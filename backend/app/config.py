@@ -6,7 +6,8 @@ from typing import List
 class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_service_key: str = ""
-    supabase_jwt_secret: str = ""  # Project Settings → API → JWT Secret
+    supabase_jwt_secret: str = ""  # Legacy HS256 (leave empty if using ES256)
+    supabase_jwt_public_key_jwk: str = ""  # ES256 EC public key as JWK JSON string
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-20250514"
     app_env: str = "development"

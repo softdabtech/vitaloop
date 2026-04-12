@@ -1,5 +1,6 @@
 """
 JWT dependency: validates Supabase-issued Bearer tokens.
+Supports both ES256 (new Supabase ECDSA keys) and HS256 (legacy).
 Usage:  current_user: dict = Depends(get_current_user)
 Returns the JWT payload (includes 'sub' = user UUID).
 """
@@ -12,18 +13,28 @@ from app.config import settings
 _bearer = HTTPBearer()
 
 
+def _get_verify_key():
+    """Return (key, algorithms) based on configured JWT settings."""
+    if settings.supabase_jwt_public_key_jwk:
+        # New Supabase format: ES256 with ECDSA public key (JWK)
+        public_key = jwt.algorithms.ECAlgorithm.from_jwk(
+            settings.supabase_jwt_public_key_jwk
+        )
+        return public_key, ["ES256"]
+    # Legacy: HS256 with symmetric secret
+    return settings.supabase_jwt_secret, ["HS256"]
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(_bearer),
 ) -> dict:
     token = credentials.credentials
+    key, algorithms = _get_verify_key()
     try:
-        # Decode without signature verification using the Supabase JWT secret.
-        # For MVP we verify the token is well-formed and not expired.
-        # Supabase JWT secret is available in Project Settings → API → JWT Secret.
         payload = jwt.decode(
             token,
-            settings.supabase_jwt_secret,
-            algorithms=["HS256"],
+            key,
+            algorithms=algorithms,
             audience="authenticated",
         )
         return payload
