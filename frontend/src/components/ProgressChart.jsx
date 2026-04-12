@@ -1,5 +1,4 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { format } from 'date-fns'
 
 export default function ProgressChart({ data }) {
   // Build per-biomarker timeseries across uploads
