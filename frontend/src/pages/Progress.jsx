@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth.js'
 import api from '../lib/api.js'
 import ProgressChart from '../components/ProgressChart.jsx'
+import EmptyState from '../components/EmptyState.jsx'
+import LockedFeatureOverlay from '../components/LockedFeatureOverlay.jsx'
+import { useSubscription } from '../hooks/useSubscription.js'
 import { useNavigate } from 'react-router-dom'
 
 function getBiomarkerValue(upload, name) {
@@ -17,6 +20,8 @@ function deltaPct(first, last) {
 export default function Progress() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { subStatus } = useSubscription()
+  const isPro = subStatus === 'active'
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -28,7 +33,16 @@ export default function Progress() {
     })
   }, [user])
 
-  if (loading) return <div className="flex items-center justify-center h-screen">Loading…</div>
+  if (loading) return (
+    <div className="min-h-screen p-6 max-w-3xl mx-auto">
+      <div className="animate-pulse h-8 w-48 bg-gray-700 rounded-xl mb-6" />
+      <div className="grid sm:grid-cols-3 gap-3 mb-6">
+        {[1,2,3].map(i => <div key={i} className="animate-pulse bg-gray-800 rounded-xl h-20" />)}
+      </div>
+      <div className="animate-pulse bg-gray-800 rounded-xl h-48 mb-4" />
+      <div className="animate-pulse bg-gray-800 rounded-xl h-32" />
+    </div>
+  )
 
   const first = data[0]
   const last = data[data.length - 1]
@@ -57,11 +71,14 @@ export default function Progress() {
       <h2 className="text-2xl font-bold text-green-400 mb-6">Progress Tracker</h2>
       {data.length === 0 ? (
         <div className="text-center py-20">
-          <p className="text-gray-400 mb-4">No lab results yet.</p>
-          <button onClick={() => navigate('/upload')} className="bg-green-500 hover:bg-green-600 text-white px-6 py-2.5 rounded-lg">
-            Upload First Test
-          </button>
-        </div>
+        <EmptyState
+          icon="📈"
+          title="No lab results yet"
+          subtitle="Upload your first blood test to start tracking biomarker progress over time."
+          action="Upload First Test"
+          onAction={() => navigate('/upload')}
+        />
+      </div>
       ) : (
         <>
           {deltas.length > 0 && (
@@ -78,7 +95,9 @@ export default function Progress() {
             </div>
           )}
 
-          <ProgressChart data={data} />
+          <LockedFeatureOverlay locked={!isPro}>
+            <ProgressChart data={data} />
+          </LockedFeatureOverlay>
 
           <div className="mt-6 bg-gray-900 border border-gray-800 rounded-xl p-5">
             <p className="text-sm text-gray-300 mb-3">Upload Timeline</p>
