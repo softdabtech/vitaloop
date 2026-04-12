@@ -1,14 +1,19 @@
-import { useNavigate } from 'react-router-dom'
-import { stripePromise } from '../lib/stripe.js'
+import { useState } from 'react'
+import api from '../lib/api.js'
+import toast from 'react-hot-toast'
 
 export default function Paywall() {
-  const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
 
   async function handleCheckout() {
-    // Redirect to Stripe Checkout — replace with your price ID and backend endpoint
-    const stripe = await stripePromise
-    // TODO: call backend to create Stripe Checkout session and redirect
-    alert('Stripe Checkout integration — add your backend /create-checkout-session endpoint.')
+    setLoading(true)
+    try {
+      const { data } = await api.post('/stripe/checkout')
+      window.location.href = data.checkout_url
+    } catch {
+      toast.error('Could not start checkout. Please try again.')
+      setLoading(false)
+    }
   }
 
   return (
@@ -25,9 +30,10 @@ export default function Paywall() {
         <p className="text-gray-400 text-sm mb-4">Subscribe to see your personalized supplement stack</p>
         <button
           onClick={handleCheckout}
-          className="bg-green-500 hover:bg-green-600 text-white font-semibold px-8 py-3 rounded-xl"
+          disabled={loading}
+          className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl transition"
         >
-          Start — $49/month
+          {loading ? 'Redirecting…' : 'Start — $49/month'}
         </button>
       </div>
     </div>
