@@ -8,11 +8,10 @@ const COL_PRODUCT = [
   { label: 'Partner program',   href: '#partners' },
 ]
 const COL_COMPANY = [
-  { label: 'About',             href: '/login' },
   { label: 'Science',           href: '#science' },
-  { label: 'Privacy',           href: '/login' },
-  { label: 'Terms of Service',  href: '/login' },
-  { label: 'Contact',           href: '/login' },
+  { label: 'Privacy policy',    href: '/privacy' },
+  { label: 'Terms of service',  href: '/terms' },
+  { label: 'Contact',           href: 'mailto:hello@vitaloop.com' },
 ]
 const COL_PARTNERS = [
   { label: 'iHerb',    href: 'https://www.iherb.com' },
@@ -34,6 +33,10 @@ function LogoIcon() {
 function FooterLink({ label, href, external = false }) {
   const navigate = useNavigate()
   const handleClick = () => {
+    if (href.startsWith('mailto:')) {
+      window.location.href = href
+      return
+    }
     if (external) { window.open(href, '_blank', 'noopener noreferrer'); return }
     if (href.startsWith('#')) {
       const el = document.getElementById(href.slice(1))
@@ -154,7 +157,7 @@ export default function Footer() {
           display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8,
         }}>
           <span style={{ fontSize: 12, color: '#6e6e73' }}>
-            © 2025 VITALOOP LLC · Delaware, USA
+            © {new Date().getFullYear()} VITALOOP LLC · Delaware, USA
           </span>
           <span style={{ fontSize: 12, color: '#6e6e73' }}>
             Made with AI · Not medical advice · HIPAA-ready

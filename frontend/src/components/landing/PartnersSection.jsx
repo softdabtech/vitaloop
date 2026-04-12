@@ -44,9 +44,10 @@ const LAB_CATEGORIES = [
 
 function WorldMap() {
   const [tooltip, setTooltip] = useState(null)
+  const regionLegend = { US: '#1D9E75', EU: '#5DCAA5', ME: '#f5a623', Asia: '#9FE1CB', LATAM: '#0F6E56' }
 
   return (
-    <div style={{ position: 'relative', background: '#0d1412', borderRadius: 20, overflow: 'hidden', height: 300 }}>
+    <div style={{ position: 'relative', background: '#0f1b18', borderRadius: 20, overflow: 'hidden', height: 360 }}>
       <svg viewBox="0 0 800 350" width="100%" height="100%" style={{ position: 'absolute', inset: 0 }} aria-hidden="true">
         <defs>
           <pattern id="mapGrid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -69,19 +70,60 @@ function WorldMap() {
           fill="#1a2820" stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
       </svg>
 
-      {LABS.map(({ name, city, x, y, region }) => (
+      <div style={{
+        position: 'absolute', top: 12, left: 16,
+        display: 'flex', flexDirection: 'column', gap: 4, zIndex: 3,
+      }}>
+        {Object.entries(regionLegend).map(([region, color]) => (
+          <div key={region} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: color }} />
+            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>{region}</span>
+          </div>
+        ))}
+      </div>
+
+      {LABS.map(({ name, city, x, y, region }, i) => (
         <div
           key={name}
           style={{ position: 'absolute', left: x, top: y, transform: 'translate(-50%,-50%)', zIndex: 2 }}
           onMouseEnter={() => setTooltip({ name, city })}
           onMouseLeave={() => setTooltip(null)}
         >
-          <div style={{
-            width: 9, height: 9, borderRadius: '50%',
-            background: REGION_COLOR[region],
-            boxShadow: `0 0 8px ${REGION_COLOR[region]}80`,
-            cursor: 'pointer',
-          }} />
+          <div style={{ position: 'relative', width: 9, height: 9 }}>
+            <div style={{
+              position: 'absolute', inset: -3,
+              borderRadius: '50%',
+              background: `${REGION_COLOR[region]}40`,
+              animation: 'zonePulse 2s ease-in-out infinite',
+              animationDelay: `${(i % 7) * 0.2}s`,
+            }} />
+            <div style={{
+              width: 9, height: 9, borderRadius: '50%',
+              background: REGION_COLOR[region],
+              position: 'relative', zIndex: 1,
+              cursor: 'pointer',
+              boxShadow: `0 0 8px ${REGION_COLOR[region]}80`,
+            }} />
+          </div>
+        </div>
+      ))}
+
+      {[
+        { label: 'North America', x: '15%', y: '55%' },
+        { label: 'Europe', x: '47%', y: '30%' },
+        { label: 'Middle East', x: '58%', y: '52%' },
+        { label: 'Asia', x: '75%', y: '40%' },
+        { label: 'South America', x: '26%', y: '75%' },
+      ].map(({ label, x, y }) => (
+        <div key={label} style={{
+          position: 'absolute', left: x, top: y,
+          fontSize: 9, color: 'rgba(255,255,255,0.18)',
+          fontWeight: 600, letterSpacing: '0.08em',
+          textTransform: 'uppercase', userSelect: 'none',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+        }}>
+          {label}
         </div>
       ))}
 

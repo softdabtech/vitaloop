@@ -53,7 +53,11 @@ function UploadVisual() {
           borderRadius: '50%', border: '2px solid var(--teal-300)',
           pointerEvents: 'none',
         }} />
-        <div style={{ fontSize: 32, marginBottom: 12 }}>📂</div>
+        <div style={{ marginBottom: 12 }}>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--teal-500)" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+            <path d="M3 7a2 2 0 0 1 2-2h3.5L10 7h9a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>
+          </svg>
+        </div>
         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--gray-700)', marginBottom: 6 }}>
           Drop your lab PDF here
         </div>

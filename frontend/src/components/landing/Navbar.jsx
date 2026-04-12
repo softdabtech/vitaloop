@@ -107,7 +107,7 @@ export default function Navbar() {
                 {label}
                 {isActive && (
                   <span style={{
-                    position: 'absolute', bottom: 0, left: '50%',
+                    position: 'absolute', bottom: -2, left: '50%',
                     transform: 'translateX(-50%)',
                     width: 4, height: 4, borderRadius: '50%',
                     background: 'var(--teal-500)',

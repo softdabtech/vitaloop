@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check } from 'lucide-react'
 
@@ -25,8 +25,19 @@ const CORE_FEATURES = [
 export default function PricingSection() {
   const navigate = useNavigate()
   const [isAnnual, setAnnual] = useState(false)
+  const [displayPrice, setDisplayPrice] = useState(49)
+  const [priceVisible, setPriceVisible] = useState(true)
 
   const monthlyPrice = isAnnual ? 39 : 49
+
+  useEffect(() => {
+    setPriceVisible(false)
+    const t = setTimeout(() => {
+      setDisplayPrice(isAnnual ? 39 : 49)
+      setPriceVisible(true)
+    }, 150)
+    return () => clearTimeout(t)
+  }, [isAnnual])
 
   return (
     <section id="pricing" style={{ padding: '120px 24px', background: 'var(--gray-50)' }}>
@@ -146,16 +157,27 @@ export default function PricingSection() {
             {/* Animated price */}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 4 }}>
               <div
-                key={monthlyPrice}
                 style={{
                   fontSize: 64, fontWeight: 700, color: 'white', letterSpacing: '-0.04em', lineHeight: 1,
-                  animation: 'countUp 0.3s ease',
+                  opacity: priceVisible ? 1 : 0,
+                  transform: priceVisible ? 'translateY(0)' : 'translateY(8px)',
+                  transition: 'opacity 200ms ease, transform 200ms ease',
                 }}
               >
-                ${monthlyPrice}
+                ${displayPrice}
               </div>
               <div style={{ fontSize: 18, color: 'var(--teal-300)', marginBottom: 2 }}>/month</div>
             </div>
+            {isAnnual && (
+              <div style={{
+                display: 'inline-block', marginTop: 8,
+                background: 'var(--teal-600)', color: 'white',
+                borderRadius: 6, padding: '3px 10px',
+                fontSize: 11, fontWeight: 700,
+              }}>
+                Save $120/year
+              </div>
+            )}
             {isAnnual && (
               <div style={{ fontSize: 12, color: 'var(--teal-100)', marginBottom: 4 }}>
                 Billed ${monthlyPrice * 12}/year
