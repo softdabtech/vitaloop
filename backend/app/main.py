@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from fastapi.exceptions import RequestValidationError
 from app.config import settings
 from app.errors import http_exception_handler, validation_exception_handler
-from app.routers import analyze, protocol, progress, health, symptoms, stripe_router
+from app.routers import analyze, protocol, progress, health, symptoms, stripe_router, admin
 
 app = FastAPI(
     title="VITALOOP API",
@@ -29,3 +29,4 @@ app.include_router(protocol.router, prefix="/protocol", tags=["protocol"])
 app.include_router(progress.router, prefix="/progress", tags=["progress"])
 app.include_router(symptoms.router, prefix="/symptoms", tags=["symptoms"])
 app.include_router(stripe_router.router, prefix="/stripe", tags=["stripe"])
+app.include_router(admin.router, prefix="/admin", tags=["admin"])
