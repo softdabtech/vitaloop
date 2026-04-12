@@ -59,14 +59,15 @@ def _strip_code_block(raw: str) -> str:
 async def _chat_completion(prompt: str, *, task_name: str) -> str:
     client = _get_client()
     model = settings.active_abacus_ai_model
+    base_url = settings.active_abacus_ai_base_url.rstrip("/")
+    key_suffix = settings.active_abacus_ai_api_key[-4:] if settings.active_abacus_ai_api_key else "none"
     started = time.perf_counter()
     logger.info(
-        "abacus_request_start",
-        extra={
-            "task": task_name,
-            "base_url": settings.active_abacus_ai_base_url,
-            "model": model,
-        },
+        "abacus_request_start task=%s base_url=%s model=%s key_suffix=%s",
+        task_name,
+        base_url,
+        model,
+        key_suffix,
     )
     response = await client.post(
         "/chat/completions",
@@ -81,6 +82,7 @@ async def _chat_completion(prompt: str, *, task_name: str) -> str:
     )
     response.raise_for_status()
     payload = response.json()
+    response_id = payload.get("id")
     choices = payload.get("choices") or []
     if not choices:
         raise ValueError("Abacus API returned no choices")
@@ -88,12 +90,11 @@ async def _chat_completion(prompt: str, *, task_name: str) -> str:
     if not isinstance(content, str) or not content.strip():
         raise ValueError("Abacus API returned empty content")
     logger.info(
-        "abacus_request_ok",
-        extra={
-            "task": task_name,
-            "model": model,
-            "duration_ms": int((time.perf_counter() - started) * 1000),
-        },
+        "abacus_request_ok task=%s model=%s response_id=%s duration_ms=%s",
+        task_name,
+        model,
+        response_id,
+        int((time.perf_counter() - started) * 1000),
     )
     return content
 
@@ -131,13 +132,11 @@ async def extract_biomarkers(text: str, symptoms: List[str]) -> List[Dict[str, A
     raw = _strip_code_block(await _chat_completion(prompt, task_name="extract_biomarkers"))
     parsed = _validate_biomarker_payload(json.loads(raw))
     logger.info(
-        "abacus_extract_ok",
-        extra={
-            "text_len": len(text),
-            "symptom_count": len(symptoms),
-            "prompt_version": EXTRACT_PROMPT_VERSION,
-            "duration_ms": int((time.perf_counter() - started) * 1000),
-        },
+        "abacus_extract_ok text_len=%s symptom_count=%s prompt_version=%s duration_ms=%s",
+        len(text),
+        len(symptoms),
+        EXTRACT_PROMPT_VERSION,
+        int((time.perf_counter() - started) * 1000),
     )
     return parsed
 
@@ -152,12 +151,10 @@ async def generate_protocol(biomarkers: List[Dict], symptoms: List[str]) -> List
     raw = _strip_code_block(await _chat_completion(prompt, task_name="generate_protocol"))
     parsed = _validate_protocol_payload(json.loads(raw))
     logger.info(
-        "abacus_protocol_ok",
-        extra={
-            "biomarker_count": len(biomarkers),
-            "symptom_count": len(symptoms),
-            "prompt_version": PROTOCOL_PROMPT_VERSION,
-            "duration_ms": int((time.perf_counter() - started) * 1000),
-        },
+        "abacus_protocol_ok biomarker_count=%s symptom_count=%s prompt_version=%s duration_ms=%s",
+        len(biomarkers),
+        len(symptoms),
+        PROTOCOL_PROMPT_VERSION,
+        int((time.perf_counter() - started) * 1000),
     )
     return parsed
