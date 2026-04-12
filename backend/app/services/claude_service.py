@@ -17,7 +17,7 @@ PROTOCOL_PROMPT = (_PROMPTS_DIR / "generate_protocol.txt").read_text()
 EXTRACT_PROMPT_VERSION = "extract_v1"
 PROTOCOL_PROMPT_VERSION = "protocol_v1"
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
 
 _BIOMARKER_KEYS = {"name", "value", "unit", "status"}
 _PROTOCOL_KEYS = {"supplement", "dosage", "timing", "priority", "rationale", "iherb_search"}
