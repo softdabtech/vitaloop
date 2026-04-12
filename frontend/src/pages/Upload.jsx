@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth.js'
 import { useOCR } from '../hooks/useOCR.js'
 import UploadZone from '../components/UploadZone.jsx'
 import SymptomSelector from '../components/SymptomSelector.jsx'
@@ -8,7 +7,6 @@ import api from '../lib/api.js'
 import toast from 'react-hot-toast'
 
 export default function Upload() {
-  const { user } = useAuth()
   const navigate = useNavigate()
   const { processFile, progress, isProcessing } = useOCR()
   const [symptoms, setSymptoms] = useState([])
@@ -26,8 +24,8 @@ export default function Upload() {
 
     setAnalyzing(true)
     try {
+      // user_id is now derived from JWT on the backend — not sent in body
       const { data } = await api.post('/analyze', {
-        user_id: user.id,
         extracted_text: text,
         lab_name: labName || undefined,
         ocr_confidence: confidence,
@@ -36,10 +34,17 @@ export default function Upload() {
 
       // Generate protocol
       await api.post('/protocol', {
-        user_id: user.id,
         upload_id: data.upload_id,
         symptoms,
       })
+
+      // Save symptoms record
+      if (symptoms.length > 0) {
+        await api.post('/symptoms', {
+          upload_id: data.upload_id,
+          tags: symptoms,
+        }).catch(() => null) // non-critical
+      }
 
       toast.success('Analysis complete!')
       navigate(`/results/${data.upload_id}`)
