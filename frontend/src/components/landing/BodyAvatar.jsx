@@ -271,6 +271,8 @@ export default function BodyAvatar() {
   const [activeZone,  setActiveZone]  = useState('brain')
   const [hoveredZone, setHoveredZone] = useState(null)
 
+  const statusLabel = (id) => STATUS[ZONES[id].status].label
+
   return (
     <div
       style={{
@@ -278,25 +280,62 @@ export default function BodyAvatar() {
         borderRadius: 20,
         border: '0.5px solid rgba(255,255,255,0.08)',
         overflow: 'hidden',
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
       }}
-      className="md:grid-cols-2"
+      className="grid grid-cols-1 md:grid-cols-2"
     >
       {/* SVG side */}
-      <div style={{ padding: 24 }}>
+      <div style={{ padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <BodySVG
           activeZone={activeZone}
           hoveredZone={hoveredZone}
           onZoneClick={setActiveZone}
           onZoneHover={setHoveredZone}
         />
+
+        <div className="md:hidden" style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            {ZONE_ORDER.map((id) => {
+              const s = STATUS[ZONES[id].status]
+              const isActive = activeZone === id
+              return (
+                <button
+                  key={id}
+                  onClick={() => setActiveZone(id)}
+                  style={{
+                    background: 'transparent', border: 'none', cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                    color: isActive ? 'white' : 'rgba(255,255,255,0.6)',
+                    transform: isActive ? 'scale(1.08)' : 'scale(1)',
+                    transition: 'transform 200ms ease, color 200ms ease',
+                  }}
+                  aria-label={`${ZONES[id].label}: ${statusLabel(id)}`}
+                >
+                  <span
+                    style={{
+                      width: isActive ? 14 : 10,
+                      height: isActive ? 14 : 10,
+                      borderRadius: '50%',
+                      background: s.color,
+                      boxShadow: isActive ? `0 0 10px ${s.color}80` : 'none',
+                      transition: 'all 200ms ease',
+                    }}
+                  />
+                  {isActive && (
+                    <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>
+                      {ZONES[id].label.split(' ')[0]}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Panel side */}
-      <div style={{ borderLeft: '0.5px solid rgba(255,255,255,0.08)', padding: 28 }}>
+      <div className="border-t md:border-t-0 md:border-l border-white/10" style={{ padding: 28 }}>
         {/* Tabs */}
-        <div style={{
+        <div className="hidden md:flex" style={{
           display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 24,
         }}>
           {ZONE_ORDER.map((id) => {

@@ -12,9 +12,105 @@ const BIOMARKERS = [
 const HERO_WORDS_L1 = ['Know', 'your', 'body.']
 const HERO_WORDS_L2 = ['Upgrade', 'your', 'life.']
 
+function DemoModal({ onClose }) {
+  const STEPS = [
+    { label: 'Upload', desc: 'Drop your Quest PDF', icon: '📂' },
+    { label: 'Scan', desc: 'AI reads 50+ biomarkers in 30s', icon: '🔬' },
+    { label: 'Protocol', desc: 'Personalized supplement stack', icon: '💊' },
+    { label: 'Avatar', desc: 'See your body health map', icon: '🧬' },
+    { label: 'Track', desc: 'Progress over 90 days', icon: '📈' },
+  ]
+  const [step, setStep] = useState(0)
+
+  useEffect(() => {
+    const t = setInterval(() => setStep((s) => (s + 1) % STEPS.length), 1800)
+    return () => clearInterval(t)
+  }, [STEPS.length])
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 2000,
+        background: 'rgba(0,0,0,0.88)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 24,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'relative',
+          background: '#111', borderRadius: 24,
+          border: '0.5px solid rgba(255,255,255,0.1)',
+          padding: 48, maxWidth: 520, width: '100%',
+          textAlign: 'center',
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute', top: 16, right: 16,
+            background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)',
+            fontSize: 24, cursor: 'pointer',
+          }}
+          aria-label="Close demo"
+        >
+          ×
+        </button>
+
+        <div style={{ fontSize: 56, marginBottom: 20 }}>
+          {STEPS[step].icon}
+        </div>
+        <div style={{
+          fontSize: 11, fontWeight: 600, letterSpacing: '0.12em',
+          color: 'var(--teal-500)', marginBottom: 8, textTransform: 'uppercase',
+        }}>
+          Step {step + 1} of {STEPS.length}
+        </div>
+        <h3 style={{ fontSize: 28, fontWeight: 700, color: 'white', marginBottom: 12 }}>
+          {STEPS[step].label}
+        </h3>
+        <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.6)', marginBottom: 32 }}>
+          {STEPS[step].desc}
+        </p>
+
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 32 }}>
+          {STEPS.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setStep(i)}
+              style={{
+                width: i === step ? 24 : 8, height: 8, borderRadius: 4,
+                background: i === step ? 'var(--teal-500)' : 'rgba(255,255,255,0.2)',
+                border: 'none', cursor: 'pointer',
+                transition: 'width 300ms ease, background 300ms ease',
+              }}
+              aria-label={`Go to step ${i + 1}`}
+            />
+          ))}
+        </div>
+
+        <button
+          onClick={onClose}
+          style={{
+            background: 'var(--teal-800)', color: 'white',
+            border: 'none', borderRadius: 980,
+            padding: '14px 36px', fontSize: 16, fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Get started free →
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function Hero() {
   const navigate = useNavigate()
   const [vis, setVis] = useState(false)
+  const [showDemo, setShowDemo] = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => setVis(true), 80)
@@ -141,6 +237,7 @@ export default function Hero() {
             Start free — no card needed <ArrowRight size={16} aria-hidden="true" />
           </button>
           <button
+            onClick={() => setShowDemo(true)}
             aria-label="Watch 60 second demo"
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
@@ -230,6 +327,8 @@ export default function Hero() {
           </div>
         </div>
       </div>
+
+      {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
     </section>
   )
 }

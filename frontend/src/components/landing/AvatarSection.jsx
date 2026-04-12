@@ -36,6 +36,18 @@ export default function AvatarSection() {
           <BodyAvatar />
         </div>
 
+        <div className="reveal" style={{ textAlign: 'center', margin: '80px 0 48px' }}>
+          <h3 style={{
+            fontSize: 'clamp(24px, 3vw, 36px)', fontWeight: 700,
+            color: 'white', letterSpacing: '-0.02em', marginBottom: 12,
+          }}>
+            Real users. Real results.
+          </h3>
+          <p style={{ fontSize: 16, color: 'var(--gray-300)', maxWidth: 480, margin: '0 auto' }}>
+            See how different health profiles look on the Avatar.
+          </p>
+        </div>
+
         {/* Avatar examples */}
         <AvatarExamples />
 
