@@ -40,6 +40,7 @@ CREATE TABLE public.lab_uploads (
   lab_name TEXT,
   test_date DATE,
   ocr_confidence NUMERIC(5,2),
+  analyze_prompt_version TEXT NOT NULL DEFAULT 'extract_v1',
   status TEXT DEFAULT 'pending'
     CHECK (status IN ('pending','processing','done','failed')),
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -66,6 +67,7 @@ CREATE TABLE public.biomarkers (
 
 CREATE INDEX idx_biomarkers_upload_id ON public.biomarkers(upload_id);
 CREATE INDEX idx_biomarkers_user_name ON public.biomarkers(user_id, name);
+CREATE UNIQUE INDEX uq_biomarkers_upload_name ON public.biomarkers(upload_id, lower(name));
 
 -- 4. SYMPTOMS
 CREATE TABLE public.symptoms (
@@ -83,10 +85,13 @@ CREATE TABLE public.protocols (
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
   upload_id UUID REFERENCES public.lab_uploads(id) ON DELETE CASCADE NOT NULL,
   recommendations JSONB NOT NULL DEFAULT '[]',
+  prompt_version TEXT NOT NULL DEFAULT 'protocol_v1',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_protocols_user_id ON public.protocols(user_id);
+CREATE INDEX idx_protocols_upload_id ON public.protocols(upload_id);
+CREATE UNIQUE INDEX uq_protocols_user_upload ON public.protocols(user_id, upload_id);
 
 -- ============================================================
 -- ROW LEVEL SECURITY
@@ -99,21 +104,41 @@ ALTER TABLE public.symptoms      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.protocols     ENABLE ROW LEVEL SECURITY;
 
 -- users
-CREATE POLICY "Users: own row only"
-  ON public.users FOR ALL USING (auth.uid() = id);
+CREATE POLICY "Users: select own"
+  ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users: insert own"
+  ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users: update own"
+  ON public.users FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
 -- lab_uploads
-CREATE POLICY "Lab uploads: own rows only"
-  ON public.lab_uploads FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Lab uploads: select own"
+  ON public.lab_uploads FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Lab uploads: insert own"
+  ON public.lab_uploads FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Lab uploads: update own"
+  ON public.lab_uploads FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- biomarkers
-CREATE POLICY "Biomarkers: own rows only"
-  ON public.biomarkers FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Biomarkers: select own"
+  ON public.biomarkers FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Biomarkers: insert own"
+  ON public.biomarkers FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Biomarkers: update own"
+  ON public.biomarkers FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- symptoms
-CREATE POLICY "Symptoms: own rows only"
-  ON public.symptoms FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Symptoms: select own"
+  ON public.symptoms FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Symptoms: insert own"
+  ON public.symptoms FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Symptoms: update own"
+  ON public.symptoms FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- protocols
-CREATE POLICY "Protocols: own rows only"
-  ON public.protocols FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Protocols: select own"
+  ON public.protocols FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Protocols: insert own"
+  ON public.protocols FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Protocols: update own"
+  ON public.protocols FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);

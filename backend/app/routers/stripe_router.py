@@ -25,8 +25,8 @@ async def create_checkout_session(
     session = stripe.checkout.Session.create(
         mode="subscription",
         line_items=[{"price": settings.stripe_price_id, "quantity": 1}],
-        success_url="https://app.vitaloop.com/dashboard?sub=success",
-        cancel_url="https://app.vitaloop.com/dashboard?sub=cancelled",
+        success_url=settings.stripe_success_url,
+        cancel_url=settings.stripe_cancel_url,
         customer_email=user_email or None,
         metadata={"user_id": user_id},
         client_reference_id=user_id,
