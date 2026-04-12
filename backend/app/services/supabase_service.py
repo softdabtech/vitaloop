@@ -169,6 +169,12 @@ async def save_protocol(
         create_payload["prompt_version"] = prompt_version
 
     resp = await _run(lambda: supabase.table("protocols").insert(create_payload).execute())
+    await _emit_timeline(
+        user_id,
+        "protocol_generated",
+        "Protocol generated from uploaded lab",
+        metadata={"upload_id": upload_id, "recommendation_count": len(recommendations)},
+    )
     return resp.data[0]
 
 
@@ -583,7 +589,11 @@ async def generate_insights(user_id: str) -> List[Dict]:
     )
     if uploads_resp.data:
         last_upload = uploads_resp.data[0]["created_at"]
-        days_since = (datetime.now(timezone.utc) - datetime.fromisoformat(last_upload.replace("Z", "+00:00"))).days
+        try:
+            upload_dt = datetime.fromisoformat(str(last_upload).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            upload_dt = datetime.now(timezone.utc)
+        days_since = (datetime.now(timezone.utc) - upload_dt).days
         if days_since >= 60:
             insights_list.append({
                 "insight_type": "retest_suggestion",
@@ -693,6 +703,11 @@ async def _emit_timeline(user_id: str, event_type: str, summary: str,
         await _run(lambda: supabase.table("timeline_events").insert(payload).execute())
     except Exception:
         pass
+
+
+async def save_timeline_event(user_id: str, event_type: str, summary: str,
+                              source: Optional[str] = None, metadata: Optional[Dict] = None) -> None:
+    await _emit_timeline(user_id, event_type, summary, source=source, metadata=metadata)
 
 
 async def get_user_timeline(user_id: str, limit: int = 30) -> List[Dict]:

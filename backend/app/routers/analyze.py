@@ -4,7 +4,7 @@ from typing import Optional, List
 
 from app.dependencies import get_current_user
 from app.services.claude_service import extract_biomarkers, EXTRACT_PROMPT_VERSION
-from app.services.supabase_service import save_lab_upload, save_biomarkers
+from app.services.supabase_service import save_lab_upload, save_biomarkers, save_timeline_event
 
 router = APIRouter()
 
@@ -69,6 +69,13 @@ async def analyze_lab(
         upload_id=upload_id,
         user_id=user_id,
         biomarkers=biomarkers,
+    )
+
+    await save_timeline_event(
+        user_id,
+        event_type="lab_uploaded",
+        summary=f"Lab uploaded from {request.lab_name or 'unknown lab'}",
+        metadata={"upload_id": upload_id, "biomarker_count": len(saved)},
     )
 
     return {
