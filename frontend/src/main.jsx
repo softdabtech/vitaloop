@@ -3,10 +3,13 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './styles/index.css'
 import { Toaster } from 'react-hot-toast'
+import { HelmetProvider } from 'react-helmet-async'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
-    <Toaster position="top-right" />
+    <HelmetProvider>
+      <App />
+      <Toaster position="top-right" />
+    </HelmetProvider>
   </React.StrictMode>
 )

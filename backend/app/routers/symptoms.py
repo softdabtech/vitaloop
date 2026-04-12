@@ -1,10 +1,15 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from uuid import UUID
 
 from app.dependencies import get_current_user
-from app.services.supabase_service import save_symptoms, assert_upload_belongs_to_user
+from app.services.supabase_service import (
+    save_symptoms,
+    assert_upload_belongs_to_user,
+    get_user_symptom_summary,
+    get_platform_symptom_summary,
+)
 
 router = APIRouter()
 
@@ -33,3 +38,29 @@ async def record_symptoms(
         severity=request.severity,
     )
     return result
+
+
+@router.get("/summary")
+async def symptom_summary(
+    days: int = 30,
+    current_user: dict = Depends(get_current_user),
+):
+    safe_days = max(1, min(days, 365))
+    user_id: str = current_user["sub"]
+    return await get_user_symptom_summary(user_id=user_id, days=safe_days)
+
+
+@router.get("/summary/all")
+async def platform_symptom_summary(
+    days: int = 30,
+    current_user: dict = Depends(get_current_user),
+):
+    user_meta = current_user.get("user_metadata") or {}
+    app_meta = current_user.get("app_metadata") or {}
+    is_super_admin = user_meta.get("is_super_admin") or app_meta.get("is_super_admin")
+
+    if not is_super_admin:
+        raise HTTPException(status_code=403, detail={"detail": "Access denied", "code": "ACCESS_DENIED"})
+
+    safe_days = max(1, min(days, 365))
+    return await get_platform_symptom_summary(days=safe_days)

@@ -1,0 +1,128 @@
+/* ============================================
+   VITALOOP Design System — Variables + Animations
+   ============================================ */
+
+:root {
+  --teal-900: #04342C;
+  --teal-800: #085041;
+  --teal-600: #0F6E56;
+  --teal-500: #1D9E75;
+  --teal-300: #5DCAA5;
+  --teal-100: #9FE1CB;
+  --teal-50:  #E1F5EE;
+
+  --gray-950: #0a0a0a;
+  --gray-900: #1d1d1f;
+  --gray-700: #3d3d3f;
+  --gray-500: #6e6e73;
+  --gray-300: #aeaeb2;
+  --gray-100: #d2d2d7;
+  --gray-50:  #f5f5f7;
+  --white:    #ffffff;
+}
+
+/* ── Scroll reveal ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              transform 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger children */
+.stagger-children > *:nth-child(1) { transition-delay: 0ms; }
+.stagger-children > *:nth-child(2) { transition-delay: 80ms; }
+.stagger-children > *:nth-child(3) { transition-delay: 160ms; }
+.stagger-children > *:nth-child(4) { transition-delay: 240ms; }
+.stagger-children > *:nth-child(5) { transition-delay: 320ms; }
+.stagger-children > *:nth-child(6) { transition-delay: 400ms; }
+
+/* ── Marquee ticker ── */
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-33.33%); }
+}
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker 40s linear infinite;
+}
+.ticker-track:hover { animation-play-state: paused; }
+
+/* ── Float (hero visual) ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+.floating {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ── Pulse ring (avatar zones) ── */
+@keyframes zonePulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.1); }
+}
+.zone-pulse {
+  animation: zonePulse 2.5s ease-in-out infinite;
+}
+
+/* ── Upload ring pulse ── */
+@keyframes ringExpand {
+  0%   { opacity: 0.7; transform: scale(1); }
+  100% { opacity: 0;   transform: scale(1.6); }
+}
+.ring-pulse {
+  animation: ringExpand 1.6s ease-out infinite;
+}
+
+/* ── Typewriter lines ── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.typewriter-line {
+  opacity: 0;
+  animation: fadeSlideIn 0.4s ease forwards;
+}
+.typewriter-line:nth-child(1) { animation-delay: 0.4s; }
+.typewriter-line:nth-child(2) { animation-delay: 1.0s; }
+.typewriter-line:nth-child(3) { animation-delay: 1.6s; }
+.typewriter-line:nth-child(4) { animation-delay: 2.2s; }
+.typewriter-badge              { animation: fadeSlideIn 0.4s ease 2.8s forwards; opacity: 0; }
+
+/* ── Count-up trigger ── */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.count-anim {
+  animation: countUp 0.5s ease forwards;
+}
+
+/* ── Progress bar fill ── */
+@keyframes fillBar {
+  from { width: 0%; }
+}
+.fill-bar {
+  animation: fillBar 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation-delay: 0.3s;
+}
+
+/* ── Reduce motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .stagger-children > * {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+  .ticker-track { animation: none; }
+  .zone-pulse   { animation: none; }
+  .floating     { animation: none; }
+  .typewriter-line { animation: none; opacity: 1; }
+  .typewriter-badge { animation: none; opacity: 1; }
+}

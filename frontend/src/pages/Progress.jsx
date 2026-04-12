@@ -24,14 +24,29 @@ export default function Progress() {
   const isPro = subStatus === 'active'
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     if (!user) return
-    api.get('/progress').then((res) => {
-      setData(res.data)
-      setLoading(false)
-    })
-  }, [user])
+    api.get('/progress')
+      .then((res) => {
+        setData(res.data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error('Progress fetch error:', err)
+        const status = err.response?.status
+        
+        if (status === 401) {
+          navigate('/login')
+        } else if (status === 402) {
+          setError('premium')
+        } else {
+          setError('failed')
+        }
+        setLoading(false)
+      })
+  }, [user, navigate])
 
   if (loading) return (
     <div className="min-h-screen p-6 max-w-3xl mx-auto">
@@ -43,6 +58,44 @@ export default function Progress() {
       <div className="animate-pulse bg-gray-800 rounded-xl h-32" />
     </div>
   )
+
+  // Premium error
+  if (error === 'premium') {
+    return (
+      <div className="min-h-screen p-6 max-w-3xl mx-auto">
+        <h2 className="text-2xl font-bold text-green-400 mb-6">Progress Tracker</h2>
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 text-center border border-green-500/20">
+          <h3 className="text-xl font-semibold text-white mb-2">Advanced Tracking</h3>
+          <p className="text-gray-400 mb-6">Detailed progress tracking is available with Vitaloop Premium.</p>
+          <button 
+            onClick={() => navigate('/checkout')} 
+            className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg font-semibold transition"
+          >
+            Upgrade to Premium
+          </button>
+          <p className="text-gray-500 text-sm mt-4">You can still upload new tests as a free user.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error === 'failed') {
+    return (
+      <div className="min-h-screen p-6 max-w-3xl mx-auto">
+        <h2 className="text-2xl font-bold text-green-400 mb-6">Progress Tracker</h2>
+        <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-8 text-center">
+          <p className="text-red-300 mb-4">Unable to load progress data. Please try again.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const first = data[0]
   const last = data[data.length - 1]

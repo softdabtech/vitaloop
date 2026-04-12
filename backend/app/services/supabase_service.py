@@ -1,10 +1,43 @@
 import asyncio
+from collections import Counter
+from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
 from supabase import create_client, Client
 from app.config import settings
 from typing import List, Dict, Any, Optional
 
 _supabase: Optional[Client] = None
+
+SYMPTOM_ZONE_MAP: Dict[str, List[str]] = {
+    "brain": ["brain_fog", "poor_concentration", "mood_swings", "depression", "anxiety"],
+    "thyroid": ["cold_intolerance", "weight_gain", "hair_loss", "fatigue"],
+    "heart": ["poor_immunity", "fatigue", "anxiety"],
+    "liver": ["skin_problems", "mood_swings", "digestive_issues"],
+    "gut": ["digestive_issues", "poor_immunity", "weight_gain", "weight_loss"],
+    "muscles": ["muscle_weakness", "fatigue", "low_libido"],
+    "joints": ["joint_pain", "muscle_weakness"],
+    "nervous": ["insomnia", "anxiety", "brain_fog", "poor_concentration"],
+}
+
+SYMPTOM_LABELS: Dict[str, str] = {
+    "fatigue": "Fatigue",
+    "insomnia": "Insomnia",
+    "brain_fog": "Brain Fog",
+    "anxiety": "Anxiety",
+    "depression": "Depression",
+    "hair_loss": "Hair Loss",
+    "weight_gain": "Weight Gain",
+    "weight_loss": "Weight Loss",
+    "low_libido": "Low Libido",
+    "muscle_weakness": "Muscle Weakness",
+    "joint_pain": "Joint Pain",
+    "poor_immunity": "Poor Immunity",
+    "digestive_issues": "Digestive Issues",
+    "skin_problems": "Skin Problems",
+    "mood_swings": "Mood Swings",
+    "poor_concentration": "Poor Concentration",
+    "cold_intolerance": "Cold Intolerance",
+}
 
 
 def _run(fn):
@@ -147,6 +180,100 @@ async def save_symptoms(user_id: str, upload_id: str, tags: List[str], severity:
         .execute()
     )
     return resp.data[0]
+
+
+def _build_symptom_summary(rows: List[Dict[str, Any]], days: int) -> Dict[str, Any]:
+    symptom_counts: Counter = Counter()
+    zone_scores: Dict[str, float] = {zone: 0.0 for zone in SYMPTOM_ZONE_MAP}
+    total_severity = 0
+
+    for row in rows:
+        tags = row.get("tags") or []
+        severity = int(row.get("severity") or 5)
+        total_severity += severity
+
+        for tag in tags:
+            symptom_counts[tag] += 1
+            for zone, zone_tags in SYMPTOM_ZONE_MAP.items():
+                if tag in zone_tags:
+                    zone_scores[zone] += severity
+
+    entries = len(rows)
+    avg_severity = round((total_severity / entries), 2) if entries else 0
+    max_zone_score = max(zone_scores.values()) if zone_scores else 0
+
+    top_symptoms = [
+        {
+            "tag": tag,
+            "label": SYMPTOM_LABELS.get(tag, tag.replace("_", " ").title()),
+            "count": count,
+        }
+        for tag, count in symptom_counts.most_common(5)
+    ]
+
+    top_zones = [
+        {
+            "zone": zone,
+            "score": round(score, 2),
+            "normalized_score": round((score / max_zone_score), 3) if max_zone_score > 0 else 0,
+        }
+        for zone, score in sorted(zone_scores.items(), key=lambda item: item[1], reverse=True)
+        if score > 0
+    ]
+
+    recent_logs = [
+        {
+            "id": row.get("id"),
+            "created_at": row.get("created_at"),
+            "severity": row.get("severity"),
+            "tags": row.get("tags") or [],
+        }
+        for row in rows[:10]
+    ]
+
+    return {
+        "window_days": days,
+        "entries": entries,
+        "average_severity": avg_severity,
+        "top_symptoms": top_symptoms,
+        "top_zones": top_zones,
+        "recent_logs": recent_logs,
+    }
+
+
+async def get_user_symptom_summary(user_id: str, days: int = 30) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    resp = await _run(
+        lambda: supabase.table("symptoms")
+        .select("id, tags, severity, created_at")
+        .eq("user_id", user_id)
+        .gte("created_at", since)
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    rows = resp.data or []
+    return _build_symptom_summary(rows, days)
+
+
+async def get_platform_symptom_summary(days: int = 30) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    resp = await _run(
+        lambda: supabase.table("symptoms")
+        .select("id, user_id, tags, severity, created_at")
+        .gte("created_at", since)
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    rows = resp.data or []
+    summary = _build_symptom_summary(rows, days)
+    summary["users_reporting"] = len({row.get("user_id") for row in rows if row.get("user_id")})
+    return summary
 
 
 async def update_user_subscription(user_id: str, sub_status: str, sub_id: Optional[str] = None) -> None:
