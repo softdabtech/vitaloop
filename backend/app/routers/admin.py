@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
-from app.services.supabase_service import get_admin_overview
+from app.services import supabase_service as svc
 
 router = APIRouter()
 
@@ -19,4 +19,37 @@ def _require_super_admin(current_user: dict = Depends(get_current_user)) -> dict
 
 @router.get("/overview")
 async def admin_overview(current_user: dict = Depends(_require_super_admin)):
-    return await get_admin_overview()
+    return await svc.get_admin_overview()
+
+
+@router.get("/users")
+async def admin_users(_: dict = Depends(_require_super_admin)):
+    return await svc.get_all_users_for_admin()
+
+
+@router.get("/users/{user_id}")
+async def admin_user_detail(user_id: str, _: dict = Depends(_require_super_admin)):
+    return await svc.get_admin_user_detail(user_id)
+
+
+@router.get("/red-flags")
+async def admin_red_flags(acknowledged: bool = False, _: dict = Depends(_require_super_admin)):
+    return await svc.get_all_red_flags(acknowledged=acknowledged)
+
+
+@router.post("/red-flags/{flag_id}/acknowledge")
+async def admin_acknowledge_flag(flag_id: str, current: dict = Depends(_require_super_admin)):
+    from app.services.supabase_service import _get_supabase, _run
+    from datetime import datetime, timezone
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("red_flag_events")
+        .update({
+            "acknowledged": True,
+            "acknowledged_at": datetime.now(timezone.utc).isoformat(),
+            "acknowledged_by": current.get("sub", "admin"),
+        })
+        .eq("id", flag_id)
+        .execute()
+    )
+    return resp.data[0] if resp.data else {}

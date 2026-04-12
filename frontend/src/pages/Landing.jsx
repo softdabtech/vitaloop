@@ -22,8 +22,8 @@ export default function Landing() {
   return (
     <div style={{ background: 'var(--white)', color: 'var(--gray-900)', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif' }}>
       <Seo
-        title="VITALOOP - AI Blood Test Analysis & Supplement Protocol"
-        description="Upload any blood test PDF. AI identifies deficiencies, builds a personalized supplement protocol, and tracks your progress with a Digital Health Avatar. Free to start."
+        title="VITALOOP - Longitudinal Lab Insights and Weekly Health Guidance"
+        description="Upload labs, add symptoms, and receive personalized weekly health guidance. Track trends over time, monitor red flags, and escalate safely to a physician when needed."
         path="/"
       />
 

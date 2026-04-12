@@ -200,17 +200,17 @@ function ProtocolText() {
     <div>
       <SectionLabel n={3} />
       <h2 style={{ fontSize: 'clamp(28px, 3.5vw, 44px)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 16, lineHeight: 1.15 }}>
-        Your personalized protocol
+        Get personalized weekly guidance
       </h2>
       <p style={{ fontSize: 17, color: 'var(--gray-500)', lineHeight: 1.65 }}>
-        Not a generic supplement list. A precise, evidence-based protocol matching your exact deficiencies,
-        symptoms, age, and sex. Every recommendation backed by clinical rationale.
+        Your plan is updated from both biomarkers and symptoms, then reinforced through weekly follow-ups.
+        Clear priorities help you focus on the most impactful next action.
       </p>
       <BulletList items={[
-        'Dosage, timing, and form specified per supplement',
-        'Priority-ranked by deficiency severity',
-        'Clinical rationale for each recommendation',
-        'One-click purchase via iHerb or Amazon',
+        'Actionable protocol with dosage and timing',
+        'Priority-ranked by deficiency and symptom severity',
+        'Weekly check-in loop for adherence and response',
+        'Educational guidance, not a medical diagnosis',
       ]} />
     </div>
   )
@@ -353,17 +353,17 @@ const ROWS = [
       <div>
         <SectionLabel n={1} />
         <h2 style={{ fontSize: 'clamp(28px, 3.5vw, 44px)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 16, lineHeight: 1.15 }}>
-          Upload any lab result
+          Upload your latest lab results
         </h2>
         <p style={{ fontSize: 17, color: 'var(--gray-500)', lineHeight: 1.65 }}>
-          Drag and drop a PDF or photo from Quest, LabCorp, or any private lab worldwide.
-          Our browser-based OCR reads it instantly — your file never touches our servers.
+          Start with what you already have: a PDF from Quest, LabCorp, or your local clinic.
+          We parse biomarkers and build your baseline so future trends are easy to track.
         </p>
         <BulletList items={[
           'PDF, JPG, PNG supported',
-          'Quest · LabCorp · SonoHealth · 50+ labs',
-          'Works with foreign-language labs (EU, UAE, LATAM)',
-          'Manual text paste fallback',
+          'Quest, LabCorp, and international lab formats',
+          'Structured biomarker extraction with reference ranges',
+          'Your first timeline event is created automatically',
         ]} />
       </div>
     ),
@@ -375,17 +375,17 @@ const ROWS = [
       <div>
         <SectionLabel n={2} />
         <h2 style={{ fontSize: 'clamp(28px, 3.5vw, 44px)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 16, lineHeight: 1.15 }}>
-          AI reads every biomarker
+          Add symptoms and recurring complaints
         </h2>
         <p style={{ fontSize: 17, color: 'var(--gray-500)', lineHeight: 1.65 }}>
-          Claude AI extracts all values, units, and reference ranges — then classifies each as OPTIMAL,
-          BORDERLINE, DEFICIENT, or ELEVATED. Correlated with your reported symptoms for deeper insight.
+          Lab values alone are not enough. VITALOOP combines biomarkers with your energy,
+          sleep, mood, and recurring complaints to personalize interpretation.
         </p>
         <BulletList items={[
-          '50+ biomarkers recognized',
-          'Symptom correlation (fatigue, insomnia, brain fog...)',
-          'Powered by Anthropic Claude',
-          'Results in under 60 seconds',
+          'Onboarding captures goals and health context',
+          'Recurring symptoms become part of your baseline',
+          'Context-aware interpretation for better prioritization',
+          'Built for longitudinal health management',
         ]} />
       </div>
     ),
@@ -402,17 +402,17 @@ const ROWS = [
       <div>
         <SectionLabel n={4} />
         <h2 style={{ fontSize: 'clamp(28px, 3.5vw, 44px)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 16, lineHeight: 1.15 }}>
-          Meet your Digital Health Avatar
+          Spot red flags early and escalate safely
         </h2>
         <p style={{ fontSize: 17, color: 'var(--gray-500)', lineHeight: 1.65 }}>
-          A living visual map of your biology. Every biomarker deficiency lights up on your personal avatar —
-          showing exactly which body systems need attention. Updated with every new lab upload.
+          Weekly signals from sleep, mood, and energy can reveal risk before it becomes a bigger issue.
+          Severe patterns trigger alerts so you can seek physician care in time.
         </p>
         <BulletList items={[
-          '5 body systems tracked',
-          'Color-coded by severity',
-          'Linked to supplement protocol',
-          'See changes over time',
+          'Automatic red-flag detection from low check-in scores',
+          'In-app alerts for high-priority issues',
+          'Acknowledge and monitor critical events',
+          'Escalation path to licensed medical professionals',
         ]} />
       </div>
     ),
@@ -424,17 +424,17 @@ const ROWS = [
       <div>
         <SectionLabel n={5} />
         <h2 style={{ fontSize: 'clamp(28px, 3.5vw, 44px)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 16, lineHeight: 1.15 }}>
-          Track your progress for years
+          See your health trends over time
         </h2>
         <p style={{ fontSize: 17, color: 'var(--gray-500)', lineHeight: 1.65 }}>
-          Re-upload your labs every 90 days. Watch your biomarkers improve. VITALOOP remembers every result
-          you've ever uploaded — your complete health history in one place, forever.
+          Your timeline combines labs, complaints, check-ins, insights, and interventions into one longitudinal record.
+          This makes progress visible and future decisions smarter.
         </p>
         <BulletList items={[
-          'Unlimited upload history',
-          'Visual trend charts per biomarker',
-          'Improvement score tracking',
-          '90-day re-test reminders',
+          'Unified timeline across all health signals',
+          'Trend charts for biomarkers and symptoms',
+          'Weekly insight generation and health score updates',
+          'Structured history for your next physician visit',
         ]} />
       </div>
     ),
@@ -459,10 +459,10 @@ export default function HowItWorksSection() {
             fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 700,
             letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 20,
           }}>
-            Your complete health intelligence loop
+            A weekly health loop, not a one-time report
           </h2>
           <p style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 560, margin: '0 auto', lineHeight: 1.65 }}>
-            From first blood draw to years of optimized living — every step guided by AI.
+            Start with labs, add symptoms, get guidance, check in weekly, and watch trends evolve over time.
           </p>
         </div>
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth.js'
 import api from '../lib/api.js'
 import { motion } from 'framer-motion'
-import { Users, Settings, Database, BarChart3, AlertCircle, CheckCircle, Clock, Construction } from 'lucide-react'
+import { Users, Settings, Database, BarChart3, AlertCircle, CheckCircle, Clock, AlertTriangle, Bell } from 'lucide-react'
 import AdminShell from '../components/admin/AdminShell.jsx'
 
 export default function MasterAdmin() {
@@ -11,6 +11,10 @@ export default function MasterAdmin() {
   const [symptomAnalytics, setSymptomAnalytics] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
   const [loading, setLoading] = useState(true)
+  const [users, setUsers] = useState([])
+  const [redFlags, setRedFlags] = useState([])
+  const [notifications, setNotifications] = useState([])
+  const [loadingTab, setLoadingTab] = useState(false)
 
   // Unified super admin check: user_metadata OR app_metadata
   const meta = user?.user_metadata || {}
@@ -41,6 +45,27 @@ export default function MasterAdmin() {
     loadAdminData()
   }, [user, isSuperAdmin])
 
+  const loadTab = async (tab) => {
+    setActiveTab(tab)
+    setLoadingTab(true)
+    try {
+      if (tab === 'users' && users.length === 0) {
+        const { data } = await api.get('/admin/users')
+        setUsers(data || [])
+      }
+      if (tab === 'redflags' && redFlags.length === 0) {
+        const { data } = await api.get('/admin/red-flags?acknowledged=false')
+        setRedFlags(data || [])
+      }
+    } catch { /* ignore */ }
+    finally { setLoadingTab(false) }
+  }
+
+  const acknowledgeFlag = async (id) => {
+    setRedFlags(prev => prev.filter(f => f.id !== id))
+    await api.post(`/admin/red-flags/${id}/acknowledge`).catch(() => {})
+  }
+
   if (loading) return (
     <AdminShell title="Operations" subtitle="Master Admin" variant="ops">
       <div style={{ textAlign: 'center', padding: 64, color: 'rgba(255,255,255,0.4)' }}>Loading…</div>
@@ -56,12 +81,13 @@ export default function MasterAdmin() {
           { id: 'users', label: 'Users', icon: Users },
           { id: 'knowledge', label: 'Knowledge Base', icon: Database },
           { id: 'monitoring', label: 'System', icon: Settings },
+          { id: 'redflags', label: 'Red Flags', icon: AlertTriangle },
         ].map(tab => {
           const Icon = tab.icon
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => loadTab(tab.id)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '10px 16px',
@@ -146,7 +172,7 @@ export default function MasterAdmin() {
       )}
 
       {/* Users Tab */}
-      {activeTab === 'users' && (
+      {activeTab === 'users' && !loadingTab && (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
           style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 24 }}
         >
@@ -163,21 +189,54 @@ export default function MasterAdmin() {
                 </tr>
               </thead>
               <tbody>
-                <tr style={{ borderBottom: '0.5px solid rgba(255,255,255,0.06)' }}>
-                  <td style={{ padding: '12px' }}><code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: 4, fontSize: 11 }}>placeholder</code></td>
-                  <td style={{ padding: '12px' }}>—</td>
-                  <td style={{ padding: '12px' }}><span style={{ color: '#1d9e75', display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={12} /> Active</span></td>
-                  <td style={{ padding: '12px' }}><span style={{ background: 'rgba(29,158,117,0.15)', color: '#1d9e75', padding: '2px 8px', borderRadius: 4, fontSize: 11 }}>Free</span></td>
-                  <td style={{ padding: '12px' }}>—</td>
-                  <td style={{ padding: '12px' }}><span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>Backend endpoint pending</span></td>
-                </tr>
+                {users.length === 0 && (
+                  <tr><td colSpan={6} style={{ padding: 24, color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>No users found.</td></tr>
+                )}
+                {users.map((u) => (
+                  <tr key={u.id} style={{ borderBottom: '0.5px solid rgba(255,255,255,0.06)', transition: 'background 0.1s' }}>
+                    <td style={{ padding: '12px' }}><code style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: 4, fontSize: 11 }}>{u.id?.slice(0, 8)}…</code></td>
+                    <td style={{ padding: '12px' }}>{u.email}</td>
+                    <td style={{ padding: '12px' }}><span style={{ color: '#1d9e75', display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={12} /> Active</span></td>
+                    <td style={{ padding: '12px' }}><span style={{ background: u.sub_status === 'active' ? 'rgba(29,158,117,0.15)' : 'rgba(255,255,255,0.06)', color: u.sub_status === 'active' ? '#1d9e75' : 'rgba(255,255,255,0.4)', padding: '2px 8px', borderRadius: 4, fontSize: 11, textTransform: 'capitalize' }}>{u.sub_status}</span></td>
+                    <td style={{ padding: '12px' }}>—</td>
+                    <td style={{ padding: '12px' }}><button onClick={() => api.get(`/admin/users/${u.id}`).then(r => alert(JSON.stringify(r.data, null, 2)))} style={{ background: 'none', border: 'none', color: '#1d9e75', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>View</button></td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-          <div style={{ marginTop: 16, padding: '14px 18px', background: 'rgba(245,166,35,0.08)', border: '0.5px solid rgba(245,166,35,0.2)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Construction size={14} style={{ color: '#f5a623', flexShrink: 0 }} />
-            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>Full user list requires <code style={{ color: '#f5a623' }}>GET /admin/users</code> backend endpoint.</span>
-          </div>
+        </motion.div>
+      )}
+
+      {/* Red Flags Tab */}
+      {activeTab === 'redflags' && !loadingTab && (
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 24 }}
+        >
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: '#fff', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <AlertTriangle size={16} style={{ color: '#ef4444' }} /> Active Red Flags ({redFlags.length})
+          </h2>
+          {redFlags.length === 0 && <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.35)' }}>No active red flags. All users nominal.</p>}
+          {redFlags.map((flag, i) => (
+            <motion.div key={flag.id || i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+              style={{ background: flag.severity === 'critical' ? 'rgba(239,68,68,0.08)' : 'rgba(245,166,35,0.08)', border: `0.5px solid ${flag.severity === 'critical' ? 'rgba(239,68,68,0.3)' : 'rgba(245,166,35,0.3)'}`, borderRadius: 12, padding: '16px 18px', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: flag.severity === 'critical' ? '#ef4444' : '#f5a623' }}>{flag.severity}</span>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{flag.trigger_type}</span>
+                </div>
+                <div style={{ fontSize: 14, color: '#fff', fontWeight: 600, marginBottom: 4 }}>{flag.summary}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>
+                  User: {flag.users?.email || flag.user_id?.slice(0, 8)} · {flag.created_at ? new Date(flag.created_at).toLocaleString() : ''}
+                </div>
+              </div>
+              <button onClick={() => acknowledgeFlag(flag.id)}
+                style={{ background: 'rgba(255,255,255,0.07)', border: 'none', borderRadius: 8, padding: '7px 14px', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                Acknowledge
+              </button>
+            </motion.div>
+          ))}
         </motion.div>
       )}
 

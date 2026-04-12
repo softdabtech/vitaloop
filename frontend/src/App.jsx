@@ -13,6 +13,9 @@ import Privacy from './pages/Privacy.jsx'
 import Terms from './pages/Terms.jsx'
 import ClientAdmin from './pages/ClientAdmin.jsx'
 import MasterAdmin from './pages/MasterAdmin.jsx'
+import Onboarding from './pages/Onboarding.jsx'
+import WeeklyCheckIn from './pages/WeeklyCheckIn.jsx'
+import Insights from './pages/Insights.jsx'
 import { useAuth } from './hooks/useAuth.js'
 import { useEffect } from 'react'
 
@@ -58,6 +61,9 @@ export default function App() {
         <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
         <Route path="/admin" element={<PrivateRoute><ClientAdmin /></PrivateRoute>} />
         <Route path="/ops" element={<SuperAdminRoute><MasterAdmin /></SuperAdminRoute>} />
+        <Route path="/onboarding" element={<PrivateRoute><Onboarding /></PrivateRoute>} />
+        <Route path="/checkin" element={<PrivateRoute><WeeklyCheckIn /></PrivateRoute>} />
+        <Route path="/timeline" element={<PrivateRoute><Insights /></PrivateRoute>} />
       </Routes>
     </BrowserRouter>
   )
