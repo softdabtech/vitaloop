@@ -1,10 +1,12 @@
 import axios from 'axios'
 import { supabase } from './supabase.js'
+import toast from 'react-hot-toast'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || 'https://vitaloop.softdab.tech/api',
 })
 
+// ── Request: attach JWT ───────────────────────────────────────────────────────
 api.interceptors.request.use(async (config) => {
   const { data: { session } } = await supabase.auth.getSession()
   if (session?.access_token) {
@@ -12,5 +14,38 @@ api.interceptors.request.use(async (config) => {
   }
   return config
 })
+
+// ── Response: handle auth errors and paywall ─────────────────────────────────
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const status = error.response?.status
+    const code = error.response?.data?.code
+
+    if (status === 401) {
+      await supabase.auth.signOut()
+      window.location.href = '/login'
+      return Promise.reject(error)
+    }
+
+    if (status === 402 || status === 403) {
+      // Trigger paywall global state via custom event
+      window.dispatchEvent(new CustomEvent('vitaloop:paywall'))
+      return Promise.reject(error)
+    }
+
+    // User-friendly error messages
+    const messages = {
+      LAB_TEXT_TOO_SHORT: 'Lab text too short — try a clearer photo.',
+      UPLOAD_NOT_FOUND: 'Upload not found or access denied.',
+      PROGRESS_NOT_FOUND: 'No progress data yet.',
+      NETWORK_ERROR: 'Network error — check your connection.',
+    }
+    const msg = messages[code] || error.response?.data?.detail || 'Something went wrong.'
+    toast.error(msg, { id: code || 'api-error' })
+
+    return Promise.reject(error)
+  }
+)
 
 export default api
