@@ -52,6 +52,9 @@ function zoneColor(zone, biomarkers) {
 
 export default function BodyAvatar({ biomarkers }) {
   const [active, setActive] = useState(null)
+  const matched = active
+    ? biomarkers.filter((b) => active.keywords.some((kw) => b.name.toLowerCase().includes(kw.toLowerCase())))
+    : []
 
   return (
     <div className="flex flex-col md:flex-row gap-8 items-start">
@@ -88,6 +91,27 @@ export default function BodyAvatar({ biomarkers }) {
         <div className="bg-gray-800 rounded-xl p-5 md:max-w-xs w-full">
           <h4 className="font-bold text-white text-lg mb-2">{active.label}</h4>
           <p className="text-xs text-gray-400 mb-3">Related markers: {active.keywords.join(', ')}</p>
+          {matched.length > 0 ? (
+            <div className="mb-3 space-y-1">
+              {matched.slice(0, 4).map((m) => (
+                <div key={m.id} className="flex items-center justify-between text-xs">
+                  <span className="text-gray-300">{m.name}</span>
+                  <span
+                    className={
+                      m.status === 'OPTIMAL' ? 'text-green-400' :
+                      m.status === 'BORDERLINE' ? 'text-yellow-400' :
+                      m.status === 'DEFICIENT' ? 'text-red-400' :
+                      m.status === 'ELEVATED' ? 'text-orange-400' : 'text-gray-400'
+                    }
+                  >
+                    {m.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500 mb-3">No matching markers in your latest data.</p>
+          )}
           <p className="text-xs text-green-400 font-medium mb-1">Recommended supplements:</p>
           <p className="text-sm text-gray-300">{active.supplements}</p>
         </div>

@@ -23,6 +23,14 @@ export default function Avatar() {
       <p className="text-gray-400 text-sm mb-8">
         Tap a zone to see related biomarkers and supplement recommendations.
       </p>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6 text-xs">
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 text-center text-green-300">Optimal</div>
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 text-center text-yellow-300">Borderline</div>
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 text-center text-red-300">Deficient</div>
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 text-center text-orange-300">Elevated</div>
+      </div>
+
       <BodyAvatar biomarkers={biomarkers} />
     </div>
   )
