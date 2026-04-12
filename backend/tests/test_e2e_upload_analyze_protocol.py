@@ -18,7 +18,14 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
         "protocols": [],
     }
 
-    async def fake_save_lab_upload(user_id, extracted_text, lab_name=None, test_date=None, ocr_confidence=None):
+    async def fake_save_lab_upload(
+        user_id,
+        extracted_text,
+        lab_name=None,
+        test_date=None,
+        ocr_confidence=None,
+        analyze_prompt_version=None,
+    ):
         upload_id = str(uuid.uuid4())
         state["uploads"][upload_id] = {
             "id": upload_id,
@@ -27,6 +34,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
             "lab_name": lab_name,
             "test_date": test_date,
             "ocr_confidence": ocr_confidence,
+            "analyze_prompt_version": analyze_prompt_version,
         }
         return {"id": upload_id}
 
@@ -65,7 +73,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
         state["biomarkers"][upload_id] = rows
         return rows
 
-    async def fake_get_biomarkers_by_upload(upload_id):
+    async def fake_get_biomarkers_by_upload(upload_id, user_id):
         return state["biomarkers"].get(upload_id, [])
 
     async def fake_generate_protocol(biomarkers, symptoms):
@@ -81,7 +89,12 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
             }
         ]
 
-    async def fake_save_protocol(user_id, upload_id, recommendations):
+    async def fake_save_protocol(user_id, upload_id, recommendations, prompt_version=None):
+        existing = [p for p in state["protocols"] if p["user_id"] == user_id and p["upload_id"] == upload_id]
+        if existing:
+            existing[0]["recommendations"] = recommendations
+            return existing[0]
+
         protocol = {
             "id": str(uuid.uuid4()),
             "user_id": user_id,
@@ -90,6 +103,13 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
         }
         state["protocols"].append(protocol)
         return protocol
+
+    async def fake_assert_upload_belongs_to_user(upload_id, user_id):
+        upload = state["uploads"].get(upload_id)
+        if not upload or upload["user_id"] != user_id:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail={"detail": "Upload not found", "code": "UPLOAD_NOT_FOUND"})
+        return upload
 
     def fake_iherb_url(query):
         return f"https://www.iherb.com/search?kw={query}&rcode=TEST"
@@ -102,6 +122,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
     monkeypatch.setattr(protocol_router, "generate_protocol", fake_generate_protocol)
     monkeypatch.setattr(protocol_router, "save_protocol", fake_save_protocol)
     monkeypatch.setattr(protocol_router, "build_iherb_url", fake_iherb_url)
+    monkeypatch.setattr(protocol_router, "assert_upload_belongs_to_user", fake_assert_upload_belongs_to_user)
 
     app.dependency_overrides[get_current_user] = lambda: {
         "sub": fake_user_id,
@@ -139,5 +160,15 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
             assert protocol_json["upload_id"] == analyze_json["upload_id"]
             assert len(protocol_json["recommendations"]) == 1
             assert "iherb_url" in protocol_json["recommendations"][0]
+
+            # DoD check: valid token but чужой upload_id -> denied
+            foreign_upload_id = str(uuid.uuid4())
+            protocol_forbidden = await client.post(
+                "/protocol",
+                json={"upload_id": foreign_upload_id, "symptoms": ["fatigue"]},
+            )
+            assert protocol_forbidden.status_code == 404
+            forbidden_json = protocol_forbidden.json()
+            assert forbidden_json["code"] == "UPLOAD_NOT_FOUND"
     finally:
         app.dependency_overrides.clear()

@@ -1,4 +1,5 @@
 import asyncio
+from fastapi import HTTPException
 from supabase import create_client, Client
 from app.config import settings
 from typing import List, Dict, Any, Optional
@@ -26,6 +27,7 @@ async def save_lab_upload(
     lab_name: Optional[str] = None,
     test_date: Optional[str] = None,
     ocr_confidence: Optional[float] = None,
+    analyze_prompt_version: Optional[str] = None,
 ) -> Dict:
     supabase = _get_supabase()
     payload: Dict[str, Any] = {
@@ -39,6 +41,8 @@ async def save_lab_upload(
         payload["test_date"] = test_date
     if ocr_confidence is not None:
         payload["ocr_confidence"] = ocr_confidence
+    if analyze_prompt_version:
+        payload["analyze_prompt_version"] = analyze_prompt_version
 
     resp = await _run(lambda: supabase.table("lab_uploads").insert(payload).execute())
     return resp.data[0]
@@ -65,19 +69,73 @@ async def save_biomarkers(upload_id: str, user_id: str, biomarkers: List[Dict]) 
     return resp.data
 
 
-async def get_biomarkers_by_upload(upload_id: str) -> List[Dict]:
+async def assert_upload_belongs_to_user(upload_id: str, user_id: str) -> Dict:
     supabase = _get_supabase()
-    resp = await _run(lambda: supabase.table("biomarkers").select("*").eq("upload_id", upload_id).execute())
+    resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .select("id,user_id")
+        .eq("id", upload_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    if not resp.data:
+        raise HTTPException(status_code=404, detail={"detail": "Upload not found", "code": "UPLOAD_NOT_FOUND"})
+    return resp.data[0]
+
+
+async def get_biomarkers_by_upload(upload_id: str, user_id: str) -> List[Dict]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("biomarkers")
+        .select("*")
+        .eq("upload_id", upload_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
     return resp.data
 
 
-async def save_protocol(user_id: str, upload_id: str, recommendations: List[Dict]) -> Dict:
+async def save_protocol(
+    user_id: str,
+    upload_id: str,
+    recommendations: List[Dict],
+    prompt_version: Optional[str] = None,
+) -> Dict:
     supabase = _get_supabase()
-    resp = await _run(
+
+    existing = await _run(
         lambda: supabase.table("protocols")
-        .insert({"user_id": user_id, "upload_id": upload_id, "recommendations": recommendations})
+        .select("id")
+        .eq("user_id", user_id)
+        .eq("upload_id", upload_id)
+        .limit(1)
         .execute()
     )
+
+    payload: Dict[str, Any] = {"recommendations": recommendations}
+    if prompt_version:
+        payload["prompt_version"] = prompt_version
+
+    if existing.data:
+        protocol_id = existing.data[0]["id"]
+        updated = await _run(
+            lambda: supabase.table("protocols")
+            .update(payload)
+            .eq("id", protocol_id)
+            .execute()
+        )
+        return updated.data[0]
+
+    create_payload: Dict[str, Any] = {
+        "user_id": user_id,
+        "upload_id": upload_id,
+        "recommendations": recommendations,
+    }
+    if prompt_version:
+        create_payload["prompt_version"] = prompt_version
+
+    resp = await _run(lambda: supabase.table("protocols").insert(create_payload).execute())
     return resp.data[0]
 
 

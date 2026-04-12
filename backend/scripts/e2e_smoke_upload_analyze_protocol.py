@@ -19,8 +19,21 @@ async def run() -> None:
         "biomarkers": {},
     }
 
-    async def fake_save_lab_upload(user_id, extracted_text, lab_name=None, test_date=None, ocr_confidence=None):
-        return {"id": str(uuid.uuid4())}
+    async def fake_save_lab_upload(
+        user_id,
+        extracted_text,
+        lab_name=None,
+        test_date=None,
+        ocr_confidence=None,
+        analyze_prompt_version=None,
+    ):
+        upload_id = str(uuid.uuid4())
+        state.setdefault("uploads", {})[upload_id] = {
+            "id": upload_id,
+            "user_id": user_id,
+            "analyze_prompt_version": analyze_prompt_version,
+        }
+        return {"id": upload_id}
 
     async def fake_extract_biomarkers(text, symptoms):
         return [
@@ -40,7 +53,14 @@ async def run() -> None:
         state["biomarkers"][upload_id] = rows
         return rows
 
-    async def fake_get_biomarkers_by_upload(upload_id):
+    async def fake_assert_upload_belongs_to_user(upload_id, user_id):
+        upload = state.get("uploads", {}).get(upload_id)
+        if not upload or upload["user_id"] != user_id:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail={"detail": "Upload not found", "code": "UPLOAD_NOT_FOUND"})
+        return upload
+
+    async def fake_get_biomarkers_by_upload(upload_id, user_id):
         return state["biomarkers"].get(upload_id, [])
 
     async def fake_generate_protocol(biomarkers, symptoms):
@@ -55,7 +75,7 @@ async def run() -> None:
             }
         ]
 
-    async def fake_save_protocol(user_id, upload_id, recommendations):
+    async def fake_save_protocol(user_id, upload_id, recommendations, prompt_version=None):
         return {
             "id": str(uuid.uuid4()),
             "user_id": user_id,
@@ -74,6 +94,7 @@ async def run() -> None:
     protocol_router.generate_protocol = fake_generate_protocol
     protocol_router.save_protocol = fake_save_protocol
     protocol_router.build_iherb_url = fake_iherb_url
+    protocol_router.assert_upload_belongs_to_user = fake_assert_upload_belongs_to_user
 
     app.dependency_overrides[get_current_user] = lambda: {"sub": fake_user_id, "email": "smoke@vitaloop.test"}
 

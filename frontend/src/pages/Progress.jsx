@@ -22,7 +22,7 @@ export default function Progress() {
 
   useEffect(() => {
     if (!user) return
-    api.get(`/progress/${user.id}`).then((res) => {
+    api.get('/progress').then((res) => {
       setData(res.data)
       setLoading(false)
     })

@@ -4,7 +4,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from app.dependencies import get_current_user
-from app.services.supabase_service import save_symptoms
+from app.services.supabase_service import save_symptoms, assert_upload_belongs_to_user
 
 router = APIRouter()
 
@@ -21,10 +21,14 @@ async def record_symptoms(
     current_user: dict = Depends(get_current_user),
 ):
     user_id: str = current_user["sub"]
+    upload_id = str(request.upload_id) if request.upload_id else None
+
+    if upload_id:
+        await assert_upload_belongs_to_user(upload_id, user_id)
 
     result = await save_symptoms(
         user_id=user_id,
-        upload_id=str(request.upload_id) if request.upload_id else None,
+        upload_id=upload_id,
         tags=request.tags,
         severity=request.severity,
     )
