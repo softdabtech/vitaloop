@@ -79,6 +79,27 @@ CREATE TABLE public.symptoms (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX idx_symptoms_user_id ON public.symptoms(user_id);
+CREATE INDEX idx_symptoms_created_at ON public.symptoms(created_at DESC);
+CREATE INDEX idx_symptoms_tags_gin ON public.symptoms USING GIN(tags);
+
+-- Optional helper for dashboard aggregation by symptom tags in a time window
+CREATE OR REPLACE FUNCTION public.get_symptom_tag_summary(p_user_id UUID, p_days INT DEFAULT 30)
+RETURNS TABLE(tag TEXT, count BIGINT, avg_severity NUMERIC)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT
+    unnest(tags) AS tag,
+    COUNT(*)::BIGINT AS count,
+    ROUND(AVG(severity)::NUMERIC, 2) AS avg_severity
+  FROM public.symptoms
+  WHERE user_id = p_user_id
+    AND created_at >= (NOW() - make_interval(days => GREATEST(1, LEAST(p_days, 365))))
+  GROUP BY tag
+  ORDER BY count DESC, avg_severity DESC;
+$$;
+
 -- 5. PROTOCOLS
 CREATE TABLE public.protocols (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
