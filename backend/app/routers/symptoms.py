@@ -11,7 +11,7 @@ router = APIRouter()
 
 class SymptomsRequest(BaseModel):
     upload_id: Optional[UUID] = None
-    tags: List[str] = Field(..., min_items=1)
+    tags: List[str] = Field(..., min_length=1)
     severity: int = Field(default=5, ge=1, le=10)
 
 

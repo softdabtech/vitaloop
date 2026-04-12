@@ -1,12 +1,13 @@
 from pydantic_settings import BaseSettings
+from pydantic_settings import SettingsConfigDict
 from typing import List
 
 
 class Settings(BaseSettings):
-    supabase_url: str
-    supabase_service_key: str
+    supabase_url: str = ""
+    supabase_service_key: str = ""
     supabase_jwt_secret: str = ""  # Project Settings → API → JWT Secret
-    anthropic_api_key: str
+    anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-20250514"
     app_env: str = "development"
     allowed_origins: str = "http://localhost:5173"
@@ -20,9 +21,10 @@ class Settings(BaseSettings):
     def origins_list(self) -> List[str]:
         return [o.strip() for o in self.allowed_origins.split(",")]
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+    )
 
 
 settings = Settings()
