@@ -3,7 +3,7 @@ import { supabase } from './supabase.js'
 import toast from 'react-hot-toast'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://vitaloop.softdab.tech/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
 })
 
 // ── Request: attach JWT ───────────────────────────────────────────────────────
@@ -28,9 +28,22 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    if (status === 402 || status === 403) {
-      // Trigger paywall global state via custom event
+    if (status === 402) {
+      // Paywall — trigger global paywall UI
       window.dispatchEvent(new CustomEvent('vitaloop:paywall'))
+      return Promise.reject(error)
+    }
+
+    if (status === 403) {
+      // 403 = access denied, NOT paywall
+      if (code === 'ACCESS_DENIED') {
+        toast.error('Access denied', { id: 'access-denied' })
+      } else {
+        const messages = {
+          UPLOAD_NOT_FOUND: 'Upload not found or access denied.',
+        }
+        toast.error(messages[code] || 'Access denied.', { id: code || 'forbidden' })
+      }
       return Promise.reject(error)
     }
 

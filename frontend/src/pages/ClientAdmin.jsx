@@ -6,6 +6,7 @@ import api from '../lib/api.js'
 import { SYMPTOM_OPTIONS } from '../lib/symptoms.js'
 import { Calendar, TrendingUp, Heart, CreditCard, Download, AlertTriangle } from 'lucide-react'
 import { motion } from 'framer-motion'
+import AdminShell from '../components/admin/AdminShell.jsx'
 
 export default function ClientAdmin() {
   const { user } = useAuth()
@@ -103,17 +104,20 @@ export default function ClientAdmin() {
   }
 
   if (loading) {
-    return <div className="min-h-screen bg-gray-950 text-gray-300 p-8">Loading dashboard...</div>
+    return (
+      <AdminShell title="Health Dashboard" variant="client">
+        <div style={{ textAlign: 'center', padding: 64, color: 'rgba(255,255,255,0.4)' }}>Loading…</div>
+      </AdminShell>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Health Dashboard</h1>
-          <p className="text-gray-400">Your personalized health journey and analytics{profile?.full_name ? `, ${profile.full_name}` : ''}</p>
-        </div>
+    <AdminShell
+      title="Health Dashboard"
+      subtitle={profile?.full_name || undefined}
+      variant="client"
+    >
+      <div>
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-4 gap-4 mb-8">
@@ -335,6 +339,6 @@ export default function ClientAdmin() {
           </div>
         </div>
       </div>
-    </div>
+    </AdminShell>
   )
 }

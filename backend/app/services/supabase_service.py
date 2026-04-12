@@ -310,3 +310,53 @@ async def get_user_progress(user_id: str) -> List[Dict]:
         )
         result.append({**upload, "biomarkers": biomarkers.data})
     return result
+
+
+async def get_admin_overview() -> Dict[str, Any]:
+    """Aggregate platform metrics for the /admin/overview endpoint."""
+    supabase = _get_supabase()
+    cutoff_30d = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    cutoff_7d = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+
+    total_users_resp = await _run(
+        lambda: supabase.table("users").select("id", count="exact").execute()
+    )
+    total_users = total_users_resp.count or len(total_users_resp.data)
+
+    active_users_resp = await _run(
+        lambda: supabase.table("users")
+        .select("id", count="exact")
+        .gte("updated_at", cutoff_30d)
+        .execute()
+    )
+    active_users = active_users_resp.count or len(active_users_resp.data)
+
+    premium_resp = await _run(
+        lambda: supabase.table("users")
+        .select("id", count="exact")
+        .eq("sub_status", "active")
+        .execute()
+    )
+    premium_subscribers = premium_resp.count or len(premium_resp.data)
+
+    total_uploads_resp = await _run(
+        lambda: supabase.table("lab_uploads").select("id", count="exact").execute()
+    )
+    total_uploads = total_uploads_resp.count or len(total_uploads_resp.data)
+
+    weekly_uploads_resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .select("id", count="exact")
+        .gte("created_at", cutoff_7d)
+        .execute()
+    )
+    weekly_uploads = weekly_uploads_resp.count or len(weekly_uploads_resp.data)
+
+    return {
+        "total_users": total_users,
+        "active_users": active_users,
+        "premium_subscribers": premium_subscribers,
+        "total_uploads": total_uploads,
+        "weekly_uploads": weekly_uploads,
+        "mrr": 0,  # requires Stripe data — placeholder
+    }

@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
 import { supabase } from '../lib/supabase.js'
 import toast from 'react-hot-toast'
 
 export default function Settings() {
   const { user, signOut } = useAuth()
+  const navigate = useNavigate()
   const [profile, setProfile] = useState({ full_name: '', age: '', sex: '', timezone: 'America/New_York' })
   const [saving, setSaving] = useState(false)
+
+  const meta = user?.user_metadata || {}
+  const app = user?.app_metadata || {}
+  const isSuperAdmin = meta.is_super_admin || app.is_super_admin
 
   useEffect(() => {
     if (!user) return
@@ -63,6 +69,22 @@ export default function Settings() {
       <button onClick={signOut} className="mt-4 w-full border border-gray-700 text-gray-500 py-2.5 rounded-lg hover:border-gray-500 text-sm">
         Sign out
       </button>
+      <div className="mt-6 space-y-2">
+        <button
+          onClick={() => navigate('/admin')}
+          className="w-full border border-gray-700 text-gray-400 py-2.5 rounded-lg hover:border-green-500 hover:text-green-400 text-sm transition"
+        >
+          My Health Dashboard →
+        </button>
+        {isSuperAdmin && (
+          <button
+            onClick={() => navigate('/ops')}
+            className="w-full bg-gray-800 border border-gray-600 text-yellow-400 py-2.5 rounded-lg hover:border-yellow-500 text-sm font-semibold transition"
+          >
+            ⚡ Open Ops Console
+          </button>
+        )}
+      </div>
     </div>
   )
 }
