@@ -9,16 +9,16 @@ const BIOMARKERS = [
   { name: 'Magnesium',  value: '1.4 mg/dL',  status: 'DEFICIENT',  pct: 20, color: '#e53935' },
 ]
 
-const HERO_WORDS_L1 = ['Know', 'your', 'body.']
-const HERO_WORDS_L2 = ['Upgrade', 'your', 'life.']
+const HERO_WORDS_L1 = ['Understand', 'your', 'labs.']
+const HERO_WORDS_L2 = ['Track', 'your', 'health.']
 
 function DemoModal({ onClose }) {
   const STEPS = [
-    { label: 'Upload', desc: 'Drop your Quest PDF', icon: '📂' },
-    { label: 'Scan', desc: 'AI reads 50+ biomarkers in 30s', icon: '🔬' },
-    { label: 'Protocol', desc: 'Personalized supplement stack', icon: '💊' },
-    { label: 'Avatar', desc: 'See your body health map', icon: '🧬' },
-    { label: 'Track', desc: 'Progress over 90 days', icon: '📈' },
+    { label: 'Upload Labs', desc: 'Drop your Quest or LabCorp PDF', icon: '📂' },
+    { label: 'Describe Symptoms', desc: 'Fatigue, brain fog, sleep issues…', icon: '📝' },
+    { label: 'Get Guidance', desc: 'Personalized protocol + rationale', icon: '💊' },
+    { label: 'Check In Weekly', desc: 'Energy, sleep, mood, adherence', icon: '📅' },
+    { label: 'Track Progress', desc: 'Health trends over months & years', icon: '📈' },
   ]
   const [step, setStep] = useState(0)
 
@@ -158,7 +158,7 @@ export default function Hero() {
             borderRadius: 980, padding: '6px 18px',
             fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--teal-600)',
           }}>
-            Biohacking · as · a · service
+            Longitudinal · Health · Intelligence
           </span>
         </div>
 
@@ -211,8 +211,8 @@ export default function Hero() {
           maxWidth: 560, margin: '0 auto 40px',
           lineHeight: 1.6,
         }}>
-          Upload any blood test. AI extracts your biomarkers, identifies deficiencies,
-          and builds a personalized supplement protocol — in 60 seconds.
+          Upload your labs, describe your symptoms, and get a personalized protocol.
+          Check in weekly — VITALOOP tracks your health trends over months, not just one-time results.
         </p>
 
         {/* CTA row */}
