@@ -1,0 +1,25 @@
+# FastAPI core
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+
+# Supabase
+supabase==2.4.2
+
+# Anthropic Claude
+anthropic==0.28.0
+
+# Data validation
+pydantic==2.7.1
+pydantic-settings==2.3.0
+
+# HTTP client
+httpx==0.27.0
+
+# Utilities
+python-dotenv==1.0.1
+tenacity==8.3.0
+
+# Tests
+pytest==8.2.2
+pytest-asyncio==0.23.7
