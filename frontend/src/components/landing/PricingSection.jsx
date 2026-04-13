@@ -13,27 +13,27 @@ const FREE_FEATURES = [
 
 const CORE_FEATURES = [
   'Unlimited lab uploads',
-  'All 50+ biomarkers',
+  'All 50+ biomarkers tracked',
   'Full AI supplement protocol',
   'Digital Health Avatar',
-  'Progress tracking (unlimited history)',
-  'iHerb & partner 1-click buy',
+  'Unlimited progress history',
+  'iHerb 1-click purchase links',
   '90-day re-test reminders',
-  'Priority AI analysis (<60s)',
+  'Priority AI (<60 seconds)',
 ]
 
 export default function PricingSection() {
   const navigate = useNavigate()
   const [isAnnual, setAnnual] = useState(false)
-  const [displayPrice, setDisplayPrice] = useState(49)
+  const [displayPrice, setDisplayPrice] = useState(29)
   const [priceVisible, setPriceVisible] = useState(true)
 
-  const monthlyPrice = isAnnual ? 39 : 49
+  const monthlyPrice = isAnnual ? 23 : 29
 
   useEffect(() => {
     setPriceVisible(false)
     const t = setTimeout(() => {
-      setDisplayPrice(isAnnual ? 39 : 49)
+      setDisplayPrice(isAnnual ? 23 : 29)
       setPriceVisible(true)
     }, 150)
     return () => clearTimeout(t)
@@ -103,6 +103,7 @@ export default function PricingSection() {
             background: 'white', borderRadius: 28,
             border: '0.5px solid var(--gray-100)', padding: '44px 36px',
             display: 'flex', flexDirection: 'column',
+            minHeight: 520,
           }}>
             <div style={{ fontSize: 13, color: 'var(--gray-500)', fontWeight: 500, marginBottom: 12 }}>Free</div>
             <div style={{ fontSize: 64, fontWeight: 700, color: 'var(--gray-900)', letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 6 }}>
@@ -120,27 +121,13 @@ export default function PricingSection() {
                 </li>
               ))}
             </ul>
-            <button
-              onClick={() => navigate('/login')}
-              style={{
-                background: 'transparent',
-                border: '1.5px solid var(--teal-500)',
-                borderRadius: 980, padding: '14px',
-                fontSize: 16, fontWeight: 600, color: 'var(--teal-600)',
-                cursor: 'pointer', transition: 'background 200ms, color 200ms',
-                width: '100%',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--teal-50)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-            >
-              Start free
-            </button>
           </div>
 
           {/* CORE card */}
           <div style={{
             background: 'var(--teal-800)', borderRadius: 28, padding: '44px 36px',
             display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden',
+            minHeight: 520,
           }}>
             {/* Badge */}
             <div style={{
@@ -175,7 +162,7 @@ export default function PricingSection() {
                 borderRadius: 6, padding: '3px 10px',
                 fontSize: 11, fontWeight: 700,
               }}>
-                Save $120/year
+                Save $72/year
               </div>
             )}
             {isAnnual && (
@@ -195,29 +182,35 @@ export default function PricingSection() {
                 </li>
               ))}
             </ul>
-
-            <button
-              onClick={() => navigate('/login')}
-              style={{
-                background: 'white', color: 'var(--teal-800)',
-                border: 'none', borderRadius: 980, padding: '14px',
-                fontSize: 16, fontWeight: 700, cursor: 'pointer',
-                transition: 'opacity 200ms, transform 200ms', width: '100%',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.92'; e.currentTarget.style.transform = 'scale(1.01)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1)' }}
-            >
-              Get started
-            </button>
-            <div style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: 'var(--teal-300)' }}>
-              Cancel anytime · No commitment
-            </div>
           </div>
         </div>
 
         {/* Footer note */}
         <div className="reveal" style={{ textAlign: 'center', fontSize: 13, color: 'var(--gray-500)' }}>
           All plans include: HIPAA-ready data handling · No ads · No data selling
+        </div>
+
+        <div className="reveal" style={{ textAlign: 'center', marginTop: 40 }}>
+          <button
+            onClick={() => navigate('/login')}
+            style={{
+              background: 'var(--teal-800)', color: 'white',
+              border: 'none', borderRadius: 980,
+              padding: '16px 48px', fontSize: 17, fontWeight: 700,
+              cursor: 'pointer', transition: 'background 200ms, transform 200ms',
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--teal-600)'; e.currentTarget.style.transform = 'scale(1.02)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal-800)'; e.currentTarget.style.transform = 'scale(1)' }}
+          >
+            Start your free analysis
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </button>
+          <p style={{ fontSize: 13, color: 'var(--gray-500)', marginTop: 12 }}>
+            Free forever · Upgrade anytime · Cancel in 1 click
+          </p>
         </div>
       </div>
     </section>

@@ -49,8 +49,7 @@ export default function WeeklyCheckIn() {
       await api.post('/checkins', form)
       setDone(true)
       toast.success('Check-in submitted!')
-    } catch (e) {
-      toast.error('Failed to submit check-in')
+    } catch (_error) {
     } finally {
       setSaving(false)
     }

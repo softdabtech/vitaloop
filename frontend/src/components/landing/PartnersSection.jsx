@@ -2,16 +2,16 @@ import { useState } from 'react'
 import { Check } from 'lucide-react'
 
 const STORES = [
-  { name: 'iHerb',             tagline: 'Global · All brands' },
-  { name: 'Amazon',            tagline: 'US · EU · UK · Global' },
-  { name: 'Thorne',            tagline: 'Professional grade' },
-  { name: 'Life Extension',    tagline: 'Science-backed' },
-  { name: 'Vitacost',          tagline: 'Best value US' },
-  { name: 'Holland & Barrett', tagline: 'EU · UK stores' },
-  { name: 'MyProtein',         tagline: 'UK · EU · AU' },
-  { name: 'Viridian',          tagline: 'UK · Ethical' },
-  { name: 'Solgar',            tagline: 'Global premium' },
-  { name: 'NOW Foods',         tagline: 'Global · Affordable' },
+  { name: 'iHerb',             tagline: 'Global · All brands',    color: '#5a9f3e', initial: 'iH' },
+  { name: 'Amazon',            tagline: 'US · EU · UK · Global',  color: '#ff9900', initial: 'Am' },
+  { name: 'Thorne',            tagline: 'Professional grade',     color: '#003865', initial: 'Th' },
+  { name: 'Life Extension',    tagline: 'Science-backed',         color: '#c41e3a', initial: 'LE' },
+  { name: 'Vitacost',          tagline: 'Best value US',          color: '#e8630a', initial: 'Vc' },
+  { name: 'Holland & Barrett', tagline: 'EU · UK stores',         color: '#006b3f', initial: 'H&' },
+  { name: 'MyProtein',         tagline: 'UK · EU · AU',           color: '#1c1c1c', initial: 'MP' },
+  { name: 'Viridian',          tagline: 'UK · Ethical',           color: '#4a7c59', initial: 'Vi' },
+  { name: 'Solgar',            tagline: 'Global premium',         color: '#8b6914', initial: 'So' },
+  { name: 'NOW Foods',         tagline: 'Global · Affordable',    color: '#e63c2f', initial: 'NF' },
 ]
 
 const LABS = [
@@ -169,16 +169,50 @@ export default function PartnersSection() {
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gray-900)', marginBottom: 20 }}>
             Supplement stores
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
-            {STORES.map(({ name, tagline }) => (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+            gap: 12,
+          }}>
+            {STORES.map(({ name, tagline, color, initial }) => (
               <div
                 key={name}
-                style={{ background: 'white', borderRadius: 16, border: '0.5px solid var(--gray-100)', padding: '18px 20px', transition: 'transform 200ms ease, border-color 200ms ease', cursor: 'default' }}
-                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.03)'; e.currentTarget.style.borderColor = 'var(--teal-300)' }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.borderColor = 'var(--gray-100)' }}
+                style={{
+                  background: 'white', borderRadius: 16,
+                  border: '0.5px solid var(--gray-100)',
+                  padding: '18px 16px',
+                  transition: 'transform 250ms ease, border-color 250ms ease, box-shadow 250ms ease',
+                  cursor: 'default',
+                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-3px)'
+                  e.currentTarget.style.borderColor = color + '60'
+                  e.currentTarget.style.boxShadow = `0 8px 24px ${color}18`
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.borderColor = 'var(--gray-100)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
               >
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 3 }}>{name}</div>
-                <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>{tagline}</div>
+                {/* Brand logo block */}
+                <div style={{
+                  width: 44, height: 44, borderRadius: 10,
+                  background: color + '15',
+                  border: `1.5px solid ${color}40`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13, fontWeight: 800, color: color,
+                  letterSpacing: '-0.02em',
+                }}>
+                  {initial}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 2 }}>
+                    {name}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>{tagline}</div>
+                </div>
               </div>
             ))}
           </div>
@@ -214,9 +248,29 @@ export default function PartnersSection() {
               Become a VITALOOP Partner
             </h3>
             <p style={{ fontSize: 16, color: 'var(--teal-100)', lineHeight: 1.65, marginBottom: 24 }}>
-              Earn 20% recurring commission on every subscriber you refer.
-              Health coaches, nutritionists, doctors, and influencers welcome.
+              Join health coaches, nutritionists, doctors and wellness brands who earn
+              <strong style={{ color: 'white' }}> 20% recurring commission </strong>
+              on every subscriber they refer — monthly, for as long as they stay.
             </p>
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28,
+            }}>
+              {[
+                { n: '20%', l: 'recurring commission' },
+                { n: '$117', l: 'avg annual value per referral' },
+                { n: '∞', l: 'no cap on earnings' },
+                { n: '30 days', l: 'cookie attribution window' },
+              ].map(({ n, l }) => (
+                <div key={n} style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: 12, padding: '14px 16px',
+                  border: '0.5px solid rgba(255,255,255,0.08)',
+                }}>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: 'white', letterSpacing: '-0.02em' }}>{n}</div>
+                  <div style={{ fontSize: 12, color: 'var(--teal-100)', marginTop: 2 }}>{l}</div>
+                </div>
+              ))}
+            </div>
             <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
               {['Custom referral link + dashboard', '20% recurring monthly commission', 'Marketing materials provided', 'Priority support'].map((item) => (
                 <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, color: 'var(--teal-100)' }}>
@@ -226,10 +280,34 @@ export default function PartnersSection() {
               ))}
             </ul>
             <button
-              style={{ background: 'white', color: 'var(--teal-800)', border: 'none', borderRadius: 980, padding: '14px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', transition: 'opacity 200ms, transform 200ms' }}
+              onClick={() => {
+                const subject = encodeURIComponent('VITALOOP Partnership Request')
+                const body = encodeURIComponent(
+                  'Hello VITALOOP team,\n\n' +
+                  'I am interested in becoming a VITALOOP partner.\n\n' +
+                  'My name: \n' +
+                  'My role / business: \n' +
+                  'Website / social: \n' +
+                  'Audience size: \n\n' +
+                  'Please send me more details about the partner program.\n\n' +
+                  'Best regards'
+                )
+                window.location.href = `mailto:info@softdab.tech?subject=${subject}&body=${body}`
+              }}
+              style={{
+                background: 'white', color: 'var(--teal-800)',
+                border: 'none', borderRadius: 980, padding: '14px 28px',
+                fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                transition: 'opacity 200ms, transform 200ms',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}
               onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9'; e.currentTarget.style.transform = 'scale(1.02)' }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1)' }}
             >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
               Apply to partner program →
             </button>
           </div>

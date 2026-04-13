@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Check } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import NeonBody from './NeonBody.jsx'
 
 const CHART_DATA = [
   { month: 'Jan', vitaminD: 18, ferritin: 12 },
@@ -216,45 +217,6 @@ function ProtocolText() {
   )
 }
 
-/* ── Row 4 — Avatar mini preview ── */
-function MiniAvatarSVG({ zoneColors }) {
-  const { brain, heart, muscles, bones, gut } = zoneColors
-  return (
-    <svg viewBox="0 0 200 380" width="100%" style={{ maxHeight: 280, display: 'block' }} aria-label="Body health map">
-      <defs>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
-      {/* Silhouette */}
-      <g fill="#1a1a1e">
-        <circle cx="100" cy="36" r="26" />
-        <rect x="88" y="62" width="24" height="20" rx="5"/>
-        <path d="M42,82 L158,82 L148,195 L52,195 Z" />
-        <path d="M42,82 L18,90 L16,182 L40,182 L48,98 Z" />
-        <path d="M158,82 L182,90 L184,182 L160,182 L152,98 Z" />
-        <path d="M52,195 L148,195 L154,228 L46,228 Z" />
-        <path d="M46,228 L93,228 L90,374 L49,374 Z" />
-        <path d="M107,228 L154,228 L151,374 L110,374 Z" />
-      </g>
-
-      {/* Zone glows */}
-      <circle cx="100" cy="36" r="26" fill={brain} opacity="0.45" filter="url(#glow)" className="zone-pulse" />
-      <ellipse cx="94" cy="130" rx="22" ry="18" fill={heart} opacity="0.45" filter="url(#glow)" className="zone-pulse" style={{ animationDelay: '0.4s' }} />
-      <g fill={muscles} opacity="0.4" filter="url(#glow)" className="zone-pulse" style={{ animationDelay: '0.8s' }}>
-        <path d="M42,82 L18,90 L16,182 L40,182 L48,98 Z" />
-        <path d="M158,82 L182,90 L184,182 L160,182 L152,98 Z" />
-      </g>
-      <g fill={bones} opacity="0.35" filter="url(#glow)" className="zone-pulse" style={{ animationDelay: '1.2s' }}>
-        <path d="M46,228 L93,228 L90,374 L49,374 Z" />
-        <path d="M107,228 L154,228 L151,374 L110,374 Z" />
-      </g>
-      <ellipse cx="100" cy="170" rx="38" ry="25" fill={gut} opacity="0.4" filter="url(#glow)" className="zone-pulse" style={{ animationDelay: '1.6s' }} />
-    </svg>
-  )
-}
-
 function AvatarRowVisual() {
   return (
     <div style={{
@@ -262,14 +224,15 @@ function AvatarRowVisual() {
       border: '0.5px solid rgba(255,255,255,0.08)', padding: 28,
       display: 'flex', flexDirection: 'column', alignItems: 'center',
     }}>
-      <MiniAvatarSVG
-        zoneColors={{
-          brain:   '#f5a623',
-          heart:   '#1D9E75',
+      <NeonBody
+        zones={{
+          brain: '#f5a623',
+          heart: '#1D9E75',
           muscles: '#e53935',
-          bones:   '#e53935',
-          gut:     '#f5a623',
+          bones: '#e53935',
+          gut: '#f5a623',
         }}
+        size={200}
       />
       <div style={{
         marginTop: 20, display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center',

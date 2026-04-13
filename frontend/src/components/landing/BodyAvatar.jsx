@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import NeonBody from './NeonBody.jsx'
 
 /* ── Zone data ── */
 const ZONES = {
@@ -197,6 +199,7 @@ function BodySVG({ activeZone, hoveredZone, onZoneClick, onZoneHover }) {
 
 /* ── Zone detail panel ── */
 function ZonePanel({ zone }) {
+  const navigate = useNavigate()
   const z = ZONES[zone]
   const stat = STATUS[z.status]
 
@@ -258,6 +261,7 @@ function ZonePanel({ zone }) {
         transition: 'background 200ms',
         alignSelf: 'flex-start',
       }}
+        onClick={() => navigate('/login')}
         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--teal-600)' }}
         onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal-800)' }}
       >
@@ -269,7 +273,14 @@ function ZonePanel({ zone }) {
 
 export default function BodyAvatar() {
   const [activeZone,  setActiveZone]  = useState('brain')
-  const [hoveredZone, setHoveredZone] = useState(null)
+
+  const zoneColors = {
+    brain: STATUS[ZONES.brain.status].color,
+    heart: STATUS[ZONES.heart.status].color,
+    muscles: STATUS[ZONES.muscles.status].color,
+    bones: STATUS[ZONES.bones.status].color,
+    gut: STATUS[ZONES.gut.status].color,
+  }
 
   const statusLabel = (id) => STATUS[ZONES[id].status].label
 
@@ -285,11 +296,12 @@ export default function BodyAvatar() {
     >
       {/* SVG side */}
       <div style={{ padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <BodySVG
+        <NeonBody
+          interactive
+          zones={zoneColors}
           activeZone={activeZone}
-          hoveredZone={hoveredZone}
           onZoneClick={setActiveZone}
-          onZoneHover={setHoveredZone}
+          size={240}
         />
 
         <div className="md:hidden" style={{ marginTop: 16 }}>

@@ -154,11 +154,11 @@ export default function Navbar() {
           <button
             className="md:hidden"
             onClick={() => setMobileOpen((v) => !v)}
-            aria-label="Toggle menu"
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--gray-700)', display: 'flex', alignItems: 'center',
+              color: 'var(--gray-700)',
             }}
           >
             {mobileOpen ? <X size={22} /> : <Menu size={22} />}
