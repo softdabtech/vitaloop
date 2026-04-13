@@ -1,3 +1,5 @@
+import { NeonBodyMini } from './NeonBody.jsx'
+
 const PROFILES = [
   {
     name: 'Sarah',
@@ -30,41 +32,6 @@ const PROFILES = [
     storyColor: '#1D9E75',
   },
 ]
-
-function MiniBodySVG({ zones }) {
-  const { brain, heart, muscles, bones, gut } = zones
-  return (
-    <svg viewBox="0 0 100 200" width={80} height={160} aria-hidden="true">
-      <defs>
-        <filter id="mglow">
-          <feGaussianBlur stdDeviation="2" result="b"/>
-          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
-      {/* Silhouette */}
-      <g fill="#2a2a2e">
-        <circle cx="50" cy="18" r="13"/>
-        <rect x="44" y="31" width="12" height="10" rx="3"/>
-        <path d="M20,41 L80,41 L74,98 L26,98 Z"/>
-        <path d="M20,41 L8,46 L7,91 L19,91 L24,50 Z"/>
-        <path d="M80,41 L92,46 L93,91 L81,91 L76,50 Z"/>
-        <path d="M26,98 L74,98 L77,114 L23,114 Z"/>
-        <path d="M23,114 L46,114 L44,188 L25,188 Z"/>
-        <path d="M54,114 L77,114 L75,188 L56,188 Z"/>
-      </g>
-      {/* Zone glows */}
-      <g filter="url(#mglow)">
-        <circle cx="50" cy="18" r="13" fill={brain} opacity="0.6"/>
-        <ellipse cx="46" cy="65" rx="12" ry="10" fill={heart} opacity="0.55"/>
-        <path d="M20,41 L8,46 L7,91 L19,91 Z" fill={muscles} opacity="0.5"/>
-        <path d="M80,41 L92,46 L93,91 L81,91 Z" fill={muscles} opacity="0.5"/>
-        <path d="M23,114 L46,114 L44,188 L25,188 Z" fill={bones} opacity="0.45"/>
-        <path d="M54,114 L77,114 L75,188 L56,188 Z" fill={bones} opacity="0.45"/>
-        <ellipse cx="50" cy="85" rx="20" ry="13" fill={gut} opacity="0.45"/>
-      </g>
-    </svg>
-  )
-}
 
 const ZONE_LABEL = ['Brain', 'Heart', 'Muscles', 'Bones', 'Gut']
 const ZONE_KEYS  = ['brain', 'heart', 'muscles', 'bones', 'gut']
@@ -101,7 +68,7 @@ export default function AvatarExamples() {
             }}
           >
             {/* Avatar */}
-            <MiniBodySVG zones={zones} />
+            <NeonBodyMini zones={zones} size={80} />
 
             {/* Name */}
             <div style={{ marginTop: 16, marginBottom: 4, textAlign: 'center' }}>

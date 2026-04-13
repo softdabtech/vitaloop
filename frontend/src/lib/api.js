@@ -21,6 +21,36 @@ api.interceptors.response.use(
   async (error) => {
     const status = error.response?.status
     const code = error.response?.data?.code
+    const detail = error.response?.data?.detail
+    const validationErrors = error.response?.data?.errors || []
+
+    const resolveMessage = () => {
+      if (status === 422) {
+        const scoreError = validationErrors.find((item) => (
+          Array.isArray(item.loc) && item.loc.includes('protocol_adherence')
+        ))
+        if (scoreError) {
+          return 'Check-in value must be between 1 and 10.'
+        }
+        if (typeof detail === 'string' && detail.trim()) {
+          return detail
+        }
+        return 'Validation failed. Check your input and try again.'
+      }
+
+      const messages = {
+        LAB_TEXT_TOO_SHORT: 'Lab text too short — try a clearer photo.',
+        UPLOAD_NOT_FOUND: 'Upload not found or access denied.',
+        PROGRESS_NOT_FOUND: 'No progress data yet.',
+        NETWORK_ERROR: 'Network error — check your connection.',
+      }
+
+      if (typeof detail === 'string' && detail.trim() && detail.length < 200) {
+        return detail
+      }
+
+      return messages[code] || 'Something went wrong.'
+    }
 
     if (status === 401) {
       await supabase.auth.signOut()
@@ -47,14 +77,7 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    // User-friendly error messages
-    const messages = {
-      LAB_TEXT_TOO_SHORT: 'Lab text too short — try a clearer photo.',
-      UPLOAD_NOT_FOUND: 'Upload not found or access denied.',
-      PROGRESS_NOT_FOUND: 'No progress data yet.',
-      NETWORK_ERROR: 'Network error — check your connection.',
-    }
-    const msg = messages[code] || error.response?.data?.detail || 'Something went wrong.'
+    const msg = resolveMessage()
     toast.error(msg, { id: code || 'api-error' })
 
     return Promise.reject(error)

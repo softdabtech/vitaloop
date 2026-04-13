@@ -1,13 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Play, Shield } from 'lucide-react'
-
-const BIOMARKERS = [
-  { name: 'Vitamin D',  value: '18.5 ng/mL', status: 'DEFICIENT',  pct: 15, color: '#e53935' },
-  { name: 'Ferritin',   value: '12 ng/mL',   status: 'BORDERLINE', pct: 40, color: '#f5a623' },
-  { name: 'B12',        value: '520 pg/mL',  status: 'OPTIMAL',    pct: 82, color: '#1D9E75' },
-  { name: 'Magnesium',  value: '1.4 mg/dL',  status: 'DEFICIENT',  pct: 20, color: '#e53935' },
-]
+import { ArrowRight, Shield } from 'lucide-react'
+import { NeonBodyMini } from './NeonBody.jsx'
 
 const HERO_WORDS_L1 = ['Understand', 'your', 'labs.']
 const HERO_WORDS_L2 = ['Track', 'your', 'health.']
@@ -107,6 +101,203 @@ function DemoModal({ onClose }) {
   )
 }
 
+function HeroSlideshow() {
+  const SLIDES = [
+    {
+      label: '01 - Upload',
+      bg: 'var(--gray-50)',
+      content: (
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <div style={{
+            border: '2px dashed var(--teal-300)', borderRadius: 16,
+            padding: '28px 20px', marginBottom: 16,
+          }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none"
+                   stroke="var(--teal-500)" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M3 7a2 2 0 012-2h3.5L10 7h9a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+              </svg>
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--gray-700)' }}>
+              Drop your lab PDF here
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: 4 }}>
+              Quest - LabCorp - Any lab worldwide
+            </div>
+          </div>
+          <div style={{ height: 4, background: 'var(--gray-100)', borderRadius: 2, overflow: 'hidden' }}>
+            <div className="fill-bar" style={{ height: '100%', width: '94%', background: 'var(--teal-500)', borderRadius: 2 }}/>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--teal-600)', marginTop: 6, fontWeight: 600 }}>
+            Extracting biomarkers... 94%
+          </div>
+        </div>
+      ),
+    },
+    {
+      label: '02 - AI Analysis',
+      bg: '#111',
+      content: (
+        <div style={{ fontFamily: '"SF Mono", monospace', padding: '4px 0' }}>
+          <div style={{ fontSize: 10, color: '#666', marginBottom: 10 }}>{'// AI analysis output'}</div>
+          {[
+            { k: 'Vitamin D', v: '18.5 ng/mL', s: 'DEFICIENT', c: '#e53935' },
+            { k: 'Ferritin',  v: '12 ng/mL',   s: 'DEFICIENT', c: '#e53935' },
+            { k: 'B12',       v: '310 pg/mL',  s: 'OPTIMAL',   c: '#1D9E75' },
+            { k: 'TSH',       v: '2.4 mIU/L',  s: 'OPTIMAL',   c: '#1D9E75' },
+          ].map(({ k, v, s, c }, i) => (
+            <div key={k} className="typewriter-line" style={{
+              fontSize: 12, color: 'rgba(255,255,255,0.8)',
+              display: 'flex', justifyContent: 'space-between',
+              marginBottom: 10, animationDelay: `${i * 0.5}s`,
+            }}>
+              <span style={{ color: 'var(--teal-300)' }}>"{k}"</span>
+              <span style={{ color: c, fontSize: 10, fontWeight: 700,
+                background: c + '20', padding: '2px 7px', borderRadius: 4 }}>{s}</span>
+            </div>
+          ))}
+          <div className="typewriter-badge" style={{
+            marginTop: 12, padding: '7px 12px', borderRadius: 8,
+            background: '#1D9E7520', border: '0.5px solid var(--teal-500)',
+            fontSize: 11, fontWeight: 700, color: 'var(--teal-300)', textAlign: 'center',
+          }}>
+            {'\u2713'} AI Analysis complete - 4 biomarkers classified
+          </div>
+        </div>
+      ),
+    },
+    {
+      label: '03 - Your Protocol',
+      bg: 'var(--gray-50)',
+      content: (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gray-900)' }}>Your protocol</div>
+            <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>6 supplements - $67/mo</div>
+          </div>
+          {[
+            { name: 'Vitamin D3',   dose: '5000 IU', timing: 'Morning', p: 'HIGH',   c: '#e53935' },
+            { name: 'Iron Bisgly.', dose: '25 mg',   timing: 'Evening', p: 'HIGH',   c: '#e53935' },
+            { name: 'Magnesium',    dose: '400 mg',  timing: 'Bedtime', p: 'MEDIUM', c: '#f5a623' },
+          ].map(({ name, dose, timing, p, c }) => (
+            <div key={name} style={{
+              background: 'var(--teal-50)', border: '0.5px solid var(--teal-100)',
+              borderRadius: 10, padding: '10px 14px', marginBottom: 8,
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: c, flexShrink: 0 }}/>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gray-900)' }}>{name}</div>
+                <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>{dose} - {timing}</div>
+              </div>
+              <span style={{ fontSize: 9, fontWeight: 700, color: c, background: c + '15',
+                padding: '2px 6px', borderRadius: 4 }}>{p}</span>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      label: '04 - Health Avatar',
+      bg: '#111',
+      content: (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '0 0 8px' }}>
+          <NeonBodyMini zones={{ brain: '#f5a623', heart: '#1D9E75', muscles: '#e53935', bones: '#e53935', gut: '#f5a623' }} size={160}/>
+        </div>
+      ),
+    },
+    {
+      label: '05 - Progress',
+      bg: 'var(--gray-50)',
+      content: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[
+            { date: 'Jan 15', label: '4 deficiencies found',    dot: '#e53935', highlight: false },
+            { date: 'Apr 20', label: '2 deficiencies remaining', dot: '#f5a623', highlight: false },
+            { date: 'Jul 8',  label: '0 deficiencies \u2713',        dot: '#1D9E75', highlight: true },
+          ].map(({ date, label, dot, highlight }) => (
+            <div key={date} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              background: highlight ? 'var(--teal-50)' : 'white',
+              borderRadius: 10, padding: '10px 14px',
+              border: `0.5px solid ${highlight ? 'var(--teal-300)' : 'var(--gray-100)'}`,
+            }}>
+              <span style={{ fontSize: 11, color: 'var(--gray-500)', minWidth: 42 }}>{date}</span>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0 }}/>
+              <span style={{ fontSize: 12, fontWeight: highlight ? 600 : 400,
+                color: highlight ? 'var(--teal-700)' : 'var(--gray-700)' }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+  ]
+
+  const [active, setActive] = useState(0)
+
+  useEffect(() => {
+    const t = setInterval(() => setActive((s) => (s + 1) % SLIDES.length), 3000)
+    return () => clearInterval(t)
+  }, [SLIDES.length])
+
+  const slide = SLIDES[active]
+
+  return (
+    <div style={{ maxWidth: 560, margin: '0 auto' }} className="floating">
+      <style>{`
+        @keyframes heroFillPulse {
+          0% { transform: translateX(-8%); }
+          100% { transform: translateX(0); }
+        }
+        @keyframes heroTypeIn {
+          from { opacity: 0; transform: translateX(-6px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .fill-bar { animation: heroFillPulse 900ms ease; }
+        .typewriter-line { animation: heroTypeIn 480ms ease both; }
+        .typewriter-badge { animation: heroTypeIn 500ms ease both; animation-delay: 0.8s; }
+      `}</style>
+
+      {/* Step tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 12, justifyContent: 'center' }}>
+        {SLIDES.map((s, i) => (
+          <button
+            key={i}
+            onClick={() => setActive(i)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 11, color: i === active ? 'var(--teal-600)' : 'var(--gray-300)',
+              fontWeight: i === active ? 700 : 400,
+              paddingBottom: 4,
+              borderBottom: `2px solid ${i === active ? 'var(--teal-500)' : 'transparent'}`,
+              transition: 'all 200ms',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Slide card */}
+      <div style={{
+        background: slide.bg, borderRadius: 20,
+        border: `0.5px solid ${slide.bg === '#111' ? 'rgba(255,255,255,0.08)' : 'var(--gray-100)'}`,
+        padding: '24px 28px', minHeight: 220,
+        transition: 'background 400ms ease',
+      }}>
+        {/* Browser dots */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
+          {['#ff5f57', '#febc2e', '#28c840'].map((c) => (
+            <div key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c }}/>
+          ))}
+        </div>
+        {slide.content}
+      </div>
+    </div>
+  )
+}
+
 export default function Hero() {
   const navigate = useNavigate()
   const [vis, setVis] = useState(false)
@@ -150,8 +341,22 @@ export default function Hero() {
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 860, width: '100%', textAlign: 'center' }}>
 
+        {/* Brand name - visible first */}
+        <div style={{ ...tx(0), marginBottom: 12 }}>
+          <span style={{
+            display: 'block',
+            fontSize: 'clamp(13px, 1.5vw, 15px)',
+            fontWeight: 700,
+            letterSpacing: '0.22em',
+            color: 'var(--teal-800)',
+            textTransform: 'uppercase',
+          }}>
+            VITALOOP
+          </span>
+        </div>
+
         {/* Eyebrow */}
-        <div style={{ ...tx(0), display: 'inline-flex', marginBottom: 32 }}>
+        <div style={{ ...tx(80), display: 'inline-flex', marginBottom: 32 }}>
           <span style={{
             display: 'inline-block',
             background: 'var(--teal-50)', border: '0.5px solid var(--teal-300)',
@@ -177,8 +382,8 @@ export default function Hero() {
                   color: 'var(--gray-900)',
                   opacity: vis ? 1 : 0,
                   transform: vis ? 'translateY(0)' : 'translateY(30px)',
-                  transition: `opacity 650ms ease ${120 + i * 35}ms,
-                               transform 650ms cubic-bezier(0.25,0.46,0.45,0.94) ${120 + i * 35}ms`,
+                  transition: `opacity 650ms ease ${200 + i * 35}ms,
+                               transform 650ms cubic-bezier(0.25,0.46,0.45,0.94) ${200 + i * 35}ms`,
                 }}
               >
                 {w}
@@ -194,8 +399,8 @@ export default function Hero() {
                   color: 'var(--teal-500)',
                   opacity: vis ? 1 : 0,
                   transform: vis ? 'translateY(0)' : 'translateY(30px)',
-                  transition: `opacity 650ms ease ${240 + i * 35}ms,
-                               transform 650ms cubic-bezier(0.25,0.46,0.45,0.94) ${240 + i * 35}ms`,
+                  transition: `opacity 650ms ease ${320 + i * 35}ms,
+                               transform 650ms cubic-bezier(0.25,0.46,0.45,0.94) ${320 + i * 35}ms`,
                 }}
               >
                 {w}
@@ -206,7 +411,7 @@ export default function Hero() {
 
         {/* Subheadline */}
         <p style={{
-          ...tx(400),
+          ...tx(480),
           fontSize: 19, color: 'var(--gray-500)',
           maxWidth: 560, margin: '0 auto 40px',
           lineHeight: 1.6,
@@ -217,7 +422,7 @@ export default function Hero() {
 
         {/* CTA row */}
         <div style={{
-          ...tx(560),
+          ...tx(640),
           display: 'flex', gap: 16, justifyContent: 'center',
           flexWrap: 'wrap', marginBottom: 32,
         }}>
@@ -238,7 +443,7 @@ export default function Hero() {
           </button>
           <button
             onClick={() => setShowDemo(true)}
-            aria-label="Watch 60 second demo"
+            aria-label="How it works quick tour"
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               background: 'transparent',
@@ -250,13 +455,19 @@ export default function Hero() {
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--teal-500)'; e.currentTarget.style.color = 'var(--teal-600)' }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--gray-300)'; e.currentTarget.style.color = 'var(--gray-700)' }}
           >
-            <Play size={12} fill="currentColor" aria-hidden="true" /> Watch 60s demo
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 8 8 12 12 16"/>
+              <line x1="16" y1="12" x2="8" y2="12"/>
+            </svg>
+            How it works - quick tour
           </button>
         </div>
 
         {/* Social proof */}
         <div style={{
-          ...tx(720),
+          ...tx(800),
           display: 'flex', gap: 20, justifyContent: 'center',
           alignItems: 'center', flexWrap: 'wrap', marginBottom: 64,
         }}>
@@ -271,60 +482,9 @@ export default function Hero() {
           </span>
         </div>
 
-        {/* Hero Visual — Dashboard Mockup */}
-        <div
-          style={{
-            ...tx(900),
-            background: 'var(--gray-50)', borderRadius: 20,
-            border: '0.5px solid var(--gray-100)', padding: '24px 28px',
-            maxWidth: 600, margin: '0 auto',
-          }}
-          className="floating"
-        >
-          {/* Browser chrome dots */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20 }}>
-            {['#ff5f57', '#febc2e', '#28c840'].map((c) => (
-              <div key={c} aria-hidden="true" style={{ width: 10, height: 10, borderRadius: '50%', background: c }} />
-            ))}
-            <div style={{
-              flex: 1, height: 20, background: 'var(--gray-100)',
-              borderRadius: 6, marginLeft: 10, opacity: 0.6,
-            }} />
-          </div>
-
-          {/* Biomarker cards */}
-          <div className="grid grid-cols-2 gap-3">
-            {BIOMARKERS.map(({ name, value, status, pct, color }) => (
-              <div
-                key={name}
-                style={{
-                  background: 'white', borderRadius: 12, padding: '14px 16px',
-                  border: '0.5px solid var(--gray-100)',
-                }}
-              >
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gray-500)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-                  {name}
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--gray-900)', marginBottom: 8 }}>
-                  {value}
-                </div>
-                <div style={{ height: 4, background: 'var(--gray-100)', borderRadius: 2, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2 }} />
-                </div>
-                <div style={{ fontSize: 10, fontWeight: 700, color, marginTop: 4 }}>{status}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Protocol badge */}
-          <div style={{
-            marginTop: 16,
-            background: 'var(--teal-50)', border: '0.5px solid var(--teal-300)',
-            borderRadius: 8, padding: '10px 16px', textAlign: 'center',
-            fontSize: 13, fontWeight: 600, color: 'var(--teal-600)',
-          }}>
-            Protocol generated ✓ — 6 supplements recommended
-          </div>
+        {/* Hero Visual */}
+        <div style={{ ...tx(980) }}>
+          <HeroSlideshow />
         </div>
       </div>
 
