@@ -14,7 +14,10 @@ export function useScrollReveal() {
     )
 
     const els = document.querySelectorAll('.reveal')
-    els.forEach((el) => observer.observe(el))
+    els.forEach((el) => {
+      el.classList.add('reveal-ready')
+      observer.observe(el)
+    })
 
     return () => observer.disconnect()
   }, [])
