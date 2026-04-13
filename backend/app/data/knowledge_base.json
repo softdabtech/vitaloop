@@ -1,0 +1,16 @@
+{
+  "version": "kb_v1",
+  "updated_at": "2026-04-12T00:00:00Z",
+  "entries": [
+    {
+      "biomarker": "Vitamin D (25-OH)",
+      "why_it_matters": "Vitamin D is linked to immune regulation, mood, and musculoskeletal resilience.",
+      "recommended_actions": ["Re-check serum 25-OH in 8-12 weeks", "Combine D3 with magnesium and K2 if appropriate"]
+    },
+    {
+      "biomarker": "Ferritin",
+      "why_it_matters": "Ferritin reflects iron stores and can affect oxygen transport, energy, and cognitive performance.",
+      "recommended_actions": ["Assess iron panel context", "Re-check ferritin and CBC after intervention window"]
+    }
+  ]
+}
