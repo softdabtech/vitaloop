@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { version } from '../../../package.json'
 
 const COL_PRODUCT = [
   { label: 'How it works',      href: '#how-it-works' },
@@ -128,8 +129,8 @@ export default function Footer() {
           <span style={{ fontSize: 12, color: '#6e6e73' }}>
             © {new Date().getFullYear()} VITALOOP LLC · Delaware, USA
           </span>
-          <span style={{ fontSize: 12, color: '#6e6e73' }}>
-            Made with AI · Not medical advice · HIPAA-ready
+          <span style={{ fontSize: 12, color: '#3d3d3f' }}>
+            AI-assisted · For informational purposes only, not medical advice · v{version}
           </span>
         </div>
       </div>
