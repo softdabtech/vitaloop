@@ -22,7 +22,7 @@ const BLOCKS = [
 
 export default function LongevitySection() {
   return (
-    <section className="dna-bg" style={{ padding: 'var(--py-lg) 24px', backgroundColor: 'var(--white)' }}>
+    <section style={{ padding: 'var(--py-lg) 24px', backgroundColor: 'var(--white)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 
         {/* Header */}

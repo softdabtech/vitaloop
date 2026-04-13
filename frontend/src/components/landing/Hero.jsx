@@ -148,7 +148,6 @@ export default function Hero() {
   return (
     <section
       id="hero"
-      className="dna-bg"
       style={{
         minHeight: 'auto',
         display: 'flex', flexDirection: 'column',
