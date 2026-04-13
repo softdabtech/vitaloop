@@ -16,6 +16,7 @@ import MasterAdmin from './pages/MasterAdmin.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import WeeklyCheckIn from './pages/WeeklyCheckIn.jsx'
 import Insights from './pages/Insights.jsx'
+import NotFound from './pages/NotFound.jsx'
 import { useAuth } from './hooks/useAuth.js'
 import { useEffect } from 'react'
 
@@ -64,6 +65,8 @@ export default function App() {
         <Route path="/onboarding" element={<PrivateRoute><Onboarding /></PrivateRoute>} />
         <Route path="/checkin" element={<PrivateRoute><WeeklyCheckIn /></PrivateRoute>} />
         <Route path="/timeline" element={<PrivateRoute><Insights /></PrivateRoute>} />
+        <Route path="/404.html" element={<NotFound />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   )
