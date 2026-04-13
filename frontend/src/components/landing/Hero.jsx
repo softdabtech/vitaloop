@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Shield } from 'lucide-react'
 import { NeonBodyMini } from './NeonBody.jsx'
 
-const HERO_WORDS_L1 = ['Understand', 'your', 'labs.']
-const HERO_WORDS_L2 = ['Track', 'your', 'health.']
+const HERO_WORDS_L1 = ['Know', 'your', 'body.']
+const HERO_WORDS_L2 = ['Upgrade', 'your', 'life.']
 
 function DemoModal({ onClose }) {
   const STEPS = [
@@ -319,11 +319,11 @@ export default function Hero() {
     <section
       id="hero"
       style={{
-        minHeight: '100svh',
+        minHeight: 'auto',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         background: 'var(--white)',
-        padding: '80px 24px 60px',
+        padding: '120px 24px 80px',
         position: 'relative', overflow: 'hidden',
       }}
     >
@@ -421,10 +421,10 @@ export default function Hero() {
         </p>
 
         {/* CTA row */}
-        <div style={{
+        <div className="flex flex-wrap justify-center gap-4 sm:flex-row flex-col items-center" style={{
           ...tx(640),
           display: 'flex', gap: 16, justifyContent: 'center',
-          flexWrap: 'wrap', marginBottom: 32,
+          marginBottom: 32,
         }}>
           <button
             onClick={() => navigate('/login')}

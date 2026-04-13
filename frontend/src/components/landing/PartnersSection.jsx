@@ -47,7 +47,7 @@ function WorldMap() {
   const regionLegend = { US: '#1D9E75', EU: '#5DCAA5', ME: '#f5a623', Asia: '#9FE1CB', LATAM: '#0F6E56' }
 
   return (
-    <div style={{ position: 'relative', background: '#0f1b18', borderRadius: 20, overflow: 'hidden', height: 360 }}>
+    <div style={{ position: 'relative', background: '#0f1b18', borderRadius: 20, overflow: 'hidden', height: 340 }}>
       <svg viewBox="0 0 800 350" width="100%" height="100%" style={{ position: 'absolute', inset: 0 }} aria-hidden="true">
         <defs>
           <pattern id="mapGrid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -109,19 +109,18 @@ function WorldMap() {
       ))}
 
       {[
-        { label: 'North America', x: '15%', y: '55%' },
-        { label: 'Europe', x: '47%', y: '30%' },
-        { label: 'Middle East', x: '58%', y: '52%' },
-        { label: 'Asia', x: '75%', y: '40%' },
-        { label: 'South America', x: '26%', y: '75%' },
+        { label: 'North America', x: '17%', y: '62%' },
+        { label: 'Europe', x: '48%', y: '35%' },
+        { label: 'Middle East', x: '60%', y: '56%' },
+        { label: 'Asia Pacific', x: '76%', y: '50%' },
+        { label: 'Latin America', x: '27%', y: '78%' },
       ].map(({ label, x, y }) => (
         <div key={label} style={{
           position: 'absolute', left: x, top: y,
-          fontSize: 9, color: 'rgba(255,255,255,0.18)',
-          fontWeight: 600, letterSpacing: '0.08em',
-          textTransform: 'uppercase', userSelect: 'none',
           transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none',
+          fontSize: 9, fontWeight: 600, letterSpacing: '0.1em',
+          textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)',
+          pointerEvents: 'none', userSelect: 'none', whiteSpace: 'nowrap',
         }}>
           {label}
         </div>
@@ -252,6 +251,25 @@ export default function PartnersSection() {
               <strong style={{ color: 'white' }}> 20% recurring commission </strong>
               on every subscriber they refer — monthly, for as long as they stay.
             </p>
+            <div style={{
+              display: 'flex', gap: 20, marginBottom: 24, flexWrap: 'wrap',
+            }}>
+              {[
+                { n: '20%', l: 'комиссия' },
+                { n: '$117', l: 'доход/год с клиента' },
+                { n: '∞', l: 'без ограничений' },
+              ].map(({ n, l }) => (
+                <div key={n} style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  borderRadius: 12, padding: '10px 16px',
+                  border: '0.5px solid rgba(255,255,255,0.08)',
+                  minWidth: 90,
+                }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: 'white', letterSpacing: '-0.02em' }}>{n}</div>
+                  <div style={{ fontSize: 11, color: 'var(--teal-100)', marginTop: 2 }}>{l}</div>
+                </div>
+              ))}
+            </div>
             <div style={{
               display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28,
             }}>

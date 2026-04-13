@@ -1,9 +1,15 @@
 const ITEMS = [
-  '🔬 Quest Diagnostics', '🧪 LabCorp', '🏥 SonoHealth',
-  '⭐ 4.9/5 rating', '👤 Sarah M. — Vitamin D +89% in 90 days',
-  '👤 James K. — Fixed iron deficiency', '🌍 Available worldwide',
-  '🔒 HIPAA-ready', '🧬 50+ biomarkers tracked',
-  '💊 iHerb · Amazon · Thorne · Solgar', '⚡ Results in under 60 seconds',
+  'Quest Diagnostics',
+  'LabCorp',
+  'SonoHealth',
+  '4.9 / 5 rating',
+  'Sarah M. — Vitamin D +89% in 90 days',
+  'James K. — Fixed iron deficiency',
+  'Available worldwide',
+  'HIPAA-ready',
+  '50+ biomarkers tracked',
+  'iHerb · Amazon · Thorne · Solgar',
+  'Results in under 60 seconds',
 ]
 
 export default function SocialProofTicker() {
@@ -33,7 +39,7 @@ export default function SocialProofTicker() {
         {all.map((text, i) => (
           <span key={i} style={{ fontSize: 13, color: 'var(--gray-500)', padding: '0 4px', display: 'inline-flex', alignItems: 'center' }}>
             {text}
-            <span style={{ margin: '0 20px', color: 'var(--teal-300)' }}>·</span>
+            <span style={{ margin: '0 16px', color: 'var(--teal-400)', fontSize: 6 }}>●</span>
           </span>
         ))}
       </div>

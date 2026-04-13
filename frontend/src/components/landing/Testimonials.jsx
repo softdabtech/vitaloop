@@ -83,15 +83,17 @@ export default function Testimonials() {
 
               {/* Stats */}
               <div style={{
-                background: 'var(--gray-50)', borderRadius: 12, padding: '12px 16px',
-                marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 6,
+                background: 'var(--teal-50)',
+                border: '0.5px solid var(--teal-300)',
+                borderRadius: 12, padding: '14px 16px', marginBottom: 20,
+                display: 'flex', flexDirection: 'column', gap: 6,
               }}>
                 {stats.map(({ label, before, after, unit }) => (
                   <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 13, color: 'var(--gray-500)' }}>{label}</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--teal-600)' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--teal-600)' }}>
                       {before !== '—' ? `${before} → ` : ''}{after} {unit}
-                      <span style={{ color: 'var(--teal-500)', marginLeft: 4 }}>↑</span>
+                      <span style={{ color: 'var(--teal-600)', marginLeft: 4, fontWeight: 700, fontSize: 11 }}>↑</span>
                     </span>
                   </div>
                 ))}
