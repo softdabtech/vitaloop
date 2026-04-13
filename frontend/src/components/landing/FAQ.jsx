@@ -3,36 +3,36 @@ import { Plus, Minus } from 'lucide-react'
 
 const ITEMS = [
   {
-    q: 'How does VITALOOP read my lab results?',
-    a: 'Our app uses Tesseract.js — an OCR engine running entirely in your browser. It reads your PDF or photo and extracts all biomarker names, values, and reference ranges. Your file is never uploaded to any server.',
+    q: 'How does VITALOOP work?',
+    a: 'You upload your lab results, answer a few personalized questions, and receive a clear protocol based on your data, symptoms, and lifestyle.',
   },
   {
-    q: 'Which labs are supported?',
-    a: 'Any lab worldwide. We officially test with Quest Diagnostics, LabCorp, SonoHealth, Synlab, and Eurofins. The AI handles any format, including non-English lab reports from EU, UAE, and Asian labs.',
+    q: 'Is this medical advice?',
+    a: 'No. VITALOOP provides wellness recommendations based on data and patterns. It does not replace professional medical advice.',
   },
   {
-    q: 'Is this a replacement for my doctor?',
-    a: 'No. VITALOOP is a nutritional optimization tool, not medical software. We help you understand your existing lab results and suggest evidence-based supplement strategies. Always consult your physician for medical decisions.',
+    q: 'What kind of lab tests can I upload?',
+    a: 'You can upload results from any lab. Our system supports most standard blood panels and expands over time.',
   },
   {
-    q: 'How is my health data protected?',
-    a: 'Your PDF never leaves your device — OCR runs client-side. We store only the extracted text values in encrypted Supabase databases with Row Level Security. No employee can access your data.',
+    q: 'How is this different from other health apps?',
+    a: 'Most apps show data. VITALOOP helps you understand it, prioritize issues, and take action with a clear protocol.',
   },
   {
-    q: 'How often should I re-test?',
-    a: 'We recommend every 90 days. This gives your body time to respond to the protocol. Most users see measurable improvement in 8–12 weeks.',
+    q: 'How personalized is it?',
+    a: 'Your protocol is based on your lab data, symptoms, lifestyle, and answers from an adaptive questionnaire — not generic templates.',
   },
   {
-    q: 'Can I use results from multiple family members?',
-    a: 'Each account tracks one individual. For family accounts, contact us — family plans are in development.',
+    q: 'Is my data secure?',
+    a: 'Yes. Your data is processed securely and never sold. Privacy is a core part of the system design.',
   },
   {
-    q: 'What if the AI misreads my lab?',
-    a: 'You can always paste the text manually as a fallback, or correct individual biomarker values in the editor. The AI flags low-confidence readings for your review.',
+    q: 'Do I need to take supplements?',
+    a: 'Not necessarily. Recommendations may include nutrition, lifestyle adjustments, and supplements when relevant.',
   },
   {
-    q: 'How do the iHerb partner links work?',
-    a: 'When you click "Buy on iHerb" from your protocol, you\'re redirected with our affiliate code. You pay the same price — we earn a small commission that helps keep the app running. We never let affiliate relationships influence protocol recommendations.',
+    q: 'How quickly will I see results?',
+    a: 'It depends on the issue, but many users start noticing improvements within a few weeks when following the protocol consistently.',
   },
 ]
 
@@ -45,17 +45,11 @@ export default function FAQ() {
 
         {/* Header */}
         <div className="reveal" style={{ textAlign: 'center', marginBottom: 64 }}>
-          <div style={{
-            fontSize: 12, fontWeight: 600, letterSpacing: '0.12em',
-            textTransform: 'uppercase', color: 'var(--teal-500)', marginBottom: 16,
-          }}>
-            FAQ
-          </div>
           <h2 style={{
             fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 700,
             letterSpacing: '-0.02em', color: 'var(--gray-900)',
           }}>
-            Common questions.
+            Questions before you start?
           </h2>
         </div>
 

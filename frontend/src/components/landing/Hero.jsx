@@ -105,6 +105,7 @@ function HeroSlideshow() {
   const SLIDES = [
     {
       label: '01 - Upload',
+      caption: 'Upload your latest lab report in seconds.',
       bg: 'var(--gray-50)',
       content: (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
@@ -136,6 +137,7 @@ function HeroSlideshow() {
     },
     {
       label: '02 - AI Analysis',
+      caption: 'AI extracts and classifies your biomarkers.',
       bg: '#111',
       content: (
         <div style={{ fontFamily: '"SF Mono", monospace', padding: '4px 0' }}>
@@ -168,6 +170,7 @@ function HeroSlideshow() {
     },
     {
       label: '03 - Your Protocol',
+      caption: 'Get supplement guidance with timing and priority.',
       bg: 'var(--gray-50)',
       content: (
         <div>
@@ -199,6 +202,7 @@ function HeroSlideshow() {
     },
     {
       label: '04 - Health Avatar',
+      caption: 'See your body systems mapped by biomarker status.',
       bg: '#111',
       content: (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '0 0 8px' }}>
@@ -208,6 +212,7 @@ function HeroSlideshow() {
     },
     {
       label: '05 - Progress',
+      caption: 'Track improvements week by week over time.',
       bg: 'var(--gray-50)',
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -258,27 +263,6 @@ function HeroSlideshow() {
         .typewriter-badge { animation: heroTypeIn 500ms ease both; animation-delay: 0.8s; }
       `}</style>
 
-      {/* Step tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 12, justifyContent: 'center' }}>
-        {SLIDES.map((s, i) => (
-          <button
-            key={i}
-            onClick={() => setActive(i)}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 11, color: i === active ? 'var(--teal-600)' : 'var(--gray-300)',
-              fontWeight: i === active ? 700 : 400,
-              paddingBottom: 4,
-              borderBottom: `2px solid ${i === active ? 'var(--teal-500)' : 'transparent'}`,
-              transition: 'all 200ms',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-
       {/* Slide card */}
       <div style={{
         background: slide.bg, borderRadius: 20,
@@ -286,6 +270,18 @@ function HeroSlideshow() {
         padding: '24px 28px', minHeight: 220,
         transition: 'background 400ms ease',
       }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--teal-500)', letterSpacing: '0.08em' }}>{slide.label}</span>
+          <span style={{ fontSize: 11, color: slide.bg === '#111' ? 'rgba(255,255,255,0.45)' : 'var(--gray-500)' }}>{active + 1}/{SLIDES.length}</span>
+        </div>
+        <p style={{
+          fontSize: 12,
+          lineHeight: 1.5,
+          marginBottom: 14,
+          color: slide.bg === '#111' ? 'rgba(255,255,255,0.68)' : 'var(--gray-500)',
+        }}>
+          {slide.caption}
+        </p>
         {/* Browser dots */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
           {['#ff5f57', '#febc2e', '#28c840'].map((c) => (
@@ -341,20 +337,6 @@ export default function Hero() {
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 860, width: '100%', textAlign: 'center' }}>
 
-        {/* Brand name - visible first */}
-        <div style={{ ...tx(0), marginBottom: 12 }}>
-          <span style={{
-            display: 'block',
-            fontSize: 'clamp(13px, 1.5vw, 15px)',
-            fontWeight: 700,
-            letterSpacing: '0.22em',
-            color: 'var(--teal-800)',
-            textTransform: 'uppercase',
-          }}>
-            VITALOOP
-          </span>
-        </div>
-
         {/* Eyebrow */}
         <div style={{ ...tx(80), display: 'inline-flex', marginBottom: 32 }}>
           <span style={{
@@ -363,7 +345,7 @@ export default function Hero() {
             borderRadius: 980, padding: '6px 18px',
             fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--teal-600)',
           }}>
-            Longitudinal · Health · Intelligence
+            AI-powered health optimization
           </span>
         </div>
 
@@ -416,8 +398,8 @@ export default function Hero() {
           maxWidth: 560, margin: '0 auto 40px',
           lineHeight: 1.6,
         }}>
-          Upload your labs, describe your symptoms, and get a personalized protocol.
-          Check in weekly — VITALOOP tracks your health trends over months, not just one-time results.
+          Upload your lab results, get AI analysis, and follow a personalized protocol.
+          Track your progress weekly — not just one-time results.
         </p>
 
         {/* CTA row */}
@@ -443,7 +425,7 @@ export default function Hero() {
           </button>
           <button
             onClick={() => setShowDemo(true)}
-            aria-label="How it works quick tour"
+            aria-label="See how it works"
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               background: 'transparent',
@@ -461,7 +443,7 @@ export default function Hero() {
               <polyline points="12 8 8 12 12 16"/>
               <line x1="16" y1="12" x2="8" y2="12"/>
             </svg>
-            How it works - quick tour
+            See how it works
           </button>
         </div>
 
@@ -472,13 +454,13 @@ export default function Hero() {
           alignItems: 'center', flexWrap: 'wrap', marginBottom: 64,
         }}>
           <span style={{ fontSize: 13, color: 'var(--gray-500)' }}>
-            <span style={{ color: 'var(--teal-500)' }}>★★★★★</span> 4.9 · 2,400+ users
+            <span style={{ color: 'var(--teal-500)' }}>★★★★★</span> 4.9 · 100+ users
           </span>
           <span aria-hidden="true" style={{ width: '0.5px', height: 16, background: 'var(--gray-100)', display: 'inline-block' }} />
-          <span style={{ fontSize: 13, color: 'var(--gray-500)' }}>Quest · LabCorp · Any lab</span>
+          <span style={{ fontSize: 13, color: 'var(--gray-500)' }}>Works with any lab worldwide</span>
           <span aria-hidden="true" style={{ width: '0.5px', height: 16, background: 'var(--gray-100)', display: 'inline-block' }} />
           <span style={{ fontSize: 13, color: 'var(--gray-500)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Shield size={12} aria-hidden="true" /> HIPAA-ready architecture
+            <Shield size={12} aria-hidden="true" /> Secure & privacy-first
           </span>
         </div>
 

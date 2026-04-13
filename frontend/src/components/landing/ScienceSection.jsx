@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
+import { GitMerge, Sliders, BookOpen, Lock } from 'lucide-react'
 
 const STATS = [
-  { value: 50,    suffix: '+', label: 'biomarkers tracked' },
-  { value: 60,    suffix: 's', label: 'average analysis time' },
-  { value: 2400,  suffix: '+', label: 'users optimized' },
-  { value: 90,    suffix: ' days', label: 'average re-test cycle' },
+  { value: 50,  suffix: '+', label: 'biomarkers tracked' },
+  { value: 60,  suffix: 's', label: 'average analysis time' },
+  { value: 100, suffix: '+', label: 'users optimized' },
+  { value: 90,  suffix: ' days', label: 'average re-test cycle' },
 ]
 
 function useCountUp(target, duration = 1600, trigger) {
@@ -52,40 +53,22 @@ function StatCounter({ value, suffix, label }) {
 
 const CARDS = [
   {
-    icon: (
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-        <circle cx="20" cy="20" r="19" stroke="var(--teal-300)" strokeWidth="0.5"/>
-        <path d="M8 20 Q12 10 16 20 Q20 30 24 15 Q28 5 32 20" stroke="var(--teal-500)" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
-        <circle cx="20" cy="12" r="3" fill="var(--teal-300)" opacity="0.6"/>
-        <circle cx="28" cy="18" r="2" fill="var(--teal-500)" opacity="0.8"/>
-        <circle cx="13" cy="24" r="2" fill="var(--teal-300)" opacity="0.6"/>
-      </svg>
-    ),
-    title: 'Powered by Anthropic Claude',
-    body: 'The same AI trusted by Fortune 500 companies interprets your lab data with clinical-grade precision. Structured prompts validated against 50+ biomarker reference databases.',
+    Icon: GitMerge,
+    label: 'Pattern-based approach',
+    title: 'We don\'t just read your labs — we connect the dots',
+    body: 'Your results, symptoms, and lifestyle are analyzed together to reveal patterns most systems miss.',
   },
   {
-    icon: (
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-        <path d="M20 4 L6 10 L6 22 C6 30 13 36 20 38 C27 36 34 30 34 22 L34 10 Z" stroke="var(--teal-500)" strokeWidth="1.8" fill="var(--teal-50)"/>
-        <path d="M13 20 L17 24 L27 14" stroke="var(--teal-500)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-    title: 'Your data never leaves your device',
-    body: 'OCR processing runs entirely in your browser using Tesseract.js. Your PDF is never uploaded to our servers. Only extracted text is analyzed — never your personal health file.',
-    badge: 'HIPAA-ready architecture',
+    Icon: Sliders,
+    label: 'Deep personalization',
+    title: 'Your protocol adapts to you',
+    body: 'Every recommendation is refined using your answers, habits, and real-world feedback — not generic templates.',
   },
   {
-    icon: (
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-        <rect x="6" y="4" width="28" height="32" rx="4" stroke="var(--teal-500)" strokeWidth="1.8" fill="var(--teal-50)"/>
-        <line x1="12" y1="13" x2="28" y2="13" stroke="var(--teal-300)" strokeWidth="1.5" strokeLinecap="round"/>
-        <line x1="12" y1="19" x2="28" y2="19" stroke="var(--teal-300)" strokeWidth="1.5" strokeLinecap="round"/>
-        <line x1="12" y1="25" x2="22" y2="25" stroke="var(--teal-300)" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    ),
-    title: 'Clinical evidence, not opinions',
-    body: 'Supplement recommendations are derived from published clinical trials in PubMed, Cochrane reviews, and established laboratory reference ranges. No affiliate bias in protocol generation.',
+    Icon: BookOpen,
+    label: 'Built from real practice',
+    title: 'Built from years of real-world experience',
+    body: 'Our methodology is based on years of work by nutrition specialists, combining lab data, symptoms, and behavioral patterns.',
   },
 ]
 
@@ -96,26 +79,17 @@ export default function ScienceSection() {
 
         {/* Header */}
         <div className="reveal" style={{ textAlign: 'center', marginBottom: 80 }}>
-          <div style={{
-            fontSize: 12, fontWeight: 600, letterSpacing: '0.12em',
-            textTransform: 'uppercase', color: 'var(--teal-500)', marginBottom: 16,
-          }}>
-            The Science Behind It
-          </div>
           <h2 style={{
             fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 700,
             letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 20,
           }}>
-            Evidence-based. Not guesswork.
+            Why VITALOOP works differently
           </h2>
-          <p style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 560, margin: '0 auto', lineHeight: 1.65 }}>
-            Every protocol recommendation cites peer-reviewed clinical research.
-          </p>
         </div>
 
-        {/* 3-column cards */}
-        <div className="grid md:grid-cols-3 gap-6 stagger-children reveal" style={{ marginBottom: 80 }}>
-          {CARDS.map(({ icon, title, body, badge }) => (
+        {/* 3-column differentiation cards */}
+        <div className="grid md:grid-cols-3 gap-6 stagger-children reveal" style={{ marginBottom: 48 }}>
+          {CARDS.map(({ Icon, label, title, body }) => (
             <div
               key={title}
               style={{
@@ -132,21 +106,75 @@ export default function ScienceSection() {
                 e.currentTarget.style.borderColor = 'var(--gray-100)'
               }}
             >
-              <div style={{ marginBottom: 20 }}>{icon}</div>
-              <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 12 }}>{title}</h3>
-              <p style={{ fontSize: 15, color: 'var(--gray-500)', lineHeight: 1.65 }}>{body}</p>
-              {badge && (
-                <div style={{
-                  marginTop: 16, display: 'inline-block',
-                  background: 'var(--teal-50)', border: '0.5px solid var(--teal-300)',
-                  borderRadius: 8, padding: '4px 10px',
-                  fontSize: 11, fontWeight: 600, color: 'var(--teal-600)', letterSpacing: '0.06em',
-                }}>
-                  {badge}
-                </div>
-              )}
+              <div style={{
+                width: 44, height: 44, borderRadius: 12,
+                background: 'rgba(16,185,129,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                marginBottom: 20,
+              }}>
+                <Icon size={22} color="var(--teal-500)" strokeWidth={1.8} />
+              </div>
+              <div style={{
+                fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
+                textTransform: 'uppercase', color: 'var(--teal-500)', marginBottom: 10,
+              }}>
+                {label}
+              </div>
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 12, lineHeight: 1.35 }}>
+                {title}
+              </h3>
+              <p style={{ fontSize: 15, color: 'var(--gray-500)', lineHeight: 1.65, margin: 0 }}>{body}</p>
             </div>
           ))}
+        </div>
+
+        {/* Bottom 2-up trust cards */}
+        <div className="grid md:grid-cols-2 gap-6 reveal" style={{ marginBottom: 80 }}>
+          {/* Privacy */}
+          <div style={{
+            borderRadius: 20, padding: '28px 32px',
+            background: 'var(--gray-50)', border: '0.5px solid var(--gray-100)',
+            display: 'flex', gap: 16, alignItems: 'flex-start',
+          }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+              background: 'rgba(16,185,129,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Lock size={20} color="var(--teal-500)" strokeWidth={1.8} />
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 6 }}>
+                Privacy-first by design
+              </div>
+              <p style={{ fontSize: 14, color: 'var(--gray-500)', lineHeight: 1.65, margin: 0 }}>
+                Your lab data is processed securely, and your personal information is protected at every step.
+              </p>
+            </div>
+          </div>
+
+          {/* Science-informed */}
+          <div style={{
+            borderRadius: 20, padding: '28px 32px',
+            background: 'var(--gray-50)', border: '0.5px solid var(--gray-100)',
+            display: 'flex', gap: 16, alignItems: 'flex-start',
+          }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+              background: 'rgba(16,185,129,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <BookOpen size={20} color="var(--teal-500)" strokeWidth={1.8} />
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 6 }}>
+                Science-informed recommendations
+              </div>
+              <p style={{ fontSize: 14, color: 'var(--gray-500)', lineHeight: 1.65, margin: 0 }}>
+                Our suggestions are based on established research, reference ranges, and practitioner knowledge.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Stats */}
