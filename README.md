@@ -1,117 +1,116 @@
-# VITALOOP — Biohacking-as-a-Service
+# VITATOOL V1.1.1 (VITALOOP)
 
-Mobile-first web app: upload blood test → AI biomarker analysis → personalized supplement protocol → track progress.
+Production: https://vitaloop.softdab.tech
 
-**Stack:** React + Vite · FastAPI · Claude AI · Supabase · Stripe · Tailwind CSS
+VITATOOL is a web service for blood test interpretation:
+upload report -> AI biomarker analysis -> personalized protocol -> weekly check-ins.
 
----
+## Release Policy (Required)
 
-## Project Structure
+1. Server Git must always be up-to-date with `origin/main`.
+2. GitHub `main` must always reflect the real production code state.
+3. New features and improvements are shipped only as versioned updates.
 
-```
-vitaloop/
-├── backend/          # FastAPI (Python)
-├── frontend/         # React + Vite
-├── supabase_migrations.sql
-├── docker-compose.yml
-└── README.md
-```
+Current release: **V1.1.1**
 
----
+## What Is Implemented on the Service
 
-## Quick Start
+### Core Product
 
-### 1. Clone & configure
+1. User authentication and session management.
+2. Blood report upload and OCR extraction flow.
+3. AI biomarker analysis endpoint.
+4. Personalized protocol generation.
+5. Weekly check-in flow.
+6. Progress and historical health tracking.
+
+### Frontend Experience
+
+1. Modern landing page sections (hero, how-it-works, pricing, partners).
+2. New body visualization components (`NeonBody`, `NeonBodyMini`).
+3. Updated login and onboarding flow.
+4. Mobile-first React + Vite UI.
+
+### Backend and Data
+
+1. FastAPI backend with stabilized check-in/protocol flows.
+2. Supabase integration and migrations in `supabase_migrations.sql`.
+3. Additional SQL bundles:
+     - `backend/sql/FINAL_MIGRATION_BUNDLE.sql`
+     - `backend/sql/auth_user_profile_sync.sql`
+4. Knowledge base data source:
+     - `backend/app/data/knowledge_base.json`
+
+## Tech Stack
+
+- Frontend: React, Vite, TailwindCSS
+- Backend: FastAPI (Python)
+- Data: Supabase (Postgres)
+- AI: Anthropic/LLM pipeline
+- Payments: Stripe (integration scaffolded)
+
+## Local Development
 
 ```bash
 git clone https://github.com/softdabtech/vitaloop.git
 cd vitaloop
-```
 
-Copy env files and fill in your keys:
-
-```bash
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 ```
 
-Required keys:
-| Variable | Where to get |
-|---|---|
-| `SUPABASE_URL` | Supabase project Settings → API |
-| `SUPABASE_SERVICE_KEY` | Supabase project Settings → API (service_role) |
-| `VITE_SUPABASE_ANON_KEY` | Supabase project Settings → API (anon) |
-| `ANTHROPIC_API_KEY` | console.anthropic.com |
-| `VITE_STRIPE_PUBLIC_KEY` | Stripe Dashboard → Developers |
+Backend:
 
-### 2. Set up Supabase database
-
-Open Supabase SQL Editor → paste contents of `supabase_migrations.sql` → Run.
-
-### 3. Run locally (Docker)
-
-```bash
-docker-compose up --build
-```
-
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:8000
-- API docs: http://localhost:8000/docs
-
-### 4. Run manually
-
-**Backend:**
 ```bash
 cd backend
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-**Frontend:**
+Frontend:
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
----
+## Production Update Flow
 
-## Architecture
+### 1. Update GitHub
 
-```
-Browser
-  └─ PDF.js + Tesseract.js (OCR — runs locally, PDF never sent)
-       └─ FastAPI POST /analyze (extracted text only)
-            └─ Claude API (biomarker extraction + protocol)
-                 └─ Supabase Postgres (users, biomarkers, protocols)
+```bash
+git add .
+git commit -m "release: vitatool vX.Y.Z"
+git push origin main
 ```
 
-> **HIPAA note:** Raw PDFs never leave the user's device. Only OCR-extracted text is sent to the server.
+### 2. Sync Server Git (mandatory)
 
----
+```bash
+ssh root@159.65.252.227
+cd /var/www/VITALOOP
+git checkout main
+git pull --ff-only origin main
+```
 
-## API Endpoints
+### 3. Frontend deploy (proven method)
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/health` | Health check |
-| POST | `/analyze` | Extract biomarkers from OCR text |
-| POST | `/protocol` | Generate supplement protocol |
-| GET | `/progress/{user_id}` | Get biomarker history |
+```bash
+cd /Users/oleksii/projects/vitaloop/frontend
+npm run build
+rsync -az --delete dist/ root@159.65.252.227:/var/www/VITALOOP/frontend/dist/
+```
 
----
+## Versioning Going Forward
 
-## Deployment (Railway)
+We now use explicit release versions for all future rollouts.
 
-1. Push to `main` — GitHub Actions deploys automatically.
-2. Set secrets in GitHub: `RAILWAY_TOKEN` + all env vars.
+Format:
+- Patch: `V1.1.2` (bug fixes)
+- Minor: `V1.2.0` (new features)
+- Major: `V2.0.0` (breaking changes)
 
----
-
-## Roadmap
-
-- [x] Week 1 — Auth, File Upload, OCR
-- [x] Week 2 — AI Engine (biomarker extraction + protocol)
-- [x] Week 3 — UX: Health Avatar, Progress Tracker
-- [ ] Week 4 — Stripe payments, production launch
+Next features and improvements will be delivered only via new tagged versions.
