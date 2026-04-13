@@ -162,4 +162,25 @@
 
   /* Show 1 testimonial card at a time on mobile */
   .testimonial-grid { grid-template-columns: 1fr !important; }
+
+  /* Hide step connector on stacked mobile layout */
+  .how-step-connector { display: none; }
+}
+
+@media (min-width: 768px) {
+  .how-step-row {
+    position: relative;
+  }
+
+  .how-step-connector {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 26px;
+    height: 1.5px;
+    background: var(--teal-300);
+    opacity: 0.9;
+    pointer-events: none;
+  }
 }

@@ -137,7 +137,7 @@ export default function HowItWorksSection() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
           {STEPS.map((step, i) => (
-            <div key={step.n} className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-stretch">
+            <div key={step.n} className="how-step-row grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-stretch">
               <div className={i % 2 === 0 ? '' : 'md:order-2'} style={{
                 background: 'white',
                 borderRadius: 18,
@@ -175,6 +175,7 @@ export default function HowItWorksSection() {
                   lines={step.card.lines}
                 />
               </div>
+              <div className="how-step-connector" aria-hidden="true" />
             </div>
           ))}
         </div>
