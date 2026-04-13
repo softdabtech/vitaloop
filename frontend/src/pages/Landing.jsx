@@ -7,6 +7,7 @@ import Hero              from '../components/landing/Hero.jsx'
 import SocialProofTicker from '../components/landing/SocialProofTicker.jsx'
 import HowItWorksSection from '../components/landing/HowItWorks.jsx'
 import AvatarSection     from '../components/landing/AvatarSection.jsx'
+import ValueBlock        from '../components/landing/ValueBlock.jsx'
 import ScienceSection    from '../components/landing/ScienceSection.jsx'
 import PartnersSection   from '../components/landing/PartnersSection.jsx'
 import Testimonials      from '../components/landing/Testimonials.jsx'
@@ -34,6 +35,7 @@ export default function Landing() {
         <SocialProofTicker />
         <HowItWorksSection />
         <AvatarSection />
+        <ValueBlock />
         <ScienceSection />
         <PartnersSection />
         <Testimonials />

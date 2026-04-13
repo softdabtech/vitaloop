@@ -1,33 +1,22 @@
-const TIMELINE = [
+const LOOP_STEPS = [
+  { id: '01', label: 'Test',       desc: 'Upload your lab results'              },
+  { id: '02', label: 'Understand', desc: 'Get a clear picture of what\'s off'   },
+  { id: '03', label: 'Act',        desc: 'Follow your personalized protocol'    },
+  { id: '04', label: 'Re-test',    desc: 'Track progress and refine your plan'  },
+]
+
+const BLOCKS = [
   {
-    period: 'Month 1',
-    title: 'Baseline established',
-    desc: 'First lab upload. AI identifies your starting deficiencies. Protocol begins.',
-    status: 'start',
+    title: 'Your data evolves',
+    body: 'New lab results and feedback refine your insights over time.',
   },
   {
-    period: 'Month 3',
-    title: 'First re-test',
-    desc: 'Most users see 40-60% improvement in key markers. Protocol adjusted.',
-    status: 'progress',
+    title: 'Your protocol adapts',
+    body: 'Recommendations update as your body improves or new issues appear.',
   },
   {
-    period: 'Month 6',
-    title: 'Optimization phase',
-    desc: 'Critical deficiencies resolved. Shifting to maintenance and performance.',
-    status: 'progress',
-  },
-  {
-    period: 'Year 1',
-    title: 'Full health picture',
-    desc: '4 complete tests. Seasonal patterns visible. Avatar fully calibrated.',
-    status: 'milestone',
-  },
-  {
-    period: 'Year 2+',
-    title: 'Lifelong companion',
-    desc: 'VITALOOP tracks every change - aging, lifestyle shifts, new goals.',
-    status: 'future',
+    title: 'You stay in control',
+    body: 'Track changes and adjust before small issues become real problems.',
   },
 ]
 
@@ -35,100 +24,118 @@ export default function LongevitySection() {
   return (
     <section style={{ padding: '120px 24px', background: 'var(--white)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-        <div className="reveal" style={{ textAlign: 'center', marginBottom: 80 }}>
-          <div style={{
-            fontSize: 12, fontWeight: 600, letterSpacing: '0.12em',
-            textTransform: 'uppercase', color: 'var(--teal-500)', marginBottom: 16,
-          }}>
-            Long-term health
-          </div>
+
+        {/* Header */}
+        <div className="reveal" style={{ textAlign: 'center', marginBottom: 72 }}>
           <h2 style={{
             fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 700,
             letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 20,
           }}>
-            Not a one-time fix.<br />A lifelong companion.
+            Health is not a one-time fix
           </h2>
-          <p style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 520, margin: '0 auto', lineHeight: 1.65 }}>
-            VITALOOP remembers every lab result you have ever uploaded.
-            Your health history, tracked and optimized for years.
+          <p style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 540, margin: '0 auto', lineHeight: 1.65 }}>
+            Your body changes over time. Your protocol should too.
+            VITALOOP continuously updates your recommendations based on new data, symptoms, and progress.
           </p>
         </div>
 
-        <div className="reveal" style={{ position: 'relative', maxWidth: 680, margin: '0 auto 80px' }}>
+        {/* Loop diagram */}
+        <div className="reveal" style={{ marginBottom: 72 }}>
           <div style={{
-            position: 'absolute', left: 20, top: 16, bottom: 16,
-            width: '0.5px', background: 'var(--gray-100)',
-          }} />
-
-          {TIMELINE.map(({ period, title, desc, status }, i) => {
-            const dotColor = status === 'start' ? 'var(--teal-500)'
-              : status === 'milestone' ? 'var(--teal-800)'
-              : status === 'future' ? 'var(--gray-300)'
-              : 'var(--teal-500)'
-            const isLast = i === TIMELINE.length - 1
-
-            return (
-              <div key={period} style={{
-                display: 'flex', gap: 24, marginBottom: isLast ? 0 : 32,
-                opacity: status === 'future' ? 0.5 : 1,
-              }}>
-                <div style={{
-                  width: 40, flexShrink: 0, display: 'flex',
-                  justifyContent: 'center', paddingTop: 4, position: 'relative', zIndex: 1,
-                }}>
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 0,
+            background: 'var(--gray-50)',
+            borderRadius: 24,
+            border: '0.5px solid var(--gray-100)',
+            overflow: 'hidden',
+          }}>
+            {LOOP_STEPS.map(({ id, label, desc }, i) => {
+              const isLast = i === LOOP_STEPS.length - 1
+              return (
+                <div
+                  key={id}
+                  style={{
+                    padding: '36px 28px',
+                    borderRight: isLast ? 'none' : '0.5px solid var(--gray-100)',
+                    position: 'relative',
+                  }}
+                >
+                  {/* Step number */}
                   <div style={{
-                    width: status === 'milestone' ? 16 : 10,
-                    height: status === 'milestone' ? 16 : 10,
-                    borderRadius: '50%', background: dotColor,
-                    border: `2px solid ${dotColor}`,
-                    marginTop: status === 'milestone' ? -3 : 0,
-                  }} />
-                </div>
-
-                <div style={{
-                  flex: 1, background: 'var(--gray-50)',
-                  borderRadius: 16, padding: '20px 24px',
-                  border: status === 'milestone' ? '1px solid var(--teal-300)' : '0.5px solid var(--gray-100)',
-                }}>
-                  <div style={{
-                    fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
-                    color: 'var(--teal-500)', textTransform: 'uppercase', marginBottom: 6,
+                    fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
+                    textTransform: 'uppercase', color: 'var(--teal-500)', marginBottom: 12,
                   }}>
-                    {period}
+                    {id}
                   </div>
-                  <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 6 }}>
-                    {title}
+
+                  {/* Label */}
+                  <div style={{
+                    fontSize: 20, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 8,
+                  }}>
+                    {label}
                   </div>
-                  <div style={{ fontSize: 15, color: 'var(--gray-500)', lineHeight: 1.6 }}>
+
+                  {/* Description */}
+                  <div style={{ fontSize: 14, color: 'var(--gray-500)', lineHeight: 1.6 }}>
                     {desc}
                   </div>
+
+                  {/* Arrow connector (except last) */}
+                  {!isLast && (
+                    <div style={{
+                      position: 'absolute', right: -12, top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 24, height: 24,
+                      background: 'var(--gray-50)',
+                      border: '0.5px solid var(--gray-100)',
+                      borderRadius: '50%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      zIndex: 1,
+                      fontSize: 11, color: 'var(--teal-500)', fontWeight: 700,
+                    }}>
+                      →
+                    </div>
+                  )}
+
+                  {/* Loop-back indicator on last step */}
+                  {isLast && (
+                    <div style={{
+                      marginTop: 16,
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      fontSize: 11, fontWeight: 600, color: 'var(--teal-500)',
+                      background: 'rgba(16,185,129,0.08)',
+                      border: '0.5px solid var(--teal-300)',
+                      borderRadius: 6, padding: '3px 8px',
+                    }}>
+                      ↺ repeat
+                    </div>
+                  )}
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
 
-        <div className="reveal grid md:grid-cols-3 gap-6">
-          {[
-            { num: '89%', label: 'of users re-test within 90 days' },
-            { num: '3.4x', label: 'average biomarker improvement by year 1' },
-            { num: '∞', label: 'your health history stored securely' },
-          ].map(({ num, label }) => (
-            <div key={num} style={{
+        {/* 3 supporting blocks */}
+        <div className="grid md:grid-cols-3 gap-6 reveal">
+          {BLOCKS.map(({ title, body }) => (
+            <div key={title} style={{
               background: 'var(--gray-50)', borderRadius: 20,
               border: '0.5px solid var(--gray-100)', padding: '32px 28px',
-              textAlign: 'center',
             }}>
               <div style={{
-                fontSize: 48, fontWeight: 700, color: 'var(--teal-500)',
-                letterSpacing: '-0.03em', lineHeight: 1, marginBottom: 10,
+                fontSize: 16, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 10,
               }}>
-                {num}
+                {title}
               </div>
-              <div style={{ fontSize: 15, color: 'var(--gray-500)', lineHeight: 1.5 }}>{label}</div>
+              <div style={{ fontSize: 14, color: 'var(--gray-500)', lineHeight: 1.65 }}>
+                {body}
+              </div>
             </div>
           ))}
         </div>
+
       </div>
     </section>
   )
