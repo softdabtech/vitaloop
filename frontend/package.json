@@ -1,7 +1,7 @@
 {
   "name": "vitaloop-frontend",
   "private": true,
-  "version": "1.1.1",
+  "version": "2.1.0",
   "type": "module",
   "homepage": "https://vitaloop.softdab.tech",
   "scripts": {
