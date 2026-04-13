@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Shield } from 'lucide-react'
-import { NeonBodyMini } from './NeonBody.jsx'
+import { ArrowRight, Shield, Activity, Zap, FlaskConical, BarChart2, Heart, Droplets, ScanLine, ClipboardList } from 'lucide-react'
 
 const HERO_WORDS_L1 = ['Know', 'your', 'body.']
 const HERO_WORDS_L2 = ['Upgrade', 'your', 'life.']
@@ -201,16 +200,6 @@ function HeroSlideshow() {
       ),
     },
     {
-      label: '04 - Health Avatar',
-      caption: 'See your body systems mapped by biomarker status.',
-      bg: '#111',
-      content: (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '0 0 8px' }}>
-          <NeonBodyMini zones={{ brain: '#f5a623', heart: '#1D9E75', muscles: '#e53935', bones: '#e53935', gut: '#f5a623' }} size={160}/>
-        </div>
-      ),
-    },
-    {
       label: '05 - Progress',
       caption: 'Track improvements week by week over time.',
       bg: 'var(--gray-50)',
@@ -334,6 +323,36 @@ export default function Hero() {
           pointerEvents: 'none',
         }}
       />
+
+      {/* Decorative side icons — left */}
+      <div aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 200, zIndex: 0, pointerEvents: 'none' }}>
+        {[
+          { Icon: Activity,      top: '14%', left: '18%', rotate: -15, size: 28 },
+          { Icon: FlaskConical,  top: '32%', left: '6%',  rotate: 10,  size: 22 },
+          { Icon: Heart,         top: '52%', left: '22%', rotate: -8,  size: 24 },
+          { Icon: BarChart2,     top: '70%', left: '10%', rotate: 12,  size: 26 },
+          { Icon: Droplets,      top: '84%', left: '28%', rotate: -6,  size: 20 },
+        ].map(({ Icon, top, left, rotate, size }, i) => (
+          <div key={i} style={{ position: 'absolute', top, left, transform: `rotate(${rotate}deg)`, opacity: 0.055 }}>
+            <Icon size={size} color="var(--teal-500)" strokeWidth={1.2} />
+          </div>
+        ))}
+      </div>
+
+      {/* Decorative side icons — right */}
+      <div aria-hidden="true" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 200, zIndex: 0, pointerEvents: 'none' }}>
+        {[
+          { Icon: ScanLine,      top: '12%', right: '14%', rotate: 8,   size: 26 },
+          { Icon: Zap,           top: '30%', right: '24%', rotate: -12, size: 22 },
+          { Icon: ClipboardList, top: '50%', right: '8%',  rotate: 6,   size: 28 },
+          { Icon: Activity,      top: '66%', right: '20%', rotate: -10, size: 24 },
+          { Icon: FlaskConical,  top: '82%', right: '30%', rotate: 14,  size: 20 },
+        ].map(({ Icon, top, right, rotate, size }, i) => (
+          <div key={i} style={{ position: 'absolute', top, right, transform: `rotate(${rotate}deg)`, opacity: 0.055 }}>
+            <Icon size={size} color="var(--teal-500)" strokeWidth={1.2} />
+          </div>
+        ))}
+      </div>
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 860, width: '100%', textAlign: 'center' }}>
 
