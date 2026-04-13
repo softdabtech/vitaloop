@@ -38,26 +38,6 @@
   transform: translateY(0);
 }
 
-/* ── White ambient DNA texture ── */
-@keyframes dnaDrift {
-  0% {
-    background-position: 0 0, 0 0, 0 0;
-  }
-  100% {
-    background-position: 0 0, 280px 180px, -280px 180px;
-  }
-}
-
-.dna-bg {
-  background-color: var(--white);
-  background-image:
-    radial-gradient(circle at 1px 1px, rgba(16, 185, 129, 0.07) 1px, transparent 1px),
-    repeating-linear-gradient(62deg, rgba(16, 185, 129, 0.05) 0 1px, transparent 1px 26px),
-    repeating-linear-gradient(-62deg, rgba(16, 185, 129, 0.05) 0 1px, transparent 1px 26px);
-  background-size: 34px 34px, 220px 220px, 220px 220px;
-  animation: dnaDrift 26s linear infinite;
-}
-
 /* Stagger children */
 .stagger-children > *:nth-child(1) { transition-delay: 0ms; }
 .stagger-children > *:nth-child(2) { transition-delay: 80ms; }
@@ -186,10 +166,6 @@
   /* Hide step connector on stacked mobile layout */
   .how-step-connector { display: none; }
 
-  .dna-bg {
-    background-size: 28px 28px, 180px 180px, 180px 180px;
-    animation-duration: 34s;
-  }
 }
 
 @media (min-width: 768px) {

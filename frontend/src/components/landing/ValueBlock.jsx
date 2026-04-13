@@ -27,7 +27,6 @@ export default function ValueBlock() {
   return (
     <section
       id="why-vitaloop"
-      className="dna-bg"
       style={{
         backgroundColor: 'var(--white)',
         padding: 'var(--py-md) 24px',
