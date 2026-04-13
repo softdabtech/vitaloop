@@ -11,35 +11,65 @@ function ParticleCanvas() {
     const ctx = canvas.getContext('2d')
     const isMobile = window.matchMedia('(pointer: coarse)').matches
 
-    const COUNT = 55
+    const COUNT = 80
     const RGB = '67, 147, 115'   // #439373
-    const REPEL_R = 120
-    const REPEL_F = 0.018
+    const LINK_DIST = 130
+    const REPEL_R = 130
+    const REPEL_F = 0.02
 
     let raf
     const mouse = { x: -9999, y: -9999 }
     let particles = []
 
     function resize() {
-      canvas.width = canvas.offsetWidth
-      canvas.height = canvas.offsetHeight
+      const w = canvas.offsetWidth || window.innerWidth
+      const h = canvas.offsetHeight || 600
+      canvas.width = w
+      canvas.height = h
+      init()
     }
 
     function init() {
       particles = Array.from({ length: COUNT }, () => {
-        const vx = (Math.random() - 0.5) * 0.3
-        const vy = (Math.random() - 0.5) * 0.3
+        const vx = (Math.random() - 0.5) * 0.35
+        const vy = (Math.random() - 0.5) * 0.35
         return {
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
-          r: 0.8 + Math.random() * 1.2,
+          r: 1.5 + Math.random() * 1.5,
           vx, vy, bvx: vx, bvy: vy,
         }
       })
     }
 
+    function yAlpha(y) {
+      const fadeBot = canvas.height * 0.70
+      const fade = y > fadeBot ? 1 - (y - fadeBot) / (canvas.height * 0.30) : 1
+      return Math.max(0, fade)
+    }
+
     function tick() {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+      // Draw connecting lines
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const a = particles[i], b = particles[j]
+          const dx = a.x - b.x, dy = a.y - b.y
+          const d = Math.sqrt(dx * dx + dy * dy)
+          if (d < LINK_DIST) {
+            const lineAlpha = (1 - d / LINK_DIST) * 0.18 * Math.min(yAlpha(a.y), yAlpha(b.y))
+            ctx.beginPath()
+            ctx.moveTo(a.x, a.y)
+            ctx.lineTo(b.x, b.y)
+            ctx.strokeStyle = `rgba(${RGB}, ${lineAlpha})`
+            ctx.lineWidth = 0.8
+            ctx.stroke()
+          }
+        }
+      }
+
+      // Draw dots
       for (const p of particles) {
         if (!isMobile) {
           const dx = p.x - mouse.x
@@ -50,7 +80,6 @@ function ParticleCanvas() {
             p.vx += (dx / d) * f
             p.vy += (dy / d) * f
           }
-          // Ease back to base velocity
           p.vx += (p.bvx - p.vx) * 0.025
           p.vy += (p.bvy - p.vy) * 0.025
         }
@@ -58,16 +87,12 @@ function ParticleCanvas() {
         p.x += p.vx
         p.y += p.vy
 
-        // Wrap around edges
         if (p.x < -5) p.x = canvas.width + 5
         if (p.x > canvas.width + 5) p.x = -5
         if (p.y < -5) p.y = canvas.height + 5
         if (p.y > canvas.height + 5) p.y = -5
 
-        // Fade out toward bottom 32% of section
-        const fadeBot = canvas.height * 0.68
-        const yFade = p.y > fadeBot ? 1 - (p.y - fadeBot) / (canvas.height * 0.32) : 1
-        const alpha = Math.max(0, 0.08 * yFade)
+        const alpha = 0.35 * yAlpha(p.y)
 
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
@@ -78,7 +103,6 @@ function ParticleCanvas() {
     }
 
     resize()
-    init()
     tick()
 
     const ro = new ResizeObserver(resize)
