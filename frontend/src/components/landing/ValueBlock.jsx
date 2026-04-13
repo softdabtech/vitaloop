@@ -27,14 +27,25 @@ export default function ValueBlock() {
   return (
     <section
       id="why-vitaloop"
+      className="dna-bg"
       style={{
-        background: 'var(--white)',
+        backgroundColor: 'var(--white)',
         padding: 'var(--py-md) 24px',
       }}
     >
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 56 }}>
+          <div style={{
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--teal-500)',
+            marginBottom: 16,
+          }}>
+            Why VITALOOP
+          </div>
           <h2
             style={{
               fontSize: 'clamp(28px, 4vw, 44px)',

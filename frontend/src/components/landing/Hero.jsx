@@ -148,11 +148,12 @@ export default function Hero() {
   return (
     <section
       id="hero"
+      className="dna-bg"
       style={{
         minHeight: 'auto',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        background: 'var(--white)',
+        backgroundColor: 'var(--white)',
         padding: 'var(--hero-pt) 24px var(--hero-pb)',
         position: 'relative', overflow: 'hidden',
       }}
