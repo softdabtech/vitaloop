@@ -24,6 +24,16 @@ export default function FinalCTA() {
       />
 
       <div className="reveal" style={{ position: 'relative', zIndex: 1, maxWidth: 640 }}>
+        <div style={{
+          fontSize: 12,
+          fontWeight: 600,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: 'var(--teal-300)',
+          marginBottom: 16,
+        }}>
+          Start now
+        </div>
         <h2 style={{
           fontSize: 'clamp(44px, 5vw, 64px)', fontWeight: 700,
           color: 'white', letterSpacing: '-0.02em', lineHeight: 1.1,

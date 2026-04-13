@@ -82,11 +82,21 @@ export default function Testimonials() {
   const visible = Array.from({ length: VISIBLE }, (_, i) => TESTIMONIALS[(index + i) % total])
 
   return (
-    <section style={{ padding: 'var(--py-lg) 24px', background: 'var(--white)', overflow: 'hidden' }}>
+    <section className="dna-bg" style={{ padding: 'var(--py-lg) 24px', backgroundColor: 'var(--white)', overflow: 'hidden' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 
         {/* Header */}
         <div className="reveal" style={{ textAlign: 'center', marginBottom: 64 }}>
+          <div style={{
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--teal-500)',
+            marginBottom: 16,
+          }}>
+            User stories
+          </div>
           <h2 style={{
             fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 700,
             letterSpacing: '-0.02em', color: 'var(--gray-900)',

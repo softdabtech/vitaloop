@@ -40,11 +40,21 @@ export default function FAQ() {
   const [open, setOpen] = useState(null)
 
   return (
-    <section style={{ padding: 'var(--py-lg) 24px', background: 'var(--white)' }}>
+    <section className="dna-bg" style={{ padding: 'var(--py-lg) 24px', backgroundColor: 'var(--white)' }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
 
         {/* Header */}
         <div className="reveal" style={{ textAlign: 'center', marginBottom: 64 }}>
+          <div style={{
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--teal-500)',
+            marginBottom: 16,
+          }}>
+            FAQ
+          </div>
           <h2 style={{
             fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 700,
             letterSpacing: '-0.02em', color: 'var(--gray-900)',
