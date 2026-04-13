@@ -108,9 +108,9 @@ const STEPS = [
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" style={{ padding: '160px 24px', background: 'var(--white)' }}>
+    <section id="how-it-works" style={{ padding: 'var(--py-xl) 24px', background: 'var(--white)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 84 }}>
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(48px, 7vw, 84px)' }}>
           <div style={{
             fontSize: 12,
             fontWeight: 600,

@@ -40,7 +40,7 @@ export default function FAQ() {
   const [open, setOpen] = useState(null)
 
   return (
-    <section style={{ padding: '120px 24px', background: 'var(--white)' }}>
+    <section style={{ padding: 'var(--py-lg) 24px', background: 'var(--white)' }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
 
         {/* Header */}

@@ -129,3 +129,33 @@
   .typewriter-line { animation: none; opacity: 1; }
   .typewriter-badge { animation: none; opacity: 1; }
 }
+
+/* ── Responsive section spacing ── */
+:root {
+  --py-xl:   160px;
+  --py-lg:   120px;
+  --py-md:    96px;
+  --py-sm:    80px;
+  --hero-pt: 120px;
+  --hero-pb:  96px;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --py-xl:   72px;
+    --py-lg:   64px;
+    --py-md:   56px;
+    --py-sm:   48px;
+    --hero-pt: 88px;
+    --hero-pb: 56px;
+  }
+
+  /* Hide decorative side icons on mobile */
+  .hero-deco { display: none; }
+
+  /* Collapse loop diagram to 2×2 on mobile */
+  .longevity-loop { grid-template-columns: 1fr 1fr !important; }
+
+  /* Show 1 testimonial card at a time on mobile */
+  .testimonial-grid { grid-template-columns: 1fr !important; }
+}
