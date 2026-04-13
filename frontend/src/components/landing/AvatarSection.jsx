@@ -11,7 +11,7 @@ export default function AvatarSection() {
   const navigate = useNavigate()
 
   return (
-    <section id="avatar" style={{ padding: '160px 24px', background: 'var(--gray-950)' }}>
+    <section id="avatar" style={{ padding: 'var(--py-xl) 24px', background: 'var(--gray-950)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
         <div className="reveal" style={{ textAlign: 'center', marginBottom: 64 }}>
           <div style={{

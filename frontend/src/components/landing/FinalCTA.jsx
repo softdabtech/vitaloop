@@ -10,7 +10,7 @@ export default function FinalCTA() {
       minHeight: 420,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       textAlign: 'center',
-      padding: '80px 24px',
+      padding: 'var(--py-sm) 24px',
       position: 'relative', overflow: 'hidden',
     }}>
       {/* Radial glow */}

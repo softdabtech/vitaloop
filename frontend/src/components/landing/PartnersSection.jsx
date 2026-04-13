@@ -68,7 +68,7 @@ const BLOCKS = [
 
 export default function PartnersSection() {
   return (
-    <section id="partners" style={{ padding: '120px 24px', background: 'var(--gray-50)' }}>
+    <section id="partners" style={{ padding: 'var(--py-lg) 24px', background: 'var(--gray-50)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 
         {/* Header */}

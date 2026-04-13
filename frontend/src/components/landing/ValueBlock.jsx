@@ -29,7 +29,7 @@ export default function ValueBlock() {
       id="why-vitaloop"
       style={{
         background: 'var(--white)',
-        padding: '96px 24px',
+        padding: 'var(--py-md) 24px',
       }}
     >
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>

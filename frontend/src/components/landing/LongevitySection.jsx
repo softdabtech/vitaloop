@@ -22,7 +22,7 @@ const BLOCKS = [
 
 export default function LongevitySection() {
   return (
-    <section style={{ padding: '120px 24px', background: 'var(--white)' }}>
+    <section style={{ padding: 'var(--py-lg) 24px', background: 'var(--white)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 
         {/* Header */}
@@ -41,9 +41,8 @@ export default function LongevitySection() {
 
         {/* Loop diagram */}
         <div className="reveal" style={{ marginBottom: 72 }}>
-          <div style={{
+          <div className="longevity-loop" style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
             gap: 0,
             background: 'var(--gray-50)',
             borderRadius: 24,

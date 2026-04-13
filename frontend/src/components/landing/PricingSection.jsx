@@ -63,7 +63,7 @@ export default function PricingSection() {
   const navigate = useNavigate()
 
   return (
-    <section id="pricing" style={{ padding: '120px 24px', background: 'var(--gray-50)' }}>
+    <section id="pricing" style={{ padding: 'var(--py-lg) 24px', background: 'var(--gray-50)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 
         {/* Header */}

@@ -74,7 +74,7 @@ const CARDS = [
 
 export default function ScienceSection() {
   return (
-    <section id="science" style={{ padding: '120px 24px', background: 'var(--white)' }}>
+    <section id="science" style={{ padding: 'var(--py-lg) 24px', background: 'var(--white)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 
         {/* Header */}

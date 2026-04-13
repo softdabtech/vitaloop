@@ -82,7 +82,7 @@ export default function Testimonials() {
   const visible = Array.from({ length: VISIBLE }, (_, i) => TESTIMONIALS[(index + i) % total])
 
   return (
-    <section style={{ padding: '120px 24px', background: 'var(--white)', overflow: 'hidden' }}>
+    <section style={{ padding: 'var(--py-lg) 24px', background: 'var(--white)', overflow: 'hidden' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 
         {/* Header */}
@@ -99,9 +99,9 @@ export default function Testimonials() {
         <div style={{ position: 'relative' }}>
           {/* Cards row */}
           <div
+            className="testimonial-grid"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
               gap: 20,
             }}
           >

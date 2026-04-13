@@ -153,7 +153,7 @@ export default function Hero() {
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         background: 'var(--white)',
-        padding: '120px 24px 96px',
+        padding: 'var(--hero-pt) 24px var(--hero-pb)',
         position: 'relative', overflow: 'hidden',
       }}
     >
@@ -161,7 +161,7 @@ export default function Hero() {
       <ParticleCanvas />
 
       {/* Decorative side icons — left */}
-      <div aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 200, zIndex: 0, pointerEvents: 'none' }}>
+      <div aria-hidden="true" className="hero-deco" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 200, zIndex: 0, pointerEvents: 'none' }}>
         {[
           { Icon: Activity,     top: '14%', left: '18%', rotate: -15, size: 28 },
           { Icon: FlaskConical, top: '32%', left: '6%',  rotate: 10,  size: 22 },
@@ -176,7 +176,7 @@ export default function Hero() {
       </div>
 
       {/* Decorative side icons — right */}
-      <div aria-hidden="true" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 200, zIndex: 0, pointerEvents: 'none' }}>
+      <div aria-hidden="true" className="hero-deco" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 200, zIndex: 0, pointerEvents: 'none' }}>
         {[
           { Icon: ScanLine,      top: '12%', right: '14%', rotate: 8,   size: 26 },
           { Icon: Zap,           top: '30%', right: '24%', rotate: -12, size: 22 },
