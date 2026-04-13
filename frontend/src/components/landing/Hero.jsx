@@ -1,5 +1,122 @@
+import { useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Shield, Activity, Zap, FlaskConical, BarChart2, Heart, Droplets, ScanLine, ClipboardList } from 'lucide-react'
+
+function ParticleCanvas() {
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    const isMobile = window.matchMedia('(pointer: coarse)').matches
+
+    const COUNT = 55
+    const RGB = '67, 147, 115'   // #439373
+    const REPEL_R = 120
+    const REPEL_F = 0.018
+
+    let raf
+    const mouse = { x: -9999, y: -9999 }
+    let particles = []
+
+    function resize() {
+      canvas.width = canvas.offsetWidth
+      canvas.height = canvas.offsetHeight
+    }
+
+    function init() {
+      particles = Array.from({ length: COUNT }, () => {
+        const vx = (Math.random() - 0.5) * 0.3
+        const vy = (Math.random() - 0.5) * 0.3
+        return {
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          r: 0.8 + Math.random() * 1.2,
+          vx, vy, bvx: vx, bvy: vy,
+        }
+      })
+    }
+
+    function tick() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      for (const p of particles) {
+        if (!isMobile) {
+          const dx = p.x - mouse.x
+          const dy = p.y - mouse.y
+          const d = Math.sqrt(dx * dx + dy * dy)
+          if (d < REPEL_R && d > 0) {
+            const f = (1 - d / REPEL_R) * REPEL_F
+            p.vx += (dx / d) * f
+            p.vy += (dy / d) * f
+          }
+          // Ease back to base velocity
+          p.vx += (p.bvx - p.vx) * 0.025
+          p.vy += (p.bvy - p.vy) * 0.025
+        }
+
+        p.x += p.vx
+        p.y += p.vy
+
+        // Wrap around edges
+        if (p.x < -5) p.x = canvas.width + 5
+        if (p.x > canvas.width + 5) p.x = -5
+        if (p.y < -5) p.y = canvas.height + 5
+        if (p.y > canvas.height + 5) p.y = -5
+
+        // Fade out toward bottom 32% of section
+        const fadeBot = canvas.height * 0.68
+        const yFade = p.y > fadeBot ? 1 - (p.y - fadeBot) / (canvas.height * 0.32) : 1
+        const alpha = Math.max(0, 0.08 * yFade)
+
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${RGB}, ${alpha})`
+        ctx.fill()
+      }
+      raf = requestAnimationFrame(tick)
+    }
+
+    resize()
+    init()
+    tick()
+
+    const ro = new ResizeObserver(resize)
+    ro.observe(canvas)
+
+    const onMove = (e) => {
+      const rect = canvas.getBoundingClientRect()
+      mouse.x = e.clientX - rect.left
+      mouse.y = e.clientY - rect.top
+    }
+    const onLeave = () => { mouse.x = -9999; mouse.y = -9999 }
+    if (!isMobile) {
+      window.addEventListener('mousemove', onMove)
+      document.addEventListener('mouseleave', onLeave)
+    }
+
+    return () => {
+      cancelAnimationFrame(raf)
+      ro.disconnect()
+      if (!isMobile) {
+        window.removeEventListener('mousemove', onMove)
+        document.removeEventListener('mouseleave', onLeave)
+      }
+    }
+  }, [])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-hidden="true"
+      style={{
+        position: 'absolute', inset: 0,
+        width: '100%', height: '100%',
+        zIndex: 0, pointerEvents: 'none', display: 'block',
+      }}
+    />
+  )
+}
 
 export default function Hero() {
   const navigate = useNavigate()
@@ -16,17 +133,8 @@ export default function Hero() {
         position: 'relative', overflow: 'hidden',
       }}
     >
-      {/* Dot-grid background */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute', inset: 0, zIndex: 0,
-          backgroundImage: 'radial-gradient(circle, var(--teal-500) 1px, transparent 1px)',
-          backgroundSize: '32px 32px',
-          opacity: 0.04,
-          pointerEvents: 'none',
-        }}
-      />
+      {/* Animated particle background */}
+      <ParticleCanvas />
 
       {/* Decorative side icons — left */}
       <div aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 200, zIndex: 0, pointerEvents: 'none' }}>
