@@ -86,7 +86,7 @@ export default function PricingSection() {
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: 20,
-            alignItems: 'start',
+            alignItems: 'stretch',
             marginBottom: 36,
           }}
         >
@@ -98,6 +98,7 @@ export default function PricingSection() {
                 padding: '44px 36px',
                 display: 'flex',
                 flexDirection: 'column',
+                height: '100%',
                 position: 'relative',
                 overflow: 'hidden',
                 background: dark
@@ -115,6 +116,13 @@ export default function PricingSection() {
                   : premium
                   ? '0 4px 20px rgba(16,185,129,0.08)'
                   : 'none',
+                transition: 'transform 220ms ease, box-shadow 220ms ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.02)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)'
               }}
             >
               {/* Badge */}

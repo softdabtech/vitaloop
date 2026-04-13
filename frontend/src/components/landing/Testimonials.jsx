@@ -102,6 +102,7 @@ export default function Testimonials() {
             className="testimonial-grid"
             style={{
               display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
               gap: 20,
             }}
           >

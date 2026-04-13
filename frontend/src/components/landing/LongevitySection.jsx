@@ -43,6 +43,7 @@ export default function LongevitySection() {
         <div className="reveal" style={{ marginBottom: 72 }}>
           <div className="longevity-loop" style={{
             display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
             gap: 0,
             background: 'var(--gray-50)',
             borderRadius: 24,
