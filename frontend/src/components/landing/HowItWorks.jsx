@@ -74,7 +74,7 @@ function UploadVisual() {
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--teal-600)' }}>94%</span>
         </div>
         <div style={{ height: 4, background: 'var(--gray-100)', borderRadius: 2, overflow: 'hidden' }}>
-          <div className="fill-bar" style={{ height: '100%', width: '94%', background: 'var(--teal-500)', borderRadius: 2 }} />
+          <div className="fill-bar" style={{ height: '100%', width: '94%', background: 'var(--teal-500)', borderRadius: 2, willChange: 'width' }} />
         </div>
       </div>
     </div>
@@ -430,9 +430,9 @@ export default function HowItWorksSection() {
         </div>
 
         {/* 5 alternating rows */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 100 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 72 }}>
           {ROWS.map(({ reversed, text, visual }, i) => (
-            <div key={i} className={`reveal grid md:grid-cols-2 gap-16 items-center`}>
+            <div key={i} className="reveal grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
               <div className={reversed ? 'md:order-2' : ''}>{text}</div>
               <div className={reversed ? 'md:order-1' : ''}>{visual}</div>
             </div>

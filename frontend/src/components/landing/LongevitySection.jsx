@@ -112,7 +112,7 @@ export default function LongevitySection() {
           {[
             { num: '89%', label: 'of users re-test within 90 days' },
             { num: '3.4x', label: 'average biomarker improvement by year 1' },
-            { num: 'Forever', label: 'your health history stored securely' },
+            { num: '∞', label: 'your health history stored securely' },
           ].map(({ num, label }) => (
             <div key={num} style={{
               background: 'var(--gray-50)', borderRadius: 20,

@@ -96,10 +96,10 @@ export default function PricingSection() {
         </div>
 
         {/* Cards */}
-        <div className="reveal grid md:grid-cols-2 gap-6" style={{ marginBottom: 24 }}>
+        <div className="reveal grid grid-cols-1 md:grid-cols-2 gap-6" style={{ marginBottom: 24 }}>
 
           {/* FREE card */}
-          <div style={{
+          <div className="order-last md:order-first" style={{
             background: 'white', borderRadius: 28,
             border: '0.5px solid var(--gray-100)', padding: '44px 36px',
             display: 'flex', flexDirection: 'column',
@@ -124,7 +124,7 @@ export default function PricingSection() {
           </div>
 
           {/* CORE card */}
-          <div style={{
+          <div className="order-first md:order-last" style={{
             background: 'var(--teal-800)', borderRadius: 28, padding: '44px 36px',
             display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden',
             minHeight: 520,
@@ -194,14 +194,15 @@ export default function PricingSection() {
           <button
             onClick={() => navigate('/login')}
             style={{
-              background: 'var(--teal-800)', color: 'white',
+              background: 'var(--teal-500)', color: 'white',
               border: 'none', borderRadius: 980,
-              padding: '16px 48px', fontSize: 17, fontWeight: 700,
+              padding: '18px 52px', fontSize: 18, fontWeight: 700,
               cursor: 'pointer', transition: 'background 200ms, transform 200ms',
               display: 'inline-flex', alignItems: 'center', gap: 8,
+              letterSpacing: '-0.01em',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--teal-600)'; e.currentTarget.style.transform = 'scale(1.02)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal-800)'; e.currentTarget.style.transform = 'scale(1)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal-500)'; e.currentTarget.style.transform = 'scale(1)' }}
           >
             Start your free analysis
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

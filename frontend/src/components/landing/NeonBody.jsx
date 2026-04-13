@@ -24,15 +24,13 @@ function ParticleField({ color, cx, cy, rx, ry, count = 28, active }) {
 
   if (particles.current.length === 0) {
     for (let i = 0; i < count; i += 1) {
-      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4
-      const r = 0.3 + Math.random() * 0.7
+      const angle = (Math.PI * 2 * i) / count + (i * 0.37)
+      const r = 0.4 + (i % 7) * 0.1
       particles.current.push({
         x: cx + Math.cos(angle) * rx * r,
         y: cy + Math.sin(angle) * ry * r,
-        size: 1 + Math.random() * 2.2,
-        delay: Math.random() * 3,
-        speed: 1.5 + Math.random() * 2,
-        opacity: 0.3 + Math.random() * 0.6,
+        size: 1.2 + (i % 5) * 0.5,
+        opacity: 0.35 + (i % 6) * 0.09,
       })
     }
   }
@@ -44,13 +42,10 @@ function ParticleField({ color, cx, cy, rx, ry, count = 28, active }) {
           key={i}
           cx={p.x}
           cy={p.y}
-          r={active ? p.size * 1.4 : p.size}
+          r={active ? p.size * 1.3 : p.size}
           fill={color}
-          opacity={active ? Math.min(p.opacity * 1.6, 1) : p.opacity * 0.7}
-          style={{
-            transition: `opacity ${p.speed * 0.5}s ease, r ${p.speed * 0.4}s ease`,
-            animation: `zonePulse ${p.speed}s ease-in-out ${p.delay}s infinite`,
-          }}
+          opacity={active ? Math.min(p.opacity * 1.5, 0.9) : p.opacity}
+          style={{ transition: 'opacity 300ms ease, r 300ms ease' }}
         />
       ))}
     </>

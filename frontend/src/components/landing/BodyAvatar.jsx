@@ -119,29 +119,29 @@ function BodySVG({ activeZone, hoveredZone, onZoneClick, onZoneHover }) {
       {/* Zone glows */}
       <g filter="url(#av-glow)">
         {/* Brain */}
-        <g {...zoneProps('brain')} className={activeZone === 'brain' ? 'zone-pulse' : ''}>
+        <g {...zoneProps('brain')}>
           <circle cx="100" cy="36" r="27" {...getColor('brain')} />
         </g>
 
         {/* Heart */}
-        <g {...zoneProps('heart')} className={activeZone === 'heart' ? 'zone-pulse' : ''}>
+        <g {...zoneProps('heart')}>
           <ellipse cx="93" cy="130" rx="24" ry="20" {...getColor('heart')} />
         </g>
 
         {/* Muscles (arms) */}
-        <g {...zoneProps('muscles')} className={activeZone === 'muscles' ? 'zone-pulse' : ''}>
+        <g {...zoneProps('muscles')}>
           <path d="M40,83 L16,92 L14,182 L38,182 L48,100 Z" {...getColor('muscles')} />
           <path d="M160,83 L184,92 L186,182 L162,182 L152,100 Z" {...getColor('muscles')} />
         </g>
 
         {/* Bones (legs) */}
-        <g {...zoneProps('bones')} className={activeZone === 'bones' ? 'zone-pulse' : ''}>
+        <g {...zoneProps('bones')}>
           <path d="M46,230 L92,230 L89,378 L49,378 Z" {...getColor('bones')} />
           <path d="M108,230 L154,230 L151,378 L111,378 Z" {...getColor('bones')} />
         </g>
 
         {/* Gut */}
-        <g {...zoneProps('gut')} className={activeZone === 'gut' ? 'zone-pulse' : ''}>
+        <g {...zoneProps('gut')}>
           <ellipse cx="100" cy="170" rx="40" ry="26" {...getColor('gut')} />
         </g>
       </g>
@@ -258,14 +258,20 @@ function ZonePanel({ zone }) {
         background: 'var(--teal-800)', color: 'white',
         border: 'none', borderRadius: 980, padding: '10px 20px',
         fontSize: 13, fontWeight: 600, cursor: 'pointer',
-        transition: 'background 200ms',
+        transition: 'background 200ms, transform 200ms',
         alignSelf: 'flex-start',
+        display: 'flex', alignItems: 'center', gap: 6,
       }}
         onClick={() => navigate('/login')}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--teal-600)' }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal-800)' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--teal-600)'; e.currentTarget.style.transform = 'scale(1.02)' }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal-800)'; e.currentTarget.style.transform = 'scale(1)' }}
+        onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.98)' }}
+        onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1.02)' }}
       >
-        View full protocol →
+        View full protocol
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
       </button>
     </div>
   )
@@ -301,7 +307,7 @@ export default function BodyAvatar() {
           zones={zoneColors}
           activeZone={activeZone}
           onZoneClick={setActiveZone}
-          size={240}
+          size={300}
         />
 
         <div className="md:hidden" style={{ marginTop: 16 }}>
@@ -348,7 +354,11 @@ export default function BodyAvatar() {
       <div className="border-t md:border-t-0 md:border-l border-white/10" style={{ padding: 28 }}>
         {/* Tabs */}
         <div className="hidden md:flex" style={{
-          display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 24,
+          display: 'flex', gap: 6, marginBottom: 24,
+          overflowX: 'auto', flexWrap: 'nowrap',
+          paddingBottom: 4,
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
         }}>
           {ZONE_ORDER.map((id) => {
             const s = STATUS[ZONES[id].status]
