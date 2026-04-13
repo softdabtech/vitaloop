@@ -129,6 +129,19 @@ async def get_biomarkers_by_upload(upload_id: str, user_id: str) -> List[Dict]:
     return resp.data
 
 
+async def get_protocol_by_upload(user_id: str, upload_id: str) -> Optional[Dict]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("protocols")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("upload_id", upload_id)
+        .limit(1)
+        .execute()
+    )
+    return resp.data[0] if resp.data else None
+
+
 async def save_protocol(
     user_id: str,
     upload_id: str,
@@ -137,21 +150,14 @@ async def save_protocol(
 ) -> Dict:
     supabase = _get_supabase()
 
-    existing = await _run(
-        lambda: supabase.table("protocols")
-        .select("id")
-        .eq("user_id", user_id)
-        .eq("upload_id", upload_id)
-        .limit(1)
-        .execute()
-    )
+    existing_protocol = await get_protocol_by_upload(user_id, upload_id)
 
     payload: Dict[str, Any] = {"recommendations": recommendations}
     if prompt_version:
         payload["prompt_version"] = prompt_version
 
-    if existing.data:
-        protocol_id = existing.data[0]["id"]
+    if existing_protocol:
+        protocol_id = existing_protocol["id"]
         updated = await _run(
             lambda: supabase.table("protocols")
             .update(payload)
@@ -462,6 +468,9 @@ async def delete_complaint(user_id: str, complaint_id: str) -> None:
 
 async def submit_weekly_checkin(user_id: str, data: Dict[str, Any]) -> Dict:
     supabase = _get_supabase()
+    for field_name in ("energy_score", "sleep_quality", "mood_score", "protocol_adherence"):
+        if field_name in data and data[field_name] is not None:
+            data[field_name] = max(1, min(int(data[field_name]), 10))
     payload = {"user_id": user_id, **data}
     resp = await _run(
         lambda: supabase.table("checkins_weekly")
@@ -603,7 +612,47 @@ async def generate_insights(user_id: str) -> List[Dict]:
             })
 
     checkins = await get_weekly_checkins(user_id, limit=4)
-    if len(checkins) < 2:
+    if checkins:
+        latest_checkin = checkins[0]
+        adherence = latest_checkin.get("protocol_adherence")
+        symptom_changes = (latest_checkin.get("symptom_changes") or "").strip()
+        low_scores = [
+            ("energy", latest_checkin.get("energy_score")),
+            ("sleep", latest_checkin.get("sleep_quality")),
+            ("mood", latest_checkin.get("mood_score")),
+        ]
+        concerning_scores = [name for name, value in low_scores if isinstance(value, int) and value <= 3]
+
+        if isinstance(adherence, int) and adherence <= 4:
+            insights_list.append({
+                "insight_type": "adherence",
+                "title": "Protocol adherence is slipping",
+                "body": "Your latest weekly check-in shows low adherence. Tighten the routine before changing the protocol.",
+                "priority": 3,
+            })
+        elif isinstance(adherence, int) and adherence >= 8:
+            insights_list.append({
+                "insight_type": "adherence",
+                "title": "Adherence looks strong",
+                "body": "You are following the protocol consistently. Keep this pace and retest to validate biomarker changes.",
+                "priority": 2,
+            })
+
+        if concerning_scores:
+            insights_list.append({
+                "insight_type": "general",
+                "title": "Weekly check-in shows high strain",
+                "body": f"Your latest check-in shows pressure in {', '.join(concerning_scores)}. Review recovery, sleep, and escalation signals closely.",
+                "priority": 4,
+            })
+        elif symptom_changes:
+            insights_list.append({
+                "insight_type": "general",
+                "title": "Symptom changes recorded",
+                "body": f"Latest note: {symptom_changes[:160]}",
+                "priority": 2,
+            })
+    else:
         insights_list.append({
             "insight_type": "adherence",
             "title": "Start your weekly check-ins",

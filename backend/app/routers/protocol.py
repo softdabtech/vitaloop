@@ -4,7 +4,12 @@ from uuid import UUID
 
 from app.dependencies import get_current_user
 from app.services.claude_service import generate_protocol, PROTOCOL_PROMPT_VERSION
-from app.services.supabase_service import assert_upload_belongs_to_user, get_biomarkers_by_upload, save_protocol
+from app.services.supabase_service import (
+    assert_upload_belongs_to_user,
+    get_biomarkers_by_upload,
+    get_protocol_by_upload,
+    save_protocol,
+)
 from app.services.affiliate import build_iherb_url
 
 router = APIRouter()
@@ -31,6 +36,10 @@ async def create_protocol(
     upload_id = str(request.upload_id)
 
     await assert_upload_belongs_to_user(upload_id, user_id)
+
+    existing_protocol = await get_protocol_by_upload(user_id, upload_id)
+    if existing_protocol:
+        return existing_protocol
 
     biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
 

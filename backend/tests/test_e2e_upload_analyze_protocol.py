@@ -16,6 +16,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
         "uploads": {},
         "biomarkers": {},
         "protocols": [],
+        "protocol_calls": 0,
     }
 
     async def fake_save_lab_upload(
@@ -76,7 +77,14 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
     async def fake_get_biomarkers_by_upload(upload_id, user_id):
         return state["biomarkers"].get(upload_id, [])
 
+    async def fake_get_protocol_by_upload(user_id, upload_id):
+        for protocol in state["protocols"]:
+            if protocol["user_id"] == user_id and protocol["upload_id"] == upload_id:
+                return protocol
+        return None
+
     async def fake_generate_protocol(biomarkers, symptoms):
+        state["protocol_calls"] += 1
         assert len(biomarkers) > 0
         return [
             {
@@ -114,11 +122,21 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
     def fake_iherb_url(query):
         return f"https://www.iherb.com/search?kw={query}&rcode=TEST"
 
+    async def fake_save_timeline_event(user_id, event_type, summary, metadata=None):
+        return {
+            "user_id": user_id,
+            "event_type": event_type,
+            "summary": summary,
+            "metadata": metadata or {},
+        }
+
     monkeypatch.setattr(analyze_router, "save_lab_upload", fake_save_lab_upload)
     monkeypatch.setattr(analyze_router, "extract_biomarkers", fake_extract_biomarkers)
     monkeypatch.setattr(analyze_router, "save_biomarkers", fake_save_biomarkers)
+    monkeypatch.setattr(analyze_router, "save_timeline_event", fake_save_timeline_event)
 
     monkeypatch.setattr(protocol_router, "get_biomarkers_by_upload", fake_get_biomarkers_by_upload)
+    monkeypatch.setattr(protocol_router, "get_protocol_by_upload", fake_get_protocol_by_upload)
     monkeypatch.setattr(protocol_router, "generate_protocol", fake_generate_protocol)
     monkeypatch.setattr(protocol_router, "save_protocol", fake_save_protocol)
     monkeypatch.setattr(protocol_router, "build_iherb_url", fake_iherb_url)
@@ -160,6 +178,19 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
             assert protocol_json["upload_id"] == analyze_json["upload_id"]
             assert len(protocol_json["recommendations"]) == 1
             assert "iherb_url" in protocol_json["recommendations"][0]
+
+            protocol_second_response = await client.post(
+                "/protocol",
+                json={
+                    "upload_id": analyze_json["upload_id"],
+                    "symptoms": ["fatigue"],
+                },
+            )
+
+            assert protocol_second_response.status_code == 200
+            protocol_second_json = protocol_second_response.json()
+            assert protocol_second_json == protocol_json
+            assert state["protocol_calls"] == 1
 
             # DoD check: valid token but чужой upload_id -> denied
             foreign_upload_id = str(uuid.uuid4())
