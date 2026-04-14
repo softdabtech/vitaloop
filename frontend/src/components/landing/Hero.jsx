@@ -1,6 +1,7 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Shield, Activity, Zap, FlaskConical, BarChart2, Heart, Droplets, ScanLine, ClipboardList } from 'lucide-react'
+import SupportChat from '../SupportChat.jsx'
 
 function ParticleCanvas() {
   const canvasRef = useRef(null)
@@ -144,6 +145,7 @@ function ParticleCanvas() {
 
 export default function Hero() {
   const navigate = useNavigate()
+  const [chatOpen, setChatOpen] = useState(false)
 
   return (
     <section
@@ -246,7 +248,7 @@ export default function Hero() {
             Start free — no card needed <ArrowRight size={16} aria-hidden="true" />
           </button>
           <button
-            onClick={() => { const el = document.getElementById('how-it-works'); el?.scrollIntoView({ behavior: 'smooth' }) }}
+            onClick={() => setChatOpen(true)}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               background: 'transparent',
@@ -255,10 +257,20 @@ export default function Hero() {
               color: 'var(--gray-700)', cursor: 'pointer',
               transition: 'border-color 200ms, color 200ms',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--teal-500)'; e.currentTarget.style.color = 'var(--teal-600)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--gray-300)'; e.currentTarget.style.color = 'var(--gray-700)' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'var(--teal-500)'
+              e.currentTarget.style.color = 'var(--teal-600)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'var(--gray-300)'
+              e.currentTarget.style.color = 'var(--gray-700)'
+            }}
           >
-            See how it works
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </svg>
+            Chat with us
           </button>
         </div>
 
@@ -279,6 +291,7 @@ export default function Hero() {
         </div>
 
       </div>
+      {chatOpen && <SupportChat onClose={() => setChatOpen(false)} />}
     </section>
   )
 }

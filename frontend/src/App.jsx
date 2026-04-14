@@ -18,7 +18,8 @@ import WeeklyCheckIn from './pages/WeeklyCheckIn.jsx'
 import Insights from './pages/Insights.jsx'
 import NotFound from './pages/NotFound.jsx'
 import { useAuth } from './hooks/useAuth.js'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import SupportChat from './components/SupportChat.jsx'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -44,6 +45,8 @@ function SuperAdminRoute({ children }) {
 }
 
 export default function App() {
+  const [chatOpen, setChatOpen] = useState(false)
+
   return (
     <BrowserRouter>
       <ScrollToTop />
@@ -68,6 +71,36 @@ export default function App() {
         <Route path="/404.html" element={<NotFound />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+
+      {/* Floating chat button - visible on all pages */}
+      <button
+        onClick={() => setChatOpen(v => !v)}
+        aria-label="Open support chat"
+        style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 2999,
+          width: 52, height: 52, borderRadius: '50%',
+          background: 'var(--teal-800,#085041)',
+          border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 20px rgba(8,80,65,0.35)',
+          transition: 'transform 200ms, background 200ms',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--teal-600,#0F6E56)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'var(--teal-800,#085041)'}
+      >
+        {chatOpen
+          ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="white" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          : <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="white" strokeWidth="2" strokeLinecap="round">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </svg>
+        }
+      </button>
+
+      {chatOpen && <SupportChat onClose={() => setChatOpen(false)} />}
     </BrowserRouter>
   )
 }
