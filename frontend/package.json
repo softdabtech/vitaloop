@@ -6,7 +6,9 @@
   "homepage": "https://vitaloop.softdab.tech",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "validate:env": "node ./scripts/validate-env.mjs",
+    "build": "npm run validate:env && vite build",
+    "build:prod": "npm run validate:env && vite build --mode production",
     "postbuild": "react-snap",
     "preview": "vite preview"
   },
