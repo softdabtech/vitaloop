@@ -8,7 +8,7 @@ import AdminShell from '../components/admin/AdminShell.jsx'
 
 export default function MasterAdmin() {
   const { user } = useAuth()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [overview, setOverview] = useState(null)
   const [symptomAnalytics, setSymptomAnalytics] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
@@ -17,6 +17,7 @@ export default function MasterAdmin() {
   const [redFlags, setRedFlags] = useState([])
   const [notifications, setNotifications] = useState([])
   const [loadingTab, setLoadingTab] = useState(false)
+  const VALID_TABS = ['overview', 'users', 'knowledge', 'monitoring', 'redflags']
 
   // Unified super admin check: user_metadata OR app_metadata
   const meta = user?.user_metadata || {}
@@ -47,8 +48,18 @@ export default function MasterAdmin() {
     loadAdminData()
   }, [user, isSuperAdmin])
 
-  const loadTab = async (tab) => {
+  const loadTab = async (tab, syncUrl = true) => {
+    if (!VALID_TABS.includes(tab)) return
+
     setActiveTab(tab)
+
+    if (syncUrl) {
+      const next = new URLSearchParams(searchParams)
+      if (tab === 'overview') next.delete('tab')
+      else next.set('tab', tab)
+      setSearchParams(next, { replace: true })
+    }
+
     setLoadingTab(true)
     try {
       if (tab === 'users' && users.length === 0) {
@@ -64,11 +75,11 @@ export default function MasterAdmin() {
   }
 
   useEffect(() => {
-    const tabFromUrl = searchParams.get('tab')
-    if (tabFromUrl && tabFromUrl !== activeTab) {
-      loadTab(tabFromUrl)
+    const tabFromUrl = searchParams.get('tab') || 'overview'
+    if (tabFromUrl !== activeTab && VALID_TABS.includes(tabFromUrl)) {
+      loadTab(tabFromUrl, false)
     }
-  }, [searchParams])
+  }, [searchParams, activeTab])
 
   const acknowledgeFlag = async (id) => {
     setRedFlags(prev => prev.filter(f => f.id !== id))
