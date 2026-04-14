@@ -42,6 +42,73 @@ function StoreCard({ name, tagline, color, initial }) {
   )
 }
 
+function WorldMap() {
+  const points = [
+    { x: '14%', y: '58%' },
+    { x: '22%', y: '66%' },
+    { x: '47%', y: '34%' },
+    { x: '56%', y: '52%' },
+    { x: '72%', y: '48%' },
+    { x: '81%', y: '58%' },
+    { x: '30%', y: '76%' },
+  ]
+
+  return (
+    <div style={{
+      position: 'relative',
+      height: 340,
+      borderRadius: 20,
+      background: 'radial-gradient(circle at 50% 40%, rgba(16,185,129,0.16), rgba(16,185,129,0.02) 70%)',
+      border: '0.5px solid rgba(255,255,255,0.08)',
+      overflow: 'hidden',
+    }}>
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.10) 1px, transparent 1px)',
+        backgroundSize: '18px 18px',
+        opacity: 0.35,
+      }} />
+
+      {points.map((p, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: p.x,
+            top: p.y,
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: 'var(--teal-300)',
+            boxShadow: '0 0 0 6px rgba(95, 221, 175, 0.12)',
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
+      ))}
+
+      {/* Region text labels */}
+      {[
+        { label: 'North America', x: '17%', y: '62%' },
+        { label: 'Europe',        x: '48%', y: '35%' },
+        { label: 'Middle East',   x: '60%', y: '56%' },
+        { label: 'Asia Pacific',  x: '76%', y: '50%' },
+        { label: 'Latin America', x: '27%', y: '78%' },
+      ].map(({ label, x, y }) => (
+        <div key={label} style={{
+          position: 'absolute', left: x, top: y,
+          transform: 'translate(-50%, -50%)',
+          fontSize: 9, fontWeight: 600, letterSpacing: '0.1em',
+          textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)',
+          pointerEvents: 'none', userSelect: 'none', whiteSpace: 'nowrap',
+        }}>
+          {label}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const BLOCKS = [
   {
     Icon: Package,
@@ -176,6 +243,68 @@ export default function PartnersSection() {
               )}
             </div>
           ))}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 reveal" style={{ marginTop: 32 }}>
+          <div style={{
+            background: 'var(--gray-900)',
+            borderRadius: 24,
+            border: '0.5px solid rgba(255,255,255,0.08)',
+            padding: '28px 24px',
+          }}>
+            <div style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--teal-100)',
+              marginBottom: 12,
+            }}>
+              Global coverage
+            </div>
+            <WorldMap />
+          </div>
+
+          <div style={{
+            background: 'var(--gray-900)',
+            borderRadius: 24,
+            border: '0.5px solid rgba(255,255,255,0.08)',
+            padding: '28px 24px',
+          }}>
+            <h3 style={{ fontSize: 26, color: 'white', letterSpacing: '-0.02em', marginBottom: 12, fontWeight: 700 }}>
+              Become a VITALOOP Partner
+            </h3>
+            <p style={{ color: 'var(--teal-100)', fontSize: 15, lineHeight: 1.65, marginBottom: 20 }}>
+              Refer users who need clarity with their lab results and earn recurring commission while they stay on VITALOOP.
+            </p>
+
+            {/* Quick stats row */}
+            <div style={{
+              display: 'flex', gap: 20, marginBottom: 24, flexWrap: 'wrap',
+            }}>
+              {[
+                { n: '20%', l: 'комиссия' },
+                { n: '$117', l: 'доход/год с клиента' },
+                { n: '∞', l: 'без ограничений' },
+              ].map(({ n, l }) => (
+                <div key={n} style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  borderRadius: 12, padding: '10px 16px',
+                  border: '0.5px solid rgba(255,255,255,0.08)',
+                  minWidth: 90,
+                }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: 'white', letterSpacing: '-0.02em' }}>{n}</div>
+                  <div style={{ fontSize: 11, color: 'var(--teal-100)', marginTop: 2 }}>{l}</div>
+                </div>
+              ))}
+            </div>
+
+            <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--gray-100)', display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>
+              <li>Recurring payout while referred clients stay active</li>
+              <li>Ready-to-share content and referral dashboard</li>
+              <li>Priority support for your partner pipeline</li>
+            </ul>
+          </div>
         </div>
 
       </div>
