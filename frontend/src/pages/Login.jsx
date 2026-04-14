@@ -111,7 +111,11 @@ export default function Login() {
     const { error } = await fn(email, password)
     setLoading(false)
     if (error) toast.error(error.message)
-    else navigate('/dashboard')
+    else if (isSignUp) {
+      navigate('/onboarding')
+    } else {
+      navigate('/dashboard')
+    }
   }
 
   return (

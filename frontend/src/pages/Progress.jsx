@@ -68,7 +68,10 @@ export default function Progress() {
           <h3 className="text-xl font-semibold text-white mb-2">Advanced Tracking</h3>
           <p className="text-gray-400 mb-6">Detailed progress tracking is available with Vitaloop Premium.</p>
           <button 
-            onClick={() => navigate('/checkout')} 
+            onClick={() => {
+              // /checkout does not exist; route user to landing pricing block.
+              window.location.href = '/#pricing'
+            }} 
             className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg font-semibold transition"
           >
             Upgrade to Premium

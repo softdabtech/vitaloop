@@ -35,9 +35,16 @@ public class AuthController : Controller
     [HttpGet("post-login")]
     public async Task<IActionResult> PostLogin(CancellationToken ct)
     {
-        var ctx = await _userContextAccessor.GetOrThrow(ct);
-        var destination = _authRedirectService.ResolvePostLoginRedirect(ctx);
-        return Redirect(destination);
+        try
+        {
+            var ctx = await _userContextAccessor.GetOrThrow(ct);
+            var destination = _authRedirectService.ResolvePostLoginRedirect(ctx);
+            return Redirect(destination);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return RedirectToAction(nameof(Login));
+        }
     }
 
     /// <summary>
