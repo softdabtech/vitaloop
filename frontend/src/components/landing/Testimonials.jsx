@@ -55,6 +55,12 @@ const TESTIMONIALS = [
 ]
 
 const VISIBLE = 3
+const METRIC_TILES = [
+  { label: 'Energy score', before: '54', after: '78', unit: '%' },
+  { label: 'Sleep quality', before: '61', after: '82', unit: '%' },
+  { label: 'Focus stability', before: '48', after: '73', unit: '%' },
+  { label: 'Stress load', before: '71', after: '49', unit: '%' },
+]
 
 export default function Testimonials() {
   const [index, setIndex] = useState(0)
@@ -118,6 +124,7 @@ export default function Testimonials() {
           >
             {visible.map(({ quote, name, age, tag, initials }, i) => {
               const isCenter = i === 1
+              const metric = METRIC_TILES[(index + i) % METRIC_TILES.length]
               return (
                 <div
                   key={`${name}-${index}-${i}`}
@@ -153,6 +160,24 @@ export default function Testimonials() {
                   }}>
                     {quote}
                   </blockquote>
+
+                  <div style={{
+                    background: 'var(--teal-50)',
+                    border: '0.5px solid var(--teal-300)',
+                    borderRadius: 12, padding: '14px 16px', marginBottom: 20,
+                    display: 'flex', flexDirection: 'column', gap: 6,
+                  }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--teal-600)' }}>
+                      {metric.label}
+                      <span style={{
+                        color: 'var(--teal-600)', marginLeft: 4,
+                        fontWeight: 700, fontSize: 11,
+                      }}>↑</span>
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--teal-600)' }}>
+                      {metric.before !== '—' ? `${metric.before} → ` : ''}{metric.after} {metric.unit}
+                    </span>
+                  </div>
 
                   {/* Tag */}
                   <div style={{

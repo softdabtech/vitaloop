@@ -90,51 +90,45 @@ export default function PricingSection() {
         </div>
 
         {/* Cards */}
-        <div
-          className="reveal"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: 20,
-            alignItems: 'stretch',
-            marginBottom: 36,
-          }}
-        >
+        <div className="reveal grid grid-cols-1 md:grid-cols-3 gap-6" style={{ marginBottom: 36 }}>
           {PLANS.map(({ id, name, price, period, desc, badge, dark, premium, cta, features }) => (
             <div
               key={id}
-              style={{
-                borderRadius: 28,
-                padding: '44px 36px',
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-                position: 'relative',
-                overflow: 'hidden',
-                background: dark
-                  ? 'var(--teal-800)'
-                  : premium
-                  ? 'var(--white)'
-                  : 'var(--white)',
-                border: dark
-                  ? 'none'
-                  : premium
-                  ? '1px solid rgba(16,185,129,0.35)'
-                  : '0.5px solid var(--gray-100)',
-                boxShadow: dark
-                  ? '0 12px 40px rgba(16,185,129,0.18)'
-                  : premium
-                  ? '0 4px 20px rgba(16,185,129,0.08)'
-                  : 'none',
-                transition: 'transform 220ms ease, box-shadow 220ms ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.02)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)'
-              }}
+              className={id === 'core' ? 'order-first md:order-none' : id === 'free' ? 'order-last md:order-none' : 'order-2 md:order-none'}
             >
+              <div
+                style={{
+                  borderRadius: 28,
+                  padding: '44px 36px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  background: dark
+                    ? 'var(--teal-800)'
+                    : premium
+                    ? 'var(--white)'
+                    : 'var(--white)',
+                  border: dark
+                    ? 'none'
+                    : premium
+                    ? '1px solid rgba(16,185,129,0.35)'
+                    : '0.5px solid var(--gray-100)',
+                  boxShadow: dark
+                    ? '0 12px 40px rgba(16,185,129,0.18)'
+                    : premium
+                    ? '0 4px 20px rgba(16,185,129,0.08)'
+                    : 'none',
+                  transition: 'transform 220ms ease, box-shadow 220ms ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.02)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)'
+                }}
+              >
               {/* Badge */}
               {badge && (
                 <div style={{
@@ -199,35 +193,55 @@ export default function PricingSection() {
                 ))}
               </ul>
 
-              {/* CTA */}
-              <button
-                onClick={() => navigate('/login')}
-                style={{
-                  borderRadius: 980,
-                  padding: '14px 24px',
-                  fontSize: 15,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  border: 'none',
-                  transition: 'opacity 200ms, transform 200ms',
-                  background: dark
-                    ? 'white'
-                    : premium
-                    ? 'var(--teal-500)'
-                    : 'var(--gray-100)',
-                  color: dark
-                    ? 'var(--teal-800)'
-                    : premium
-                    ? 'white'
-                    : 'var(--gray-700)',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'scale(1.02)' }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1)' }}
-              >
-                {cta}
-              </button>
+                {/* CTA */}
+                <button
+                  onClick={() => navigate('/login')}
+                  style={{
+                    borderRadius: 980,
+                    padding: '14px 24px',
+                    fontSize: 15,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    border: 'none',
+                    transition: 'opacity 200ms, transform 200ms',
+                    background: dark
+                      ? 'white'
+                      : premium
+                      ? 'var(--teal-500)'
+                      : 'var(--gray-100)',
+                    color: dark
+                      ? 'var(--teal-800)'
+                      : premium
+                      ? 'white'
+                      : 'var(--gray-700)',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'scale(1.02)' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1)' }}
+                >
+                  {cta}
+                </button>
+              </div>
             </div>
           ))}
+        </div>
+
+        <div className="reveal" style={{ textAlign: 'center', marginBottom: 28 }}>
+          <button
+            onClick={() => navigate('/login')}
+            style={{
+              background: 'var(--teal-500)',
+              color: 'white',
+              border: 'none', borderRadius: 980,
+              padding: '18px 52px', fontSize: 18, fontWeight: 700,
+              cursor: 'pointer', transition: 'background 200ms, transform 200ms',
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              letterSpacing: '-0.01em',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--teal-600)'; e.currentTarget.style.transform = 'scale(1.02)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal-500)'; e.currentTarget.style.transform = 'scale(1)' }}
+          >
+            Start your free analysis
+          </button>
         </div>
 
         {/* Footer note */}
