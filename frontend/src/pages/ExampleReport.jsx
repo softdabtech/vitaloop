@@ -27,14 +27,19 @@ export default function ExampleReport() {
   const borderlineCount = DEMO_BIOMARKERS.filter(b => b.status === 'BORDERLINE').length
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--gray-950, #0a0a0a)',
+      color: 'white',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+    }}>
       <Seo
         title="Example Biomarker Report"
         description="Preview a realistic VITALOOP biomarker report with interactive zones, supplement protocols, and AI-generated insights."
         path="/example-report"
       />
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border-b border-blue-500/20 px-6 py-16">
+      <div className="bg-gradient-to-r from-teal-900/40 to-teal-800/30 border-b px-6 py-16" style={{ borderColor: 'var(--teal-500)' }}>
         <div className="max-w-6xl mx-auto">
           <h1 className="text-5xl font-bold text-white mb-4">
             See Your Health in 3D
@@ -43,7 +48,10 @@ export default function ExampleReport() {
             This is a sample report showing how Vitaloop transforms lab data into an interactive visual guide for your health. Upload your own tests to get your personalized avatar.
           </p>
           <div className="flex gap-4">
-            <button onClick={() => navigate('/login')} className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition">
+            <button
+              onClick={() => navigate('/login')}
+              style={{ background: 'var(--teal-500, #1D9E75)', color: 'white', border: 'none', borderRadius: 980, padding: '12px 28px', fontWeight: 600, cursor: 'pointer' }}
+            >
               Try It Live →
             </button>
             <button onClick={() => navigate('/how-it-works')} className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition border border-white/20">
@@ -75,10 +83,10 @@ export default function ExampleReport() {
             <p className="text-sm text-gray-400 mt-1">Room for optimization</p>
           </div>
 
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6">
+          <div className="bg-teal-500/10 border rounded-xl p-6" style={{ borderColor: 'var(--teal-500)' }}>
             <div className="flex items-center gap-3 mb-2">
-              <TrendingUp className="w-6 h-6 text-blue-400" />
-              <span className="text-blue-300 font-semibold">Insights</span>
+              <TrendingUp className="w-6 h-6" style={{ color: 'var(--teal-400)' }} />
+              <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Insights</span>
             </div>
             <p className="text-3xl font-bold text-white">3</p>
             <p className="text-sm text-gray-400 mt-1">Personalized recommendations</p>
@@ -113,36 +121,36 @@ export default function ExampleReport() {
         </motion.div>
 
         {/* Sample Protocol */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border border-purple-500/20 rounded-xl p-8 mb-12">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-gradient-to-br from-teal-900/20 to-teal-800/10 border rounded-xl p-8 mb-12" style={{ borderColor: 'var(--teal-500)' }}>
           <h3 className="text-2xl font-bold text-white mb-4">Sample Protocol Generated from This Avatar</h3>
           
           <div className="space-y-6">
             <div>
-              <h4 className="font-semibold text-cyan-300 mb-3">🧠 Brain & Cognition Protocol</h4>
+              <h4 className="font-semibold mb-3" style={{ color: 'var(--teal-400)' }}>🧠 Brain & Cognition Protocol</h4>
               <div className="space-y-2 text-sm text-gray-300">
-                <p>✓ <span className="text-cyan-300 font-semibold">Methylcobalamin 2mg sublingual</span> — Daily (B12 optimization)</p>
-                <p>✓ <span className="text-cyan-300 font-semibold">Omega-3 2000mg EPA/DHA</span> — With meals, 2x daily</p>
-                <p>✓ <span className="text-cyan-300 font-semibold">Magnesium Glycinate 300mg</span> — Before bed (sleep quality)</p>
+                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Methylcobalamin 2mg sublingual</span> — Daily (B12 optimization)</p>
+                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Omega-3 2000mg EPA/DHA</span> — With meals, 2x daily</p>
+                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Magnesium Glycinate 300mg</span> — Before bed (sleep quality)</p>
                 <p className="text-gray-500 text-xs mt-2">💡 Retest: 8 weeks to assess B12 absorption & cognitive improvements</p>
               </div>
             </div>
 
             <div>
-              <h4 className="font-semibold text-cyan-300 mb-3">❤️ Cardiovascular Protocol</h4>
+              <h4 className="font-semibold mb-3" style={{ color: 'var(--teal-400)' }}>❤️ Cardiovascular Protocol</h4>
               <div className="space-y-2 text-sm text-gray-300">
-                <p>✓ <span className="text-cyan-300 font-semibold">CoQ10 Ubiquinol 200mg</span> — 2x daily (heart mitochondria)</p>
-                <p>✓ <span className="text-cyan-300 font-semibold">Berberine 500mg</span> — Before meals, 2x daily (cholesterol support)</p>
-                <p>✓ <span className="text-cyan-300 font-semibold">Garlic Extract (Kyolic) 2 caps</span> — 2x daily (arterial health)</p>
+                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>CoQ10 Ubiquinol 200mg</span> — 2x daily (heart mitochondria)</p>
+                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Berberine 500mg</span> — Before meals, 2x daily (cholesterol support)</p>
+                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Garlic Extract (Kyolic) 2 caps</span> — 2x daily (arterial health)</p>
                 <p className="text-gray-500 text-xs mt-2">💡 Retest: 12 weeks for lipid panel reassessment</p>
               </div>
             </div>
 
             <div>
-              <h4 className="font-semibold text-cyan-300 mb-3">🔄 Liver Detox Protocol</h4>
+              <h4 className="font-semibold mb-3" style={{ color: 'var(--teal-400)' }}>🔄 Liver Detox Protocol</h4>
               <div className="space-y-2 text-sm text-gray-300">
-                <p>✓ <span className="text-cyan-300 font-semibold">NAC (N-Acetyl Cysteine) 1000mg</span> — 2x daily</p>
-                <p>✓ <span className="text-cyan-300 font-semibold">Milk Thistle 300mg silymarin</span> — 2x daily</p>
-                <p>✓ <span className="text-cyan-300 font-semibold">Alpha-Lipoic Acid 300mg</span> — 2 hours before meals (antioxidant)</p>
+                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>NAC (N-Acetyl Cysteine) 1000mg</span> — 2x daily</p>
+                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Milk Thistle 300mg silymarin</span> — 2x daily</p>
+                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Alpha-Lipoic Acid 300mg</span> — 2 hours before meals (antioxidant)</p>
                 <p className="text-gray-500 text-xs mt-2">💡 Lifestyle: 8-10 hours sleep, hydrate 2L+ water daily, limit alcohol</p>
               </div>
             </div>
@@ -150,13 +158,16 @@ export default function ExampleReport() {
         </motion.div>
 
         {/* CTA */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-12 text-center">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="rounded-xl p-12 text-center" style={{ background: 'linear-gradient(135deg, rgba(29,158,117,0.9), rgba(8,80,65,0.95))' }}>
           <h2 className="text-3xl font-bold text-white mb-4">Ready to Map Your Health?</h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl mb-8 max-w-2xl mx-auto" style={{ color: 'rgba(226, 255, 246, 0.9)' }}>
             Upload your own lab results to get your personalized biomarker map, avatar, and AI-generated protocol.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
-            <button onClick={() => navigate('/login')} className="px-8 py-4 bg-white text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition">
+            <button
+              onClick={() => navigate('/login')}
+              style={{ background: 'var(--teal-500, #1D9E75)', color: 'white', border: 'none', borderRadius: 980, padding: '12px 28px', fontWeight: 600, cursor: 'pointer' }}
+            >
               Get Started Free
             </button>
             <button onClick={() => navigate('/how-it-works')} className="px-8 py-4 bg-white/20 text-white font-bold rounded-lg hover:bg-white/30 transition border border-white/40">
@@ -172,19 +183,19 @@ export default function ExampleReport() {
           <h2 className="text-3xl font-bold text-white mb-12 text-center">Common Questions</h2>
           <div className="grid md:grid-cols-2 gap-8">
             <div>
-              <h3 className="font-semibold text-cyan-300 mb-2">How accurate is the analysis?</h3>
+              <h3 className="font-semibold mb-2" style={{ color: 'var(--teal-400)' }}>How accurate is the analysis?</h3>
               <p className="text-gray-400 text-sm">Our analysis is powered by Claude AI trained on 15+ years of clinical nutrition research. Protocols are recommendations only — always consult your healthcare provider.</p>
             </div>
             <div>
-              <h3 className="font-semibold text-cyan-300 mb-2">Where do I get lab tests?</h3>
+              <h3 className="font-semibold mb-2" style={{ color: 'var(--teal-400)' }}>Where do I get lab tests?</h3>
               <p className="text-gray-400 text-sm">Use services like Quest Diagnostics, LabCorp, or EverlyWell to order tests. Upload PDFs directly to Vitaloop to get your avatar and protocol.</p>
             </div>
             <div>
-              <h3 className="font-semibold text-cyan-300 mb-2">Can I track progress over time?</h3>
+              <h3 className="font-semibold mb-2" style={{ color: 'var(--teal-400)' }}>Can I track progress over time?</h3>
               <p className="text-gray-400 text-sm">Yes! Upload tests every 6-12 weeks to track biomarker trends. Premium users get charts comparing your metrics across time.</p>
             </div>
             <div>
-              <h3 className="font-semibold text-cyan-300 mb-2">Are the recommendations personalized?</h3>
+              <h3 className="font-semibold mb-2" style={{ color: 'var(--teal-400)' }}>Are the recommendations personalized?</h3>
               <p className="text-gray-400 text-sm">Completely. Our AI generates protocols based on YOUR specific biomarker patterns, lifestyle, and health goals.</p>
             </div>
           </div>

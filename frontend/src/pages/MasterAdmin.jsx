@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
 import api from '../lib/api.js'
 import { motion } from 'framer-motion'
@@ -7,6 +8,7 @@ import AdminShell from '../components/admin/AdminShell.jsx'
 
 export default function MasterAdmin() {
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
   const [overview, setOverview] = useState(null)
   const [symptomAnalytics, setSymptomAnalytics] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
@@ -60,6 +62,13 @@ export default function MasterAdmin() {
     } catch { /* ignore */ }
     finally { setLoadingTab(false) }
   }
+
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab')
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      loadTab(tabFromUrl)
+    }
+  }, [searchParams])
 
   const acknowledgeFlag = async (id) => {
     setRedFlags(prev => prev.filter(f => f.id !== id))
