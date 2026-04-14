@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase.js'
+import { supabase, hasSupabaseConfig } from '../lib/supabase.js'
 
 export function useAuth() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!hasSupabaseConfig) {
+      setUser(null)
+      setLoading(false)
+      return () => {}
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
@@ -25,7 +31,12 @@ export function useAuth() {
     supabase.auth.signUp({ email, password })
 
   const signInWithGoogle = () =>
-    supabase.auth.signInWithOAuth({ provider: 'google' })
+    supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
 
   const resetPassword = (email) =>
     supabase.auth.resetPasswordForEmail(email, {

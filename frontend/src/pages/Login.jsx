@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
+import { supabase } from '../lib/supabase.js'
+import { navigateToResolvedPath, resolvePostLoginDestination } from '../auth/postLogin.js'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 
@@ -110,12 +112,20 @@ export default function Login() {
     const fn = isSignUp ? signUpWithEmail : signInWithEmail
     const { error } = await fn(email, password)
     setLoading(false)
-    if (error) toast.error(error.message)
-    else if (isSignUp) {
-      navigate('/onboarding')
-    } else {
-      navigate('/dashboard')
+    if (error) {
+      toast.error(error.message)
+      return
     }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      toast.success(isSignUp ? 'Account created. Confirm email to continue.' : 'Signed in successfully.')
+      navigate('/login', { replace: true })
+      return
+    }
+
+    const destination = await resolvePostLoginDestination(user)
+    navigateToResolvedPath(navigate, destination)
   }
 
   return (
