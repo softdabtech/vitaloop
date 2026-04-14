@@ -225,25 +225,6 @@ export default function PricingSection() {
           ))}
         </div>
 
-        <div className="reveal" style={{ textAlign: 'center', marginBottom: 28 }}>
-          <button
-            onClick={() => navigate('/login')}
-            style={{
-              background: 'var(--teal-500)',
-              color: 'white',
-              border: 'none', borderRadius: 980,
-              padding: '18px 52px', fontSize: 18, fontWeight: 700,
-              cursor: 'pointer', transition: 'background 200ms, transform 200ms',
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              letterSpacing: '-0.01em',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--teal-600)'; e.currentTarget.style.transform = 'scale(1.02)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal-500)'; e.currentTarget.style.transform = 'scale(1)' }}
-          >
-            Start your free analysis
-          </button>
-        </div>
-
         {/* Footer note */}
         <div className="reveal" style={{ textAlign: 'center', fontSize: 13, color: 'var(--gray-500)' }}>
           Secure. Private. No data selling.
