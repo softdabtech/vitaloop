@@ -1,0 +1,11 @@
+@model FormSectionViewModel
+
+<section class="vo-card vo-form-section">
+  <header>
+    <h3>@Model.Title</h3>
+    @if (!string.IsNullOrWhiteSpace(Model.Description))
+    {
+      <p>@Model.Description</p>
+    }
+  </header>
+</section>

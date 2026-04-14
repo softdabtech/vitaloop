@@ -1,4 +1,4 @@
-# VITATOOL V1.1.1 (VITALOOP)
+# VITATOOL V2.1.1 (VITALOOP)
 
 Production: https://vitaloop.softdab.tech
 
@@ -11,7 +11,7 @@ upload report -> AI biomarker analysis -> personalized protocol -> weekly check-
 2. GitHub `main` must always reflect the real production code state.
 3. New features and improvements are shipped only as versioned updates.
 
-Current release: **V1.1.1**
+Current release: **V2.1.1**
 
 ## What Is Implemented on the Service
 

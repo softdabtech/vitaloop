@@ -1,0 +1,68 @@
+@model InvitationsPageViewModel
+
+@{
+  ViewData["Title"] = "Invitations";
+}
+
+@await Html.PartialAsync("Partials/_Breadcrumbs")
+@await Html.PartialAsync("Partials/_PageHeader", new PageHeaderViewModel { Title = "Invitations", Subtitle = "Invite lifecycle — send, track, revoke", Eyebrow = "Domain" })
+
+<section class="vo-card" style="margin-bottom: var(--vo-space-5);">
+  <form method="get" action="/invitations" class="vo-filter-bar">
+    <div class="vo-filter-input-wrap">
+      <span class="vo-filter-search-icon" aria-hidden="true">🔍</span>
+      <input class="vo-input" type="search" name="q" value="@Model.Search" placeholder="Search invitations by email…" />
+    </div>
+    <button type="submit" class="vo-btn vo-btn-primary vo-btn-sm">Search</button>
+  </form>
+</section>
+
+@await Html.PartialAsync("Ui/_DataTableShell", new DataTableShellViewModel {
+  Title = "Pending and Historical Invites",
+  Columns = new[] { "Email", "Role", "Status", "Expires" },
+  EmptyMessage = "No invitations found for this organization.",
+  Rows = Model.Invitations.Select(i => (IReadOnlyList<string>)new[] { i.DisplayName, i.RoleLabel, i.StatusBadge, i.ExpiresLabel }).ToList()
+})
+
+<section class="vo-grid two-up">
+  <div class="vo-card">
+    <div class="vo-card-head"><h3>Create Invitation</h3></div>
+    <form method="post" action="/invitations/create" class="vo-form-grid">
+      @Html.AntiForgeryToken()
+      <div class="vo-field">
+        <label class="vo-label" for="inv-email">Email address</label>
+        <input class="vo-input" id="inv-email" type="email" name="email" placeholder="member@company.com" />
+        <span class="vo-field-hint">An invitation email will be sent to this address.</span>
+      </div>
+      <div class="vo-field">
+        <label class="vo-label" for="inv-role">Invite as role</label>
+        <div class="vo-select-wrap">
+          <select class="vo-input" id="inv-role" name="role">
+            <option value="end_user">End User</option>
+            <option value="practitioner">Practitioner</option>
+            <option value="client_admin">Client Admin</option>
+          </select>
+        </div>
+        <span class="vo-field-hint">Defines what the invitee can do after joining.</span>
+      </div>
+      <div class="vo-form-actions">
+        <button type="submit" class="vo-btn vo-btn-primary">Send invite</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="vo-card tone-danger">
+    <div class="vo-card-head"><h3>Revoke Invitation</h3></div>
+    <form method="post" action="/invitations/revoke" class="vo-form-grid">
+      @Html.AntiForgeryToken()
+      <div class="vo-field">
+        <label class="vo-label" for="rev-id">Invitation ID</label>
+        <input class="vo-input" id="rev-id" type="text" name="invitationId" placeholder="00000000-0000-0000-0000-000000000000" />
+        <span class="vo-field-hint">The invite will be immediately invalidated.</span>
+      </div>
+      <div class="vo-form-actions">
+        <button type="submit" class="vo-btn vo-btn-danger">Revoke invite</button>
+      </div>
+    </form>
+  </div>
+</section>

@@ -1,0 +1,77 @@
+@using System.Linq
+@model UserContext?
+@{
+  var currentPath = Context.Request.Path.Value?.ToLowerInvariant() ?? string.Empty;
+  var activeMembership = Model?.ActiveOrganizationId.HasValue == true
+    ? Model.Memberships.FirstOrDefault(m => m.OrganizationId == Model.ActiveOrganizationId.Value)
+    : null;
+
+  var navItems = new[]
+  {
+    new { Href = "/admin",         Label = "Dashboard",     Group = "Overview",  Icon = "&#127968;" },
+    new { Href = "/ops",           Label = "Ops",           Group = "Overview",  Icon = "&#128202;" },
+    new { Href = "/organizations", Label = "Organizations", Group = "CRM",       Icon = "&#127962;" },
+    new { Href = "/members",       Label = "Members",       Group = "CRM",       Icon = "&#128101;" },
+    new { Href = "/invitations",   Label = "Invitations",   Group = "CRM",       Icon = "&#9993;" },
+    new { Href = "/assignments",   Label = "Assignments",   Group = "CRM",       Icon = "&#128279;" },
+    new { Href = "/billing",       Label = "Billing",       Group = "Account",   Icon = "&#128179;" },
+    new { Href = "/settings",      Label = "Settings",      Group = "Account",   Icon = "&#9881;" }
+  };
+}
+
+<aside class="vo-sidebar" id="vo-sidebar" aria-label="Main navigation">
+  <div class="vo-brand">
+    <a href="/admin" class="vo-brand-link" aria-label="VITALOOP CRM home">
+      <span class="vo-brand-mark">VL</span>
+      <span class="vo-brand-text">Vitaloop</span>
+    </a>
+    <button class="vo-sidebar-toggle" type="button" aria-label="Toggle sidebar">&#10005;</button>
+  </div>
+
+  <div class="vo-identity-block">
+    @if (Model is null)
+    {
+      <p class="vo-identity-line">Guest session</p>
+      <p class="vo-identity-sub">Not authenticated</p>
+    }
+    else
+    {
+      <p class="vo-identity-line">@Model.Email</p>
+      <p class="vo-identity-sub">@Model.GlobalRole</p>
+      @if (activeMembership is not null)
+      {
+        <p class="vo-identity-org">&#127962; @activeMembership.OrganizationName</p>
+      }
+    }
+  </div>
+
+  @foreach (var group in navItems.GroupBy(x => x.Group))
+  {
+    <div class="vo-nav-group">
+      <p class="vo-nav-group-title">@group.Key</p>
+      <ul class="vo-nav-list">
+        @foreach (var item in group)
+        {
+          var exactMatch = currentPath == item.Href;
+          var prefixMatch = item.Href.Length > 5 && currentPath.StartsWith(item.Href + "/");
+          var active = exactMatch || prefixMatch;
+          <li>
+            <a class="vo-nav-link @(active ? "is-active" : string.Empty)"
+               href="@item.Href"
+               aria-current="@(active ? "page" : null)">
+              <span class="vo-nav-icon" aria-hidden="true">@Html.Raw(item.Icon)</span>
+              @item.Label
+            </a>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  <div class="vo-sidebar-footer">
+    <a class="vo-nav-link" href="/auth/login">
+      <span class="vo-nav-icon" aria-hidden="true">&#128275;</span>
+      Log out
+    </a>
+  </div>
+</aside>

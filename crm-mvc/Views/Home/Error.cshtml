@@ -1,0 +1,20 @@
+@{
+  ViewData["Title"] = "Unexpected Error";
+  Layout = "_BlankLayout";
+  var originalPath = ViewData["OriginalPath"] as string ?? "/";
+}
+
+<div class="vo-blank-wrap" style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+  <section class="vo-auth-card" style="text-align:center;">
+    <p class="vo-eyebrow">VITALOOP CRM</p>
+    <p style="font-size:64px;margin:0 0 16px;line-height:1;" aria-hidden="true">⚠️</p>
+    <h1 style="font-size:22px;margin:0 0 8px;">Something went wrong</h1>
+    <p style="color:var(--vo-gray-500);font-size:14px;margin:0 0 24px;">
+      An unexpected error occurred. Our team has been notified.
+    </p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a class="vo-btn vo-btn-primary" href="/admin">Go to Dashboard</a>
+      <a class="vo-btn vo-btn-secondary" href="@originalPath">Try again</a>
+    </div>
+  </section>
+</div>

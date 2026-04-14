@@ -1,0 +1,64 @@
+@using System.Linq
+@model UserContext?
+@{
+  var pageTitle  = ViewData["Title"]?.ToString() ?? "CRM";
+  var activeMembership = Model?.ActiveOrganizationId.HasValue == true
+    ? Model.Memberships.FirstOrDefault(m => m.OrganizationId == Model.ActiveOrganizationId.Value)
+    : null;
+  var activeOrgName = activeMembership?.OrganizationName ?? "No organization";
+}
+
+<header class="vo-topbar">
+  <div class="vo-topbar-left">
+    <button class="vo-topbar-hamburger" type="button" id="vo-mobile-menu-btn" aria-label="Open navigation" aria-expanded="false">
+      &#9776;
+    </button>
+    <div>
+      <h1 class="vo-topbar-title">@pageTitle</h1>
+    </div>
+  </div>
+
+  <div class="vo-topbar-right">
+    @if (Model is not null && Model.Memberships.Any())
+    {
+      <div class="vo-org-switcher" id="vo-org-switcher">
+        <button class="vo-org-switcher-btn" type="button"
+                id="vo-org-switcher-btn"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-controls="vo-org-switcher-list">
+          <span>&#127970;</span>
+          <span class="vo-org-switcher-label">@activeOrgName</span>
+          <span class="vo-org-switcher-caret">&#9660;</span>
+        </button>
+        <div id="vo-org-switcher-list" class="vo-org-switcher-dropdown" role="listbox" aria-label="Switch organization">
+          @foreach (var m in Model.Memberships)
+          {
+            var isSelected = m.OrganizationId == Model.ActiveOrganizationId;
+            <a class="vo-org-switcher-item @(isSelected ? "is-selected" : string.Empty)"
+               href="/organizations/switch/@m.OrganizationId"
+               role="option"
+               aria-selected="@isSelected.ToString().ToLowerInvariant()">
+              @m.OrganizationName
+              @if (isSelected) { <span style="margin-left:auto;">&#10003;</span> }
+            </a>
+          }
+          <div class="vo-org-switcher-sep"></div>
+          <a class="vo-org-switcher-item" href="/organizations">All organizations</a>
+        </div>
+      </div>
+    }
+
+    <button class="vo-topbar-bell" type="button" aria-label="Notifications" title="Notifications">
+      &#128276;
+    </button>
+
+    @if (Model is not null)
+    {
+      <div class="vo-user-chip" title="Authenticated as @Model.Email">
+        <strong>@(Model.Email?.Split('@')[0] ?? "User")</strong>
+        <span>@Model.GlobalRole</span>
+      </div>
+    }
+  </div>
+</header>

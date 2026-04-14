@@ -1,0 +1,11 @@
+@model EmptyStateViewModel
+
+<section class="vo-empty-state">
+  <span class="vo-empty-state-icon" aria-hidden="true">📭</span>
+  <h3>@Model.Title</h3>
+  <p>@Model.Description</p>
+  @if (!string.IsNullOrWhiteSpace(Model.ActionLabel) && !string.IsNullOrWhiteSpace(Model.ActionHref))
+  {
+    <a class="vo-btn vo-btn-primary" href="@Model.ActionHref">@Model.ActionLabel</a>
+  }
+</section>

@@ -1,0 +1,21 @@
+@{
+  var area = ViewContext.RouteData.Values["area"]?.ToString();
+  var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Home";
+  var action = ViewContext.RouteData.Values["action"]?.ToString() ?? "Index";
+}
+
+<nav class="vo-breadcrumbs" aria-label="Breadcrumb">
+  <a href="/admin">CRM</a>
+  @if (!string.IsNullOrWhiteSpace(area))
+  {
+    <span>/</span>
+    <span>@area</span>
+  }
+  <span>/</span>
+  <span>@controller</span>
+  @if (!string.Equals(action, "Index", StringComparison.OrdinalIgnoreCase))
+  {
+    <span>/</span>
+    <span>@action</span>
+  }
+</nav>

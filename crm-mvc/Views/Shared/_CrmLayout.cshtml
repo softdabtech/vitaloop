@@ -1,0 +1,53 @@
+@{
+  Layout = "_CommonMasterLayout";
+  var userContext = Context.Items["UserContext"] as UserContext;
+  var successMsg = TempData["SuccessMessage"] as string;
+  var errorMsg   = TempData["ErrorMessage"]   as string;
+  var infoMsg    = TempData["InfoMessage"]    as string;
+}
+
+@* Mobile sidebar overlay *@
+<div class="vo-sidebar-overlay" id="vo-sidebar-overlay" aria-hidden="true"></div>
+
+<div class="vo-layout-wrapper">
+  @await Html.PartialAsync("Partials/_Sidebar", userContext)
+
+  <div class="vo-layout-page">
+    @await Html.PartialAsync("Partials/_Topbar", userContext)
+    @await Html.PartialAsync("Partials/_StatusStrip", userContext)
+
+    <main class="vo-content">
+      <div class="vo-content-container">
+        @RenderBody()
+      </div>
+    </main>
+  </div>
+</div>
+
+@* Toast notification region *@
+<div class="vo-toast-region" id="vo-toast-region" aria-live="assertive" aria-atomic="false">
+  @if (!string.IsNullOrWhiteSpace(successMsg))
+  {
+    <div class="vo-toast is-success" data-auto-dismiss="4000">
+      <span class="vo-toast-icon" aria-hidden="true">&#10003;</span>
+      <span class="vo-toast-msg">@successMsg</span>
+      <button type="button" class="vo-toast-close" aria-label="Dismiss">&#215;</button>
+    </div>
+  }
+  @if (!string.IsNullOrWhiteSpace(errorMsg))
+  {
+    <div class="vo-toast is-error" data-auto-dismiss="6000">
+      <span class="vo-toast-icon" aria-hidden="true">&#9888;</span>
+      <span class="vo-toast-msg">@errorMsg</span>
+      <button type="button" class="vo-toast-close" aria-label="Dismiss">&#215;</button>
+    </div>
+  }
+  @if (!string.IsNullOrWhiteSpace(infoMsg))
+  {
+    <div class="vo-toast is-info" data-auto-dismiss="4000">
+      <span class="vo-toast-icon" aria-hidden="true">&#8505;</span>
+      <span class="vo-toast-msg">@infoMsg</span>
+      <button type="button" class="vo-toast-close" aria-label="Dismiss">&#215;</button>
+    </div>
+  }
+</div>

@@ -1,0 +1,15 @@
+@model IReadOnlyList<OrganizationViewModel>
+
+@{
+  ViewData["Title"] = "Organizations";
+}
+
+@await Html.PartialAsync("Partials/_Breadcrumbs")
+@await Html.PartialAsync("Partials/_PageHeader", new PageHeaderViewModel { Title = "Organizations", Subtitle = "Multi-tenant structure shell", Eyebrow = "Domain" })
+@await Html.PartialAsync("Ui/_FilterBar", new FilterBarViewModel { SearchPlaceholder = "Search organizations", Filters = new[] { "Status", "Type" } })
+@await Html.PartialAsync("Ui/_DataTableShell", new DataTableShellViewModel {
+  Title = "Organizations",
+  Columns = new[] { "Display", "Owner", "Status", "Id" },
+  EmptyMessage = "No organizations available.",
+  Rows = Model.Select(o => (IReadOnlyList<string>)new[] { o.DisplayName, o.RoleLabel, o.StatusBadge, o.Id.ToString() }).ToList()
+})

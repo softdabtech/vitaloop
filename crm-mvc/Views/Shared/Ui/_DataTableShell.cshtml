@@ -1,0 +1,46 @@
+@model DataTableShellViewModel
+
+<section class="vo-card" style="margin-bottom: var(--vo-space-6);">
+  <div class="vo-card-head">
+    <h3>@Model.Title</h3>
+    @if (Model.Rows.Count > 0)
+    {
+      <span class="vo-pill tone-gray">@Model.Rows.Count</span>
+    }
+  </div>
+
+  @if (Model.Rows.Count == 0)
+  {
+    <div class="vo-empty-state">
+      <span class="vo-empty-state-icon">🔍</span>
+      <h3>Nothing here yet</h3>
+      <p>@Model.EmptyMessage</p>
+    </div>
+  }
+  else
+  {
+    <div class="vo-table-wrap">
+      <table class="vo-table">
+        <thead>
+          <tr>
+            @foreach (var column in Model.Columns)
+            {
+              <th>@column</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var row in Model.Rows)
+          {
+            <tr>
+              @foreach (var cell in row)
+              {
+                <td>@cell</td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
