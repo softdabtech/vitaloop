@@ -18,34 +18,25 @@ const STORES = [
 // -- Lab network --------------------------------------------------------------
 const LAB_REGIONS = [
   {
-    region: 'North America',
+    key: 'us',
+    region: 'US',
     color: '#1D9E75',
-    labs: ['Quest Diagnostics', 'LabCorp', 'SonoHealth', 'HealthLabs.com'],
-    dot: { x: '18%', y: '38%' },
+    labs: ['Quest', 'LabCorp', 'SonoHealth'],
+    dot: { x: '22%', y: '34%' },
   },
   {
-    region: 'Europe',
+    key: 'eu',
+    region: 'EU',
     color: '#5DCAA5',
-    labs: ['Synlab', 'Eurofins', 'Sonic Healthcare', 'Cerba'],
-    dot: { x: '46%', y: '22%' },
+    labs: ['Synlab', 'Eurofins', 'Cerba'],
+    dot: { x: '49%', y: '28%' },
   },
   {
-    region: 'Middle East',
-    color: '#f5a623',
-    labs: ['Dubai Health Authority', 'Medilab', 'Al Ain Labs'],
-    dot: { x: '59%', y: '42%' },
-  },
-  {
-    region: 'Asia Pacific',
+    key: 'worldwide',
+    region: 'Worldwide',
     color: '#9FE1CB',
-    labs: ['Pathology Asia', 'SRL Diagnostics', 'Tokyo Clinical Labs'],
-    dot: { x: '78%', y: '48%' },
-  },
-  {
-    region: 'Latin America',
-    color: '#0F6E56',
-    labs: ['Fleury', 'Chopo', 'Lavogen'],
-    dot: { x: '27%', y: '68%' },
+    labs: ['Any PDF - AI auto-reads'],
+    dot: { x: '62%', y: '58%' },
   },
 ]
 
@@ -60,8 +51,7 @@ const PARTNER_TYPES = [
 ]
 
 // -- Map component ------------------------------------------------------------
-function GlobalMap() {
-  const [active, setActive] = useState(null)
+function GlobalMap({ activeRegion, onRegionChange }) {
 
   return (
     <div style={{
@@ -73,48 +63,35 @@ function GlobalMap() {
       border: '0.5px solid rgba(29,158,117,0.15)',
     }}>
 
-      {/* Grid lines */}
+      {/* World silhouette */}
       <svg
         viewBox="0 0 800 320" width="100%" height="100%"
         style={{ position: 'absolute', inset: 0 }}
         aria-hidden="true"
       >
-        {/* Latitude lines */}
-        {[80, 140, 200, 260].map(y => (
-          <line key={y} x1="0" y1={y} x2="800" y2={y}
-                stroke="rgba(255,255,255,0.03)" strokeWidth="0.5"/>
-        ))}
-        {/* Longitude lines */}
-        {[100, 200, 300, 400, 500, 600, 700].map(x => (
-          <line key={x} x1={x} y1="0" x2={x} y2="320"
-                stroke="rgba(255,255,255,0.03)" strokeWidth="0.5"/>
-        ))}
-
-        {/* Simplified continent fills */}
         {/* North America */}
         <path d="M70,30 L155,25 L195,55 L210,95 L200,155 L165,185 L130,195 L90,175 L60,140 L55,90 Z"
-              fill="rgba(29,158,117,0.06)" stroke="rgba(29,158,117,0.12)" strokeWidth="0.5"/>
+          fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.08)" strokeWidth="0.6"/>
         {/* South America */}
         <path d="M140,210 L195,200 L225,230 L238,275 L220,315 L188,318 L162,295 L148,258 Z"
-              fill="rgba(29,158,117,0.05)" stroke="rgba(29,158,117,0.1)" strokeWidth="0.5"/>
+          fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.07)" strokeWidth="0.6"/>
         {/* Europe */}
         <path d="M330,20 L390,15 L420,35 L425,72 L400,85 L368,80 L338,58 Z"
-              fill="rgba(93,202,165,0.06)" stroke="rgba(93,202,165,0.12)" strokeWidth="0.5"/>
+          fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.08)" strokeWidth="0.6"/>
         {/* Africa */}
         <path d="M335,90 L388,88 L420,110 L432,175 L425,248 L395,268 L360,260 L332,220 L325,155 Z"
-              fill="rgba(29,158,117,0.04)" stroke="rgba(29,158,117,0.08)" strokeWidth="0.5"/>
+          fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.06)" strokeWidth="0.6"/>
         {/* Asia */}
         <path d="M420,15 L600,10 L660,35 L680,85 L668,140 L625,170 L565,178 L490,158 L445,120 L430,65 Z"
-              fill="rgba(93,202,165,0.05)" stroke="rgba(93,202,165,0.1)" strokeWidth="0.5"/>
+          fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.07)" strokeWidth="0.6"/>
         {/* Australia */}
         <path d="M588,210 L660,205 L690,230 L692,268 L660,285 L615,282 L585,255 Z"
-              fill="rgba(29,158,117,0.04)" stroke="rgba(29,158,117,0.08)" strokeWidth="0.5"/>
+          fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.06)" strokeWidth="0.6"/>
 
         {/* Connection arcs between regions */}
         {[
-          { x1: 144, y1: 122, x2: 368, y2: 50 },
-          { x1: 368, y1: 50, x2: 472, y2: 134 },
-          { x1: 368, y1: 50, x2: 188, y2: 218 },
+          { x1: 176, y1: 109, x2: 392, y2: 90 },
+          { x1: 392, y1: 90, x2: 496, y2: 185 },
         ].map(({ x1, y1, x2, y2 }, i) => {
           const mx = (x1 + x2) / 2
           const my = Math.min(y1, y2) - 30
@@ -123,7 +100,7 @@ function GlobalMap() {
               key={i}
               d={`M${x1},${y1} Q${mx},${my} ${x2},${y2}`}
               fill="none"
-              stroke="rgba(29,158,117,0.12)"
+              stroke="rgba(95,202,165,0.18)"
               strokeWidth="0.6"
               strokeDasharray="4 6"
             />
@@ -132,14 +109,15 @@ function GlobalMap() {
       </svg>
 
       {/* Region dots + labels */}
-      {LAB_REGIONS.map(({ region, color, dot, labs }) => {
-        const isActive = active === region
+      {LAB_REGIONS.map(({ key, region, color, dot, labs }) => {
+        const isActive = activeRegion === key
         return (
           <div
-            key={region}
+            key={key}
             style={{ position: 'absolute', left: dot.x, top: dot.y, zIndex: 2 }}
-            onMouseEnter={() => setActive(region)}
-            onMouseLeave={() => setActive(null)}
+            onMouseEnter={() => onRegionChange(key)}
+            onMouseLeave={() => onRegionChange(null)}
+            onClick={() => onRegionChange(isActive ? null : key)}
           >
             {/* Pulse ring */}
             <div style={{
@@ -214,7 +192,7 @@ function GlobalMap() {
         fontSize: 10, fontWeight: 700, letterSpacing: '0.14em',
         color: 'rgba(29,158,117,0.6)', textTransform: 'uppercase',
       }}>
-        Global coverage
+        World map
       </div>
 
       {/* Bottom caption */}
@@ -222,7 +200,7 @@ function GlobalMap() {
         position: 'absolute', bottom: 12, right: 16,
         fontSize: 10, color: 'rgba(255,255,255,0.2)',
       }}>
-        Hover a region to see supported labs
+        Hover or tap a marker
       </div>
     </div>
   )
@@ -230,6 +208,8 @@ function GlobalMap() {
 
 // -- Main component ------------------------------------------------------------
 export default function PartnersSection() {
+  const [activeRegion, setActiveRegion] = useState(null)
+
   const handlePartnerClick = () => {
     const subject = encodeURIComponent('VITALOOP Partnership Request')
     const body = encodeURIComponent(
@@ -336,20 +316,22 @@ export default function PartnersSection() {
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 16 }}>
               Partner laboratories
             </div>
-            <GlobalMap />
+            <GlobalMap activeRegion={activeRegion} onRegionChange={setActiveRegion} />
             <div style={{
               display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
               gap: 8, marginTop: 12,
             }}>
               {[
-                { label: 'US labs',   text: 'Quest - LabCorp - SonoHealth' },
-                { label: 'EU labs',   text: 'Synlab - Eurofins - Cerba' },
-                { label: 'Worldwide', text: 'Any PDF - AI auto-reads' },
-              ].map(({ label, text }) => (
+                { key: 'us', label: 'US labs',   text: 'Quest - LabCorp - SonoHealth' },
+                { key: 'eu', label: 'EU labs',   text: 'Synlab - Eurofins - Cerba' },
+                { key: 'worldwide', label: 'Worldwide', text: 'Any PDF - AI auto-reads' },
+              ].map(({ key, label, text }) => (
                 <div key={label} style={{
                   background: 'white', borderRadius: 10,
-                  border: '0.5px solid var(--gray-100)',
+                  border: activeRegion === key ? '0.5px solid var(--teal-300)' : '0.5px solid var(--gray-100)',
                   padding: '10px 12px',
+                  transition: 'border-color 200ms, box-shadow 200ms',
+                  boxShadow: activeRegion === key ? '0 6px 18px rgba(29,158,117,0.14)' : 'none',
                 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 3 }}>{label}</div>
                   <div style={{ fontSize: 11, color: 'var(--gray-500)', lineHeight: 1.5 }}>{text}</div>
