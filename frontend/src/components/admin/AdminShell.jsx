@@ -16,8 +16,20 @@ const OPS_NAV = [
 
 export default function AdminShell({ title, subtitle, children, variant = 'client' }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { signOut } = useAuth()
   const navItems = variant === 'ops' ? OPS_NAV : CLIENT_NAV
+
+  function isOpsTabActive(target) {
+    if (variant !== 'ops') return false
+
+    const [targetPath, targetQuery = ''] = target.split('?')
+    if (location.pathname !== targetPath) return false
+
+    const currentTab = new URLSearchParams(location.search).get('tab') || 'overview'
+    const targetTab = new URLSearchParams(targetQuery).get('tab') || 'overview'
+    return currentTab === targetTab
+  }
 
   function handleBack() {
     if (window.history.length > 1) {
@@ -75,15 +87,18 @@ export default function AdminShell({ title, subtitle, children, variant = 'clien
             key={to}
             to={to}
             end
-            style={({ isActive }) => ({
+            style={({ isActive }) => {
+              const active = variant === 'ops' ? isOpsTabActive(to) : isActive
+              return {
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '10px 14px',
               fontSize: 13, fontWeight: 500,
-              color: isActive ? '#1d9e75' : 'rgba(255,255,255,0.45)',
-              borderBottom: isActive ? '2px solid #1d9e75' : '2px solid transparent',
+              color: active ? '#1d9e75' : 'rgba(255,255,255,0.45)',
+              borderBottom: active ? '2px solid #1d9e75' : '2px solid transparent',
               textDecoration: 'none', transition: 'color 0.2s',
               marginBottom: -1,
-            })}
+            }
+            }}
           >
             <Icon size={14} />
             {label}
