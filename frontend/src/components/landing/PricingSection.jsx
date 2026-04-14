@@ -195,7 +195,18 @@ export default function PricingSection() {
 
                 {/* CTA */}
                 <button
-                  onClick={() => navigate('/login')}
+                  onClick={() => {
+                    if (id === 'personal') {
+                      const subject = encodeURIComponent('Personal Plan - Application')
+                      const body = encodeURIComponent(
+                        'Hi VITALOOP team,\n\nI am interested in the Personal plan ($99/mo).\n\n' +
+                        'Name:\nBackground:\nGoals:\n\nPlease contact me.'
+                      )
+                      window.location.href = `mailto:info@softdab.tech?subject=${subject}&body=${body}`
+                      return
+                    }
+                    navigate('/login')
+                  }}
                   style={{
                     borderRadius: 980,
                     padding: '14px 24px',
