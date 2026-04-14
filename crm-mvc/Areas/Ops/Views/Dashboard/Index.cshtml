@@ -1,0 +1,29 @@
+@model OpsDashboardViewModel
+
+@{
+  ViewData["Title"] = "Ops Dashboard";
+}
+
+@await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
+@await Html.PartialAsync("~/Views/Shared/Partials/_PageHeader.cshtml", new PageHeaderViewModel { Title = "Ops Dashboard", Subtitle = "Global user visibility — super_admin only", Eyebrow = "Ops" })
+
+<nav class="vo-quick-actions" aria-label="Quick actions">
+  <a class="vo-quick-action" href="/ops">
+    <span class="vo-quick-action-icon">👤</span> Global Users
+  </a>
+  <a class="vo-quick-action" href="/organizations">
+    <span class="vo-quick-action-icon">🏢</span> All Organizations
+  </a>
+</nav>
+
+<section class="vo-grid two-up" style="margin-bottom: var(--vo-space-6);">
+  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Global Users", Value = Model.GlobalUsers.Count.ToString(), Trend = "All registered accounts", Tone = "teal" })
+  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Super Admins", Value = Model.GlobalUsers.Count(u => u.GlobalRole == "super_admin").ToString(), Trend = "Platform-level access", Tone = "default" })
+</section>
+
+@await Html.PartialAsync("~/Views/Shared/Ui/_DataTableShell.cshtml", new DataTableShellViewModel {
+  Title = "Global Users",
+  Columns = new[] { "User", "Global Role", "Status", "User ID" },
+  EmptyMessage = "No global users found.",
+  Rows = Model.GlobalUsers.Select(u => (IReadOnlyList<string>)new[] { u.DisplayName, u.GlobalRole, u.StatusBadge, u.UserId.ToString() }).ToList()
+})

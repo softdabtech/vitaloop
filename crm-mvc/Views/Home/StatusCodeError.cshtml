@@ -1,0 +1,39 @@
+@{
+  var statusCode = ViewData["StatusCode"] as int? ?? 0;
+
+  var (emoji, heading, body) = statusCode switch
+  {
+    404 => ("🔍", "Page not found", "The page you're looking for doesn't exist or has been moved."),
+    403 => ("🔒", "Access denied", "You don't have permission to view this page. Check your organization role."),
+    401 => ("🔐", "Unauthorized", "You need to sign in to access this resource."),
+    429 => ("⏳", "Too many requests", "Please wait a moment and try again."),
+    _   => ("⚠️", "Something went wrong", $"HTTP {statusCode} — An error has occurred.")
+  };
+
+  ViewData["Title"] = heading;
+  Layout = "_BlankLayout";
+}
+
+<div class="vo-blank-wrap" style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+  <section class="vo-auth-card" style="text-align:center;">
+    <p class="vo-eyebrow">VITALOOP CRM</p>
+    <p style="font-size:64px;margin:0 0 16px;line-height:1;" aria-hidden="true">@emoji</p>
+    @if (statusCode > 0)
+    {
+      <p style="font-size:13px;color:var(--vo-gray-400);margin:0 0 4px;font-weight:600;">@statusCode</p>
+    }
+    <h1 style="font-size:22px;margin:0 0 8px;">@heading</h1>
+    <p style="color:var(--vo-gray-500);font-size:14px;margin:0 0 24px;">@body</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a class="vo-btn vo-btn-primary" href="/admin">Go to Dashboard</a>
+      @if (statusCode == 403)
+      {
+        <a class="vo-btn vo-btn-secondary" href="/organizations">Switch organization</a>
+      }
+      else
+      {
+        <a class="vo-btn vo-btn-secondary" href="javascript:history.back()">Go back</a>
+      }
+    </div>
+  </section>
+</div>

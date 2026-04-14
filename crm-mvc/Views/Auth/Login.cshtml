@@ -1,0 +1,27 @@
+@{
+  ViewData["Title"] = "Sign In";
+  Layout = "_BlankLayout";
+}
+
+<div class="vo-blank-wrap">
+  <section class="vo-auth-card">
+    <p class="vo-eyebrow">Vitaloop CRM</p>
+    <h2 class="vo-page-title">Sign in</h2>
+    <p class="vo-page-subtitle">Access your organization portal.</p>
+
+    <form class="vo-form-grid" method="post" action="#">
+      <div class="vo-field">
+        <label class="vo-label" for="login-email">Email</label>
+        <input id="login-email" type="email" class="vo-input" name="email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="vo-field">
+        <label class="vo-label" for="login-password">Password</label>
+        <input id="login-password" type="password" class="vo-input" name="password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <div class="vo-form-actions">
+        <button type="submit" class="vo-btn vo-btn-primary">Continue</button>
+        <a class="vo-btn vo-btn-ghost" href="/auth/forgot-password">Forgot password?</a>
+      </div>
+    </form>
+  </section>
+</div>

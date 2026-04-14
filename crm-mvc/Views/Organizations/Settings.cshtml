@@ -1,0 +1,49 @@
+@model OrganizationSettingsPageViewModel
+
+@{
+  ViewData["Title"] = "Organization Settings";
+}
+
+@await Html.PartialAsync("Partials/_Breadcrumbs")
+@await Html.PartialAsync("Partials/_PageHeader", new PageHeaderViewModel { Title = "Organization Settings", Subtitle = "Active organization configuration", Eyebrow = "Settings" })
+
+@if (Model.Organization is not null)
+{
+  <section class="vo-card" style="margin-bottom: 16px;">
+    <h3>@Model.Organization.DisplayName</h3>
+    <p>@Model.Organization.RoleLabel</p>
+    @await Html.PartialAsync("Ui/_StatusPill", new StatusPillViewModel { Text = Model.Organization.StatusBadge, Tone = "teal" })
+  </section>
+}
+
+@await Html.PartialAsync("Ui/_FormSection", new FormSectionViewModel { Title = "General", Description = "Update organization profile and status." })
+
+<section class="vo-card">
+  <form method="post" action="/organizations/settings" class="vo-form-grid">
+    @Html.AntiForgeryToken()
+      <div class="vo-field">
+        <label class="vo-label" for="org-name">Name</label>
+        <input id="org-name" class="vo-input" type="text" name="name" value="@(Model.Organization?.Name ?? string.Empty)" />
+      </div>
+      <div class="vo-field">
+        <label class="vo-label" for="org-status">Status</label>
+        <select id="org-status" class="vo-input" name="status">
+          <option value="active" selected="@(Model.Organization?.Status == "active")">active</option>
+          <option value="paused" selected="@(Model.Organization?.Status == "paused")">paused</option>
+        </select>
+      </div>
+      <div class="vo-field">
+        <label class="vo-label">Billing Email</label>
+        <input class="vo-input" type="email" value="@Model.BillingEmail" disabled />
+        <span class="vo-field-hint">Managed via Stripe billing account.</span>
+      </div>
+      <div class="vo-field">
+        <label class="vo-label">Support Email</label>
+        <input class="vo-input" type="email" value="@Model.SupportEmail" disabled />
+        <span class="vo-field-hint">Managed via support provider configuration.</span>
+      </div>
+      <div class="vo-form-actions">
+        <button type="submit" class="vo-btn vo-btn-primary">Save organization</button>
+      </div>
+  </form>
+</section>

@@ -1,0 +1,16 @@
+@model ModalShellViewModel
+
+<div id="@Model.Id" class="vo-modal" hidden aria-modal="true" role="dialog" aria-labelledby="@(Model.Id)-title">
+  <div class="vo-modal-panel">
+    <header class="vo-modal-header">
+      <h3 id="@(Model.Id)-title">@Model.Title</h3>
+      <button type="button" class="vo-modal-close" data-close-modal="@Model.Id" aria-label="Close dialog">×</button>
+    </header>
+    <div class="vo-modal-body">
+      @if (!string.IsNullOrWhiteSpace(Model.Description))
+      {
+        <p style="margin: 0 0 var(--vo-space-4); color: var(--vo-gray-600); font-size: var(--vo-text-sm);">@Model.Description</p>
+      }
+    </div>
+  </div>
+</div>

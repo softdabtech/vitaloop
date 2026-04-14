@@ -1,0 +1,22 @@
+@{
+  ViewData["Title"] = "Settings";
+}
+
+@await Html.PartialAsync("Partials/_Breadcrumbs")
+@await Html.PartialAsync("Partials/_PageHeader", new PageHeaderViewModel { Title = "Account Settings", Subtitle = "Manage your profile and workspace preferences", Eyebrow = "Account" })
+
+<section class="vo-card">
+  <div class="vo-card-head"><h3>Profile</h3></div>
+  <div class="vo-form-grid">
+    <div class="vo-field">
+      <label class="vo-label">Display name</label>
+      <input class="vo-input" type="text" placeholder="Your name" disabled />
+      <span class="vo-field-hint">Profile settings will be backed by Supabase user metadata.</span>
+    </div>
+    <div class="vo-field">
+      <label class="vo-label">Email</label>
+      <input class="vo-input" type="email" placeholder="your@email.com" disabled />
+      <span class="vo-field-hint">Email is managed by your identity provider.</span>
+    </div>
+  </div>
+</section>

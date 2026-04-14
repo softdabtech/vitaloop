@@ -1,0 +1,75 @@
+@model MembersPageViewModel
+
+@{
+  ViewData["Title"] = "Members";
+}
+
+@await Html.PartialAsync("Partials/_Breadcrumbs")
+@await Html.PartialAsync("Partials/_PageHeader", new PageHeaderViewModel { Title = "Members", Subtitle = "Global and org-scoped membership directory", Eyebrow = "Domain" })
+
+<section class="vo-card" style="margin-bottom: var(--vo-space-5);">
+  <form method="get" action="/members" class="vo-filter-bar">
+    <div class="vo-filter-input-wrap">
+      <span class="vo-filter-search-icon" aria-hidden="true">🔍</span>
+      <input class="vo-input" type="search" name="q" value="@Model.Search" placeholder="Search members by name or email…" />
+    </div>
+    <button type="submit" class="vo-btn vo-btn-primary vo-btn-sm">Search</button>
+  </form>
+</section>
+
+<section class="vo-grid three-up">
+  @await Html.PartialAsync("Ui/_StatCard", new StatCardViewModel { Label = "Total Members", Value = Model.TotalMembers.ToString(), Trend = "Active organization", Tone = "teal" })
+  @await Html.PartialAsync("Ui/_StatCard", new StatCardViewModel { Label = "Practitioners", Value = Model.PractitionerCount.ToString(), Trend = "Org-scoped role", Tone = "default" })
+  @await Html.PartialAsync("Ui/_StatCard", new StatCardViewModel { Label = "Admins", Value = Model.Members.Count(m => m.OrgRole is "client_admin" or "org_owner").ToString(), Trend = "Management access", Tone = "default" })
+</section>
+
+@await Html.PartialAsync("Ui/_DataTableShell", new DataTableShellViewModel {
+  Title = "Member Directory",
+  Columns = new[] { "User", "Roles", "Status", "Subscription" },
+  EmptyMessage = "No members found for this organization.",
+  Rows = Model.Members.Select(m => (IReadOnlyList<string>)new[] { m.DisplayName, m.RoleLabel, m.StatusBadge, m.SubscriptionStatus }).ToList()
+})
+
+<section class="vo-grid two-up">
+  <div class="vo-card">
+    <div class="vo-card-head"><h3>Change Role</h3></div>
+    <form method="post" action="/members/change-role" class="vo-form-grid">
+      @Html.AntiForgeryToken()
+      <div class="vo-field">
+        <label class="vo-label" for="cr-userId">User ID</label>
+        <input class="vo-input" id="cr-userId" type="text" name="userId" placeholder="00000000-0000-0000-0000-000000000000" />
+        <span class="vo-field-hint">Paste the UUID of the member to update.</span>
+      </div>
+      <div class="vo-field">
+        <label class="vo-label" for="cr-role">New Role</label>
+        <div class="vo-select-wrap">
+          <select class="vo-input" id="cr-role" name="role">
+            <option value="end_user">End User</option>
+            <option value="practitioner">Practitioner</option>
+            <option value="client_admin">Client Admin</option>
+            <option value="org_owner">Org Owner</option>
+          </select>
+        </div>
+        <span class="vo-field-hint">Requires org_owner or client_admin permission.</span>
+      </div>
+      <div class="vo-form-actions">
+        <button type="submit" class="vo-btn vo-btn-primary">Apply role</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="vo-card tone-danger">
+    <div class="vo-card-head"><h3>Remove Member</h3></div>
+    <form method="post" action="/members/remove" class="vo-form-grid">
+      @Html.AntiForgeryToken()
+      <div class="vo-field">
+        <label class="vo-label" for="rm-userId">User ID</label>
+        <input class="vo-input" id="rm-userId" type="text" name="userId" placeholder="00000000-0000-0000-0000-000000000000" />
+        <span class="vo-field-hint">This will mark the member as removed from the organization.</span>
+      </div>
+      <div class="vo-form-actions">
+        <button type="submit" class="vo-btn vo-btn-danger">Remove member</button>
+      </div>
+    </form>
+  </div>
+</section>

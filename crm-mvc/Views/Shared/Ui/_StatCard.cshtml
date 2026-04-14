@@ -1,0 +1,10 @@
+@model StatCardViewModel
+
+<article class="vo-card vo-stat-card tone-@Model.Tone">
+  <p class="vo-stat-label">@Model.Label</p>
+  <p class="vo-stat-value">@Model.Value</p>
+  @if (!string.IsNullOrWhiteSpace(Model.Trend))
+  {
+    <p class="vo-stat-trend">↑ @Model.Trend</p>
+  }
+</article>

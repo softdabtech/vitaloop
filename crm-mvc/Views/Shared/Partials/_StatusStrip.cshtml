@@ -1,0 +1,29 @@
+@using System.Linq
+@model UserContext?
+@{
+  var activeMembership = Model?.ActiveOrganizationId.HasValue == true
+    ? Model.Memberships.FirstOrDefault(m => m.OrganizationId == Model.ActiveOrganizationId.Value)
+    : null;
+}
+
+<section class="vo-status-strip" role="status" aria-live="polite">
+  <span class="vo-status-dot"></span>
+  @if (Model is null)
+  {
+    <span>Not authenticated</span>
+  }
+  else
+  {
+    <span>
+      <strong>@Model.GlobalRole</strong>
+      @if (activeMembership is not null)
+      {
+        <span>&nbsp;&#183;&nbsp;@activeMembership.OrganizationName (@activeMembership.Role)</span>
+      }
+      @if (Model.SubscriptionStatus is not null)
+      {
+        <span>&nbsp;&#183;&nbsp;@Model.SubscriptionStatus</span>
+      }
+    </span>
+  }
+</section>

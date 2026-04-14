@@ -1,0 +1,47 @@
+@model AssignmentsPageViewModel
+
+@{
+  ViewData["Title"] = "Assignments";
+}
+
+@await Html.PartialAsync("Partials/_Breadcrumbs")
+@await Html.PartialAsync("Partials/_PageHeader", new PageHeaderViewModel { Title = "Practitioner Assignments", Subtitle = "Org-scoped assignment flow", Eyebrow = "Domain" })
+@await Html.PartialAsync("Ui/_InfoCard", new InfoCardViewModel { Title = "Assignment Model", Body = "All operations are constrained by active organization and access policies.", Tone = "teal" })
+@await Html.PartialAsync("Ui/_DataTableShell", new DataTableShellViewModel {
+  Title = "Assignments",
+  Columns = new[] { "Display", "Client ID", "Practitioner ID", "Status" },
+  EmptyMessage = "No assignments found for this organization.",
+  Rows = Model.Assignments.Select(a => (IReadOnlyList<string>)new[] { a.DisplayName, a.ClientId.ToString(), a.PractitionerId.ToString(), a.StatusBadge }).ToList()
+})
+
+<section class="vo-grid two-up" style="margin-top: 16px;">
+  @await Html.PartialAsync("Ui/_FormSection", new FormSectionViewModel { Title = "Assign Practitioner", Description = "Create assignment for a client in active org." })
+  <form method="post" action="/assignments/create" class="vo-card vo-form-grid">
+    @Html.AntiForgeryToken()
+    <label>
+      <span>Client ID</span>
+      <input class="vo-input" type="text" name="clientId" placeholder="00000000-0000-0000-0000-000000000000" />
+    </label>
+    <label>
+      <span>Practitioner ID</span>
+      <input class="vo-input" type="text" name="practitionerId" placeholder="00000000-0000-0000-0000-000000000000" />
+    </label>
+    <button type="submit" class="vo-btn vo-btn-primary">Assign</button>
+  </form>
+</section>
+
+<section class="vo-card vo-form-grid">
+  <h3>Reassign Practitioner</h3>
+  <form method="post" action="/assignments/reassign" class="vo-form-grid">
+    @Html.AntiForgeryToken()
+    <label>
+      <span>Assignment ID</span>
+      <input class="vo-input" type="text" name="assignmentId" placeholder="00000000-0000-0000-0000-000000000000" />
+    </label>
+    <label>
+      <span>New Practitioner ID</span>
+      <input class="vo-input" type="text" name="practitionerId" placeholder="00000000-0000-0000-0000-000000000000" />
+    </label>
+    <button type="submit" class="vo-btn vo-btn-secondary">Reassign</button>
+  </form>
+</section>
