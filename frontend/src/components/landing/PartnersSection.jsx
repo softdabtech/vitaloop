@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { Check } from 'lucide-react'
 
@@ -52,12 +51,12 @@ const LAB_REGIONS = [
 
 // -- Partner tiers ------------------------------------------------------------
 const PARTNER_TYPES = [
-  { label: 'Health Coach',    desc: 'Refer your clients' },
-  { label: 'Nutritionist',   desc: 'Extend your practice' },
-  { label: 'Doctor / GP',    desc: 'Complement your care' },
-  { label: 'Fitness Trainer',desc: 'Add lab insights' },
-  { label: 'Wellness Brand', desc: 'White-label options' },
-  { label: 'Influencer',     desc: 'Content + referrals' },
+  { label: 'Health Coach' },
+  { label: 'Nutritionist' },
+  { label: 'Doctor / GP' },
+  { label: 'Fitness Trainer' },
+  { label: 'Wellness Brand' },
+  { label: 'Influencer' },
 ]
 
 // -- Map component ------------------------------------------------------------
@@ -231,8 +230,6 @@ function GlobalMap() {
 
 // -- Main component ------------------------------------------------------------
 export default function PartnersSection() {
-  const navigate = useNavigate()
-
   const handlePartnerClick = () => {
     const subject = encodeURIComponent('VITALOOP Partnership Request')
     const body = encodeURIComponent(
