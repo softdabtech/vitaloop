@@ -1,309 +1,480 @@
-import { Package, Activity, Zap } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Check } from 'lucide-react'
 
+// -- Supplement store partners ------------------------------------------------
 const STORES = [
-  { name: 'iHerb',          tagline: 'Global · All brands',   color: '#5a9f3e', initial: 'iH' },
-  { name: 'Thorne',         tagline: 'Professional grade',    color: '#003865', initial: 'Th' },
-  { name: 'Life Extension', tagline: 'Science-backed',        color: '#c41e3a', initial: 'LE' },
+  { name: 'iHerb',             tagline: 'Global · 30,000+ products',  color: '#5a9f3e', initial: 'iH' },
+  { name: 'Amazon',            tagline: 'US · EU · UK · Worldwide',   color: '#ff9900', initial: 'Am' },
+  { name: 'Thorne',            tagline: 'Clinical-grade supplements',  color: '#003865', initial: 'Th' },
+  { name: 'Life Extension',    tagline: 'Science-backed formulas',     color: '#c41e3a', initial: 'LE' },
+  { name: 'Vitacost',          tagline: 'Best-value US shipping',      color: '#e8630a', initial: 'Vc' },
+  { name: 'Holland & Barrett', tagline: 'EU · UK · 1,000+ stores',    color: '#006b3f', initial: 'H&' },
+  { name: 'MyProtein',         tagline: 'UK · EU · Australia',        color: '#111111', initial: 'MP' },
+  { name: 'Solgar',            tagline: 'Premium since 1947',          color: '#8b6914', initial: 'So' },
+  { name: 'NOW Foods',         tagline: 'Affordable · 1,400+ SKUs',   color: '#e63c2f', initial: 'NF' },
+  { name: 'Viridian',          tagline: 'UK · Ethical sourcing',      color: '#4a7c59', initial: 'Vi' },
 ]
 
-function StoreCard({ name, tagline, color, initial }) {
-  return (
-    <div
-      style={{
-        background: 'white', borderRadius: 14,
-        border: '0.5px solid var(--gray-100)',
-        padding: '16px 18px',
-        display: 'flex', alignItems: 'center', gap: 12,
-        transition: 'transform 250ms ease, border-color 250ms ease',
-        cursor: 'default',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)'
-        e.currentTarget.style.borderColor = color + '60'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)'
-        e.currentTarget.style.borderColor = 'var(--gray-100)'
-      }}
-    >
-      <div style={{
-        width: 38, height: 38, borderRadius: 9, flexShrink: 0,
-        background: color + '15', border: `1.5px solid ${color}40`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 12, fontWeight: 800, color: color, letterSpacing: '-0.02em',
-      }}>
-        {initial}
-      </div>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-900)' }}>{name}</div>
-        <div style={{ fontSize: 11, color: 'var(--gray-500)', marginTop: 2 }}>{tagline}</div>
-      </div>
-    </div>
-  )
-}
+// -- Lab network --------------------------------------------------------------
+const LAB_REGIONS = [
+  {
+    region: 'North America',
+    color: '#1D9E75',
+    labs: ['Quest Diagnostics', 'LabCorp', 'SonoHealth', 'HealthLabs.com'],
+    dot: { x: '18%', y: '38%' },
+  },
+  {
+    region: 'Europe',
+    color: '#5DCAA5',
+    labs: ['Synlab', 'Eurofins', 'Sonic Healthcare', 'Cerba'],
+    dot: { x: '46%', y: '22%' },
+  },
+  {
+    region: 'Middle East',
+    color: '#f5a623',
+    labs: ['Dubai Health Authority', 'Medilab', 'Al Ain Labs'],
+    dot: { x: '59%', y: '42%' },
+  },
+  {
+    region: 'Asia Pacific',
+    color: '#9FE1CB',
+    labs: ['Pathology Asia', 'SRL Diagnostics', 'Tokyo Clinical Labs'],
+    dot: { x: '78%', y: '48%' },
+  },
+  {
+    region: 'Latin America',
+    color: '#0F6E56',
+    labs: ['Fleury', 'Chopo', 'Lavogen'],
+    dot: { x: '27%', y: '68%' },
+  },
+]
 
-function WorldMap() {
-  const points = [
-    { x: '14%', y: '58%' },
-    { x: '22%', y: '66%' },
-    { x: '47%', y: '34%' },
-    { x: '56%', y: '52%' },
-    { x: '72%', y: '48%' },
-    { x: '81%', y: '58%' },
-    { x: '30%', y: '76%' },
-  ]
+// -- Partner tiers ------------------------------------------------------------
+const PARTNER_TYPES = [
+  { label: 'Health Coach',    desc: 'Refer your clients' },
+  { label: 'Nutritionist',   desc: 'Extend your practice' },
+  { label: 'Doctor / GP',    desc: 'Complement your care' },
+  { label: 'Fitness Trainer',desc: 'Add lab insights' },
+  { label: 'Wellness Brand', desc: 'White-label options' },
+  { label: 'Influencer',     desc: 'Content + referrals' },
+]
+
+// -- Map component ------------------------------------------------------------
+function GlobalMap() {
+  const [active, setActive] = useState(null)
 
   return (
     <div style={{
       position: 'relative',
-      height: 340,
+      background: '#0a1510',
       borderRadius: 20,
-      background: 'radial-gradient(circle at 50% 40%, rgba(16,185,129,0.16), rgba(16,185,129,0.02) 70%)',
-      border: '0.5px solid rgba(255,255,255,0.08)',
       overflow: 'hidden',
+      height: 320,
+      border: '0.5px solid rgba(29,158,117,0.15)',
     }}>
+
+      {/* Grid lines */}
+      <svg
+        viewBox="0 0 800 320" width="100%" height="100%"
+        style={{ position: 'absolute', inset: 0 }}
+        aria-hidden="true"
+      >
+        {/* Latitude lines */}
+        {[80, 140, 200, 260].map(y => (
+          <line key={y} x1="0" y1={y} x2="800" y2={y}
+                stroke="rgba(255,255,255,0.03)" strokeWidth="0.5"/>
+        ))}
+        {/* Longitude lines */}
+        {[100, 200, 300, 400, 500, 600, 700].map(x => (
+          <line key={x} x1={x} y1="0" x2={x} y2="320"
+                stroke="rgba(255,255,255,0.03)" strokeWidth="0.5"/>
+        ))}
+
+        {/* Simplified continent fills */}
+        {/* North America */}
+        <path d="M70,30 L155,25 L195,55 L210,95 L200,155 L165,185 L130,195 L90,175 L60,140 L55,90 Z"
+              fill="rgba(29,158,117,0.06)" stroke="rgba(29,158,117,0.12)" strokeWidth="0.5"/>
+        {/* South America */}
+        <path d="M140,210 L195,200 L225,230 L238,275 L220,315 L188,318 L162,295 L148,258 Z"
+              fill="rgba(29,158,117,0.05)" stroke="rgba(29,158,117,0.1)" strokeWidth="0.5"/>
+        {/* Europe */}
+        <path d="M330,20 L390,15 L420,35 L425,72 L400,85 L368,80 L338,58 Z"
+              fill="rgba(93,202,165,0.06)" stroke="rgba(93,202,165,0.12)" strokeWidth="0.5"/>
+        {/* Africa */}
+        <path d="M335,90 L388,88 L420,110 L432,175 L425,248 L395,268 L360,260 L332,220 L325,155 Z"
+              fill="rgba(29,158,117,0.04)" stroke="rgba(29,158,117,0.08)" strokeWidth="0.5"/>
+        {/* Asia */}
+        <path d="M420,15 L600,10 L660,35 L680,85 L668,140 L625,170 L565,178 L490,158 L445,120 L430,65 Z"
+              fill="rgba(93,202,165,0.05)" stroke="rgba(93,202,165,0.1)" strokeWidth="0.5"/>
+        {/* Australia */}
+        <path d="M588,210 L660,205 L690,230 L692,268 L660,285 L615,282 L585,255 Z"
+              fill="rgba(29,158,117,0.04)" stroke="rgba(29,158,117,0.08)" strokeWidth="0.5"/>
+
+        {/* Connection arcs between regions */}
+        {[
+          { x1: 144, y1: 122, x2: 368, y2: 50 },
+          { x1: 368, y1: 50, x2: 472, y2: 134 },
+          { x1: 368, y1: 50, x2: 188, y2: 218 },
+        ].map(({ x1, y1, x2, y2 }, i) => {
+          const mx = (x1 + x2) / 2
+          const my = Math.min(y1, y2) - 30
+          return (
+            <path
+              key={i}
+              d={`M${x1},${y1} Q${mx},${my} ${x2},${y2}`}
+              fill="none"
+              stroke="rgba(29,158,117,0.12)"
+              strokeWidth="0.6"
+              strokeDasharray="4 6"
+            />
+          )
+        })}
+      </svg>
+
+      {/* Region dots + labels */}
+      {LAB_REGIONS.map(({ region, color, dot, labs }) => {
+        const isActive = active === region
+        return (
+          <div
+            key={region}
+            style={{ position: 'absolute', left: dot.x, top: dot.y, zIndex: 2 }}
+            onMouseEnter={() => setActive(region)}
+            onMouseLeave={() => setActive(null)}
+          >
+            {/* Pulse ring */}
+            <div style={{
+              position: 'absolute',
+              width: 22, height: 22,
+              borderRadius: '50%',
+              background: color + '25',
+              top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              transition: 'all 300ms ease',
+              ...(isActive ? { width: 32, height: 32, background: color + '35' } : {}),
+            }}/>
+            {/* Dot */}
+            <div style={{
+              width: 10, height: 10,
+              borderRadius: '50%',
+              background: color,
+              position: 'relative', zIndex: 1,
+              cursor: 'pointer',
+              boxShadow: `0 0 0 2px ${color}40`,
+              transition: 'transform 200ms ease',
+              transform: isActive ? 'scale(1.4)' : 'scale(1)',
+            }}/>
+            {/* Region label */}
+            <div style={{
+              position: 'absolute',
+              top: 14, left: '50%',
+              transform: 'translateX(-50%)',
+              whiteSpace: 'nowrap',
+              fontSize: 9,
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              color: isActive ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)',
+              textTransform: 'uppercase',
+              transition: 'color 200ms ease',
+              pointerEvents: 'none',
+            }}>
+              {region}
+            </div>
+
+            {/* Tooltip on hover */}
+            {isActive && (
+              <div style={{
+                position: 'absolute',
+                bottom: 20, left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(10,21,16,0.96)',
+                border: `0.5px solid ${color}50`,
+                borderRadius: 10,
+                padding: '10px 14px',
+                minWidth: 160,
+                zIndex: 10,
+                pointerEvents: 'none',
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color, marginBottom: 6, letterSpacing: '0.06em' }}>
+                  {region}
+                </div>
+                {labs.map(l => (
+                  <div key={l} style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginBottom: 2 }}>
+                    {l}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      {/* Top-left label */}
       <div style={{
-        position: 'absolute',
-        inset: 0,
-        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.10) 1px, transparent 1px)',
-        backgroundSize: '18px 18px',
-        opacity: 0.35,
-      }} />
+        position: 'absolute', top: 14, left: 16,
+        fontSize: 10, fontWeight: 700, letterSpacing: '0.14em',
+        color: 'rgba(29,158,117,0.6)', textTransform: 'uppercase',
+      }}>
+        Global coverage
+      </div>
 
-      {points.map((p, i) => (
-        <div
-          key={i}
-          style={{
-            position: 'absolute',
-            left: p.x,
-            top: p.y,
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            background: 'var(--teal-300)',
-            boxShadow: '0 0 0 6px rgba(95, 221, 175, 0.12)',
-            transform: 'translate(-50%, -50%)',
-          }}
-        />
-      ))}
-
-      {/* Region text labels */}
-      {[
-        { label: 'North America', x: '17%', y: '62%' },
-        { label: 'Europe',        x: '48%', y: '35%' },
-        { label: 'Middle East',   x: '60%', y: '56%' },
-        { label: 'Asia Pacific',  x: '76%', y: '50%' },
-        { label: 'Latin America', x: '27%', y: '78%' },
-      ].map(({ label, x, y }) => (
-        <div key={label} style={{
-          position: 'absolute', left: x, top: y,
-          transform: 'translate(-50%, -50%)',
-          fontSize: 9, fontWeight: 600, letterSpacing: '0.1em',
-          textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)',
-          pointerEvents: 'none', userSelect: 'none', whiteSpace: 'nowrap',
-        }}>
-          {label}
-        </div>
-      ))}
+      {/* Bottom caption */}
+      <div style={{
+        position: 'absolute', bottom: 12, right: 16,
+        fontSize: 10, color: 'rgba(255,255,255,0.2)',
+      }}>
+        Hover a region to see supported labs
+      </div>
     </div>
   )
 }
 
-const BLOCKS = [
-  {
-    Icon: Package,
-    label: 'Supplements',
-    title: 'Order supplements in one click',
-    body: 'Get direct links to trusted stores based on your protocol. No searching. No guesswork.',
-    extra: 'stores',
-  },
-  {
-    Icon: Activity,
-    label: 'Lab integrations',
-    title: 'Connect your lab results',
-    body: 'Upload results from any lab — or connect directly as integrations expand.',
-    extra: 'labs',
-  },
-  {
-    Icon: Zap,
-    label: 'Ecosystem benefits',
-    title: 'Unlock partner benefits as you follow your protocol',
-    body: 'Exclusive pricing, early access to new features, and more — the longer you track, the more you get.',
-    extra: null,
-  },
-]
-
+// -- Main component ------------------------------------------------------------
 export default function PartnersSection() {
+  const navigate = useNavigate()
+
+  const handlePartnerClick = () => {
+    const subject = encodeURIComponent('VITALOOP Partnership Request')
+    const body = encodeURIComponent(
+      'Hello VITALOOP team,\n\nI am interested in the partner program.\n\n' +
+      'My name:\nRole / business:\nAudience / reach:\nWebsite or social:\n\n' +
+      'Please send me details.\n\nBest regards'
+    )
+    window.location.href = `mailto:info@softdab.tech?subject=${subject}&body=${body}`
+  }
+
   return (
-    <section id="partners" style={{ padding: 'var(--py-lg) 24px', background: 'var(--gray-50)' }}>
+    <section id="partners" style={{ padding: 'var(--py-xl, 120px) 24px', background: 'var(--gray-50)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 
-        {/* Header */}
-        <div className="reveal" style={{ textAlign: 'center', marginBottom: 72 }}>
+        {/* -- Header -- */}
+        <div className="reveal" style={{ textAlign: 'center', marginBottom: 80 }}>
           <div style={{
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'var(--teal-500)',
-            marginBottom: 16,
+            fontSize: 12, fontWeight: 600, letterSpacing: '0.12em',
+            textTransform: 'uppercase', color: 'var(--teal-500)', marginBottom: 16,
           }}>
-            Ecosystem
+            Partner network
           </div>
           <h2 style={{
             fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 700,
             letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 16,
           }}>
-            Everything you need —{' '}
-            <span style={{ color: 'var(--teal-500)' }}>in one place</span>
+            Buy supplements anywhere.<br/>
+            <span style={{ color: 'var(--teal-500)' }}>Upload labs from any lab.</span>
           </h2>
-          <p style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 520, margin: '0 auto', lineHeight: 1.65 }}>
-            From lab testing to supplements — seamlessly connected inside VITALOOP.
+          <p style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 480, margin: '0 auto', lineHeight: 1.65 }}>
+            One-click purchase links to your preferred store. Results from any
+            lab worldwide - uploaded in seconds.
           </p>
         </div>
 
-        {/* 3 ecosystem blocks */}
-        <div className="grid md:grid-cols-3 gap-6 stagger-children reveal">
-          {BLOCKS.map(({ Icon, label, title, body, extra }) => (
-            <div
-              key={label}
-              style={{
-                background: 'white', borderRadius: 24,
-                border: '0.5px solid var(--gray-100)',
-                padding: '32px 28px',
-                display: 'flex', flexDirection: 'column', gap: 0,
-                transition: 'transform 300ms ease, border-color 300ms ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)'
-                e.currentTarget.style.borderColor = 'var(--teal-300)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.borderColor = 'var(--gray-100)'
-              }}
-            >
-              {/* Icon */}
-              <div style={{
-                width: 44, height: 44, borderRadius: 12,
-                background: 'rgba(16,185,129,0.1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                marginBottom: 20,
-              }}>
-                <Icon size={22} color="var(--teal-500)" strokeWidth={1.8} />
-              </div>
-
-              {/* Label */}
-              <div style={{
-                fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
-                textTransform: 'uppercase', color: 'var(--teal-500)', marginBottom: 10,
-              }}>
-                {label}
-              </div>
-
-              {/* Title */}
-              <h3 style={{
-                fontSize: 17, fontWeight: 700, color: 'var(--gray-900)',
-                marginBottom: 12, lineHeight: 1.35,
-              }}>
-                {title}
-              </h3>
-
-              {/* Body */}
-              <p style={{ fontSize: 14, color: 'var(--gray-500)', lineHeight: 1.65, margin: '0 0 20px' }}>
-                {body}
-              </p>
-
-              {/* Store cards */}
-              {extra === 'stores' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 'auto' }}>
-                  {STORES.map((s) => <StoreCard key={s.name} {...s} />)}
-                </div>
-              )}
-
-              {/* Labs placeholder */}
-              {extra === 'labs' && (
-                <div style={{
-                  marginTop: 'auto',
-                  background: 'var(--gray-50)',
-                  borderRadius: 12,
-                  border: '0.5px solid var(--gray-100)',
-                  padding: '14px 16px',
-                }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gray-900)', marginBottom: 6 }}>
-                    Supported labs
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--teal-600)', lineHeight: 1.6 }}>
-                    Quest · LabCorp · EU labs
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 6 }}>
-                    + any lab PDF worldwide
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 reveal" style={{ marginTop: 32 }}>
+        {/* -- Supplement stores -- */}
+        <div className="reveal" style={{ marginBottom: 80 }}>
           <div style={{
-            background: 'var(--gray-900)',
-            borderRadius: 24,
-            border: '0.5px solid rgba(255,255,255,0.08)',
-            padding: '28px 24px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: 20, flexWrap: 'wrap', gap: 8,
           }}>
-            <div style={{
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: 'var(--teal-100)',
-              marginBottom: 12,
-            }}>
-              Global coverage
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--gray-900)' }}>
+              Supplement stores
             </div>
-            <WorldMap />
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'var(--teal-50)', border: '0.5px solid var(--teal-300)',
+              borderRadius: 8, padding: '5px 12px',
+              fontSize: 12, fontWeight: 600, color: 'var(--teal-600)',
+            }}>
+              5-8% cashback via partner links
+            </div>
           </div>
 
           <div style={{
-            background: 'var(--gray-900)',
-            borderRadius: 24,
-            border: '0.5px solid rgba(255,255,255,0.08)',
-            padding: '28px 24px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+            gap: 10,
           }}>
-            <h3 style={{ fontSize: 26, color: 'white', letterSpacing: '-0.02em', marginBottom: 12, fontWeight: 700 }}>
-              Become a VITALOOP Partner
-            </h3>
-            <p style={{ color: 'var(--teal-100)', fontSize: 15, lineHeight: 1.65, marginBottom: 20 }}>
-              Refer users who need clarity with their lab results and earn recurring commission while they stay on VITALOOP.
-            </p>
+            {STORES.map(({ name, tagline, color, initial }) => (
+              <div
+                key={name}
+                style={{
+                  background: 'white', borderRadius: 14,
+                  border: '0.5px solid var(--gray-100)',
+                  padding: '16px 16px',
+                  transition: 'transform 250ms ease, border-color 250ms ease, box-shadow 250ms ease',
+                  cursor: 'default',
+                  display: 'flex', flexDirection: 'column', gap: 10,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-3px)'
+                  e.currentTarget.style.borderColor = color + '55'
+                  e.currentTarget.style.boxShadow = `0 6px 20px ${color}12`
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.borderColor = 'var(--gray-100)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                <div style={{
+                  width: 40, height: 40, borderRadius: 9,
+                  background: color + '15', border: `1.5px solid ${color}35`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 12, fontWeight: 800, color, letterSpacing: '-0.02em',
+                }}>
+                  {initial}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 2 }}>{name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>{tagline}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-            {/* Quick stats row */}
+        {/* -- Map + Affiliate - side by side -- */}
+        <div className="reveal grid grid-cols-1 md:grid-cols-2 gap-6" style={{ marginBottom: 0 }}>
+
+          {/* Map */}
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 16 }}>
+              Partner laboratories
+            </div>
+            <GlobalMap />
             <div style={{
-              display: 'flex', gap: 20, marginBottom: 24, flexWrap: 'wrap',
+              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 8, marginTop: 12,
             }}>
               {[
-                { n: '20%', l: 'комиссия' },
-                { n: '$117', l: 'доход/год с клиента' },
-                { n: '∞', l: 'без ограничений' },
+                { label: 'US labs',   text: 'Quest - LabCorp - SonoHealth' },
+                { label: 'EU labs',   text: 'Synlab - Eurofins - Cerba' },
+                { label: 'Worldwide', text: 'Any PDF - AI auto-reads' },
+              ].map(({ label, text }) => (
+                <div key={label} style={{
+                  background: 'white', borderRadius: 10,
+                  border: '0.5px solid var(--gray-100)',
+                  padding: '10px 12px',
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 3 }}>{label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--gray-500)', lineHeight: 1.5 }}>{text}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Affiliate card */}
+          <div style={{
+            background: '#0d2218',
+            borderRadius: 20,
+            padding: '36px 32px',
+            border: '0.5px solid rgba(29,158,117,0.2)',
+            display: 'flex', flexDirection: 'column',
+          }}>
+            <div style={{
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
+              textTransform: 'uppercase', color: 'var(--teal-400)', marginBottom: 14,
+            }}>
+              Partner program
+            </div>
+
+            <h3 style={{
+              fontSize: 'clamp(22px, 2.5vw, 28px)', fontWeight: 700,
+              color: 'white', letterSpacing: '-0.02em', marginBottom: 10, lineHeight: 1.2,
+            }}>
+              Earn with every referral.
+            </h3>
+
+            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, marginBottom: 24 }}>
+              Refer users who need clarity with their lab results and earn
+              recurring commission while they stay on VITALOOP.
+            </p>
+
+            {/* Stats */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 8, marginBottom: 24,
+            }}>
+              {[
+                { n: '20%',  l: 'recurring commission' },
+                { n: '$117', l: 'avg annual per referral' },
+                { n: '∞',    l: 'no earnings cap' },
               ].map(({ n, l }) => (
                 <div key={n} style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  borderRadius: 12, padding: '10px 16px',
-                  border: '0.5px solid rgba(255,255,255,0.08)',
-                  minWidth: 90,
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: 12, padding: '12px 14px',
+                  border: '0.5px solid rgba(255,255,255,0.07)',
                 }}>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: 'white', letterSpacing: '-0.02em' }}>{n}</div>
-                  <div style={{ fontSize: 11, color: 'var(--teal-100)', marginTop: 2 }}>{l}</div>
+                  <div style={{
+                    fontSize: 22, fontWeight: 700, color: 'white',
+                    letterSpacing: '-0.02em', lineHeight: 1,
+                  }}>
+                    {n}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 4, lineHeight: 1.4 }}>
+                    {l}
+                  </div>
                 </div>
               ))}
             </div>
 
-            <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--gray-100)', display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>
-              <li>Recurring payout while referred clients stay active</li>
-              <li>Ready-to-share content and referral dashboard</li>
-              <li>Priority support for your partner pipeline</li>
+            {/* Benefits list */}
+            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                'Recurring payout while referred clients stay active',
+                'Ready-to-share content and referral dashboard',
+                'Priority support for your partner pipeline',
+                'Works for coaches, doctors, nutritionists & influencers',
+              ].map(item => (
+                <li key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <Check size={14} style={{ color: 'var(--teal-400)', flexShrink: 0, marginTop: 2 }} aria-hidden="true"/>
+                  <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>{item}</span>
+                </li>
+              ))}
             </ul>
+
+            {/* Partner type chips */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 28 }}>
+              {PARTNER_TYPES.map(({ label }) => (
+                <span key={label} style={{
+                  background: 'rgba(29,158,117,0.12)',
+                  border: '0.5px solid rgba(29,158,117,0.25)',
+                  borderRadius: 6, padding: '4px 10px',
+                  fontSize: 12, fontWeight: 600, color: 'var(--teal-300)',
+                }}>
+                  {label}
+                </span>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <button
+              onClick={handlePartnerClick}
+              style={{
+                marginTop: 'auto',
+                background: 'var(--teal-500)', color: 'white',
+                border: 'none', borderRadius: 980,
+                padding: '13px 28px', fontSize: 15, fontWeight: 700,
+                cursor: 'pointer', transition: 'background 200ms, transform 200ms',
+                display: 'flex', alignItems: 'center', gap: 8, alignSelf: 'flex-start',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'var(--teal-600)'
+                e.currentTarget.style.transform = 'scale(1.02)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'var(--teal-500)'
+                e.currentTarget.style.transform = 'scale(1)'
+              }}
+            >
+              Apply to partner program
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </button>
+
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', marginTop: 10 }}>
+              We'll reply within 24 hours - info@softdab.tech
+            </p>
           </div>
         </div>
 
