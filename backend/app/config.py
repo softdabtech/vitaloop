@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     stripe_price_id: str = ""  # Price ID for $49/mo plan
     stripe_success_url: str = "http://localhost:5173/dashboard?sub=success"
     stripe_cancel_url: str = "http://localhost:5173/dashboard?sub=cancelled"
+    sendgrid_api_key: str = ""
+    sendgrid_from_email: str = "VITALOOP <noreply@vitaloop.today>"
+    frontend_base_url: str = "https://vitaloop.today"
+    crm_base_url: str = "https://crm.vitaloop.today"
 
     @property
     def origins_list(self) -> List[str]:

@@ -45,4 +45,14 @@ public sealed class AssignmentService
 
         await _gateway.Reassign(orgId, assignmentId, practitionerId, ct);
     }
+
+    public async Task UpdateAssignment(UserContext userCtx, Guid orgId, Guid assignmentId, string? status, string? notes, CancellationToken ct = default)
+    {
+        if (!_accessPolicyService.CanAccessOrg(userCtx, orgId))
+        {
+            throw new UnauthorizedAccessException("Assignment update denied.");
+        }
+
+        await _gateway.UpdateAssignment(orgId, assignmentId, status, notes, ct);
+    }
 }

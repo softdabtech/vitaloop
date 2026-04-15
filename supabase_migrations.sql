@@ -479,3 +479,25 @@ CREATE POLICY "Invitations: admins see org invitations" ON public.invitations
       WHERE user_id = auth.uid() AND role IN ('org_owner', 'client_admin')
     )
   );
+
+-- 19. AUDIT LOGS (Platform activity stream)
+CREATE TABLE public.audit_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  organization_id UUID REFERENCES public.organizations(id) ON DELETE SET NULL,
+  old_value JSONB DEFAULT '{}',
+  new_value JSONB DEFAULT '{}',
+  timestamp TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_audit_logs_timestamp ON public.audit_logs(timestamp DESC);
+CREATE INDEX idx_audit_logs_user_id ON public.audit_logs(user_id);
+CREATE INDEX idx_audit_logs_entity ON public.audit_logs(entity_type, entity_id);
+CREATE INDEX idx_audit_logs_organization_id ON public.audit_logs(organization_id);
+
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "AuditLogs: users can see own actions" ON public.audit_logs
+  FOR SELECT USING (auth.uid() = user_id);

@@ -38,7 +38,17 @@ public class InvitationsController : Controller
         var userCtx = await _userContextAccessor.GetCurrent(ct);
         if (userCtx is not null)
         {
-            return Redirect("/auth/post-login");
+            try
+            {
+                await _invitationService.AcceptInvite(userCtx, token, ct);
+                TempData["SuccessMessage"] = "Invitation accepted. Organization membership activated.";
+                return Redirect("/auth/post-login");
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "Invitation could not be accepted. It may be expired or invalid.";
+                return Redirect("/auth/post-login");
+            }
         }
 
         var encodedToken = WebUtility.UrlEncode(token);

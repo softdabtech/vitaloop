@@ -58,4 +58,24 @@ public sealed class MembershipService
 
         return await _gateway.GetGlobalUsers(ct);
     }
+
+    public async Task<PlatformOverview?> GetPlatformOverview(UserContext userCtx, CancellationToken ct = default)
+    {
+        if (!_accessPolicyService.HasGlobalRole(userCtx, "super_admin"))
+        {
+            throw new UnauthorizedAccessException("Platform overview access denied.");
+        }
+
+        return await _gateway.GetPlatformOverview(ct);
+    }
+
+    public async Task<IReadOnlyList<AuditLogEntry>> GetAuditLogs(UserContext userCtx, Guid? organizationId = null, int limit = 200, CancellationToken ct = default)
+    {
+        if (!_accessPolicyService.HasGlobalRole(userCtx, "super_admin"))
+        {
+            throw new UnauthorizedAccessException("Audit log access denied.");
+        }
+
+        return await _gateway.GetAuditLogs(organizationId, limit, ct);
+    }
 }

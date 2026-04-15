@@ -32,6 +32,21 @@ async def admin_user_detail(user_id: str, _: dict = Depends(_require_super_admin
     return await svc.get_admin_user_detail(user_id)
 
 
+@router.get("/platform-overview")
+async def admin_platform_overview(_: dict = Depends(_require_super_admin)):
+    return await svc.get_platform_overview()
+
+
+@router.get("/audit-logs")
+async def admin_audit_logs(
+    limit: int = 200,
+    organization_id: str | None = None,
+    _: dict = Depends(_require_super_admin),
+):
+    safe_limit = max(1, min(limit, 1000))
+    return await svc.get_audit_logs(limit=safe_limit, organization_id=organization_id)
+
+
 @router.get("/red-flags")
 async def admin_red_flags(acknowledged: bool = False, _: dict = Depends(_require_super_admin)):
     return await svc.get_all_red_flags(acknowledged=acknowledged)

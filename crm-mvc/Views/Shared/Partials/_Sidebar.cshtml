@@ -17,8 +17,10 @@
 
   var navItemsOverview = new[]
   {
-    new { Href = "/admin",         Label = "Dashboard",     Group = "Overview",  Icon = "&#127968;", RequireRole = new string[0] },
-    new { Href = "/ops",           Label = "Ops",           Group = "Overview",  Icon = "&#128202;", RequireRole = new[] { "super_admin" } }
+    new { Href = "/admin",         Label = "Dashboard",     Group = "Overview",  Icon = "&#127968;", RequireRole = new[] { "org_admin", "manager" } },
+    new { Href = "/practitioner/clients", Label = "My Clients", Group = "Overview", Icon = "&#129658;", RequireRole = new[] { "practitioner" } },
+    new { Href = "/ops",           Label = "Ops",           Group = "Overview",  Icon = "&#128202;", RequireRole = new[] { "super_admin" } },
+    new { Href = "/ops/activity",  Label = "Activity Log",  Group = "Overview",  Icon = "&#129534;", RequireRole = new[] { "super_admin" } }
   };
 
   var navItemsCrm = new[]

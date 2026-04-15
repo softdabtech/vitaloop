@@ -11,14 +11,19 @@
   <a class="vo-quick-action" href="/ops">
     <span class="vo-quick-action-icon">👤</span> Global Users
   </a>
-  <a class="vo-quick-action" href="/organizations">
+  <a class="vo-quick-action" href="/ops/activity">
+    <span class="vo-quick-action-icon">🧾</span> Activity Log
+  </a>
+  <a class="vo-quick-action" href="/admin/organizations">
     <span class="vo-quick-action-icon">🏢</span> All Organizations
   </a>
 </nav>
 
 <section class="vo-grid two-up" style="margin-bottom: var(--vo-space-6);">
-  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Global Users", Value = Model.GlobalUsers.Count.ToString(), Trend = "All registered accounts", Tone = "teal" })
-  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Super Admins", Value = Model.GlobalUsers.Count(u => u.GlobalRole == "super_admin").ToString(), Trend = "Platform-level access", Tone = "default" })
+  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Total Users", Value = Model.TotalUsers.ToString(), Trend = "All organizations", Tone = "teal" })
+  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Organizations", Value = Model.TotalOrganizations.ToString(), Trend = "Multi-org scope", Tone = "default" })
+  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Active Programs", Value = Model.ActivePrograms.ToString(), Trend = "Active assignments", Tone = "default" })
+  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "New Registrations (24h)", Value = Model.NewRegistrations24h.ToString(), Trend = "Last 24 hours", Tone = "default" })
 </section>
 
 @await Html.PartialAsync("~/Views/Shared/Ui/_DataTableShell.cshtml", new DataTableShellViewModel {
@@ -27,3 +32,25 @@
   EmptyMessage = "No global users found.",
   Rows = Model.GlobalUsers.Select(u => (IReadOnlyList<string>)new[] { u.DisplayName, u.GlobalRole, u.StatusBadge, u.UserId.ToString() }).ToList()
 })
+
+@await Html.PartialAsync("~/Views/Shared/Ui/_DataTableShell.cshtml", new DataTableShellViewModel {
+  Title = "Recent Activity Log",
+  Columns = new[] { "When", "Action", "Entity", "Entity Id", "User", "Org" },
+  EmptyMessage = "No recent activity found.",
+  Rows = Model.RecentAuditLogs
+    .Select(l => (IReadOnlyList<string>)new[] {
+      l.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"),
+      l.Action,
+      l.EntityType,
+      l.EntityId,
+      l.UserId?.ToString() ?? "-",
+      l.OrganizationId?.ToString() ?? "-",
+    })
+    .ToList()
+})
+
+<script>
+  setTimeout(function () {
+    window.location.reload();
+  }, 30000);
+</script>

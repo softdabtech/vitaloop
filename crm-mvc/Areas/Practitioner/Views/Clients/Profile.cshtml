@@ -1,0 +1,55 @@
+@model PractitionerClientProfileViewModel
+@{
+  ViewData["Title"] = "Client Profile";
+  Layout = "_CrmLayout";
+}
+
+@await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
+@await Html.PartialAsync("~/Views/Shared/Partials/_PageHeader.cshtml", new PageHeaderViewModel {
+  Title = Model.Assignment?.ClientName ?? "Client",
+  Subtitle = "Practitioner client profile",
+  Eyebrow = "Practitioner"
+})
+
+@if (Model.Assignment is null)
+{
+  <div class="vo-empty-state">Client assignment not found.</div>
+}
+else
+{
+  <section class="vo-card" style="padding:20px;display:grid;gap:14px;">
+    <div><strong>Client:</strong> @Model.Assignment.ClientName</div>
+    <div><strong>Practitioner:</strong> @Model.Assignment.PractitionerName</div>
+    <div><strong>Last Updated:</strong> @Model.Assignment.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</div>
+
+    <form method="post" action="/practitioner/clients/@Model.Assignment.Id/update" style="display:grid;gap:12px;max-width:760px;">
+      @Html.AntiForgeryToken()
+      <label>
+        <span>Status</span>
+        <select name="status" class="vo-input">
+          @foreach (var option in new[] { "active", "paused", "inactive", "archived" })
+          {
+            if (string.Equals(Model.Assignment.Status, option, StringComparison.OrdinalIgnoreCase))
+            {
+              <option value="@option" selected>@option</option>
+            }
+            else
+            {
+              <option value="@option">@option</option>
+            }
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Notes</span>
+        <textarea name="notes" rows="6" class="vo-input" placeholder="Add practitioner notes...">@Model.Assignment.Notes</textarea>
+      </label>
+
+      <div>
+        <button type="submit" class="vo-btn vo-btn-primary">Save</button>
+        <a href="/practitioner/clients" class="vo-btn vo-btn-ghost">Back to My Clients</a>
+      </div>
+    </form>
+  </section>
+}

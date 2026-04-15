@@ -27,19 +27,29 @@ public class DashboardController : Controller
     {
         var userCtx = await _userContextAccessor.GetOrThrow(ct);
         IReadOnlyList<GlobalUser> users;
+        Vitaloop.Crm.Web.Models.Crm.PlatformOverview? overview;
+        IReadOnlyList<Vitaloop.Crm.Web.Models.Crm.AuditLogEntry> logs;
         try
         {
             users = await _membershipService.GetGlobalUsers(userCtx, ct);
+            overview = await _membershipService.GetPlatformOverview(userCtx, ct);
+            logs = await _membershipService.GetAuditLogs(userCtx, null, 20, ct);
         }
         catch (HttpRequestException)
         {
             // Keep Ops page accessible even when optional admin API is unavailable.
             users = Array.Empty<GlobalUser>();
+            overview = null;
+            logs = Array.Empty<Vitaloop.Crm.Web.Models.Crm.AuditLogEntry>();
             TempData["WarningMessage"] = "Global users feed is temporarily unavailable.";
         }
 
         var model = new OpsDashboardViewModel
         {
+            TotalUsers = overview?.TotalUsers ?? users.Count,
+            TotalOrganizations = overview?.TotalOrganizations ?? 0,
+            ActivePrograms = overview?.ActivePrograms ?? 0,
+            NewRegistrations24h = overview?.NewRegistrations24h ?? 0,
             GlobalUsers = users.Select(u => new MemberViewModel
             {
                 UserId = u.UserId,
@@ -49,6 +59,16 @@ public class DashboardController : Controller
                 OrgRole = "-",
                 MembershipStatus = u.Status,
                 SubscriptionStatus = "-"
+            }).ToList(),
+            RecentAuditLogs = logs.Select(l => new OpsAuditLogViewModel
+            {
+                Id = l.Id,
+                UserId = l.UserId,
+                Action = l.Action,
+                EntityType = l.EntityType,
+                EntityId = l.EntityId,
+                OrganizationId = l.OrganizationId,
+                Timestamp = l.Timestamp,
             }).ToList()
         };
 

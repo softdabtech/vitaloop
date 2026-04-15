@@ -5,13 +5,50 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
+from app.config import settings
 from app.dependencies import get_current_user
 from app.models.crm import OrganizationMemberCreate
 from app.models.organization import OrganizationCreate, OrganizationUpdate
 from app.services import supabase_service as svc
+from app.services.email_service import send_invitation_email
 
 
 router = APIRouter()
+
+
+async def _write_audit_log(
+    sb,
+    *,
+    actor_user_id: str,
+    action: str,
+    entity_type: str,
+    entity_id: str,
+    old_value: Optional[dict[str, Any]] = None,
+    new_value: Optional[dict[str, Any]] = None,
+    organization_id: Optional[str] = None,
+) -> None:
+    try:
+        await svc._run(
+            lambda: sb.table("audit_logs")
+            .insert({
+                "user_id": actor_user_id,
+                "action": action,
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "old_value": old_value or {},
+                "new_value": new_value or {},
+                "organization_id": organization_id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+            .execute()
+        )
+    except Exception:
+        # Audit should never break business operations.
+        return
+
+
+def _as_text(value: Any, fallback: str = "") -> str:
+    return str(value) if value is not None else fallback
 
 
 def _is_super_admin(current_user: dict) -> bool:
@@ -116,11 +153,13 @@ def _serialize_assignment(row: dict, users_by_id: dict[str, dict]) -> dict[str, 
     client = users_by_id.get(str(row.get("client_id")))
     return {
         "id": row.get("id"),
+        "organization_id": row.get("organization_id"),
         "client_id": row.get("client_id"),
         "client_name": _display_name(client),
         "practitioner_id": row.get("practitioner_id"),
         "practitioner_name": _display_name(practitioner),
         "status": row.get("status") or "active",
+        "notes": row.get("notes") or "",
         "updated_at": row.get("updated_at") or row.get("assigned_at"),
     }
 
@@ -205,7 +244,7 @@ async def get_organization_settings(org_id: UUID, current_user: dict = Depends(g
 
 
 @router.post("/organizations")
-async def create_organization(req: OrganizationCreate, _: dict = Depends(_require_super_admin)):
+async def create_organization(req: OrganizationCreate, current_user: dict = Depends(_require_super_admin)):
     sb = await _get_supabase()
     owner_map = await _load_users_by_ids(sb, [str(req.owner_id)])
     owner = owner_map.get(str(req.owner_id))
@@ -242,6 +281,16 @@ async def create_organization(req: OrganizationCreate, _: dict = Depends(_requir
         .execute()
     )
 
+    await _write_audit_log(
+        sb,
+        actor_user_id=current_user["sub"],
+        action="create",
+        entity_type="organization",
+        entity_id=_as_text(created.get("id")),
+        new_value=created,
+        organization_id=_as_text(created.get("id")),
+    )
+
     return _serialize_organization(created, owner)
 
 
@@ -256,6 +305,15 @@ async def update_organization(org_id: UUID, req: OrganizationUpdate, current_use
         raise HTTPException(status_code=400, detail="No organization fields provided")
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
 
+    old_resp = await svc._run(
+        lambda: sb.table("organizations")
+        .select("*")
+        .eq("id", str(org_id))
+        .limit(1)
+        .execute()
+    )
+    old_row = old_resp.data[0] if old_resp.data else None
+
     resp = await svc._run(
         lambda: sb.table("organizations")
         .update(update_data)
@@ -266,6 +324,17 @@ async def update_organization(org_id: UUID, req: OrganizationUpdate, current_use
         raise HTTPException(status_code=404, detail="Organization not found")
 
     row = resp.data[0]
+    await _write_audit_log(
+        sb,
+        actor_user_id=current_user["sub"],
+        action="update",
+        entity_type="organization",
+        entity_id=str(org_id),
+        old_value=old_row,
+        new_value=row,
+        organization_id=str(org_id),
+    )
+
     owners = await _load_users_by_ids(sb, [row.get("owner_id")])
     return _serialize_organization(row, owners.get(str(row.get("owner_id"))))
 
@@ -310,6 +379,15 @@ async def add_member(org_id: UUID, req: OrganizationMemberCreate, current_user: 
         raise HTTPException(status_code=400, detail="Failed to add member")
 
     users = await _load_users_by_ids(sb, [str(req.user_id)])
+    await _write_audit_log(
+        sb,
+        actor_user_id=current_user["sub"],
+        action="create",
+        entity_type="organization_member",
+        entity_id=f"{org_id}:{req.user_id}",
+        new_value=row,
+        organization_id=str(org_id),
+    )
     return _serialize_member(row, users.get(str(req.user_id)))
 
 
@@ -323,6 +401,16 @@ async def change_member_role(
     sb = await _get_supabase()
     await _require_org_role(sb, org_id, current_user, {"org_owner", "client_admin"})
 
+    old_resp = await svc._run(
+        lambda: sb.table("organization_members")
+        .select("*")
+        .eq("organization_id", str(org_id))
+        .eq("user_id", str(user_id))
+        .limit(1)
+        .execute()
+    )
+    old_row = old_resp.data[0] if old_resp.data else None
+
     resp = await svc._run(
         lambda: sb.table("organization_members")
         .update({"role": role, "updated_at": datetime.now(timezone.utc).isoformat()})
@@ -334,6 +422,17 @@ async def change_member_role(
     if not row:
         raise HTTPException(status_code=404, detail="Member not found")
 
+    await _write_audit_log(
+        sb,
+        actor_user_id=current_user["sub"],
+        action="update",
+        entity_type="organization_member",
+        entity_id=f"{org_id}:{user_id}",
+        old_value=old_row,
+        new_value=row,
+        organization_id=str(org_id),
+    )
+
     users = await _load_users_by_ids(sb, [str(user_id)])
     return _serialize_member(row, users.get(str(user_id)))
 
@@ -342,6 +441,16 @@ async def change_member_role(
 async def remove_member(user_id: UUID, org_id: UUID = Query(...), current_user: dict = Depends(get_current_user)):
     sb = await _get_supabase()
     await _require_org_role(sb, org_id, current_user, {"org_owner", "client_admin"})
+
+    old_resp = await svc._run(
+        lambda: sb.table("organization_members")
+        .select("*")
+        .eq("organization_id", str(org_id))
+        .eq("user_id", str(user_id))
+        .limit(1)
+        .execute()
+    )
+    old_row = old_resp.data[0] if old_resp.data else None
 
     resp = await svc._run(
         lambda: sb.table("organization_members")
@@ -352,6 +461,18 @@ async def remove_member(user_id: UUID, org_id: UUID = Query(...), current_user: 
     )
     if not resp.data:
         raise HTTPException(status_code=404, detail="Member not found")
+
+    await _write_audit_log(
+        sb,
+        actor_user_id=current_user["sub"],
+        action="delete",
+        entity_type="organization_member",
+        entity_id=f"{org_id}:{user_id}",
+        old_value=old_row,
+        new_value=resp.data[0],
+        organization_id=str(org_id),
+    )
+
     return {"ok": True}
 
 
@@ -384,6 +505,15 @@ async def create_invitation(body: dict[str, Any] = Body(...), current_user: dict
     sb = await _get_supabase()
     await _require_org_role(sb, org_id, current_user, {"org_owner", "client_admin"})
 
+    org_resp = await svc._run(
+        lambda: sb.table("organizations")
+        .select("id,name")
+        .eq("id", str(org_id))
+        .limit(1)
+        .execute()
+    )
+    org_row = org_resp.data[0] if org_resp.data else None
+
     resp = await svc._run(
         lambda: sb.table("invitations")
         .insert({
@@ -402,6 +532,28 @@ async def create_invitation(body: dict[str, Any] = Body(...), current_user: dict
     row = resp.data[0] if resp.data else None
     if not row:
         raise HTTPException(status_code=400, detail="Failed to create invitation")
+
+    invitation_accept_url = f"{settings.crm_base_url.rstrip('/')}/invitations/accept?token={row['token']}"
+    inviter_name = current_user.get("email") or "Team Admin"
+    await send_invitation_email(
+        to_email=email,
+        organization_name=(org_row or {}).get("name") or "VITALOOP Team",
+        role=role,
+        inviter_name=inviter_name,
+        invitation_url=invitation_accept_url,
+        expires_at_iso=row.get("expires_at"),
+    )
+
+    await _write_audit_log(
+        sb,
+        actor_user_id=current_user["sub"],
+        action="create",
+        entity_type="invitation",
+        entity_id=_as_text(row.get("id")),
+        new_value=row,
+        organization_id=str(org_id),
+    )
+
     return _serialize_invitation(row)
 
 
@@ -409,6 +561,16 @@ async def create_invitation(body: dict[str, Any] = Body(...), current_user: dict
 async def revoke_invitation(invitation_id: UUID, org_id: UUID = Query(...), current_user: dict = Depends(get_current_user)):
     sb = await _get_supabase()
     await _require_org_role(sb, org_id, current_user, {"org_owner", "client_admin"})
+
+    old_resp = await svc._run(
+        lambda: sb.table("invitations")
+        .select("*")
+        .eq("id", str(invitation_id))
+        .eq("organization_id", str(org_id))
+        .limit(1)
+        .execute()
+    )
+    old_row = old_resp.data[0] if old_resp.data else None
 
     resp = await svc._run(
         lambda: sb.table("invitations")
@@ -419,7 +581,111 @@ async def revoke_invitation(invitation_id: UUID, org_id: UUID = Query(...), curr
     )
     if not resp.data:
         raise HTTPException(status_code=404, detail="Invitation not found")
+
+    await _write_audit_log(
+        sb,
+        actor_user_id=current_user["sub"],
+        action="update",
+        entity_type="invitation",
+        entity_id=str(invitation_id),
+        old_value=old_row,
+        new_value=resp.data[0],
+        organization_id=str(org_id),
+    )
+
     return {"ok": True}
+
+
+@router.post("/invitations/accept")
+async def accept_invitation(
+    body: dict[str, Any] = Body(...),
+    current_user: dict = Depends(get_current_user),
+):
+    token = str(body.get("token") or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="token is required")
+
+    sb = await _get_supabase()
+    invite_resp = await svc._run(
+        lambda: sb.table("invitations")
+        .select("*")
+        .eq("token", token)
+        .limit(1)
+        .execute()
+    )
+    invitation = invite_resp.data[0] if invite_resp.data else None
+    if not invitation:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+
+    status = str(invitation.get("status") or "sent").lower()
+    if status != "sent":
+        raise HTTPException(status_code=400, detail="Invitation is no longer valid")
+
+    expires_at = invitation.get("expires_at")
+    if expires_at:
+        try:
+            if datetime.fromisoformat(str(expires_at).replace("Z", "+00:00")) < datetime.now(timezone.utc):
+                raise HTTPException(status_code=400, detail="Invitation expired")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+    invite_email = str(invitation.get("email") or "").strip().lower()
+    current_email = str(current_user.get("email") or "").strip().lower()
+    if invite_email and current_email and invite_email != current_email:
+        raise HTTPException(status_code=403, detail="Invitation email does not match current account")
+
+    org_id = _as_text(invitation.get("organization_id"))
+    member_resp = await svc._run(
+        lambda: sb.table("organization_members")
+        .upsert(
+            {
+                "organization_id": org_id,
+                "user_id": current_user["sub"],
+                "role": invitation.get("role") or "member",
+                "status": "active",
+                "invited_by": invitation.get("invited_by"),
+                "invited_at": invitation.get("invited_at") or datetime.now(timezone.utc).isoformat(),
+                "joined_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            on_conflict="organization_id,user_id",
+        )
+        .execute()
+    )
+
+    updated_invite_resp = await svc._run(
+        lambda: sb.table("invitations")
+        .update(
+            {
+                "status": "accepted",
+                "accepted_by_user_id": current_user["sub"],
+                "accepted_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        .eq("id", str(invitation.get("id")))
+        .execute()
+    )
+
+    await _write_audit_log(
+        sb,
+        actor_user_id=current_user["sub"],
+        action="accept",
+        entity_type="invitation",
+        entity_id=_as_text(invitation.get("id")),
+        old_value=invitation,
+        new_value=(updated_invite_resp.data[0] if updated_invite_resp.data else invitation),
+        organization_id=org_id,
+    )
+
+    membership = member_resp.data[0] if member_resp.data else None
+    return {
+        "ok": True,
+        "organization_id": org_id,
+        "membership": membership,
+        "invitation": updated_invite_resp.data[0] if updated_invite_resp.data else invitation,
+    }
 
 
 @router.get("/assignments")
@@ -476,6 +742,16 @@ async def create_assignment(body: dict[str, Any] = Body(...), current_user: dict
     if not row:
         raise HTTPException(status_code=400, detail="Failed to create assignment")
 
+    await _write_audit_log(
+        sb,
+        actor_user_id=current_user["sub"],
+        action="create",
+        entity_type="assignment",
+        entity_id=_as_text(row.get("id")),
+        new_value=row,
+        organization_id=str(org_id),
+    )
+
     users = await _load_users_by_ids(sb, [str(practitioner_id), str(client_id)])
     return _serialize_assignment(row, users)
 
@@ -488,19 +764,51 @@ async def reassign_assignment(
 ):
     org_id_raw = body.get("org_id") or body.get("organization_id")
     practitioner_id = body.get("practitioner_id")
-    if not org_id_raw or not practitioner_id:
-        raise HTTPException(status_code=400, detail="org_id and practitioner_id are required")
+    status = body.get("status")
+    notes = body.get("notes")
+    if not org_id_raw:
+        raise HTTPException(status_code=400, detail="org_id is required")
     org_id = UUID(str(org_id_raw))
 
     sb = await _get_supabase()
-    await _require_org_role(sb, org_id, current_user, {"org_owner", "client_admin", "manager"})
+    membership = await _require_org_access(sb, org_id, current_user)
+
+    existing_resp = await svc._run(
+        lambda: sb.table("practitioner_assignments")
+        .select("*")
+        .eq("id", str(assignment_id))
+        .eq("organization_id", str(org_id))
+        .limit(1)
+        .execute()
+    )
+    existing = existing_resp.data[0] if existing_resp.data else None
+    if not existing:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    role = str((membership or {}).get("role") or "").lower()
+    is_practitioner = role == "practitioner"
+    is_admin_like = _is_super_admin(current_user) or role in {"org_owner", "client_admin", "manager"}
+
+    if is_practitioner and str(existing.get("practitioner_id")) != str(current_user["sub"]):
+        raise HTTPException(status_code=403, detail="Practitioner can only edit own clients")
+
+    update_data: dict[str, Any] = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    if notes is not None:
+        update_data["notes"] = str(notes)
+    if status is not None:
+        update_data["status"] = str(status)
+
+    if practitioner_id is not None:
+        if not is_admin_like:
+            raise HTTPException(status_code=403, detail="Only managers/admins can reassign practitioners")
+        update_data["practitioner_id"] = str(practitioner_id)
+
+    if len(update_data) == 1:
+        raise HTTPException(status_code=400, detail="No assignment changes provided")
 
     resp = await svc._run(
         lambda: sb.table("practitioner_assignments")
-        .update({
-            "practitioner_id": str(practitioner_id),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        })
+        .update(update_data)
         .eq("id", str(assignment_id))
         .eq("organization_id", str(org_id))
         .execute()
@@ -509,5 +817,16 @@ async def reassign_assignment(
     if not row:
         raise HTTPException(status_code=404, detail="Assignment not found")
 
-    users = await _load_users_by_ids(sb, [str(practitioner_id), str(row.get("client_id"))])
+    await _write_audit_log(
+        sb,
+        actor_user_id=current_user["sub"],
+        action="update",
+        entity_type="assignment",
+        entity_id=str(assignment_id),
+        old_value=existing,
+        new_value=row,
+        organization_id=str(org_id),
+    )
+
+    users = await _load_users_by_ids(sb, [str(row.get("practitioner_id")), str(row.get("client_id"))])
     return _serialize_assignment(row, users)

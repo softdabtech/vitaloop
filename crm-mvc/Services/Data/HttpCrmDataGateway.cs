@@ -84,6 +84,9 @@ public sealed class HttpCrmDataGateway : ICrmDataGateway
     public Task RevokeInvite(Guid orgId, Guid invitationId, CancellationToken ct = default)
         => SendWithoutResponse(HttpMethod.Delete, WithOrg($"{_options.InvitationsPath}/{invitationId}", orgId), null, ct);
 
+    public Task AcceptInvite(string token, CancellationToken ct = default)
+        => SendWithoutResponse(HttpMethod.Post, $"{_options.InvitationsPath}/accept", new { token }, ct);
+
     public Task<IReadOnlyList<Assignment>> GetAssignments(Guid orgId, CancellationToken ct = default)
         => GetList<Assignment>(WithOrg(_options.AssignmentsPath, orgId), ct);
 
@@ -93,8 +96,30 @@ public sealed class HttpCrmDataGateway : ICrmDataGateway
     public Task Reassign(Guid orgId, Guid assignmentId, Guid practitionerId, CancellationToken ct = default)
         => SendWithoutResponse(new HttpMethod("PATCH"), $"{_options.AssignmentsPath}/{assignmentId}", new { org_id = orgId, practitioner_id = practitionerId }, ct);
 
+    public Task UpdateAssignment(Guid orgId, Guid assignmentId, string? status, string? notes, CancellationToken ct = default)
+        => SendWithoutResponse(
+            new HttpMethod("PATCH"),
+            $"{_options.AssignmentsPath}/{assignmentId}",
+            new { org_id = orgId, status, notes },
+            ct);
+
     public Task<IReadOnlyList<GlobalUser>> GetGlobalUsers(CancellationToken ct = default)
         => GetList<GlobalUser>(_options.GlobalUsersPath, ct);
+
+    public Task<PlatformOverview?> GetPlatformOverview(CancellationToken ct = default)
+        => GetSingle<PlatformOverview>(_options.PlatformOverviewPath, ct);
+
+    public Task<IReadOnlyList<AuditLogEntry>> GetAuditLogs(Guid? organizationId = null, int limit = 200, CancellationToken ct = default)
+    {
+        var safeLimit = Math.Clamp(limit, 1, 1000);
+        var path = $"{_options.AuditLogsPath}?limit={safeLimit}";
+        if (organizationId.HasValue)
+        {
+            path += $"&organization_id={organizationId.Value}";
+        }
+
+        return GetList<AuditLogEntry>(path, ct);
+    }
 
     private async Task<IReadOnlyList<T>> GetList<T>(string path, CancellationToken ct)
     {
