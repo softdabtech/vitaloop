@@ -214,8 +214,15 @@ export default function Login() {
     }
 
     if (isSignUp) {
-      toast.success('Account created. Confirm email to continue.')
-      navigate(`/auth/confirmation?pending=1&email=${encodeURIComponent(normalizedEmail)}`, { replace: true })
+      // If Supabase auto-confirmed the account (e.g. email confirmation disabled),
+      // the session is active immediately — skip the confirmation waiting page.
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (sessionData?.session?.user) {
+        navigate('/onboarding', { replace: true })
+      } else {
+        toast.success('Account created. Confirm email to continue.')
+        navigate(`/auth/confirmation?pending=1&email=${encodeURIComponent(normalizedEmail)}`, { replace: true })
+      }
       return
     }
 

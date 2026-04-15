@@ -23,6 +23,15 @@ export default function EmailConfirmation() {
   const isPendingMode = searchParams.get('pending') === '1'
 
   useEffect(() => {
+    // If already has an active session (e.g. Supabase auto-confirmed), go straight to onboarding.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        navigate('/onboarding', { replace: true })
+      }
+    })
+  }, [])
+
+  useEffect(() => {
     const handleConfirmation = async () => {
       if (isPendingMode) {
         setStatus('pending')
@@ -66,13 +75,8 @@ export default function EmailConfirmation() {
           toast.success('✅ Email confirmed! Redirecting...')
           setRedirecting(true)
 
-          setTimeout(async () => {
-            try {
-              const destination = await resolvePostLoginDestination()
-              navigateToResolvedPath(navigate, destination)
-            } catch {
-              navigate('/dashboard', { replace: true })
-            }
+          setTimeout(() => {
+            navigate('/onboarding', { replace: true })
           }, 1500)
         } else {
           setStatus('error')
