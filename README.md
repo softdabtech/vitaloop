@@ -1,75 +1,96 @@
-# VITATOOL V2.1.1 (VITALOOP)
+# VITALOOP
 
-Production: https://vitaloop.softdab.tech
+Production environment:
 
-VITATOOL is a web service for blood test interpretation:
-upload report -> AI biomarker analysis -> personalized protocol -> weekly check-ins.
+- Frontend: https://vitaloop.today
+- API (FastAPI): https://api.vitaloop.today
+- CRM (ASP.NET MVC): https://crm.vitaloop.today
 
-## Release Policy (Required)
+VITALOOP is a health platform for blood report interpretation and longitudinal tracking:
 
-1. Server Git must always be up-to-date with `origin/main`.
-2. GitHub `main` must always reflect the real production code state.
-3. New features and improvements are shipped only as versioned updates.
+1. Upload lab report
+2. Extract text/OCR
+3. Analyze biomarkers
+4. Generate recommendations/protocol
+5. Track progress and check-ins
+6. Work with CRM roles and organization context
 
-Current release: **V2.1.1**
+## Architecture
 
-## What Is Implemented on the Service
+The project consists of 3 main runtime components:
 
-### Core Product
+1. `frontend/` (React + Vite)
+     - Public site, login flow, dashboard UI.
+     - Sends token handoff to CRM `/auth/post-login`.
 
-1. User authentication and session management.
-2. Blood report upload and OCR extraction flow.
-3. AI biomarker analysis endpoint.
-4. Personalized protocol generation.
-5. Weekly check-in flow.
-6. Progress and historical health tracking.
+2. `backend/` (FastAPI)
+     - Business API, analysis endpoints, `/auth/me` user context.
+     - Supabase integration (DB + Auth token validation via JWKS ES256).
 
-### Frontend Experience
+3. `crm-mvc/` (ASP.NET 8 MVC)
+     - Internal CRM and admin/ops interfaces.
+     - Validates Supabase JWT, resolves user context via backend `/auth/me`.
 
-1. Modern landing page sections (hero, how-it-works, pricing, partners).
-2. New body visualization components (`NeonBody`, `NeonBodyMini`).
-3. Updated login and onboarding flow.
-4. Mobile-first React + Vite UI.
+Data and infra artifacts:
 
-### Backend and Data
-
-1. FastAPI backend with stabilized check-in/protocol flows.
-2. Supabase integration and migrations in `supabase_migrations.sql`.
-3. Additional SQL bundles:
-     - `backend/sql/FINAL_MIGRATION_BUNDLE.sql`
-     - `backend/sql/auth_user_profile_sync.sql`
-4. Knowledge base data source:
-     - `backend/app/data/knowledge_base.json`
+- `supabase_migrations.sql`
+- `docker-compose.yml`
+- `nginx.vitaloop.conf`
+- `scripts/`
+- `docs/`
 
 ## Tech Stack
 
-- Frontend: React, Vite, TailwindCSS
-- Backend: FastAPI (Python)
-- Data: Supabase (Postgres)
-- AI: Anthropic/LLM pipeline
-- Payments: Stripe (integration scaffolded)
+- Frontend: React, Vite
+- Backend: FastAPI, Python
+- CRM: ASP.NET 8 MVC
+- Database/Auth: Supabase (Postgres + Auth)
+- AI: LLM-based analysis pipeline
+
+## Repository Structure
+
+```text
+.
+├── backend/
+├── crm-mvc/
+├── frontend/
+├── docs/
+├── scripts/
+├── supabase_migrations.sql
+├── docker-compose.yml
+└── README.md
+```
 
 ## Local Development
+
+### 1) Clone
 
 ```bash
 git clone https://github.com/softdabtech/vitaloop.git
 cd vitaloop
-
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
 ```
 
-Backend:
+### 2) Configure environment
+
+Create env files for each component from local templates/examples used in your branch/team process.
+
+Minimum required values include:
+
+- Backend: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, JWT/Auth settings, CORS origins
+- Frontend: API/CRM base URLs and Supabase public config
+- CRM: `Auth` and `CrmData` sections (Issuer, Audience, JWK/JWKS path, Backend URL)
+
+### 3) Run backend
 
 ```bash
 cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8004
 ```
 
-Frontend:
+### 4) Run frontend
 
 ```bash
 cd frontend
@@ -77,40 +98,81 @@ npm install
 npm run dev
 ```
 
-## Production Update Flow
+### 5) Run CRM
 
-### 1. Update GitHub
+```bash
+cd crm-mvc
+dotnet restore
+dotnet run
+```
+
+## Auth Flow (Current)
+
+1. User signs in on frontend via Supabase.
+2. Frontend resolves destination and performs POST handoff to CRM `/auth/post-login`.
+3. CRM stores `vo_access_token` cookie.
+4. CRM validates token (ES256 via Supabase JWKS).
+5. CRM requests backend `/auth/me` for user context.
+6. Role-based redirect to `/ops`, `/admin`, or other CRM destination.
+
+## Production Deployment
+
+All deployments are performed from `main` and must keep server code in sync with GitHub.
+
+### 1) Push changes
 
 ```bash
 git add .
-git commit -m "release: vitatool vX.Y.Z"
+git commit -m "feat/fix: ..."
 git push origin main
 ```
 
-### 2. Sync Server Git (mandatory)
+### 2) Sync server repository
 
 ```bash
 ssh root@159.65.252.227
 cd /var/www/VITALOOP
-git checkout main
 git pull --ff-only origin main
 ```
 
-### 3. Frontend deploy (proven method)
+### 3) Deploy backend
 
 ```bash
-cd /Users/oleksii/projects/vitaloop/frontend
+ssh root@159.65.252.227 'systemctl restart vitaloop-backend && systemctl is-active vitaloop-backend'
+```
+
+### 4) Deploy CRM
+
+```bash
+ssh root@159.65.252.227 '
+  systemctl stop vitaloop-crm-mvc &&
+  cd /var/www/VITALOOP/crm-mvc &&
+  /usr/bin/dotnet publish Vitaloop.Crm.Web.csproj -c Release -o /var/www/VITALOOP/crm-mvc/publish &&
+  systemctl start vitaloop-crm-mvc &&
+  systemctl is-active vitaloop-crm-mvc
+'
+```
+
+### 5) Deploy frontend
+
+```bash
+cd frontend
 npm run build
 rsync -az --delete dist/ root@159.65.252.227:/var/www/VITALOOP/frontend/dist/
 ```
 
-## Versioning Going Forward
+## Operations Checklist
 
-We now use explicit release versions for all future rollouts.
+After deploy:
 
-Format:
-- Patch: `V1.1.2` (bug fixes)
-- Minor: `V1.2.0` (new features)
-- Major: `V2.0.0` (breaking changes)
+1. `systemctl is-active vitaloop-backend` -> `active`
+2. `systemctl is-active vitaloop-crm-mvc` -> `active`
+3. `/auth/me` responds correctly with a valid bearer token
+4. CRM `/auth/post-login` sets `vo_access_token`
+5. User reaches intended CRM route without auth loop
 
-Next features and improvements will be delivered only via new tagged versions.
+## Notes
+
+- CRM must not be forced to HS256 via `Auth__JwtSecret` override when using Supabase ES256 tokens.
+- Supabase role source of truth for CRM access is the user context returned by backend `/auth/me`.
+- Keep production config and code paths aligned across frontend, backend, and CRM to avoid login loops.
