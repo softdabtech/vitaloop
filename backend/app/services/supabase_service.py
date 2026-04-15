@@ -468,6 +468,92 @@ async def get_admin_overview() -> Dict[str, Any]:
     }
 
 
+async def get_funnel_overview(days: int = 30) -> Dict[str, Any]:
+    """Aggregate B2C funnel metrics for the admin dashboard."""
+    supabase = _get_supabase()
+    safe_days = max(1, min(days, 365))
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=safe_days)).isoformat()
+
+    end_users_resp = await _run(
+        lambda: supabase.table("users")
+        .select("id, created_at, sub_status, global_role")
+        .eq("global_role", "end_user")
+        .execute()
+    )
+    end_users = end_users_resp.data or []
+
+    signup_user_ids = {
+        str(row.get("id"))
+        for row in end_users
+        if row.get("id") and str(row.get("created_at") or "") >= cutoff
+    }
+
+    timeline_resp = await _run(
+        lambda: supabase.table("timeline_events")
+        .select("user_id, event_type, occurred_at")
+        .gte("occurred_at", cutoff)
+        .in_("event_type", [
+            "funnel_signup_completed",
+            "funnel_onboarding_completed",
+            "funnel_first_upload_completed",
+            "funnel_paywall_shown",
+        ])
+        .execute()
+    )
+    timeline_rows = timeline_resp.data or []
+
+    onboarding_user_ids = {
+        str(row.get("user_id"))
+        for row in timeline_rows
+        if row.get("event_type") == "funnel_onboarding_completed" and row.get("user_id")
+    }
+    first_upload_user_ids = {
+        str(row.get("user_id"))
+        for row in timeline_rows
+        if row.get("event_type") == "funnel_first_upload_completed" and row.get("user_id")
+    }
+    paywall_user_ids = {
+        str(row.get("user_id"))
+        for row in timeline_rows
+        if row.get("event_type") == "funnel_paywall_shown" and row.get("user_id")
+    }
+
+    paid_user_ids = {
+        str(row.get("id"))
+        for row in end_users
+        if row.get("id") and str(row.get("sub_status") or "").lower() == "active"
+    }
+
+    def _rate(numerator: int, denominator: int) -> float:
+        if denominator <= 0:
+            return 0.0
+        return round((numerator / denominator) * 100.0, 2)
+
+    signups = len(signup_user_ids)
+    onboarding_completed = len(onboarding_user_ids)
+    first_upload_completed = len(first_upload_user_ids)
+    paywall_seen = len(paywall_user_ids)
+    paid_total = len(paid_user_ids)
+
+    return {
+        "window_days": safe_days,
+        "counts": {
+            "signup": signups,
+            "onboarding_completed": onboarding_completed,
+            "first_upload_completed": first_upload_completed,
+            "paywall_seen": paywall_seen,
+            "paid_total_end_users": paid_total,
+        },
+        "rates": {
+            "signup_to_onboarding_pct": _rate(onboarding_completed, signups),
+            "onboarding_to_first_upload_pct": _rate(first_upload_completed, onboarding_completed),
+            "signup_to_first_upload_pct": _rate(first_upload_completed, signups),
+            "paywall_to_paid_pct": _rate(len(paywall_user_ids & paid_user_ids), paywall_seen),
+            "signup_to_paid_pct": _rate(len(signup_user_ids & paid_user_ids), signups),
+        },
+    }
+
+
 # ──────────────────────────────────────────────
 # PROFILE
 # ──────────────────────────────────────────────
