@@ -44,7 +44,15 @@ function normalizeReturnUrl(returnUrl) {
 }
 
 export async function resolvePostLoginDestination(returnUrl = null) {
-  const { data } = await api.get('/auth/me')
+  // Attempt to fetch user context via /auth/me, but don't fail the entire handoff if it fails
+  try {
+    const { data } = await api.get('/auth/me')
+    console.log('User context fetched:', data)
+  } catch (error) {
+    console.warn('Failed to fetch /auth/me context (401 or network error):', error?.message || error)
+    console.log('Continuing with CRM handoff despite /auth/me failure...')
+    // Continue anyway - CRM can handle session validation on its side
+  }
 
   if (!hasSupabaseConfig) {
     throw new Error('Supabase config is unavailable for CRM token handoff.')
