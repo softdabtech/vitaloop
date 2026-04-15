@@ -10,6 +10,8 @@ import jwt
 import logging
 from jwt import PyJWKClient
 
+from app.services import supabase_service as svc
+
 _bearer = HTTPBearer(auto_error=False)
 logger = logging.getLogger("auth.jwt")
 logger.setLevel(logging.INFO)
@@ -44,3 +46,25 @@ def require_same_user(user_id: str, current_user: dict) -> None:
     """Raise 403 if the authenticated user doesn't match the requested user_id."""
     if current_user.get("sub") != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+
+async def require_active_subscription(current_user: dict = Depends(get_current_user)) -> dict:
+    """Require active paid subscription for end-user premium routes."""
+    user_id = current_user.get("sub")
+    jwt_role = str(current_user.get("global_role") or current_user.get("role") or "").lower()
+
+    account = await svc.get_user_account(user_id)
+    global_role = str(account.get("global_role") or jwt_role or "end_user").lower()
+    sub_status = str(account.get("sub_status") or "").lower()
+
+    # Non-end-user roles (ops/admin/practitioner) bypass B2C subscription gating.
+    if global_role != "end_user":
+        return current_user
+
+    if sub_status == "active":
+        return current_user
+
+    raise HTTPException(
+        status_code=status.HTTP_402_PAYMENT_REQUIRED,
+        detail={"detail": "Active subscription required", "code": "SUBSCRIPTION_REQUIRED"},
+    )
