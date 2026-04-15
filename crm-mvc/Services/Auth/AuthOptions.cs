@@ -9,5 +9,6 @@ public sealed class AuthOptions
     public string ActiveOrganizationCookieName { get; set; } = "vo_active_org_id";
     public string Issuer { get; set; } = string.Empty;
     public string Audience { get; set; } = string.Empty;
+    public string JwtSecret { get; set; } = string.Empty;
     public string JwtPublicKey { get; set; } = string.Empty;
 }

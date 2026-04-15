@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -145,11 +146,6 @@ public sealed class UserContextAccessor : IUserContextAccessor
             throw new SecurityTokenException("Auth:Audience must be configured for JWT validation.");
         }
 
-        if (string.IsNullOrWhiteSpace(_authOptions.JwtPublicKey))
-        {
-            throw new SecurityTokenException("Auth:JwtPublicKey must be configured for JWT validation.");
-        }
-
         var validations = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -162,7 +158,19 @@ public sealed class UserContextAccessor : IUserContextAccessor
             ValidateIssuerSigningKey = true
         };
 
-        validations.IssuerSigningKey = BuildSigningKey(_authOptions.JwtPublicKey);
+        if (!string.IsNullOrWhiteSpace(_authOptions.JwtSecret))
+        {
+            validations.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_authOptions.JwtSecret.Trim()));
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(_authOptions.JwtPublicKey))
+            {
+                throw new SecurityTokenException("Auth:JwtSecret or Auth:JwtPublicKey must be configured for JWT validation.");
+            }
+
+            validations.IssuerSigningKey = BuildSigningKey(_authOptions.JwtPublicKey);
+        }
 
         var principal = handler.ValidateToken(token, validations, out var validatedToken);
         if (validatedToken is not JwtSecurityToken jwt)
