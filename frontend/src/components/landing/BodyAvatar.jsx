@@ -262,7 +262,7 @@ function ZonePanel({ zone }) {
         alignSelf: 'flex-start',
         display: 'flex', alignItems: 'center', gap: 6,
       }}
-        onClick={() => navigate('/login')}
+        onClick={() => navigate('/login?signup=true')}
         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--teal-600)'; e.currentTarget.style.transform = 'scale(1.02)' }}
         onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal-800)'; e.currentTarget.style.transform = 'scale(1)' }}
         onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.98)' }}

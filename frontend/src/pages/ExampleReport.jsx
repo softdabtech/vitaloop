@@ -49,7 +49,7 @@ export default function ExampleReport() {
           </p>
           <div className="flex gap-4">
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/login?signup=true')}
               style={{ background: 'var(--teal-500, #1D9E75)', color: 'white', border: 'none', borderRadius: 980, padding: '12px 28px', fontWeight: 600, cursor: 'pointer' }}
             >
               Try It Live →
@@ -165,7 +165,7 @@ export default function ExampleReport() {
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/login?signup=true')}
               style={{ background: 'var(--teal-500, #1D9E75)', color: 'white', border: 'none', borderRadius: 980, padding: '12px 28px', fontWeight: 600, cursor: 'pointer' }}
             >
               Get Started Free

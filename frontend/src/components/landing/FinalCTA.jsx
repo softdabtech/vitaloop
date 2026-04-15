@@ -55,7 +55,7 @@ export default function FinalCTA() {
           Upload your blood test today — free, instant, no card required.
         </p>
         <button
-          onClick={() => navigate('/login')}
+          onClick={() => navigate('/login?signup=true')}
           style={{
             background: 'var(--teal-500)', color: 'white',
             border: 'none', borderRadius: 980,

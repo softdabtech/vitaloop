@@ -133,7 +133,7 @@ export default function Navbar() {
             Sign in
           </button>
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/login?signup=true')}
             style={{
               background: 'var(--teal-800)', color: 'white',
               border: 'none', borderRadius: 980,
@@ -196,7 +196,7 @@ export default function Navbar() {
             </button>
           ))}
           <button
-            onClick={() => { setMobileOpen(false); navigate('/login') }}
+            onClick={() => { setMobileOpen(false); navigate('/login?signup=true') }}
             style={{
               marginTop: 16,
               background: 'var(--teal-500)', color: 'white',
