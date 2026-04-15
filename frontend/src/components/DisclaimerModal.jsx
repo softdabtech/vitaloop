@@ -1,12 +1,16 @@
 import { useEffect } from 'react'
 import { useAppStore } from '../lib/store.js'
+import { trackFunnelEvent } from '../lib/funnel.js'
 
 export default function DisclaimerModal() {
   const { disclaimerAccepted, acceptDisclaimer } = useAppStore()
 
   // Also listen for paywall events from api.js interceptor
   useEffect(() => {
-    const handler = () => useAppStore.getState().setShowPaywall(true)
+    const handler = () => {
+      useAppStore.getState().setShowPaywall(true)
+      trackFunnelEvent('funnel_paywall_shown', 'Paywall shown after protected action', {}, { oncePerSession: true })
+    }
     window.addEventListener('vitaloop:paywall', handler)
     return () => window.removeEventListener('vitaloop:paywall', handler)
   }, [])

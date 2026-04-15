@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { Sparkles, Calendar, Activity, User } from 'lucide-react'
 import api from '../lib/api.js'
 import RedFlagBanner from '../components/RedFlagBanner.jsx'
+import { useOnboardingState } from '../hooks/useOnboardingState.js'
 
 export default function Dashboard() {
   const { user, signOut } = useAuth()
@@ -14,7 +15,7 @@ export default function Dashboard() {
   const [profile, setProfile] = useState(null)
   const [checkins, setCheckins] = useState([])
   const [insights, setInsights] = useState([])
-  const [onboardingDone, setOnboardingDone] = useState(true)
+  const { state: onboardingState } = useOnboardingState()
 
   useEffect(() => {
     Promise.allSettled([
@@ -24,12 +25,22 @@ export default function Dashboard() {
     ]).then(([p, c, i]) => {
       if (p.status === 'fulfilled') {
         setProfile(p.value.data?.profile)
-        setOnboardingDone(p.value.data?.profile?.onboarding_complete ?? false)
       }
       if (c.status === 'fulfilled') setCheckins(c.value.data || [])
       if (i.status === 'fulfilled') setInsights((i.value.data || []).slice(0, 2))
     })
   }, [])
+
+  const checklist = onboardingState?.checklist || {}
+  const steps = [
+    { key: 'profile_basics', label: 'Fill profile basics', action: () => navigate('/onboarding') },
+    { key: 'location', label: 'Set your location', action: () => navigate('/onboarding') },
+    { key: 'complaints', label: 'Add recurring complaints', action: () => navigate('/onboarding') },
+    { key: 'first_upload', label: 'Upload your first lab report', action: () => navigate('/upload') },
+  ]
+  const completedSteps = steps.filter((s) => checklist[s.key]).length
+  const progressPct = Math.round((completedSteps / steps.length) * 100)
+  const missingSteps = steps.filter((s) => !checklist[s.key])
 
   const getMonday = () => {
     const d = new Date()
@@ -55,15 +66,30 @@ export default function Dashboard() {
       {/* Red flag banner */}
       <RedFlagBanner />
 
-      {/* Onboarding prompt */}
-      {!onboardingDone && (
+      {/* Onboarding progress + gate cards */}
+      {onboardingState?.requires_onboarding && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          style={{ background: 'rgba(29,158,117,0.08)', border: '0.5px solid rgba(29,158,117,0.3)', borderRadius: 14, padding: '16px 20px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          style={{ background: 'rgba(29,158,117,0.08)', border: '0.5px solid rgba(29,158,117,0.3)', borderRadius: 14, padding: '16px 20px', marginBottom: 20 }}>
           <div>
-            <div style={{ fontWeight: 600, color: '#1d9e75', marginBottom: 4 }}>Complete your health profile</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }}>Set your baseline data to unlock personalized guidance.</div>
+            <div style={{ fontWeight: 600, color: '#1d9e75', marginBottom: 4 }}>Onboarding progress: {progressPct}%</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 10 }}>Complete baseline steps to unlock full personalization.</div>
+            <div style={{ height: 6, borderRadius: 8, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+              <div style={{ width: `${progressPct}%`, height: '100%', background: '#1d9e75' }} />
+            </div>
           </div>
-          <button onClick={() => navigate('/onboarding')} style={{ padding: '9px 18px', background: '#1d9e75', borderRadius: 10, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap' }}>Complete now</button>
+          <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
+            {missingSteps.map((step) => (
+              <div key={step.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)' }}>{step.label}</div>
+                <button
+                  onClick={step.action}
+                  style={{ padding: '6px 12px', background: '#1d9e75', borderRadius: 8, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap' }}
+                >
+                  Continue
+                </button>
+              </div>
+            ))}
+          </div>
         </motion.div>
       )}
 

@@ -4,6 +4,7 @@ import { useOCR } from '../hooks/useOCR.js'
 import UploadZone from '../components/UploadZone.jsx'
 import SymptomSelector from '../components/SymptomSelector.jsx'
 import api from '../lib/api.js'
+import { trackFunnelEvent } from '../lib/funnel.js'
 import toast from 'react-hot-toast'
 
 export default function Upload() {
@@ -45,6 +46,12 @@ export default function Upload() {
           tags: symptoms,
         }).catch(() => null) // non-critical
       }
+
+      trackFunnelEvent('funnel_first_upload_completed', 'User completed first lab upload analysis', {
+        upload_id: data.upload_id,
+        symptoms_count: symptoms.length,
+        has_lab_name: Boolean(labName),
+      }, { oncePerSession: true })
 
       toast.success('Analysis complete!')
       navigate(`/results/${data.upload_id}`)
