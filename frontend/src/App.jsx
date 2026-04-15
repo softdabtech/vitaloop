@@ -25,6 +25,7 @@ import WeeklyCheckIn from './pages/WeeklyCheckIn.jsx'
 import Insights from './pages/Insights.jsx'
 import NotFound from './pages/NotFound.jsx'
 import { useAuth } from './hooks/useAuth.js'
+import { useSubscription } from './hooks/useSubscription.js'
 import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
 import { useEffect, useState } from 'react'
 import { useOnboardingState } from './hooks/useOnboardingState.js'
@@ -64,6 +65,20 @@ function EndUserFlowRoute({ children, allowBeforeOnboarding = false, redirectIfO
   return children
 }
 
+function PremiumRoute({ children }) {
+  const { isActive, loading } = useSubscription()
+
+  useEffect(() => {
+    if (!loading && !isActive) {
+      window.dispatchEvent(new CustomEvent('vitaloop:paywall'))
+    }
+  }, [loading, isActive])
+
+  if (loading) return <div className="flex items-center justify-center h-screen">Loading…</div>
+  if (!isActive) return <Navigate to="/dashboard" replace />
+  return children
+}
+
 export default function App() {
   const [chatOpen, setChatOpen] = useState(false)
 
@@ -82,7 +97,7 @@ export default function App() {
         <Route path="/upload" element={<ProtectedRoute><EndUserFlowRoute><Upload /></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/results/:uploadId" element={<ProtectedRoute><EndUserFlowRoute><Results /></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/avatar" element={<ProtectedRoute><EndUserFlowRoute><Avatar /></EndUserFlowRoute></ProtectedRoute>} />
-        <Route path="/progress" element={<ProtectedRoute><EndUserFlowRoute><Progress /></EndUserFlowRoute></ProtectedRoute>} />
+        <Route path="/progress" element={<ProtectedRoute><EndUserFlowRoute><PremiumRoute><Progress /></PremiumRoute></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><EndUserFlowRoute><Settings /></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><ClientAdmin /></ProtectedRoute>} />
         <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
@@ -94,8 +109,8 @@ export default function App() {
         <Route path="/crm/practitioners" element={<ProtectedRoute><CRMRoute><CRMPractitioners /></CRMRoute></ProtectedRoute>} />
         <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
         <Route path="/onboarding" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding redirectIfOnboardingComplete><Onboarding /></EndUserFlowRoute></ProtectedRoute>} />
-        <Route path="/checkin" element={<ProtectedRoute><EndUserFlowRoute><WeeklyCheckIn /></EndUserFlowRoute></ProtectedRoute>} />
-        <Route path="/timeline" element={<ProtectedRoute><EndUserFlowRoute><Insights /></EndUserFlowRoute></ProtectedRoute>} />
+        <Route path="/checkin" element={<ProtectedRoute><EndUserFlowRoute><PremiumRoute><WeeklyCheckIn /></PremiumRoute></EndUserFlowRoute></ProtectedRoute>} />
+        <Route path="/timeline" element={<ProtectedRoute><EndUserFlowRoute><PremiumRoute><Insights /></PremiumRoute></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/404.html" element={<NotFound />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

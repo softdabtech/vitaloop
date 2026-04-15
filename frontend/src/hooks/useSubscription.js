@@ -8,7 +8,13 @@ export function useSubscription() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) return
+    if (!user) {
+      setSubStatus('free')
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
     supabase
       .from('users')
       .select('sub_status')
@@ -16,6 +22,10 @@ export function useSubscription() {
       .single()
       .then(({ data }) => {
         if (data) setSubStatus(data.sub_status)
+        setLoading(false)
+      })
+      .catch(() => {
+        setSubStatus('free')
         setLoading(false)
       })
   }, [user])
