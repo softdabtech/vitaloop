@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
+import { resolvePostLoginDestination, navigateToResolvedPath } from '../auth/postLogin'
 
 function resolveEmailConfirmationRedirect() {
   const configured = import.meta.env.VITE_EMAIL_CONFIRMATION_PATH
@@ -62,11 +63,16 @@ export default function EmailConfirmation() {
 
         if (user.email_confirmed_at) {
           setStatus('success')
-          toast.success('✅ Email confirmed! Redirecting to dashboard...')
+          toast.success('✅ Email confirmed! Redirecting...')
           setRedirecting(true)
 
-          setTimeout(() => {
-            navigate('/dashboard', { replace: true })
+          setTimeout(async () => {
+            try {
+              const destination = await resolvePostLoginDestination()
+              navigateToResolvedPath(navigate, destination)
+            } catch {
+              navigate('/dashboard', { replace: true })
+            }
           }, 1500)
         } else {
           setStatus('error')
@@ -231,7 +237,14 @@ export default function EmailConfirmation() {
             </p>
             {!redirecting && (
               <button
-                onClick={() => navigate('/dashboard')}
+                onClick={async () => {
+                  try {
+                    const destination = await resolvePostLoginDestination()
+                    navigateToResolvedPath(navigate, destination)
+                  } catch {
+                    navigate('/dashboard')
+                  }
+                }}
                 style={{
                   padding: '12px 24px',
                   backgroundColor: '#007AFF',
