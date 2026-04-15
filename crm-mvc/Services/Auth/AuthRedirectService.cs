@@ -11,26 +11,33 @@ public sealed class AuthRedirectService
             return "/invitations/accept";
         }
 
-        if (!ctx.OnboardingCompleted)
-        {
-            return "/onboarding";
-        }
-
         if (string.Equals(ctx.GlobalRole, "super_admin", StringComparison.OrdinalIgnoreCase))
         {
             return "/ops";
         }
 
-        var hasOrgAdminRole = ctx.Memberships.Any(m =>
-            string.Equals(m.Status, "active", StringComparison.OrdinalIgnoreCase) &&
-            (string.Equals(m.Role, "org_owner", StringComparison.OrdinalIgnoreCase)
-             || string.Equals(m.Role, "client_admin", StringComparison.OrdinalIgnoreCase)));
+        var activeMembers = ctx.Memberships
+            .Where(m => string.Equals(m.Status, "active", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
-        if (hasOrgAdminRole)
+        var hasAdminRole = activeMembers.Any(m =>
+            string.Equals(m.Role, "org_owner", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(m.Role, "client_admin", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(m.Role, "manager", StringComparison.OrdinalIgnoreCase));
+
+        if (hasAdminRole)
         {
             return "/admin";
         }
 
-        return "/dashboard";
+        var hasPractitionerRole = activeMembers.Any(m =>
+            string.Equals(m.Role, "practitioner", StringComparison.OrdinalIgnoreCase));
+
+        if (hasPractitionerRole)
+        {
+            return "/practitioner/clients";
+        }
+
+        return "/admin";
     }
 }
