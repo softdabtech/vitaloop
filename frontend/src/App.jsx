@@ -13,12 +13,19 @@ import Privacy from './pages/Privacy.jsx'
 import Terms from './pages/Terms.jsx'
 import ClientAdmin from './pages/ClientAdmin.jsx'
 import MasterAdmin from './pages/MasterAdmin.jsx'
+import OpsDashboard from './pages/crm/OpsDashboard.jsx'
+import CRMPrograms from './pages/crm/Programs.jsx'
+import CRMClients from './pages/crm/Clients.jsx'
+import CRMClientDetails from './pages/crm/ClientDetails.jsx'
+import CRMPractitioners from './pages/crm/Practitioners.jsx'
+import CRMAuditLog from './pages/crm/AuditLog.jsx'
 import EmailConfirmation from './pages/EmailConfirmation.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import WeeklyCheckIn from './pages/WeeklyCheckIn.jsx'
 import Insights from './pages/Insights.jsx'
 import NotFound from './pages/NotFound.jsx'
 import { useAuth } from './hooks/useAuth.js'
+import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
 import { useEffect, useState } from 'react'
 import SupportChat from './components/SupportChat.jsx'
 
@@ -33,6 +40,14 @@ function ProtectedRoute({ children }) {
   if (loading) return <div className="flex items-center justify-center h-screen">Loading…</div>
   if (!user) return <Navigate to="/login" replace />
 
+  return children
+}
+
+function CRMRoute({ children, needsOps = false }) {
+  const { loading, canAccessCRM, canAccessOps } = useCRMRoleAccess()
+  if (loading) return <div className="flex items-center justify-center h-screen">Loading…</div>
+  if (needsOps && !canAccessOps) return <Navigate to="/dashboard" replace />
+  if (!needsOps && !canAccessCRM) return <Navigate to="/dashboard" replace />
   return children
 }
 
@@ -57,7 +72,13 @@ export default function App() {
         <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><ClientAdmin /></ProtectedRoute>} />
-        <Route path="/ops" element={<ProtectedRoute><MasterAdmin /></ProtectedRoute>} />
+        <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
+        <Route path="/ops/legacy" element={<ProtectedRoute><MasterAdmin /></ProtectedRoute>} />
+        <Route path="/crm/programs" element={<ProtectedRoute><CRMRoute><CRMPrograms /></CRMRoute></ProtectedRoute>} />
+        <Route path="/crm/clients" element={<ProtectedRoute><CRMRoute><CRMClients /></CRMRoute></ProtectedRoute>} />
+        <Route path="/crm/clients/:id" element={<ProtectedRoute><CRMRoute><CRMClientDetails /></CRMRoute></ProtectedRoute>} />
+        <Route path="/crm/practitioners" element={<ProtectedRoute><CRMRoute><CRMPractitioners /></CRMRoute></ProtectedRoute>} />
+        <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
         <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
         <Route path="/checkin" element={<ProtectedRoute><WeeklyCheckIn /></ProtectedRoute>} />
         <Route path="/timeline" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
