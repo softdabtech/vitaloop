@@ -175,6 +175,7 @@ export default function Login() {
 
   async function handleSubmit(e) {
     e.preventDefault()
+    console.log('[STEP 0] Form submission started')
     setAuthAlert(null)
     // Honeypot check - bots fill hidden fields
     if (honeypot) return
@@ -201,8 +202,10 @@ export default function Login() {
     }
 
     const fn = isSignUp ? signUpWithEmail : signInWithEmail
+    console.log('[STEP 0B] Calling', isSignUp ? 'signUpWithEmail' : 'signInWithEmail')
     const { error } = await fn(normalizedEmail, password)
     setLoading(false)
+    console.log('[STEP 0C] Auth response received:', { hasError: !!error, errorMsg: error?.message })
     if (error) {
       const mapped = mapAuthErrorMessage(error.message)
       setAuthAlert(mapped)
@@ -217,10 +220,23 @@ export default function Login() {
     }
 
     try {
+      console.log('[STEP 1] Login successful, preparing CRM handoff')
       const returnUrl = searchParams.get('returnUrl')
+      console.log('[STEP 1B] Return URL from search params:', returnUrl)
+      
+      console.log('[STEP 2] Getting Supabase session')
+      const { data: sessionData } = await supabase.auth.getSession()
+      console.log('[STEP 2B] Session received:', { hasSession: !!sessionData?.session, hasToken: !!sessionData?.session?.access_token })
+      
+      console.log('[STEP 2C] Calling resolvePostLoginDestination')
       const destination = await resolvePostLoginDestination(returnUrl)
+      console.log('[STEP 2D] resolvePostLoginDestination returned:', { url: destination?.url, method: destination?.method })
+      
+      console.log('[STEP 2E] Calling navigateToResolvedPath')
       navigateToResolvedPath(navigate, destination)
-    } catch {
+      console.log('[STEP 2F] navigateToResolvedPath completed - user should be redirected to CRM')
+    } catch (err) {
+      console.error('[ERROR] Exception caught in login flow:', err)
       await signOut()
       toast.error('Session validation failed. Please sign in again.')
       navigate('/login', { replace: true })
