@@ -84,7 +84,7 @@ def get_current_user(
                 _last_trace_line(exc),
             )
 
-    logger.info(
+    logger.error(
         "jwt_validation token_meta alg=%s kid=%s iss=%s aud=%s sub=%s configured_jwk_kid=%s kid_match=%s",
         token_alg,
         token_kid,
@@ -97,7 +97,7 @@ def get_current_user(
 
     # Attempt 1: Try ES256 with ECDSA public key (new Supabase format)
     if settings.supabase_jwt_public_key_jwk:
-        logger.info("jwt_validation branch=ES256")
+        logger.error("jwt_validation branch=ES256")
         try:
             public_key = jwt.algorithms.ECAlgorithm.from_jwk(settings.supabase_jwt_public_key_jwk)
             payload = jwt.decode(
@@ -106,7 +106,7 @@ def get_current_user(
                 algorithms=["ES256"],
                 audience="authenticated",
             )
-            logger.info("jwt_validation branch=ES256 result=success")
+            logger.error("jwt_validation branch=ES256 result=success")
             return payload
         except jwt.ExpiredSignatureError as exc:
             logger.error(
@@ -124,11 +124,11 @@ def get_current_user(
             # ES256 validation failed, try HS256 next
             pass
     else:
-        logger.info("jwt_validation branch=ES256 skipped=no_public_jwk")
+        logger.error("jwt_validation branch=ES256 skipped=no_public_jwk")
 
     # Attempt 2: Try HS256 with symmetric secret (legacy format or Supabase HS256 tokens)
     if settings.supabase_jwt_secret:
-        logger.info("jwt_validation branch=HS256")
+        logger.error("jwt_validation branch=HS256")
         try:
             payload = jwt.decode(
                 token,
@@ -136,7 +136,7 @@ def get_current_user(
                 algorithms=["HS256"],
                 audience="authenticated",
             )
-            logger.info("jwt_validation branch=HS256 result=success")
+            logger.error("jwt_validation branch=HS256 result=success")
             return payload
         except jwt.ExpiredSignatureError as exc:
             logger.error(
@@ -154,7 +154,7 @@ def get_current_user(
             )
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     else:
-        logger.info("jwt_validation branch=HS256 skipped=no_secret")
+        logger.error("jwt_validation branch=HS256 skipped=no_secret")
 
     # No valid JWT configuration available
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="JWT configuration missing")
