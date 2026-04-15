@@ -34,6 +34,11 @@ public sealed class RequireOrgRoleAttribute : Attribute, IAsyncAuthorizationFilt
             return;
         }
 
+        if (policy.HasGlobalRole(userCtx, "super_admin"))
+        {
+            return;
+        }
+
         var orgId = userCtx.ActiveOrganizationId;
         if (!orgId.HasValue || !policy.HasOrgRole(userCtx, orgId.Value, _roles))
         {
