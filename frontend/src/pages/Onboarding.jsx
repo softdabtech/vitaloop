@@ -55,17 +55,18 @@ export default function Onboarding() {
   const [location, setLocation] = useState({ city: '', state: '', country: '', district: '' })
   const [complaints, setComplaints] = useState([{ complaint: '', duration_description: '', tried_interventions: '' }])
 
-  // On mount: check if user already belongs to an organisation.
+  // On mount: org setup is only required for CRM roles with no org membership.
   useEffect(() => {
     api.get('/auth/me').then(r => {
       const memberships = r.data?.memberships
-      if (!Array.isArray(memberships) || memberships.length === 0) {
-        setNeedsOrg(true)
-      }
+      const globalRole = String(r.data?.user?.global_role || r.data?.global_role || '').toLowerCase()
+      const requiresOrg = globalRole === 'org_admin' || globalRole === 'super_admin'
+      const hasMembership = Array.isArray(memberships) && memberships.length > 0
+      setNeedsOrg(requiresOrg && !hasMembership)
       setOrgCheckDone(true)
     }).catch(() => {
-      // If /auth/me fails, show org setup anyway so user is never stuck.
-      setNeedsOrg(true)
+      // Fail open for normal users: show personal onboarding, not org setup.
+      setNeedsOrg(false)
       setOrgCheckDone(true)
     })
   }, [])
@@ -186,7 +187,7 @@ export default function Onboarding() {
           </motion.div>
         )}
 
-        {/* ── Health-profile steps (shown when user already has an org) ── */}
+        {/* ── Health-profile steps (default path for regular users) ── */}
         {orgCheckDone && !needsOrg && (
           <>
         {/* Progress bar */}
