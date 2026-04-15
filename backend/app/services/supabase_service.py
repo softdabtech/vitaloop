@@ -302,6 +302,18 @@ async def get_user_by_stripe_sub(sub_id: str) -> Optional[Dict]:
     return resp.data[0] if resp.data else None
 
 
+async def get_user_account(user_id: str) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("users")
+        .select("id, email, full_name, sub_status")
+        .eq("id", user_id)
+        .limit(1)
+        .execute()
+    )
+    return resp.data[0] if resp.data else {}
+
+
 async def get_user_progress(user_id: str) -> List[Dict]:
     supabase = _get_supabase()
     uploads = await _run(

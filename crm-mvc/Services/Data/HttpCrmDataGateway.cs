@@ -32,6 +32,28 @@ public sealed class HttpCrmDataGateway : ICrmDataGateway
         _authOptions = authOptions.Value;
     }
 
+    public Task<Organization?> CreateOrganization(
+        Guid ownerId,
+        string name,
+        string slug,
+        string status,
+        string? description,
+        string? logoUrl,
+        CancellationToken ct = default)
+        => SendAndRead<Organization>(
+            HttpMethod.Post,
+            _options.OrganizationsPath,
+            new
+            {
+                owner_id = ownerId,
+                name,
+                slug,
+                status,
+                description,
+                logo_url = logoUrl,
+            },
+            ct);
+
     public Task<IReadOnlyList<Organization>> GetOrganizations(CancellationToken ct = default)
         => GetList<Organization>(_options.OrganizationsPath, ct);
 

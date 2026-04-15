@@ -4,6 +4,7 @@ namespace Vitaloop.Crm.Web.Services.Data;
 
 public interface ICrmDataGateway
 {
+    Task<Organization?> CreateOrganization(Guid ownerId, string name, string slug, string status, string? description, string? logoUrl, CancellationToken ct = default);
     Task<IReadOnlyList<Organization>> GetOrganizations(CancellationToken ct = default);
     Task<Organization?> GetOrganization(Guid orgId, CancellationToken ct = default);
     Task<OrganizationSettings?> GetOrganizationSettings(Guid orgId, CancellationToken ct = default);

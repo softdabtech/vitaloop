@@ -2,9 +2,10 @@ namespace Vitaloop.Crm.Web.ViewModels;
 
 public sealed class InvitationViewModel
 {
+    public Guid OrganizationId { get; set; }
     public Guid Id { get; init; }
-    public string Email { get; init; } = string.Empty;
-    public string Role { get; init; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
     public string Status { get; init; } = string.Empty;
     public DateTimeOffset? ExpiresAt { get; init; }
 

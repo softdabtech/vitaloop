@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Vitaloop.Crm.Web.Services.Contracts;
 
@@ -16,6 +18,12 @@ public sealed class RequireOrgRoleAttribute : Attribute, IAsyncAuthorizationFilt
 
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
+        if (context.Filters.Any(filter => filter is IAllowAnonymousFilter)
+            || context.ActionDescriptor.EndpointMetadata.OfType<IAllowAnonymous>().Any())
+        {
+            return;
+        }
+
         var accessor = context.HttpContext.RequestServices.GetRequiredService<IUserContextAccessor>();
         var policy = context.HttpContext.RequestServices.GetRequiredService<IAccessPolicyService>();
         var userCtx = await accessor.GetCurrent(context.HttpContext.RequestAborted);

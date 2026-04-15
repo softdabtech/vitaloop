@@ -10,7 +10,7 @@ import jwt
 
 from app.config import settings
 
-_bearer = HTTPBearer()
+_bearer = HTTPBearer(auto_error=False)
 
 
 def _get_verify_key():
@@ -26,8 +26,11 @@ def _get_verify_key():
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ) -> dict:
+    if credentials is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
+
     token = credentials.credentials
     key, algorithms = _get_verify_key()
     try:

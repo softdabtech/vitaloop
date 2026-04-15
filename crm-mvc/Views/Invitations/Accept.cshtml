@@ -1,0 +1,23 @@
+@model InvitationAcceptViewModel
+@{
+  ViewData["Title"] = "Accept Invitation";
+  Layout = "_BlankLayout";
+}
+
+<div class="vo-blank-wrap">
+  <section class="vo-auth-card">
+    <p class="vo-eyebrow">Vitaloop CRM</p>
+    <h2 class="vo-page-title">Accept invitation</h2>
+    <p class="vo-page-subtitle">Continue to sign in and complete your invite flow.</p>
+
+    <form method="get" action="@Model.ContinueUrl" class="vo-form-grid">
+      <div class="vo-field">
+        <label class="vo-label" for="invite-token">Invitation token</label>
+        <input id="invite-token" type="text" class="vo-input" value="@Model.Token" readonly />
+      </div>
+      <div class="vo-form-actions">
+        <button type="submit" class="vo-btn vo-btn-primary">Continue</button>
+      </div>
+    </form>
+  </section>
+</div>

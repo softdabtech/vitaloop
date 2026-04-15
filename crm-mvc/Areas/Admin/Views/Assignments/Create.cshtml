@@ -1,0 +1,78 @@
+@model CreateAssignmentViewModel
+@{
+    ViewData["Title"] = "Create Assignment";
+    Layout = "_CrmLayout";
+}
+
+<div class="container-narrow">
+    <div class="page-header">
+        <h1 class="page-title">Create Assignment</h1>
+        <p class="page-subtitle">Link a practitioner to a client</p>
+    </div>
+
+    <form method="post">
+        <input type="hidden" asp-for="OrganizationId" />
+
+        <div class="form-card">
+            <div class="form-section">
+                <label class="form-label" asp-for="PractitionerId">Practitioner ID</label>
+                <input asp-for="PractitionerId" class="form-control" placeholder="00000000-0000-0000-0000-000000000000" required />
+            </div>
+
+            <div class="form-section">
+                <label class="form-label" asp-for="ClientId">Client ID</label>
+                <input asp-for="ClientId" class="form-control" placeholder="00000000-0000-0000-0000-000000000000" required />
+            </div>
+
+            <div class="form-section">
+                <label class="form-label" asp-for="Notes">Notes</label>
+                <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Optional assignment notes"></textarea>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg">Create Assignment</button>
+            <a href="/admin/assignments" class="btn btn-secondary btn-lg">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+    .container-narrow {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    .form-card {
+        background: var(--color-bg-secondary);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 2rem;
+        margin: 2rem 0;
+    }
+
+    .form-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        font-size: 1rem;
+        font-family: inherit;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+    }
+</style>

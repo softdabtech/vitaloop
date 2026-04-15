@@ -8,7 +8,7 @@ public class HomeController : Controller
     [HttpGet("/")]
     public IActionResult Index()
     {
-        return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
+        return RedirectToAction("PostLogin", "Auth");
     }
 
     [HttpGet("/health")]

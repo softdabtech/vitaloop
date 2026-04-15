@@ -4,10 +4,9 @@ from fastapi import HTTPException
 from fastapi.exceptions import RequestValidationError
 from app.config import settings
 from app.errors import http_exception_handler, validation_exception_handler
-from app.routers import analyze, protocol, progress, health, symptoms, stripe_router, admin
 from app.routers import (
     analyze, protocol, progress, health, symptoms, stripe_router, admin,
-    profile, complaints, checkins, timeline, insights, red_flags, notifications,
+    profile, complaints, checkins, timeline, insights, red_flags, notifications, auth, crm,
 )
 
 app = FastAPI(
@@ -34,6 +33,7 @@ app.include_router(progress.router, prefix="/progress", tags=["progress"])
 app.include_router(symptoms.router, prefix="/symptoms", tags=["symptoms"])
 app.include_router(stripe_router.router, prefix="/stripe", tags=["stripe"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
+app.include_router(crm.router, prefix="/admin", tags=["crm"])
 app.include_router(profile.router, prefix="/profile", tags=["profile"])
 app.include_router(complaints.router, prefix="/complaints", tags=["complaints"])
 app.include_router(checkins.router, prefix="/checkins", tags=["checkins"])
@@ -41,3 +41,4 @@ app.include_router(timeline.router, prefix="/timeline", tags=["timeline"])
 app.include_router(insights.router, prefix="/insights", tags=["insights"])
 app.include_router(red_flags.router, prefix="/red-flags", tags=["red-flags"])
 app.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+app.include_router(auth.router, prefix="/auth", tags=["auth"])

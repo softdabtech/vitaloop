@@ -10,6 +10,20 @@ const requiredKeys = [
   'VITE_API_BASE_URL',
 ]
 
+function isPlaceholder(value) {
+  const raw = String(value || '').trim().toLowerCase()
+  return !raw || raw.includes('<') || raw.includes('>') || raw.includes('...') || raw.includes('placeholder')
+}
+
+function isValidSupabaseUrl(value) {
+  return /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(String(value || '').trim())
+}
+
+function isValidSupabaseAnonKey(value) {
+  const raw = String(value || '').trim()
+  return raw.startsWith('eyJ') || raw.startsWith('sb_publishable_')
+}
+
 function parseEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return {}
 
@@ -44,6 +58,22 @@ const missing = requiredKeys.filter((key) => !String(merged[key] || '').trim())
 if (missing.length > 0) {
   console.error('Missing required frontend env variables:')
   for (const key of missing) {
+    console.error(`- ${key}`)
+  }
+  process.exit(1)
+}
+
+const invalid = []
+if (isPlaceholder(merged.VITE_SUPABASE_URL) || !isValidSupabaseUrl(merged.VITE_SUPABASE_URL)) {
+  invalid.push('VITE_SUPABASE_URL')
+}
+if (isPlaceholder(merged.VITE_SUPABASE_ANON_KEY) || !isValidSupabaseAnonKey(merged.VITE_SUPABASE_ANON_KEY)) {
+  invalid.push('VITE_SUPABASE_ANON_KEY')
+}
+
+if (invalid.length > 0) {
+  console.error('Invalid frontend env variables (placeholder or malformed):')
+  for (const key of invalid) {
     console.error(`- ${key}`)
   }
   process.exit(1)

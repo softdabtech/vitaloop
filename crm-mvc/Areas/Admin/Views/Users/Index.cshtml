@@ -1,0 +1,229 @@
+@model MembersPageViewModel
+@{
+    ViewData["Title"] = "Team Members";
+    Layout = "_CrmLayout";
+}
+
+<div class="container-page">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Team Members</h1>
+            <p class="page-subtitle">Manage your organization's team</p>
+        </div>
+        <a href="@Url.Action("Invite")" class="btn btn-primary">
+            <span class="btn-icon">➕</span> Invite Member
+        </a>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <span class="stat-label">Total Members</span>
+            <span class="stat-value">@Model?.TotalMembers</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Practitioners</span>
+            <span class="stat-value">@Model?.PractitionerCount</span>
+        </div>
+    </div>
+
+    @if (Model?.Members.Any() == true)
+    {
+        <div class="table-container">
+            <table class="table table-members">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Subscription</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var member in Model.Members)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@member.FullName</strong>
+                            </td>
+                            <td>
+                                <code>@member.Email</code>
+                            </td>
+                            <td>
+                                <span class="badge badge-@(member.OrgRole == "practitioner" ? "primary" : "secondary")">
+                                    @member.OrgRole
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge badge-@(member.MembershipStatus == "active" ? "success" : "warning")">
+                                    @member.MembershipStatus
+                                </span>
+                            </td>
+                            <td>
+                                <small>@member.SubscriptionStatus</small>
+                            </td>
+                            <td>
+                                <div class="action-menu">
+                                    <button type="button" class="btn btn-xs btn-outline">
+                                        ⋮ Actions
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <p class="empty-icon">👥</p>
+            <h2>No Team Members</h2>
+            <p>Start by inviting your first team member.</p>
+            <a href="@Url.Action("Invite")" class="btn btn-primary btn-lg">Invite Team Member</a>
+        </div>
+    }
+</div>
+
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: var(--color-bg-secondary);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: var(--color-text-secondary);
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--color-primary);
+    }
+
+    .table-container {
+        background: var(--color-bg-secondary);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table th {
+        background: var(--color-bg);
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .table tbody tr:hover {
+        background: rgba(0,0,0,0.02);
+    }
+
+    .table code {
+        background: var(--color-bg);
+        padding: 0.25rem 0.5rem;
+        border-radius: 3px;
+        font-size: 0.85rem;
+    }
+
+    .badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .badge-primary {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+
+    .badge-secondary {
+        background: rgba(107, 114, 128, 0.1);
+        color: #6b7280;
+    }
+
+    .badge-success {
+        background: rgba(34, 197, 94, 0.1);
+        color: #22c55e;
+    }
+
+    .badge-warning {
+        background: rgba(234, 179, 8, 0.1);
+        color: #eab308;
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        font-size: 0.875rem;
+    }
+
+    .btn-primary {
+        background: var(--color-primary);
+        color: white;
+    }
+
+    .btn-xs {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    .btn-outline {
+        background: transparent;
+        color: var(--color-primary);
+        border: 1px solid var(--color-primary);
+    }
+
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+</style>
