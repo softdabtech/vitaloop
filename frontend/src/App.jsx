@@ -11,15 +11,14 @@ import ExampleReport from './pages/ExampleReport.jsx'
 import HowItWorks from './pages/HowItWorks.jsx'
 import Privacy from './pages/Privacy.jsx'
 import Terms from './pages/Terms.jsx'
-import AuthCallback from './pages/AuthCallback.jsx'
 import ClientAdmin from './pages/ClientAdmin.jsx'
 import MasterAdmin from './pages/MasterAdmin.jsx'
+import EmailConfirmation from './pages/EmailConfirmation.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import WeeklyCheckIn from './pages/WeeklyCheckIn.jsx'
 import Insights from './pages/Insights.jsx'
 import NotFound from './pages/NotFound.jsx'
 import { useAuth } from './hooks/useAuth.js'
-import { AUTH_POST_LOGIN_PATH } from './auth/postLogin.js'
 import { useEffect, useState } from 'react'
 import SupportChat from './components/SupportChat.jsx'
 
@@ -29,25 +28,10 @@ function ScrollToTop() {
   return null
 }
 
-function ProtectedRoute({ children, requireAdmin = false, requireSuperAdmin = false }) {
+function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <div className="flex items-center justify-center h-screen">Loading…</div>
   if (!user) return <Navigate to="/login" replace />
-
-  const meta = user?.user_metadata || {}
-  const app = user?.app_metadata || {}
-  const isSuperAdmin = meta.is_super_admin || app.is_super_admin
-  const isAdmin = isSuperAdmin || meta.is_admin || app.is_admin || meta.role === 'admin' || app.role === 'admin'
-
-  if (requireSuperAdmin && !isSuperAdmin) {
-    window.location.assign(AUTH_POST_LOGIN_PATH)
-    return <div className="flex items-center justify-center h-screen">Redirecting…</div>
-  }
-
-  if (requireAdmin && !isAdmin) {
-    window.location.assign(AUTH_POST_LOGIN_PATH)
-    return <div className="flex items-center justify-center h-screen">Redirecting…</div>
-  }
 
   return children
 }
@@ -64,16 +48,16 @@ export default function App() {
         <Route path="/how-it-works" element={<HowItWorks />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/auth/confirmation" element={<EmailConfirmation />} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
         <Route path="/results/:uploadId" element={<ProtectedRoute><Results /></ProtectedRoute>} />
         <Route path="/avatar" element={<ProtectedRoute><Avatar /></ProtectedRoute>} />
         <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute requireAdmin><ClientAdmin /></ProtectedRoute>} />
-        <Route path="/ops" element={<ProtectedRoute requireSuperAdmin><MasterAdmin /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><ClientAdmin /></ProtectedRoute>} />
+        <Route path="/ops" element={<ProtectedRoute><MasterAdmin /></ProtectedRoute>} />
         <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
         <Route path="/checkin" element={<ProtectedRoute><WeeklyCheckIn /></ProtectedRoute>} />
         <Route path="/timeline" element={<ProtectedRoute><Insights /></ProtectedRoute>} />

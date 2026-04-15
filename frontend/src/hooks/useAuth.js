@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase, hasSupabaseConfig } from '../lib/supabase.js'
+import { AUTH_POST_LOGIN_PATH } from '../auth/postLogin.js'
+
+const CRM_BASE_URL = (import.meta.env.VITE_CRM_BASE_URL || 'https://crm.vitaloop.today').replace(/\/$/, '')
 
 export function useAuth() {
   const [user, setUser] = useState(null)
@@ -34,7 +37,7 @@ export function useAuth() {
     supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: AUTH_POST_LOGIN_PATH,
       },
     })
 
@@ -43,7 +46,20 @@ export function useAuth() {
       redirectTo: `${window.location.origin}/login?reset=true`,
     })
 
-  const signOut = () => supabase.auth.signOut()
+  const signOut = async () => {
+    // Best-effort CRM cookie cleanup to avoid sticky SSO sessions.
+    try {
+      await fetch(`${CRM_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        mode: 'no-cors',
+      })
+    } catch {
+      // Ignore network errors and still sign out from Supabase.
+    }
+
+    return supabase.auth.signOut()
+  }
 
   return { user, loading, signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword, signOut }
 }

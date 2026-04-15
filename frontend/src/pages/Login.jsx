@@ -1,10 +1,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
-import { supabase } from '../lib/supabase.js'
 import { navigateToResolvedPath, resolvePostLoginDestination } from '../auth/postLogin.js'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function isValidEmail(value) {
+  return EMAIL_RE.test(String(value || '').trim())
+}
+
+function hasAnyPasswordSymbol(value) {
+  return String(value || '').trim().length >= 1
+}
 
 // Abstract particle art panels
 function AbstractPanel({ side }) {
@@ -85,7 +94,7 @@ function AbstractPanel({ side }) {
 }
 
 export default function Login() {
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword } = useAuth()
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword, signOut } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -99,10 +108,22 @@ export default function Login() {
     e.preventDefault()
     // Honeypot check - bots fill hidden fields
     if (honeypot) return
+
+    const normalizedEmail = email.trim()
+    if (!isValidEmail(normalizedEmail)) {
+      toast.error('Введите корректный email.')
+      return
+    }
+
+    if (!isForgot && !hasAnyPasswordSymbol(password)) {
+      toast.error('Пароль должен содержать минимум 1 символ.')
+      return
+    }
+
     setLoading(true)
 
     if (isForgot) {
-      const { error } = await resetPassword(email)
+      const { error } = await resetPassword(normalizedEmail)
       setLoading(false)
       if (error) toast.error(error.message)
       else { toast.success('Reset link sent - check your email'); setIsForgot(false) }
@@ -110,22 +131,27 @@ export default function Login() {
     }
 
     const fn = isSignUp ? signUpWithEmail : signInWithEmail
-    const { error } = await fn(email, password)
+    const { error } = await fn(normalizedEmail, password)
     setLoading(false)
     if (error) {
       toast.error(error.message)
       return
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    if (isSignUp) {
       toast.success(isSignUp ? 'Account created. Confirm email to continue.' : 'Signed in successfully.')
       navigate('/login', { replace: true })
       return
     }
 
-    const destination = await resolvePostLoginDestination(user)
-    navigateToResolvedPath(navigate, destination)
+    try {
+      const destination = await resolvePostLoginDestination()
+      navigateToResolvedPath(navigate, destination)
+    } catch {
+      await signOut()
+      toast.error('Session validation failed. Please sign in again.')
+      navigate('/login', { replace: true })
+    }
   }
 
   return (
@@ -238,6 +264,7 @@ export default function Login() {
                 <input
                   type={showPass ? 'text' : 'password'}
                   required
+                  minLength={1}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

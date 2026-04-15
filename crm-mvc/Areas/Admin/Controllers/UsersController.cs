@@ -1,0 +1,177 @@
+using Microsoft.AspNetCore.Mvc;
+using Vitaloop.Crm.Web.Attributes;
+using Vitaloop.Crm.Web.Services.Contracts;
+using Vitaloop.Crm.Web.Services.Invitations;
+using Vitaloop.Crm.Web.Services.Memberships;
+using Vitaloop.Crm.Web.ViewModels;
+
+namespace Vitaloop.Crm.Web.Areas.Admin.Controllers;
+
+[Area("Admin")]
+[Route("admin/members")]
+[RequireOrgRole("org_owner", "client_admin", "manager")]
+public class UsersController : Controller
+{
+    private readonly IUserContextAccessor _userContextAccessor;
+    private readonly MembershipService _membershipService;
+    private readonly InvitationService _invitationService;
+    private readonly ILogger<UsersController> _logger;
+
+    public UsersController(
+        IUserContextAccessor userContextAccessor,
+        MembershipService membershipService,
+        InvitationService invitationService,
+        ILogger<UsersController> logger)
+    {
+        _userContextAccessor = userContextAccessor;
+        _membershipService = membershipService;
+        _invitationService = invitationService;
+        _logger = logger;
+    }
+
+    /// <summary>List team members in the active organization.</summary>
+    [HttpGet("")]
+    public async Task<IActionResult> Index(CancellationToken ct)
+    {
+        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+
+        if (!userCtx.ActiveOrganizationId.HasValue)
+        {
+            TempData["ErrorMessage"] = "No active organization selected.";
+            return RedirectToAction("Index", "Organizations");
+        }
+
+        try
+        {
+            var members = await _membershipService.GetMembers(userCtx, userCtx.ActiveOrganizationId.Value, ct);
+
+            var model = new MembersPageViewModel
+            {
+                ActiveOrganizationId = userCtx.ActiveOrganizationId.Value,
+                Members = members
+                    .Select(m => new MemberViewModel
+                    {
+                        UserId = m.UserId,
+                        Email = m.Email,
+                        FullName = m.FullName,
+                        GlobalRole = m.GlobalRole,
+                        OrgRole = m.OrgRole,
+                        MembershipStatus = m.MembershipStatus,
+                        SubscriptionStatus = m.SubscriptionStatus,
+                    })
+                    .ToList()
+            };
+
+            return View(model);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading team members");
+            TempData["ErrorMessage"] = "Failed to load team members.";
+            return View(new MembersPageViewModel());
+        }
+    }
+
+    /// <summary>Change member role (org admin only).</summary>
+    [HttpPost("{userId}/role")]
+    [RequireOrgRole("org_owner", "client_admin")]
+    public async Task<IActionResult> ChangeRole(Guid userId, [FromForm] string newRole, CancellationToken ct)
+    {
+        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+
+        if (!userCtx.ActiveOrganizationId.HasValue)
+        {
+            return BadRequest("No active organization");
+        }
+
+        try
+        {
+            await _membershipService.ChangeRole(userCtx, userCtx.ActiveOrganizationId.Value, userId, newRole, ct);
+            TempData["SuccessMessage"] = "Member role updated successfully.";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            TempData["ErrorMessage"] = "Insufficient permissions.";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error changing member role");
+            TempData["ErrorMessage"] = "Failed to update member role.";
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
+    /// <summary>Remove member from organization (org admin only).</summary>
+    [HttpPost("{userId}/remove")]
+    [RequireOrgRole("org_owner", "client_admin")]
+    public async Task<IActionResult> RemoveMember(Guid userId, CancellationToken ct)
+    {
+        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+
+        if (!userCtx.ActiveOrganizationId.HasValue)
+        {
+            return BadRequest("No active organization");
+        }
+
+        try
+        {
+            await _membershipService.RemoveMember(userCtx, userCtx.ActiveOrganizationId.Value, userId, ct);
+            TempData["SuccessMessage"] = "Member removed from organization.";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            TempData["ErrorMessage"] = "Insufficient permissions.";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing member");
+            TempData["ErrorMessage"] = "Failed to remove member.";
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
+    /// <summary>Send invitation to new team member.</summary>
+    [HttpGet("invite")]
+    [RequireOrgRole("org_owner", "client_admin")]
+    public async Task<IActionResult> Invite(CancellationToken ct)
+    {
+        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+        return View(new InvitationViewModel { OrganizationId = userCtx.ActiveOrganizationId ?? Guid.Empty, Role = "member" });
+    }
+
+    /// <summary>Submit invitation form.</summary>
+    [HttpPost("invite")]
+    [RequireOrgRole("org_owner", "client_admin")]
+    public async Task<IActionResult> SendInvite(InvitationViewModel model, CancellationToken ct)
+    {
+        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+
+        if (!ModelState.IsValid)
+        {
+            return View("Invite", model);
+        }
+
+        try
+        {
+            if (!userCtx.ActiveOrganizationId.HasValue)
+            {
+                TempData["ErrorMessage"] = "No active organization selected.";
+                return View("Invite", model);
+            }
+
+            await _invitationService.CreateInvite(userCtx, userCtx.ActiveOrganizationId.Value, model.Email, model.Role, ct);
+            TempData["SuccessMessage"] = $"Invitation sent to {model.Email}";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending invitation");
+            TempData["ErrorMessage"] = "Failed to send invitation.";
+            return View("Invite", model);
+        }
+    }
+}

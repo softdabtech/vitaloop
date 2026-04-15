@@ -27,6 +27,24 @@ public sealed class OrganizationService
         return organizations.Where(o => _accessPolicyService.CanAccessOrg(userCtx, o.Id)).ToList();
     }
 
+    public async Task<Organization?> CreateOrganization(
+        UserContext userCtx,
+        Guid ownerId,
+        string name,
+        string slug,
+        string status,
+        string? description,
+        string? logoUrl,
+        CancellationToken ct = default)
+    {
+        if (!_accessPolicyService.HasGlobalRole(userCtx, "super_admin"))
+        {
+            throw new UnauthorizedAccessException("Organization creation denied.");
+        }
+
+        return await _gateway.CreateOrganization(ownerId, name, slug, status, description, logoUrl, ct);
+    }
+
     public async Task<Organization?> GetOrganization(UserContext userCtx, Guid orgId, CancellationToken ct = default)
     {
         if (!_accessPolicyService.CanAccessOrg(userCtx, orgId))
@@ -55,5 +73,15 @@ public sealed class OrganizationService
         }
 
         return await _gateway.GetOrganizationSettings(orgId, ct);
+    }
+
+    public async Task<IReadOnlyList<Member>> GetMembers(UserContext userCtx, Guid orgId, CancellationToken ct = default)
+    {
+        if (!_accessPolicyService.CanAccessOrg(userCtx, orgId))
+        {
+            throw new UnauthorizedAccessException("Members access denied.");
+        }
+
+        return await _gateway.GetMembers(orgId, ct);
     }
 }

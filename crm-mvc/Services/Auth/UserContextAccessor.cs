@@ -64,7 +64,8 @@ public sealed class UserContextAccessor : IUserContextAccessor
             return null;
         }
 
-        var sub = principal.FindFirstValue("sub");
+        var sub = principal.FindFirstValue(JwtRegisteredClaimNames.Sub)
+            ?? principal.FindFirstValue(ClaimTypes.NameIdentifier);
         var email = principal.FindFirstValue("email") ?? string.Empty;
         if (!Guid.TryParse(sub, out var userId))
         {
@@ -73,7 +74,7 @@ public sealed class UserContextAccessor : IUserContextAccessor
         }
 
         var baseMemberships = ParseMembershipsFromClaims(principal);
-        var globalRole = principal.FindFirstValue("global_role") ?? "end_user";
+        var globalRole = principal.FindFirstValue("global_role");
         var subscriptionStatus = principal.FindFirstValue("subscription_status") ?? "inactive";
 
         var record = await _userContextDataSource.GetByUserAsync(userId, email, ct);
@@ -83,7 +84,7 @@ public sealed class UserContextAccessor : IUserContextAccessor
         {
             UserId = userId,
             Email = email,
-            GlobalRole = globalRole,
+            GlobalRole = record?.GlobalRole ?? globalRole ?? "end_user",
             OnboardingCompleted = record?.OnboardingCompleted ?? ParseBoolClaim(principal, "onboarding_completed"),
             SubscriptionActive = record?.SubscriptionActive ?? ParseSubscriptionActive(subscriptionStatus),
             SubscriptionStatus = record?.SubscriptionStatus ?? subscriptionStatus,

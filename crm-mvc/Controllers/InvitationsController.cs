@@ -1,3 +1,5 @@
+using System.Net;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Vitaloop.Crm.Web.Attributes;
 using Vitaloop.Crm.Web.Services.Contracts;
@@ -22,6 +24,32 @@ public class InvitationsController : Controller
         _userContextAccessor = userContextAccessor;
         _activeOrganizationResolver = activeOrganizationResolver;
         _invitationService = invitationService;
+    }
+
+    [AllowAnonymous]
+    [HttpGet("/invitations/accept")]
+    public async Task<IActionResult> Accept([FromQuery] string token, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return Redirect("/auth/login");
+        }
+
+        var userCtx = await _userContextAccessor.GetCurrent(ct);
+        if (userCtx is not null)
+        {
+            return Redirect("/auth/post-login");
+        }
+
+        var encodedToken = WebUtility.UrlEncode(token);
+        var returnUrl = WebUtility.UrlEncode($"/invitations/accept?token={encodedToken}");
+        var continueUrl = $"/auth/login?returnUrl={returnUrl}";
+
+        return View("Accept", new InvitationAcceptViewModel
+        {
+            Token = token,
+            ContinueUrl = continueUrl,
+        });
     }
 
     [HttpGet("")]

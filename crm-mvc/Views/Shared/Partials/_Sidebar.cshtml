@@ -6,17 +6,51 @@
     ? Model.Memberships.FirstOrDefault(m => m.OrganizationId == Model.ActiveOrganizationId.Value)
     : null;
 
-  var navItems = new[]
+  var isSuperAdmin = string.Equals(Model?.GlobalRole, "super_admin", StringComparison.OrdinalIgnoreCase);
+  var isOrgAdmin = activeMembership != null && 
+    (string.Equals(activeMembership.Role, "org_owner", StringComparison.OrdinalIgnoreCase) ||
+     string.Equals(activeMembership.Role, "client_admin", StringComparison.OrdinalIgnoreCase));
+  var isManager = activeMembership != null &&
+    string.Equals(activeMembership.Role, "manager", StringComparison.OrdinalIgnoreCase);
+  var isPractitioner = activeMembership != null && 
+    string.Equals(activeMembership.Role, "practitioner", StringComparison.OrdinalIgnoreCase);
+
+  var navItemsOverview = new[]
   {
-    new { Href = "/admin",         Label = "Dashboard",     Group = "Overview",  Icon = "&#127968;" },
-    new { Href = "/ops",           Label = "Ops",           Group = "Overview",  Icon = "&#128202;" },
-    new { Href = "/organizations", Label = "Organizations", Group = "CRM",       Icon = "&#127962;" },
-    new { Href = "/members",       Label = "Members",       Group = "CRM",       Icon = "&#128101;" },
-    new { Href = "/invitations",   Label = "Invitations",   Group = "CRM",       Icon = "&#9993;" },
-    new { Href = "/assignments",   Label = "Assignments",   Group = "CRM",       Icon = "&#128279;" },
-    new { Href = "/billing",       Label = "Billing",       Group = "Account",   Icon = "&#128179;" },
-    new { Href = "/settings",      Label = "Settings",      Group = "Account",   Icon = "&#9881;" }
+    new { Href = "/admin",         Label = "Dashboard",     Group = "Overview",  Icon = "&#127968;", RequireRole = new string[0] },
+    new { Href = "/ops",           Label = "Ops",           Group = "Overview",  Icon = "&#128202;", RequireRole = new[] { "super_admin" } }
   };
+
+  var navItemsCrm = new[]
+  {
+    new { Href = "/admin/organizations", Label = "Organizations", Group = "CRM", Icon = "&#127962;", RequireRole = new[] { "super_admin", "org_admin" } },
+    new { Href = "/admin/members",       Label = "Team Members",   Group = "CRM", Icon = "&#128101;", RequireRole = new[] { "org_admin", "manager" } },
+    new { Href = "/admin/members/invite", Label = "Invitations",   Group = "CRM", Icon = "&#9993;",  RequireRole = new[] { "org_admin" } },
+    new { Href = "/admin/assignments",   Label = "Assignments",    Group = "CRM", Icon = "&#128279;", RequireRole = new[] { "org_admin", "manager", "practitioner" } }
+  };
+
+  var navItemsAccount = new[]
+  {
+    new { Href = "/admin/billing",       Label = "Billing",        Group = "Account", Icon = "&#128179;", RequireRole = new[] { "org_admin" } },
+    new { Href = "/admin/settings",      Label = "Settings",       Group = "Account", Icon = "&#9881;",  RequireRole = new string[0] }
+  };
+
+  bool ShouldShowItem(string[] requiredRoles)
+  {
+    if (requiredRoles.Length == 0) return true;
+    if (isSuperAdmin) return true;
+    return requiredRoles.Any(role => role switch
+    {
+      "super_admin" => isSuperAdmin,
+      "org_admin" => isOrgAdmin,
+      "manager" => isOrgAdmin || isManager,
+      "practitioner" => isOrgAdmin || isManager || isPractitioner,
+      _ => false,
+    });
+  }
+
+  var allItems = new[] { navItemsOverview, navItemsCrm, navItemsAccount }.SelectMany(x => x).ToArray();
+  var visibleItems = allItems.Where(item => ShouldShowItem(item.RequireRole)).ToArray();
 }
 
 <aside class="vo-sidebar" id="vo-sidebar" aria-label="Main navigation">
@@ -37,15 +71,41 @@
     else
     {
       <p class="vo-identity-line">@Model.Email</p>
-      <p class="vo-identity-sub">@Model.GlobalRole</p>
-      @if (activeMembership is not null)
+      <p class="vo-identity-sub">
+        @(isSuperAdmin ? "🔑 Super Admin" : activeMembership?.Role ?? "Member")
+      </p>
+      
+      @if (Model.Memberships.Count > 0)
       {
-        <p class="vo-identity-org">&#127962; @activeMembership.OrganizationName</p>
+        <div class="vo-org-selector">
+          <select class="vo-org-select" onchange="location.href = this.value">
+            @if (!Model.ActiveOrganizationId.HasValue)
+            {
+              <option value="" selected>Select Organization...</option>
+            }
+            @foreach (var membership in Model.Memberships)
+            {
+              var selected = membership.OrganizationId == Model.ActiveOrganizationId;
+              if (selected)
+              {
+                <option value="/admin/orgs/@membership.OrganizationId/switch" selected>
+                  @membership.OrganizationName
+                </option>
+              }
+              else
+              {
+                <option value="/admin/orgs/@membership.OrganizationId/switch">
+                  @membership.OrganizationName
+                </option>
+              }
+            }
+          </select>
+        </div>
       }
     }
   </div>
 
-  @foreach (var group in navItems.GroupBy(x => x.Group))
+  @foreach (var group in visibleItems.GroupBy(x => x.Group).OrderBy(g => g.Key == "Overview" ? 0 : (g.Key == "CRM" ? 1 : 2)))
   {
     <div class="vo-nav-group">
       <p class="vo-nav-group-title">@group.Key</p>
@@ -69,9 +129,35 @@
   }
 
   <div class="vo-sidebar-footer">
-    <a class="vo-nav-link" href="/auth/login">
+    <a class="vo-nav-link" href="/auth/logout">
       <span class="vo-nav-icon" aria-hidden="true">&#128275;</span>
       Log out
     </a>
   </div>
 </aside>
+
+<style>
+  .vo-org-selector {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .vo-org-select {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .vo-org-select:hover,
+  .vo-org-select:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+</style>
+

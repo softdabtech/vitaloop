@@ -1,5 +1,7 @@
+using System.Net.Http;
 using Microsoft.AspNetCore.Mvc;
 using Vitaloop.Crm.Web.Attributes;
+using Vitaloop.Crm.Web.Models.Crm;
 using Vitaloop.Crm.Web.Services.Contracts;
 using Vitaloop.Crm.Web.Services.Memberships;
 using Vitaloop.Crm.Web.ViewModels;
@@ -24,7 +26,17 @@ public class DashboardController : Controller
     public async Task<IActionResult> Index(CancellationToken ct)
     {
         var userCtx = await _userContextAccessor.GetOrThrow(ct);
-        var users = await _membershipService.GetGlobalUsers(userCtx, ct);
+        IReadOnlyList<GlobalUser> users;
+        try
+        {
+            users = await _membershipService.GetGlobalUsers(userCtx, ct);
+        }
+        catch (HttpRequestException)
+        {
+            // Keep Ops page accessible even when optional admin API is unavailable.
+            users = Array.Empty<GlobalUser>();
+            TempData["WarningMessage"] = "Global users feed is temporarily unavailable.";
+        }
 
         var model = new OpsDashboardViewModel
         {

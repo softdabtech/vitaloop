@@ -1,0 +1,182 @@
+@model OrganizationsPageViewModel
+@{
+    ViewData["Title"] = "Organizations";
+    Layout = "_CrmLayout";
+}
+
+<div class="container-page">
+    <div class="page-header">
+        <div class="page-title-group">
+            <h1 class="page-title">Organizations</h1>
+            <p class="page-subtitle">Manage CRM organizations and permissions</p>
+        </div>
+        @if (Model?.IsSuperAdmin == true)
+        {
+            <a href="@Model.CreateOrgUrl" class="btn btn-primary">
+                <span class="btn-icon">➕</span> Create Organization
+            </a>
+        }
+    </div>
+
+    @if (Model?.Organizations.Count > 0)
+    {
+        <div class="cards-grid">
+            @foreach (var org in Model.Organizations)
+            {
+                <div class="card card-org">
+                    <div class="card-header">
+                        <h3 class="card-title">@org.DisplayName</h3>
+                        <span class="badge badge-@(org.Status == "active" ? "success" : "warning")">
+                            @org.Status
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="org-meta">
+                            <strong>@org.RoleLabel</strong>
+                        </div>
+                        <div class="org-slug">
+                            <code>@org.Slug</code>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <a href="@Url.Action("Details", new { orgId = org.Id })" class="btn btn-sm btn-secondary">
+                            View Details
+                        </a>
+                        @if (Model?.IsSuperAdmin == true)
+                        {
+                            <a href="@Url.Action("Edit", new { orgId = org.Id })" class="btn btn-sm btn-outline">
+                                Edit
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <p class="empty-icon">📭</p>
+            <h2>No Organizations</h2>
+            <p>You don't have access to any organizations yet.</p>
+            @if (Model?.IsSuperAdmin == true)
+            {
+                <a href="@Model.CreateOrgUrl" class="btn btn-primary btn-lg">Create Your First Organization</a>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .card-org {
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 1.5rem;
+        background: var(--color-bg-secondary);
+        transition: all 0.2s ease;
+    }
+
+    .card-org:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-color: var(--color-primary);
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .card-title {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 600;
+    }
+
+    .badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .badge-success {
+        background: rgba(34, 197, 94, 0.1);
+        color: #22c55e;
+    }
+
+    .badge-warning {
+        background: rgba(234, 179, 8, 0.1);
+        color: #eab308;
+    }
+
+    .org-meta {
+        font-size: 0.875rem;
+        color: var(--color-text-secondary);
+        margin-bottom: 0.5rem;
+    }
+
+    .org-slug {
+        margin: 1rem 0;
+    }
+
+    .org-slug code {
+        background: var(--color-bg);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+
+    .card-footer {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--color-border);
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        display: inline-block;
+    }
+
+    .btn-primary {
+        background: var(--color-primary);
+        color: white;
+    }
+
+    .btn-secondary {
+        background: var(--color-bg);
+        color: var(--color-text);
+        border: 1px solid var(--color-border);
+    }
+
+    .btn-outline {
+        background: transparent;
+        color: var(--color-primary);
+        border: 1px solid var(--color-primary);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+</style>

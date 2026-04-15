@@ -355,3 +355,127 @@ CREATE TABLE public.health_scores (
 CREATE INDEX idx_health_scores_user_id ON public.health_scores(user_id);
 ALTER TABLE public.health_scores ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "HealthScores: select own" ON public.health_scores FOR SELECT USING (auth.uid() = user_id);
+
+-- ============================================================
+-- STAGE 4 — CRM CORE: ORGANIZATIONS & MULTI-TENANCY
+-- ============================================================
+
+-- 15. ORGANIZATIONS
+CREATE TABLE public.organizations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+  owner_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  owner_name TEXT,
+  logo_url TEXT,
+  description TEXT,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_organizations_owner_id ON public.organizations(owner_id);
+CREATE INDEX idx_organizations_slug ON public.organizations(slug);
+ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
+
+-- RLS: Users can see organizations they belong to, admins see more
+CREATE POLICY "Organizations: owners see all" ON public.organizations 
+  FOR SELECT USING (auth.uid() = owner_id);
+CREATE POLICY "Organizations: members see their org" ON public.organizations 
+  FOR SELECT USING (
+    id IN (SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid())
+  );
+
+-- 16. ORGANIZATION MEMBERS (Join table with roles)
+CREATE TABLE public.organization_members (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  role TEXT NOT NULL DEFAULT 'member' 
+    CHECK (role IN ('org_owner', 'client_admin', 'manager', 'practitioner', 'support', 'member')),
+  status TEXT DEFAULT 'active'
+    CHECK (status IN ('active', 'inactive', 'pending', 'removed')),
+  invited_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  invited_at TIMESTAMPTZ,
+  joined_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(organization_id, user_id)
+);
+
+CREATE INDEX idx_org_members_organization_id ON public.organization_members(organization_id);
+CREATE INDEX idx_org_members_user_id ON public.organization_members(user_id);
+CREATE INDEX idx_org_members_role ON public.organization_members(role);
+ALTER TABLE public.organization_members ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "OrgMembers: see own membership" ON public.organization_members 
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "OrgMembers: admins see org members" ON public.organization_members 
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_members 
+      WHERE user_id = auth.uid() AND role IN ('org_owner', 'client_admin')
+    )
+  );
+
+-- 17. PRACTITIONER ASSIGNMENTS (Practitioner → Client relationship)
+CREATE TABLE public.practitioner_assignments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE NOT NULL,
+  practitioner_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  client_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  status TEXT DEFAULT 'active'
+    CHECK (status IN ('active', 'inactive', 'paused', 'archived')),
+  notes TEXT,
+  assigned_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(organization_id, practitioner_id, client_id)
+);
+
+CREATE INDEX idx_practitioner_assignments_org_id ON public.practitioner_assignments(organization_id);
+CREATE INDEX idx_practitioner_assignments_practitioner_id ON public.practitioner_assignments(practitioner_id);
+CREATE INDEX idx_practitioner_assignments_client_id ON public.practitioner_assignments(client_id);
+ALTER TABLE public.practitioner_assignments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "PractitionerAssignments: users see assignments involving them" ON public.practitioner_assignments 
+  FOR SELECT USING (auth.uid() = practitioner_id OR auth.uid() = client_id);
+CREATE POLICY "PractitionerAssignments: admins see org assignments" ON public.practitioner_assignments 
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_members 
+      WHERE user_id = auth.uid() AND role IN ('org_owner', 'client_admin', 'manager')
+    )
+  );
+
+-- 18. INVITATIONS (Pending user invites to organizations)
+CREATE TABLE public.invitations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE NOT NULL,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'member'
+    CHECK (role IN ('org_owner', 'client_admin', 'manager', 'practitioner', 'support', 'member')),
+  status TEXT DEFAULT 'sent'
+    CHECK (status IN ('sent', 'accepted', 'expired', 'revoked')),
+  invited_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  invited_at TIMESTAMPTZ DEFAULT NOW(),
+  accepted_by_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  accepted_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '7 days'),
+  token TEXT UNIQUE,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_invitations_organization_id ON public.invitations(organization_id);
+CREATE INDEX idx_invitations_email ON public.invitations(email);
+CREATE INDEX idx_invitations_status ON public.invitations(status);
+CREATE INDEX idx_invitations_token ON public.invitations(token);
+ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Invitations: admins see org invitations" ON public.invitations 
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_members 
+      WHERE user_id = auth.uid() AND role IN ('org_owner', 'client_admin')
+    )
+  );
