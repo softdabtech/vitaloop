@@ -41,6 +41,8 @@ async def get_auth_me(current_user: dict = Depends(get_current_user)):
 
     global_role = current_user.get("global_role")
     if global_role is None:
+        global_role = account.get("global_role")
+    if global_role is None:
         global_role = app_metadata.get("global_role")
     if global_role is None:
         global_role = current_user.get("role")
