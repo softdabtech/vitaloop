@@ -74,9 +74,10 @@ public class AuthController : Controller
                 new CookieOptions
                 {
                     HttpOnly = true,
-                    SameSite = SameSiteMode.Lax,
-                    Secure = Request.IsHttps,
+                    SameSite = SameSiteMode.None,
+                    Secure = true,
                     Domain = ".vitaloop.today",
+                    Path = "/",
                     MaxAge = TimeSpan.FromHours(12)
                 });
             if (!string.IsNullOrWhiteSpace(normalizedReturnUrl))
