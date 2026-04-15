@@ -37,6 +37,7 @@ export default function Dashboard() {
     { key: 'location', label: 'Set your location', action: () => navigate('/onboarding') },
     { key: 'complaints', label: 'Add recurring complaints', action: () => navigate('/onboarding') },
     { key: 'first_upload', label: 'Upload your first lab report', action: () => navigate('/upload') },
+    { key: 'questionnaire_completed', label: 'Complete adaptive questionnaire', action: () => navigate('/questionnaire') },
   ]
   const completedSteps = steps.filter((s) => checklist[s.key]).length
   const progressPct = Math.round((completedSteps / steps.length) * 100)

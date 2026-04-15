@@ -11,6 +11,7 @@ const DEFAULT_STATE = {
     location: true,
     complaints: true,
     first_upload: true,
+    questionnaire_completed: true,
     onboarding_complete: true,
   },
 }
