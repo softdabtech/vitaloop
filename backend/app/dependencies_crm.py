@@ -181,10 +181,11 @@ async def get_org_context(org_id: UUID, user_context: UserContext = Depends(get_
             )
 
         membership = resp.data[0]
+        membership_role = membership.get("org_role") or membership.get("role") or "member"
         return {
             "org_id": org_id,
-            "role": membership.get("org_role", "member"),
-            "is_admin": membership.get("org_role") in ["org_owner", "client_admin"],
+            "role": membership_role,
+            "is_admin": membership_role in ["org_owner", "client_admin", "org_admin", "manager"],
             "membership_id": membership.get("id"),
         }
     except HTTPException:
@@ -363,3 +364,136 @@ async def resolve_practitioner_list_scope(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to resolve practitioner visibility scope",
         )
+
+
+def require_global_role(allowed_roles: list[str]):
+    """Factory dependency to enforce global roles."""
+
+    allowed = {str(role).lower() for role in allowed_roles}
+
+    async def checker(user_context: UserContext = Depends(get_user_context)) -> UserContext:
+        current_role = str(user_context.global_role or "").lower()
+        if current_role not in allowed:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Global role access denied")
+        return user_context
+
+    return checker
+
+
+def require_org_role(allowed_roles: list[str]):
+    """Factory dependency to enforce organization membership role."""
+
+    allowed = {str(role).lower() for role in allowed_roles}
+
+    async def checker(
+        org_id: UUID,
+        user_context: UserContext = Depends(get_user_context),
+    ) -> Dict[str, Any]:
+        if user_context.is_super_admin:
+            return {"organization_id": str(org_id), "role": "super_admin", "status": "active"}
+
+        try:
+            sb = svc._get_supabase()
+            resp = await svc._run(
+                lambda: sb.table("organization_members")
+                .select("*")
+                .eq("organization_id", str(org_id))
+                .eq("user_id", str(user_context.user_id))
+                .limit(1)
+                .execute()
+            )
+            membership = resp.data[0] if resp.data else None
+            role = str((membership or {}).get("org_role") or (membership or {}).get("role") or "").lower()
+            if not membership or role not in allowed:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Organization role access denied")
+            return membership
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("Organization role check failed for user %s: %s", user_context.user_id, e, exc_info=True)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Organization role check failed")
+
+    return checker
+
+
+def require_assignment_access(action: str):
+    """
+    Load assignment and verify access by action:
+    - read: super_admin/admin, org member, practitioner-self, or client-self
+    - modify: super_admin/admin or org admin-like
+    - cancel: modify + practitioner-self
+    """
+
+    async def checker(
+        assignment_id: UUID,
+        user_context: UserContext = Depends(get_user_context),
+    ) -> Dict[str, Any]:
+        try:
+            sb = svc._get_supabase()
+            assignment_resp = await svc._run(
+                lambda: sb.table("practitioner_assignments")
+                .select("*")
+                .eq("id", str(assignment_id))
+                .limit(1)
+                .execute()
+            )
+            assignment = assignment_resp.data[0] if assignment_resp.data else None
+            if not assignment:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+
+            if user_context.is_super_admin:
+                return assignment
+
+            global_role = str(user_context.global_role or "").lower()
+            org_id = assignment.get("organization_id")
+
+            membership_resp = await svc._run(
+                lambda: sb.table("organization_members")
+                .select("*")
+                .eq("organization_id", str(org_id))
+                .eq("user_id", str(user_context.user_id))
+                .limit(1)
+                .execute()
+            )
+            membership = membership_resp.data[0] if membership_resp.data else None
+            membership_role = str((membership or {}).get("org_role") or (membership or {}).get("role") or "").lower()
+            is_org_admin_like = membership_role in {"org_admin", "org_owner", "client_admin", "manager"}
+
+            practitioner_resp = await svc._run(
+                lambda: sb.table("practitioners")
+                .select("id,user_id")
+                .eq("user_id", str(user_context.user_id))
+                .limit(1)
+                .execute()
+            )
+            own_practitioner = practitioner_resp.data[0] if practitioner_resp.data else None
+            is_practitioner_owner = bool(
+                own_practitioner and str(own_practitioner.get("id")) == str(assignment.get("practitioner_id"))
+            )
+            is_client_owner = str(assignment.get("client_user_id")) == str(user_context.user_id)
+
+            if action == "read":
+                if membership or is_practitioner_owner or is_client_owner:
+                    return assignment
+            elif action == "modify":
+                if global_role in {"super_admin", "admin"} or is_org_admin_like:
+                    return assignment
+            elif action == "cancel":
+                if global_role in {"super_admin", "admin"} or is_org_admin_like or is_practitioner_owner:
+                    return assignment
+
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Assignment access denied")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(
+                "Assignment access check failed for user %s assignment %s action %s: %s",
+                user_context.user_id,
+                assignment_id,
+                action,
+                e,
+                exc_info=True,
+            )
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Assignment access check failed")
+
+    return checker
