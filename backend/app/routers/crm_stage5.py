@@ -266,8 +266,13 @@ async def list_practitioners(
             )
         elif scope == "self":
             own = await practitioner_service.get_practitioner_for_user(UUID(practitioner_scope["user_id"]))
-            practitioners = [own] if own else []
-            total = len(practitioners)
+            if not own:
+                return PractitionerListResponse(items=[], total=0)
+
+            return PractitionerListResponse(
+                items=[PractitionerResponse(**own)],
+                total=1,
+            )
         else:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 

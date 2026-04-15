@@ -53,12 +53,8 @@ def _clean(value: str) -> str:
     return (value or "").strip()
 
 
-def _is_sb_secret_key(value: str) -> bool:
-    return _clean(value).startswith("sb_secret_")
-
-
 def _rest_headers() -> Dict[str, str]:
-    key = _clean(settings.supabase_service_key)
+    key = _clean(settings.active_supabase_service_key)
     return {
         "apikey": key,
         "Authorization": f"Bearer {key}",
@@ -103,35 +99,48 @@ async def _select_first_by_id_with_fallback(table: str, columns: str, user_id: s
             .execute()
         )
         return response.data[0] if response.data else {}
-    except RuntimeError as ex:
-        if str(ex) == "SUPABASE_SDK_INVALID_API_KEY_FOR_SB_SECRET":
-            _use_rest_auth_context = True
-            _logger.warning("Supabase SDK rejected sb_secret key; using REST fallback for auth context queries.")
-            return await _run(lambda: _rest_select_first_by_id(table, columns, user_id))
-        raise
     except Exception as ex:
-        # Defensive fallback if validation is raised later in the SDK call chain.
-        if _is_sb_secret_key(settings.supabase_service_key) and "Invalid API key" in str(ex):
-            _use_rest_auth_context = True
-            _logger.warning("Supabase SDK invalid key at runtime; using REST fallback for auth context queries.")
-            return await _run(lambda: _rest_select_first_by_id(table, columns, user_id))
+        # Keep REST fallback for auth context lookup resilience.
+        _use_rest_auth_context = True
+        _logger.warning(
+            "Supabase SDK query failed for %s; switching auth context lookup to REST fallback: %s",
+            table,
+            ex,
+        )
+        return await _run(lambda: _rest_select_first_by_id(table, columns, user_id))
+
+
+def _missing_key_error_message() -> str:
+    return "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+
+
+def _is_invalid_api_key_error(ex: Exception) -> bool:
+    return "Invalid API key" in str(ex)
+
+
+def _build_supabase_client(supabase_url: str, supabase_key: str) -> Client:
+    return create_client(supabase_url, supabase_key)
+
+
+def _init_supabase_client() -> Client:
+    supabase_url = _clean(settings.supabase_url)
+    supabase_key = _clean(settings.active_supabase_service_key)
+    if not supabase_url or not supabase_key:
+        raise RuntimeError(_missing_key_error_message())
+
+    try:
+        return _build_supabase_client(supabase_url, supabase_key)
+    except Exception as ex:
+        _logger.error("Failed to initialize Supabase client: %s", ex)
+        if _is_invalid_api_key_error(ex):
+            raise RuntimeError("SUPABASE_SDK_INVALID_API_KEY") from ex
         raise
 
 
 def _get_supabase() -> Client:
     global _supabase
     if _supabase is None:
-        supabase_url = _clean(settings.supabase_url)
-        supabase_key = _clean(settings.supabase_service_key)
-        if not supabase_url or not supabase_key:
-            raise RuntimeError("Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_KEY.")
-        try:
-            _supabase = create_client(supabase_url, supabase_key)
-        except Exception as ex:
-            # supabase-py versions that don't yet accept sb_secret_* should fall back to REST in auth context calls.
-            if _is_sb_secret_key(supabase_key) and "Invalid API key" in str(ex):
-                raise RuntimeError("SUPABASE_SDK_INVALID_API_KEY_FOR_SB_SECRET") from ex
-            raise
+        _supabase = _init_supabase_client()
     return _supabase
 
 
