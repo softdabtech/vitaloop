@@ -11,4 +11,5 @@ public sealed class AuthOptions
     public string Audience { get; set; } = string.Empty;
     public string JwtSecret { get; set; } = string.Empty;
     public string JwtPublicKey { get; set; } = string.Empty;
+    public string JwksUrl { get; set; } = "https://bfjxkzydonhwmafnyktt.supabase.co/auth/v1/.well-known/jwks.json";
 }

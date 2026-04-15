@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -13,6 +14,10 @@ namespace Vitaloop.Crm.Web.Services.Auth;
 public sealed class UserContextAccessor : IUserContextAccessor
 {
     private const string HttpContextItemKey = "UserContext";
+    private static readonly HttpClient JwksHttpClient = new();
+    private static readonly object JwksLock = new();
+    private static JsonWebKeySet? CachedJwks;
+    private static DateTimeOffset CachedJwksAt = DateTimeOffset.MinValue;
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IUserContextDataSource _userContextDataSource;
@@ -165,27 +170,14 @@ public sealed class UserContextAccessor : IUserContextAccessor
             ValidateIssuerSigningKey = true
         };
 
-        if (!string.IsNullOrWhiteSpace(_authOptions.JwtSecret))
-        {
-            Console.WriteLine("[CRM] jwt validation branch: HS256 JwtSecret");
-            validations.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_authOptions.JwtSecret.Trim()));
-        }
-        else
-        {
-            if (string.IsNullOrWhiteSpace(_authOptions.JwtPublicKey))
-            {
-                throw new SecurityTokenException("Auth:JwtSecret or Auth:JwtPublicKey must be configured for JWT validation.");
-            }
-
-            Console.WriteLine("[CRM] jwt validation branch: JwtPublicKey");
-            validations.IssuerSigningKey = BuildSigningKey(_authOptions.JwtPublicKey);
-        }
+        validations.IssuerSigningKey = ResolveSigningKey(readToken);
 
         ClaimsPrincipal principal;
         SecurityToken validatedToken;
         try
         {
             principal = handler.ValidateToken(token, validations, out validatedToken);
+            Console.WriteLine("[CRM] Token validated successfully");
         }
         catch (Exception ex)
         {
@@ -199,6 +191,52 @@ public sealed class UserContextAccessor : IUserContextAccessor
         }
 
         return (principal, jwt);
+    }
+
+    private SecurityKey ResolveSigningKey(JwtSecurityToken readToken)
+    {
+        if (!string.IsNullOrWhiteSpace(_authOptions.JwksUrl))
+        {
+            Console.WriteLine("[CRM] jwt validation branch: JWKS ES256");
+            var jwks = GetJwks();
+            var key = jwks.Keys.FirstOrDefault(k =>
+                string.Equals(k.Kid, readToken.Header.Kid, StringComparison.Ordinal));
+
+            if (key is null)
+            {
+                throw new SecurityTokenSignatureKeyNotFoundException(
+                    $"No JWK found for kid '{readToken.Header.Kid}'.");
+            }
+
+            return key;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_authOptions.JwtPublicKey))
+        {
+            Console.WriteLine("[CRM] jwt validation branch: JwtPublicKey");
+            return BuildSigningKey(_authOptions.JwtPublicKey);
+        }
+
+        throw new SecurityTokenException("Auth:JwksUrl or Auth:JwtPublicKey must be configured for JWT validation.");
+    }
+
+    private JsonWebKeySet GetJwks()
+    {
+        var now = DateTimeOffset.UtcNow;
+        lock (JwksLock)
+        {
+            if (CachedJwks is not null && (now - CachedJwksAt) < TimeSpan.FromMinutes(10))
+            {
+                return CachedJwks;
+            }
+
+            var jwksJson = JwksHttpClient.GetStringAsync(_authOptions.JwksUrl)
+                .GetAwaiter()
+                .GetResult();
+            CachedJwks = new JsonWebKeySet(jwksJson);
+            CachedJwksAt = now;
+            return CachedJwks;
+        }
     }
 
     private static bool ParseSubscriptionActive(string? status)
