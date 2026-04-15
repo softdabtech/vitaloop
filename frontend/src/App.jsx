@@ -70,10 +70,8 @@ function EndUserFlowRoute({ children, allowBeforeOnboarding = false }) {
       }
 
       try {
-        const { data } = await api.get('/auth/me')
-        const role = String(data?.user?.global_role || data?.global_role || '').toLowerCase()
-        const onboardingCompleted = Boolean(data?.user?.onboarding_completed ?? data?.onboarding_completed)
-        const needs = role === 'end_user' && !onboardingCompleted
+        const { data } = await api.get('/auth/onboarding/state')
+        const needs = Boolean(data?.requires_onboarding)
 
         if (active) {
           setRequiresOnboarding(needs)
