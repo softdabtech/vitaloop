@@ -49,7 +49,10 @@ export function navigateToResolvedPath(_navigate, destination) {
 function normalizeReturnUrl(returnUrl) {
   if (!returnUrl || typeof returnUrl !== 'string') return null
   return returnUrl.startsWith('/') ? returnUrl : null
-}console.log('[STEP 2] resolvePostLoginDestination called', { returnUrl })
+}
+
+export async function resolvePostLoginDestination(returnUrl = null) {
+  console.log('[STEP 2] resolvePostLoginDestination called', { returnUrl })
   
   // Attempt to fetch user context via /auth/me, but don't fail the entire handoff if it fails
   try {
@@ -97,8 +100,5 @@ function normalizeReturnUrl(returnUrl) {
   }
   
   console.log('[STEP 3I] Destination resolved, returning result')
-  return result token: accessToken,
-    // Temporary fallback for consumers still expecting a string URL.
-    fallbackUrl: withToken(baseTarget, accessToken),
-  }
+  return result
 }
