@@ -27,7 +27,7 @@ import NotFound from './pages/NotFound.jsx'
 import { useAuth } from './hooks/useAuth.js'
 import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
 import { useEffect, useState } from 'react'
-import api from './lib/api.js'
+import { useOnboardingState } from './hooks/useOnboardingState.js'
 import SupportChat from './components/SupportChat.jsx'
 
 function ScrollToTop() {
@@ -52,52 +52,14 @@ function CRMRoute({ children, needsOps = false }) {
   return children
 }
 
-function EndUserFlowRoute({ children, allowBeforeOnboarding = false }) {
+function EndUserFlowRoute({ children, allowBeforeOnboarding = false, redirectIfOnboardingComplete = false }) {
   const { user, loading } = useAuth()
-  const [checking, setChecking] = useState(true)
-  const [requiresOnboarding, setRequiresOnboarding] = useState(false)
+  const { state, loading: onboardingLoading } = useOnboardingState()
+  const requiresOnboarding = Boolean(state?.requires_onboarding)
 
-  useEffect(() => {
-    let active = true
-
-    async function resolveContext() {
-      if (!user) {
-        if (active) {
-          setRequiresOnboarding(false)
-          setChecking(false)
-        }
-        return
-      }
-
-      try {
-        const { data } = await api.get('/auth/onboarding/state')
-        const needs = Boolean(data?.requires_onboarding)
-
-        if (active) {
-          setRequiresOnboarding(needs)
-        }
-      } catch {
-        if (active) {
-          // Fail open for non-critical context errors.
-          setRequiresOnboarding(false)
-        }
-      } finally {
-        if (active) {
-          setChecking(false)
-        }
-      }
-    }
-
-    resolveContext()
-
-    return () => {
-      active = false
-    }
-  }, [user])
-
-  if (loading || checking) return <div className="flex items-center justify-center h-screen">Loading…</div>
+  if (loading || (Boolean(user) && onboardingLoading)) return <div className="flex items-center justify-center h-screen">Loading…</div>
   if (requiresOnboarding && !allowBeforeOnboarding) return <Navigate to="/onboarding" replace />
-  if (!requiresOnboarding && allowBeforeOnboarding) return <Navigate to="/dashboard" replace />
+  if (!requiresOnboarding && redirectIfOnboardingComplete) return <Navigate to="/dashboard" replace />
 
   return children
 }
@@ -116,7 +78,7 @@ export default function App() {
         <Route path="/terms" element={<Terms />} />
         <Route path="/login" element={<Login />} />
         <Route path="/auth/confirmation" element={<EmailConfirmation />} />
-        <Route path="/dashboard" element={<ProtectedRoute><EndUserFlowRoute><Dashboard /></EndUserFlowRoute></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Dashboard /></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/upload" element={<ProtectedRoute><EndUserFlowRoute><Upload /></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/results/:uploadId" element={<ProtectedRoute><EndUserFlowRoute><Results /></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/avatar" element={<ProtectedRoute><EndUserFlowRoute><Avatar /></EndUserFlowRoute></ProtectedRoute>} />
@@ -131,7 +93,7 @@ export default function App() {
         <Route path="/crm/clients/:id" element={<ProtectedRoute><CRMRoute><CRMClientDetails /></CRMRoute></ProtectedRoute>} />
         <Route path="/crm/practitioners" element={<ProtectedRoute><CRMRoute><CRMPractitioners /></CRMRoute></ProtectedRoute>} />
         <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
-        <Route path="/onboarding" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Onboarding /></EndUserFlowRoute></ProtectedRoute>} />
+        <Route path="/onboarding" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding redirectIfOnboardingComplete><Onboarding /></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/checkin" element={<ProtectedRoute><EndUserFlowRoute><WeeklyCheckIn /></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/timeline" element={<ProtectedRoute><EndUserFlowRoute><Insights /></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/404.html" element={<NotFound />} />

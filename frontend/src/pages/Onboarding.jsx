@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ChevronRight, ChevronLeft, CheckCircle, User, MapPin, AlertTriangle } from 'lucide-react'
 import api from '../lib/api.js'
+import { trackFunnelEvent } from '../lib/funnel.js'
 import toast from 'react-hot-toast'
 
 const GOAL_OPTIONS = [
@@ -135,6 +136,12 @@ export default function Onboarding() {
           await api.post('/complaints', c)
         }
       }
+
+      await api.post('/auth/onboarding/complete')
+      trackFunnelEvent('funnel_onboarding_completed', 'User completed onboarding profile flow', {
+        goals_count: profile.goals.length,
+        complaints_count: complaints.filter((c) => c.complaint.trim()).length,
+      }, { oncePerSession: true })
 
       toast.success('Profile saved!')
       navigate('/dashboard')
