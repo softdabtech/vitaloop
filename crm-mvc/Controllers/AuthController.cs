@@ -63,6 +63,10 @@ public class AuthController : Controller
 
     private async Task<IActionResult> PostLoginCore(string? token, string? returnUrl, CancellationToken ct)
     {
+        Console.WriteLine("[CRM] post-login called");
+        Console.WriteLine($"[CRM] token present: {!string.IsNullOrEmpty(token)}");
+        Console.WriteLine($"[CRM] token length: {token?.Length}");
+
         var normalizedReturnUrl = NormalizeReturnUrlOrFallback(returnUrl, string.Empty);
 
         if (!string.IsNullOrWhiteSpace(token))
@@ -90,7 +94,10 @@ public class AuthController : Controller
 
         try
         {
+            Console.WriteLine("[CRM] validation start");
             var ctx = await _userContextAccessor.GetOrThrow(ct);
+            Console.WriteLine("[CRM] validation result: success");
+            Console.WriteLine("[CRM] validation error: ");
             if (!string.IsNullOrWhiteSpace(normalizedReturnUrl))
             {
                 _logger.LogInformation("SSO login succeeded for user {UserId}; redirecting to returnUrl {ReturnUrl}.", ctx.UserId, normalizedReturnUrl);
@@ -103,6 +110,8 @@ public class AuthController : Controller
         }
         catch (UnauthorizedAccessException)
         {
+            Console.WriteLine("[CRM] validation result: failed");
+            Console.WriteLine("[CRM] validation error: UnauthorizedAccessException: User is not authenticated.");
             _logger.LogWarning("SSO login failed: user context unavailable after token handoff.");
             Response.Cookies.Delete(_authOptions.TokenCookieName, new CookieOptions
             {
