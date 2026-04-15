@@ -233,7 +233,7 @@ export default function Hero() {
           flexWrap: 'wrap', marginBottom: 40,
         }}>
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/login?signup=true')}
             aria-label="Start free — no card needed"
             style={{
               display: 'flex', alignItems: 'center', gap: 8,

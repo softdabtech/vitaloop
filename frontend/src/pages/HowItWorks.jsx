@@ -131,7 +131,7 @@ export default function HowItWorks() {
           <button onClick={() => navigate('/example-report')} style={{ background: 'var(--teal-500, #1D9E75)', color: 'white', border: 'none', borderRadius: 980, padding: '12px 28px', fontWeight: 600, cursor: 'pointer' }}>
             See Example Report
           </button>
-          <button onClick={() => navigate('/login')} className="px-8 py-3 bg-white/10 hover:bg-white/20 border border-white/30 text-white font-bold rounded-lg transition">
+          <button onClick={() => navigate('/login?signup=true')} className="px-8 py-3 bg-white/10 hover:bg-white/20 border border-white/30 text-white font-bold rounded-lg transition">
             Get Started Free
           </button>
         </div>

@@ -205,7 +205,7 @@ export default function PricingSection() {
                       window.location.href = `mailto:info@softdab.tech?subject=${subject}&body=${body}`
                       return
                     }
-                    navigate('/login')
+                    navigate('/login?signup=true')
                   }}
                   style={{
                     borderRadius: 980,
