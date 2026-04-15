@@ -37,6 +37,12 @@ async def admin_platform_overview(_: dict = Depends(_require_super_admin)):
     return await svc.get_platform_overview()
 
 
+@router.get("/funnel-overview")
+async def admin_funnel_overview(days: int = 30, _: dict = Depends(_require_super_admin)):
+    safe_days = max(1, min(days, 365))
+    return await svc.get_funnel_overview(days=safe_days)
+
+
 @router.get("/audit-logs")
 async def admin_audit_logs(
     limit: int = 200,
