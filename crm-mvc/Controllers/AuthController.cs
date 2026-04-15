@@ -53,16 +53,18 @@ public class AuthController : Controller
     public IActionResult ResetPassword() => View();
 
     [HttpGet("post-login")]
-    public async Task<IActionResult> PostLogin([FromQuery] string? token, CancellationToken ct)
-        => await PostLoginCore(token, ct);
+    public async Task<IActionResult> PostLogin([FromQuery] string? token, [FromQuery] string? returnUrl, CancellationToken ct)
+        => await PostLoginCore(token, returnUrl, ct);
 
     [HttpPost("post-login")]
     [IgnoreAntiforgeryToken]
-    public async Task<IActionResult> PostLoginPost([FromForm] string? token, CancellationToken ct)
-        => await PostLoginCore(token, ct);
+    public async Task<IActionResult> PostLoginPost([FromForm] string? token, [FromForm] string? returnUrl, CancellationToken ct)
+        => await PostLoginCore(token, returnUrl, ct);
 
-    private async Task<IActionResult> PostLoginCore(string? token, CancellationToken ct)
+    private async Task<IActionResult> PostLoginCore(string? token, string? returnUrl, CancellationToken ct)
     {
+        var normalizedReturnUrl = NormalizeReturnUrlOrFallback(returnUrl, string.Empty);
+
         if (!string.IsNullOrWhiteSpace(token))
         {
             _logger.LogInformation("SSO bridge token received for CRM handoff.");
@@ -77,6 +79,10 @@ public class AuthController : Controller
                     Domain = ".vitaloop.today",
                     MaxAge = TimeSpan.FromHours(12)
                 });
+            if (!string.IsNullOrWhiteSpace(normalizedReturnUrl))
+            {
+                return RedirectToAction(nameof(PostLogin), new { returnUrl = normalizedReturnUrl });
+            }
 
             return RedirectToAction(nameof(PostLogin));
         }
@@ -84,6 +90,12 @@ public class AuthController : Controller
         try
         {
             var ctx = await _userContextAccessor.GetOrThrow(ct);
+            if (!string.IsNullOrWhiteSpace(normalizedReturnUrl))
+            {
+                _logger.LogInformation("SSO login succeeded for user {UserId}; redirecting to returnUrl {ReturnUrl}.", ctx.UserId, normalizedReturnUrl);
+                return Redirect(normalizedReturnUrl);
+            }
+
             var destination = _authRedirectService.ResolvePostLoginRedirect(ctx);
             _logger.LogInformation("SSO login succeeded for user {UserId}; redirecting to {Destination}.", ctx.UserId, destination);
             return Redirect(destination);
@@ -97,8 +109,8 @@ public class AuthController : Controller
                 Path = "/"
             });
 
-            var returnUrl = Url.Action(nameof(PostLogin), "Auth") ?? "/auth/post-login";
-            return Redirect(BuildFrontendLoginUrl(returnUrl));
+            var loginReturnUrl = Url.Action(nameof(PostLogin), "Auth") ?? "/auth/post-login";
+            return Redirect(BuildFrontendLoginUrl(loginReturnUrl));
         }
     }
 

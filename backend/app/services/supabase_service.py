@@ -832,6 +832,47 @@ async def get_all_users_for_admin(limit: int = 200) -> List[Dict]:
     return resp.data or []
 
 
+async def get_platform_overview() -> Dict[str, Any]:
+    """Multi-org platform aggregation for super-admin dashboards."""
+    supabase = _get_supabase()
+    cutoff_24h = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+
+    users_total_resp = await _run(lambda: supabase.table("users").select("id", count="exact").execute())
+    org_total_resp = await _run(lambda: supabase.table("organizations").select("id", count="exact").execute())
+
+    active_programs_resp = await _run(
+        lambda: supabase.table("practitioner_assignments")
+        .select("id", count="exact")
+        .eq("status", "active")
+        .execute()
+    )
+
+    registrations_24h_resp = await _run(
+        lambda: supabase.table("users")
+        .select("id", count="exact")
+        .gte("created_at", cutoff_24h)
+        .execute()
+    )
+
+    return {
+        "total_users": users_total_resp.count or len(users_total_resp.data),
+        "total_organizations": org_total_resp.count or len(org_total_resp.data),
+        "active_programs": active_programs_resp.count or len(active_programs_resp.data),
+        "new_registrations_24h": registrations_24h_resp.count or len(registrations_24h_resp.data),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+async def get_audit_logs(limit: int = 200, organization_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Return latest platform audit events for Ops visibility."""
+    supabase = _get_supabase()
+    query = supabase.table("audit_logs").select("*").order("timestamp", desc=True).limit(limit)
+    if organization_id:
+        query = query.eq("organization_id", organization_id)
+    resp = await _run(lambda: query.execute())
+    return resp.data or []
+
+
 async def get_admin_user_detail(user_id: str) -> Dict[str, Any]:
     supabase = _get_supabase()
     user_resp, profile_resp, location_resp, complaints_resp, checkins_resp, uploads_resp, red_flags_resp, timeline_resp = \

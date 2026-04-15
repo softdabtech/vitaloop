@@ -17,10 +17,14 @@ public interface ICrmDataGateway
     Task<IReadOnlyList<Invitation>> GetInvitations(Guid orgId, CancellationToken ct = default);
     Task<Invitation?> CreateInvite(Guid orgId, string email, string role, CancellationToken ct = default);
     Task RevokeInvite(Guid orgId, Guid invitationId, CancellationToken ct = default);
+    Task AcceptInvite(string token, CancellationToken ct = default);
 
     Task<IReadOnlyList<Assignment>> GetAssignments(Guid orgId, CancellationToken ct = default);
     Task Assign(Guid orgId, Guid clientId, Guid practitionerId, CancellationToken ct = default);
     Task Reassign(Guid orgId, Guid assignmentId, Guid practitionerId, CancellationToken ct = default);
+    Task UpdateAssignment(Guid orgId, Guid assignmentId, string? status, string? notes, CancellationToken ct = default);
 
     Task<IReadOnlyList<GlobalUser>> GetGlobalUsers(CancellationToken ct = default);
+    Task<PlatformOverview?> GetPlatformOverview(CancellationToken ct = default);
+    Task<IReadOnlyList<AuditLogEntry>> GetAuditLogs(Guid? organizationId = null, int limit = 200, CancellationToken ct = default);
 }

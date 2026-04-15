@@ -1,0 +1,44 @@
+@model PractitionerClientsPageViewModel
+@{
+  ViewData["Title"] = "My Clients";
+  Layout = "_CrmLayout";
+}
+
+@await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
+@await Html.PartialAsync("~/Views/Shared/Partials/_PageHeader.cshtml", new PageHeaderViewModel {
+  Title = "My Clients",
+  Subtitle = "Only clients assigned to you",
+  Eyebrow = "Practitioner"
+})
+
+@await Html.PartialAsync("~/Views/Shared/Ui/_DataTableShell.cshtml", new DataTableShellViewModel {
+  Title = "Assigned Clients",
+  Columns = new[] { "Client", "Status", "Last Updated", "Profile" },
+  EmptyMessage = "No clients assigned yet.",
+  Rows = Model.Clients
+    .Select(c => (IReadOnlyList<string>)new[] {
+      c.ClientName,
+      string.IsNullOrWhiteSpace(c.Status) ? "active" : c.Status,
+      c.UpdatedAt == default ? "-" : c.UpdatedAt.ToString("yyyy-MM-dd HH:mm"),
+      $"/practitioner/clients/{c.Id}",
+    })
+    .ToList()
+})
+
+@if (Model.Clients.Any())
+{
+  <div style="margin-top:var(--vo-space-4)">
+    <ul style="list-style:none;padding:0;margin:0;display:grid;gap:12px;">
+      @foreach (var client in Model.Clients)
+      {
+        <li style="display:flex;justify-content:space-between;align-items:center;border:1px solid var(--vo-gray-200);border-radius:12px;padding:12px 14px;background:#fff;">
+          <div>
+            <div style="font-weight:600">@client.ClientName</div>
+            <div style="font-size:12px;color:var(--vo-gray-500)">Status: @client.Status</div>
+          </div>
+          <a class="vo-btn vo-btn-primary" href="/practitioner/clients/@client.Id">Open Profile</a>
+        </li>
+      }
+    </ul>
+  </div>
+}

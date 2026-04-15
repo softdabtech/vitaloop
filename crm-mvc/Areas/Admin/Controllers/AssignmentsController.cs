@@ -63,11 +63,14 @@ public class AssignmentsController : Controller
                     .Select(a => new AssignmentViewModel
                     {
                         Id = a.Id,
+                        OrganizationId = a.OrganizationId,
                         ClientId = a.ClientId,
                         ClientName = a.ClientName,
                         PractitionerId = a.PractitionerId,
                         PractitionerName = a.PractitionerName,
                         Status = a.Status,
+                        Notes = a.Notes,
+                        UpdatedAt = a.UpdatedAt,
                     })
                     .ToList()
             };

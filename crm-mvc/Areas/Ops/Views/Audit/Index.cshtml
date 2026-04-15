@@ -1,0 +1,45 @@
+@model OpsAuditPageViewModel
+@{
+  ViewData["Title"] = "Activity Log";
+}
+
+@await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
+@await Html.PartialAsync("~/Views/Shared/Partials/_PageHeader.cshtml", new PageHeaderViewModel {
+  Title = "Activity Log",
+  Subtitle = "Platform-wide audit events",
+  Eyebrow = "Ops"
+})
+
+<form method="get" class="vo-filter-bar" style="margin-bottom:var(--vo-space-4)">
+  <label>
+    <span>Organization ID</span>
+    <input type="text" name="organizationId" value="@Model.OrganizationId" placeholder="Optional" />
+  </label>
+  <label>
+    <span>Limit</span>
+    <input type="number" name="limit" min="1" max="1000" value="@Model.Limit" />
+  </label>
+  <button type="submit" class="vo-btn vo-btn-primary">Apply</button>
+</form>
+
+@await Html.PartialAsync("~/Views/Shared/Ui/_DataTableShell.cshtml", new DataTableShellViewModel {
+  Title = "Audit Events",
+  Columns = new[] { "When", "Action", "Entity", "Entity Id", "User", "Org" },
+  EmptyMessage = "No audit events found.",
+  Rows = Model.Logs
+    .Select(l => (IReadOnlyList<string>)new[] {
+      l.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"),
+      l.Action,
+      l.EntityType,
+      l.EntityId,
+      l.UserId?.ToString() ?? "-",
+      l.OrganizationId?.ToString() ?? "-",
+    })
+    .ToList()
+})
+
+<script>
+  setTimeout(function () {
+    window.location.reload();
+  }, 15000);
+</script>

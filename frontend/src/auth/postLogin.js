@@ -38,7 +38,12 @@ export function navigateToResolvedPath(_navigate, destination) {
   window.location.assign(destination?.url || destination)
 }
 
-export async function resolvePostLoginDestination() {
+function normalizeReturnUrl(returnUrl) {
+  if (!returnUrl || typeof returnUrl !== 'string') return null
+  return returnUrl.startsWith('/') ? returnUrl : null
+}
+
+export async function resolvePostLoginDestination(returnUrl = null) {
   const { data } = await api.get('/auth/me')
 
   if (!hasSupabaseConfig) {
@@ -52,7 +57,13 @@ export async function resolvePostLoginDestination() {
   }
 
   // Always hand off auth token via the dedicated auth bridge endpoint.
-  const baseTarget = AUTH_POST_LOGIN_PATH
+  const target = new URL(AUTH_POST_LOGIN_PATH)
+  const normalized = normalizeReturnUrl(returnUrl)
+  if (normalized) {
+    target.searchParams.set('returnUrl', normalized)
+  }
+
+  const baseTarget = target.toString()
   return {
     url: baseTarget,
     method: 'POST',

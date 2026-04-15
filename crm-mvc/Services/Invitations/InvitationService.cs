@@ -45,4 +45,14 @@ public sealed class InvitationService
 
         await _gateway.RevokeInvite(orgId, invitationId, ct);
     }
+
+    public async Task AcceptInvite(UserContext userCtx, string token, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            throw new ArgumentException("Invitation token is required.", nameof(token));
+        }
+
+        await _gateway.AcceptInvite(token, ct);
+    }
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
 import { supabase } from '../lib/supabase.js'
 import { navigateToResolvedPath, resolvePostLoginDestination } from '../auth/postLogin.js'
@@ -136,6 +136,7 @@ function AbstractPanel({ side }) {
 export default function Login() {
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword, signOut } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
@@ -216,7 +217,8 @@ export default function Login() {
     }
 
     try {
-      const destination = await resolvePostLoginDestination()
+      const returnUrl = searchParams.get('returnUrl')
+      const destination = await resolvePostLoginDestination(returnUrl)
       navigateToResolvedPath(navigate, destination)
     } catch {
       await signOut()
