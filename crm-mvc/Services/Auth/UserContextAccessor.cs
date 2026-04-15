@@ -136,6 +136,13 @@ public sealed class UserContextAccessor : IUserContextAccessor
     {
         var handler = new JwtSecurityTokenHandler();
 
+        var readToken = handler.ReadJwtToken(token);
+        Console.WriteLine($"[CRM] jwt header alg: {readToken.Header.Alg}");
+        Console.WriteLine($"[CRM] jwt header kid: {readToken.Header.Kid}");
+        Console.WriteLine($"[CRM] jwt payload iss: {readToken.Issuer}");
+        Console.WriteLine($"[CRM] jwt payload aud: {string.Join(',', readToken.Audiences)}");
+        Console.WriteLine($"[CRM] jwt payload sub: {readToken.Subject}");
+
         if (string.IsNullOrWhiteSpace(_authOptions.Issuer))
         {
             throw new SecurityTokenException("Auth:Issuer must be configured for JWT validation.");
@@ -160,6 +167,7 @@ public sealed class UserContextAccessor : IUserContextAccessor
 
         if (!string.IsNullOrWhiteSpace(_authOptions.JwtSecret))
         {
+            Console.WriteLine("[CRM] jwt validation branch: HS256 JwtSecret");
             validations.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_authOptions.JwtSecret.Trim()));
         }
         else
@@ -169,10 +177,22 @@ public sealed class UserContextAccessor : IUserContextAccessor
                 throw new SecurityTokenException("Auth:JwtSecret or Auth:JwtPublicKey must be configured for JWT validation.");
             }
 
+            Console.WriteLine("[CRM] jwt validation branch: JwtPublicKey");
             validations.IssuerSigningKey = BuildSigningKey(_authOptions.JwtPublicKey);
         }
 
-        var principal = handler.ValidateToken(token, validations, out var validatedToken);
+        ClaimsPrincipal principal;
+        SecurityToken validatedToken;
+        try
+        {
+            principal = handler.ValidateToken(token, validations, out validatedToken);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CRM] jwt validation exception: {ex.GetType().Name}: {ex.Message}");
+            throw;
+        }
+
         if (validatedToken is not JwtSecurityToken jwt)
         {
             throw new SecurityTokenException("Validated token is not JWT.");
