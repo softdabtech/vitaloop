@@ -27,6 +27,7 @@ import NotFound from './pages/NotFound.jsx'
 import { useAuth } from './hooks/useAuth.js'
 import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
 import { useEffect, useState } from 'react'
+import api from './lib/api.js'
 import SupportChat from './components/SupportChat.jsx'
 
 function ScrollToTop() {
@@ -51,6 +52,58 @@ function CRMRoute({ children, needsOps = false }) {
   return children
 }
 
+function EndUserFlowRoute({ children, allowBeforeOnboarding = false }) {
+  const { user, loading } = useAuth()
+  const [checking, setChecking] = useState(true)
+  const [requiresOnboarding, setRequiresOnboarding] = useState(false)
+
+  useEffect(() => {
+    let active = true
+
+    async function resolveContext() {
+      if (!user) {
+        if (active) {
+          setRequiresOnboarding(false)
+          setChecking(false)
+        }
+        return
+      }
+
+      try {
+        const { data } = await api.get('/auth/me')
+        const role = String(data?.user?.global_role || data?.global_role || '').toLowerCase()
+        const onboardingCompleted = Boolean(data?.user?.onboarding_completed ?? data?.onboarding_completed)
+        const needs = role === 'end_user' && !onboardingCompleted
+
+        if (active) {
+          setRequiresOnboarding(needs)
+        }
+      } catch {
+        if (active) {
+          // Fail open for non-critical context errors.
+          setRequiresOnboarding(false)
+        }
+      } finally {
+        if (active) {
+          setChecking(false)
+        }
+      }
+    }
+
+    resolveContext()
+
+    return () => {
+      active = false
+    }
+  }, [user])
+
+  if (loading || checking) return <div className="flex items-center justify-center h-screen">Loading…</div>
+  if (requiresOnboarding && !allowBeforeOnboarding) return <Navigate to="/onboarding" replace />
+  if (!requiresOnboarding && allowBeforeOnboarding) return <Navigate to="/dashboard" replace />
+
+  return children
+}
+
 export default function App() {
   const [chatOpen, setChatOpen] = useState(false)
 
@@ -65,12 +118,12 @@ export default function App() {
         <Route path="/terms" element={<Terms />} />
         <Route path="/login" element={<Login />} />
         <Route path="/auth/confirmation" element={<EmailConfirmation />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
-        <Route path="/results/:uploadId" element={<ProtectedRoute><Results /></ProtectedRoute>} />
-        <Route path="/avatar" element={<ProtectedRoute><Avatar /></ProtectedRoute>} />
-        <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><EndUserFlowRoute><Dashboard /></EndUserFlowRoute></ProtectedRoute>} />
+        <Route path="/upload" element={<ProtectedRoute><EndUserFlowRoute><Upload /></EndUserFlowRoute></ProtectedRoute>} />
+        <Route path="/results/:uploadId" element={<ProtectedRoute><EndUserFlowRoute><Results /></EndUserFlowRoute></ProtectedRoute>} />
+        <Route path="/avatar" element={<ProtectedRoute><EndUserFlowRoute><Avatar /></EndUserFlowRoute></ProtectedRoute>} />
+        <Route path="/progress" element={<ProtectedRoute><EndUserFlowRoute><Progress /></EndUserFlowRoute></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><EndUserFlowRoute><Settings /></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><ClientAdmin /></ProtectedRoute>} />
         <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
         <Route path="/admin/dashboard" element={<ProtectedRoute><CRMRoute><OpsDashboard /></CRMRoute></ProtectedRoute>} />
@@ -80,9 +133,9 @@ export default function App() {
         <Route path="/crm/clients/:id" element={<ProtectedRoute><CRMRoute><CRMClientDetails /></CRMRoute></ProtectedRoute>} />
         <Route path="/crm/practitioners" element={<ProtectedRoute><CRMRoute><CRMPractitioners /></CRMRoute></ProtectedRoute>} />
         <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
-        <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-        <Route path="/checkin" element={<ProtectedRoute><WeeklyCheckIn /></ProtectedRoute>} />
-        <Route path="/timeline" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
+        <Route path="/onboarding" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Onboarding /></EndUserFlowRoute></ProtectedRoute>} />
+        <Route path="/checkin" element={<ProtectedRoute><EndUserFlowRoute><WeeklyCheckIn /></EndUserFlowRoute></ProtectedRoute>} />
+        <Route path="/timeline" element={<ProtectedRoute><EndUserFlowRoute><Insights /></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/404.html" element={<NotFound />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
