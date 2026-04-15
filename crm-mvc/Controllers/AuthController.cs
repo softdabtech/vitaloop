@@ -108,10 +108,10 @@ public class AuthController : Controller
             _logger.LogInformation("SSO login succeeded for user {UserId}; redirecting to {Destination}.", ctx.UserId, destination);
             return Redirect(destination);
         }
-        catch (UnauthorizedAccessException)
+        catch (UnauthorizedAccessException ex)
         {
             Console.WriteLine("[CRM] validation result: failed");
-            Console.WriteLine("[CRM] validation error: UnauthorizedAccessException: User is not authenticated.");
+            Console.WriteLine($"[CRM] validation error: {ex.GetType().Name}: {ex.Message}");
             _logger.LogWarning("SSO login failed: user context unavailable after token handoff.");
             Response.Cookies.Delete(_authOptions.TokenCookieName, new CookieOptions
             {
