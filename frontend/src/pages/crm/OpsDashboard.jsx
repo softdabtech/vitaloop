@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { getPrograms } from '../../api/crmPrograms.js'
 import { getClients } from '../../api/crmClients.js'
 import { getPractitioners } from '../../api/crmPractitioners.js'
+import { getFunnelOverview } from '../../api/crmOps.js'
 import { isNotImplemented } from '../../api/crmClient.js'
 import { useCRMQuery } from '../../hooks/useCRMQuery.js'
 import { useCRMRoleAccess } from '../../hooks/useCRMRoleAccess.js'
@@ -15,10 +16,12 @@ export default function OpsDashboard() {
   const programsQuery = useCallback(() => getPrograms({ limit: 100, offset: 0 }), [])
   const clientsQuery = useCallback(() => getClients({ limit: 100, offset: 0 }), [])
   const practitionersQuery = useCallback(() => getPractitioners(), [])
+  const funnelQuery = useCallback(() => getFunnelOverview({ days: 30 }), [])
 
   const programs = useCRMQuery(programsQuery, [programsQuery], { enabled: canAccessOps })
   const clients = useCRMQuery(clientsQuery, [clientsQuery], { enabled: canAccessOps })
   const practitioners = useCRMQuery(practitionersQuery, [practitionersQuery], { enabled: canAccessOps })
+  const funnel = useCRMQuery(funnelQuery, [funnelQuery], { enabled: canAccessOps })
 
   if (!canAccessOps) {
     return (
@@ -30,6 +33,9 @@ export default function OpsDashboard() {
 
   const criticalError = clients.error || programs.error
   const practitionerNotAvailable = isNotImplemented(practitioners.error)
+  const funnelAvailable = !isNotImplemented(funnel.error) && !!funnel.data
+  const funnelCounts = funnel.data?.counts || {}
+  const funnelRates = funnel.data?.rates || {}
 
   return (
     <CRMLayout title="Ops Dashboard">
@@ -49,6 +55,21 @@ export default function OpsDashboard() {
           />
         </div>
       )}
+
+      <div style={{ marginTop: 16 }}>
+        <CRMPageHeader title="Funnel (30d)" subtitle="B2C conversion milestones from signup to paid" />
+        {funnel.error && !funnelAvailable ? (
+          <CRMErrorState error={funnel.error} onRetry={() => funnel.refetch()} />
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+            <CRMStatCard label="Signups" value={funnelCounts.signup ?? '-'} hint="end_user created in last 30 days" tone="#14b8a6" />
+            <CRMStatCard label="Onboarding Completed" value={funnelCounts.onboarding_completed ?? '-'} hint={`${funnelRates.signup_to_onboarding_pct ?? 0}% from signups`} tone="#22c55e" />
+            <CRMStatCard label="First Upload" value={funnelCounts.first_upload_completed ?? '-'} hint={`${funnelRates.signup_to_first_upload_pct ?? 0}% from signups`} tone="#3b82f6" />
+            <CRMStatCard label="Paywall Seen" value={funnelCounts.paywall_seen ?? '-'} hint={`${funnelRates.paywall_to_paid_pct ?? 0}% to paid`} tone="#f59e0b" />
+            <CRMStatCard label="Paid End Users" value={funnelCounts.paid_total_end_users ?? '-'} hint={`${funnelRates.signup_to_paid_pct ?? 0}% from signups`} tone="#a855f7" />
+          </div>
+        )}
+      </div>
 
       <div style={{ marginTop: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 14 }}>
         <h3 style={{ margin: '0 0 8px', color: '#fff' }}>Lifecycle Signal</h3>
