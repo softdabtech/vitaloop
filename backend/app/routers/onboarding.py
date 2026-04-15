@@ -64,6 +64,7 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
                 "location": True,
                 "complaints": True,
                 "first_upload": True,
+                "questionnaire_completed": True,
                 "onboarding_complete": True,
             },
         }
@@ -83,11 +84,20 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
         .limit(1)
         .execute()
     )
+    questionnaire_resp = await svc._run(
+        lambda: sb.table("questionnaire_sessions")
+        .select("id")
+        .eq("user_id", user_id)
+        .eq("status", "completed")
+        .limit(1)
+        .execute()
+    )
 
     has_profile_basics = _has_profile_basics(profile)
     has_location = _has_location(location)
     has_complaints = bool(complaints_resp.data)
     has_uploads = bool(uploads_resp.data)
+    has_questionnaire = bool(questionnaire_resp.data)
 
     if not has_profile_basics:
         current_stage = "profile"
@@ -97,6 +107,8 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
         current_stage = "complaints"
     elif not has_uploads:
         current_stage = "upload"
+    elif not has_questionnaire:
+        current_stage = "questionnaire"
     else:
         current_stage = "review"
 
@@ -110,6 +122,7 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
             "location": has_location,
             "complaints": has_complaints,
             "first_upload": has_uploads,
+            "questionnaire_completed": has_questionnaire,
             "onboarding_complete": onboarding_completed,
         },
     }

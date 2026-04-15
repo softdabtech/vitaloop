@@ -23,6 +23,7 @@ import EmailConfirmation from './pages/EmailConfirmation.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import WeeklyCheckIn from './pages/WeeklyCheckIn.jsx'
 import Insights from './pages/Insights.jsx'
+import Questionnaire from './pages/Questionnaire.jsx'
 import NotFound from './pages/NotFound.jsx'
 import { useAuth } from './hooks/useAuth.js'
 import { useSubscription } from './hooks/useSubscription.js'
@@ -109,6 +110,7 @@ export default function App() {
         <Route path="/crm/practitioners" element={<ProtectedRoute><CRMRoute><CRMPractitioners /></CRMRoute></ProtectedRoute>} />
         <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
         <Route path="/onboarding" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding redirectIfOnboardingComplete><Onboarding /></EndUserFlowRoute></ProtectedRoute>} />
+        <Route path="/questionnaire" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Questionnaire /></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/checkin" element={<ProtectedRoute><EndUserFlowRoute><PremiumRoute><WeeklyCheckIn /></PremiumRoute></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/timeline" element={<ProtectedRoute><EndUserFlowRoute><PremiumRoute><Insights /></PremiumRoute></EndUserFlowRoute></ProtectedRoute>} />
         <Route path="/404.html" element={<NotFound />} />
