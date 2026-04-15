@@ -290,6 +290,16 @@ async def resolve_practitioner_list_scope(
     if user_context.is_super_admin:
         return {"scope": "all"}
 
+    if user_context.global_role == "practitioner":
+        return {"scope": "self", "user_id": str(user_context.user_id)}
+
+    admin_like_roles = {"org_admin", "org_owner", "client_admin", "manager"}
+    if user_context.global_role not in admin_like_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient role to list practitioners",
+        )
+
     try:
         sb = svc._get_supabase()
 
@@ -334,22 +344,19 @@ async def resolve_practitioner_list_scope(
                 detail="Organization admin has no active organization memberships",
             )
 
-        if user_context.global_role == "practitioner":
-            return {"scope": "self", "user_id": str(user_context.user_id)}
-
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient role to list practitioners",
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     except HTTPException:
         raise
     except Exception as e:
-        if _is_missing_org_members_table_error(e):
+        if user_context.global_role == "org_admin" or _is_missing_org_members_table_error(e):
             # Safe fallback until PostgREST schema cache includes organization_members.
-            if user_context.global_role == "practitioner":
-                return {"scope": "self", "user_id": str(user_context.user_id)}
-            if user_context.global_role == "org_admin":
-                return {"scope": "org", "organization_ids": [], "user_ids": []}
+            logger.warning(
+                "Organization membership lookup unavailable for user %s (role=%s): %s. Returning empty org scope.",
+                user_context.user_id,
+                user_context.global_role,
+                e,
+            )
+            return {"scope": "org", "organization_ids": [], "user_ids": []}
 
         logger.error("Practitioner scope resolution failed for user %s: %s", user_context.user_id, e, exc_info=True)
         raise HTTPException(
