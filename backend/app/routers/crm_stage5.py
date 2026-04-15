@@ -51,6 +51,7 @@ from app.dependencies_crm import (
     get_org_context,
     require_org_admin,
     require_client_access,
+    resolve_practitioner_list_scope,
 )
 from app.services.crm_service import (
     ClientService,
@@ -243,18 +244,39 @@ async def get_practitioner(
 async def list_practitioners(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    user_context: UserContext = Depends(require_super_admin),
+    practitioner_scope: dict = Depends(resolve_practitioner_list_scope),
 ):
     """
-    List practitioners for CRM table view.
-    Super admin scope.
+    List practitioners with role-aware visibility.
+
+    - super_admin/admin: all practitioners
+    - org admin-like: practitioners in same organization(s)
+    - practitioner: own practitioner profile
     """
     try:
-        practitioners, total = await practitioner_service.list_practitioners(limit=limit, offset=offset)
+        scope = practitioner_scope.get("scope")
+
+        if scope == "all":
+            practitioners, total = await practitioner_service.list_practitioners(limit=limit, offset=offset)
+        elif scope == "org":
+            practitioners, total = await practitioner_service.list_practitioners_by_user_ids(
+                user_ids=practitioner_scope.get("user_ids", []),
+                limit=limit,
+                offset=offset,
+            )
+        elif scope == "self":
+            own = await practitioner_service.get_practitioner_for_user(UUID(practitioner_scope["user_id"]))
+            practitioners = [own] if own else []
+            total = len(practitioners)
+        else:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
         return PractitionerListResponse(
             items=[PractitionerResponse(**p) for p in practitioners],
             total=total,
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"List practitioners failed: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch practitioners")

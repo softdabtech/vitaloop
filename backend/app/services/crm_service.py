@@ -172,8 +172,18 @@ class PractitionerService:
         return await self.repo.get_by_id(practitioner_id)
 
     async def list_practitioners(self, limit: int = 100, offset: int = 0) -> tuple[List[Dict[str, Any]], int]:
-        """List practitioner summaries for CRM table view."""
+        """List practitioners for CRM table view."""
         return await self.repo.get_all_summary(limit=limit, offset=offset)
+
+    async def list_practitioners_by_user_ids(
+        self, user_ids: List[str], limit: int = 100, offset: int = 0
+    ) -> tuple[List[Dict[str, Any]], int]:
+        """List practitioners constrained to specific user IDs."""
+        return await self.repo.get_by_user_ids(user_ids=user_ids, limit=limit, offset=offset)
+
+    async def get_practitioner_for_user(self, user_id: UUID) -> Optional[Dict[str, Any]]:
+        """Return practitioner profile for a specific auth user."""
+        return await self.repo.get_by_user_id_summary(user_id)
 
     async def assign_to_client(
         self, client_id: UUID, practitioner_id: UUID, assigner_user_id: Optional[UUID] = None

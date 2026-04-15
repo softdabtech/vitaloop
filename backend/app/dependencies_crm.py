@@ -268,3 +268,79 @@ async def require_client_access(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Authorization check failed",
         )
+
+
+async def resolve_practitioner_list_scope(
+    user_context: UserContext = Depends(get_user_context),
+) -> Dict[str, Any]:
+    """
+    Resolve practitioner list visibility scope.
+
+    Rules:
+    - super_admin/admin: all practitioners
+    - org admin-like member (org_owner/client_admin/manager/org_admin): practitioners in same org(s)
+    - practitioner: own practitioner profile only
+    - otherwise: forbidden
+    """
+    if user_context.is_super_admin:
+        return {"scope": "all"}
+
+    try:
+        sb = svc._get_supabase()
+
+        memberships_resp = await svc._run(
+            lambda: sb.table("organization_members")
+            .select("organization_id, role, org_role, status")
+            .eq("user_id", str(user_context.user_id))
+            .execute()
+        )
+        memberships = memberships_resp.data or []
+
+        admin_roles = {"org_owner", "client_admin", "manager", "org_admin"}
+        admin_org_ids = {
+            str(row.get("organization_id"))
+            for row in memberships
+            if str((row.get("status") or "active")).lower() == "active"
+            and str((row.get("role") or row.get("org_role") or "")).lower() in admin_roles
+            and row.get("organization_id")
+        }
+
+        if admin_org_ids:
+            members_resp = await svc._run(
+                lambda: sb.table("organization_members")
+                .select("organization_id,user_id,status")
+                .in_("organization_id", list(admin_org_ids))
+                .execute()
+            )
+            visible_user_ids = {
+                str(row.get("user_id"))
+                for row in (members_resp.data or [])
+                if str((row.get("status") or "active")).lower() == "active" and row.get("user_id")
+            }
+            return {
+                "scope": "org",
+                "organization_ids": sorted(admin_org_ids),
+                "user_ids": sorted(visible_user_ids),
+            }
+
+        if user_context.global_role == "org_admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Organization admin has no active organization memberships",
+            )
+
+        if user_context.global_role == "practitioner":
+            return {"scope": "self", "user_id": str(user_context.user_id)}
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient role to list practitioners",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Practitioner scope resolution failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authorization check failed",
+        )
