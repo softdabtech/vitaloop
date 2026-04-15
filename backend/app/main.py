@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import HTTPException
 from fastapi.exceptions import RequestValidationError
-from app.config import settings
 from app.errors import http_exception_handler, validation_exception_handler
 from app.routers import (
     analyze, protocol, progress, health, symptoms, stripe_router, admin,
@@ -18,9 +17,16 @@ app = FastAPI(
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
+origins = [
+    "https://vitaloop.today",
+    "https://www.vitaloop.today",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.origins_list,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
