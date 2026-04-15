@@ -214,13 +214,7 @@ export default function Login() {
     }
 
     if (isSignUp) {
-      // data.session is non-null when Supabase "Confirm email" is OFF — go straight to onboarding.
-      if (authData?.session) {
-        navigate('/onboarding', { replace: true })
-      } else {
-        toast.success('Account created. Confirm email to continue.')
-        navigate(`/auth/confirmation?pending=1&email=${encodeURIComponent(normalizedEmail)}`, { replace: true })
-      }
+      navigate('/onboarding', { replace: true })
       return
     }
 
