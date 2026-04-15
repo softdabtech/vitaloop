@@ -136,7 +136,7 @@ export default function AvatarSection() {
 
         <div className="reveal" style={{ textAlign: 'center', marginTop: 52 }}>
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/login?signup=true')}
             style={{
               background: 'var(--teal-500)',
               color: 'white',
@@ -150,7 +150,6 @@ export default function AvatarSection() {
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--teal-300)'; e.currentTarget.style.transform = 'scale(1.02)' }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal-500)'; e.currentTarget.style.transform = 'scale(1)' }}
-            onClick={() => navigate('/login?signup=true')}
           >
             Start your assessment
           </button>
