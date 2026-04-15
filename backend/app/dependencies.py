@@ -15,6 +15,7 @@ from app.config import settings
 
 _bearer = HTTPBearer(auto_error=False)
 logger = logging.getLogger("auth.jwt")
+logger.setLevel(logging.INFO)
 
 
 def _last_trace_line(exc: Exception) -> str:
