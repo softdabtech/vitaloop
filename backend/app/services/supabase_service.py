@@ -1,12 +1,16 @@
 import asyncio
+import logging
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
+import httpx
 from supabase import create_client, Client
 from app.config import settings
 from typing import List, Dict, Any, Optional
 
 _supabase: Optional[Client] = None
+_use_rest_auth_context = False
+_logger = logging.getLogger(__name__)
 
 SYMPTOM_ZONE_MAP: Dict[str, List[str]] = {
     "brain": ["brain_fog", "poor_concentration", "mood_swings", "depression", "anxiety"],
@@ -45,12 +49,89 @@ def _run(fn):
     return asyncio.to_thread(fn)
 
 
+def _clean(value: str) -> str:
+    return (value or "").strip()
+
+
+def _is_sb_secret_key(value: str) -> bool:
+    return _clean(value).startswith("sb_secret_")
+
+
+def _rest_headers() -> Dict[str, str]:
+    key = _clean(settings.supabase_service_key)
+    return {
+        "apikey": key,
+        "Authorization": f"Bearer {key}",
+    }
+
+
+def _rest_select_first_by_id(table: str, columns: str, user_id: str) -> Dict[str, Any]:
+    base_url = _clean(settings.supabase_url).rstrip("/")
+    if not base_url:
+        return {}
+
+    url = f"{base_url}/rest/v1/{table}"
+    params = {
+        "select": columns,
+        "id": f"eq.{user_id}",
+        "limit": "1",
+    }
+
+    with httpx.Client(timeout=20.0) as client:
+        response = client.get(url, headers=_rest_headers(), params=params)
+        response.raise_for_status()
+        data = response.json()
+
+    if isinstance(data, list) and data:
+        return data[0]
+    return {}
+
+
+async def _select_first_by_id_with_fallback(table: str, columns: str, user_id: str) -> Dict[str, Any]:
+    global _use_rest_auth_context
+
+    if _use_rest_auth_context:
+        return await _run(lambda: _rest_select_first_by_id(table, columns, user_id))
+
+    try:
+        supabase = _get_supabase()
+        response = await _run(
+            lambda: supabase.table(table)
+            .select(columns)
+            .eq("id", user_id)
+            .limit(1)
+            .execute()
+        )
+        return response.data[0] if response.data else {}
+    except RuntimeError as ex:
+        if str(ex) == "SUPABASE_SDK_INVALID_API_KEY_FOR_SB_SECRET":
+            _use_rest_auth_context = True
+            _logger.warning("Supabase SDK rejected sb_secret key; using REST fallback for auth context queries.")
+            return await _run(lambda: _rest_select_first_by_id(table, columns, user_id))
+        raise
+    except Exception as ex:
+        # Defensive fallback if validation is raised later in the SDK call chain.
+        if _is_sb_secret_key(settings.supabase_service_key) and "Invalid API key" in str(ex):
+            _use_rest_auth_context = True
+            _logger.warning("Supabase SDK invalid key at runtime; using REST fallback for auth context queries.")
+            return await _run(lambda: _rest_select_first_by_id(table, columns, user_id))
+        raise
+
+
 def _get_supabase() -> Client:
     global _supabase
     if _supabase is None:
-        if not settings.supabase_url or not settings.supabase_service_key:
+        supabase_url = _clean(settings.supabase_url)
+        supabase_key = _clean(settings.supabase_service_key)
+        if not supabase_url or not supabase_key:
             raise RuntimeError("Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_KEY.")
-        _supabase = create_client(settings.supabase_url, settings.supabase_service_key)
+        try:
+            _supabase = create_client(supabase_url, supabase_key)
+        except Exception as ex:
+            # supabase-py versions that don't yet accept sb_secret_* should fall back to REST in auth context calls.
+            if _is_sb_secret_key(supabase_key) and "Invalid API key" in str(ex):
+                raise RuntimeError("SUPABASE_SDK_INVALID_API_KEY_FOR_SB_SECRET") from ex
+            raise
     return _supabase
 
 
@@ -303,15 +384,7 @@ async def get_user_by_stripe_sub(sub_id: str) -> Optional[Dict]:
 
 
 async def get_user_account(user_id: str) -> Dict[str, Any]:
-    supabase = _get_supabase()
-    resp = await _run(
-        lambda: supabase.table("users")
-        .select("id, email, full_name, sub_status")
-        .eq("id", user_id)
-        .limit(1)
-        .execute()
-    )
-    return resp.data[0] if resp.data else {}
+    return await _select_first_by_id_with_fallback("users", "id, email, full_name, sub_status", user_id)
 
 
 async def get_user_progress(user_id: str) -> List[Dict]:
@@ -391,15 +464,7 @@ async def get_admin_overview() -> Dict[str, Any]:
 # ──────────────────────────────────────────────
 
 async def get_user_profile(user_id: str) -> Dict[str, Any]:
-    supabase = _get_supabase()
-    resp = await _run(
-        lambda: supabase.table("user_profile")
-        .select("*")
-        .eq("id", user_id)
-        .limit(1)
-        .execute()
-    )
-    return resp.data[0] if resp.data else {}
+    return await _select_first_by_id_with_fallback("user_profile", "*", user_id)
 
 
 async def upsert_user_profile(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
