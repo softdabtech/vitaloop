@@ -203,7 +203,7 @@ export default function Login() {
 
     const fn = isSignUp ? signUpWithEmail : signInWithEmail
     console.log('[STEP 0B] Calling', isSignUp ? 'signUpWithEmail' : 'signInWithEmail')
-    const { error } = await fn(normalizedEmail, password)
+    const { data: authData, error } = await fn(normalizedEmail, password)
     setLoading(false)
     console.log('[STEP 0C] Auth response received:', { hasError: !!error, errorMsg: error?.message })
     if (error) {
@@ -214,10 +214,8 @@ export default function Login() {
     }
 
     if (isSignUp) {
-      // If Supabase auto-confirmed the account (e.g. email confirmation disabled),
-      // the session is active immediately — skip the confirmation waiting page.
-      const { data: sessionData } = await supabase.auth.getSession()
-      if (sessionData?.session?.user) {
+      // data.session is non-null when Supabase "Confirm email" is OFF — go straight to onboarding.
+      if (authData?.session) {
         navigate('/onboarding', { replace: true })
       } else {
         toast.success('Account created. Confirm email to continue.')
