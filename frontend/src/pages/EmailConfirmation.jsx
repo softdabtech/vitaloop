@@ -1,66 +1,107 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
+function resolveEmailConfirmationRedirect() {
+  const configured = import.meta.env.VITE_EMAIL_CONFIRMATION_PATH
+  if (configured && /^https?:\/\//i.test(configured)) {
+    return configured
+  }
+  return `${window.location.origin}/auth/confirmation`
+}
+
 export default function EmailConfirmation() {
   const navigate = useNavigate()
-  const [status, setStatus] = useState('checking') // checking | success | error | expired
+  const [searchParams] = useSearchParams()
+  const [status, setStatus] = useState('checking') // pending | checking | success | error
   const [errorMsg, setErrorMsg] = useState('')
   const [redirecting, setRedirecting] = useState(false)
+  const [resendEmail, setResendEmail] = useState(searchParams.get('email') || '')
+
+  const isPendingMode = searchParams.get('pending') === '1'
 
   useEffect(() => {
     const handleConfirmation = async () => {
+      if (isPendingMode) {
+        setStatus('pending')
+        return
+      }
+
       try {
-        // Supabase automatically processes confirmation hash from URL
-        // getSession() will return the user if hash is valid
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        
-        if (sessionError) {
+        const currentUrl = new URL(window.location.href)
+        const hashParams = new URLSearchParams(currentUrl.hash.replace(/^#/, ''))
+        const code = currentUrl.searchParams.get('code')
+        const tokenHash = currentUrl.searchParams.get('token_hash')
+        const type = currentUrl.searchParams.get('type')
+
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code)
+          if (error) throw error
+        } else if (tokenHash && type) {
+          const { error } = await supabase.auth.verifyOtp({
+            type,
+            token_hash: tokenHash,
+          })
+          if (error) throw error
+        } else if (hashParams.get('access_token')) {
+          // Session may already be populated from hash-based callback.
+          await supabase.auth.getSession()
+        }
+
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        if (userError) {
+          throw userError
+        }
+
+        if (!user) {
           setStatus('error')
-          setErrorMsg('Session error: ' + sessionError.message)
+          setErrorMsg('Не удалось подтвердить email. Ссылка может быть недействительна или истекла.')
           return
         }
 
-        if (!session || !session.user) {
-          setStatus('error')
-          setErrorMsg('No valid session. Confirmation link may have expired.')
-          return
-        }
-
-        if (session.user.email_confirmed_at) {
+        if (user.email_confirmed_at) {
           setStatus('success')
           toast.success('✅ Email confirmed! Redirecting to dashboard...')
           setRedirecting(true)
-          
-          // Give user time to see success message
+
           setTimeout(() => {
             navigate('/dashboard', { replace: true })
           }, 1500)
         } else {
           setStatus('error')
-          setErrorMsg('Email confirmation failed. The link may have expired.')
+          setErrorMsg('Email пока не подтвержден. Проверьте, что открыта актуальная ссылка из письма.')
         }
       } catch (err) {
         console.error('Email confirmation error:', err)
         setStatus('error')
-        setErrorMsg(err.message || 'An unexpected error occurred')
+        setErrorMsg(err.message || 'Произошла ошибка при подтверждении email.')
       }
     }
 
     handleConfirmation()
-  }, [navigate])
+  }, [isPendingMode, navigate])
 
   const handleResend = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user?.email) {
-        throw new Error('Unable to determine email address')
+      const manualEmail = String(resendEmail || '').trim()
+      let targetEmail = manualEmail
+
+      if (!targetEmail) {
+        const { data: { session } } = await supabase.auth.getSession()
+        targetEmail = session?.user?.email || ''
+      }
+
+      if (!targetEmail) {
+        throw new Error('Введите email для повторной отправки')
       }
 
       const { error } = await supabase.auth.resend({
         type: 'signup',
-        email: session.user.email,
+        email: targetEmail,
+        options: {
+          emailRedirectTo: resolveEmailConfirmationRedirect(),
+        },
       })
 
       if (error) throw error
@@ -92,6 +133,65 @@ export default function EmailConfirmation() {
           width: '100%',
         }}
       >
+        {status === 'pending' && (
+          <>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📧</div>
+            <h1 style={{ fontSize: '22px', marginBottom: '8px' }}>Confirm Your Email</h1>
+            <p style={{ color: '#666', marginBottom: '16px' }}>
+              Мы отправили письмо для подтверждения. Откройте ссылку из письма, затем вернитесь сюда.
+            </p>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={resendEmail}
+              onChange={(e) => setResendEmail(e.target.value)}
+              style={{
+                width: '100%',
+                marginBottom: '12px',
+                padding: '10px 12px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                fontSize: '14px',
+                boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={handleResend}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  backgroundColor: '#007AFF',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                }}
+              >
+                Resend Email
+              </button>
+              <button
+                onClick={() => navigate('/login')}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  backgroundColor: '#f0f0f0',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                }}
+              >
+                Back to Login
+              </button>
+            </div>
+          </>
+        )}
+
         {status === 'checking' && (
           <>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
@@ -159,6 +259,21 @@ export default function EmailConfirmation() {
             <p style={{ color: '#999', fontSize: '14px', marginBottom: '24px' }}>
               The confirmation link may have expired. You can request a new one below.
             </p>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={resendEmail}
+              onChange={(e) => setResendEmail(e.target.value)}
+              style={{
+                width: '100%',
+                marginBottom: '12px',
+                padding: '10px 12px',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                fontSize: '14px',
+                boxSizing: 'border-box',
+              }}
+            />
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 onClick={handleResend}
@@ -196,31 +311,7 @@ export default function EmailConfirmation() {
           </>
         )}
 
-        {status === 'expired' && (
-          <>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏰</div>
-            <h1 style={{ fontSize: '20px', marginBottom: '8px' }}>Link Expired</h1>
-            <p style={{ color: '#666', marginBottom: '24px' }}>
-              Your confirmation link has expired. Request a new one to continue.
-            </p>
-            <button
-              onClick={handleResend}
-              style={{
-                width: '100%',
-                padding: '12px 24px',
-                backgroundColor: '#007AFF',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
-                cursor: 'pointer',
-                fontWeight: '600',
-              }}
-            >
-              Resend Confirmation Email
-            </button>
-          </>
-        )}
+        {/* expired state is folded into generic error flow */}
       </div>
     </div>
   )

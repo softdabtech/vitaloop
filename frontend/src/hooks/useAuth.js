@@ -4,6 +4,14 @@ import { AUTH_POST_LOGIN_PATH } from '../auth/postLogin.js'
 
 const CRM_BASE_URL = (import.meta.env.VITE_CRM_BASE_URL || 'https://crm.vitaloop.today').replace(/\/$/, '')
 
+function resolveEmailConfirmationRedirect() {
+  const configured = import.meta.env.VITE_EMAIL_CONFIRMATION_PATH
+  if (configured && /^https?:\/\//i.test(configured)) {
+    return configured
+  }
+  return `${window.location.origin}/auth/confirmation`
+}
+
 export function useAuth() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -31,7 +39,13 @@ export function useAuth() {
     supabase.auth.signInWithPassword({ email, password })
 
   const signUpWithEmail = (email, password) =>
-    supabase.auth.signUp({ email, password })
+    supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: resolveEmailConfirmationRedirect(),
+      },
+    })
 
   const signInWithGoogle = () =>
     supabase.auth.signInWithOAuth({
