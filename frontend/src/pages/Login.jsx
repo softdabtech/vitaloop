@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
+import { supabase } from '../lib/supabase.js'
 import { navigateToResolvedPath, resolvePostLoginDestination } from '../auth/postLogin.js'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
@@ -13,6 +14,45 @@ function isValidEmail(value) {
 
 function hasAnyPasswordSymbol(value) {
   return String(value || '').trim().length >= 1
+}
+
+function resolveEmailConfirmationRedirect() {
+  const configured = import.meta.env.VITE_EMAIL_CONFIRMATION_PATH
+  if (configured && /^https?:\/\//i.test(configured)) {
+    return configured
+  }
+  return `${window.location.origin}/auth/confirmation`
+}
+
+function mapAuthErrorMessage(message) {
+  const raw = String(message || '')
+  const normalized = raw.toLowerCase()
+
+  if (normalized.includes('email not confirmed') || normalized.includes('email_not_confirmed')) {
+    return {
+      text: 'Email не подтвержден. Подтвердите email по ссылке из письма или отправьте письмо повторно.',
+      canResendConfirmation: true,
+    }
+  }
+
+  if (normalized.includes('invalid login credentials')) {
+    return {
+      text: 'Неверный email или пароль. Проверьте данные и попробуйте снова.',
+      canResendConfirmation: false,
+    }
+  }
+
+  if (normalized.includes('too many requests')) {
+    return {
+      text: 'Слишком много попыток входа. Подождите минуту и повторите.',
+      canResendConfirmation: false,
+    }
+  }
+
+  return {
+    text: raw || 'Не удалось выполнить вход. Попробуйте еще раз.',
+    canResendConfirmation: false,
+  }
 }
 
 // Abstract particle art panels
@@ -101,11 +141,40 @@ export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false)
   const [isForgot, setIsForgot] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [honeypot, setHoneypot] = useState('')  // bot trap
+  const [authAlert, setAuthAlert] = useState(null)
+
+  async function handleResendConfirmation(emailToUse) {
+    const targetEmail = String(emailToUse || '').trim()
+    if (!isValidEmail(targetEmail)) {
+      toast.error('Введите корректный email для повторной отправки.')
+      return
+    }
+
+    setResendLoading(true)
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: targetEmail,
+        options: {
+          emailRedirectTo: resolveEmailConfirmationRedirect(),
+        },
+      })
+      if (error) throw error
+      toast.success('Письмо подтверждения отправлено повторно. Проверьте почту.')
+      navigate(`/auth/confirmation?pending=1&email=${encodeURIComponent(targetEmail)}`, { replace: true })
+    } catch (err) {
+      toast.error('Не удалось отправить письмо: ' + (err?.message || 'Unknown error'))
+    } finally {
+      setResendLoading(false)
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
+    setAuthAlert(null)
     // Honeypot check - bots fill hidden fields
     if (honeypot) return
 
@@ -134,13 +203,15 @@ export default function Login() {
     const { error } = await fn(normalizedEmail, password)
     setLoading(false)
     if (error) {
-      toast.error(error.message)
+      const mapped = mapAuthErrorMessage(error.message)
+      setAuthAlert(mapped)
+      toast.error(mapped.text)
       return
     }
 
     if (isSignUp) {
-      toast.success(isSignUp ? 'Account created. Confirm email to continue.' : 'Signed in successfully.')
-      navigate('/login', { replace: true })
+      toast.success('Account created. Confirm email to continue.')
+      navigate(`/auth/confirmation?pending=1&email=${encodeURIComponent(normalizedEmail)}`, { replace: true })
       return
     }
 
@@ -216,6 +287,40 @@ export default function Login() {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+          {authAlert && (
+            <div style={{
+              background: 'rgba(255,99,71,0.12)',
+              border: '0.5px solid rgba(255,99,71,0.35)',
+              borderRadius: 12,
+              padding: '12px 14px',
+              color: 'rgba(255,255,255,0.9)',
+              fontSize: 13,
+              lineHeight: 1.45,
+            }}>
+              <div>{authAlert.text}</div>
+              {authAlert.canResendConfirmation && (
+                <button
+                  type="button"
+                  disabled={resendLoading}
+                  onClick={() => handleResendConfirmation(email)}
+                  style={{
+                    marginTop: 10,
+                    background: 'rgba(29,158,117,0.15)',
+                    border: '0.5px solid rgba(29,158,117,0.45)',
+                    color: '#5DCAA5',
+                    borderRadius: 10,
+                    padding: '8px 10px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: resendLoading ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {resendLoading ? 'Sending…' : 'Resend confirmation email'}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Honeypot - invisible to users, visible to bots */}
           <input

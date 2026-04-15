@@ -87,9 +87,13 @@ After user confirms email, they need to be redirected somewhere.
 ```
 1. In Supabase, still in "Authentication" section
 2. Click "URL Configuration"
-3. Under "Redirect URLs", add:
+3. Set "Site URL" to:
+   https://vitaloop.today
+4. Under "Redirect URLs", add:
    https://vitaloop.today/auth/confirmation
-4. Click "Save"
+   https://vitaloop.today/login
+5. Remove stale URLs that are no longer used for email auth callbacks (for example old /onboarding callback URLs)
+6. Click "Save"
 ```
 
 ### 1.6 Review Email Template (Optional but Recommended)
