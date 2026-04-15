@@ -6,6 +6,7 @@ from app.errors import http_exception_handler, validation_exception_handler
 from app.routers import (
     analyze, protocol, progress, health, symptoms, stripe_router, admin,
     profile, complaints, checkins, timeline, insights, red_flags, notifications, auth, crm,
+    crm_stage5,
 )
 
 app = FastAPI(
@@ -39,6 +40,7 @@ app.include_router(progress.router, prefix="/progress", tags=["progress"])
 app.include_router(symptoms.router, prefix="/symptoms", tags=["symptoms"])
 app.include_router(stripe_router.router, prefix="/stripe", tags=["stripe"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
+app.include_router(crm_stage5.router, tags=["crm-stage5"])
 app.include_router(crm.router, prefix="/admin", tags=["crm"])
 app.include_router(profile.router, prefix="/profile", tags=["profile"])
 app.include_router(complaints.router, prefix="/complaints", tags=["complaints"])
