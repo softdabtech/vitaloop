@@ -191,12 +191,15 @@ class PractitionerRepository(BaseRepository):
             return []
 
     async def get_all_summary(self, limit: int = 100, offset: int = 0) -> tuple[List[Dict[str, Any]], int]:
-        """Get practitioner summaries used by CRM list endpoint."""
+        """Get practitioner list rows used by CRM list endpoint."""
         try:
             sb = svc._get_supabase()
             resp = await svc._run(
                 lambda: sb.table("practitioners")
-                .select("id,user_id,specialization,status,current_clients,max_clients", count="exact")
+                .select(
+                    "id,user_id,specialization,bio,status,availability,current_clients,max_clients,created_at",
+                    count="exact",
+                )
                 .order("created_at", desc=True)
                 .range(offset, offset + limit - 1)
                 .execute()
@@ -205,6 +208,46 @@ class PractitionerRepository(BaseRepository):
         except Exception as e:
             logger.error(f"Error fetching practitioner summary list: {e}")
             return [], 0
+
+    async def get_by_user_ids(self, user_ids: List[str], limit: int = 100, offset: int = 0) -> tuple[List[Dict[str, Any]], int]:
+        """Get practitioners scoped to a list of user IDs."""
+        ids = [str(uid) for uid in set(user_ids or []) if uid]
+        if not ids:
+            return [], 0
+
+        try:
+            sb = svc._get_supabase()
+            resp = await svc._run(
+                lambda: sb.table("practitioners")
+                .select(
+                    "id,user_id,specialization,bio,status,availability,current_clients,max_clients,created_at",
+                    count="exact",
+                )
+                .in_("user_id", ids)
+                .order("created_at", desc=True)
+                .range(offset, offset + limit - 1)
+                .execute()
+            )
+            return resp.data or [], resp.count or 0
+        except Exception as e:
+            logger.error(f"Error fetching practitioners by user ids: {e}")
+            return [], 0
+
+    async def get_by_user_id_summary(self, user_id: UUID) -> Optional[Dict[str, Any]]:
+        """Get one practitioner row for specific user_id with list fields."""
+        try:
+            sb = svc._get_supabase()
+            resp = await svc._run(
+                lambda: sb.table("practitioners")
+                .select("id,user_id,specialization,bio,status,availability,current_clients,max_clients,created_at")
+                .eq("user_id", str(user_id))
+                .limit(1)
+                .execute()
+            )
+            return resp.data[0] if resp.data else None
+        except Exception as e:
+            logger.error(f"Error fetching practitioner summary by user_id {user_id}: {e}")
+            return None
 
 
 class ProgramRepository(BaseRepository):
