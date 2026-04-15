@@ -45,9 +45,46 @@ export default function Onboarding() {
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
 
+  // Org-setup state (shown before health-profile steps when user has no org)
+  const [orgCheckDone, setOrgCheckDone] = useState(false)
+  const [needsOrg, setNeedsOrg] = useState(false)
+  const [orgName, setOrgName] = useState('')
+  const [orgSaving, setOrgSaving] = useState(false)
+
   const [profile, setProfile] = useState({ height_cm: '', weight_kg: '', goals: [], current_supplements: '', current_medications: '', prior_diagnoses: '' })
   const [location, setLocation] = useState({ city: '', state: '', country: '', district: '' })
   const [complaints, setComplaints] = useState([{ complaint: '', duration_description: '', tried_interventions: '' }])
+
+  // On mount: check if user already belongs to an organisation.
+  useEffect(() => {
+    api.get('/auth/me').then(r => {
+      const memberships = r.data?.memberships
+      if (!Array.isArray(memberships) || memberships.length === 0) {
+        setNeedsOrg(true)
+      }
+      setOrgCheckDone(true)
+    }).catch(() => {
+      // If /auth/me fails, show org setup anyway so user is never stuck.
+      setNeedsOrg(true)
+      setOrgCheckDone(true)
+    })
+  }, [])
+
+  const handleCreateOrg = async (e) => {
+    e.preventDefault()
+    const name = orgName.trim()
+    if (!name) { toast.error('Введите название организации.'); return }
+    setOrgSaving(true)
+    try {
+      await api.post('/auth/onboarding/organization', { name })
+      toast.success('Организация создана!')
+      navigate('/admin/dashboard', { replace: true })
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || 'Не удалось создать организацию.')
+    } finally {
+      setOrgSaving(false)
+    }
+  }
 
   useEffect(() => {
     api.get('/profile').then(r => {
@@ -113,6 +150,45 @@ export default function Onboarding() {
   return (
     <div style={s.wrap}>
       <motion.div style={s.card} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
+
+        {/* ── Org-setup screen (shown only before health profile, when user has no org) ── */}
+        {!orgCheckDone && (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid #1d9e75', borderTopColor: 'transparent', margin: '0 auto', animation: 'spin 0.7s linear infinite' }} />
+            <div style={{ marginTop: 16, color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>Загружаем данные...</div>
+          </div>
+        )}
+
+        {orgCheckDone && needsOrg && (
+          <motion.div key="org-setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <div style={{ textAlign: 'center', marginBottom: 8 }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>👋</div>
+              <div style={s.title}>Добро пожаловать!</div>
+              <div style={s.sub}>Как назовём вашу организацию?</div>
+            </div>
+            <form onSubmit={handleCreateOrg}>
+              <label>
+                <span style={s.label}>Название организации</span>
+                <input
+                  style={s.input}
+                  type="text"
+                  placeholder="Например: HealthFirst Clinic"
+                  value={orgName}
+                  onChange={e => setOrgName(e.target.value)}
+                  autoFocus
+                  maxLength={120}
+                />
+              </label>
+              <button type="submit" style={{ ...s.btnPrimary, opacity: orgSaving ? 0.6 : 1 }} disabled={orgSaving}>
+                {orgSaving ? 'Создаём...' : 'Создать и войти в CRM →'}
+              </button>
+            </form>
+          </motion.div>
+        )}
+
+        {/* ── Health-profile steps (shown when user already has an org) ── */}
+        {orgCheckDone && !needsOrg && (
+          <>
         {/* Progress bar */}
         <div style={s.progress}>
           {steps.map((_, i) => <div key={i} style={s.dot(i === step, i < step)} />)}
@@ -227,6 +303,8 @@ export default function Onboarding() {
         <div style={{ textAlign: 'center', marginTop: 16 }}>
           <button style={s.btnSec} onClick={() => navigate('/dashboard')}>Skip for now</button>
         </div>
+          </>
+        )}
       </motion.div>
     </div>
   )
