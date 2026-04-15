@@ -15,6 +15,11 @@ from app.services import supabase_service as svc
 logger = logging.getLogger("crm.dependencies")
 
 
+def _is_missing_org_members_table_error(ex: Exception) -> bool:
+    message = str(ex)
+    return "PGRST205" in message and "organization_members" in message
+
+
 class UserContext:
     """Resolved user context with role information."""
 
@@ -60,7 +65,7 @@ async def get_user_context(jwt_payload: dict = Depends(get_current_user)) -> Use
             else:
                 global_role = "end_user"
         except Exception as e:
-            logger.warning(f"Failed to fetch global_role for {user_id}: {e}")
+            logger.warning("Failed to fetch global_role for %s: %s", user_id, e, exc_info=True)
             global_role = "end_user"
 
     return UserContext(user_id, global_role, jwt_payload)
@@ -339,8 +344,15 @@ async def resolve_practitioner_list_scope(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Practitioner scope resolution failed: {e}")
+        if _is_missing_org_members_table_error(e):
+            # Safe fallback until PostgREST schema cache includes organization_members.
+            if user_context.global_role == "practitioner":
+                return {"scope": "self", "user_id": str(user_context.user_id)}
+            if user_context.global_role == "org_admin":
+                return {"scope": "org", "organization_ids": [], "user_ids": []}
+
+        logger.error("Practitioner scope resolution failed for user %s: %s", user_context.user_id, e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Authorization check failed",
+            detail="Failed to resolve practitioner visibility scope",
         )

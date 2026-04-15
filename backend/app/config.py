@@ -5,6 +5,7 @@ from typing import List
 
 class Settings(BaseSettings):
     supabase_url: str = ""
+    supabase_service_role_key: str = ""
     supabase_service_key: str = ""
     supabase_jwt_secret: str = ""  # Legacy HS256 (leave empty if using ES256)
     supabase_jwt_public_key_jwk: str = ""  # ES256 EC public key as JWK JSON string
@@ -45,6 +46,11 @@ class Settings(BaseSettings):
     @property
     def active_abacus_ai_model(self) -> str:
         return self.abacus_ai_model or self.routellm_model or "route-llm"
+
+    @property
+    def active_supabase_service_key(self) -> str:
+        """Prefer service role key; keep legacy key as fallback during migration."""
+        return self.supabase_service_role_key or self.supabase_service_key
 
     model_config = SettingsConfigDict(
         env_file=".env",
