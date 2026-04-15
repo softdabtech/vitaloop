@@ -39,13 +39,7 @@ export function useAuth() {
     supabase.auth.signInWithPassword({ email, password })
 
   const signUpWithEmail = (email, password) =>
-    supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: resolveEmailConfirmationRedirect(),
-      },
-    })
+    supabase.auth.signUp({ email, password })
 
   const signInWithGoogle = () =>
     supabase.auth.signInWithOAuth({
