@@ -39,14 +39,22 @@ Production backend path:
 - `/var/www/VITALOOP/backend`
 - Service: `vitaloop-backend`
 - Unit file: `/etc/systemd/system/vitaloop-backend.service`
+- Canonical env file: `/etc/vitaloop/backend.env` (server-managed, not in repo)
+- App-local env path: `/var/www/VITALOOP/backend/.env` (must be a symlink to canonical env file)
 
 Deploy/update steps:
 ```bash
 ssh root@159.65.252.227
-cd /var/www/VITALOOP/backend
-git pull
-.venv/bin/pip install -r requirements.txt
-systemctl restart vitaloop-backend
+cd /Users/oleksii/projects/vitaloop
+bash scripts/deploy_backend_safe.sh
+```
+
+If running a manual rsync deploy, always exclude server-local secrets:
+```bash
+rsync -az --delete \
+	--exclude='.env' --exclude='.env.*' \
+	--exclude='*.pem' --exclude='*.key' \
+	backend/ root@159.65.252.227:/var/www/VITALOOP/backend/
 ```
 
 Health/log checks:
@@ -76,6 +84,11 @@ Critical current migrations to apply:
 ## 2. Secrets Management
 
 ### 2.1 Backend `.env` variables
+
+Production policy:
+1. Secrets live in `/etc/vitaloop/backend.env`.
+2. `/var/www/VITALOOP/backend/.env` is a symlink only.
+3. Never store production secrets in Git or CI artifacts.
 
 | Variable | Purpose | Rotation Source |
 |---|---|---|
