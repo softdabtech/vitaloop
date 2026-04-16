@@ -211,7 +211,7 @@ export default function UserDashboard() {
             )}
 
             {/* Quick Stats Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+            <div className="dashboard-grid-auto dashboard-stats-grid gap-3 sm:gap-4">
               {loading ? (
                 <>
                   <StatSkeleton />
@@ -255,9 +255,9 @@ export default function UserDashboard() {
             </div>
 
             {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-              {/* Health Trends Chart - Spans 2 columns */}
-              <div className="lg:col-span-2">
+            <div className="dashboard-main-grid gap-4 sm:gap-6">
+              {/* Health Trends Chart */}
+              <div className="dashboard-main-grid__chart">
                 {loading ? (
                   <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
                     <SectionSkeleton rows={4} rowClass="h-14" />
@@ -268,7 +268,7 @@ export default function UserDashboard() {
               </div>
 
               {/* Quick Actions */}
-              <div>
+              <div className="dashboard-main-grid__actions">
                 {loading ? (
                   <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
                     <SectionSkeleton rows={6} rowClass="h-10" />
@@ -279,87 +279,89 @@ export default function UserDashboard() {
               </div>
             </div>
 
-            {/* Assignments Section */}
-            <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-emerald-500" />
-                  Active Assignments
-                </h2>
-                <button
-                  onClick={() => navigate('/assignments')}
-                  className="flex items-center gap-2 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded transition text-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  New
-                </button>
+            <div className="dashboard-grid-auto dashboard-work-grid gap-4 sm:gap-6">
+              {/* Assignments Section */}
+              <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-emerald-500" />
+                    Active Assignments
+                  </h2>
+                  <button
+                    onClick={() => navigate('/assignments')}
+                    className="flex items-center gap-2 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded transition text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    New
+                  </button>
+                </div>
+
+                {loading ? (
+                  <SectionSkeleton rows={4} rowClass="h-20" />
+                ) : assignments.length > 0 ? (
+                  <div className="space-y-3">
+                    {assignments.slice(0, 5).map((assignment) => (
+                        <AssignmentCard
+                          key={assignment.id}
+                          assignment={assignment}
+                          onClick={() => navigate(assignment?.id ? `/assignments/${assignment.id}` : '/assignments')}
+                        />
+                    ))}
+                    {assignments.length > 5 && (
+                      <button
+                        onClick={() => navigate('/assignments')}
+                        className="w-full text-center py-2 text-slate-400 hover:text-emerald-400 transition text-sm"
+                      >
+                        View all {assignments.length} assignments
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-slate-300">No active assignments yet</p>
+                    <p className="text-slate-500 text-sm mt-1">Start with onboarding or upload labs to generate your first task list.</p>
+                  </div>
+                )}
               </div>
 
-              {loading ? (
-                <SectionSkeleton rows={4} rowClass="h-20" />
-              ) : assignments.length > 0 ? (
-                <div className="space-y-3">
-                  {assignments.slice(0, 5).map((assignment) => (
+              {/* Today Focus */}
+              <div className="bg-slate-800 border border-emerald-500/30 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    Today Focus
+                  </h2>
+                  <button
+                    onClick={() => navigate('/assignments')}
+                    className="text-sm text-emerald-300 hover:text-emerald-200 transition"
+                  >
+                    Open planner
+                  </button>
+                </div>
+
+                {loading ? (
+                  <SectionSkeleton rows={3} rowClass="h-20" />
+                ) : todayFocus.length > 0 ? (
+                  <div className="space-y-3">
+                    {todayFocus.map((assignment) => (
                       <AssignmentCard
-                        key={assignment.id}
+                        key={`focus-${assignment.id || assignment.title}`}
                         assignment={assignment}
                         onClick={() => navigate(assignment?.id ? `/assignments/${assignment.id}` : '/assignments')}
                       />
-                  ))}
-                  {assignments.length > 5 && (
-                    <button
-                      onClick={() => navigate('/assignments')}
-                      className="w-full text-center py-2 text-slate-400 hover:text-emerald-400 transition text-sm"
-                    >
-                      View all {assignments.length} assignments
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-slate-300">No active assignments yet</p>
-                  <p className="text-slate-500 text-sm mt-1">Start with onboarding or upload labs to generate your first task list.</p>
-                </div>
-              )}
-            </div>
-
-            {/* Today Focus */}
-            <div className="bg-slate-800 border border-emerald-500/30 rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-emerald-400" />
-                  Today Focus
-                </h2>
-                <button
-                  onClick={() => navigate('/assignments')}
-                  className="text-sm text-emerald-300 hover:text-emerald-200 transition"
-                >
-                  Open planner
-                </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-slate-300 text-sm">No active focus tasks today.</p>
+                    <p className="text-slate-500 text-xs mt-1">Use weekly check-in to generate the next recommended action.</p>
+                  </div>
+                )}
               </div>
-
-              {loading ? (
-                <SectionSkeleton rows={3} rowClass="h-20" />
-              ) : todayFocus.length > 0 ? (
-                <div className="space-y-3">
-                  {todayFocus.map((assignment) => (
-                    <AssignmentCard
-                      key={`focus-${assignment.id || assignment.title}`}
-                      assignment={assignment}
-                      onClick={() => navigate(assignment?.id ? `/assignments/${assignment.id}` : '/assignments')}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div>
-                  <p className="text-slate-300 text-sm">No active focus tasks today.</p>
-                  <p className="text-slate-500 text-xs mt-1">Use weekly check-in to generate the next recommended action.</p>
-                </div>
-              )}
             </div>
 
             {/* Recommendations & Progress Timeline */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div className="dashboard-grid-auto dashboard-insights-grid gap-4 sm:gap-6">
               {loading ? (
                 <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
                   <SectionSkeleton rows={4} rowClass="h-12" />
