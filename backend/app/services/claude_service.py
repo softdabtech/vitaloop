@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import time
 from pathlib import Path
 from typing import List, Dict, Any
@@ -27,9 +28,192 @@ _SYSTEM_PROMPT = (
     "Do not include markdown, commentary, or code fences."
 )
 
+_LINE_PATTERNS = [
+    re.compile(
+        r"(?P<name>[A-Za-z][A-Za-z0-9()/%+\- ,._]{2,}?)\s+"
+        r"(?P<value>-?\d+(?:[.,]\d+)?)\s*"
+        r"(?P<unit>[A-Za-z%/µμ\-]+(?:/[A-Za-z]+)?)?\s*"
+        r"(?:(?P<low>-?\d+(?:[.,]\d+)?)\s*[-–]\s*(?P<high>-?\d+(?:[.,]\d+)?))?\s*$"
+    ),
+    re.compile(
+        r"(?P<name>[A-Za-z][A-Za-z0-9()/%+\- ,._]{2,}?)\s*[:=]\s*"
+        r"(?P<value>-?\d+(?:[.,]\d+)?)\s*"
+        r"(?P<unit>[A-Za-z%/µμ\-]+(?:/[A-Za-z]+)?)?\s*"
+        r"(?:\(?(?P<low>-?\d+(?:[.,]\d+)?)\s*[-–]\s*(?P<high>-?\d+(?:[.,]\d+)?)\)?)?\s*$"
+    ),
+]
+
+_CATEGORY_KEYWORDS = {
+    "vitamins": ["vitamin", "folate", "b12"],
+    "minerals": ["iron", "ferritin", "magnesium", "zinc", "selenium", "calcium", "potassium", "sodium"],
+    "thyroid": ["tsh", "t3", "t4", "thyroid"],
+    "lipids": ["cholesterol", "hdl", "ldl", "triglycer"],
+    "glucose": ["glucose", "insulin", "a1c", "hba1c"],
+    "inflammation": ["crp", "esr", "homocysteine"],
+    "hormones": ["testosterone", "estradiol", "cortisol", "progesterone", "dhea"],
+}
+
+_FALLBACK_PROTOCOLS = [
+    {
+        "keywords": ["vitamin d", "25-oh"],
+        "supplement": "Vitamin D3",
+        "dosage": "5000 IU",
+        "timing": "morning_with_food",
+        "priority": "HIGH",
+        "rationale": "Low vitamin D commonly benefits from D3 repletion and repeat testing.",
+        "iherb_search": "Vitamin D3 5000 IU",
+    },
+    {
+        "keywords": ["magnesium"],
+        "supplement": "Magnesium glycinate",
+        "dosage": "200-400 mg",
+        "timing": "evening",
+        "priority": "MEDIUM",
+        "rationale": "Magnesium support can help with deficiency patterns and recovery.",
+        "iherb_search": "Magnesium glycinate",
+    },
+    {
+        "keywords": ["ferritin", "iron"],
+        "supplement": "Iron bisglycinate",
+        "dosage": "25 mg",
+        "timing": "between_meals",
+        "priority": "HIGH",
+        "rationale": "Low iron markers may respond to targeted iron repletion if clinically appropriate.",
+        "iherb_search": "Iron bisglycinate 25 mg",
+    },
+    {
+        "keywords": ["b12"],
+        "supplement": "Vitamin B12",
+        "dosage": "1000 mcg",
+        "timing": "morning",
+        "priority": "MEDIUM",
+        "rationale": "Low B12 markers often benefit from supplemental B12 support.",
+        "iherb_search": "Vitamin B12 1000 mcg",
+    },
+]
+
 
 def is_llm_configured() -> bool:
     return bool((settings.active_abacus_ai_api_key or "").strip())
+
+
+def _to_float(value: str | None) -> float | None:
+    if value is None:
+        return None
+    raw = str(value).strip().replace(",", ".")
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def _normalize_name(name: str) -> str:
+    return re.sub(r"\s+", " ", str(name or "").strip(" :-")).strip()
+
+
+def _infer_category(name: str) -> str | None:
+    lowered = name.lower()
+    for category, keywords in _CATEGORY_KEYWORDS.items():
+        if any(keyword in lowered for keyword in keywords):
+            return category
+    return None
+
+
+def _status_for_value(value: float, low: float | None, high: float | None) -> str:
+    if low is not None and value < low:
+        return "DEFICIENT"
+    if high is not None and value > high:
+        return "ELEVATED"
+    if low is not None and high is not None:
+        band = high - low
+        if band > 0:
+            lower_warn = low + band * 0.15
+            upper_warn = high - band * 0.15
+            if value <= lower_warn or value >= upper_warn:
+                return "BORDERLINE"
+    return "OPTIMAL"
+
+
+def _fallback_extract_biomarkers(text: str) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    seen: set[tuple[str, float]] = set()
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if len(line) < 6:
+            continue
+        for pattern in _LINE_PATTERNS:
+            match = pattern.match(line)
+            if not match:
+                continue
+
+            name = _normalize_name(match.group("name"))
+            value = _to_float(match.group("value"))
+            unit = (match.group("unit") or "").strip() or "unit"
+            low = _to_float(match.group("low"))
+            high = _to_float(match.group("high"))
+
+            if not name or value is None:
+                continue
+            if len(name) < 3 or name.lower() in {"range", "reference", "result", "value"}:
+                continue
+
+            fingerprint = (name.lower(), value)
+            if fingerprint in seen:
+                continue
+            seen.add(fingerprint)
+
+            rows.append(
+                {
+                    "name": name,
+                    "value": value,
+                    "unit": unit,
+                    "ref_low": low,
+                    "ref_high": high,
+                    "status": _status_for_value(value, low, high),
+                    "category": _infer_category(name),
+                }
+            )
+            break
+
+    return rows
+
+
+def _fallback_generate_protocol(biomarkers: List[Dict[str, Any]], symptoms: List[str]) -> List[Dict[str, Any]]:
+    recommendations: List[Dict[str, Any]] = []
+    seen_supplements: set[str] = set()
+
+    for biomarker in biomarkers:
+        name = str(biomarker.get("name") or "").lower()
+        status = str(biomarker.get("status") or "").upper()
+        if status not in {"DEFICIENT", "ELEVATED", "BORDERLINE"}:
+            continue
+
+        for template in _FALLBACK_PROTOCOLS:
+            if any(keyword in name for keyword in template["keywords"]):
+                supplement = template["supplement"]
+                if supplement in seen_supplements:
+                    break
+                seen_supplements.add(supplement)
+                recommendations.append(dict(template))
+                break
+
+    if not recommendations:
+        symptom_hint = ", ".join(symptoms[:2]) if symptoms else "reported symptoms"
+        recommendations.append(
+            {
+                "supplement": "Comprehensive re-test plan",
+                "dosage": "Repeat labs in 6-8 weeks",
+                "timing": "follow_up",
+                "priority": "MEDIUM",
+                "rationale": f"Fallback mode detected no specific supplement target. Use symptoms ({symptom_hint}) and repeat labs to refine the protocol.",
+                "iherb_search": "electrolyte support",
+            }
+        )
+
+    return recommendations
 
 
 def _get_client() -> httpx.AsyncClient:
@@ -129,36 +313,50 @@ def _validate_protocol_payload(payload: Any) -> List[Dict[str, Any]]:
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 async def extract_biomarkers(text: str, symptoms: List[str]) -> List[Dict[str, Any]]:
+    if not is_llm_configured():
+        logger.warning("abacus_extract_fallback reason=llm_not_configured")
+        return _fallback_extract_biomarkers(text)
+
     started = time.perf_counter()
     symptoms_str = ", ".join(symptoms) if symptoms else "none reported"
     prompt = EXTRACT_PROMPT.replace("{lab_text}", text).replace("{symptoms}", symptoms_str)
-
-    raw = _strip_code_block(await _chat_completion(prompt, task_name="extract_biomarkers"))
-    parsed = _validate_biomarker_payload(json.loads(raw))
-    logger.info(
-        "abacus_extract_ok text_len=%s symptom_count=%s prompt_version=%s duration_ms=%s",
-        len(text),
-        len(symptoms),
-        EXTRACT_PROMPT_VERSION,
-        int((time.perf_counter() - started) * 1000),
-    )
-    return parsed
+    try:
+        raw = _strip_code_block(await _chat_completion(prompt, task_name="extract_biomarkers"))
+        parsed = _validate_biomarker_payload(json.loads(raw))
+        logger.info(
+            "abacus_extract_ok text_len=%s symptom_count=%s prompt_version=%s duration_ms=%s",
+            len(text),
+            len(symptoms),
+            EXTRACT_PROMPT_VERSION,
+            int((time.perf_counter() - started) * 1000),
+        )
+        return parsed
+    except Exception as ex:
+        logger.warning("abacus_extract_fallback reason=%s", ex)
+        return _fallback_extract_biomarkers(text)
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 async def generate_protocol(biomarkers: List[Dict], symptoms: List[str]) -> List[Dict[str, Any]]:
+    if not is_llm_configured():
+        logger.warning("abacus_protocol_fallback reason=llm_not_configured")
+        return _fallback_generate_protocol(biomarkers, symptoms)
+
     started = time.perf_counter()
     symptoms_str = ", ".join(symptoms) if symptoms else "none reported"
     biomarkers_str = json.dumps(biomarkers, indent=2)
     prompt = PROTOCOL_PROMPT.replace("{biomarkers}", biomarkers_str).replace("{symptoms}", symptoms_str)
-
-    raw = _strip_code_block(await _chat_completion(prompt, task_name="generate_protocol"))
-    parsed = _validate_protocol_payload(json.loads(raw))
-    logger.info(
-        "abacus_protocol_ok biomarker_count=%s symptom_count=%s prompt_version=%s duration_ms=%s",
-        len(biomarkers),
-        len(symptoms),
-        PROTOCOL_PROMPT_VERSION,
-        int((time.perf_counter() - started) * 1000),
-    )
-    return parsed
+    try:
+        raw = _strip_code_block(await _chat_completion(prompt, task_name="generate_protocol"))
+        parsed = _validate_protocol_payload(json.loads(raw))
+        logger.info(
+            "abacus_protocol_ok biomarker_count=%s symptom_count=%s prompt_version=%s duration_ms=%s",
+            len(biomarkers),
+            len(symptoms),
+            PROTOCOL_PROMPT_VERSION,
+            int((time.perf_counter() - started) * 1000),
+        )
+        return parsed
+    except Exception as ex:
+        logger.warning("abacus_protocol_fallback reason=%s", ex)
+        return _fallback_generate_protocol(biomarkers, symptoms)

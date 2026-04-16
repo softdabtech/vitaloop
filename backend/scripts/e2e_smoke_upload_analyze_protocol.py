@@ -1,9 +1,16 @@
 import asyncio
+import os
 import uuid
 import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
+os.environ.setdefault(
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.signature",
+)
 
 from httpx import AsyncClient, ASGITransport
 
@@ -53,6 +60,18 @@ async def run() -> None:
         state["biomarkers"][upload_id] = rows
         return rows
 
+    async def fake_save_timeline_event(user_id, event_type, summary, metadata=None, source=None):
+        state.setdefault("timeline", []).append(
+            {
+                "user_id": user_id,
+                "event_type": event_type,
+                "summary": summary,
+                "metadata": metadata or {},
+                "source": source,
+            }
+        )
+        return {"ok": True}
+
     async def fake_assert_upload_belongs_to_user(upload_id, user_id):
         upload = state.get("uploads", {}).get(upload_id)
         if not upload or upload["user_id"] != user_id:
@@ -62,6 +81,9 @@ async def run() -> None:
 
     async def fake_get_biomarkers_by_upload(upload_id, user_id):
         return state["biomarkers"].get(upload_id, [])
+
+    async def fake_get_protocol_by_upload(user_id, upload_id):
+        return None
 
     async def fake_generate_protocol(biomarkers, symptoms):
         return [
@@ -89,12 +111,16 @@ async def run() -> None:
     analyze_router.save_lab_upload = fake_save_lab_upload
     analyze_router.extract_biomarkers = fake_extract_biomarkers
     analyze_router.save_biomarkers = fake_save_biomarkers
+    analyze_router.save_timeline_event = fake_save_timeline_event
+    analyze_router.is_llm_configured = lambda: True
 
     protocol_router.get_biomarkers_by_upload = fake_get_biomarkers_by_upload
+    protocol_router.get_protocol_by_upload = fake_get_protocol_by_upload
     protocol_router.generate_protocol = fake_generate_protocol
     protocol_router.save_protocol = fake_save_protocol
     protocol_router.build_iherb_url = fake_iherb_url
     protocol_router.assert_upload_belongs_to_user = fake_assert_upload_belongs_to_user
+    protocol_router.is_llm_configured = lambda: True
 
     app.dependency_overrides[get_current_user] = lambda: {"sub": fake_user_id, "email": "smoke@vitaloop.test"}
 
