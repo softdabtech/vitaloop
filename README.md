@@ -155,6 +155,17 @@ The deployment script performs a 6-phase rollout:
 5. **Service restart**: Restarts backend and CRM with health monitoring
 6. **Validation**: Verifies all endpoints are responding (health, ready, frontend, CRM)
 
+Security and retention operations:
+
+- API header smoke check:
+     - `./scripts/smoke_api_security_headers.sh`
+- Install nightly retention timer (systemd):
+     - `export REMOTE_HOST="deploy@your-prod-host"`
+     - `export REMOTE_DIR="/var/www/VITALOOP"`
+     - `./scripts/install_retention_timer.sh`
+- Run retention redaction manually on backend host:
+     - `cd /var/www/VITALOOP/backend && ./.venv/bin/python scripts/run_lab_retention_redaction.py --days 180 --batch-size 500 --apply`
+
 ### 📋 Manual Deployment (Legacy)
 
 If automation is not available, follow the manual steps:

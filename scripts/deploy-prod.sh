@@ -201,6 +201,14 @@ else
     log_success "API readiness check passed"
 fi
 
+log_info "Checking API security headers..."
+if ! ./scripts/smoke_api_security_headers.sh > /dev/null 2>&1; then
+    log_error "API security header smoke check failed"
+    VALIDATION_PASSED=false
+else
+    log_success "API security header smoke check passed"
+fi
+
 # Check frontend
 log_info "Checking frontend endpoint..."
 if ! curl $CURL_OPTS -f "https://vitaloop.today" > /dev/null 2>&1; then

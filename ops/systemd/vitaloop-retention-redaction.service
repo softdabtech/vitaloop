@@ -1,0 +1,15 @@
+[Unit]
+Description=VITALOOP retention redaction job for old lab raw text
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/VITALOOP/backend
+EnvironmentFile=/var/www/VITALOOP/backend/.env
+ExecStart=/var/www/VITALOOP/backend/.venv/bin/python /var/www/VITALOOP/backend/scripts/run_lab_retention_redaction.py --apply
+Nice=10
+
+[Install]
+WantedBy=multi-user.target
