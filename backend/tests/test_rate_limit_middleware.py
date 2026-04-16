@@ -107,3 +107,30 @@ async def test_path_rate_limiter_ignores_forwarded_for_when_not_trusted() -> Non
 
     assert r1.status_code == 200
     assert r2.status_code == 429
+
+
+@pytest.mark.asyncio
+async def test_path_rate_limiter_fails_open_when_backend_errors() -> None:
+    class ExplodingBackend:
+        async def check(self, **kwargs):
+            raise RuntimeError("backend down")
+
+    app = FastAPI()
+
+    @app.get("/auth/ping")
+    async def auth_ping():
+        return {"ok": True}
+
+    app.add_middleware(
+        PathRateLimitMiddleware,
+        rules=[RateLimitRule(prefix="/auth", max_requests=1, window_seconds=60)],
+        backend=ExplodingBackend(),
+    )
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        r1 = await client.get("/auth/ping")
+        r2 = await client.get("/auth/ping")
+
+    assert r1.status_code == 200
+    assert r2.status_code == 200

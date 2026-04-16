@@ -20,8 +20,11 @@ class Settings(BaseSettings):
     app_env: str = "development"
     allowed_origins: str = "http://localhost:5173"
     security_enable_headers: bool = True
+    rate_limit_backend: str = "inmemory"  # inmemory | redis
     rate_limit_trust_forwarded_for: bool = False
     rate_limit_forwarded_for_header: str = "x-forwarded-for"
+    rate_limit_redis_url: str = ""
+    rate_limit_redis_prefix: str = "rl"
     auth_rate_limit_per_minute: int = 60
     analyze_rate_limit_per_minute: int = 30
     protocol_rate_limit_per_minute: int = 30
