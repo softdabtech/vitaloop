@@ -19,16 +19,24 @@ export default defineConfig({
           // Feature-based chunks
           'feature-dashboard': [
             'src/pages/Dashboard.jsx',
-            'src/components/dashboard/AchievementsPanel.jsx',
-            'src/components/dashboard/WeeklyDigestPanel.jsx',
             'src/components/dashboard/AssignmentCard.jsx',
-            'src/components/dashboard/DailyMissionsPanel.jsx',
-            'src/components/dashboard/AnalyticsDashboard.jsx',
+            'src/components/dashboard/HealthChart.jsx',
+            'src/components/dashboard/ProgressTimeline.jsx',
+            'src/components/dashboard/QuickActionsPanel.jsx',
+            'src/components/dashboard/RecommendationsPanel.jsx',
+            'src/components/dashboard/StatCard.jsx',
+            'src/components/dashboard/UserDashboardSidebar.jsx',
           ],
           
           // Utilities
-          'lib-api': ['src/lib/api.js', 'src/lib/notifications.js'],
-          'lib-features': ['src/lib/achievements.js', 'src/lib/recommendations.js'],
+          'lib-api': ['src/lib/api.js'],
+          'lib-features': [
+            'src/lib/assignmentRouting.js',
+            'src/lib/assignmentScoring.js',
+            'src/lib/funnel.js',
+            'src/lib/store.js',
+            'src/lib/symptoms.js',
+          ],
         },
       },
     },
