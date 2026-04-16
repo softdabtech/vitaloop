@@ -32,9 +32,6 @@ async def create_protocol(
     request: ProtocolRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    if not is_llm_configured():
-        raise HTTPException(status_code=503, detail="LLM provider is not configured")
-
     user_id: str = current_user["sub"]
     upload_id = str(request.upload_id)
 
