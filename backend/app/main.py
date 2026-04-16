@@ -30,7 +30,7 @@ from app.routers import (
 
 app = FastAPI(
     title="VITALOOP API",
-    version="1.0.0",
+    version="2.1.2",
     description="Biohacking-as-a-Service backend",
 )
 
