@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { EASE } from '../../lib/motion.js'
 
 const NAV_LINKS = [
   { label: 'How it works', href: '#how-it-works' },
@@ -28,6 +29,7 @@ function LogoIcon() {
 
 export default function Navbar() {
   const navigate = useNavigate()
+  const reduced = useReducedMotion()
   const [scrolled, setScrolled]     = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [activeSection, setActive]  = useState('')
@@ -151,63 +153,114 @@ export default function Navbar() {
           >
             Get started free
           </button>
+          {/* Hamburger — animated bars → X */}
           <button
-            className="md:hidden"
+            className="md:hidden hamburger-btn"
             onClick={() => setMobileOpen((v) => !v)}
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
+            aria-controls="mobile-nav"
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--gray-700)',
+              color: 'var(--gray-700)', padding: '8px',
+              display: 'flex', flexDirection: 'column',
+              gap: 5, alignItems: 'center', justifyContent: 'center',
+              width: 36, height: 36,
             }}
           >
-            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+            <motion.span
+              animate={mobileOpen ? { rotate: 45, y: 7 } : { rotate: 0, y: 0 }}
+              transition={{ duration: 0.22, ease: EASE }}
+              style={{ display: 'block', width: 20, height: 2, background: 'currentColor', borderRadius: 2, transformOrigin: 'center' }}
+            />
+            <motion.span
+              animate={mobileOpen ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }}
+              transition={{ duration: 0.18 }}
+              style={{ display: 'block', width: 20, height: 2, background: 'currentColor', borderRadius: 2 }}
+            />
+            <motion.span
+              animate={mobileOpen ? { rotate: -45, y: -7 } : { rotate: 0, y: 0 }}
+              transition={{ duration: 0.22, ease: EASE }}
+              style={{ display: 'block', width: 20, height: 2, background: 'currentColor', borderRadius: 2, transformOrigin: 'center' }}
+            />
           </button>
         </div>
       </nav>
 
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Mobile navigation"
-          style={{
-            position: 'fixed', inset: 0, zIndex: 999,
-            background: 'rgba(0,0,0,0.96)',
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            gap: 32,
-          }}
-        >
-          {NAV_LINKS.map(({ label, href }, i) => (
-            <button
-              key={label}
-              onClick={() => scrollTo(href)}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 28, color: 'white', fontWeight: 600,
-                opacity: 0,
-                animation: `countUp 0.4s ease forwards`,
-                animationDelay: `${i * 60}ms`,
-              }}
-            >
-              {label}
-            </button>
-          ))}
-          <button
-            onClick={() => { setMobileOpen(false); navigate('/login?signup=true') }}
+      {/* Mobile overlay — animated */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            id="mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile navigation"
+            initial={reduced ? { opacity: 1 } : { opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, x: '100%' }}
+            transition={{ type: 'spring', stiffness: 320, damping: 30 }}
             style={{
-              marginTop: 16,
-              background: 'var(--teal-500)', color: 'white',
-              border: 'none', borderRadius: 980,
-              padding: '14px 40px', fontSize: 18, fontWeight: 600, cursor: 'pointer',
+              position: 'fixed', inset: 0, zIndex: 999,
+              background: 'rgba(10,10,10,0.97)',
+              backdropFilter: 'blur(20px)',
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              gap: 8,
             }}
           >
-            Get started free
-          </button>
-        </div>
-      )}
+            {/* Close button top-right */}
+            <button
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close menu"
+              style={{
+                position: 'absolute', top: 16, right: 20,
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'rgba(255,255,255,0.5)', fontSize: 28, lineHeight: 1,
+                padding: 8,
+              }}
+            >
+              ×
+            </button>
+
+            {NAV_LINKS.map(({ label, href }, i) => (
+              <motion.button
+                key={label}
+                onClick={() => scrollTo(href)}
+                initial={reduced ? {} : { opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.07, duration: 0.32, ease: EASE }}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 'clamp(24px, 7vw, 32px)', color: 'white', fontWeight: 600,
+                  padding: '12px 0', letterSpacing: '-0.01em',
+                  minHeight: 56,
+                }}
+                whileHover={{ color: 'var(--teal-400)', x: 4 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                {label}
+              </motion.button>
+            ))}
+
+            <motion.button
+              onClick={() => { setMobileOpen(false); navigate('/login?signup=true') }}
+              initial={reduced ? {} : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: NAV_LINKS.length * 0.07 + 0.06, duration: 0.32, ease: EASE }}
+              whileTap={{ scale: 0.97 }}
+              style={{
+                marginTop: 24,
+                background: 'var(--teal-500)', color: 'white',
+                border: 'none', borderRadius: 980,
+                padding: '16px 48px', fontSize: 18, fontWeight: 600, cursor: 'pointer',
+                minHeight: 56,
+              }}
+            >
+              Get started free
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   )
 }

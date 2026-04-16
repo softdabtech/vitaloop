@@ -78,7 +78,7 @@ export default function Footer() {
               <LogoIcon />
               <span style={{ fontSize: 18, fontWeight: 700, color: 'white', letterSpacing: '-0.01em' }}>VITALOOP</span>
             </div>
-            <div style={{ fontSize: 13, color: '#6e6e73', marginBottom: 24 }}>Biohacking-as-a-Service</div>
+            <div style={{ fontSize: 13, color: '#6e6e73', marginBottom: 24 }}>Privacy-first health intelligence</div>
           </div>
 
           {/* Product */}
@@ -127,10 +127,10 @@ export default function Footer() {
           display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8,
         }}>
           <span style={{ fontSize: 12, color: '#6e6e73' }}>
-            © {new Date().getFullYear()} VITALOOP LLC · Delaware, USA
+            VITALOOP © {new Date().getFullYear()} • Privacy-first health intelligence · Made with precision in Odessa, Ukraine
           </span>
           <span style={{ fontSize: 12, color: '#3d3d3f' }}>
-            AI-assisted · For informational purposes only, not medical advice · v{version}
+            Secure • Private • Never sells your data · v{version}
           </span>
         </div>
       </div>

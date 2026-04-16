@@ -1,7 +1,8 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, Shield, Activity, Zap, FlaskConical, BarChart2, Heart, Droplets, ScanLine, ClipboardList } from 'lucide-react'
-import SupportChat from '../SupportChat.jsx'
+import { stagger, staggerChild, buttonHoverProps, EASE } from '../../lib/motion.js'
 
 function ParticleCanvas() {
   const canvasRef = useRef(null)
@@ -145,11 +146,16 @@ function ParticleCanvas() {
 
 export default function Hero() {
   const navigate = useNavigate()
-  const [chatOpen, setChatOpen] = useState(false)
+  const reduced = useReducedMotion()
+
+  // Stagger container: chip → h1 → p1 → p2 → ctas → proof
+  const containerVariants = reduced ? {} : stagger(0.1, 0)
+  const childVariants = reduced ? {} : staggerChild
 
   return (
     <section
       id="hero"
+      className="hero-section"
       style={{
         minHeight: 'auto',
         display: 'flex', flexDirection: 'column',
@@ -159,6 +165,18 @@ export default function Hero() {
         position: 'relative', overflow: 'hidden',
       }}
     >
+      {/* Radial glow — fades in once */}
+      {!reduced && (
+        <div
+          aria-hidden="true"
+          className="hero-radial-glow"
+          style={{
+            position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
+            background: 'radial-gradient(ellipse 70% 55% at 50% 40%, #10b981, transparent)',
+          }}
+        />
+      )}
+
       {/* Animated particle background */}
       <ParticleCanvas />
 
@@ -192,106 +210,125 @@ export default function Hero() {
         ))}
       </div>
 
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 760, width: '100%', textAlign: 'center' }}>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        style={{ position: 'relative', zIndex: 1, maxWidth: 760, width: '100%', textAlign: 'center' }}
+      >
 
         {/* Eyebrow chip */}
-        <div style={{ marginBottom: 32 }}>
+        <motion.div variants={childVariants} style={{ marginBottom: 32 }}>
           <span style={{
             display: 'inline-block',
             background: 'var(--teal-50)', border: '0.5px solid var(--teal-300)',
             borderRadius: 980, padding: '6px 18px',
             fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--teal-600)',
           }}>
-            AI-powered health optimization
+            AI-Powered Biohacking as a Service
           </span>
-        </div>
+        </motion.div>
 
         {/* Headline */}
-        <h1 style={{
-          fontSize: 'clamp(52px, 7vw, 84px)',
-          fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.05,
-          color: 'var(--gray-900)',
-          marginBottom: 24,
-        }}>
+        <motion.h1
+          variants={reduced ? {} : {
+            hidden: { opacity: 0, y: 32, filter: 'blur(6px)' },
+            visible: { opacity: 1, y: 0, filter: 'blur(0px)',
+              transition: { duration: 0.48, ease: EASE } },
+          }}
+          style={{
+            fontSize: 'clamp(42px, 7vw, 84px)',
+            fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.05,
+            color: 'var(--gray-900)',
+            marginBottom: 24,
+          }}
+        >
           Know your body.<br />
           <span style={{ color: 'var(--teal-500)' }}>Upgrade your life.</span>
-        </h1>
+        </motion.h1>
 
         {/* Subheadline */}
-        <p style={{
-          fontSize: 19, color: 'var(--gray-500)',
-          maxWidth: 540, margin: '0 auto 40px',
+        <motion.p variants={childVariants} style={{
+          fontSize: 'clamp(16px, 2.5vw, 19px)', color: 'var(--gray-500)',
+          maxWidth: 580, margin: '0 auto 12px',
           lineHeight: 1.6,
         }}>
-          Upload your lab results, get AI analysis, and follow a personalized protocol.
-          Track your progress weekly — not just one-time results.
-        </p>
+          Upload any lab PDF or photo → Get instant AI analysis powered by OCR + Claude LLM.
+        </motion.p>
+        <motion.p variants={childVariants} style={{
+          fontSize: 'clamp(14px, 2vw, 17px)', color: 'var(--gray-400)',
+          maxWidth: 560, margin: '0 auto 40px',
+          lineHeight: 1.6,
+        }}>
+          Clear biomarker insights, red flags, personalized protocols, and long-term progress tracking.
+          Works with any laboratory worldwide.
+        </motion.p>
 
         {/* CTA row */}
-        <div style={{
-          display: 'flex', gap: 16, justifyContent: 'center',
-          flexWrap: 'wrap', marginBottom: 40,
-        }}>
-          <button
+        <motion.div
+          variants={childVariants}
+          className="hero-cta-row"
+          style={{
+            display: 'flex', gap: 16, justifyContent: 'center',
+            flexWrap: 'wrap', marginBottom: 40,
+          }}
+        >
+          <motion.button
             onClick={() => navigate('/login?signup=true')}
             aria-label="Start free — no card needed"
+            className="btn-primary hero-cta-primary"
+            {...buttonHoverProps}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               background: 'var(--teal-800)', color: 'white',
               border: 'none', borderRadius: 980,
               padding: '16px 36px', fontSize: 17, fontWeight: 600,
-              cursor: 'pointer', transition: 'background 200ms, transform 200ms',
+              cursor: 'pointer',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--teal-600)'; e.currentTarget.style.transform = 'scale(1.02)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal-800)'; e.currentTarget.style.transform = 'scale(1)' }}
           >
-            Start free — no card needed <ArrowRight size={16} aria-hidden="true" />
-          </button>
-          <button
-            onClick={() => setChatOpen(true)}
+            Start Free — No card required <ArrowRight size={16} aria-hidden="true" />
+          </motion.button>
+          <motion.button
+            onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+            className="hero-cta-secondary"
+            {...buttonHoverProps}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               background: 'transparent',
               border: '1.5px solid var(--gray-300)',
               borderRadius: 980, padding: '16px 28px', fontSize: 17,
               color: 'var(--gray-700)', cursor: 'pointer',
-              transition: 'border-color 200ms, color 200ms',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = 'var(--teal-500)'
-              e.currentTarget.style.color = 'var(--teal-600)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = 'var(--gray-300)'
-              e.currentTarget.style.color = 'var(--gray-700)'
             }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                 stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"/>
             </svg>
-            Chat with us
-          </button>
-        </div>
+            Watch 45-second demo
+          </motion.button>
+        </motion.div>
 
         {/* Social proof */}
-        <div style={{
-          display: 'flex', gap: 20, justifyContent: 'center',
-          alignItems: 'center', flexWrap: 'wrap',
-        }}>
+        <motion.div
+          variants={childVariants}
+          className="hero-proof-row"
+          style={{
+            display: 'flex', gap: 20, justifyContent: 'center',
+            alignItems: 'center', flexWrap: 'wrap',
+          }}
+        >
           <span style={{ fontSize: 13, color: 'var(--gray-500)' }}>
-            <span style={{ color: 'var(--teal-500)' }}>★★★★★</span> 4.9 · 100+ users
+            <span style={{ color: 'var(--teal-500)' }}>★★★★★</span> 4.9 · Trusted by early biohackers and practitioners
           </span>
-          <span aria-hidden="true" style={{ width: '0.5px', height: 16, background: 'var(--gray-100)', display: 'inline-block' }} />
-          <span style={{ fontSize: 13, color: 'var(--gray-500)' }}>Works with any lab worldwide</span>
-          <span aria-hidden="true" style={{ width: '0.5px', height: 16, background: 'var(--gray-100)', display: 'inline-block' }} />
+          <span aria-hidden="true" className="hero-proof-divider" style={{ width: '0.5px', height: 16, background: 'var(--gray-100)', display: 'inline-block' }} />
+          <span style={{ fontSize: 13, color: 'var(--gray-500)' }}>Works with any laboratory worldwide</span>
+          <span aria-hidden="true" className="hero-proof-divider" style={{ width: '0.5px', height: 16, background: 'var(--gray-100)', display: 'inline-block' }} />
           <span style={{ fontSize: 13, color: 'var(--gray-500)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Shield size={12} aria-hidden="true" /> Secure &amp; privacy-first
+            <Shield size={12} aria-hidden="true" /> Secure. Private. Privacy-first by design.
           </span>
-        </div>
+        </motion.div>
 
-      </div>
-      {chatOpen && <SupportChat onClose={() => setChatOpen(false)} />}
+      </motion.div>
     </section>
   )
 }
