@@ -88,7 +88,7 @@ export default function Testimonials() {
   const visible = Array.from({ length: VISIBLE }, (_, i) => TESTIMONIALS[(index + i) % total])
 
   return (
-    <section style={{ padding: 'var(--py-lg) 24px', backgroundColor: 'var(--white)', overflow: 'hidden' }}>
+    <section id="stories" style={{ padding: 'var(--py-lg) 24px', backgroundColor: 'var(--white)', overflow: 'hidden' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 
         {/* Header */}
@@ -105,10 +105,13 @@ export default function Testimonials() {
           </div>
           <h2 style={{
             fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 700,
-            letterSpacing: '-0.02em', color: 'var(--gray-900)',
+            letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 16,
           }}>
-            Real experiences from early users
+            Early users are already seeing measurable gains
           </h2>
+          <p style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 620, margin: '0 auto', lineHeight: 1.65 }}>
+            Individual users get clarity faster. Practitioners deliver protocols in less time.
+          </p>
         </div>
 
         {/* Slider */}

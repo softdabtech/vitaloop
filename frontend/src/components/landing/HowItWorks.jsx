@@ -1,4 +1,5 @@
-import { Activity, ClipboardList, FileUp, LineChart, Search } from 'lucide-react'
+import { Activity, ArrowRight, ClipboardList, FileUp, LineChart, Search } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import { fadeUp, slideIn, cardHoverProps, viewport, EASE } from '../../lib/motion.js'
 
@@ -113,6 +114,7 @@ const STEPS = [
 
 export default function HowItWorksSection() {
   const reduced = useReducedMotion()
+  const navigate = useNavigate()
 
   return (
     <section id="how-it-works" style={{ padding: 'var(--py-xl) 24px', backgroundColor: 'var(--white)' }}>
@@ -155,7 +157,7 @@ export default function HowItWorksSection() {
             custom={0.16}
             style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 620, margin: '0 auto', lineHeight: 1.65 }}
           >
-            A clear 5-step flow focused on outcomes: understand your data, apply recommendations, and improve over time.
+            OCR extracts your data, Claude LLM interprets 50+ biomarkers, and VITALOOP builds practical next steps.
           </motion.p>
         </motion.div>
 
@@ -221,6 +223,28 @@ export default function HowItWorksSection() {
               <div className="how-step-connector" aria-hidden="true" />
             </motion.div>
           ))}
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: 48 }}>
+          <button
+            onClick={() => navigate('/login?signup=true')}
+            className="btn-primary"
+            style={{
+              background: 'var(--teal-500)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 980,
+              padding: '12px 24px',
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            Try it free <ArrowRight size={14} aria-hidden="true" />
+          </button>
         </div>
       </div>
     </section>

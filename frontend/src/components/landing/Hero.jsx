@@ -253,15 +253,15 @@ export default function Hero() {
           maxWidth: 580, margin: '0 auto 12px',
           lineHeight: 1.6,
         }}>
-          Upload any lab PDF or photo → Get instant AI analysis powered by OCR + Claude LLM.
+          Upload any lab PDF or photo and get instant analysis powered by OCR + Claude LLM.
         </motion.p>
         <motion.p variants={childVariants} style={{
           fontSize: 'clamp(14px, 2vw, 17px)', color: 'var(--gray-400)',
           maxWidth: 560, margin: '0 auto 40px',
           lineHeight: 1.6,
         }}>
-          Clear biomarker insights, red flags, personalized protocols, and long-term progress tracking.
-          Works with any laboratory worldwide.
+          50+ biomarkers, red flags, personalized protocols, timeline tracking, and practitioner CRM in one place.
+          Product is 80% ready and onboarding early customers now.
         </motion.p>
 
         {/* CTA row */}
@@ -289,7 +289,7 @@ export default function Hero() {
             Start Free — No card required <ArrowRight size={16} aria-hidden="true" />
           </motion.button>
           <motion.button
-            onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+            onClick={() => navigate('/login?signup=true')}
             className="hero-cta-secondary"
             {...buttonHoverProps}
             style={{
@@ -300,11 +300,8 @@ export default function Hero() {
               color: 'var(--gray-700)', cursor: 'pointer',
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="5 3 19 12 5 21 5 3"/>
-            </svg>
-            Watch 45-second demo
+            <ArrowRight size={16} aria-hidden="true" />
+            Upload Labs Now
           </motion.button>
         </motion.div>
 

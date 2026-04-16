@@ -6,14 +6,10 @@ import Navbar            from '../components/landing/Navbar.jsx'
 import Hero              from '../components/landing/Hero.jsx'
 import ProblemSection    from '../components/landing/ProblemSection.jsx'
 import HowItWorksSection from '../components/landing/HowItWorks.jsx'
-import AvatarSection     from '../components/landing/AvatarSection.jsx'
 import ValueBlock        from '../components/landing/ValueBlock.jsx'
-import ScienceSection    from '../components/landing/ScienceSection.jsx'
-import PartnersSection   from '../components/landing/PartnersSection.jsx'
+import PricingSection    from '../components/landing/PricingSection.jsx'
 import Testimonials      from '../components/landing/Testimonials.jsx'
 import LongevitySection  from '../components/landing/LongevitySection.jsx'
-import PricingSection    from '../components/landing/PricingSection.jsx'
-import FAQ               from '../components/landing/FAQ.jsx'
 import FinalCTA          from '../components/landing/FinalCTA.jsx'
 import Footer            from '../components/landing/Footer.jsx'
 
@@ -34,14 +30,10 @@ export default function Landing() {
         <Hero />
         <ProblemSection />
         <HowItWorksSection />
-        <AvatarSection />
         <ValueBlock />
-        <ScienceSection />
-        <PartnersSection />
+        <PricingSection />
         <Testimonials />
         <LongevitySection />
-        <PricingSection />
-        <FAQ />
         <FinalCTA />
       </main>
 
