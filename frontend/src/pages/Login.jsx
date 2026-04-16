@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
 import { supabase } from '../lib/supabase.js'
@@ -149,6 +149,29 @@ export default function Login() {
   const [honeypot, setHoneypot] = useState('')  // bot trap
   const [authAlert, setAuthAlert] = useState(null)
   const [rateLimitedUntil, setRateLimitedUntil] = useState(0)
+
+  useEffect(() => {
+    let active = true
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!active || !session?.user) {
+        return
+      }
+
+      try {
+        const destination = await resolvePostLoginDestination(searchParams.get('returnUrl'))
+        if (!active) return
+        navigateToResolvedPath(navigate, destination)
+      } catch {
+        if (!active) return
+        navigate('/dashboard', { replace: true })
+      }
+    })
+
+    return () => {
+      active = false
+    }
+  }, [navigate, searchParams])
 
   const ATTEMPT_KEY = 'vo:auth-attempts'
   const ATTEMPT_WINDOW_MS = 10 * 60 * 1000

@@ -12,6 +12,8 @@ from app.services.assignment_service import AssignmentService
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 _assignment_service = AssignmentService()
 
+_CRM_ROLES = {"super_admin", "admin", "org_admin", "org_owner", "client_admin", "manager", "practitioner"}
+
 
 def _as_bool(value: Any) -> bool:
     if isinstance(value, bool):
@@ -31,6 +33,16 @@ def _first_name(full_name: Optional[str], fallback_email: Optional[str]) -> str:
     if email and "@" in email:
         return email.split("@")[0]
     return "there"
+
+
+def _normalize_role(*values: Any) -> str:
+    for value in values:
+        role = str(value or "").strip().lower()
+        if not role:
+            continue
+        if role in _CRM_ROLES or role == "end_user":
+            return role
+    return "end_user"
 
 
 def _safe_iso(value: Any) -> Optional[datetime]:
@@ -54,7 +66,7 @@ async def _resolve_onboarding_state(user_id: str, current_user: dict) -> Dict[st
     profile = profile or {}
     location = location or {}
 
-    role = str(current_user.get("global_role") or current_user.get("role") or "end_user").lower()
+    role = _normalize_role(current_user.get("global_role"), current_user.get("role"))
     onboarding_completed = _as_bool(profile.get("onboarding_complete") or current_user.get("onboarding_completed"))
     requires_onboarding = role == "end_user" and not onboarding_completed
 
@@ -257,7 +269,7 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     progress = progress_result if isinstance(progress_result, list) else []
     insights = insights_result if isinstance(insights_result, list) else []
 
-    global_role = str(account.get("global_role") or current_user.get("global_role") or current_user.get("role") or "end_user")
+    global_role = _normalize_role(account.get("global_role"), current_user.get("global_role"), current_user.get("role"))
     assignments = await _fetch_assignments(user_id, global_role)
 
     health_latest = None

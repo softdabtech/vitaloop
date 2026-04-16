@@ -2,6 +2,7 @@ import api from '../lib/api.js'
 import { supabase, hasSupabaseConfig } from '../lib/supabase.js'
 
 const CRM_BASE_URL = (import.meta.env.VITE_CRM_BASE_URL || 'https://crm.vitaloop.today').replace(/\/$/, '')
+const CRM_ROLES = new Set(['super_admin', 'admin', 'org_admin', 'org_owner', 'client_admin', 'manager', 'practitioner'])
 
 export const AUTH_POST_LOGIN_PATH = import.meta.env.VITE_AUTH_POST_LOGIN_PATH || `${CRM_BASE_URL}/auth/post-login`
 export const INVITATIONS_ACCEPT_PATH = import.meta.env.VITE_INVITATIONS_ACCEPT_PATH || `${CRM_BASE_URL}/invitations/accept`
@@ -55,7 +56,10 @@ function resolveGlobalRole(mePayload) {
   const fromUser = mePayload?.user?.global_role
   const fromRoot = mePayload?.global_role
   const role = String(fromUser || fromRoot || '').trim().toLowerCase()
-  return role || 'end_user'
+  if (CRM_ROLES.has(role) || role === 'end_user') {
+    return role
+  }
+  return 'end_user'
 }
 
 function resolveLocalProductPath(mePayload, normalizedReturnUrl) {

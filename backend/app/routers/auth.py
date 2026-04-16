@@ -11,6 +11,18 @@ from app.services.email_service import send_registration_alert_email
 
 router = APIRouter()
 
+_CRM_ROLES = {"super_admin", "admin", "org_admin", "org_owner", "client_admin", "manager", "practitioner"}
+
+
+def _normalize_global_role(*values: Any) -> str:
+    for value in values:
+        role = str(value or "").strip().lower()
+        if not role:
+            continue
+        if role in _CRM_ROLES or role == "end_user":
+            return role
+    return "end_user"
+
 
 def _as_bool(value: Any) -> bool:
     if isinstance(value, bool):
@@ -43,16 +55,15 @@ async def get_auth_me(current_user: dict = Depends(get_current_user)):
 
     app_metadata = current_user.get("app_metadata") if isinstance(current_user.get("app_metadata"), dict) else {}
 
-    global_role = current_user.get("global_role")
-    if global_role is None:
-        global_role = account.get("global_role")
-    if global_role is None:
-        global_role = app_metadata.get("global_role")
-    if global_role is None:
-        global_role = current_user.get("role")
+    global_role = _normalize_global_role(
+        current_user.get("global_role"),
+        account.get("global_role"),
+        app_metadata.get("global_role"),
+        current_user.get("role"),
+    )
 
-    # Auto-assign end_user role for new users who have no role yet.
-    if not global_role:
+    # Auto-assign end_user role for new users who have no explicit business role yet.
+    if not account.get("global_role") and not app_metadata.get("global_role") and not current_user.get("global_role"):
         global_role = "end_user"
         supabase = svc._get_supabase()
         await svc._run(
