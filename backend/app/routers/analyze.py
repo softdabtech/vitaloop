@@ -1,3 +1,8 @@
+import asyncio
+from collections import defaultdict, deque
+from datetime import date
+from time import monotonic
+
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List
@@ -12,12 +17,18 @@ logger = logging.getLogger("uvicorn.error")
 
 MAX_SYMPTOMS = 20
 MAX_SYMPTOM_LENGTH = 60
+ANALYZE_REQUESTS_PER_MINUTE = 12
+ANALYZE_WINDOW_SECONDS = 60.0
+ANALYZE_EXTRACT_TIMEOUT_SECONDS = 75
+
+_analyze_rate_window: dict[str, deque[float]] = defaultdict(deque)
+_analyze_rate_lock = asyncio.Lock()
 
 
 class AnalyzeRequest(BaseModel):
     extracted_text: str = Field(..., min_length=20, max_length=100_000)
     lab_name: Optional[str] = Field(None, max_length=100)
-    test_date: Optional[str] = None
+    test_date: Optional[date] = None
     ocr_confidence: Optional[float] = None
     symptoms: List[str] = Field(default_factory=list)
 
@@ -60,12 +71,33 @@ def _normalize_symptoms(symptoms: List[str]) -> List[str]:
     return normalized
 
 
+async def _enforce_analyze_rate_limit(user_id: str) -> None:
+    now = monotonic()
+    async with _analyze_rate_lock:
+        bucket = _analyze_rate_window[user_id]
+        while bucket and (now - bucket[0]) > ANALYZE_WINDOW_SECONDS:
+            bucket.popleft()
+
+        if len(bucket) >= ANALYZE_REQUESTS_PER_MINUTE:
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "detail": "Too many analyze requests. Please retry in a minute.",
+                    "code": "ANALYZE_RATE_LIMITED",
+                },
+            )
+
+        bucket.append(now)
+
+
 @router.post("", response_model=AnalyzeResponse)
 async def analyze_lab(
     request: AnalyzeRequest,
     current_user: dict = Depends(get_current_user),
 ):
     user_id: str = current_user["sub"]
+    await _enforce_analyze_rate_limit(user_id)
+
     normalized_text = _normalize_lab_text(request.extracted_text)
     normalized_symptoms = _normalize_symptoms(request.symptoms or [])
     normalized_lab_name = request.lab_name.strip() if request.lab_name else None
@@ -80,23 +112,39 @@ async def analyze_lab(
         raise HTTPException(status_code=422, detail={"detail": "Extracted text is too short", "code": "LAB_TEXT_TOO_SHORT"})
 
     # Save raw OCR text (never the PDF)
-    upload = await save_lab_upload(
-        user_id=user_id,
-        extracted_text=normalized_text,
-        lab_name=normalized_lab_name,
-        test_date=request.test_date,
-        ocr_confidence=request.ocr_confidence,
-        analyze_prompt_version=EXTRACT_PROMPT_VERSION,
-    )
+    try:
+        upload = await save_lab_upload(
+            user_id=user_id,
+            extracted_text=normalized_text,
+            lab_name=normalized_lab_name,
+            test_date=request.test_date.isoformat() if request.test_date else None,
+            ocr_confidence=request.ocr_confidence,
+            analyze_prompt_version=EXTRACT_PROMPT_VERSION,
+        )
+    except Exception as exc:
+        logger.error("analyze_save_upload_failed user_id=%s error=%s", user_id, repr(exc), exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={"detail": "Could not store uploaded lab text", "code": "LAB_UPLOAD_SAVE_FAILED"},
+        ) from exc
 
     upload_id = upload["id"]
 
     # Call Claude to extract biomarkers
     try:
-        biomarkers = await extract_biomarkers(
-            text=normalized_text,
-            symptoms=normalized_symptoms,
+        biomarkers = await asyncio.wait_for(
+            extract_biomarkers(
+                text=normalized_text,
+                symptoms=normalized_symptoms,
+            ),
+            timeout=ANALYZE_EXTRACT_TIMEOUT_SECONDS,
         )
+    except asyncio.TimeoutError as exc:
+        logger.error("analyze_extract_timeout upload_id=%s user_id=%s", upload_id, user_id)
+        raise HTTPException(
+            status_code=504,
+            detail={"detail": "Analysis timed out. Please retry.", "code": "ANALYSIS_TIMEOUT"},
+        ) from exc
     except HTTPException:
         raise
     except Exception as exc:
@@ -113,18 +161,29 @@ async def analyze_lab(
         )
 
     # Persist biomarkers
-    saved = await save_biomarkers(
-        upload_id=upload_id,
-        user_id=user_id,
-        biomarkers=biomarkers,
-    )
+    try:
+        saved = await save_biomarkers(
+            upload_id=upload_id,
+            user_id=user_id,
+            biomarkers=biomarkers,
+        )
+    except Exception as exc:
+        logger.error("analyze_save_biomarkers_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc), exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={"detail": "Could not save extracted biomarkers", "code": "BIOMARKER_SAVE_FAILED"},
+        ) from exc
 
-    await save_timeline_event(
-        user_id,
-        event_type="lab_uploaded",
-        summary=f"Lab uploaded from {normalized_lab_name or 'unknown lab'}",
-        metadata={"upload_id": upload_id, "biomarker_count": len(saved)},
-    )
+    try:
+        await save_timeline_event(
+            user_id,
+            event_type="lab_uploaded",
+            summary=f"Lab uploaded from {normalized_lab_name or 'unknown lab'}",
+            metadata={"upload_id": upload_id, "biomarker_count": len(saved)},
+        )
+    except Exception as exc:
+        # Timeline should not fail the request after successful biomarker persistence.
+        logger.warning("analyze_timeline_event_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
 
     return {
         "upload_id": upload_id,
