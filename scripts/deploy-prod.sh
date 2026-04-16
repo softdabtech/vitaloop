@@ -144,25 +144,35 @@ ssh $SSH_OPTS "$REMOTE_HOST" "
     set -euo pipefail
     cd $REMOTE_DIR
     
-    # Frontend build
-    echo 'Building frontend...'
-    cd frontend
-    npm ci --prefer-offline || npm ci
-    # Use build:prod to avoid npm postbuild hooks (react-snap) on headless servers.
-    NODE_OPTIONS='--max-old-space-size=2048' npm run build:prod || {
-        echo 'ERROR: Frontend build failed'
-        exit 1
-    }
-    cd ..
+    CHANGED_FILES=\"\$(git diff --name-only ORIG_HEAD HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || true)\"
+
+    # Frontend build (only when frontend files changed)
+    if echo \"\$CHANGED_FILES\" | grep -qE '^(frontend/|frontend/package.json|frontend/package-lock.json)$'; then
+        echo 'Building frontend...'
+        cd frontend
+        npm ci --prefer-offline || npm ci
+        # Use build:prod to avoid npm postbuild hooks (react-snap) on headless servers.
+        NODE_OPTIONS='--max-old-space-size=2048' npm run build:prod || {
+            echo 'ERROR: Frontend build failed'
+            exit 1
+        }
+        cd ..
+    else
+        echo 'Skipping frontend build (no frontend changes)'
+    fi
     
-    # CRM build
-    echo 'Building CRM...'
-    cd crm-mvc
-    dotnet publish -c Release || {
-        echo 'ERROR: CRM build failed'
-        exit 1
-    }
-    cd ..
+    # CRM build (only when CRM files changed)
+    if echo \"\$CHANGED_FILES\" | grep -qE '^crm-mvc/'; then
+        echo 'Building CRM...'
+        cd crm-mvc
+        dotnet publish -c Release || {
+            echo 'ERROR: CRM build failed'
+            exit 1
+        }
+        cd ..
+    else
+        echo 'Skipping CRM build (no crm changes)'
+    fi
     
     # Restart services
     echo 'Restarting services...'
