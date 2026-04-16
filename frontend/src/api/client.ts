@@ -60,10 +60,17 @@ api.interceptors.response.use(
     }
 
     if (status === 401) {
-      if (hasSupabaseConfig) {
-        await supabase.auth.signOut()
+      const requestUrl = String(error?.config?.url || '')
+      const authBoundary = requestUrl.includes('/auth/me') || requestUrl.includes('/auth/onboarding/state')
+
+      // Only force global sign-out on auth boundary calls.
+      // For other endpoints we propagate the error so screens can degrade gracefully.
+      if (authBoundary) {
+        if (hasSupabaseConfig) {
+          await supabase.auth.signOut()
+        }
+        window.location.href = '/login'
       }
-      window.location.href = '/login'
       return Promise.reject(error)
     }
 

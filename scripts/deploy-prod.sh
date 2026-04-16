@@ -160,7 +160,14 @@ log_success "Build completed and services restarted"
 # PHASE 6: Validation
 log_section "Phase 6: Post-Deployment Validation"
 
-sleep 3  # Give services time to start
+# Give services time to start and warm up before external health checks.
+for i in {1..30}; do
+        if curl -sf "https://api.vitaloop.today/health" > /dev/null 2>&1 \
+            && curl -sf "https://api.vitaloop.today/health/ready" > /dev/null 2>&1; then
+                break
+        fi
+        sleep 2
+done
 
 VALIDATION_PASSED=true
 
