@@ -6,7 +6,13 @@ from app.errors import http_exception_handler, validation_exception_handler
 from app.config import settings
 from app.middleware.request_context import RequestContextMiddleware
 from app.middleware.logging import StructuredLoggingMiddleware
-from app.middleware.security import PathRateLimitMiddleware, RateLimitRule, SecurityHeadersMiddleware
+from app.middleware.security import (
+    InMemoryRateLimiterBackend,
+    PathRateLimitMiddleware,
+    RateLimitRule,
+    RedisRateLimiterBackend,
+    SecurityHeadersMiddleware,
+)
 import logging
 
 from app.services.claude_service import is_llm_configured
@@ -73,6 +79,15 @@ app.add_middleware(StructuredLoggingMiddleware)
 if settings.security_enable_headers:
     app.add_middleware(SecurityHeadersMiddleware)
 
+rate_limit_backend_name = (settings.rate_limit_backend or "inmemory").strip().lower()
+if rate_limit_backend_name == "redis":
+    rate_limit_backend = RedisRateLimiterBackend(
+        redis_url=settings.rate_limit_redis_url,
+        key_prefix=settings.rate_limit_redis_prefix,
+    )
+else:
+    rate_limit_backend = InMemoryRateLimiterBackend()
+
 app.add_middleware(
     PathRateLimitMiddleware,
     rules=[
@@ -80,6 +95,7 @@ app.add_middleware(
         RateLimitRule(prefix="/analyze", max_requests=settings.analyze_rate_limit_per_minute, window_seconds=60),
         RateLimitRule(prefix="/protocol", max_requests=settings.protocol_rate_limit_per_minute, window_seconds=60),
     ],
+    backend=rate_limit_backend,
     trust_forwarded_for=settings.rate_limit_trust_forwarded_for,
     forwarded_for_header=settings.rate_limit_forwarded_for_header,
 )
