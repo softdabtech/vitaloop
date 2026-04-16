@@ -5,6 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from app.errors import http_exception_handler, validation_exception_handler
 from app.config import settings
 from app.middleware.logging import StructuredLoggingMiddleware
+from app.middleware.security import PathRateLimitMiddleware, RateLimitRule, SecurityHeadersMiddleware
 import logging
 
 import sentry_sdk
@@ -58,12 +59,19 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 # Add structured logging middleware
 app.add_middleware(StructuredLoggingMiddleware)
 
-origins = [
-    "https://vitaloop.today",
-    "https://www.vitaloop.today",
-    "http://localhost:5173",
-    "http://localhost:3000",
-]
+if settings.security_enable_headers:
+    app.add_middleware(SecurityHeadersMiddleware)
+
+app.add_middleware(
+    PathRateLimitMiddleware,
+    rules=[
+        RateLimitRule(prefix="/auth", max_requests=settings.auth_rate_limit_per_minute, window_seconds=60),
+        RateLimitRule(prefix="/analyze", max_requests=settings.analyze_rate_limit_per_minute, window_seconds=60),
+        RateLimitRule(prefix="/protocol", max_requests=settings.protocol_rate_limit_per_minute, window_seconds=60),
+    ],
+)
+
+origins = settings.origins_list
 
 app.add_middleware(
     CORSMiddleware,

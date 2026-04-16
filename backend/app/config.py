@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     routellm_model: str = "route-llm"
     app_env: str = "development"
     allowed_origins: str = "http://localhost:5173"
+    security_enable_headers: bool = True
+    auth_rate_limit_per_minute: int = 60
+    analyze_rate_limit_per_minute: int = 30
+    protocol_rate_limit_per_minute: int = 30
     iherb_rcode: str = "VIT123"
     iherb_base_url: str = "https://www.iherb.com/search"
     stripe_secret_key: str = ""
@@ -38,7 +42,7 @@ class Settings(BaseSettings):
 
     @property
     def origins_list(self) -> List[str]:
-        return [o.strip() for o in self.allowed_origins.split(",")]
+        return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
 
     @property
     def active_abacus_ai_api_key(self) -> str:
