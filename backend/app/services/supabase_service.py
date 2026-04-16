@@ -2,6 +2,7 @@ import asyncio
 import logging
 from collections import Counter
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 from fastapi import HTTPException
 import httpx
 from supabase import create_client, Client
@@ -1467,6 +1468,39 @@ async def get_audit_logs(limit: int = 200, organization_id: Optional[str] = None
     return resp.data or []
 
 
+async def write_audit_log(
+    *,
+    user_id: Optional[str],
+    action: str,
+    entity_type: str,
+    entity_id: Optional[str] = None,
+    old_value: Optional[Dict[str, Any]] = None,
+    new_value: Optional[Dict[str, Any]] = None,
+    organization_id: Optional[str] = None,
+) -> None:
+    """Best-effort audit logging helper that never raises."""
+    try:
+        supabase = _get_supabase()
+        await _run(
+            lambda: supabase.table("audit_logs")
+            .insert(
+                {
+                    "user_id": user_id,
+                    "action": action,
+                    "entity_type": entity_type,
+                    "entity_id": entity_id or str(uuid4()),
+                    "old_value": old_value or {},
+                    "new_value": new_value or {},
+                    "organization_id": organization_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            .execute()
+        )
+    except Exception as ex:
+        _logger.warning("audit_log_write_failed action=%s entity_type=%s error=%s", action, entity_type, ex)
+
+
 async def get_admin_user_detail(user_id: str) -> Dict[str, Any]:
     supabase = _get_supabase()
     user_resp, profile_resp, location_resp, complaints_resp, checkins_resp, uploads_resp, red_flags_resp, timeline_resp = \
@@ -1541,6 +1575,19 @@ async def redact_old_lab_upload_text(
         .execute()
     )
     result["updated"] = len(target_ids)
+
+    await write_audit_log(
+        user_id=None,
+        action="retention_redaction",
+        entity_type="lab_uploads",
+        entity_id=str(uuid4()),
+        new_value={
+            "retention_days": safe_days,
+            "batch_size": safe_batch,
+            "updated": result["updated"],
+            "sample_ids": result["sample_ids"],
+        },
+    )
 
     _logger.info(
         "retention_redaction_completed scanned=%s candidates=%s updated=%s cutoff=%s",
