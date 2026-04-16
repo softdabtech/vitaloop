@@ -1597,3 +1597,91 @@ async def redact_old_lab_upload_text(
         cutoff_iso,
     )
     return result
+
+
+def _parse_iso_datetime(value: Any) -> Optional[datetime]:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+async def get_retention_redaction_status() -> Dict[str, Any]:
+    """Return retention run health summary for admin dashboards."""
+    supabase = _get_supabase()
+    since_24h = datetime.now(timezone.utc) - timedelta(hours=24)
+
+    resp = await _run(
+        lambda: supabase.table("audit_logs")
+        .select("action,timestamp,new_value,entity_type")
+        .eq("entity_type", "lab_uploads")
+        .in_("action", ["retention_redaction_job", "retention_redaction", "retention_redaction_failed"])
+        .order("timestamp", desc=True)
+        .limit(200)
+        .execute()
+    )
+    rows = resp.data or []
+
+    def _row_status(row: Dict[str, Any]) -> str:
+        action = str(row.get("action") or "")
+        nv = row.get("new_value") if isinstance(row.get("new_value"), dict) else {}
+        if action == "retention_redaction_failed":
+            return "failed"
+        if action == "retention_redaction":
+            return "success"
+        status = str(nv.get("status") or "").strip().lower()
+        return status or "unknown"
+
+    def _row_updated(row: Dict[str, Any]) -> int:
+        nv = row.get("new_value") if isinstance(row.get("new_value"), dict) else {}
+        return _safe_int(nv.get("updated"), 0)
+
+    def _row_compact(row: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        if not row:
+            return None
+        nv = row.get("new_value") if isinstance(row.get("new_value"), dict) else {}
+        return {
+            "action": row.get("action"),
+            "timestamp": row.get("timestamp"),
+            "status": _row_status(row),
+            "updated": _row_updated(row),
+            "dry_run": bool(nv.get("dry_run")) if "dry_run" in nv else None,
+            "error": nv.get("error"),
+        }
+
+    last_run = rows[0] if rows else None
+    last_success = next((row for row in rows if _row_status(row) == "success"), None)
+    last_failure = next((row for row in rows if _row_status(row) == "failed"), None)
+
+    runs_24h = 0
+    failures_24h = 0
+    updated_24h = 0
+    for row in rows:
+        dt = _parse_iso_datetime(row.get("timestamp"))
+        if not dt or dt < since_24h:
+            continue
+        runs_24h += 1
+        if _row_status(row) == "failed":
+            failures_24h += 1
+        if _row_status(row) == "success":
+            updated_24h += _row_updated(row)
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "runs_24h": runs_24h,
+        "failures_24h": failures_24h,
+        "updated_24h": updated_24h,
+        "last_run": _row_compact(last_run),
+        "last_success": _row_compact(last_success),
+        "last_failure": _row_compact(last_failure),
+    }

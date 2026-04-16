@@ -231,3 +231,8 @@ async def admin_redact_old_lab_upload_text(
         batch_size=batch_size if batch_size is not None else settings.lab_upload_retention_batch_size,
         dry_run=dry_run,
     )
+
+
+@router.get("/retention/status")
+async def admin_retention_status(_: dict = Depends(_require_super_admin)):
+    return await svc.get_retention_redaction_status()

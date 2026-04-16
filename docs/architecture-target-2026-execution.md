@@ -87,7 +87,7 @@ Exit criteria:
 ## Immediate Next Sprint
 1. Extend audit log coverage for medical-data reads and writes.
 2. Implement Redis-backed distributed rate limiter for multi-instance backend (design in `docs/redis-rate-limiter-plan.md`). (in progress: backend abstraction and Redis backend wiring completed)
-3. Add retention run dashboard panel (last success/fail, rows updated).
+3. Add retention run dashboard panel (last success/fail, rows updated). (completed: admin endpoint `/admin/retention/status` + job audit events)
 4. Expand abuse tests to include auth/protocol prefixes and multi-IP behavior. (completed)
 
 ## Risks and Mitigations
