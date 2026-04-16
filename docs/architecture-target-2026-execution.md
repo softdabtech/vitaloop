@@ -89,6 +89,7 @@ Exit criteria:
 2. Implement Redis-backed distributed rate limiter for multi-instance backend (design in `docs/redis-rate-limiter-plan.md`). (completed in production: Redis installed, env switched, runtime keys verified)
 3. Add retention run dashboard panel (last success/fail, rows updated). (completed: admin endpoint `/admin/retention/status` + job audit events)
 4. Expand abuse tests to include auth/protocol prefixes and multi-IP behavior. (completed)
+5. Add live rate-limiter abuse smoke for staged/prod verification. (completed: `scripts/smoke_rate_limiter.sh`, optional deploy flag `RUN_RATE_LIMIT_SMOKE=1`)
 
 ## Risks and Mitigations
 - In-process limiter is per-instance only.

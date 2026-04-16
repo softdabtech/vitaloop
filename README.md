@@ -155,10 +155,19 @@ The deployment script performs a 6-phase rollout:
 5. **Service restart**: Restarts backend and CRM with health monitoring
 6. **Validation**: Verifies all endpoints are responding (health, ready, frontend, CRM)
 
+Optional post-deploy limiter smoke can be enabled:
+
+```bash
+RUN_RATE_LIMIT_SMOKE=1 ./scripts/deploy-prod.sh
+```
+
 Security and retention operations:
 
 - API header smoke check:
      - `./scripts/smoke_api_security_headers.sh`
+- API rate limiter smoke check (burst and verify `429`):
+     - `./scripts/smoke_rate_limiter.sh`
+     - optional tuning: `RATE_LIMIT_TARGET_PATH=/protocol/__rate_limit_smoke__ RATE_LIMIT_BURST_REQUESTS=40 RATE_LIMIT_MIN_429=1 ./scripts/smoke_rate_limiter.sh`
 - Install nightly retention timer (systemd):
      - `export REMOTE_HOST="deploy@your-prod-host"`
      - `export REMOTE_DIR="/var/www/VITALOOP"`
