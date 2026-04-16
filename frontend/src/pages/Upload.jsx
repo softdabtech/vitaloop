@@ -7,18 +7,67 @@ import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
 import toast from 'react-hot-toast'
 
+const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
+const SUPPORTED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
+
 export default function Upload() {
   const navigate = useNavigate()
   const { processFile, progress, isProcessing } = useOCR()
   const [symptoms, setSymptoms] = useState([])
   const [labName, setLabName] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [selectedFileName, setSelectedFileName] = useState('')
+
+  const isBusy = isProcessing || analyzing
+
+  function validateFile(file) {
+    if (!file) {
+      return 'No file selected. Please choose a lab report.'
+    }
+
+    if (!SUPPORTED_FILE_TYPES.includes(file.type)) {
+      return 'Unsupported file type. Please upload PDF, JPG, or PNG.'
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      return 'File is too large. Please upload a file under 20MB.'
+    }
+
+    return ''
+  }
 
   async function handleFile(file) {
+    if (isBusy) {
+      return
+    }
+
+    const validationError = validateFile(file)
+    if (validationError) {
+      setErrorMessage(validationError)
+      toast.error(validationError)
+      return
+    }
+
+    setErrorMessage('')
+    setSelectedFileName(file.name)
+
     toast('Extracting text from your lab report…', { icon: '🔍' })
-    const { text, confidence } = await processFile(file)
+    let text = ''
+    let confidence = null
+
+    try {
+      const result = await processFile(file)
+      text = result.text
+      confidence = result.confidence
+    } catch (err) {
+      setErrorMessage('Could not read this file. Please try another clear PDF or image.')
+      toast.error('Could not read this file. Please try another clear PDF or image.')
+      return
+    }
 
     if (!text || text.trim().length < 20) {
+      setErrorMessage('Not enough readable text found. Please upload a clearer document.')
       toast.error('Could not read the document. Try a clearer image or PDF.')
       return
     }
@@ -56,26 +105,53 @@ export default function Upload() {
       toast.success('Analysis complete!')
       navigate(`/results/${data.upload_id}`)
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Analysis failed. Please try again.')
+      const message = err.response?.data?.detail || 'Analysis failed. Please try again.'
+      setErrorMessage(message)
+      toast.error(message)
     } finally {
       setAnalyzing(false)
     }
   }
 
   return (
-    <div className="min-h-screen p-6 max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-green-400 mb-6">Upload Lab Results</h2>
-      <p className="text-gray-400 text-sm mb-6">
-        Your PDF never leaves your device. Only the extracted text is sent for analysis.
+    <div className="min-h-screen px-4 py-6 sm:px-6 max-w-3xl mx-auto">
+      <div className="mb-6 rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-5 sm:p-6">
+        <h2 className="text-2xl font-bold text-teal-800 mb-2">Upload Lab Results</h2>
+        <p className="text-gray-600 text-sm">
+          Your file is processed locally on your device first. Only extracted text is sent for analysis.
+        </p>
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+        <div className={`rounded-xl border px-3 py-2 ${isProcessing ? 'border-teal-500 bg-teal-50 text-teal-800' : 'border-gray-200 bg-white text-gray-500'}`}>
+          1. Read document
+        </div>
+        <div className={`rounded-xl border px-3 py-2 ${analyzing ? 'border-teal-500 bg-teal-50 text-teal-800' : 'border-gray-200 bg-white text-gray-500'}`}>
+          2. Analyze biomarkers
+        </div>
+        <div className={`rounded-xl border px-3 py-2 ${!isBusy && selectedFileName ? 'border-teal-500 bg-teal-50 text-teal-800' : 'border-gray-200 bg-white text-gray-500'}`}>
+          3. Open results
+        </div>
+      </div>
+
+      {errorMessage && (
+        <div className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">
+          {errorMessage}
+        </div>
+      )}
+
+      <p className="text-gray-500 text-sm mb-6">
+        Tip: for best results, upload a clear full-page PDF or a sharp photo in good lighting.
       </p>
 
       <div className="mb-6">
-        <label className="block text-sm text-gray-400 mb-1">Lab / Clinic name (optional)</label>
+        <label className="block text-sm text-gray-600 mb-1">Lab / Clinic name (optional)</label>
         <input
           value={labName}
+          disabled={isBusy}
           onChange={(e) => setLabName(e.target.value)}
           placeholder="Quest, LabCorp, Other…"
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+          className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-teal-500 disabled:opacity-60 disabled:cursor-not-allowed"
         />
       </div>
 
@@ -83,15 +159,24 @@ export default function Upload() {
 
       <div className="mt-6">
         {isProcessing && (
-          <div className="mb-4">
-            <div className="text-sm text-gray-400 mb-1">Reading document… {progress}%</div>
-            <div className="w-full bg-gray-800 rounded-full h-2">
-              <div className="bg-green-500 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
+          <div className="mb-4 rounded-xl border border-teal-100 bg-teal-50 p-4">
+            <div className="text-sm text-teal-800 mb-2">Reading document… {progress}%</div>
+            <div className="w-full bg-teal-100 rounded-full h-2.5">
+              <div className="bg-teal-600 h-2.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
             </div>
+            {selectedFileName && <div className="mt-2 text-xs text-teal-700 truncate">{selectedFileName}</div>}
           </div>
         )}
-        {analyzing && <p className="text-sm text-gray-400 animate-pulse mb-4">AI is analyzing your results…</p>}
-        {!isProcessing && !analyzing && <UploadZone onFile={handleFile} />}
+
+        {analyzing && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 animate-pulse">
+            AI is analyzing your results. This usually takes under a minute.
+          </div>
+        )}
+
+        {!isProcessing && !analyzing && (
+          <UploadZone onFile={handleFile} disabled={isBusy} />
+        )}
       </div>
     </div>
   )
