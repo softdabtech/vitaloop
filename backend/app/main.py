@@ -9,14 +9,20 @@ from app.middleware.logging import StructuredLoggingMiddleware
 from app.middleware.security import PathRateLimitMiddleware, RateLimitRule, SecurityHeadersMiddleware
 import logging
 
-import sentry_sdk
-from sentry_sdk.integrations.fastapi import FastApiIntegration
-from sentry_sdk.integrations.starlette import StarletteIntegration
 from app.services.claude_service import is_llm_configured
+
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.starlette import StarletteIntegration
+except Exception:  # pragma: no cover - optional dependency in some environments
+    sentry_sdk = None
+    FastApiIntegration = None
+    StarletteIntegration = None
 
 logger = logging.getLogger("uvicorn.error")
 
-if settings.sentry_dsn:
+if settings.sentry_dsn and sentry_sdk is not None:
     sentry_sdk.init(
         dsn=settings.sentry_dsn,
         integrations=[StarletteIntegration(), FastApiIntegration()],
@@ -24,6 +30,8 @@ if settings.sentry_dsn:
         environment=settings.app_env,
         send_default_pii=False,
     )
+elif settings.sentry_dsn and sentry_sdk is None:
+    logger.warning("sentry_dsn_set_but_sdk_missing")
 from app.routers import (
     analyze, protocol, progress, health, symptoms, stripe_router, admin,
     profile, complaints, checkins, timeline, insights, red_flags, notifications, auth, crm,

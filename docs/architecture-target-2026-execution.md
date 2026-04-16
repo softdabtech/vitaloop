@@ -33,9 +33,9 @@ Backlog:
 - [x] Add endpoint-level timeout/error hardening for analyze/protocol.
 - [x] Add app-level security headers middleware.
 - [x] Add app-level path rate limiting middleware.
-- [ ] Add request-id propagation and correlate logs across frontend/backend/CRM.
-- [ ] Add idempotency key support for expensive analysis operations.
-- [ ] Add retention jobs for raw upload artifacts (90-365 day policy).
+- [x] Add request-id propagation and correlate logs across frontend/backend/CRM.
+- [x] Add idempotency key support for expensive analysis operations.
+- [x] Add retention jobs for raw upload artifacts (90-365 day policy).
 - [ ] Add audit log coverage for all medical-data reads and writes.
 
 Exit criteria:
@@ -85,10 +85,10 @@ Exit criteria:
 - Compliance controls mapped to operational runbooks and automated checks.
 
 ## Immediate Next Sprint
-1. Add request-id middleware and cross-service log correlation.
-2. Add idempotency-key support for analyze requests.
-3. Add upload retention cleanup job and verification logging.
-4. Add API abuse tests for rate-limit behavior.
+1. Add API abuse tests for rate-limit behavior.
+2. Add retention execution telemetry and alerting for failed runs.
+3. Extend audit log coverage for medical-data reads and writes.
+4. Plan Redis-backed distributed rate limiter for multi-instance backend.
 
 ## Risks and Mitigations
 - In-process limiter is per-instance only.

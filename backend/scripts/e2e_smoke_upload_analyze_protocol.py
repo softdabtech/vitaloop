@@ -43,6 +43,7 @@ async def run() -> None:
         return {"id": upload_id}
 
     async def fake_extract_biomarkers(text, symptoms):
+        state["extract_calls"] = state.get("extract_calls", 0) + 1
         return [
             {
                 "name": "Vitamin D (25-OH)",
@@ -126,7 +127,22 @@ async def run() -> None:
 
     try:
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="https://test") as client:
+            health_response = await client.get("/health")
+            health_response.raise_for_status()
+            required_headers = [
+                "x-request-id",
+                "x-content-type-options",
+                "x-frame-options",
+                "referrer-policy",
+                "permissions-policy",
+                "cache-control",
+                "strict-transport-security",
+            ]
+            for header_name in required_headers:
+                assert header_name in health_response.headers, f"missing header: {header_name}"
+
+            idem_key = "smoke-idem-key-001"
             analyze_response = await client.post(
                 "/analyze",
                 json={
@@ -134,9 +150,35 @@ async def run() -> None:
                     "lab_name": "LabCorp",
                     "symptoms": ["fatigue"],
                 },
+                headers={"X-Idempotency-Key": idem_key},
             )
             analyze_response.raise_for_status()
             upload_id = analyze_response.json()["upload_id"]
+
+            analyze_cached_response = await client.post(
+                "/analyze",
+                json={
+                    "extracted_text": "Lab report text with Vitamin D result and basic panel data...",
+                    "lab_name": "LabCorp",
+                    "symptoms": ["fatigue"],
+                },
+                headers={"X-Idempotency-Key": idem_key},
+            )
+            analyze_cached_response.raise_for_status()
+            cached_upload_id = analyze_cached_response.json()["upload_id"]
+            assert cached_upload_id == upload_id
+            assert state.get("extract_calls") == 1
+
+            conflict_response = await client.post(
+                "/analyze",
+                json={
+                    "extracted_text": "Lab report text with a DIFFERENT payload and values...",
+                    "lab_name": "LabCorp",
+                    "symptoms": ["fatigue"],
+                },
+                headers={"X-Idempotency-Key": idem_key},
+            )
+            assert conflict_response.status_code == 409
 
             protocol_response = await client.post(
                 "/protocol",
@@ -148,6 +190,7 @@ async def run() -> None:
             print("E2E smoke OK")
             print(f"upload_id={upload_id}")
             print(f"supplements={len(protocol['recommendations'])}")
+            print(f"extract_calls={state.get('extract_calls', 0)}")
     finally:
         app.dependency_overrides.clear()
 
