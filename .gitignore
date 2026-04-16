@@ -7,3 +7,8 @@ dist/
 
 node_modules/
 frontend/node_modules/
+
+# CRM build artifacts
+crm-mvc/bin/
+crm-mvc/obj/
+crm-mvc/publish/
