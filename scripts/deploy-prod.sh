@@ -114,6 +114,15 @@ log_info "Pulling latest code to server..."
 ssh $SSH_OPTS "$REMOTE_HOST" "
     set -euo pipefail
     cd $REMOTE_DIR
+
+    # Backend dependency sync
+    echo 'Installing backend dependencies...'
+    cd backend
+    ./.venv/bin/pip install -r requirements.txt || {
+        echo 'ERROR: Backend dependency install failed'
+        exit 1
+    }
+    cd ..
     
     # Fast-forward only (no force merges)
     git pull --ff-only origin main || {
