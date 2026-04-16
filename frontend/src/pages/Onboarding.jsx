@@ -56,6 +56,18 @@ export default function Onboarding() {
   const [location, setLocation] = useState({ city: '', state: '', country: '', district: '' })
   const [complaints, setComplaints] = useState([{ complaint: '', duration_description: '', tried_interventions: '' }])
 
+  const handleSkipOnboarding = async () => {
+    try {
+      await api.post('/auth/onboarding/skip')
+      trackFunnelEvent('funnel_onboarding_skipped', 'User skipped onboarding and entered dashboard', {
+        stage: steps[step] || 'unknown',
+      }, { oncePerSession: true })
+    } catch {
+      // Fail-open: user explicitly chose to continue without onboarding.
+    }
+    navigate('/dashboard')
+  }
+
   // On mount: org setup is only required for CRM roles with no org membership.
   useEffect(() => {
     api.get('/auth/me').then(r => {
@@ -309,7 +321,7 @@ export default function Onboarding() {
           )}
         </div>
         <div style={{ textAlign: 'center', marginTop: 16 }}>
-          <button style={s.btnSec} onClick={() => navigate('/dashboard')}>Skip for now</button>
+          <button style={s.btnSec} onClick={handleSkipOnboarding}>Skip for now</button>
         </div>
           </>
         )}

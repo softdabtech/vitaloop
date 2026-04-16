@@ -148,6 +148,31 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false)
   const [honeypot, setHoneypot] = useState('')  // bot trap
   const [authAlert, setAuthAlert] = useState(null)
+  const [rateLimitedUntil, setRateLimitedUntil] = useState(0)
+
+  const ATTEMPT_KEY = 'vo:auth-attempts'
+  const ATTEMPT_WINDOW_MS = 10 * 60 * 1000
+  const ATTEMPT_LIMIT = 8
+
+  function registerAttempt() {
+    const now = Date.now()
+    let attempts = []
+    try {
+      attempts = JSON.parse(window.localStorage.getItem(ATTEMPT_KEY) || '[]')
+    } catch {
+      attempts = []
+    }
+    const recent = attempts.filter((t) => Number.isFinite(t) && (now - t) < ATTEMPT_WINDOW_MS)
+    recent.push(now)
+    window.localStorage.setItem(ATTEMPT_KEY, JSON.stringify(recent))
+
+    if (recent.length > ATTEMPT_LIMIT) {
+      const blockUntil = now + 60 * 1000
+      setRateLimitedUntil(blockUntil)
+      return false
+    }
+    return true
+  }
 
   async function handleResendConfirmation(emailToUse) {
     const targetEmail = String(emailToUse || '').trim()
@@ -181,6 +206,17 @@ export default function Login() {
     setAuthAlert(null)
     // Honeypot check - bots fill hidden fields
     if (honeypot) return
+
+    const now = Date.now()
+    if (rateLimitedUntil > now) {
+      toast.error('Too many attempts. Please wait 1 minute and try again.')
+      return
+    }
+
+    if (!registerAttempt()) {
+      toast.error('Too many attempts. Please wait 1 minute and try again.')
+      return
+    }
 
     const normalizedEmail = email.trim()
     if (!isValidEmail(normalizedEmail)) {
@@ -222,6 +258,7 @@ export default function Login() {
 
       if (authData?.session?.access_token) {
         await notifyRegistrationAlert('email_signup')
+        import('./UserDashboard.jsx').catch(() => {})
         toast.success('Account created. Continue with onboarding.')
         navigate('/onboarding', { replace: true })
         return
@@ -234,6 +271,7 @@ export default function Login() {
 
     try {
       console.log('[STEP 1] Login successful, preparing CRM handoff')
+      import('./UserDashboard.jsx').catch(() => {})
       const returnUrl = searchParams.get('returnUrl')
       console.log('[STEP 1B] Return URL from search params:', returnUrl)
       

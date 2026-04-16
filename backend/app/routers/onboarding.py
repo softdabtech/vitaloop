@@ -138,3 +138,15 @@ async def complete_onboarding(current_user: dict = Depends(get_current_user)):
 
     updated = await svc.upsert_user_profile(user_id, {"onboarding_complete": True})
     return {"ok": True, "profile": updated}
+
+
+@router.post("/skip")
+async def skip_onboarding(current_user: dict = Depends(get_current_user)):
+    """Fail-safe skip endpoint for end users.
+
+    Some accounts may not have a pre-created user_profile row yet. Using upsert
+    here prevents a 404 flow-break and lets users enter the dashboard.
+    """
+    user_id = current_user.get("sub")
+    updated = await svc.upsert_user_profile(user_id, {"onboarding_complete": True})
+    return {"ok": True, "profile": updated, "skipped": True}
