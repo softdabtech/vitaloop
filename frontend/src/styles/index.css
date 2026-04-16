@@ -5,11 +5,15 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+  font-family: "SF Pro Display", "Avenir Next", "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #ffffff;
+  background:
+    radial-gradient(circle at 12% 6%, rgba(45, 184, 135, 0.14), transparent 34%),
+    radial-gradient(circle at 88% 2%, rgba(13, 110, 86, 0.1), transparent 30%),
+    #f8fbfa;
   color: #1d1d1f;
+  min-height: 100vh;
 }
 
 * {
@@ -22,4 +26,13 @@ button {
 
 a {
   color: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+:focus-visible {
+  outline: 2px solid #0f6e56;
+  outline-offset: 2px;
 }

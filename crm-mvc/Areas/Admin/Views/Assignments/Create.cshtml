@@ -12,16 +12,19 @@
 
     <form method="post">
         <input type="hidden" asp-for="OrganizationId" />
+        <div asp-validation-summary="ModelOnly" class="text-danger" style="margin-bottom: 1rem;"></div>
 
         <div class="form-card">
             <div class="form-section">
                 <label class="form-label" asp-for="PractitionerId">Practitioner ID</label>
                 <input asp-for="PractitionerId" class="form-control" placeholder="00000000-0000-0000-0000-000000000000" required />
+                <span asp-validation-for="PractitionerId" class="text-danger"></span>
             </div>
 
             <div class="form-section">
                 <label class="form-label" asp-for="ClientId">Client ID</label>
                 <input asp-for="ClientId" class="form-control" placeholder="00000000-0000-0000-0000-000000000000" required />
+                <span asp-validation-for="ClientId" class="text-danger"></span>
             </div>
 
             <div class="form-section">

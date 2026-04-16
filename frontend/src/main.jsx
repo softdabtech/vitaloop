@@ -23,7 +23,22 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <ErrorBoundary>
       <HelmetProvider>
         <App />
-        <Toaster position="top-right" />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 3800,
+            style: {
+              borderRadius: '12px',
+              border: '1px solid #d1e7df',
+              background: '#ffffff',
+              color: '#1d1d1f',
+              boxShadow: '0 10px 32px rgba(8, 80, 65, 0.12)',
+              fontSize: '14px',
+              maxWidth: '420px',
+            },
+          }}
+          containerStyle={{ top: 18, right: 18 }}
+        />
       </HelmetProvider>
     </ErrorBoundary>
   </React.StrictMode>
