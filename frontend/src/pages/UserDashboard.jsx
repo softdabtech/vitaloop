@@ -37,7 +37,7 @@ function StatSkeleton() {
 }
 
 export default function UserDashboard() {
-  const { user, signOut } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [summary, setSummary] = useState(null);
@@ -45,12 +45,15 @@ export default function UserDashboard() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
     if (!user) {
       navigate('/login');
       return;
     }
     fetchDashboardData();
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   const fetchDashboardData = async () => {
     try {
