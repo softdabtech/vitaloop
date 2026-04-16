@@ -471,6 +471,30 @@ async def record_stripe_event(
         return False
 
 
+async def record_health_failure(
+    service_name: str,
+    error_type: str,
+    error_message: str,
+) -> None:
+    """Log a service health failure for ops monitoring and alerting."""
+    supabase = _get_supabase()
+    
+    try:
+        await _run(
+            lambda: supabase.table("health_failures")
+            .insert({
+                "service_name": service_name,
+                "error_type": error_type,
+                "error_message": error_message[:500],  # Truncate to prevent abuse
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+            .execute()
+        )
+    except Exception:
+        # Silent fail; don't let health logging block the app
+        pass
+
+
 async def get_user_account(user_id: str) -> Dict[str, Any]:
     return await _select_first_by_id_with_fallback("users", "id, email, full_name, sub_status, global_role", user_id)
 

@@ -3,6 +3,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import HTTPException
 from fastapi.exceptions import RequestValidationError
 from app.errors import http_exception_handler, validation_exception_handler
+from app.config import settings
+import logging
+
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.starlette import StarletteIntegration
+from app.services.claude_service import is_llm_configured
+
+logger = logging.getLogger("uvicorn.error")
+
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        integrations=[StarletteIntegration(), FastApiIntegration()],
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+        environment=settings.app_env,
+        send_default_pii=False,
+    )
 from app.routers import (
     analyze, protocol, progress, health, symptoms, stripe_router, admin,
     profile, complaints, checkins, timeline, insights, red_flags, notifications, auth, crm,
@@ -14,6 +32,24 @@ app = FastAPI(
     version="1.0.0",
     description="Biohacking-as-a-Service backend",
 )
+
+
+@app.on_event("startup")
+async def _log_runtime_readiness_summary():
+    checks = {
+        "supabase_url": bool((settings.supabase_url or "").strip()),
+        "supabase_service_role_key": bool((settings.supabase_service_role_key or "").strip()),
+        "llm_provider_key": is_llm_configured(),
+        "resend_api_key": bool((settings.resend_api_key or "").strip()),
+        "stripe_secret_key": bool((settings.stripe_secret_key or "").strip()),
+        "stripe_webhook_secret": bool((settings.stripe_webhook_secret or "").strip()),
+        "stripe_price_id": bool((settings.stripe_price_id or "").strip()),
+    }
+    missing = [name for name, ok in checks.items() if not ok]
+    if missing:
+        logger.warning("runtime_readiness_missing count=%s keys=%s", len(missing), ",".join(missing))
+    else:
+        logger.info("runtime_readiness_ok")
 
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
