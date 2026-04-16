@@ -1,102 +1,131 @@
 import { useNavigate } from 'react-router-dom'
 import { Check, Minus } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
+import { stagger, staggerChild, cardHoverProps, viewport } from '../../lib/motion.js'
 
 const PLANS = [
   {
     id: 'free',
-    name: 'Free',
+    name: 'Free / Starter',
     price: '$0',
     period: null,
-    desc: 'Try VITALOOP and see how it works',
+    desc: 'Try the platform — no card required.',
     badge: null,
     dark: false,
-    cta: 'Get started free',
+    cta: 'Start free',
     features: [
-      { text: 'Upload 1 lab result',       ok: true  },
-      { text: 'Limited biomarker insights', ok: true  },
-      { text: 'Basic issue detection',      ok: true  },
-      { text: 'Full protocol',              ok: false },
-      { text: 'Progress tracking',          ok: false },
-      { text: 'Supplement recommendations', ok: false },
-    ],
-  },
-  {
-    id: 'core',
-    name: 'Core',
-    price: '$29',
-    period: '/month',
-    desc: 'Your complete health optimization system',
-    badge: 'MOST POPULAR',
-    dark: true,
-    cta: 'Start free analysis',
-    features: [
-      { text: 'Unlimited lab uploads',        ok: true },
-      { text: 'Full biomarker analysis',       ok: true },
-      { text: 'Personalized protocol',         ok: true },
-      { text: 'Adaptive questionnaire',        ok: true },
-      { text: 'Progress tracking',             ok: true },
-      { text: 'Supplement recommendations',    ok: true },
-      { text: 'Re-test reminders',             ok: true },
+      { text: '1–2 analyses per month',        ok: true  },
+      { text: 'Basic flags & summary',          ok: true  },
+      { text: 'Full biomarker protocols',       ok: false },
+      { text: 'Progress timeline',              ok: false },
+      { text: 'Exports',                        ok: false },
     ],
   },
   {
     id: 'personal',
-    name: 'Personal',
-    price: '$99',
+    name: 'Personal Pro',
+    price: '$9.99',
     period: '/month',
-    desc: 'Work 1:1 with experienced nutrition specialists to refine and adjust your protocol over time.',
-    badge: 'PREMIUM',
+    annualNote: 'or $99 / year — save 17%',
+    desc: 'Full optimization system for biohackers & individuals.',
+    badge: 'MOST POPULAR',
+    dark: true,
+    cta: 'Start free analysis',
+    features: [
+      { text: 'Unlimited analyses',             ok: true },
+      { text: 'Full biomarker analysis',        ok: true },
+      { text: 'Personalized protocols',         ok: true },
+      { text: 'Progress timeline tracking',     ok: true },
+      { text: 'Exports',                        ok: true },
+    ],
+  },
+  {
+    id: 'practitioner',
+    name: 'Practitioner Pro',
+    price: '$29',
+    period: '/month',
+    annualNote: 'or $299 / year',
+    desc: 'Everything in Personal · built for doctors, nutritionists & coaches.',
+    badge: 'FOR PROFESSIONALS',
     dark: false,
     premium: true,
-    cta: 'Apply for Personal',
+    cta: 'Get Practitioner Pro',
     features: [
-      { text: 'Everything in Core',                              ok: true },
-      { text: '1:1 guidance from vetted specialists',            ok: true },
-      { text: 'Protocol adjustments based on feedback',          ok: true },
-      { text: 'Priority support',                                ok: true },
-      { text: 'Deeper personalization',                          ok: true },
+      { text: 'Everything in Personal Pro',          ok: true },
+      { text: 'CRM with patient assignment',         ok: true },
+      { text: 'White-label reports',                 ok: true },
+      { text: 'Up to 10 patients',                   ok: true },
+      { text: 'Priority support',                    ok: true },
+    ],
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    price: 'From $99',
+    period: '/month',
+    annualNote: '5 seats included',
+    desc: 'Full multi-tenancy for clinics & organizations.',
+    badge: null,
+    dark: false,
+    cta: 'Contact us',
+    features: [
+      { text: 'Full multi-tenancy',             ok: true },
+      { text: 'API access',                     ok: true },
+      { text: 'Bulk analysis',                  ok: true },
+      { text: 'Dedicated support',              ok: true },
+      { text: 'Custom integrations',            ok: true },
     ],
   },
 ]
 
 export default function PricingSection() {
   const navigate = useNavigate()
+  const reduced = useReducedMotion()
 
   return (
     <section id="pricing" style={{ padding: 'var(--py-lg) 24px', background: 'var(--gray-50)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 
         {/* Header */}
-        <div className="reveal" style={{ textAlign: 'center', marginBottom: 64 }}>
-          <div style={{
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'var(--teal-500)',
-            marginBottom: 16,
+        <motion.div
+          variants={reduced ? {} : stagger(0.1)}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport('-60px')}
+          style={{ textAlign: 'center', marginBottom: 64 }}
+        >
+          <motion.div variants={reduced ? {} : staggerChild} style={{
+            fontSize: 12, fontWeight: 600, letterSpacing: '0.12em',
+            textTransform: 'uppercase', color: 'var(--teal-500)', marginBottom: 16,
           }}>
             Pricing
-          </div>
-          <h2 style={{
+          </motion.div>
+          <motion.h2 variants={reduced ? {} : staggerChild} style={{
             fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 700,
             letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 16,
           }}>
-            Simple. Transparent. Cancellable anytime.
-          </h2>
-          <p style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 460, margin: '0 auto', lineHeight: 1.65 }}>
-            Start free. Upgrade when you're ready.
-          </p>
-        </div>
+            Simple, transparent pricing. Cancel anytime.
+          </motion.h2>
+          <motion.p variants={reduced ? {} : staggerChild} style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 460, margin: '0 auto', lineHeight: 1.65 }}>
+            Start free. Upgrade when you need unlimited access and advanced tools.
+          </motion.p>
+        </motion.div>
 
         {/* Cards */}
-        <div className="reveal grid grid-cols-1 md:grid-cols-3 gap-6" style={{ marginBottom: 36 }}>
-          {PLANS.map(({ id, name, price, period, desc, badge, dark, premium, cta, features }) => (
-            <div
+        <motion.div
+          variants={reduced ? {} : stagger(0.08)}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport('-40px')}
+          className="pricing-scroll-wrapper grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
+          style={{ marginBottom: 36 }}
+        >
+          {PLANS.map(({ id, name, price, period, annualNote, desc, badge, dark, premium, cta, features }) => (
+            <motion.div
               key={id}
-              className={id === 'core' ? 'order-first md:order-none' : id === 'free' ? 'order-last md:order-none' : 'order-2 md:order-none'}
+              variants={reduced ? {} : staggerChild}
             >
-              <div
+              <motion.div
                 style={{
                   borderRadius: 28,
                   padding: '44px 36px',
@@ -122,12 +151,7 @@ export default function PricingSection() {
                     : 'none',
                   transition: 'transform 220ms ease, box-shadow 220ms ease',
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.02)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)'
-                }}
+                {...(reduced ? {} : cardHoverProps)}
               >
               {/* Badge */}
               {badge && (
@@ -152,9 +176,9 @@ export default function PricingSection() {
               </div>
 
               {/* Price */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, marginBottom: 4 }}>
                 <span style={{
-                  fontSize: 56, fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1,
+                  fontSize: 48, fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1,
                   color: dark ? 'white' : 'var(--gray-900)',
                 }}>
                   {price}
@@ -169,6 +193,11 @@ export default function PricingSection() {
                   </span>
                 )}
               </div>
+              {annualNote && (
+                <div style={{ fontSize: 12, color: dark ? 'var(--teal-200)' : 'var(--teal-600)', marginBottom: 16 }}>
+                  {annualNote}
+                </div>
+              )}
 
               {/* Description */}
               <p style={{
@@ -196,11 +225,16 @@ export default function PricingSection() {
                 {/* CTA */}
                 <button
                   onClick={() => {
-                    if (id === 'personal') {
-                      const subject = encodeURIComponent('Personal Plan - Application')
+                    if (id === 'enterprise') {
+                      const subject = encodeURIComponent('Enterprise Plan Inquiry')
+                      window.location.href = `mailto:info@softdab.tech?subject=${subject}`
+                      return
+                    }
+                    if (id === 'practitioner') {
+                      const subject = encodeURIComponent('Practitioner Pro Application')
                       const body = encodeURIComponent(
-                        'Hi VITALOOP team,\n\nI am interested in the Personal plan ($99/mo).\n\n' +
-                        'Name:\nBackground:\nGoals:\n\nPlease contact me.'
+                        'Hi VITALOOP team,\n\nI am interested in the Practitioner Pro plan.\n\n' +
+                        'Name:\nSpecialty:\nNumber of patients:\n\nPlease contact me.'
                       )
                       window.location.href = `mailto:info@softdab.tech?subject=${subject}&body=${body}`
                       return
@@ -227,19 +261,24 @@ export default function PricingSection() {
                       : 'var(--gray-700)',
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'scale(1.02)' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1)' }}
                 >
                   {cta}
                 </button>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         {/* Footer note */}
-        <div className="reveal" style={{ textAlign: 'center', fontSize: 13, color: 'var(--gray-500)' }}>
-          Secure. Private. No data selling.
-        </div>
+        <motion.div
+          variants={reduced ? {} : staggerChild}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport('-40px')}
+          style={{ textAlign: 'center', fontSize: 13, color: 'var(--gray-500)' }}
+        >
+          All paid plans include secure data storage, priority support, and regular protocol updates.
+        </motion.div>
 
       </div>
     </section>

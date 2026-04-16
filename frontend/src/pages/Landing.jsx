@@ -4,6 +4,7 @@ import { useScrollReveal } from '../hooks/useScrollReveal.js'
 
 import Navbar            from '../components/landing/Navbar.jsx'
 import Hero              from '../components/landing/Hero.jsx'
+import ProblemSection    from '../components/landing/ProblemSection.jsx'
 import HowItWorksSection from '../components/landing/HowItWorks.jsx'
 import AvatarSection     from '../components/landing/AvatarSection.jsx'
 import ValueBlock        from '../components/landing/ValueBlock.jsx'
@@ -31,6 +32,7 @@ export default function Landing() {
 
       <main>
         <Hero />
+        <ProblemSection />
         <HowItWorksSection />
         <AvatarSection />
         <ValueBlock />

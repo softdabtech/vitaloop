@@ -1,4 +1,6 @@
 import { Activity, ClipboardList, FileUp, LineChart, Search } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
+import { fadeUp, slideIn, cardHoverProps, viewport, EASE } from '../../lib/motion.js'
 
 function StepLabel({ n }) {
   return (
@@ -17,13 +19,16 @@ function StepLabel({ n }) {
 
 function StepCard({ icon, title, subtitle, lines }) {
   return (
-    <div style={{
-      background: 'var(--gray-50)',
-      borderRadius: 18,
-      border: '0.5px solid var(--gray-100)',
-      padding: 24,
-      height: '100%',
-    }}>
+    <motion.div
+      {...cardHoverProps}
+      style={{
+        background: 'var(--gray-50)',
+        borderRadius: 18,
+        border: '0.5px solid var(--gray-100)',
+        padding: 24,
+        height: '100%',
+        cursor: 'default',
+      }}>
       <div style={{
         width: 40,
         height: 40,
@@ -47,7 +52,7 @@ function StepCard({ icon, title, subtitle, lines }) {
           </div>
         ))}
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -107,47 +112,85 @@ const STEPS = [
 ]
 
 export default function HowItWorksSection() {
+  const reduced = useReducedMotion()
+
   return (
     <section id="how-it-works" style={{ padding: 'var(--py-xl) 24px', backgroundColor: 'var(--white)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 'clamp(48px, 7vw, 84px)' }}>
-          <div style={{
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'var(--teal-500)',
-            marginBottom: 16,
-          }}>
+        <motion.div
+          variants={reduced ? {} : { hidden: {}, visible: { transition: { staggerChildren: 0 } } }}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport('-40px')}
+          style={{ textAlign: 'center', marginBottom: 'clamp(48px, 7vw, 84px)' }}
+        >
+          <motion.div
+            variants={reduced ? {} : fadeUp}
+            custom={0}
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'var(--teal-500)',
+              marginBottom: 16,
+            }}>
             How VITALOOP improves your health
-          </div>
-          <h2 style={{
-            fontSize: 'clamp(32px, 4vw, 52px)',
-            fontWeight: 700,
-            letterSpacing: '-0.02em',
-            color: 'var(--gray-900)',
-            marginBottom: 20,
-          }}>
+          </motion.div>
+          <motion.h2
+            variants={reduced ? {} : fadeUp}
+            custom={0.08}
+            style={{
+              fontSize: 'clamp(32px, 4vw, 52px)',
+              fontWeight: 700,
+              letterSpacing: '-0.02em',
+              color: 'var(--gray-900)',
+              marginBottom: 20,
+            }}
+          >
             From raw labs to weekly progress
-          </h2>
-          <p style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 620, margin: '0 auto', lineHeight: 1.65 }}>
+          </motion.h2>
+          <motion.p
+            variants={reduced ? {} : fadeUp}
+            custom={0.16}
+            style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 620, margin: '0 auto', lineHeight: 1.65 }}
+          >
             A clear 5-step flow focused on outcomes: understand your data, apply recommendations, and improve over time.
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 72 }}>
           {STEPS.map((step, i) => (
-            <div key={step.n} className="reveal how-step-row grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
-              <div className={i % 2 === 0 ? '' : 'md:order-2'} style={{
-                background: 'white',
-                borderRadius: 18,
-                border: '0.5px solid var(--gray-100)',
-                padding: '28px 24px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-              }}>
-                <StepLabel n={step.n} />
+            <motion.div
+              key={step.n}
+              className="how-step-row grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center"
+              variants={reduced ? {} : (i % 2 === 0 ? slideIn('left') : slideIn('right'))}
+              custom={0}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport('-40px')}
+            >
+              <motion.div
+                className={i % 2 === 0 ? '' : 'md:order-2'}
+                style={{
+                  background: 'white',
+                  borderRadius: 18,
+                  border: '0.5px solid var(--gray-100)',
+                  padding: '28px 24px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                }}
+              >
+                {/* Step number badge — springs in */}
+                <motion.div
+                  initial={reduced ? {} : { scale: 0.5, opacity: 0 }}
+                  whileInView={reduced ? {} : { scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 18, delay: 0.15 }}
+                  viewport={{ once: true }}
+                >
+                  <StepLabel n={step.n} />
+                </motion.div>
                 <h3 style={{
                   fontSize: 'clamp(26px, 3.4vw, 38px)',
                   fontWeight: 700,
@@ -166,7 +209,7 @@ export default function HowItWorksSection() {
                     {step.micro}
                   </p>
                 )}
-              </div>
+              </motion.div>
               <div className={i % 2 === 0 ? '' : 'md:order-1'}>
                 <StepCard
                   icon={step.card.icon}
@@ -176,7 +219,7 @@ export default function HowItWorksSection() {
                 />
               </div>
               <div className="how-step-connector" aria-hidden="true" />
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
