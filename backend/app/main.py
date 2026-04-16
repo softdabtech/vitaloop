@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from fastapi.exceptions import RequestValidationError
 from app.errors import http_exception_handler, validation_exception_handler
 from app.config import settings
+from app.middleware.request_context import RequestContextMiddleware
 from app.middleware.logging import StructuredLoggingMiddleware
 from app.middleware.security import PathRateLimitMiddleware, RateLimitRule, SecurityHeadersMiddleware
 import logging
@@ -55,6 +56,8 @@ async def _log_runtime_readiness_summary():
 
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+app.add_middleware(RequestContextMiddleware)
 
 # Add structured logging middleware
 app.add_middleware(StructuredLoggingMiddleware)
