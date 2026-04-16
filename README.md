@@ -76,7 +76,7 @@ Create env files for each component from local templates/examples used in your b
 
 Minimum required values include:
 
-- Backend: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (or legacy `SUPABASE_SERVICE_KEY`), JWT/Auth settings, `ALLOWED_ORIGINS`, and security/rate-limit settings (`SECURITY_ENABLE_HEADERS`, `AUTH_RATE_LIMIT_PER_MINUTE`, `ANALYZE_RATE_LIMIT_PER_MINUTE`, `PROTOCOL_RATE_LIMIT_PER_MINUTE`)
+- Backend: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (or legacy `SUPABASE_SERVICE_KEY`), JWT/Auth settings, `ALLOWED_ORIGINS`, security/rate-limit settings (`SECURITY_ENABLE_HEADERS`, `AUTH_RATE_LIMIT_PER_MINUTE`, `ANALYZE_RATE_LIMIT_PER_MINUTE`, `PROTOCOL_RATE_LIMIT_PER_MINUTE`), and retention controls (`LAB_UPLOAD_RAW_RETENTION_DAYS`, `LAB_UPLOAD_RETENTION_BATCH_SIZE`)
 - Frontend: API/CRM base URLs and Supabase public config
 - CRM: `Auth` and `CrmData` sections (Issuer, Audience, JWK/JWKS path, Backend URL)
 
