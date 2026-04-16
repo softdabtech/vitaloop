@@ -12,7 +12,7 @@ import logging
 
 from app.dependencies import get_current_user
 from app.services.claude_service import extract_biomarkers, EXTRACT_PROMPT_VERSION, is_llm_configured
-from app.services.supabase_service import save_lab_upload, save_biomarkers, save_timeline_event
+from app.services.supabase_service import save_lab_upload, save_biomarkers, save_timeline_event, write_audit_log
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
@@ -253,6 +253,18 @@ async def analyze_lab(
 
         upload_id = upload["id"]
 
+        await write_audit_log(
+            user_id=user_id,
+            action="create",
+            entity_type="lab_upload",
+            entity_id=str(upload_id),
+            new_value={
+                "lab_name": normalized_lab_name,
+                "has_test_date": bool(request.test_date),
+                "has_symptoms": bool(normalized_symptoms),
+            },
+        )
+
         # Call Claude to extract biomarkers
         try:
             biomarkers = await asyncio.wait_for(
@@ -296,6 +308,14 @@ async def analyze_lab(
                 status_code=500,
                 detail={"detail": "Could not save extracted biomarkers", "code": "BIOMARKER_SAVE_FAILED"},
             ) from exc
+
+        await write_audit_log(
+            user_id=user_id,
+            action="create",
+            entity_type="biomarkers",
+            entity_id=str(upload_id),
+            new_value={"count": len(saved)},
+        )
 
         try:
             await save_timeline_event(

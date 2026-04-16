@@ -8,6 +8,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.config import settings
 from app.services.supabase_service import redact_old_lab_upload_text
+from app.services.email_service import send_ops_alert_email
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -19,13 +20,36 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 async def _run(days: int, batch_size: int, apply_changes: bool) -> int:
-    result = await redact_old_lab_upload_text(
-        retention_days=days,
-        batch_size=batch_size,
-        dry_run=not apply_changes,
-    )
-    print(json.dumps(result, ensure_ascii=True))
-    return 0
+    try:
+        result = await redact_old_lab_upload_text(
+            retention_days=days,
+            batch_size=batch_size,
+            dry_run=not apply_changes,
+        )
+        print(json.dumps(result, ensure_ascii=True))
+        return 0
+    except Exception as exc:
+        error_payload = {
+            "error": str(exc),
+            "days": days,
+            "batch_size": batch_size,
+            "apply": apply_changes,
+        }
+        print(json.dumps(error_payload, ensure_ascii=True), file=sys.stderr)
+
+        alert_email = (settings.retention_alert_email or settings.registration_alert_email or "").strip()
+        if alert_email:
+            try:
+                await send_ops_alert_email(
+                    to_email=alert_email,
+                    organization_name="VITALOOP",
+                    alert_title="Retention redaction job failed",
+                    alert_message=json.dumps(error_payload, ensure_ascii=True),
+                    alert_level="critical",
+                )
+            except Exception:
+                pass
+        return 1
 
 
 def main() -> int:

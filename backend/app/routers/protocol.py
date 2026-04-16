@@ -12,6 +12,7 @@ from app.services.supabase_service import (
     get_biomarkers_by_upload,
     get_protocol_by_upload,
     save_protocol,
+    write_audit_log,
 )
 from app.services.affiliate import build_iherb_url
 
@@ -74,9 +75,23 @@ async def create_protocol(
 
     existing_protocol = await get_protocol_by_upload(user_id, upload_id)
     if existing_protocol:
+        await write_audit_log(
+            user_id=user_id,
+            action="read",
+            entity_type="protocol",
+            entity_id=str(existing_protocol.get("id") or upload_id),
+            new_value={"source": "cache"},
+        )
         return existing_protocol
 
     biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
+    await write_audit_log(
+        user_id=user_id,
+        action="read",
+        entity_type="biomarkers",
+        entity_id=str(upload_id),
+        new_value={"count": len(biomarkers)},
+    )
 
     if not biomarkers:
         raise HTTPException(
@@ -131,5 +146,13 @@ async def create_protocol(
             status_code=500,
             detail={"detail": "Could not store protocol recommendations", "code": "PROTOCOL_SAVE_FAILED"},
         ) from exc
+
+    await write_audit_log(
+        user_id=user_id,
+        action="create",
+        entity_type="protocol",
+        entity_id=str(protocol.get("id") or upload_id),
+        new_value={"recommendation_count": len(recommendations)},
+    )
 
     return protocol

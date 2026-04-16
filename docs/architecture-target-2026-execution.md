@@ -85,10 +85,10 @@ Exit criteria:
 - Compliance controls mapped to operational runbooks and automated checks.
 
 ## Immediate Next Sprint
-1. Add API abuse tests for rate-limit behavior.
-2. Add retention execution telemetry and alerting for failed runs.
-3. Extend audit log coverage for medical-data reads and writes.
-4. Plan Redis-backed distributed rate limiter for multi-instance backend.
+1. Extend audit log coverage for medical-data reads and writes.
+2. Plan Redis-backed distributed rate limiter for multi-instance backend.
+3. Add retention run dashboard panel (last success/fail, rows updated).
+4. Expand abuse tests to include auth/protocol prefixes and multi-IP behavior.
 
 ## Risks and Mitigations
 - In-process limiter is per-instance only.
