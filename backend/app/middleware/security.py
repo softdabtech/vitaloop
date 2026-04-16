@@ -44,11 +44,29 @@ class PathRateLimitMiddleware(BaseHTTPMiddleware):
     Note: in-memory limiter is per-process. For horizontal scaling use Redis.
     """
 
-    def __init__(self, app, *, rules: list[RateLimitRule]):
+    def __init__(
+        self,
+        app,
+        *,
+        rules: list[RateLimitRule],
+        trust_forwarded_for: bool = False,
+        forwarded_for_header: str = "x-forwarded-for",
+    ):
         super().__init__(app)
         self._rules = [r for r in rules if r.max_requests > 0 and r.window_seconds > 0]
         self._buckets: dict[tuple[str, str], deque[float]] = defaultdict(deque)
         self._lock = asyncio.Lock()
+        self._trust_forwarded_for = trust_forwarded_for
+        self._forwarded_for_header = (forwarded_for_header or "x-forwarded-for").strip().lower()
+
+    def _resolve_client_ip(self, request: Request) -> str:
+        if self._trust_forwarded_for:
+            raw = request.headers.get(self._forwarded_for_header)
+            if raw:
+                first = raw.split(",", 1)[0].strip()
+                if first:
+                    return first
+        return request.client.host if request.client else "unknown"
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         path = request.url.path
@@ -59,7 +77,7 @@ class PathRateLimitMiddleware(BaseHTTPMiddleware):
         if matched is None:
             return await call_next(request)
 
-        client_ip = request.client.host if request.client else "unknown"
+        client_ip = self._resolve_client_ip(request)
         key = (matched.prefix, client_ip)
         now = time.monotonic()
         cutoff = now - matched.window_seconds
