@@ -7,6 +7,8 @@ from app.services import supabase_service as svc
 
 router = APIRouter(prefix="/auth/onboarding", tags=["onboarding"])
 
+_CRM_ROLES = {"super_admin", "admin", "org_admin", "org_owner", "client_admin", "manager", "practitioner"}
+
 
 def _as_bool(value: Any) -> bool:
     if isinstance(value, bool):
@@ -39,6 +41,16 @@ def _has_location(location: Dict[str, Any]) -> bool:
     )
 
 
+def _normalize_role(*values: Any) -> str:
+    for value in values:
+        role = str(value or "").strip().lower()
+        if not role:
+            continue
+        if role in _CRM_ROLES or role == "end_user":
+            return role
+    return "end_user"
+
+
 @router.get("/state")
 async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
     user_id = current_user.get("sub")
@@ -47,7 +59,7 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
     profile = await svc.get_user_profile(user_id)
     location = await svc.get_user_location(user_id) or {}
 
-    role = str(account.get("global_role") or current_user.get("global_role") or current_user.get("role") or "end_user").lower()
+    role = _normalize_role(account.get("global_role"), current_user.get("global_role"), current_user.get("role"))
     onboarding_completed = _as_bool(profile.get("onboarding_complete") or current_user.get("onboarding_completed"))
 
     # Only end-user role is constrained by B2C onboarding steps.

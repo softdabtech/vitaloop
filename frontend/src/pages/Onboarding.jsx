@@ -65,7 +65,7 @@ export default function Onboarding() {
     } catch {
       // Fail-open: user explicitly chose to continue without onboarding.
     }
-    navigate('/dashboard')
+    navigate('/dashboard', { replace: true })
   }
 
   // On mount: org setup is only required for CRM roles with no org membership.
@@ -156,7 +156,7 @@ export default function Onboarding() {
       }, { oncePerSession: true })
 
       toast.success('Profile saved!')
-      navigate('/dashboard')
+      navigate('/dashboard', { replace: true })
     } catch (e) {
       toast.error('Failed to save profile')
     } finally {
