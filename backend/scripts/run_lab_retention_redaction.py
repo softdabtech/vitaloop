@@ -3,11 +3,12 @@ import asyncio
 import json
 import sys
 from pathlib import Path
+from uuid import uuid4
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.config import settings
-from app.services.supabase_service import redact_old_lab_upload_text
+from app.services.supabase_service import redact_old_lab_upload_text, write_audit_log
 from app.services.email_service import send_ops_alert_email
 
 
@@ -26,6 +27,19 @@ async def _run(days: int, batch_size: int, apply_changes: bool) -> int:
             batch_size=batch_size,
             dry_run=not apply_changes,
         )
+        await write_audit_log(
+            user_id=None,
+            action="retention_redaction_job",
+            entity_type="lab_uploads",
+            entity_id=str(uuid4()),
+            new_value={
+                "status": "success",
+                "days": days,
+                "batch_size": batch_size,
+                "dry_run": not apply_changes,
+                "updated": int(result.get("updated") or 0),
+            },
+        )
         print(json.dumps(result, ensure_ascii=True))
         return 0
     except Exception as exc:
@@ -36,6 +50,20 @@ async def _run(days: int, batch_size: int, apply_changes: bool) -> int:
             "apply": apply_changes,
         }
         print(json.dumps(error_payload, ensure_ascii=True), file=sys.stderr)
+
+        await write_audit_log(
+            user_id=None,
+            action="retention_redaction_job",
+            entity_type="lab_uploads",
+            entity_id=str(uuid4()),
+            new_value={
+                "status": "failed",
+                "days": days,
+                "batch_size": batch_size,
+                "dry_run": not apply_changes,
+                "error": str(exc),
+            },
+        )
 
         alert_email = (settings.retention_alert_email or settings.registration_alert_email or "").strip()
         if alert_email:
