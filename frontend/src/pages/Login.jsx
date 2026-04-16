@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
 import { supabase } from '../lib/supabase.js'
 import { navigateToResolvedPath, resolvePostLoginDestination } from '../auth/postLogin.js'
+import { notifyRegistrationAlert } from '../auth/registrationAlert.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
@@ -218,7 +219,16 @@ export default function Login() {
       trackFunnelEvent('funnel_signup_completed', 'User completed signup', {
         auth_provider: 'email',
       }, { oncePerSession: true })
-      navigate('/onboarding', { replace: true })
+
+      if (authData?.session?.access_token) {
+        await notifyRegistrationAlert('email_signup')
+        toast.success('Account created. Continue with onboarding.')
+        navigate('/onboarding', { replace: true })
+        return
+      }
+
+      toast.success('Account created. Confirm your email to continue.')
+      navigate(`/auth/confirmation?pending=1&email=${encodeURIComponent(normalizedEmail)}`, { replace: true })
       return
     }
 
