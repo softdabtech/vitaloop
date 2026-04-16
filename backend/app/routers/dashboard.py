@@ -156,7 +156,7 @@ async def _fetch_assignments(user_id: str, global_role: str) -> List[Dict[str, A
         return []
 
 
-def _build_next_best_action(onboarding: Dict[str, Any], assignments: List[Dict[str, Any]], progress: List[Dict[str, Any]) -> Dict[str, str]:
+def _build_next_best_action(onboarding: Dict[str, Any], assignments: List[Dict[str, Any]], progress: List[Dict[str, Any]]) -> Dict[str, str]:
     if onboarding.get("requires_onboarding"):
         return {
             "title": onboarding.get("current_stage_label") or "Continue onboarding",
