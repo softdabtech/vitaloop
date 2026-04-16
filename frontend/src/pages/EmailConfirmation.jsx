@@ -82,9 +82,23 @@ export default function EmailConfirmation() {
           toast.success('✅ Email confirmed! Redirecting...')
           setRedirecting(true)
 
-          setTimeout(() => {
-            navigate('/onboarding', { replace: true })
-          }, 1500)
+          // Wait for the session token to be persisted before entering protected routes.
+          let attempts = 0
+          const waitForSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session?.access_token) {
+              navigate('/onboarding', { replace: true })
+              return
+            }
+            attempts += 1
+            if (attempts < 15) {
+              setTimeout(waitForSession, 200)
+            } else {
+              navigate('/login', { replace: true })
+            }
+          }
+
+          setTimeout(waitForSession, 300)
         } else {
           setStatus('error')
           setErrorMsg('Email пока не подтвержден. Проверьте, что открыта актуальная ссылка из письма.')
