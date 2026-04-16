@@ -80,6 +80,8 @@ app.add_middleware(
         RateLimitRule(prefix="/analyze", max_requests=settings.analyze_rate_limit_per_minute, window_seconds=60),
         RateLimitRule(prefix="/protocol", max_requests=settings.protocol_rate_limit_per_minute, window_seconds=60),
     ],
+    trust_forwarded_for=settings.rate_limit_trust_forwarded_for,
+    forwarded_for_header=settings.rate_limit_forwarded_for_header,
 )
 
 origins = settings.origins_list
