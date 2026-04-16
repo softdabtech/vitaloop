@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from fastapi.exceptions import RequestValidationError
 from app.errors import http_exception_handler, validation_exception_handler
 from app.config import settings
+from app.middleware.logging import StructuredLoggingMiddleware
 import logging
 
 import sentry_sdk
@@ -53,6 +54,9 @@ async def _log_runtime_readiness_summary():
 
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+# Add structured logging middleware
+app.add_middleware(StructuredLoggingMiddleware)
 
 origins = [
     "https://vitaloop.today",
