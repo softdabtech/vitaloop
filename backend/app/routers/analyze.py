@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 
 from app.dependencies import get_current_user
-from app.services.claude_service import extract_biomarkers, EXTRACT_PROMPT_VERSION
+from app.services.claude_service import extract_biomarkers, EXTRACT_PROMPT_VERSION, is_llm_configured
 from app.services.supabase_service import save_lab_upload, save_biomarkers, save_timeline_event
 
 router = APIRouter()
@@ -34,6 +34,9 @@ async def analyze_lab(
     request: AnalyzeRequest,
     current_user: dict = Depends(get_current_user),
 ):
+    if not is_llm_configured():
+        raise HTTPException(status_code=503, detail="LLM provider is not configured")
+
     user_id: str = current_user["sub"]
     normalized_text = _normalize_lab_text(request.extracted_text)
 

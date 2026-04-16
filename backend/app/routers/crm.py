@@ -10,7 +10,7 @@ from app.dependencies import get_current_user
 from app.models.crm import OrganizationMemberCreate
 from app.models.organization import OrganizationCreate, OrganizationUpdate
 from app.services import supabase_service as svc
-from app.services.email_service import send_invitation_email
+from app.services.email_service import send_invitation_accepted_email, send_invitation_email, send_welcome_email, send_ops_alert_email
 
 
 router = APIRouter()
@@ -49,6 +49,30 @@ async def _write_audit_log(
 
 def _as_text(value: Any, fallback: str = "") -> str:
     return str(value) if value is not None else fallback
+
+
+def _is_missing_table_error(ex: Exception, table_name: str) -> bool:
+    msg = str(ex)
+    return "PGRST205" in msg and table_name in msg
+
+
+def _raise_missing_table_http(table_name: str) -> None:
+    raise HTTPException(
+        status_code=503,
+        detail=(
+            f"Storage table '{table_name}' is not available. "
+            "Apply supabase_migrations.sql and reload PostgREST schema cache."
+        ),
+    )
+
+
+async def _run_invitations_query(query_fn):
+    try:
+        return await svc._run(query_fn)
+    except Exception as ex:
+        if _is_missing_table_error(ex, "invitations"):
+            _raise_missing_table_http("invitations")
+        raise
 
 
 def _is_super_admin(current_user: dict) -> bool:
@@ -481,7 +505,7 @@ async def list_invitations(org_id: UUID = Query(...), current_user: dict = Depen
     sb = await _get_supabase()
     await _require_org_role(sb, org_id, current_user, {"org_owner", "client_admin"})
 
-    resp = await svc._run(
+    resp = await _run_invitations_query(
         lambda: sb.table("invitations")
         .select("*")
         .eq("organization_id", str(org_id))
@@ -514,7 +538,7 @@ async def create_invitation(body: dict[str, Any] = Body(...), current_user: dict
     )
     org_row = org_resp.data[0] if org_resp.data else None
 
-    resp = await svc._run(
+    resp = await _run_invitations_query(
         lambda: sb.table("invitations")
         .insert({
             "organization_id": str(org_id),
@@ -562,7 +586,7 @@ async def revoke_invitation(invitation_id: UUID, org_id: UUID = Query(...), curr
     sb = await _get_supabase()
     await _require_org_role(sb, org_id, current_user, {"org_owner", "client_admin"})
 
-    old_resp = await svc._run(
+    old_resp = await _run_invitations_query(
         lambda: sb.table("invitations")
         .select("*")
         .eq("id", str(invitation_id))
@@ -572,7 +596,7 @@ async def revoke_invitation(invitation_id: UUID, org_id: UUID = Query(...), curr
     )
     old_row = old_resp.data[0] if old_resp.data else None
 
-    resp = await svc._run(
+    resp = await _run_invitations_query(
         lambda: sb.table("invitations")
         .update({"status": "revoked"})
         .eq("id", str(invitation_id))
@@ -606,7 +630,7 @@ async def accept_invitation(
         raise HTTPException(status_code=400, detail="token is required")
 
     sb = await _get_supabase()
-    invite_resp = await svc._run(
+    invite_resp = await _run_invitations_query(
         lambda: sb.table("invitations")
         .select("*")
         .eq("token", token)
@@ -655,7 +679,7 @@ async def accept_invitation(
         .execute()
     )
 
-    updated_invite_resp = await svc._run(
+    updated_invite_resp = await _run_invitations_query(
         lambda: sb.table("invitations")
         .update(
             {
@@ -680,6 +704,123 @@ async def accept_invitation(
     )
 
     membership = member_resp.data[0] if member_resp.data else None
+
+    # Best-effort notification: do not block acceptance if email sending fails.
+    try:
+        inviter_id = _as_text(invitation.get("invited_by"))
+        inviter_user = None
+        if inviter_id:
+            inviter_user = (await _load_users_by_ids(sb, [inviter_id])).get(inviter_id)
+        inviter_email = str((inviter_user or {}).get("email") or "").strip().lower()
+
+        if inviter_email:
+            org_name = "VITALOOP Team"
+            if org_id:
+                try:
+                    org_resp = await svc._run(
+                        lambda: sb.table("organizations")
+                        .select("name")
+                        .eq("id", org_id)
+                        .limit(1)
+                        .execute()
+                    )
+                    org_name = ((org_resp.data or [{}])[0].get("name") or org_name)
+                except Exception:
+                    pass
+
+            accepted_user_name = (
+                current_user.get("full_name")
+                or (current_user.get("user_metadata") or {}).get("full_name")
+                or current_user.get("email")
+                or "A team member"
+            )
+            await send_invitation_accepted_email(
+                to_email=inviter_email,
+                organization_name=org_name,
+                accepted_user_name=str(accepted_user_name),
+            )
+    except Exception:
+        pass
+
+    # Best-effort welcome email to new team member
+    try:
+        accepted_email = str(current_user.get("email") or "").strip().lower()
+        if accepted_email:
+            org_name = "VITALOOP Team"
+            if org_id:
+                try:
+                    org_resp = await svc._run(
+                        lambda: sb.table("organizations")
+                        .select("name")
+                        .eq("id", org_id)
+                        .limit(1)
+                        .execute()
+                    )
+                    org_name = ((org_resp.data or [{}])[0].get("name") or org_name)
+                except Exception:
+                    pass
+
+            accepted_user_name = (
+                current_user.get("full_name")
+                or (current_user.get("user_metadata") or {}).get("full_name")
+                or current_user.get("email")
+                or "Team member"
+            )
+            dashboard_url = f"{settings.frontend_base_url}/dashboard"
+
+            await send_welcome_email(
+                to_email=accepted_email,
+                user_name=str(accepted_user_name),
+                organization_name=org_name,
+                dashboard_url=dashboard_url,
+            )
+    except Exception:
+        pass
+
+    # Best-effort ops notification: send alert to inviter about new team member join
+    try:
+        inviter_id = _as_text(invitation.get("invited_by"))
+        inviter_user = None
+        if inviter_id:
+            inviter_user = (await _load_users_by_ids(sb, [inviter_id])).get(inviter_id)
+        inviter_email = str((inviter_user or {}).get("email") or "").strip().lower()
+
+        if inviter_email:
+            org_name = "VITALOOP Team"
+            if org_id:
+                try:
+                    org_resp = await svc._run(
+                        lambda: sb.table("organizations")
+                        .select("name")
+                        .eq("id", org_id)
+                        .limit(1)
+                        .execute()
+                    )
+                    org_name = ((org_resp.data or [{}])[0].get("name") or org_name)
+                except Exception:
+                    pass
+
+            accepted_user_name = (
+                current_user.get("full_name")
+                or (current_user.get("user_metadata") or {}).get("full_name")
+                or current_user.get("email")
+                or "A team member"
+            )
+            member_role = invitation.get("role") or "member"
+            
+            crm_link = f"{settings.crm_base_url}/organizations/{org_id}/members"
+
+            await send_ops_alert_email(
+                to_email=inviter_email,
+                organization_name=org_name,
+                alert_title=f"New Team Member Joined: {accepted_user_name}",
+                alert_message=f"{accepted_user_name} has accepted your invitation and joined with role '{member_role}'.",
+                alert_level="info",
+                action_url=crm_link,
+            )
+    except Exception:
+        pass
+
     return {
         "ok": True,
         "organization_id": org_id,
