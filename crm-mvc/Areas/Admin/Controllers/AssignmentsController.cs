@@ -36,8 +36,8 @@ public class AssignmentsController : Controller
 
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
-            TempData["ErrorMessage"] = "No active organization selected.";
-            return RedirectToAction("Index", "Organizations");
+            TempData["ErrorMessage"] = "Select an active organization to view assignments.";
+            return RedirectToAction("Index", "Organizations", new { area = "Admin" });
         }
 
         try
@@ -94,7 +94,8 @@ public class AssignmentsController : Controller
 
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
-            return BadRequest("No active organization");
+            TempData["ErrorMessage"] = "Select an active organization before creating assignments.";
+            return RedirectToAction("Index", "Organizations", new { area = "Admin" });
         }
 
         // TODO: Load practitioners and clients from backend
@@ -115,7 +116,14 @@ public class AssignmentsController : Controller
 
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
-            return BadRequest("No active organization");
+            TempData["ErrorMessage"] = "Select an active organization before creating assignments.";
+            return RedirectToAction("Index", "Organizations", new { area = "Admin" });
+        }
+
+        if (model.ClientId == Guid.Empty || model.PractitionerId == Guid.Empty)
+        {
+            ModelState.AddModelError(string.Empty, "Practitioner ID and Client ID are required.");
+            return View(model);
         }
 
         try
