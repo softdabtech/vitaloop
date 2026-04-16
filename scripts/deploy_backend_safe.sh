@@ -4,7 +4,7 @@ set -euo pipefail
 # Safe backend deploy script for production.
 # Prevents accidental deletion of server-managed secret files.
 
-SERVER="${SERVER:-root@159.65.252.227}"
+SERVER="${SERVER:-}"
 LOCAL_ROOT="${LOCAL_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 REMOTE_ROOT="${REMOTE_ROOT:-/var/www/VITALOOP}"
 REMOTE_BACKEND="${REMOTE_ROOT}/backend"
@@ -16,6 +16,11 @@ ROLLBACK_ON_FAIL="${ROLLBACK_ON_FAIL:-1}"
 
 if [[ ! -d "${LOCAL_ROOT}/backend" ]]; then
   echo "Local backend directory not found at ${LOCAL_ROOT}/backend" >&2
+  exit 1
+fi
+
+if [[ -z "${SERVER}" ]]; then
+  echo "SERVER is not set. Export SERVER (for example, deploy@your-host) before running this script." >&2
   exit 1
 fi
 

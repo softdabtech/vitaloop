@@ -7,10 +7,15 @@ set -euo pipefail
 
 OUTPUT_FILE="${1:-./monitoring/slo-metrics.json}"
 DATA_DIR="$(dirname "$OUTPUT_FILE")"
-REMOTE_HOST="${REMOTE_HOST:-root@159.65.252.227}"
+REMOTE_HOST="${REMOTE_HOST:-}"
 REMOTE_DIR="${REMOTE_DIR:-/var/www/VITALOOP}"
 
 mkdir -p "$DATA_DIR"
+
+if [[ -z "$REMOTE_HOST" ]]; then
+    echo "REMOTE_HOST is not set. Export REMOTE_HOST (for example, deploy@your-host) before collecting SLO metrics." >&2
+    exit 1
+fi
 
 # Create JSON output
 collect_metrics() {

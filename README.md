@@ -123,6 +123,13 @@ All deployments are performed from `main` and must keep server code in sync with
 
 We provide comprehensive deployment automation with safety checks, health verification, and rollback capability.
 
+Before running deployment scripts, set the target host in your shell (do not commit real production host/IP into repository files):
+
+```bash
+export REMOTE_HOST="deploy@your-prod-host"
+export REMOTE_DIR="/var/www/VITALOOP"
+```
+
 **Step 1: Push changes to GitHub**
 ```bash
 git add .
@@ -161,33 +168,33 @@ git push origin main
 
 2. **Sync server repository**
 ```bash
-ssh root@159.65.252.227
-cd /var/www/VITALOOP
+ssh "$REMOTE_HOST"
+cd "$REMOTE_DIR"
 git pull --ff-only origin main
 ```
 
 3. **Deploy backend**
 ```bash
-ssh root@159.65.252.227 'systemctl restart vitaloop-backend && systemctl is-active vitaloop-backend'
+ssh "$REMOTE_HOST" 'systemctl restart vitaloop-backend && systemctl is-active vitaloop-backend'
 ```
 
 4. **Deploy CRM**
 ```bash
-ssh root@159.65.252.227 '
-  systemctl stop vitaloop-crm-mvc &&
-  cd /var/www/VITALOOP/crm-mvc &&
-  /usr/bin/dotnet publish Vitaloop.Crm.Web.csproj -c Release -o /var/www/VITALOOP/crm-mvc/publish &&
-  systemctl start vitaloop-crm-mvc &&
-  systemctl is-active vitaloop-crm-mvc
-'
+ssh "$REMOTE_HOST" "
+     systemctl stop vitaloop-crm-mvc &&
+     cd '$REMOTE_DIR/crm-mvc' &&
+     /usr/bin/dotnet publish Vitaloop.Crm.Web.csproj -c Release -o '$REMOTE_DIR/crm-mvc/publish' &&
+     systemctl start vitaloop-crm-mvc &&
+     systemctl is-active vitaloop-crm-mvc
+"
 ```
 
 5. **Deploy frontend**
 ```bash
-ssh root@159.65.252.227 '
-  cd /var/www/VITALOOP/frontend
-  npm ci && npm run build
-'
+ssh "$REMOTE_HOST" "
+     cd '$REMOTE_DIR/frontend'
+     npm ci && npm run build
+"
 ```
 
 ### 🔄 Staging → Production Workflow
