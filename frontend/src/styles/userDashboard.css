@@ -44,6 +44,29 @@
   gap: 1.5rem;
 }
 
+.dashboard-stats-grid {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.dashboard-main-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.dashboard-main-grid__chart,
+.dashboard-main-grid__actions {
+  min-width: 0;
+}
+
+.dashboard-work-grid {
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+}
+
+.dashboard-insights-grid {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
 /* Card Animations */
 @keyframes slideInUp {
   from {
@@ -249,10 +272,30 @@
   .dashboard-grid-auto {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
+
+  .dashboard-stats-grid,
+  .dashboard-main-grid,
+  .dashboard-work-grid,
+  .dashboard-insights-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .dashboard-main-grid__chart {
+    grid-column: span 2;
+  }
 }
 
 @media (max-width: 640px) {
   .dashboard-grid-auto {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-stats-grid,
+  .dashboard-main-grid,
+  .dashboard-work-grid,
+  .dashboard-insights-grid {
     grid-template-columns: 1fr;
   }
 
