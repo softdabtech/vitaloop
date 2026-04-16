@@ -323,6 +323,9 @@ async def extract_biomarkers(text: str, symptoms: List[str]) -> List[Dict[str, A
     try:
         raw = _strip_code_block(await _chat_completion(prompt, task_name="extract_biomarkers"))
         parsed = _validate_biomarker_payload(json.loads(raw))
+        if not parsed:
+            logger.warning("abacus_extract_fallback reason=empty_payload")
+            return _fallback_extract_biomarkers(text)
         logger.info(
             "abacus_extract_ok text_len=%s symptom_count=%s prompt_version=%s duration_ms=%s",
             len(text),
@@ -349,6 +352,9 @@ async def generate_protocol(biomarkers: List[Dict], symptoms: List[str]) -> List
     try:
         raw = _strip_code_block(await _chat_completion(prompt, task_name="generate_protocol"))
         parsed = _validate_protocol_payload(json.loads(raw))
+        if not parsed:
+            logger.warning("abacus_protocol_fallback reason=empty_payload")
+            return _fallback_generate_protocol(biomarkers, symptoms)
         logger.info(
             "abacus_protocol_ok biomarker_count=%s symptom_count=%s prompt_version=%s duration_ms=%s",
             len(biomarkers),
