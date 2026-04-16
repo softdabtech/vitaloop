@@ -109,6 +109,9 @@ public sealed class HttpCrmDataGateway : ICrmDataGateway
     public Task<PlatformOverview?> GetPlatformOverview(CancellationToken ct = default)
         => GetSingle<PlatformOverview>(_options.PlatformOverviewPath, ct);
 
+    public Task<RuntimeReadinessSnapshot?> GetRuntimeReadiness(CancellationToken ct = default)
+        => GetSingle<RuntimeReadinessSnapshot>(_options.RuntimeReadinessPath, ct);
+
     public Task<IReadOnlyList<AuditLogEntry>> GetAuditLogs(Guid? organizationId = null, int limit = 200, CancellationToken ct = default)
     {
         var safeLimit = Math.Clamp(limit, 1, 1000);

@@ -78,4 +78,14 @@ public sealed class MembershipService
 
         return await _gateway.GetAuditLogs(organizationId, limit, ct);
     }
+
+    public async Task<RuntimeReadinessSnapshot?> GetRuntimeReadiness(UserContext userCtx, CancellationToken ct = default)
+    {
+        if (!_accessPolicyService.HasGlobalRole(userCtx, "super_admin"))
+        {
+            throw new UnauthorizedAccessException("Runtime readiness access denied.");
+        }
+
+        return await _gateway.GetRuntimeReadiness(ct);
+    }
 }

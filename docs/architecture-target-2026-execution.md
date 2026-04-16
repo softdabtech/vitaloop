@@ -36,7 +36,7 @@ Backlog:
 - [x] Add request-id propagation and correlate logs across frontend/backend/CRM.
 - [x] Add idempotency key support for expensive analysis operations.
 - [x] Add retention jobs for raw upload artifacts (90-365 day policy).
-- [ ] Add audit log coverage for all medical-data reads and writes.
+- [x] Add audit log coverage for all medical-data reads and writes.
 
 Exit criteria:
 - No hardcoded production hosts in scripts.
@@ -85,11 +85,12 @@ Exit criteria:
 - Compliance controls mapped to operational runbooks and automated checks.
 
 ## Immediate Next Sprint
-1. Extend audit log coverage for medical-data reads and writes.
+1. Extend audit log coverage for medical-data reads and writes. (completed: service-layer + questionnaire/onboarding/dashboard direct-query paths)
 2. Implement Redis-backed distributed rate limiter for multi-instance backend (design in `docs/redis-rate-limiter-plan.md`). (completed in production: Redis installed, env switched, runtime keys verified)
 3. Add retention run dashboard panel (last success/fail, rows updated). (completed: admin endpoint `/admin/retention/status` + job audit events)
 4. Expand abuse tests to include auth/protocol prefixes and multi-IP behavior. (completed)
 5. Add live rate-limiter abuse smoke for staged/prod verification. (completed: `scripts/smoke_rate_limiter.sh`, optional deploy flag `RUN_RATE_LIMIT_SMOKE=1`)
+6. Expose limiter runtime status in CRM Ops dashboard. (completed: backend runtime-readiness wiring through CRM gateway/service/view)
 
 ## Risks and Mitigations
 - In-process limiter is per-instance only.

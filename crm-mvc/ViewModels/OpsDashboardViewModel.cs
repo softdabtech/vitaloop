@@ -8,6 +8,20 @@ public sealed class OpsDashboardViewModel
     public int ActivePrograms { get; init; }
     public int NewRegistrations24h { get; init; }
     public IReadOnlyList<OpsAuditLogViewModel> RecentAuditLogs { get; init; } = Array.Empty<OpsAuditLogViewModel>();
+    public OpsRuntimeReadinessViewModel RuntimeReadiness { get; init; } = new();
+}
+
+public sealed class OpsRuntimeReadinessViewModel
+{
+    public bool Available { get; init; }
+    public bool Ok { get; init; }
+    public string LimiterBackend { get; init; } = "unknown";
+    public bool LimiterOk { get; init; }
+    public bool RedisRequired { get; init; }
+    public bool RedisConfigured { get; init; }
+    public bool? RedisReachable { get; init; }
+    public string RedisReason { get; init; } = "n/a";
+    public int MissingCount { get; init; }
 }
 
 public sealed class OpsAuditLogViewModel

@@ -26,6 +26,47 @@
   @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "New Registrations (24h)", Value = Model.NewRegistrations24h.ToString(), Trend = "Last 24 hours", Tone = "default" })
 </section>
 
+<section class="vo-panel" style="margin-bottom: var(--vo-space-6);">
+  <h3 style="margin:0 0 8px 0;">Rate Limiter Runtime</h3>
+  @if (!Model.RuntimeReadiness.Available)
+  {
+    <p style="margin:0; opacity:.8;">Runtime readiness feed is unavailable.</p>
+  }
+  else
+  {
+    var redisReachable = Model.RuntimeReadiness.RedisReachable.HasValue
+      ? (Model.RuntimeReadiness.RedisReachable.Value ? "yes" : "no")
+      : "n/a";
+    <div class="vo-grid three-up">
+      <div>
+        <div style="font-size:.8rem; opacity:.7;">Backend</div>
+        <strong>@Model.RuntimeReadiness.LimiterBackend</strong>
+      </div>
+      <div>
+        <div style="font-size:.8rem; opacity:.7;">Limiter OK</div>
+        <strong>@(Model.RuntimeReadiness.LimiterOk ? "yes" : "no")</strong>
+      </div>
+      <div>
+        <div style="font-size:.8rem; opacity:.7;">Overall runtime OK</div>
+        <strong>@(Model.RuntimeReadiness.Ok ? "yes" : "no")</strong>
+      </div>
+      <div>
+        <div style="font-size:.8rem; opacity:.7;">Redis required</div>
+        <strong>@(Model.RuntimeReadiness.RedisRequired ? "yes" : "no")</strong>
+      </div>
+      <div>
+        <div style="font-size:.8rem; opacity:.7;">Redis configured</div>
+        <strong>@(Model.RuntimeReadiness.RedisConfigured ? "yes" : "no")</strong>
+      </div>
+      <div>
+        <div style="font-size:.8rem; opacity:.7;">Redis reachable</div>
+        <strong>@redisReachable</strong>
+      </div>
+    </div>
+    <p style="margin:10px 0 0 0; opacity:.8;">Reason: @Model.RuntimeReadiness.RedisReason | Missing checks: @Model.RuntimeReadiness.MissingCount</p>
+  }
+</section>
+
 @await Html.PartialAsync("~/Views/Shared/Ui/_DataTableShell.cshtml", new DataTableShellViewModel {
   Title = "Global Users",
   Columns = new[] { "User", "Global Role", "Status", "User ID" },

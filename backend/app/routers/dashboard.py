@@ -108,6 +108,21 @@ async def _resolve_onboarding_state(user_id: str, current_user: dict) -> Dict[st
     has_upload = bool(uploads_resp.data)
     has_questionnaire = bool(questionnaire_resp.data)
 
+    await svc.write_audit_log(
+        user_id=user_id,
+        action="read",
+        entity_type="onboarding_state",
+        entity_id=user_id,
+        new_value={
+            "scope": "medical",
+            "profile_basics": has_profile_basics,
+            "location": has_location,
+            "complaints": has_complaints,
+            "first_upload": has_upload,
+            "questionnaire_completed": has_questionnaire,
+        },
+    )
+
     if not requires_onboarding:
         stage = "complete"
     elif not has_profile_basics:
@@ -284,6 +299,13 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
             .execute()
         )
         rows = health_resp.data or []
+        await svc.write_audit_log(
+            user_id=user_id,
+            action="read",
+            entity_type="health_scores",
+            entity_id=user_id,
+            new_value={"scope": "medical", "rows": len(rows)},
+        )
         if rows:
             health_latest = rows[0]
             health_delta = round(float(rows[0].get("score") or 0) - float(rows[1].get("score") or 0), 1) if len(rows) > 1 else 0
