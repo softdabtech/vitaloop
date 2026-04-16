@@ -496,7 +496,11 @@ async def record_health_failure(
 
 
 async def get_user_account(user_id: str) -> Dict[str, Any]:
-    return await _select_first_by_id_with_fallback("users", "id, email, full_name, sub_status, global_role", user_id)
+    return await _select_first_by_id_with_fallback(
+        "users",
+        "id, email, full_name, sub_status, global_role, created_at",
+        user_id,
+    )
 
 
 async def get_user_progress(user_id: str) -> List[Dict]:

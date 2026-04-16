@@ -361,3 +361,74 @@ async def send_ops_alert_email(
         subject=f"[{alert_level.upper()}] {alert_title} - {organization_name}",
         html=html,
     )
+
+
+async def send_registration_alert_email(
+    *,
+    to_email: str,
+    registered_email: str,
+    user_id: str,
+    flow: str,
+    full_name: Optional[str] = None,
+    created_at_iso: Optional[str] = None,
+) -> bool:
+    """Notify operations when a new end-user registration completes."""
+
+    safe_email = _safe(registered_email)
+    safe_user_id = _safe(user_id)
+    safe_flow = _safe(flow)
+    safe_name = _safe(full_name)
+    safe_created_at = _safe(created_at_iso)
+    users_url = _safe(f"{settings.frontend_base_url.rstrip('/')}/ops")
+
+    html = f"""
+<!doctype html>
+<html lang="en">
+  <body style="margin:0;padding:0;background:#f4f7f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
+            <tr>
+              <td style="background:linear-gradient(135deg,#0b4033,#1d9e75);padding:24px;color:#ffffff;">
+                <div style="font-size:11px;letter-spacing:.12em;font-weight:700;text-transform:uppercase;opacity:.85;">VITALOOP Registration</div>
+                <h1 style="margin:12px 0 0;font-size:22px;line-height:1.3;">New end-user signup detected</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px;">
+                <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#475569;">
+                  A new standard VITALOOP user has completed the registration flow.
+                </p>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:16px 0;">
+                  <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Email</td><td style="padding:8px 0;color:#0f172a;font-size:13px;font-weight:600;">{safe_email}</td></tr>
+                  <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Full name</td><td style="padding:8px 0;color:#0f172a;font-size:13px;font-weight:600;">{safe_name or '—'}</td></tr>
+                  <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">User ID</td><td style="padding:8px 0;color:#0f172a;font-size:13px;font-weight:600;word-break:break-all;">{safe_user_id}</td></tr>
+                  <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Flow</td><td style="padding:8px 0;color:#0f172a;font-size:13px;font-weight:600;">{safe_flow}</td></tr>
+                  <tr><td style="padding:8px 0;color:#64748b;font-size:13px;">Created at</td><td style="padding:8px 0;color:#0f172a;font-size:13px;font-weight:600;">{safe_created_at or '—'}</td></tr>
+                </table>
+                <table role="presentation" cellspacing="0" cellpadding="0" style="margin:20px 0;">
+                  <tr>
+                    <td>
+                      <a href="{users_url}" style="display:inline-block;padding:12px 24px;border-radius:999px;background:#1d9e75;color:#ffffff;font-weight:700;font-size:14px;text-decoration:none;">Open Ops Dashboard</a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:16px 0 0;font-size:12px;color:#64748b;line-height:1.6;">
+                  This is an automated internal notification for signup monitoring.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+""".strip()
+
+    return await _deliver_html_email(
+        to_email=to_email,
+        subject=f"New VITALOOP signup: {registered_email}",
+        html=html,
+    )

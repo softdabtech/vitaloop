@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     resend_from_email: str = "onboarding@resend.dev"
     sendgrid_api_key: str = ""
     sendgrid_from_email: str = "VITALOOP <noreply@vitaloop.today>"
+    registration_alert_email: str = "info@softdab.tech"
     sentry_dsn: str = ""
     sentry_traces_sample_rate: float = 0.1
     frontend_base_url: str = "https://vitaloop.today"

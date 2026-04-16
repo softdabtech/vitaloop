@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import { resolvePostLoginDestination, navigateToResolvedPath } from '../auth/postLogin'
+import { notifyRegistrationAlert } from '../auth/registrationAlert'
 
 function resolveEmailConfirmationRedirect() {
   const configured = import.meta.env.VITE_EMAIL_CONFIRMATION_PATH
@@ -23,13 +24,18 @@ export default function EmailConfirmation() {
   const isPendingMode = searchParams.get('pending') === '1'
 
   useEffect(() => {
-    // If already has an active session (e.g. Supabase auto-confirmed), go straight to onboarding.
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    if (!isPendingMode) {
+      return
+    }
+
+    // Pending confirmation page should still fast-forward if a session already exists.
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        await notifyRegistrationAlert('email_confirmation_existing_session')
         navigate('/onboarding', { replace: true })
       }
     })
-  }, [])
+  }, [isPendingMode, navigate])
 
   useEffect(() => {
     const handleConfirmation = async () => {
@@ -71,6 +77,7 @@ export default function EmailConfirmation() {
         }
 
         if (user.email_confirmed_at) {
+          await notifyRegistrationAlert('email_confirmation')
           setStatus('success')
           toast.success('✅ Email confirmed! Redirecting...')
           setRedirecting(true)

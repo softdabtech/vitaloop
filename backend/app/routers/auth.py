@@ -1,10 +1,13 @@
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.dependencies import get_current_user
+from app.config import settings
 from app.services import supabase_service as svc
+from app.services.email_service import send_registration_alert_email
 
 router = APIRouter()
 
@@ -86,6 +89,10 @@ class _OrgSetupRequest(BaseModel):
     name: str
 
 
+class _RegistrationNotifyRequest(BaseModel):
+    flow: str = "signup"
+
+
 @router.post("/onboarding/organization", status_code=201)
 async def onboarding_create_organization(
     req: _OrgSetupRequest,
@@ -156,3 +163,37 @@ async def onboarding_create_organization(
     )
 
     return {"id": org_id, "name": org["name"], "slug": org.get("slug")}
+
+
+@router.post("/registration/notify")
+async def notify_registration(
+    body: _RegistrationNotifyRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    user_id = current_user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    account = await svc.get_user_account(user_id)
+    email = str(account.get("email") or current_user.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="User email not found")
+
+    created_at_raw = str(account.get("created_at") or "").strip()
+    if created_at_raw:
+        try:
+            created_at = datetime.fromisoformat(created_at_raw.replace("Z", "+00:00"))
+            if created_at < (datetime.now(timezone.utc) - timedelta(hours=24)):
+                return {"ok": True, "sent": False, "reason": "account_not_recent"}
+        except ValueError:
+            pass
+
+    sent = await send_registration_alert_email(
+        to_email=settings.registration_alert_email,
+        registered_email=email,
+        user_id=user_id,
+        flow=body.flow,
+        full_name=account.get("full_name"),
+        created_at_iso=created_at_raw or None,
+    )
+    return {"ok": True, "sent": sent}
