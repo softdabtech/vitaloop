@@ -7,8 +7,10 @@ set -euo pipefail
 FORCE_DEPLOY=false
 CREATE_BACKUP=true
 DEPLOY_DIR="${DEPLOY_DIR:-.}"
-REMOTE_HOST="${REMOTE_HOST:-root@159.65.252.227}"
+REMOTE_HOST="${REMOTE_HOST:-}"
 REMOTE_DIR="${REMOTE_DIR:-/var/www/VITALOOP}"
+SSH_OPTS="${SSH_OPTS:--o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3}"
+CURL_OPTS="${CURL_OPTS:--sS --max-time 10}"
 
 log_info() {
     echo "ℹ️  $1"
@@ -40,8 +42,18 @@ done
 
 cd "$DEPLOY_DIR"
 
+if [[ -z "$REMOTE_HOST" ]]; then
+    log_error "REMOTE_HOST is not set. Export REMOTE_HOST (for example, deploy@your-host) before running deploy."
+    exit 1
+fi
+
 # PHASE 1: Local pre-deploy checks
 log_section "Phase 1: Pre-Deployment Checks"
+
+if [[ ! -x ./scripts/pre-deploy-check.sh ]]; then
+    log_error "Missing executable pre-deploy check script: ./scripts/pre-deploy-check.sh"
+    exit 1
+fi
 
 if ! ./scripts/pre-deploy-check.sh; then
     if [[ "$FORCE_DEPLOY" != "true" ]]; then
@@ -73,7 +85,7 @@ if [[ "$CREATE_BACKUP" == "true" ]]; then
     BACKUP_BRANCH="backup-prod-${TIMESTAMP}"
     
     log_info "Creating backup branch: $BACKUP_BRANCH"
-    ssh -o BatchMode=yes "$REMOTE_HOST" "
+    ssh $SSH_OPTS "$REMOTE_HOST" "
         set -euo pipefail
         cd $REMOTE_DIR
         
@@ -99,7 +111,7 @@ fi
 log_section "Phase 4: Pull & Deploy to Production"
 
 log_info "Pulling latest code to server..."
-ssh -o BatchMode=yes "$REMOTE_HOST" "
+ssh $SSH_OPTS "$REMOTE_HOST" "
     set -euo pipefail
     cd $REMOTE_DIR
     
@@ -119,7 +131,7 @@ log_success "Code pulled to server"
 # PHASE 5: Build & restart services
 log_section "Phase 5: Build & Restart Services"
 
-ssh -o BatchMode=yes "$REMOTE_HOST" "
+ssh $SSH_OPTS "$REMOTE_HOST" "
     set -euo pipefail
     cd $REMOTE_DIR
     
@@ -162,8 +174,8 @@ log_section "Phase 6: Post-Deployment Validation"
 
 # Give services time to start and warm up before external health checks.
 for i in {1..30}; do
-        if curl -sf "https://api.vitaloop.today/health" > /dev/null 2>&1 \
-            && curl -sf "https://api.vitaloop.today/health/ready" > /dev/null 2>&1; then
+    if curl $CURL_OPTS -f "https://api.vitaloop.today/health" > /dev/null 2>&1 \
+        && curl $CURL_OPTS -f "https://api.vitaloop.today/health/ready" > /dev/null 2>&1; then
                 break
         fi
         sleep 2
@@ -173,7 +185,7 @@ VALIDATION_PASSED=true
 
 # Check /health
 log_info "Checking API health endpoint..."
-if ! curl -sf "https://api.vitaloop.today/health" > /dev/null 2>&1; then
+if ! curl $CURL_OPTS -f "https://api.vitaloop.today/health" > /dev/null 2>&1; then
     log_error "API health check failed"
     VALIDATION_PASSED=false
 else
@@ -182,7 +194,7 @@ fi
 
 # Check /health/ready
 log_info "Checking API readiness endpoint..."
-if ! curl -sf "https://api.vitaloop.today/health/ready" > /dev/null 2>&1; then
+if ! curl $CURL_OPTS -f "https://api.vitaloop.today/health/ready" > /dev/null 2>&1; then
     log_error "API readiness check failed"
     VALIDATION_PASSED=false
 else
@@ -191,7 +203,7 @@ fi
 
 # Check frontend
 log_info "Checking frontend endpoint..."
-if ! curl -sf "https://vitaloop.today" > /dev/null 2>&1; then
+if ! curl $CURL_OPTS -f "https://vitaloop.today" > /dev/null 2>&1; then
     log_error "Frontend health check failed"
     VALIDATION_PASSED=false
 else
@@ -200,7 +212,7 @@ fi
 
 # Check CRM
 log_info "Checking CRM endpoint..."
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://crm.vitaloop.today" || echo "000")
+STATUS=$(curl $CURL_OPTS -o /dev/null -w "%{http_code}" "https://crm.vitaloop.today" || echo "000")
 if [[ "$STATUS" == "302" ]]; then
     log_success "CRM health check passed (302 redirect)"
 elif [[ "$STATUS" == "200" ]]; then
