@@ -154,7 +154,7 @@ export default function Login() {
     let active = true
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!active || !session?.user) {
+      if (!active || !session?.user || !session?.access_token) {
         return
       }
 
@@ -163,8 +163,8 @@ export default function Login() {
         if (!active) return
         navigateToResolvedPath(navigate, destination)
       } catch {
-        if (!active) return
-        navigate('/dashboard', { replace: true })
+        // Stay on /login when destination can't be resolved.
+        // This avoids false-positive redirects for stale/incomplete sessions.
       }
     })
 
