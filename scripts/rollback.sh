@@ -1,0 +1,178 @@
+#!/bin/bash
+# Emergency rollback to previous stable version
+# Usage: ./scripts/rollback.sh [target-commit] [--confirm]
+#
+# Examples:
+#   ./scripts/rollback.sh                  # Show previous commits, no action
+#   ./scripts/rollback.sh abc1234 --confirm  # Rollback to specific commit
+
+set -euo pipefail
+
+REMOTE_HOST="${REMOTE_HOST:-root@159.65.252.227}"
+REMOTE_DIR="${REMOTE_DIR:-/var/www/VITALOOP}"
+TARGET_COMMIT="${1:-}"
+CONFIRM="${2:-}"
+
+log_info() { echo "ℹ️  $1"; }
+log_success() { echo "✅ $1"; }
+log_error() { echo "❌ ERROR: $1" >&2; }
+log_warn() { echo "⚠️  WARNING: $1" >&2; }
+log_section() { echo ""; echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; echo "⏮️  $1"; echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; }
+
+log_section "Emergency Rollback Tool"
+
+# Check if we have SSH access first
+log_info "Checking server connectivity..."
+if ! ssh -o BatchMode=yes -o ConnectTimeout=5 "$REMOTE_HOST" "cd $REMOTE_DIR && echo ok" >/dev/null 2>&1; then
+    log_error "Cannot connect to server: $REMOTE_HOST"
+    exit 1
+fi
+log_success "Server is reachable"
+
+# Get current status
+log_section "Current Deployment Status"
+
+CURRENT_INFO=$(ssh -o BatchMode=yes "$REMOTE_HOST" "
+    cd $REMOTE_DIR
+    echo \"Current_HEAD=\$(git rev-parse --short HEAD)\"
+    echo \"Main_Branch=\$(git rev-parse --short origin/main)\"
+    echo \"Status_Dirty=\$([ -n \\\"\$(git status --porcelain)\\\" ] && echo true || echo false)\"
+    echo \"Last_3_Commits=\"
+    git log --oneline -3
+")
+
+echo "$CURRENT_INFO"
+
+# Parse current state
+CURRENT_HEAD=$(echo "$CURRENT_INFO" | grep "^Current_HEAD=" | cut -d'=' -f2)
+MAIN_BRANCH=$(echo "$CURRENT_INFO" | grep "^Main_Branch=" | cut -d'=' -f2)
+
+log_info "Current deployment: $CURRENT_HEAD"
+
+# If no target specified, just show options
+if [[ -z "$TARGET_COMMIT" ]]; then
+    log_section "Available Rollback Options"
+    log_warn "No target commit specified. Choose one of the above commits to rollback to."
+    log_info "Usage: $0 <commit-hash> --confirm"
+    log_info ""
+    log_info "Examples:"
+    log_info "  ./scripts/rollback.sh abc1234 --confirm    # Rollback to abc1234"
+    log_info "  ./scripts/rollback.sh HEAD~1 --confirm     # Rollback to previous commit"
+    exit 0
+fi
+
+# Require confirmation for actual rollback
+if [[ "$CONFIRM" != "--confirm" ]]; then
+    log_section "Rollback Preview"
+    log_warn "Rollback requires --confirm flag for safety"
+    log_info "Target commit: $TARGET_COMMIT"
+    log_info "Current commit: $CURRENT_HEAD"
+    log_info ""
+    log_info "To execute rollback, run:"
+    log_info "  $0 $TARGET_COMMIT --confirm"
+    exit 0
+fi
+
+log_section "PERFORMING ROLLBACK"
+log_warn "Rolling back to commit: $TARGET_COMMIT"
+
+# Get commit info before rollback
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+BACKUP_BRANCH="rollback-backup-${TIMESTAMP}"
+
+rollback_result=$(ssh -o BatchMode=yes "$REMOTE_HOST" "
+    set -euo pipefail
+    cd $REMOTE_DIR || exit 1
+    
+    # Create backup branch at current HEAD
+    CURRENT_COMMIT=\$(git rev-parse HEAD)
+    git branch $BACKUP_BRANCH \$CURRENT_COMMIT
+    echo \"Backup_Branch=$BACKUP_BRANCH\"
+    
+    # Verify target commit exists
+    if ! git rev-parse --verify \"$TARGET_COMMIT\" >/dev/null 2>&1; then
+        echo \"ERROR: Target commit not found: $TARGET_COMMIT\" >&2
+        exit 1
+    fi
+    
+    # Perform rollback via revert (safer than hard reset)
+    echo \"Rolling back to: \$(git rev-parse --short $TARGET_COMMIT)\"
+    git reset --soft \"$TARGET_COMMIT\" || {
+        echo \"ERROR: Reset failed\" >&2
+        exit 1
+    }
+    
+    # Create rollback commit
+    git add -A
+    git commit -m \"revert: emergency rollback from \$CURRENT_COMMIT to $TARGET_COMMIT
+
+Backup branch: $BACKUP_BRANCH
+Reason: Emergency rollback performed at $(date)
+To restore previous version: git reset --hard $BACKUP_BRANCH\" || true
+    
+    echo \"Reset_Complete=true\"
+" 2>&1) || {
+    log_error "Rollback failed"
+    echo "$rollback_result" | tail -10
+    exit 1
+}
+
+echo "$rollback_result"
+
+# Extract backup branch from result
+BACKUP_BRANCH=$(echo "$rollback_result" | grep "^Backup_Branch=" | cut -d'=' -f2 || echo "")
+
+log_section "Rebuild & Restart Services"
+
+ssh -o BatchMode=yes "$REMOTE_HOST" "
+    set -euo pipefail
+    cd $REMOTE_DIR
+    
+    # Rebuild frontend
+    echo 'Rebuilding frontend...'
+    cd frontend && npm ci && npm run build && cd .. || {
+        echo 'Frontend rebuild failed'
+        exit 1
+    }
+    
+    # Rebuild CRM
+    echo 'Rebuilding CRM...'
+    cd crm-mvc && dotnet publish -c Release && cd .. || {
+        echo 'CRM rebuild failed'
+        exit 1
+    }
+    
+    # Restart services
+    echo 'Restarting services...'
+    systemctl restart vitaloop-backend vitaloop-crm-mvc
+    echo 'Services restarted'
+    
+    git log --oneline -3
+" || {
+    log_error "Service restart failed. Manual intervention may be needed."
+    exit 1
+}
+
+log_section "Verification"
+
+sleep 3
+
+# Check health
+if curl -sf "https://api.vitaloop.today/health" >/dev/null 2>&1; then
+    log_success "API is healthy"
+else
+    log_error "API health check failed. Services may not be responding."
+fi
+
+log_section "Rollback Complete"
+log_success "Successfully rolled back to: $TARGET_COMMIT"
+if [[ -n "$BACKUP_BRANCH" ]]; then
+    log_info "Backup branch created: $BACKUP_BRANCH (for manual recovery if needed)"
+fi
+
+log_warn "Important!"
+log_info "1. Verify the application is working: https://vitaloop.today"
+log_info "2. Check logs for any errors: systemctl status vitaloop-backend"
+log_info "3. Data has NOT been reverted (rollback is code only)"
+log_info ""
+log_info "If issues persist, contact the team."
