@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, Body
 from app.config import settings
 from app.dependencies import get_current_user
@@ -15,6 +17,93 @@ def _is_set(value: str) -> bool:
 def _is_http_url(value: str) -> bool:
     raw = str(value or "").strip().lower()
     return raw.startswith("http://") or raw.startswith("https://")
+
+
+async def _probe_redis_connectivity(redis_url: str, timeout_seconds: float = 1.5) -> tuple[bool, str | None]:
+    try:
+        import redis.asyncio as redis
+    except Exception:
+        return False, "redis_dependency_missing"
+
+    client = redis.from_url(redis_url, encoding="utf-8", decode_responses=True)
+    try:
+        pong = await asyncio.wait_for(client.ping(), timeout=timeout_seconds)
+        return bool(pong), None if pong else "redis_ping_failed"
+    except asyncio.TimeoutError:
+        return False, "redis_timeout"
+    except Exception:
+        return False, "redis_unreachable"
+    finally:
+        await client.aclose()
+
+
+async def _get_rate_limiter_runtime_status() -> dict:
+    backend = (settings.rate_limit_backend or "inmemory").strip().lower()
+    backend = backend if backend in {"inmemory", "redis"} else "inmemory"
+
+    if backend != "redis":
+        return {
+            "backend": backend,
+            "ok": True,
+            "redis": {
+                "required": False,
+                "configured": _is_set(settings.rate_limit_redis_url),
+                "reachable": None,
+                "reason": "not_required",
+            },
+        }
+
+    redis_url = (settings.rate_limit_redis_url or "").strip()
+    if not redis_url:
+        return {
+            "backend": backend,
+            "ok": False,
+            "redis": {
+                "required": True,
+                "configured": False,
+                "reachable": False,
+                "reason": "missing_redis_url",
+            },
+        }
+
+    reachable, reason = await _probe_redis_connectivity(redis_url)
+    return {
+        "backend": backend,
+        "ok": reachable,
+        "redis": {
+            "required": True,
+            "configured": True,
+            "reachable": reachable,
+            "reason": reason,
+        },
+    }
+
+
+async def _build_runtime_readiness_payload() -> dict:
+    rate_limiter = await _get_rate_limiter_runtime_status()
+    requires_redis_url = rate_limiter["backend"] == "redis"
+
+    checks = {
+        "supabase_url": _is_set(settings.supabase_url),
+        "supabase_service_role_key": _is_set(settings.supabase_service_role_key),
+        "llm_provider_key": is_llm_configured(),
+        "resend_api_key": _is_set(settings.resend_api_key),
+        "resend_from_email": _is_set(settings.resend_from_email),
+        "sentry_dsn": _is_set(settings.sentry_dsn),
+        "stripe_secret_key": _is_set(settings.stripe_secret_key),
+        "stripe_webhook_secret": _is_set(settings.stripe_webhook_secret),
+        "stripe_price_id": _is_set(settings.stripe_price_id),
+        "rate_limit_backend": _is_set(settings.rate_limit_backend),
+        "rate_limit_redis_url": (not requires_redis_url) or _is_set(settings.rate_limit_redis_url),
+    }
+    missing = [name for name, ok in checks.items() if not ok]
+    return {
+        "ok": len(missing) == 0 and rate_limiter["ok"],
+        "checks": checks,
+        "missing": missing,
+        "missing_count": len(missing),
+        "rate_limiter": rate_limiter,
+    }
 
 
 def _require_super_admin(current_user: dict = Depends(get_current_user)) -> dict:
@@ -83,24 +172,7 @@ async def admin_audit_logs(
 
 @router.get("/runtime-readiness")
 async def admin_runtime_readiness(_: dict = Depends(_require_super_admin)):
-    checks = {
-        "supabase_url": _is_set(settings.supabase_url),
-        "supabase_service_role_key": _is_set(settings.supabase_service_role_key),
-        "llm_provider_key": is_llm_configured(),
-        "resend_api_key": _is_set(settings.resend_api_key),
-        "resend_from_email": _is_set(settings.resend_from_email),
-        "sentry_dsn": _is_set(settings.sentry_dsn),
-        "stripe_secret_key": _is_set(settings.stripe_secret_key),
-        "stripe_webhook_secret": _is_set(settings.stripe_webhook_secret),
-        "stripe_price_id": _is_set(settings.stripe_price_id),
-    }
-    missing = [name for name, ok in checks.items() if not ok]
-    return {
-        "ok": len(missing) == 0,
-        "checks": checks,
-        "missing": missing,
-        "missing_count": len(missing),
-    }
+    return await _build_runtime_readiness_payload()
 
 
 @router.get("/stripe-readiness")
