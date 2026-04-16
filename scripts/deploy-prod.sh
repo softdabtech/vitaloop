@@ -228,6 +228,18 @@ else
     log_success "API security header smoke check passed"
 fi
 
+if [[ "${RUN_RATE_LIMIT_SMOKE:-0}" == "1" ]]; then
+    log_info "Checking API rate limiter smoke..."
+    if ! ./scripts/smoke_rate_limiter.sh > /dev/null 2>&1; then
+        log_error "API rate limiter smoke check failed"
+        VALIDATION_PASSED=false
+    else
+        log_success "API rate limiter smoke check passed"
+    fi
+else
+    log_info "Skipping API rate limiter smoke (set RUN_RATE_LIMIT_SMOKE=1 to enable)"
+fi
+
 # Check frontend
 log_info "Checking frontend endpoint..."
 if ! curl $CURL_OPTS -f "https://vitaloop.today" > /dev/null 2>&1; then
