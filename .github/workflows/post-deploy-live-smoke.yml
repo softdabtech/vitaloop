@@ -8,22 +8,17 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  workflow_run:
-    workflows: ["Deploy to Railway"]
-    types: [completed]
+  workflow_dispatch:
 
 jobs:
   smoke-tests:
     name: Run post-deploy smoke suite
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
       - name: Checkout deployed revision
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -74,8 +69,8 @@ jobs:
           {
             echo "## Post Deploy Live Smoke"
             echo ""
-            echo "- Triggering workflow: Deploy to Railway"
-            echo "- Deployed commit: ${{ github.event.workflow_run.head_sha }}"
+            echo "- Trigger: workflow_dispatch"
+            echo "- Checked commit: ${{ github.sha }}"
             echo "- Exit code: ${exit_code}"
             echo "- API base: ${E2E_API_BASE_URL:-unset}"
             echo ""
