@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from uuid import UUID
@@ -18,6 +20,7 @@ logger = logging.getLogger("uvicorn.error")
 
 MAX_SYMPTOMS = 20
 MAX_SYMPTOM_LENGTH = 60
+PROTOCOL_GENERATION_TIMEOUT_SECONDS = 75
 
 
 class ProtocolRequest(BaseModel):
@@ -82,10 +85,19 @@ async def create_protocol(
         )
 
     try:
-        recommendations = await generate_protocol(
-            biomarkers=biomarkers,
-            symptoms=normalized_symptoms,
+        recommendations = await asyncio.wait_for(
+            generate_protocol(
+                biomarkers=biomarkers,
+                symptoms=normalized_symptoms,
+            ),
+            timeout=PROTOCOL_GENERATION_TIMEOUT_SECONDS,
         )
+    except asyncio.TimeoutError as exc:
+        logger.error("protocol_generation_timeout upload_id=%s user_id=%s", upload_id, user_id)
+        raise HTTPException(
+            status_code=504,
+            detail={"detail": "Protocol generation timed out. Please retry.", "code": "PROTOCOL_TIMEOUT"},
+        ) from exc
     except HTTPException:
         raise
     except Exception as exc:
@@ -106,11 +118,18 @@ async def create_protocol(
         search_term = rec.get("iherb_search") or rec.get("supplement")
         rec["iherb_url"] = build_iherb_url(search_term or "supplement")
 
-    protocol = await save_protocol(
-        user_id=user_id,
-        upload_id=upload_id,
-        recommendations=recommendations,
-        prompt_version=PROTOCOL_PROMPT_VERSION,
-    )
+    try:
+        protocol = await save_protocol(
+            user_id=user_id,
+            upload_id=upload_id,
+            recommendations=recommendations,
+            prompt_version=PROTOCOL_PROMPT_VERSION,
+        )
+    except Exception as exc:
+        logger.error("protocol_save_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc), exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={"detail": "Could not store protocol recommendations", "code": "PROTOCOL_SAVE_FAILED"},
+        ) from exc
 
     return protocol
