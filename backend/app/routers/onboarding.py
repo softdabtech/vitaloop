@@ -111,6 +111,21 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
     has_uploads = bool(uploads_resp.data)
     has_questionnaire = bool(questionnaire_resp.data)
 
+    await svc.write_audit_log(
+        user_id=user_id,
+        action="read",
+        entity_type="onboarding_state",
+        entity_id=user_id,
+        new_value={
+            "scope": "medical",
+            "profile_basics": has_profile_basics,
+            "location": has_location,
+            "complaints": has_complaints,
+            "first_upload": has_uploads,
+            "questionnaire_completed": has_questionnaire,
+        },
+    )
+
     if not has_profile_basics:
         current_stage = "profile"
     elif not has_location:

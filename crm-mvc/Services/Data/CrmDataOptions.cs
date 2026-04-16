@@ -17,6 +17,7 @@ public sealed class CrmDataOptions
     public string GlobalUsersPath { get; set; } = "/admin/users";
     public string PlatformOverviewPath { get; set; } = "/admin/platform-overview";
     public string AuditLogsPath { get; set; } = "/admin/audit-logs";
+    public string RuntimeReadinessPath { get; set; } = "/admin/runtime-readiness";
     public string UserContextPath { get; set; } = "/auth/me";
     public string UserContextFallbackPath { get; set; } = "/profile";
 }

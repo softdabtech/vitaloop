@@ -114,6 +114,18 @@ async def get_questionnaire_session(current_user: dict = Depends(get_current_use
         answer_map = {str(a.get("question_id")): int(a.get("answer_value") or 0) for a in answers if a.get("question_id")}
         next_question = _normalize_next_question(answered_ids, answer_map)
 
+        await svc.write_audit_log(
+            user_id=user_id,
+            action="read",
+            entity_type="questionnaire_session",
+            entity_id=str(session.get("id") or ""),
+            new_value={
+                "scope": "medical",
+                "answered_count": len(answers),
+                "remaining_count": max(0, len(QUESTION_BANK) - len(answers)),
+            },
+        )
+
         return {
             "session": session,
             "answered_count": len(answers),
@@ -176,6 +188,18 @@ async def submit_questionnaire_answer(
             .execute()
         )
 
+        await svc.write_audit_log(
+            user_id=user_id,
+            action="create",
+            entity_type="questionnaire_answer",
+            entity_id=f"{session['id']}:{body.question_id}",
+            new_value={
+                "scope": "medical",
+                "question_id": body.question_id,
+                "answer_value": body.answer_value,
+            },
+        )
+
         updated_answers = await _get_session_answers(session["id"])
         updated_answered_ids = {str(a.get("question_id")) for a in updated_answers if a.get("question_id")}
         updated_answer_map = {
@@ -225,6 +249,14 @@ async def complete_questionnaire(
 
         if body.mark_onboarding_complete:
             await svc.upsert_user_profile(user_id, {"onboarding_complete": True})
+
+        await svc.write_audit_log(
+            user_id=user_id,
+            action="update",
+            entity_type="questionnaire_session",
+            entity_id=str(session.get("id") or ""),
+            new_value={"scope": "medical", "status": "completed"},
+        )
 
         await svc.save_timeline_event(
             user_id=user_id,

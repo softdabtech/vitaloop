@@ -27,4 +27,5 @@ public interface ICrmDataGateway
     Task<IReadOnlyList<GlobalUser>> GetGlobalUsers(CancellationToken ct = default);
     Task<PlatformOverview?> GetPlatformOverview(CancellationToken ct = default);
     Task<IReadOnlyList<AuditLogEntry>> GetAuditLogs(Guid? organizationId = null, int limit = 200, CancellationToken ct = default);
+    Task<RuntimeReadinessSnapshot?> GetRuntimeReadiness(CancellationToken ct = default);
 }

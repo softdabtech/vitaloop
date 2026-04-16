@@ -145,6 +145,40 @@ def _get_supabase() -> Client:
     return _supabase
 
 
+async def _audit_medical_read(
+    *,
+    user_id: Optional[str],
+    entity_type: str,
+    entity_id: Optional[str] = None,
+    details: Optional[Dict[str, Any]] = None,
+) -> None:
+    await write_audit_log(
+        user_id=user_id,
+        action="read",
+        entity_type=entity_type,
+        entity_id=entity_id,
+        new_value={"scope": "medical", **(details or {})},
+    )
+
+
+async def _audit_medical_write(
+    *,
+    user_id: Optional[str],
+    action: str,
+    entity_type: str,
+    entity_id: Optional[str] = None,
+    details: Optional[Dict[str, Any]] = None,
+) -> None:
+    safe_action = action if action in {"create", "update", "delete"} else "update"
+    await write_audit_log(
+        user_id=user_id,
+        action=safe_action,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        new_value={"scope": "medical", **(details or {})},
+    )
+
+
 async def save_lab_upload(
     user_id: str,
     extracted_text: str,
@@ -282,7 +316,15 @@ async def save_symptoms(user_id: str, upload_id: str, tags: List[str], severity:
         .insert({"user_id": user_id, "upload_id": upload_id, "tags": tags, "severity": severity})
         .execute()
     )
-    return resp.data[0]
+    result = resp.data[0]
+    await _audit_medical_write(
+        user_id=user_id,
+        action="create",
+        entity_type="symptoms",
+        entity_id=str(result.get("id") or upload_id),
+        details={"tag_count": len(tags)},
+    )
+    return result
 
 
 def _build_symptom_summary(rows: List[Dict[str, Any]], days: int) -> Dict[str, Any]:
@@ -358,6 +400,11 @@ async def get_user_symptom_summary(user_id: str, days: int = 30) -> Dict[str, An
     )
 
     rows = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="symptoms",
+        details={"window_days": days, "row_count": len(rows)},
+    )
     return _build_symptom_summary(rows, days)
 
 
@@ -523,6 +570,11 @@ async def get_user_progress(user_id: str) -> List[Dict]:
             .execute()
         )
         result.append({**upload, "biomarkers": biomarkers.data})
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="lab_progress",
+        details={"upload_count": len(result)},
+    )
     return result
 
 
@@ -994,7 +1046,14 @@ async def get_funnel_overview(
 # ──────────────────────────────────────────────
 
 async def get_user_profile(user_id: str) -> Dict[str, Any]:
-    return await _select_first_by_id_with_fallback("user_profile", "*", user_id)
+    profile = await _select_first_by_id_with_fallback("user_profile", "*", user_id)
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="user_profile",
+        entity_id=user_id,
+        details={"found": bool(profile)},
+    )
+    return profile
 
 
 async def upsert_user_profile(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -1006,7 +1065,15 @@ async def upsert_user_profile(user_id: str, data: Dict[str, Any]) -> Dict[str, A
         .execute()
     )
     await _emit_timeline(user_id, "profile_updated", "Profile updated", metadata={"fields": list(data.keys())})
-    return resp.data[0] if resp.data else payload
+    result = resp.data[0] if resp.data else payload
+    await _audit_medical_write(
+        user_id=user_id,
+        action="update",
+        entity_type="user_profile",
+        entity_id=user_id,
+        details={"fields": list(data.keys())},
+    )
+    return result
 
 
 async def get_user_location(user_id: str) -> Optional[Dict]:
@@ -1019,7 +1086,14 @@ async def get_user_location(user_id: str) -> Optional[Dict]:
         .limit(1)
         .execute()
     )
-    return resp.data[0] if resp.data else None
+    location = resp.data[0] if resp.data else None
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="user_location",
+        entity_id=user_id,
+        details={"found": bool(location)},
+    )
+    return location
 
 
 async def upsert_user_location(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -1027,7 +1101,15 @@ async def upsert_user_location(user_id: str, data: Dict[str, Any]) -> Dict[str, 
     await _run(lambda: supabase.table("user_locations").delete().eq("user_id", user_id).execute())
     payload = {"user_id": user_id, "is_primary": True, **data}
     resp = await _run(lambda: supabase.table("user_locations").insert(payload).execute())
-    return resp.data[0] if resp.data else payload
+    result = resp.data[0] if resp.data else payload
+    await _audit_medical_write(
+        user_id=user_id,
+        action="update",
+        entity_type="user_location",
+        entity_id=str(result.get("id") or user_id),
+        details={"fields": list(data.keys())},
+    )
+    return result
 
 
 # ──────────────────────────────────────────────
@@ -1043,7 +1125,13 @@ async def get_complaints(user_id: str) -> List[Dict]:
         .order("created_at", desc=False)
         .execute()
     )
-    return resp.data or []
+    complaints = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="recurring_complaints",
+        details={"count": len(complaints)},
+    )
+    return complaints
 
 
 async def add_complaint(user_id: str, complaint: str, duration: Optional[str] = None, tried: Optional[str] = None) -> Dict:
@@ -1055,7 +1143,15 @@ async def add_complaint(user_id: str, complaint: str, duration: Optional[str] = 
         payload["tried_interventions"] = tried
     resp = await _run(lambda: supabase.table("recurring_complaints").insert(payload).execute())
     await _emit_timeline(user_id, "complaint_added", f"Complaint added: {complaint[:60]}")
-    return resp.data[0]
+    result = resp.data[0]
+    await _audit_medical_write(
+        user_id=user_id,
+        action="create",
+        entity_type="recurring_complaints",
+        entity_id=str(result.get("id") or ""),
+        details={"has_duration": bool(duration), "has_tried_interventions": bool(tried)},
+    )
+    return result
 
 
 async def delete_complaint(user_id: str, complaint_id: str) -> None:
@@ -1066,6 +1162,12 @@ async def delete_complaint(user_id: str, complaint_id: str) -> None:
         .eq("id", complaint_id)
         .eq("user_id", user_id)
         .execute()
+    )
+    await _audit_medical_write(
+        user_id=user_id,
+        action="delete",
+        entity_type="recurring_complaints",
+        entity_id=complaint_id,
     )
 
 
@@ -1087,6 +1189,13 @@ async def submit_weekly_checkin(user_id: str, data: Dict[str, Any]) -> Dict:
     result = resp.data[0] if resp.data else payload
     await _emit_timeline(user_id, "weekly_checkin_submitted", f"Weekly check-in submitted for {data.get('week_start', 'this week')}")
     await _evaluate_checkin_red_flags(user_id, data)
+    await _audit_medical_write(
+        user_id=user_id,
+        action="update",
+        entity_type="weekly_checkin",
+        entity_id=str(result.get("id") or f"{user_id}:{data.get('week_start', '')}"),
+        details={"week_start": data.get("week_start")},
+    )
     return result
 
 
@@ -1112,7 +1221,13 @@ async def get_weekly_checkins(user_id: str, limit: int = 12) -> List[Dict]:
         .limit(limit)
         .execute()
     )
-    return resp.data or []
+    checkins = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="weekly_checkin",
+        details={"count": len(checkins), "limit": limit},
+    )
+    return checkins
 
 
 # ──────────────────────────────────────────────
@@ -1131,7 +1246,15 @@ async def create_red_flag(user_id: str, trigger_type: str, summary: str,
     }
     resp = await _run(lambda: supabase.table("red_flag_events").insert(payload).execute())
     await _emit_timeline(user_id, "red_flag_triggered", f"Red flag: {summary[:80]}", metadata={"severity": severity})
-    return resp.data[0] if resp.data else payload
+    result = resp.data[0] if resp.data else payload
+    await _audit_medical_write(
+        user_id=user_id,
+        action="create",
+        entity_type="red_flag",
+        entity_id=str(result.get("id") or ""),
+        details={"trigger_type": trigger_type, "severity": severity},
+    )
+    return result
 
 
 async def get_user_red_flags(user_id: str) -> List[Dict]:
@@ -1143,7 +1266,13 @@ async def get_user_red_flags(user_id: str) -> List[Dict]:
         .order("created_at", desc=True)
         .execute()
     )
-    return resp.data or []
+    flags = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="red_flag",
+        details={"count": len(flags)},
+    )
+    return flags
 
 
 async def acknowledge_red_flag(user_id: str, flag_id: str) -> Dict:
@@ -1155,7 +1284,15 @@ async def acknowledge_red_flag(user_id: str, flag_id: str) -> Dict:
         .eq("user_id", user_id)
         .execute()
     )
-    return resp.data[0] if resp.data else {}
+    result = resp.data[0] if resp.data else {}
+    await _audit_medical_write(
+        user_id=user_id,
+        action="update",
+        entity_type="red_flag",
+        entity_id=flag_id,
+        details={"acknowledged": True},
+    )
+    return result
 
 
 async def get_all_red_flags(acknowledged: Optional[bool] = False) -> List[Dict]:
@@ -1271,6 +1408,12 @@ async def generate_insights(user_id: str) -> List[Dict]:
         rows = [{"user_id": user_id, **i} for i in insights_list]
         await _run(lambda: supabase.table("insights").insert(rows).execute())
         await _emit_timeline(user_id, "insight_created", f"{len(insights_list)} new insight(s) generated")
+        await _audit_medical_write(
+            user_id=user_id,
+            action="create",
+            entity_type="insights",
+            details={"count": len(insights_list)},
+        )
 
     return insights_list
 
@@ -1287,7 +1430,13 @@ async def get_user_insights(user_id: str) -> List[Dict]:
         .limit(10)
         .execute()
     )
-    return resp.data or []
+    insights = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="insights",
+        details={"count": len(insights)},
+    )
+    return insights
 
 
 async def dismiss_insight(user_id: str, insight_id: str) -> None:
@@ -1298,6 +1447,13 @@ async def dismiss_insight(user_id: str, insight_id: str) -> None:
         .eq("id", insight_id)
         .eq("user_id", user_id)
         .execute()
+    )
+    await _audit_medical_write(
+        user_id=user_id,
+        action="update",
+        entity_type="insights",
+        entity_id=insight_id,
+        details={"dismissed": True},
     )
 
 
@@ -1338,6 +1494,17 @@ async def calculate_health_score(user_id: str) -> Dict[str, Any]:
         "calculated_at": datetime.now(timezone.utc).isoformat(),
     }
     await _run(lambda: supabase.table("health_scores").insert({"user_id": user_id, **result}).execute())
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="biomarkers",
+        details={"sample_size": len(bio_rows), "source": "health_score_calc"},
+    )
+    await _audit_medical_write(
+        user_id=user_id,
+        action="create",
+        entity_type="health_scores",
+        details={"score": result.get("score")},
+    )
     return result
 
 
@@ -1376,7 +1543,13 @@ async def get_user_timeline(user_id: str, limit: int = 30) -> List[Dict]:
         .limit(limit)
         .execute()
     )
-    return resp.data or []
+    timeline = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="timeline_events",
+        details={"count": len(timeline), "limit": limit},
+    )
+    return timeline
 
 
 # ──────────────────────────────────────────────
