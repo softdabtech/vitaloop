@@ -25,7 +25,7 @@ if settings.sentry_dsn:
 from app.routers import (
     analyze, protocol, progress, health, symptoms, stripe_router, admin,
     profile, complaints, checkins, timeline, insights, red_flags, notifications, auth, crm,
-    crm_stage5, assignments, onboarding, questionnaire,
+    crm_stage5, assignments, onboarding, questionnaire, dashboard,
 )
 
 app = FastAPI(
@@ -93,3 +93,4 @@ app.include_router(notifications.router, prefix="/notifications", tags=["notific
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(onboarding.router)
 app.include_router(questionnaire.router, prefix="/questionnaire", tags=["questionnaire"])
+app.include_router(dashboard.router)

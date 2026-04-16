@@ -61,7 +61,7 @@ api.interceptors.response.use(
 
     if (status === 401) {
       const requestUrl = String(error?.config?.url || '')
-      const authBoundary = requestUrl.includes('/auth/me') || requestUrl.includes('/auth/onboarding/state')
+      const authBoundary = requestUrl.includes('/auth/me')
 
       // Only force global sign-out on auth boundary calls.
       // For other endpoints we propagate the error so screens can degrade gracefully.

@@ -3,8 +3,8 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api.js';
 import { 
-  Heart, Calendar, AlertCircle, CheckCircle, 
-  Activity, Download, Settings, LogOut, Menu, X, Plus 
+  Heart, Calendar, AlertCircle, CheckCircle,
+  Activity, Download, Settings, LogOut, Menu, Plus, Sparkles, ArrowRight
 } from 'lucide-react';
 import UserDashboardSidebar from '../components/dashboard/UserDashboardSidebar';
 import StatCard from '../components/dashboard/StatCard';
@@ -16,14 +16,31 @@ import RecommendationsPanel from '../components/dashboard/RecommendationsPanel';
 import { enrichAssignments } from '../lib/assignmentScoring.js';
 import '../styles/userDashboard.css';
 
+function SectionSkeleton({ rows = 3, rowClass = 'h-12' }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: rows }).map((_, index) => (
+        <div key={index} className={`skeleton ${rowClass} rounded-xl`} />
+      ))}
+    </div>
+  );
+}
+
+function StatSkeleton() {
+  return (
+    <div className="bg-slate-800 border border-slate-700 rounded-lg p-5">
+      <div className="skeleton h-10 w-10 mb-3" />
+      <div className="skeleton h-4 w-28 mb-3" />
+      <div className="skeleton h-8 w-24" />
+    </div>
+  );
+}
+
 export default function UserDashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [dashboardData, setDashboardData] = useState(null);
-  const [assignments, setAssignments] = useState([]);
-  const [progress, setProgress] = useState([]);
-  const [insights, setInsights] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -38,36 +55,24 @@ export default function UserDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      const response = await api.get('/dashboard/summary');
+      const payload = response?.data || {};
 
-      const normalizeList = (payload) => {
-        if (Array.isArray(payload)) return payload;
-        if (Array.isArray(payload?.items)) return payload.items;
-        if (Array.isArray(payload?.data)) return payload.data;
-        return [];
-      };
-
-      const assignmentsRequest = api
-        .get('/assignments')
-        .catch(() => api.get('/crm/assignments'));
-
-      const [profileResult, assignmentsResult, progressResult, insightsResult] = await Promise.allSettled([
-        api.get('/auth/me').catch(() => api.get('/me')),
-        assignmentsRequest,
-        api.get('/progress'),
-        api.get('/insights'),
-      ]);
-
-      const profileData = profileResult.status === 'fulfilled' ? profileResult.value.data : null;
-      const assignmentsData = assignmentsResult.status === 'fulfilled' ? normalizeList(assignmentsResult.value.data) : [];
-      const progressData = progressResult.status === 'fulfilled' ? normalizeList(progressResult.value.data) : [];
-      const insightsData = insightsResult.status === 'fulfilled' ? normalizeList(insightsResult.value.data) : [];
-      const rankedAssignments = enrichAssignments(assignmentsData)
+      const rankedAssignments = enrichAssignments(payload?.blocks?.assignments || [])
         .sort((a, b) => (b?.priority?.score || 0) - (a?.priority?.score || 0));
+      const todayFocus = rankedAssignments
+        .filter((item) => String(item?.status || '').toLowerCase() !== 'completed')
+        .slice(0, 3);
 
-      setDashboardData(profileData);
-      setAssignments(Array.isArray(rankedAssignments) ? rankedAssignments : []);
-      setProgress(Array.isArray(progressData) ? progressData : []);
-      setInsights(Array.isArray(insightsData) ? insightsData : []);
+      setSummary({
+        ...payload,
+        blocks: {
+          assignments: Array.isArray(rankedAssignments) ? rankedAssignments : [],
+          today_focus: todayFocus,
+          progress: Array.isArray(payload?.blocks?.progress) ? payload.blocks.progress : [],
+          insights: Array.isArray(payload?.blocks?.insights) ? payload.blocks.insights : [],
+        },
+      });
       setError(null);
     } catch (err) {
       console.error('Dashboard data fetch error:', err);
@@ -82,64 +87,73 @@ export default function UserDashboard() {
     navigate('/login');
   };
 
-  const todayFocus = assignments
-    .filter((item) => String(item?.status || '').toLowerCase() !== 'completed')
-    .slice(0, 3);
+  const profile = summary?.profile || {};
+  const onboarding = profile?.onboarding || {};
+  const stats = summary?.stats || {};
+  const nextBestAction = summary?.next_best_action || {};
+  const startHere = summary?.start_here || {};
+  const assignments = summary?.blocks?.assignments || [];
+  const progress = summary?.blocks?.progress || [];
+  const insights = summary?.blocks?.insights || [];
+  const todayFocus = summary?.blocks?.today_focus || [];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-        <div className="text-center">
-          <div className="animate-spin mb-4">
-            <Heart className="w-12 h-12 text-emerald-500" />
-          </div>
-          <p className="text-white text-lg">Loading your dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  const displayName = profile?.first_name || user?.user_metadata?.full_name || user?.email?.split('@')?.[0] || 'there';
+  const onboardingLabel = onboarding?.requires_onboarding
+    ? onboarding?.current_stage_label || 'Continue onboarding'
+    : 'Dashboard ready';
 
   return (
-    <div className="flex h-screen bg-slate-950">
-      {/* Sidebar */}
-      <UserDashboardSidebar 
-        isOpen={sidebarOpen} 
-        toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-        user={user}
-        onLogout={handleLogout}
-      />
+    <div className="flex min-h-screen bg-slate-950">
+      <div className="hidden lg:block">
+        <UserDashboardSidebar
+          isOpen={sidebarOpen}
+          toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          user={user}
+          onLogout={handleLogout}
+        />
+      </div>
+
+      {sidebarOpen && (
+        <div className="lg:hidden fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm" onClick={() => setSidebarOpen(false)}>
+          <div className="h-full w-72" onClick={(event) => event.stopPropagation()}>
+            <UserDashboardSidebar
+              isOpen={true}
+              toggleSidebar={() => setSidebarOpen(false)}
+              user={user}
+              onLogout={handleLogout}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <div className="bg-slate-900 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
+        <div className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 hover:bg-slate-800 rounded-lg transition"
             >
-              {sidebarOpen ? (
-                <X className="w-5 h-5 text-white" />
-              ) : (
-                <Menu className="w-5 h-5 text-white" />
-              )}
+              <Menu className="w-5 h-5 text-white" />
             </button>
-            <h1 className="text-2xl font-bold text-white">
-              Welcome back, {user?.name || 'User'}!
-            </h1>
+            <div>
+              <h1 className="text-lg sm:text-2xl font-bold text-white">Welcome back, {displayName}</h1>
+              <p className="text-xs sm:text-sm text-slate-400">{onboardingLabel}</p>
+            </div>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition text-sm"
           >
             <LogOut className="w-4 h-4" />
-            Logout
+            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-auto">
-          <div className="p-6 space-y-6">
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
             {/* Error Banner */}
             {error && (
               <div className="bg-red-500/10 border border-red-500 rounded-lg p-4 flex items-center gap-3">
@@ -148,49 +162,117 @@ export default function UserDashboard() {
               </div>
             )}
 
+            {/* Start Here */}
+            {startHere?.enabled && (
+              <div className="bg-gradient-to-r from-emerald-500/15 via-cyan-500/10 to-slate-800 border border-emerald-500/30 rounded-2xl p-4 sm:p-6">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="space-y-2">
+                    <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wide">First value in 30 seconds</p>
+                    <h2 className="text-white text-xl sm:text-2xl font-semibold flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-emerald-300" />
+                      {startHere.title}
+                    </h2>
+                    <p className="text-slate-300 text-sm">{startHere.description}</p>
+                    <ul className="text-xs sm:text-sm text-slate-300 space-y-1">
+                      {(startHere.steps || []).slice(0, 3).map((step, idx) => (
+                        <li key={`start-${idx}`}>{idx + 1}. {step}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <button
+                    onClick={() => navigate(startHere.cta_path || '/upload')}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl font-semibold transition"
+                  >
+                    {startHere.cta_label || 'Start now'}
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Next Best Action */}
+            {!loading && nextBestAction?.title && (
+              <div className="bg-slate-900/70 border border-slate-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-400">Next best action</p>
+                  <p className="text-white font-semibold">{nextBestAction.title}</p>
+                  <p className="text-slate-400 text-sm">{nextBestAction.description}</p>
+                </div>
+                <button
+                  onClick={() => navigate(nextBestAction.path || '/dashboard')}
+                  className="px-4 py-2 rounded-lg bg-slate-800 border border-slate-600 text-emerald-300 hover:text-emerald-200 hover:border-emerald-500/40 transition"
+                >
+                  {nextBestAction.cta_label || 'Open'}
+                </button>
+              </div>
+            )}
+
             {/* Quick Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard
-                title="Health Score"
-                value={dashboardData?.health_score || '--'}
-                unit="/100"
-                icon={Heart}
-                color="emerald"
-                change={dashboardData?.health_score_change || 0}
-              />
-              <StatCard
-                title="Active Program"
-                value={dashboardData?.current_program || 'None'}
-                unit=""
-                icon={Activity}
-                color="blue"
-              />
-              <StatCard
-                title="Completed Tasks"
-                value={dashboardData?.completed_tasks || 0}
-                unit="this week"
-                icon={CheckCircle}
-                color="purple"
-              />
-              <StatCard
-                title="Subscription"
-                value={dashboardData?.sub_status || 'Free'}
-                unit=""
-                icon={Calendar}
-                color="orange"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+              {loading ? (
+                <>
+                  <StatSkeleton />
+                  <StatSkeleton />
+                  <StatSkeleton />
+                  <StatSkeleton />
+                </>
+              ) : (
+                <>
+                  <StatCard
+                    title="Health Score"
+                    value={stats?.health_score ?? '--'}
+                    unit="/100"
+                    icon={Heart}
+                    color="emerald"
+                    change={stats?.health_score_change || 0}
+                  />
+                  <StatCard
+                    title="Active Program"
+                    value={stats?.active_program || 'None'}
+                    unit=""
+                    icon={Activity}
+                    color="blue"
+                  />
+                  <StatCard
+                    title="Completed Tasks"
+                    value={stats?.completed_tasks || 0}
+                    unit="total"
+                    icon={CheckCircle}
+                    color="purple"
+                  />
+                  <StatCard
+                    title="Subscription"
+                    value={String(stats?.subscription || 'free').replace('_', ' ')}
+                    unit=""
+                    icon={Calendar}
+                    color="orange"
+                  />
+                </>
+              )}
             </div>
 
             {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
               {/* Health Trends Chart - Spans 2 columns */}
               <div className="lg:col-span-2">
-                <HealthChart progress={progress} />
+                {loading ? (
+                  <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+                    <SectionSkeleton rows={4} rowClass="h-14" />
+                  </div>
+                ) : (
+                  <HealthChart progress={progress} />
+                )}
               </div>
 
               {/* Quick Actions */}
               <div>
-                <QuickActionsPanel />
+                {loading ? (
+                  <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+                    <SectionSkeleton rows={6} rowClass="h-10" />
+                  </div>
+                ) : (
+                  <QuickActionsPanel />
+                )}
               </div>
             </div>
 
@@ -210,7 +292,9 @@ export default function UserDashboard() {
                 </button>
               </div>
 
-              {assignments.length > 0 ? (
+              {loading ? (
+                <SectionSkeleton rows={4} rowClass="h-20" />
+              ) : assignments.length > 0 ? (
                 <div className="space-y-3">
                   {assignments.slice(0, 5).map((assignment) => (
                       <AssignmentCard
@@ -229,7 +313,10 @@ export default function UserDashboard() {
                   )}
                 </div>
               ) : (
-                <p className="text-slate-400 text-center py-8">No active assignments yet</p>
+                <div className="text-center py-8">
+                  <p className="text-slate-300">No active assignments yet</p>
+                  <p className="text-slate-500 text-sm mt-1">Start with onboarding or upload labs to generate your first task list.</p>
+                </div>
               )}
             </div>
 
@@ -248,7 +335,9 @@ export default function UserDashboard() {
                 </button>
               </div>
 
-              {todayFocus.length > 0 ? (
+              {loading ? (
+                <SectionSkeleton rows={3} rowClass="h-20" />
+              ) : todayFocus.length > 0 ? (
                 <div className="space-y-3">
                   {todayFocus.map((assignment) => (
                     <AssignmentCard
@@ -259,18 +348,33 @@ export default function UserDashboard() {
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-400 text-sm">No active focus tasks today. Great momentum.</p>
+                <div>
+                  <p className="text-slate-300 text-sm">No active focus tasks today.</p>
+                  <p className="text-slate-500 text-xs mt-1">Use weekly check-in to generate the next recommended action.</p>
+                </div>
               )}
             </div>
 
             {/* Recommendations & Progress Timeline */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <RecommendationsPanel insights={insights} />
-              <ProgressTimeline progress={progress} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              {loading ? (
+                <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+                  <SectionSkeleton rows={4} rowClass="h-12" />
+                </div>
+              ) : (
+                <RecommendationsPanel insights={insights} />
+              )}
+              {loading ? (
+                <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+                  <SectionSkeleton rows={5} rowClass="h-11" />
+                </div>
+              ) : (
+                <ProgressTimeline progress={progress} />
+              )}
             </div>
 
             {/* Bottom Action Buttons */}
-            <div className="flex gap-4 pb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pb-6">
               <button
                 onClick={() => navigate('/upload')}
                 className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition"

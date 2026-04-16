@@ -51,18 +51,52 @@ function normalizeReturnUrl(returnUrl) {
   return returnUrl.startsWith('/') ? returnUrl : null
 }
 
+function resolveGlobalRole(mePayload) {
+  const fromUser = mePayload?.user?.global_role
+  const fromRoot = mePayload?.global_role
+  const role = String(fromUser || fromRoot || '').trim().toLowerCase()
+  return role || 'end_user'
+}
+
+function resolveLocalProductPath(mePayload, normalizedReturnUrl) {
+  const role = resolveGlobalRole(mePayload)
+  const onboardingCompleted = Boolean(mePayload?.user?.onboarding_completed ?? mePayload?.onboarding_completed)
+
+  if (normalizedReturnUrl && (normalizedReturnUrl.startsWith('/dashboard') || normalizedReturnUrl.startsWith('/onboarding'))) {
+    return normalizedReturnUrl
+  }
+
+  if (role === 'end_user' && !onboardingCompleted) {
+    return '/onboarding'
+  }
+  return '/dashboard'
+}
+
 export async function resolvePostLoginDestination(returnUrl = null) {
   console.log('[STEP 2] resolvePostLoginDestination called', { returnUrl })
-  
+
+  const normalized = normalizeReturnUrl(returnUrl)
+  let authMe = null
+
   // Attempt to fetch user context via /auth/me, but don't fail the entire handoff if it fails
   try {
     console.log('[STEP 3A] Fetching /auth/me')
     const { data } = await api.get('/auth/me')
+    authMe = data
     console.log('[STEP 3B] User context fetched successfully:', data)
   } catch (error) {
     console.warn('[STEP 3B] Failed to fetch /auth/me context', error?.message || error)
     console.log('[STEP 3C] Continuing with CRM handoff despite /auth/me failure...')
     // Continue anyway - CRM can handle session validation on its side
+  }
+
+  // End-users should stay in B2C app instead of being redirected to CRM /admin.
+  if (authMe && resolveGlobalRole(authMe) === 'end_user') {
+    const localPath = resolveLocalProductPath(authMe, normalized)
+    return {
+      url: localPath,
+      method: 'GET',
+    }
   }
 
   if (!hasSupabaseConfig) {
@@ -83,7 +117,6 @@ export async function resolvePostLoginDestination(returnUrl = null) {
 
   // Always hand off auth token via the dedicated auth bridge endpoint.
   const target = new URL(AUTH_POST_LOGIN_PATH)
-  const normalized = normalizeReturnUrl(returnUrl)
   if (normalized) {
     target.searchParams.set('returnUrl', normalized)
   }
