@@ -1490,3 +1490,63 @@ async def get_admin_user_detail(user_id: str) -> Dict[str, Any]:
         "red_flags": red_flags_resp.data or [],
         "timeline": timeline_resp.data or [],
     }
+
+
+async def redact_old_lab_upload_text(
+    *,
+    retention_days: int,
+    batch_size: int,
+    dry_run: bool = True,
+) -> Dict[str, Any]:
+    """Redact old raw extracted_text values while preserving biomarker history.
+
+    This keeps longitudinal insights but minimizes storage of raw medical text.
+    """
+    supabase = _get_supabase()
+    safe_days = max(30, min(retention_days, 3650))
+    safe_batch = max(1, min(batch_size, 5000))
+    cutoff_iso = (datetime.now(timezone.utc) - timedelta(days=safe_days)).isoformat()
+
+    resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .select("id,user_id,created_at,extracted_text")
+        .lt("created_at", cutoff_iso)
+        .order("created_at", desc=False)
+        .limit(safe_batch)
+        .execute()
+    )
+
+    rows = resp.data or []
+    to_redact = [row for row in rows if str(row.get("extracted_text") or "").strip()]
+    target_ids = [str(row.get("id")) for row in to_redact if row.get("id")]
+
+    result: Dict[str, Any] = {
+        "cutoff": cutoff_iso,
+        "retention_days": safe_days,
+        "batch_size": safe_batch,
+        "candidates_scanned": len(rows),
+        "redaction_candidates": len(target_ids),
+        "dry_run": dry_run,
+        "updated": 0,
+        "sample_ids": target_ids[:10],
+    }
+
+    if dry_run or not target_ids:
+        return result
+
+    await _run(
+        lambda: supabase.table("lab_uploads")
+        .update({"extracted_text": "[REDACTED_BY_RETENTION_POLICY]"})
+        .in_("id", target_ids)
+        .execute()
+    )
+    result["updated"] = len(target_ids)
+
+    _logger.info(
+        "retention_redaction_completed scanned=%s candidates=%s updated=%s cutoff=%s",
+        result["candidates_scanned"],
+        result["redaction_candidates"],
+        result["updated"],
+        cutoff_iso,
+    )
+    return result

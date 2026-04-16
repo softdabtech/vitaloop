@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     auth_rate_limit_per_minute: int = 60
     analyze_rate_limit_per_minute: int = 30
     protocol_rate_limit_per_minute: int = 30
+    lab_upload_raw_retention_days: int = 180
+    lab_upload_retention_batch_size: int = 500
     iherb_rcode: str = "VIT123"
     iherb_base_url: str = "https://www.iherb.com/search"
     stripe_secret_key: str = ""

@@ -217,3 +217,17 @@ async def admin_acknowledge_flag(flag_id: str, current: dict = Depends(_require_
         .execute()
     )
     return resp.data[0] if resp.data else {}
+
+
+@router.post("/retention/lab-uploads/redact")
+async def admin_redact_old_lab_upload_text(
+    dry_run: bool = True,
+    days: int | None = None,
+    batch_size: int | None = None,
+    _: dict = Depends(_require_super_admin),
+):
+    return await svc.redact_old_lab_upload_text(
+        retention_days=days if days is not None else settings.lab_upload_raw_retention_days,
+        batch_size=batch_size if batch_size is not None else settings.lab_upload_retention_batch_size,
+        dry_run=dry_run,
+    )
