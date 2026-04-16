@@ -28,6 +28,10 @@ _SYSTEM_PROMPT = (
 )
 
 
+def is_llm_configured() -> bool:
+    return bool((settings.active_abacus_ai_api_key or "").strip())
+
+
 def _get_client() -> httpx.AsyncClient:
     global _client
     if _client is None:

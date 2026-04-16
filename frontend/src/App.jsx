@@ -1,11 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Suspense, lazy } from 'react'
 import Landing from './pages/Landing.jsx'
 import Login from './pages/Login.jsx'
 import Dashboard from './pages/Dashboard.jsx'
-import Upload from './pages/Upload.jsx'
-import Results from './pages/Results.jsx'
 import Avatar from './pages/Avatar.jsx'
-import Progress from './pages/Progress.jsx'
 import Settings from './pages/Settings.jsx'
 import ExampleReport from './pages/ExampleReport.jsx'
 import HowItWorks from './pages/HowItWorks.jsx'
@@ -22,7 +20,6 @@ import CRMAuditLog from './pages/crm/AuditLog.jsx'
 import EmailConfirmation from './pages/EmailConfirmation.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import WeeklyCheckIn from './pages/WeeklyCheckIn.jsx'
-import Insights from './pages/Insights.jsx'
 import Questionnaire from './pages/Questionnaire.jsx'
 import NotFound from './pages/NotFound.jsx'
 import { useAuth } from './hooks/useAuth.js'
@@ -31,6 +28,15 @@ import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
 import { useEffect, useState } from 'react'
 import { useOnboardingState } from './hooks/useOnboardingState.js'
 import SupportChat from './components/SupportChat.jsx'
+
+const UserDashboard = lazy(() => import('./pages/UserDashboard.jsx'))
+const Upload = lazy(() => import('./pages/Upload.jsx'))
+const Results = lazy(() => import('./pages/Results.jsx'))
+const Progress = lazy(() => import('./pages/Progress.jsx'))
+const Insights = lazy(() => import('./pages/Insights.jsx'))
+const LabResultsList = lazy(() => import('./pages/LabResultsList.jsx'))
+const Assignments = lazy(() => import('./pages/Assignments.jsx'))
+const AssignmentDetails = lazy(() => import('./pages/AssignmentDetails.jsx'))
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -80,42 +86,52 @@ function PremiumRoute({ children }) {
   return children
 }
 
+function RouteFallback() {
+  return <div className="flex items-center justify-center h-screen">Loading…</div>
+}
+
 export default function App() {
   const [chatOpen, setChatOpen] = useState(false)
 
   return (
     <BrowserRouter>
       <ScrollToTop />
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/example-report" element={<ExampleReport />} />
-        <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/auth/confirmation" element={<EmailConfirmation />} />
-        <Route path="/dashboard" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Dashboard /></EndUserFlowRoute></ProtectedRoute>} />
-        <Route path="/upload" element={<ProtectedRoute><EndUserFlowRoute><Upload /></EndUserFlowRoute></ProtectedRoute>} />
-        <Route path="/results/:uploadId" element={<ProtectedRoute><EndUserFlowRoute><Results /></EndUserFlowRoute></ProtectedRoute>} />
-        <Route path="/avatar" element={<ProtectedRoute><EndUserFlowRoute><Avatar /></EndUserFlowRoute></ProtectedRoute>} />
-        <Route path="/progress" element={<ProtectedRoute><EndUserFlowRoute><PremiumRoute><Progress /></PremiumRoute></EndUserFlowRoute></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><EndUserFlowRoute><Settings /></EndUserFlowRoute></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute><ClientAdmin /></ProtectedRoute>} />
-        <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
-        <Route path="/admin/dashboard" element={<ProtectedRoute><CRMRoute><OpsDashboard /></CRMRoute></ProtectedRoute>} />
-        <Route path="/ops/legacy" element={<ProtectedRoute><MasterAdmin /></ProtectedRoute>} />
-        <Route path="/crm/programs" element={<ProtectedRoute><CRMRoute><CRMPrograms /></CRMRoute></ProtectedRoute>} />
-        <Route path="/crm/clients" element={<ProtectedRoute><CRMRoute><CRMClients /></CRMRoute></ProtectedRoute>} />
-        <Route path="/crm/clients/:id" element={<ProtectedRoute><CRMRoute><CRMClientDetails /></CRMRoute></ProtectedRoute>} />
-        <Route path="/crm/practitioners" element={<ProtectedRoute><CRMRoute><CRMPractitioners /></CRMRoute></ProtectedRoute>} />
-        <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
-        <Route path="/onboarding" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding redirectIfOnboardingComplete><Onboarding /></EndUserFlowRoute></ProtectedRoute>} />
-        <Route path="/questionnaire" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Questionnaire /></EndUserFlowRoute></ProtectedRoute>} />
-        <Route path="/checkin" element={<ProtectedRoute><EndUserFlowRoute><PremiumRoute><WeeklyCheckIn /></PremiumRoute></EndUserFlowRoute></ProtectedRoute>} />
-        <Route path="/timeline" element={<ProtectedRoute><EndUserFlowRoute><PremiumRoute><Insights /></PremiumRoute></EndUserFlowRoute></ProtectedRoute>} />
-        <Route path="/404.html" element={<NotFound />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/example-report" element={<ExampleReport />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/auth/confirmation" element={<EmailConfirmation />} />
+          <Route path="/dashboard" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><UserDashboard /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/dashboard-legacy" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Dashboard /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/upload" element={<ProtectedRoute><EndUserFlowRoute><Upload /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/results/:uploadId" element={<ProtectedRoute><EndUserFlowRoute><Results /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/avatar" element={<ProtectedRoute><EndUserFlowRoute><Avatar /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/progress" element={<ProtectedRoute><EndUserFlowRoute><PremiumRoute><Progress /></PremiumRoute></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/assignments" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Assignments /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/assignments/:assignmentId" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><AssignmentDetails /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/lab-results" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><LabResultsList /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><EndUserFlowRoute><Settings /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><ClientAdmin /></ProtectedRoute>} />
+          <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
+          <Route path="/admin/dashboard" element={<ProtectedRoute><CRMRoute><OpsDashboard /></CRMRoute></ProtectedRoute>} />
+          <Route path="/ops/legacy" element={<ProtectedRoute><MasterAdmin /></ProtectedRoute>} />
+          <Route path="/crm/programs" element={<ProtectedRoute><CRMRoute><CRMPrograms /></CRMRoute></ProtectedRoute>} />
+          <Route path="/crm/clients" element={<ProtectedRoute><CRMRoute><CRMClients /></CRMRoute></ProtectedRoute>} />
+          <Route path="/crm/clients/:id" element={<ProtectedRoute><CRMRoute><CRMClientDetails /></CRMRoute></ProtectedRoute>} />
+          <Route path="/crm/practitioners" element={<ProtectedRoute><CRMRoute><CRMPractitioners /></CRMRoute></ProtectedRoute>} />
+          <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
+          <Route path="/onboarding" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding redirectIfOnboardingComplete><Onboarding /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/questionnaire" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Questionnaire /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/checkin" element={<ProtectedRoute><EndUserFlowRoute><PremiumRoute><WeeklyCheckIn /></PremiumRoute></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/timeline" element={<ProtectedRoute><EndUserFlowRoute><PremiumRoute><Insights /></PremiumRoute></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/404.html" element={<NotFound />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
 
       {/* Floating chat button - visible on all pages */}
       <button

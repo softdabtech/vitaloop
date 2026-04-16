@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from uuid import UUID
 
 from app.dependencies import get_current_user
-from app.services.claude_service import generate_protocol, PROTOCOL_PROMPT_VERSION
+from app.services.claude_service import generate_protocol, PROTOCOL_PROMPT_VERSION, is_llm_configured
 from app.services.supabase_service import (
     assert_upload_belongs_to_user,
     get_biomarkers_by_upload,
@@ -32,6 +32,9 @@ async def create_protocol(
     request: ProtocolRequest,
     current_user: dict = Depends(get_current_user),
 ):
+    if not is_llm_configured():
+        raise HTTPException(status_code=503, detail="LLM provider is not configured")
+
     user_id: str = current_user["sub"]
     upload_id = str(request.upload_id)
 

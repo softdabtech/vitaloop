@@ -392,6 +392,109 @@ async def get_user_by_stripe_sub(sub_id: str) -> Optional[Dict]:
     return resp.data[0] if resp.data else None
 
 
+async def sync_stripe_subscription_to_subscriptions_table(
+    *,
+    user_id: str,
+    stripe_subscription_id: str,
+    stripe_customer_id: Optional[str] = None,
+    stripe_status: str = "active",
+    current_period_start: Optional[str] = None,
+    current_period_end: Optional[str] = None,
+    cancel_at_period_end: bool = False,
+    plan_name: str = "core",
+) -> Optional[Dict]:
+    """Sync Stripe subscription to subscriptions table (idempotent upsert).
+    
+    Maintains normalized subscription record for reporting and audit.
+    """
+    supabase = _get_supabase()
+    
+    now = datetime.now(timezone.utc).isoformat()
+    status_map = {
+        "active": "active",
+        "trialing": "active",
+        "past_due": "past_due",
+        "cancelled": "cancelled",
+        "paused": "paused",
+        "unpaid": "past_due",
+    }
+    mapped_status = status_map.get(stripe_status, "active")
+    
+    payload = {
+        "user_id": user_id,
+        "plan_name": plan_name,
+        "status": mapped_status,
+        "stripe_subscription_id": stripe_subscription_id,
+        "stripe_customer_id": stripe_customer_id,
+        "stripe_status": stripe_status,
+        "current_period_start": current_period_start,
+        "current_period_end": current_period_end,
+        "cancel_at_period_end": cancel_at_period_end,
+        "updated_at": now,
+    }
+    
+    # For initial insert, add started_at timestamp
+    # For updates, it will be ignored due to upsert behavior
+    payload["started_at"] = current_period_start or now
+    
+    resp = await _run(
+        lambda: supabase.table("subscriptions")
+        .upsert(payload, on_conflict="stripe_subscription_id")
+        .execute()
+    )
+    
+    return resp.data[0] if resp.data else None
+
+
+async def record_stripe_event(
+    event_id: str,
+    event_type: str,
+    event_payload: Dict[str, Any],
+) -> bool:
+    """Record Stripe webhook event for idempotency and audit (no-op if already processed)."""
+    supabase = _get_supabase()
+    
+    try:
+        await _run(
+            lambda: supabase.table("stripe_events")
+            .insert({
+                "event_id": event_id,
+                "event_type": event_type,
+                "payload": event_payload,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+            .execute()
+        )
+        return True
+    except Exception:
+        # Event already exists (duplicate); idempotent no-op
+        return False
+
+
+async def record_health_failure(
+    service_name: str,
+    error_type: str,
+    error_message: str,
+) -> None:
+    """Log a service health failure for ops monitoring and alerting."""
+    supabase = _get_supabase()
+    
+    try:
+        await _run(
+            lambda: supabase.table("health_failures")
+            .insert({
+                "service_name": service_name,
+                "error_type": error_type,
+                "error_message": error_message[:500],  # Truncate to prevent abuse
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+            .execute()
+        )
+    except Exception:
+        # Silent fail; don't let health logging block the app
+        pass
+
+
 async def get_user_account(user_id: str) -> Dict[str, Any]:
     return await _select_first_by_id_with_fallback("users", "id, email, full_name, sub_status, global_role", user_id)
 
@@ -468,11 +571,22 @@ async def get_admin_overview() -> Dict[str, Any]:
     }
 
 
-async def get_funnel_overview(days: int = 30) -> Dict[str, Any]:
+async def get_funnel_overview(
+    days: int = 30,
+    min_dropoff_reached: int = 1,
+    dropoff_sort: str = "count",
+    dropoff_limit: int = 10,
+) -> Dict[str, Any]:
     """Aggregate B2C funnel metrics for the admin dashboard."""
     supabase = _get_supabase()
     safe_days = max(1, min(days, 365))
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=safe_days)).isoformat()
+    safe_min_dropoff_reached = max(1, min(min_dropoff_reached, 10000))
+    safe_dropoff_sort = str(dropoff_sort or "count").strip().lower()
+    if safe_dropoff_sort not in {"count", "rate", "order"}:
+        safe_dropoff_sort = "count"
+    safe_dropoff_limit = max(1, min(dropoff_limit, 100))
+    cutoff_dt = datetime.now(timezone.utc) - timedelta(days=safe_days)
+    cutoff = cutoff_dt.isoformat()
 
     end_users_resp = await _run(
         lambda: supabase.table("users")
@@ -481,12 +595,6 @@ async def get_funnel_overview(days: int = 30) -> Dict[str, Any]:
         .execute()
     )
     end_users = end_users_resp.data or []
-
-    signup_user_ids = {
-        str(row.get("id"))
-        for row in end_users
-        if row.get("id") and str(row.get("created_at") or "") >= cutoff
-    }
 
     timeline_resp = await _run(
         lambda: supabase.table("timeline_events")
@@ -501,6 +609,22 @@ async def get_funnel_overview(days: int = 30) -> Dict[str, Any]:
         .execute()
     )
     timeline_rows = timeline_resp.data or []
+
+    def _parse_dt(value: Any) -> Optional[datetime]:
+        raw = str(value or "").strip()
+        if not raw:
+            return None
+        try:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        except Exception:
+            return None
+
+    signup_user_ids = {
+        str(row.get("id"))
+        for row in end_users
+        if row.get("id") and (_parse_dt(row.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc)) >= cutoff_dt
+    }
 
     onboarding_user_ids = {
         str(row.get("user_id"))
@@ -524,10 +648,223 @@ async def get_funnel_overview(days: int = 30) -> Dict[str, Any]:
         if row.get("id") and str(row.get("sub_status") or "").lower() == "active"
     }
 
+    signup_created_at: Dict[str, datetime] = {}
+    for row in end_users:
+        user_id = str(row.get("id") or "")
+        if not user_id:
+            continue
+        created_dt = _parse_dt(row.get("created_at"))
+        if created_dt and created_dt >= cutoff_dt and user_id in signup_user_ids:
+            signup_created_at[user_id] = created_dt
+
+    first_onboarding_at: Dict[str, datetime] = {}
+    first_upload_at: Dict[str, datetime] = {}
+    first_paywall_at: Dict[str, datetime] = {}
+    for row in timeline_rows:
+        user_id = str(row.get("user_id") or "")
+        event_type = str(row.get("event_type") or "")
+        occurred_dt = _parse_dt(row.get("occurred_at"))
+        if not user_id or not occurred_dt:
+            continue
+        if event_type == "funnel_onboarding_completed":
+            if user_id not in first_onboarding_at or occurred_dt < first_onboarding_at[user_id]:
+                first_onboarding_at[user_id] = occurred_dt
+        elif event_type == "funnel_first_upload_completed":
+            if user_id not in first_upload_at or occurred_dt < first_upload_at[user_id]:
+                first_upload_at[user_id] = occurred_dt
+        elif event_type == "funnel_paywall_shown":
+            if user_id not in first_paywall_at or occurred_dt < first_paywall_at[user_id]:
+                first_paywall_at[user_id] = occurred_dt
+
+    def _avg_lag_days(source: Dict[str, datetime]) -> float:
+        values: List[float] = []
+        for user_id, start_dt in signup_created_at.items():
+            target_dt = source.get(user_id)
+            if not target_dt:
+                continue
+            delta = (target_dt - start_dt).total_seconds() / 86400.0
+            if delta >= 0:
+                values.append(delta)
+        if not values:
+            return 0.0
+        return round(sum(values) / len(values), 2)
+
+    date_counts: Dict[str, int] = {}
+    for user_id in signup_user_ids:
+        dt = signup_created_at.get(user_id)
+        if not dt:
+            continue
+        day = dt.date().isoformat()
+        date_counts[day] = date_counts.get(day, 0) + 1
+    daily_signups = [
+        {"date": day, "count": count}
+        for day, count in sorted(date_counts.items())
+    ]
+
     def _rate(numerator: int, denominator: int) -> float:
         if denominator <= 0:
             return 0.0
         return round((numerator / denominator) * 100.0, 2)
+
+    def _is_missing_questionnaire_storage_error(ex: Exception) -> bool:
+        msg = str(ex)
+        return "PGRST205" in msg and (
+            "questionnaire_sessions" in msg or "questionnaire_answers" in msg
+        )
+
+    questionnaire_started_sessions = 0
+    questionnaire_completed_sessions = 0
+    questionnaire_median_minutes = 0.0
+    questionnaire_dropoff_by_question: List[Dict[str, Any]] = []
+    questionnaire_no_answer_incomplete = 0
+    questionnaire_daily_cohorts: List[Dict[str, Any]] = []
+    questionnaire_confidence_daily: List[Dict[str, Any]] = []
+
+    try:
+        questionnaire_sessions_resp = await _run(
+            lambda: supabase.table("questionnaire_sessions")
+            .select("id,user_id,status,started_at,completed_at,last_question_order")
+            .gte("started_at", cutoff)
+            .execute()
+        )
+        questionnaire_sessions = questionnaire_sessions_resp.data or []
+        questionnaire_started_sessions = len(questionnaire_sessions)
+
+        daily_started_counts: Dict[str, int] = {}
+        daily_completed_counts: Dict[str, int] = {}
+        for row in questionnaire_sessions:
+            started_dt = _parse_dt(row.get("started_at"))
+            if started_dt:
+                started_day = started_dt.date().isoformat()
+                daily_started_counts[started_day] = daily_started_counts.get(started_day, 0) + 1
+
+            if str(row.get("status") or "").lower() == "completed":
+                completed_dt = _parse_dt(row.get("completed_at"))
+                completed_day = (completed_dt or started_dt)
+                if completed_day:
+                    day = completed_day.date().isoformat()
+                    daily_completed_counts[day] = daily_completed_counts.get(day, 0) + 1
+
+        completed_sessions = [
+            row
+            for row in questionnaire_sessions
+            if str(row.get("status") or "").lower() == "completed"
+        ]
+        questionnaire_completed_sessions = len(completed_sessions)
+
+        completion_minutes: List[float] = []
+        for row in completed_sessions:
+            started_dt = _parse_dt(row.get("started_at"))
+            completed_dt = _parse_dt(row.get("completed_at"))
+            if not started_dt or not completed_dt:
+                continue
+            minutes = (completed_dt - started_dt).total_seconds() / 60.0
+            if minutes >= 0:
+                completion_minutes.append(minutes)
+
+        if completion_minutes:
+            sorted_minutes = sorted(completion_minutes)
+            mid = len(sorted_minutes) // 2
+            if len(sorted_minutes) % 2 == 0:
+                questionnaire_median_minutes = round((sorted_minutes[mid - 1] + sorted_minutes[mid]) / 2.0, 1)
+            else:
+                questionnaire_median_minutes = round(sorted_minutes[mid], 1)
+
+        session_ids = [str(row.get("id")) for row in questionnaire_sessions if row.get("id")]
+        question_answers = []
+        if session_ids:
+            answers_resp = await _run(
+                lambda: supabase.table("questionnaire_answers")
+                .select("session_id,question_id,question_order")
+                .in_("session_id", session_ids)
+                .execute()
+            )
+            question_answers = answers_resp.data or []
+
+        max_order_by_session: Dict[str, int] = {}
+        question_id_by_order_counts: Dict[int, Dict[str, int]] = {}
+        for row in question_answers:
+            sid = str(row.get("session_id") or "")
+            if not sid:
+                continue
+            order = int(row.get("question_order") or 0)
+            if order <= 0:
+                continue
+            max_order_by_session[sid] = max(max_order_by_session.get(sid, 0), order)
+
+            qid = str(row.get("question_id") or "")
+            if qid:
+                bucket = question_id_by_order_counts.setdefault(order, {})
+                bucket[qid] = bucket.get(qid, 0) + 1
+
+        incomplete_sessions = [
+            row
+            for row in questionnaire_sessions
+            if str(row.get("status") or "").lower() != "completed"
+        ]
+        dropoff_order_counts: Dict[int, int] = {}
+        for row in incomplete_sessions:
+            sid = str(row.get("id") or "")
+            stop_order = max_order_by_session.get(sid, int(row.get("last_question_order") or 0))
+            if stop_order <= 0:
+                questionnaire_no_answer_incomplete += 1
+                continue
+            dropoff_order_counts[stop_order] = dropoff_order_counts.get(stop_order, 0) + 1
+
+        max_seen_order = max(max_order_by_session.values(), default=0)
+        for order in range(1, max_seen_order + 1):
+            sessions_reached = sum(1 for reached in max_order_by_session.values() if reached >= order)
+            if sessions_reached < safe_min_dropoff_reached:
+                continue
+            order_qids = question_id_by_order_counts.get(order, {})
+            question_id = max(order_qids, key=order_qids.get) if order_qids else f"order_{order}"
+            dropoff_count = dropoff_order_counts.get(order, 0)
+            questionnaire_dropoff_by_question.append(
+                {
+                    "question_order": order,
+                    "question_id": question_id,
+                    "sessions_reached": sessions_reached,
+                    "dropoff_count": dropoff_count,
+                    "dropoff_rate_pct": _rate(dropoff_count, sessions_reached),
+                }
+            )
+
+        all_days = sorted(set(daily_started_counts.keys()) | set(daily_completed_counts.keys()))
+        for day in all_days:
+            started = daily_started_counts.get(day, 0)
+            completed = daily_completed_counts.get(day, 0)
+            incomplete = max(0, started - completed)
+            questionnaire_daily_cohorts.append(
+                {
+                    "date": day,
+                    "started": started,
+                    "completed": completed,
+                    "incomplete": incomplete,
+                    "completion_rate_pct": _rate(completed, started),
+                }
+            )
+
+        def _confidence_from_sample(sample_size: int) -> str:
+            if sample_size >= 50:
+                return "high"
+            if sample_size >= 15:
+                return "medium"
+            if sample_size >= 1:
+                return "low"
+            return "unknown"
+
+        for day in all_days:
+            sample_size = int(daily_started_counts.get(day, 0))
+            questionnaire_confidence_daily.append(
+                {
+                    "date": day,
+                    "sample_size": sample_size,
+                    "level": _confidence_from_sample(sample_size),
+                }
+            )
+    except Exception as ex:
+        if not _is_missing_questionnaire_storage_error(ex):
+            raise
 
     signups = len(signup_user_ids)
     onboarding_completed = len(onboarding_user_ids)
@@ -535,8 +872,76 @@ async def get_funnel_overview(days: int = 30) -> Dict[str, Any]:
     paywall_seen = len(paywall_user_ids)
     paid_total = len(paid_user_ids)
 
+    def _dropoff_sort_key(row: Dict[str, Any]) -> tuple:
+        if safe_dropoff_sort == "rate":
+            return (
+                -float(row.get("dropoff_rate_pct") or 0),
+                -float(row.get("dropoff_count") or 0),
+                -float(row.get("sessions_reached") or 0),
+            )
+        if safe_dropoff_sort == "order":
+            return (
+                int(row.get("question_order") or 0),
+                -float(row.get("dropoff_count") or 0),
+            )
+        return (
+            -float(row.get("dropoff_count") or 0),
+            -float(row.get("sessions_reached") or 0),
+        )
+
+    sorted_dropoff = sorted(questionnaire_dropoff_by_question, key=_dropoff_sort_key)
+    sorted_dropoff = sorted_dropoff[:safe_dropoff_limit]
+
+    dropoff_sort_explainer = {
+        "count": "Sorted by highest dropoff_count, then sessions_reached.",
+        "rate": "Sorted by highest dropoff_rate_pct, then dropoff_count, then sessions_reached.",
+        "order": "Sorted by earliest question_order, then dropoff_count.",
+    }.get(safe_dropoff_sort, "Sorted by highest dropoff_count, then sessions_reached.")
+
+    # Rollup confidence summary across all daily points
+    if questionnaire_confidence_daily:
+        _cd_samples = [p["sample_size"] for p in questionnaire_confidence_daily]
+        _cd_avg = sum(_cd_samples) / len(_cd_samples)
+        _cd_level_counts: Dict[str, int] = {}
+        for p in questionnaire_confidence_daily:
+            _cd_level_counts[p["level"]] = _cd_level_counts.get(p["level"], 0) + 1
+        _dominant_level = max(_cd_level_counts, key=lambda k: _cd_level_counts[k])
+        _low_days = _cd_level_counts.get("low", 0) + _cd_level_counts.get("unknown", 0)
+        _low_days_share = round(_low_days / len(questionnaire_confidence_daily) * 100, 1)
+        confidence_rollup = {
+            "avg_sample_size": round(_cd_avg, 1),
+            "dominant_level": _dominant_level,
+            "low_days_share_pct": _low_days_share,
+            "total_days": len(questionnaire_confidence_daily),
+        }
+    else:
+        confidence_rollup = {
+            "avg_sample_size": 0,
+            "dominant_level": "unknown",
+            "low_days_share_pct": 100.0,
+            "total_days": 0,
+        }
+
+    if questionnaire_started_sessions >= 50:
+        confidence_level = "high"
+    elif questionnaire_started_sessions >= 15:
+        confidence_level = "medium"
+    else:
+        confidence_level = "low"
+
+    confidence_notes: List[str] = []
+    if questionnaire_started_sessions < 15:
+        confidence_notes.append("Low sample size: interpretation may be unstable.")
+    if questionnaire_no_answer_incomplete > 0:
+        confidence_notes.append("Some sessions ended before first answer.")
+    if len(sorted_dropoff) == 0:
+        confidence_notes.append("No drop-off rows matched the current threshold and window.")
+
     return {
         "window_days": safe_days,
+        "min_dropoff_reached": safe_min_dropoff_reached,
+        "dropoff_sort": safe_dropoff_sort,
+        "dropoff_limit": safe_dropoff_limit,
         "counts": {
             "signup": signups,
             "onboarding_completed": onboarding_completed,
@@ -550,6 +955,31 @@ async def get_funnel_overview(days: int = 30) -> Dict[str, Any]:
             "signup_to_first_upload_pct": _rate(first_upload_completed, signups),
             "paywall_to_paid_pct": _rate(len(paywall_user_ids & paid_user_ids), paywall_seen),
             "signup_to_paid_pct": _rate(len(signup_user_ids & paid_user_ids), signups),
+        },
+        "lag_days": {
+            "signup_to_onboarding_avg": _avg_lag_days(first_onboarding_at),
+            "signup_to_first_upload_avg": _avg_lag_days(first_upload_at),
+            "signup_to_paywall_avg": _avg_lag_days(first_paywall_at),
+        },
+        "daily_signups": daily_signups,
+        "questionnaire": {
+            "started_sessions": questionnaire_started_sessions,
+            "completed_sessions": questionnaire_completed_sessions,
+            "completion_rate_pct": _rate(questionnaire_completed_sessions, questionnaire_started_sessions),
+            "median_minutes_to_complete": questionnaire_median_minutes,
+            "incomplete_no_answers": questionnaire_no_answer_incomplete,
+            "dropoff_sort_explainer": dropoff_sort_explainer,
+            "dropoff_by_question": sorted_dropoff,
+            "data_confidence": {
+                "level": confidence_level,
+                "sample_size": questionnaire_started_sessions,
+                "dropoff_rows_available": len(questionnaire_dropoff_by_question),
+                "dropoff_rows_returned": len(sorted_dropoff),
+                "notes": confidence_notes,
+            },
+            "daily_cohorts": questionnaire_daily_cohorts,
+            "confidence_daily": questionnaire_confidence_daily,
+            "confidence_rollup": confidence_rollup,
         },
     }
 
