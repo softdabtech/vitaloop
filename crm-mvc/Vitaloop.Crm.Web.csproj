@@ -4,6 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Vitaloop.Crm.Web</RootNamespace>
+    <Version>2.1.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
