@@ -140,7 +140,7 @@ ssh $SSH_OPTS "$REMOTE_HOST" "
     cd frontend
     npm ci --prefer-offline || npm ci
     # Use build:prod to avoid npm postbuild hooks (react-snap) on headless servers.
-    npm run build:prod || {
+    NODE_OPTIONS='--max-old-space-size=2048' npm run build:prod || {
         echo 'ERROR: Frontend build failed'
         exit 1
     }
