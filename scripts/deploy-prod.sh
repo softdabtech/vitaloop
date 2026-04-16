@@ -127,7 +127,8 @@ ssh -o BatchMode=yes "$REMOTE_HOST" "
     echo 'Building frontend...'
     cd frontend
     npm ci --prefer-offline || npm ci
-    npm run build || {
+    # Use build:prod to avoid npm postbuild hooks (react-snap) on headless servers.
+    npm run build:prod || {
         echo 'ERROR: Frontend build failed'
         exit 1
     }
