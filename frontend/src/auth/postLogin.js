@@ -43,8 +43,15 @@ export function navigateToResolvedPath(_navigate, destination) {
     return
   }
 
-  console.log('[STEP 5] Non-POST redirect, using window.location.assign', destination?.url || destination)
-  window.location.assign(destination?.url || destination)
+  const target = destination?.url || destination
+  if (typeof target === 'string' && target.startsWith('/')) {
+    console.log('[STEP 5] Non-POST local redirect via SPA navigate', target)
+    _navigate(target, { replace: true })
+    return
+  }
+
+  console.log('[STEP 5] Non-POST external redirect, using window.location.assign', target)
+  window.location.assign(target)
 }
 
 function normalizeReturnUrl(returnUrl) {
@@ -81,6 +88,7 @@ export async function resolvePostLoginDestination(returnUrl = null) {
 
   const normalized = normalizeReturnUrl(returnUrl)
   let authMe = null
+  let authMeFailed = false
 
   // Attempt to fetch user context via /auth/me, but don't fail the entire handoff if it fails
   try {
@@ -90,8 +98,8 @@ export async function resolvePostLoginDestination(returnUrl = null) {
     console.log('[STEP 3B] User context fetched successfully:', data)
   } catch (error) {
     console.warn('[STEP 3B] Failed to fetch /auth/me context', error?.message || error)
-    console.log('[STEP 3C] Continuing with CRM handoff despite /auth/me failure...')
-    // Continue anyway - CRM can handle session validation on its side
+    console.log('[STEP 3C] Falling back to local dashboard path when /auth/me is unavailable')
+    authMeFailed = true
   }
 
   // End-users should stay in B2C app instead of being redirected to CRM /admin.
@@ -99,6 +107,15 @@ export async function resolvePostLoginDestination(returnUrl = null) {
     const localPath = resolveLocalProductPath(authMe, normalized)
     return {
       url: localPath,
+      method: 'GET',
+    }
+  }
+
+  if (authMeFailed) {
+    return {
+      url: normalized && (normalized.startsWith('/dashboard') || normalized.startsWith('/onboarding'))
+        ? normalized
+        : '/dashboard',
       method: 'GET',
     }
   }
