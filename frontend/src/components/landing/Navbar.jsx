@@ -4,11 +4,11 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { EASE } from '../../lib/motion.js'
 
 const NAV_LINKS = [
+  { label: 'Problem',      href: '#problem' },
   { label: 'How it works', href: '#how-it-works' },
-  { label: 'Avatar',       href: '#avatar' },
-  { label: 'Science',      href: '#science' },
-  { label: 'Partners',     href: '#partners' },
+  { label: 'Why VITALOOP', href: '#why-vitaloop' },
   { label: 'Pricing',      href: '#pricing' },
+  { label: 'Stories',      href: '#stories' },
 ]
 
 function LogoIcon() {

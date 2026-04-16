@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { Check, Minus } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { stagger, staggerChild, cardHoverProps, viewport } from '../../lib/motion.js'
@@ -7,71 +8,75 @@ const PLANS = [
   {
     id: 'free',
     name: 'Free / Starter',
-    price: '$0',
-    period: null,
-    desc: 'Try the platform — no card required.',
+    monthly: '$0',
+    yearly: '$0',
+    period: '',
+    desc: 'Start with core insights and evaluate your first reports.',
     badge: null,
     dark: false,
-    cta: 'Start free',
+    cta: 'Start Free',
     features: [
-      { text: '1–2 analyses per month',        ok: true  },
-      { text: 'Basic flags & summary',          ok: true  },
-      { text: 'Full biomarker protocols',       ok: false },
-      { text: 'Progress timeline',              ok: false },
-      { text: 'Exports',                        ok: false },
+      { text: '1-2 analyses per month',       ok: true  },
+      { text: 'Basic flags and summary',      ok: true  },
+      { text: 'Full protocols',               ok: false },
+      { text: 'Timeline tracking',            ok: false },
+      { text: 'Practitioner CRM tools',       ok: false },
     ],
   },
   {
     id: 'personal',
     name: 'Personal Pro',
-    price: '$9.99',
-    period: '/month',
-    annualNote: 'or $99 / year — save 17%',
-    desc: 'Full optimization system for biohackers & individuals.',
+    monthly: '$9.99',
+    yearly: '$99',
+    period: '/mo',
+    annualNote: 'Save 17% on yearly billing',
+    desc: 'Unlimited analysis with complete biomarker protocols and personal timeline.',
     badge: 'MOST POPULAR',
     dark: true,
-    cta: 'Start free analysis',
+    cta: 'Get Personal Pro',
     features: [
-      { text: 'Unlimited analyses',             ok: true },
-      { text: 'Full biomarker analysis',        ok: true },
-      { text: 'Personalized protocols',         ok: true },
-      { text: 'Progress timeline tracking',     ok: true },
-      { text: 'Exports',                        ok: true },
+      { text: 'Unlimited analyses',            ok: true },
+      { text: 'Full biomarker protocols',      ok: true },
+      { text: 'Personalized recommendations',  ok: true },
+      { text: 'Timeline tracking',             ok: true },
+      { text: 'Priority product updates',      ok: true },
     ],
   },
   {
     id: 'practitioner',
     name: 'Practitioner Pro',
-    price: '$29',
-    period: '/month',
-    annualNote: 'or $299 / year',
-    desc: 'Everything in Personal · built for doctors, nutritionists & coaches.',
+    monthly: '$29',
+    yearly: '$299',
+    period: '/mo',
+    annualNote: 'Annual option available',
+    desc: 'Everything in Personal plus CRM workflows and white-label reporting for practice use.',
     badge: 'FOR PROFESSIONALS',
     dark: false,
     premium: true,
     cta: 'Get Practitioner Pro',
     features: [
-      { text: 'Everything in Personal Pro',          ok: true },
-      { text: 'CRM with patient assignment',         ok: true },
-      { text: 'White-label reports',                 ok: true },
-      { text: 'Up to 10 patients',                   ok: true },
-      { text: 'Priority support',                    ok: true },
+      { text: 'Everything in Personal Pro',      ok: true },
+      { text: 'Built-in practitioner CRM',       ok: true },
+      { text: 'White-label reports',             ok: true },
+      { text: 'Up to 10 patients',               ok: true },
+      { text: 'Team collaboration workflows',    ok: true },
     ],
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    price: 'From $99',
-    period: '/month',
-    annualNote: '5 seats included',
-    desc: 'Full multi-tenancy for clinics & organizations.',
+    monthly: 'From $99',
+    yearly: 'Custom',
+    period: '/mo',
+    annualNote: '5 seats included in entry plan',
+    desc: 'Multi-tenancy CRM, API access, and security controls for organizations.',
     badge: null,
     dark: false,
-    cta: 'Contact us',
+    cta: 'Contact Sales',
     features: [
-      { text: 'Full multi-tenancy',             ok: true },
+      { text: 'Full multi-tenancy CRM',         ok: true },
       { text: 'API access',                     ok: true },
-      { text: 'Bulk analysis',                  ok: true },
+      { text: 'Role-based organization control',ok: true },
       { text: 'Dedicated support',              ok: true },
       { text: 'Custom integrations',            ok: true },
     ],
@@ -81,6 +86,17 @@ const PLANS = [
 export default function PricingSection() {
   const navigate = useNavigate()
   const reduced = useReducedMotion()
+  const [billing, setBilling] = useState('monthly')
+
+  const getPlanPrice = (plan) => {
+    if (plan.id === 'enterprise' && billing === 'yearly') {
+      return { value: plan.yearly, period: '' }
+    }
+    if (billing === 'yearly' && plan.id !== 'free') {
+      return { value: plan.yearly, period: '/year' }
+    }
+    return { value: plan.monthly, period: plan.period }
+  }
 
   return (
     <section id="pricing" style={{ padding: 'var(--py-lg) 24px', background: 'var(--gray-50)' }}>
@@ -104,11 +120,68 @@ export default function PricingSection() {
             fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 700,
             letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 16,
           }}>
-            Simple, transparent pricing. Cancel anytime.
+            Freemium pricing built for users and practitioners
           </motion.h2>
           <motion.p variants={reduced ? {} : staggerChild} style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 460, margin: '0 auto', lineHeight: 1.65 }}>
-            Start free. Upgrade when you need unlimited access and advanced tools.
+            Start on Free, grow into Pro, and scale with multi-tenancy CRM when your organization is ready.
           </motion.p>
+          <motion.div variants={reduced ? {} : staggerChild} style={{ marginTop: 20 }}>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 12,
+              color: 'var(--teal-600)',
+              background: 'rgba(16,185,129,0.08)',
+              border: '0.5px solid var(--teal-300)',
+              borderRadius: 980,
+              padding: '6px 14px',
+              fontWeight: 600,
+            }}>
+              80% ready - launching soon
+            </span>
+          </motion.div>
+          <motion.div variants={reduced ? {} : staggerChild} style={{ marginTop: 24, display: 'flex', justifyContent: 'center' }}>
+            <div style={{
+              display: 'inline-flex',
+              background: 'white',
+              borderRadius: 980,
+              border: '0.5px solid var(--gray-100)',
+              padding: 4,
+              gap: 4,
+            }}>
+              <button
+                onClick={() => setBilling('monthly')}
+                style={{
+                  border: 'none',
+                  borderRadius: 980,
+                  padding: '10px 18px',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: billing === 'monthly' ? 'var(--teal-500)' : 'transparent',
+                  color: billing === 'monthly' ? 'white' : 'var(--gray-600)',
+                }}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBilling('yearly')}
+                style={{
+                  border: 'none',
+                  borderRadius: 980,
+                  padding: '10px 18px',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: billing === 'yearly' ? 'var(--teal-500)' : 'transparent',
+                  color: billing === 'yearly' ? 'white' : 'var(--gray-600)',
+                }}
+              >
+                Yearly (save up to 17%)
+              </button>
+            </div>
+          </motion.div>
         </motion.div>
 
         {/* Cards */}
@@ -120,7 +193,10 @@ export default function PricingSection() {
           className="pricing-scroll-wrapper grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
           style={{ marginBottom: 36 }}
         >
-          {PLANS.map(({ id, name, price, period, annualNote, desc, badge, dark, premium, cta, features }) => (
+          {PLANS.map((plan) => {
+            const { id, name, annualNote, desc, badge, dark, premium, cta, features } = plan
+            const display = getPlanPrice(plan)
+            return (
             <motion.div
               key={id}
               variants={reduced ? {} : staggerChild}
@@ -181,15 +257,15 @@ export default function PricingSection() {
                   fontSize: 48, fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1,
                   color: dark ? 'white' : 'var(--gray-900)',
                 }}>
-                  {price}
+                  {display.value}
                 </span>
-                {period && (
+                {display.period && (
                   <span style={{
                     fontSize: 16,
                     color: dark ? 'var(--teal-300)' : 'var(--gray-400)',
                     marginBottom: 2,
                   }}>
-                    {period}
+                    {display.period}
                   </span>
                 )}
               </div>
@@ -241,6 +317,7 @@ export default function PricingSection() {
                     }
                     navigate('/login?signup=true')
                   }}
+                  className="btn-primary"
                   style={{
                     borderRadius: 980,
                     padding: '14px 24px',
@@ -248,7 +325,6 @@ export default function PricingSection() {
                     fontWeight: 700,
                     cursor: 'pointer',
                     border: 'none',
-                    transition: 'opacity 200ms, transform 200ms',
                     background: dark
                       ? 'white'
                       : premium
@@ -260,13 +336,12 @@ export default function PricingSection() {
                       ? 'white'
                       : 'var(--gray-700)',
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'scale(1.02)' }}
                 >
                   {cta}
                 </button>
               </motion.div>
             </motion.div>
-          ))}
+          )})}
         </motion.div>
 
         {/* Footer note */}
@@ -277,7 +352,7 @@ export default function PricingSection() {
           viewport={viewport('-40px')}
           style={{ textAlign: 'center', fontSize: 13, color: 'var(--gray-500)' }}
         >
-          All paid plans include secure data storage, priority support, and regular protocol updates.
+          All paid plans include secure storage, regular protocol updates, and onboarding support.
         </motion.div>
 
       </div>

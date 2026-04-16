@@ -1,22 +1,22 @@
 const LOOP_STEPS = [
   { id: '01', label: 'Test',       desc: 'Upload your lab results'              },
-  { id: '02', label: 'Understand', desc: 'Get a clear picture of what\'s off'   },
-  { id: '03', label: 'Act',        desc: 'Follow your personalized protocol'    },
-  { id: '04', label: 'Re-test',    desc: 'Track progress and refine your plan'  },
+  { id: '02', label: 'Interpret',  desc: 'See red flags and priority biomarkers' },
+  { id: '03', label: 'Act',        desc: 'Apply a personalized protocol'         },
+  { id: '04', label: 'Re-test',    desc: 'Track trends and refine your plan'     },
 ]
 
 const BLOCKS = [
   {
     title: 'Your data evolves',
-    body: 'New lab results and feedback refine your insights over time.',
+    body: 'Every new report updates your baseline and priorities.',
   },
   {
-    title: 'Your protocol adapts',
-    body: 'Recommendations update as your body improves or new issues appear.',
+    title: 'Your protocol adapts automatically',
+    body: 'Recommendations adjust as biomarkers and symptoms change.',
   },
   {
-    title: 'You stay in control',
-    body: 'Track changes and adjust before small issues become real problems.',
+    title: 'Your practitioner can collaborate',
+    body: 'CRM workflows keep individual and team care aligned over time.',
   },
 ]
 
@@ -41,11 +41,11 @@ export default function LongevitySection() {
             fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 700,
             letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 20,
           }}>
-            Health is not a one-time fix
+            Long-term health is a continuous loop
           </h2>
           <p style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 540, margin: '0 auto', lineHeight: 1.65 }}>
-            Your body changes over time. Your protocol should too.
-            VITALOOP continuously updates your recommendations based on new data, symptoms, and progress.
+            Your body changes over time. VITALOOP keeps your decisions current with every new test,
+            symptom update, and protocol adjustment.
           </p>
         </div>
 

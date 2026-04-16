@@ -34,15 +34,14 @@ export default function ProblemSection() {
             fontSize: 18, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7,
             maxWidth: 660, margin: '0 auto 24px',
           }}>
-            You get the numbers, but not the meaning. Doctors spend 15–20 minutes per report.
-            Biohackers waste hours in spreadsheets. There's no easy way to track changes over time
-            or turn raw data into actionable protocols.
+            Most reports show numbers without context. People lose hours trying to interpret markers,
+            compare tests, and decide what to do next. Practitioners spend valuable time repeating the same analysis.
           </motion.p>
           <motion.p variants={staggerChild} style={{
             fontSize: 20, fontWeight: 600, color: 'var(--teal-400)',
             letterSpacing: '-0.01em',
           }}>
-            VITALOOP changes that.
+            VITALOOP turns raw labs into clear action.
           </motion.p>
         </motion.div>
       </div>
