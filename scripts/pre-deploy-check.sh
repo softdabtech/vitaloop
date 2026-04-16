@@ -82,7 +82,12 @@ echo ""
 
 # 6. Check disk space (if on server)
 log_info "Checking disk space..."
-DISK_FREE=$(df -B 1G . | tail -1 | awk '{print $4}')
+if df -B 1G . >/dev/null 2>&1; then
+    DISK_FREE=$(df -B 1G . | tail -1 | awk '{print $4}')
+else
+    # macOS/BSD df fallback: -g reports values in GiB.
+    DISK_FREE=$(df -g . | tail -1 | awk '{print $4}')
+fi
 if [[ $DISK_FREE -lt 2 ]]; then
     log_error "Low disk space: ${DISK_FREE}GB free (need >= 2GB)"
 else
