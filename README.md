@@ -119,30 +119,59 @@ dotnet run
 
 All deployments are performed from `main` and must keep server code in sync with GitHub.
 
-### 1) Push changes
+### 🚀 Automated Deployment (Recommended)
 
+We provide comprehensive deployment automation with safety checks, health verification, and rollback capability.
+
+**Step 1: Push changes to GitHub**
 ```bash
 git add .
 git commit -m "feat/fix: ..."
 git push origin main
 ```
 
-### 2) Sync server repository
+**Step 2: Deploy to production**
+```bash
+# Verify all safety checks pass, then deploy with automatic backup
+./scripts/deploy-prod.sh
 
+# Or with custom options:
+./scripts/deploy-prod.sh --force      # Force deploy ignoring warnings
+./scripts/deploy-prod.sh --no-backup  # Skip creating backup branch
+```
+
+The deployment script performs a 6-phase rollout:
+1. **Pre-deployment checks**: Git status, env vars, disk space, connectivity
+2. **GitHub sync**: Confirms code is pushed to origin/main
+3. **Server backup**: Creates backup branch with current state
+4. **Code deploy**: Fast-forward git pull, rebuilds frontend/CRM, restarts services
+5. **Service restart**: Restarts backend and CRM with health monitoring
+6. **Validation**: Verifies all endpoints are responding (health, ready, frontend, CRM)
+
+### 📋 Manual Deployment (Legacy)
+
+If automation is not available, follow the manual steps:
+
+1. **Push changes**
+```bash
+git add .
+git commit -m "feat/fix: ..."
+git push origin main
+```
+
+2. **Sync server repository**
 ```bash
 ssh root@159.65.252.227
 cd /var/www/VITALOOP
 git pull --ff-only origin main
 ```
 
-### 3) Deploy backend
-
+3. **Deploy backend**
 ```bash
 ssh root@159.65.252.227 'systemctl restart vitaloop-backend && systemctl is-active vitaloop-backend'
 ```
 
-### 4) Deploy CRM
-
+4. **Deploy CRM**
 ```bash
 ssh root@159.65.252.227 '
   systemctl stop vitaloop-crm-mvc &&
@@ -153,26 +182,98 @@ ssh root@159.65.252.227 '
 '
 ```
 
-### 5) Deploy frontend
+5. **Deploy frontend**
+```bash
+ssh root@159.65.252.227 '
+  cd /var/www/VITALOOP/frontend
+  npm ci && npm run build
+'
+```
+
+### 🔄 Staging → Production Workflow
+
+For testing before production:
 
 ```bash
-cd frontend
-npm run build
-rsync -az --delete dist/ root@159.65.252.227:/var/www/VITALOOP/frontend/dist/
+# 1. Prepare on staging branch
+git checkout staging
+git pull origin staging
+# Make changes...
+git push origin staging
+
+# 2. Promote staging to main (runs tests, builds, creates merge)
+./scripts/promote-staging-to-prod.sh staging
+
+# 3. Deploy to production
+./scripts/deploy-prod.sh
 ```
+
+### 🆘 Emergency Rollback
+
+View recent commits without making changes:
+```bash
+./scripts/rollback.sh
+```
+
+Rollback to a specific commit (requires confirmation):
+```bash
+./scripts/rollback.sh abc1234 --confirm
+```
+
+The rollback script:
+- Creates backup branch of current state
+- Resets code to target commit
+- Rebuilds frontend and CRM
+- Restarts services
+- Verifies health endpoints
+
+### 🏥 Health & Monitoring
+
+**Health Endpoints**
+- **Liveness** (`/health`): Always returns 200 if service is running
+- **Readiness** (`/health/ready`): Returns 200 only if all critical dependencies are ready
+- **Detailed** (`/health/detailed`): Full service status for observability
+
+Test health locally:
+```bash
+curl https://api.vitaloop.today/health
+curl https://api.vitaloop.today/health/ready | jq
+curl https://api.vitaloop.today/health/detailed | jq
+```
+
+Collect SLO metrics:
+```bash
+./scripts/collect-slo-metrics.sh
+cat ./monitoring/slo-metrics.json | jq
+```
+
+### 📖 Full Documentation
+
+For comprehensive deployment documentation, troubleshooting, and operations runbook, see [DEPLOYMENT_RUNBOOK.md](./DEPLOYMENT_RUNBOOK.md).
 
 ## Operations Checklist
 
 After deploy:
 
-1. `systemctl is-active vitaloop-backend` -> `active`
-2. `systemctl is-active vitaloop-crm-mvc` -> `active`
-3. `/auth/me` responds correctly with a valid bearer token
-4. CRM `/auth/post-login` sets `vo_access_token`
-5. User reaches intended CRM route without auth loop
+1. ✅ `curl https://api.vitaloop.today/health` → 200 with `"status": "ok"`
+2. ✅ `curl https://api.vitaloop.today/health/ready` → 200 with `"ready": true`
+3. ✅ `curl https://vitaloop.today` → 200 (frontend loads)
+4. ✅ `systemctl is-active vitaloop-backend` → `active`
+5. ✅ `systemctl is-active vitaloop-crm-mvc` → `active`
+6. ✅ `/auth/me` responds correctly with valid bearer token
+7. ✅ CRM `/auth/post-login` sets `vo_access_token`
+8. ✅ User reaches intended CRM route without auth loop
+
+## Build Optimization
+
+- Frontend uses **Vite with manual code splitting** for optimal performance
+- Chunks split by vendor (React, charts, UI) and feature (Dashboard, analytics)
+- Target: individual chunks < 200KB gzipped
+- Monitor warnings: `npm run build 2>&1 | grep -i warning`
 
 ## Notes
 
 - CRM must not be forced to HS256 via `Auth__JwtSecret` override when using Supabase ES256 tokens.
 - Supabase role source of truth for CRM access is the user context returned by backend `/auth/me`.
 - Keep production config and code paths aligned across frontend, backend, and CRM to avoid login loops.
+- All deployment scripts include safety checks and error handling. Review output carefully.
