@@ -6,26 +6,31 @@ import { stagger, staggerChild, fadeUp, viewport } from '../../lib/motion.js'
 const FEATURES = [
   {
     icon: Pill,
-    title: 'Supplement Schedule Table',
-    desc: 'Every supplement listed with exact dosage, daily timing, and priority level — sorted by what your body needs most.',
+    title: 'Supplement Protocol',
+    desc: 'Exactly as in your cabinet: Supplement/Dosage, Rationale, Daily Schedule, and Priority in one table.',
   },
   {
     icon: UtensilsCrossed,
-    title: 'Nutrition Plan by Deficiency',
-    desc: 'Food groups are automatically matched to your flagged biomarkers — Leafy Greens for iron, Healthy Fats for Vitamin D.',
+    title: 'Nutrition Plan',
+    desc: 'Food groups are prioritised by flagged biomarkers, matching the same Nutrition Plan section in your protocol page.',
   },
   {
     icon: Zap,
     title: 'Lifestyle Recommendations',
-    desc: 'Hydration, sleep, and exercise habits tailored to your protocol — clear checklists you can action the same day.',
+    desc: 'Hydration, sleep, and exercise blocks with clear daily checklists — the same structure shown in the cabinet.',
+  },
+  {
+    icon: ArrowRight,
+    title: 'Export PDF',
+    desc: 'Premium users can export the full 7-Day Health Protocol as PDF directly from the protocol view.',
   },
 ]
 
 // Mock supplement rows shown in the visual preview
 const MOCK_ROWS = [
-  { name: 'Vitamin D3', dose: '2000 IU', time: '8:00 am', priority: 'HIGH', highlight: true },
-  { name: 'Omega-3',    dose: '1000 mg', time: '12:00 pm · 6:00 pm', priority: 'HIGH', highlight: false },
-  { name: 'Magnesium',  dose: '400 mg',  time: '9:00 pm', priority: 'MEDIUM', highlight: false },
+  { name: 'Vitamin D3', dose: '2000 IU', rationale: 'Low Vitamin D support', time: '8:00 am', priority: 'HIGH', highlight: true },
+  { name: 'Omega-3', dose: '1000 mg', rationale: 'Cardio-inflammatory balance', time: '12:00 pm · 6:00 pm', priority: 'HIGH', highlight: false },
+  { name: 'Magnesium', dose: '400 mg', rationale: 'Sleep and recovery support', time: '9:00 pm', priority: 'MEDIUM', highlight: false },
 ]
 
 const PRIORITY_COLORS = {
@@ -76,7 +81,7 @@ export default function ProtocolFeatureSection() {
             variants={reduced ? {} : staggerChild}
             style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 520, margin: '0 auto', lineHeight: 1.65 }}
           >
-            After each lab upload you get a structured, actionable plan: supplements, food groups, and daily habits — all in one view.
+            After each lab upload, your cabinet shows a structured plan with Supplement Protocol, Nutrition Plan, Lifestyle Recommendations, and Export PDF.
           </motion.p>
         </motion.div>
 
@@ -105,7 +110,7 @@ export default function ProtocolFeatureSection() {
               </div>
               <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Your 7-Day Health Plan</div>
               <div style={{ display: 'flex', gap: 20 }}>
-                {[['3', 'Supplements'], ['3', 'Food Groups'], ['3', 'Habits']].map(([n, l]) => (
+                {[['3', 'Supplements'], ['3', 'Food Groups'], ['3', 'Lifestyle Areas']].map(([n, l]) => (
                   <div key={l}>
                     <div style={{ fontSize: 20, fontWeight: 700 }}>{n}</div>
                     <div style={{ fontSize: 10, opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{l}</div>
@@ -151,7 +156,7 @@ export default function ProtocolFeatureSection() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                 <thead>
                   <tr style={{ background: 'var(--gray-50)', borderBottom: '0.5px solid var(--gray-100)' }}>
-                    {['Supplement', 'Schedule', 'Priority'].map((h) => (
+                    {['Supplement / Dosage', 'Rationale', 'Daily Schedule', 'Priority'].map((h) => (
                       <th key={h} style={{ padding: '6px 12px', textAlign: 'left', fontSize: 9, fontWeight: 600, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                         {h}
                       </th>
@@ -167,6 +172,7 @@ export default function ProtocolFeatureSection() {
                           <div style={{ fontWeight: 600, color: 'var(--gray-900)' }}>{row.name}</div>
                           <div style={{ fontSize: 9, color: 'var(--gray-400)' }}>{row.dose}</div>
                         </td>
+                        <td style={{ padding: '8px 12px', color: 'var(--gray-600)' }}>{row.rationale}</td>
                         <td style={{ padding: '8px 12px', color: 'var(--gray-600)', whiteSpace: 'nowrap' }}>{row.time}</td>
                         <td style={{ padding: '8px 12px' }}>
                           <span style={{ background: pc.bg, color: pc.text, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
