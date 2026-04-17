@@ -1,5 +1,5 @@
 """
-CRM Stage 5 Router
+CRM Clients Router
 Exposes all client management, program, practitioner, subscription endpoints.
 Uses clean dependency injection for auth, org scoping, and business logic validation.
 """
@@ -10,7 +10,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.models.crm_stage5 import (
+from app.models.crm_clients import (
     ClientCreateRequest,
     ClientUpdateRequest,
     ClientResponse,

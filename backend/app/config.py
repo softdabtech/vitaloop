@@ -53,16 +53,30 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
 
     @property
+    def active_llm_api_key(self) -> str:
+        """RouteLLM API key. Accepts both ROUTELLM_API_KEY and legacy ABACUS_AI_API_KEY env vars."""
+        return self.routellm_api_key or self.abacus_ai_api_key
+
+    @property
+    def active_llm_base_url(self) -> str:
+        return self.routellm_base_url or self.abacus_ai_base_url or "https://routellm.abacus.ai/v1"
+
+    @property
+    def active_llm_model(self) -> str:
+        return self.routellm_model or self.abacus_ai_model or "route-llm"
+
+    # Backward-compatible aliases (deprecated — use active_llm_* instead)
+    @property
     def active_abacus_ai_api_key(self) -> str:
-        return self.abacus_ai_api_key or self.routellm_api_key
+        return self.active_llm_api_key
 
     @property
     def active_abacus_ai_base_url(self) -> str:
-        return self.abacus_ai_base_url or self.routellm_base_url or "https://routellm.abacus.ai/v1"
+        return self.active_llm_base_url
 
     @property
     def active_abacus_ai_model(self) -> str:
-        return self.abacus_ai_model or self.routellm_model or "route-llm"
+        return self.active_llm_model
 
     @property
     def active_supabase_service_key(self) -> str:

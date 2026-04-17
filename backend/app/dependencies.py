@@ -10,13 +10,22 @@ import jwt
 import logging
 from jwt import PyJWKClient
 
+from app.config import settings
 from app.services import supabase_service as svc
 
 _bearer = HTTPBearer(auto_error=False)
 logger = logging.getLogger("auth.jwt")
 logger.setLevel(logging.INFO)
-JWKS_URL = "https://bfjxkzydonhwmafnyktt.supabase.co/auth/v1/.well-known/jwks.json"
-jwks_client = PyJWKClient(JWKS_URL)
+
+def _build_jwks_url() -> str:
+    base = (settings.supabase_url or "").rstrip("/")
+    if not base:
+        raise RuntimeError("SUPABASE_URL is not configured; cannot build JWKS URL")
+    return f"{base}/auth/v1/.well-known/jwks.json"
+
+# Cache JWKS for 5 minutes; auto-refreshes on expiry so key rotations are
+# picked up without a restart (PyJWT default is no TTL → keys cached forever).
+jwks_client = PyJWKClient(_build_jwks_url(), cache_keys=True, lifespan=300)
 
 
 def get_current_user(

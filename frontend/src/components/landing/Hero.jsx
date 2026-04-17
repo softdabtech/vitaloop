@@ -253,15 +253,14 @@ export default function Hero() {
           maxWidth: 580, margin: '0 auto 12px',
           lineHeight: 1.6,
         }}>
-          Upload any lab PDF or photo and get instant analysis powered by OCR and Claude LLM.
+          Upload any lab result and receive an AI-powered analysis of 50+ biomarkers, red flags, and a personalized protocol in seconds.
         </motion.p>
         <motion.p variants={childVariants} style={{
           fontSize: 'clamp(14px, 2vw, 17px)', color: 'var(--gray-400)',
           maxWidth: 560, margin: '0 auto 40px',
           lineHeight: 1.6,
         }}>
-          50+ biomarkers, red flags, personalized protocols, timeline tracking, and practitioner CRM in one place.
-          80% complete and onboarding early customers.
+          Timeline tracking, weekly check-ins, and practitioner CRM — everything in one place.
         </motion.p>
 
         {/* CTA row */}
@@ -300,8 +299,7 @@ export default function Hero() {
               color: 'var(--gray-700)', cursor: 'pointer',
             }}
           >
-            <ArrowRight size={16} aria-hidden="true" />
-            Upload Labs Now
+            See how it works <ArrowRight size={16} aria-hidden="true" />
           </motion.button>
         </motion.div>
 

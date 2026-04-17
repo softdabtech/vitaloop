@@ -1,7 +1,7 @@
 import asyncio
 import hashlib
 import json
-from collections import defaultdict, deque
+from collections import deque
 from datetime import date
 from time import monotonic
 
@@ -13,20 +13,16 @@ import logging
 from app.dependencies import get_current_user
 from app.services.claude_service import extract_biomarkers, EXTRACT_PROMPT_VERSION, is_llm_configured
 from app.services.supabase_service import save_lab_upload, save_biomarkers, save_timeline_event, write_audit_log
+from app.constants import (
+    ANALYZE_EXTRACT_TIMEOUT_SECONDS,
+    ANALYZE_IDEMPOTENCY_TTL_SECONDS,
+    MAX_IDEMPOTENCY_KEY_LENGTH,
+)
+from app.utils.validation import normalize_symptoms as _normalize_symptoms
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
 
-MAX_SYMPTOMS = 20
-MAX_SYMPTOM_LENGTH = 60
-ANALYZE_REQUESTS_PER_MINUTE = 12
-ANALYZE_WINDOW_SECONDS = 60.0
-ANALYZE_EXTRACT_TIMEOUT_SECONDS = 75
-ANALYZE_IDEMPOTENCY_TTL_SECONDS = 900.0
-MAX_IDEMPOTENCY_KEY_LENGTH = 128
-
-_analyze_rate_window: dict[str, deque[float]] = defaultdict(deque)
-_analyze_rate_lock = asyncio.Lock()
 _analyze_idempotency: dict[tuple[str, str], dict] = {}
 _analyze_idempotency_lock = asyncio.Lock()
 
@@ -49,51 +45,6 @@ def _normalize_lab_text(text: str) -> str:
     # Keep line breaks but normalize excessive spacing
     cleaned = "\n".join(" ".join(line.split()) for line in cleaned.splitlines())
     return cleaned
-
-
-def _normalize_symptoms(symptoms: List[str]) -> List[str]:
-    normalized: List[str] = []
-    seen = set()
-
-    for raw in symptoms:
-        item = (raw or "").strip().lower()
-        if not item:
-            continue
-        if len(item) > MAX_SYMPTOM_LENGTH:
-            raise HTTPException(
-                status_code=422,
-                detail={"detail": f"Symptom is too long (max {MAX_SYMPTOM_LENGTH} chars)", "code": "SYMPTOM_TOO_LONG"},
-            )
-        if item not in seen:
-            seen.add(item)
-            normalized.append(item)
-
-    if len(normalized) > MAX_SYMPTOMS:
-        raise HTTPException(
-            status_code=422,
-            detail={"detail": f"Too many symptoms provided (max {MAX_SYMPTOMS})", "code": "TOO_MANY_SYMPTOMS"},
-        )
-
-    return normalized
-
-
-async def _enforce_analyze_rate_limit(user_id: str) -> None:
-    now = monotonic()
-    async with _analyze_rate_lock:
-        bucket = _analyze_rate_window[user_id]
-        while bucket and (now - bucket[0]) > ANALYZE_WINDOW_SECONDS:
-            bucket.popleft()
-
-        if len(bucket) >= ANALYZE_REQUESTS_PER_MINUTE:
-            raise HTTPException(
-                status_code=429,
-                detail={
-                    "detail": "Too many analyze requests. Please retry in a minute.",
-                    "code": "ANALYZE_RATE_LIMITED",
-                },
-            )
-
-        bucket.append(now)
 
 
 def _request_fingerprint(
@@ -188,7 +139,6 @@ async def analyze_lab(
     idempotency_key: Optional[str] = Header(default=None, alias="X-Idempotency-Key"),
 ):
     user_id: str = current_user["sub"]
-    await _enforce_analyze_rate_limit(user_id)
 
     normalized_text = _normalize_lab_text(request.extracted_text)
     normalized_symptoms = _normalize_symptoms(request.symptoms or [])

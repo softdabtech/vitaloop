@@ -11,6 +11,7 @@ from fastapi import Depends, HTTPException, status
 
 from app.dependencies import get_current_user
 from app.services import supabase_service as svc
+from app.utils.roles import normalize_global_role
 
 logger = logging.getLogger("crm.dependencies")
 
@@ -61,7 +62,7 @@ async def get_user_context(jwt_payload: dict = Depends(get_current_user)) -> Use
                 .execute()
             )
             if resp.data:
-                global_role = resp.data[0].get("global_role", "end_user")
+                global_role = normalize_global_role(resp.data[0].get("global_role"))
             else:
                 global_role = "end_user"
         except Exception as e:

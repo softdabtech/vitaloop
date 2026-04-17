@@ -8,21 +8,10 @@ from fastapi import APIRouter, Depends
 from app.dependencies import get_current_user
 from app.services import supabase_service as svc
 from app.services.assignment_service import AssignmentService
+from app.utils.roles import normalize_global_role as _normalize_role, as_bool as _as_bool
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 _assignment_service = AssignmentService()
-
-_CRM_ROLES = {"super_admin", "admin", "org_admin", "org_owner", "client_admin", "manager", "practitioner"}
-
-
-def _as_bool(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes"}
-    if isinstance(value, (int, float)):
-        return value != 0
-    return False
 
 
 def _first_name(full_name: Optional[str], fallback_email: Optional[str]) -> str:
@@ -33,16 +22,6 @@ def _first_name(full_name: Optional[str], fallback_email: Optional[str]) -> str:
     if email and "@" in email:
         return email.split("@")[0]
     return "there"
-
-
-def _normalize_role(*values: Any) -> str:
-    for value in values:
-        role = str(value or "").strip().lower()
-        if not role:
-            continue
-        if role in _CRM_ROLES or role == "end_user":
-            return role
-    return "end_user"
 
 
 def _safe_iso(value: Any) -> Optional[datetime]:

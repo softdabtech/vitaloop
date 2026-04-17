@@ -1,6 +1,6 @@
 """
-Stage 5 CRM Domain Models (Pydantic Schemas)
-Represents all business entities per stage-5-crm-core.md architecture.
+CRM Clients Domain Models (Pydantic Schemas)
+Represents client, practitioner, program and related business entities.
 """
 
 from pydantic import BaseModel, Field

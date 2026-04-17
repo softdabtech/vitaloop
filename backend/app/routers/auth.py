@@ -8,30 +8,9 @@ from app.dependencies import get_current_user
 from app.config import settings
 from app.services import supabase_service as svc
 from app.services.email_service import send_registration_alert_email
+from app.utils.roles import normalize_global_role as _normalize_global_role, as_bool as _as_bool
 
 router = APIRouter()
-
-_CRM_ROLES = {"super_admin", "admin", "org_admin", "org_owner", "client_admin", "manager", "practitioner"}
-
-
-def _normalize_global_role(*values: Any) -> str:
-    for value in values:
-        role = str(value or "").strip().lower()
-        if not role:
-            continue
-        if role in _CRM_ROLES or role == "end_user":
-            return role
-    return "end_user"
-
-
-def _as_bool(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes"}
-    if isinstance(value, (int, float)):
-        return value != 0
-    return False
 
 
 @router.get("/me")
@@ -63,13 +42,21 @@ async def get_auth_me(current_user: dict = Depends(get_current_user)):
     )
 
     # Auto-assign end_user role for new users who have no explicit business role yet.
+    # Use upsert to ensure the public.users row exists (FK-safe for protocol inserts).
     if not account.get("global_role") and not app_metadata.get("global_role") and not current_user.get("global_role"):
         global_role = "end_user"
         supabase = svc._get_supabase()
+        email = account.get("email") or current_user.get("email") or ""
         await svc._run(
             lambda: supabase.table("users")
-            .update({"global_role": "end_user"})
-            .eq("id", user_id)
+            .upsert(
+                {
+                    "id": user_id,
+                    "email": email,
+                    "global_role": "end_user",
+                },
+                on_conflict="id",
+            )
             .execute()
         )
 

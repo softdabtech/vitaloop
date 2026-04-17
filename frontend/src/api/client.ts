@@ -9,6 +9,7 @@ const apiBaseUrl =
 
 const api = axios.create({
   baseURL: apiBaseUrl,
+  timeout: 30_000, // 30 s — prevents requests from hanging indefinitely
 })
 
 api.interceptors.request.use(async (config) => {
@@ -37,7 +38,7 @@ api.interceptors.response.use(
           Array.isArray(item.loc) && item.loc.includes('protocol_adherence')
         ))
         if (scoreError) {
-          return 'Check-in value must be between 1 and 10.'
+          return 'Check-in score must be between 1 and 5.'
         }
         if (typeof detail === 'string' && detail.trim()) {
           return detail

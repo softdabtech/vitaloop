@@ -1,21 +1,5 @@
 /* User Dashboard Styles - Modern, Professional Design */
-
-:root {
-  --emerald-50: #f0fdf4;
-  --emerald-100: #dcfce7;
-  --emerald-400: #4ade80;
-  --emerald-500: #22c55e;
-  --emerald-600: #16a34a;
-  --emerald-700: #15803d;
-
-  --slate-50: #f8fafc;
-  --slate-400: #94a3b8;
-  --slate-600: #475569;
-  --slate-700: #334155;
-  --slate-800: #1e293b;
-  --slate-900: #0f172a;
-  --slate-950: #020617;
-}
+/* Design tokens are defined in dashboard2026.css (:root .vtl-*) */
 
 /* Scrollbar Styling */
 .user-dashboard-scroll::-webkit-scrollbar {

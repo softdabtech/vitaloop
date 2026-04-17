@@ -2,25 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { Suspense, lazy } from 'react'
 import Landing from './pages/Landing.jsx'
 import Login from './pages/Login.jsx'
-import Dashboard from './pages/Dashboard.jsx'
-import Avatar from './pages/Avatar.jsx'
-import Settings from './pages/Settings.jsx'
-import ExampleReport from './pages/ExampleReport.jsx'
-import HowItWorks from './pages/HowItWorks.jsx'
-import Privacy from './pages/Privacy.jsx'
-import Terms from './pages/Terms.jsx'
-import ClientAdmin from './pages/ClientAdmin.jsx'
-import MasterAdmin from './pages/MasterAdmin.jsx'
-import OpsDashboard from './pages/crm/OpsDashboard.jsx'
-import CRMPrograms from './pages/crm/Programs.jsx'
-import CRMClients from './pages/crm/Clients.jsx'
-import CRMClientDetails from './pages/crm/ClientDetails.jsx'
-import CRMPractitioners from './pages/crm/Practitioners.jsx'
-import CRMAuditLog from './pages/crm/AuditLog.jsx'
-import EmailConfirmation from './pages/EmailConfirmation.jsx'
-import Onboarding from './pages/Onboarding.jsx'
-import WeeklyCheckIn from './pages/WeeklyCheckIn.jsx'
-import Questionnaire from './pages/Questionnaire.jsx'
 import NotFound from './pages/NotFound.jsx'
 import { useAuth } from './hooks/useAuth.js'
 import { useSubscription } from './hooks/useSubscription.js'
@@ -29,6 +10,10 @@ import { useEffect, useState } from 'react'
 import { useOnboardingState } from './hooks/useOnboardingState.js'
 import SupportChat from './components/SupportChat.jsx'
 
+// Critical user path — eager
+import EmailConfirmation from './pages/EmailConfirmation.jsx'
+
+// All other pages — lazy (reduces initial bundle by ~60%)
 const UserDashboard = lazy(() => import('./pages/UserDashboard.jsx'))
 const Upload = lazy(() => import('./pages/Upload.jsx'))
 const Results = lazy(() => import('./pages/Results.jsx'))
@@ -37,6 +22,28 @@ const Insights = lazy(() => import('./pages/Insights.jsx'))
 const LabResultsList = lazy(() => import('./pages/LabResultsList.jsx'))
 const Assignments = lazy(() => import('./pages/Assignments.jsx'))
 const AssignmentDetails = lazy(() => import('./pages/AssignmentDetails.jsx'))
+const Avatar = lazy(() => import('./pages/Avatar.jsx'))
+const Settings = lazy(() => import('./pages/Settings.jsx'))
+const Onboarding = lazy(() => import('./pages/Onboarding.jsx'))
+const WeeklyCheckIn = lazy(() => import('./pages/WeeklyCheckIn.jsx'))
+const Questionnaire = lazy(() => import('./pages/Questionnaire.jsx'))
+
+// Marketing pages — lazy
+const ExampleReport = lazy(() => import('./pages/ExampleReport.jsx'))
+const HowItWorks = lazy(() => import('./pages/HowItWorks.jsx'))
+const Privacy = lazy(() => import('./pages/Privacy.jsx'))
+const Terms = lazy(() => import('./pages/Terms.jsx'))
+
+// Legacy admin pages — lazy (rarely accessed; /admin still active)
+const ClientAdmin = lazy(() => import('./pages/ClientAdmin.jsx'))
+
+// CRM pages — lazy (role-gated, not on main user path)
+const OpsDashboard = lazy(() => import('./pages/crm/OpsDashboard.jsx'))
+const CRMPrograms = lazy(() => import('./pages/crm/Programs.jsx'))
+const CRMClients = lazy(() => import('./pages/crm/Clients.jsx'))
+const CRMClientDetails = lazy(() => import('./pages/crm/ClientDetails.jsx'))
+const CRMPractitioners = lazy(() => import('./pages/crm/Practitioners.jsx'))
+const CRMAuditLog = lazy(() => import('./pages/crm/AuditLog.jsx'))
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -109,7 +116,6 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/auth/confirmation" element={<EmailConfirmation />} />
           <Route path="/dashboard" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><UserDashboard /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/dashboard-legacy" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Dashboard /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/upload" element={<ProtectedRoute><EndUserFlowRoute><Upload /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/results/:uploadId" element={<ProtectedRoute><EndUserFlowRoute><Results /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/avatar" element={<ProtectedRoute><EndUserFlowRoute><Avatar /></EndUserFlowRoute></ProtectedRoute>} />
@@ -121,7 +127,6 @@ export default function App() {
           <Route path="/admin" element={<ProtectedRoute><ClientAdmin /></ProtectedRoute>} />
           <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<ProtectedRoute><CRMRoute><OpsDashboard /></CRMRoute></ProtectedRoute>} />
-          <Route path="/ops/legacy" element={<ProtectedRoute><MasterAdmin /></ProtectedRoute>} />
           <Route path="/crm/programs" element={<ProtectedRoute><CRMRoute><CRMPrograms /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/clients" element={<ProtectedRoute><CRMRoute><CRMClients /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/clients/:id" element={<ProtectedRoute><CRMRoute><CRMClientDetails /></CRMRoute></ProtectedRoute>} />
@@ -131,9 +136,11 @@ export default function App() {
           <Route path="/questionnaire" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Questionnaire /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/check-ins" element={<ProtectedRoute><EndUserFlowRoute><WeeklyCheckIn /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/insights" element={<ProtectedRoute><EndUserFlowRoute><Insights /></EndUserFlowRoute></ProtectedRoute>} />
-          {/* Legacy aliases for backward compatibility */}
+          {/* Legacy route redirects */}
           <Route path="/checkin" element={<Navigate to="/check-ins" replace />} />
           <Route path="/timeline" element={<Navigate to="/insights" replace />} />
+          <Route path="/dashboard-legacy" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/ops/legacy" element={<Navigate to="/ops" replace />} />
           <Route path="/404.html" element={<NotFound />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
