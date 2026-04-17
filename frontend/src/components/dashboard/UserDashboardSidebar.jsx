@@ -22,9 +22,9 @@ const MENU_ITEMS = [
   { icon: FileText,   label: 'Lab Results',   path: '/lab-results', badge: null },
   { icon: Target,     label: 'Assignments',   path: '/assignments', badgeKey: 'pending_assignments', premium: true },
   { icon: TrendingUp, label: 'Progress',      path: '/progress',    badge: null, premium: true },
-  { icon: BarChart3,  label: 'Insights',      path: '/insights',    badge: null, premium: true },
-  { icon: Clock,      label: 'Check-ins',     path: '/check-ins',   badge: null, premium: true },
-  { icon: Flame,      label: 'Onboarding',    path: '/onboarding',  badge: null },
+  { icon: BarChart3,  label: 'Health Insights', path: '/insights',  badge: null, premium: true },
+  { icon: Clock,      label: 'Weekly Check-in', path: '/check-ins', badge: null, premium: true },
+  { icon: Flame,      label: 'Health Profile',  path: '/onboarding', badge: null, hideWhenOnboarded: true },
 ]
 
 export default function UserDashboardSidebar({
@@ -39,6 +39,8 @@ export default function UserDashboardSidebar({
   const location = useLocation()
   const { isActive: hasPremium, loading: subscriptionLoading } = useSubscription()
   const sidebarWidth = collapsed ? 'w-[72px]' : 'w-[280px]'
+  const onboardingComplete = Boolean(user?.onboarding_complete)
+  const visibleItems = MENU_ITEMS.filter((item) => !(item.hideWhenOnboarded && onboardingComplete))
 
   function handleLockedFeature(item, event) {
     if (!item.premium || subscriptionLoading || hasPremium) {
@@ -90,7 +92,7 @@ export default function UserDashboardSidebar({
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-        {MENU_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const ItemIcon = item.icon
           const badgeValue = item.badgeKey ? Number(user?.[item.badgeKey] || 0) : item.badge
 

@@ -1,151 +1,245 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Heart, CheckCircle } from 'lucide-react'
+import { supabase } from '../lib/supabase.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
-import api from '../lib/api.js'
-import toast from 'react-hot-toast'
+import { useAuth } from '../hooks/useAuth.js'
 
-const s = {
-  wrap: { minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '24px 16px' },
-  card: { width: '100%', maxWidth: 560, background: '#ffffff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 24, padding: '40px 36px', boxShadow: '0 1px 3px rgba(15,23,42,0.06)' },
-  title: { fontSize: 24, fontWeight: 700, color: '#0f172a', marginBottom: 6 },
-  sub: { fontSize: 14, color: '#64748b', marginBottom: 32 },
-  label: { display: 'block', fontSize: 13, color: '#475569', marginBottom: 8, fontWeight: 500, letterSpacing: '0.03em' },
-  input: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box' },
-  textarea: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 14, outline: 'none', boxSizing: 'border-box', resize: 'vertical', minHeight: 80 },
-  btn: { width: '100%', padding: '14px', background: '#10b981', borderRadius: 12, color: '#ffffff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', marginTop: 28 },
-  scoreRow: { display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 },
-  scoreLabel: { fontSize: 14, color: '#475569', flex: '0 0 140px' },
-  scoreVal: { fontSize: 16, fontWeight: 700, color: '#10b981', width: 24, textAlign: 'right' },
-}
+const FEELING_OPTIONS = [
+  { value: 'drained', label: 'Drained', hint: 'Low energy all week', score: 3 },
+  { value: 'off', label: 'Off-balance', hint: 'Mixed mood and focus', score: 5 },
+  { value: 'steady', label: 'Steady', hint: 'Mostly stable and productive', score: 7 },
+  { value: 'great', label: 'Great', hint: 'Clear, energized, and focused', score: 9 },
+]
 
-function getMonday(d = new Date()) {
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  const mon = new Date(d.setDate(diff))
-  return mon.toISOString().split('T')[0]
-}
+const ADHERENCE_OPTIONS = [
+  { value: 'yes', label: 'Yes, daily', hint: 'I followed the protocol consistently', score: 5 },
+  { value: 'partial', label: 'Partially', hint: 'I missed some doses or days', score: 3 },
+  { value: 'no', label: 'Not this week', hint: 'I could not follow the plan yet', score: 1 },
+]
 
 export default function WeeklyCheckIn() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({
-    week_start: getMonday(),
-    energy_score: 5,
-    sleep_quality: 5,
-    mood_score: 5,
-    protocol_adherence: 5,
-    symptom_changes: '',
-    new_complaints: '',
-    notes: '',
-  })
-  const [saving, setSaving] = useState(false)
+  const { user } = useAuth()
+  const [step, setStep] = useState(1)
+  const [feeling, setFeeling] = useState('')
+  const [sleepStars, setSleepStars] = useState(3)
+  const [adherence, setAdherence] = useState('')
+  const [changes, setChanges] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const totalSteps = 4
+  const progress = Math.round((step / totalSteps) * 100)
 
-  const handleSubmit = async () => {
-    setSaving(true)
-    try {
-      await api.post('/checkins', form)
+  const selectedFeeling = useMemo(() => FEELING_OPTIONS.find((opt) => opt.value === feeling) || null, [feeling])
+  const selectedAdherence = useMemo(() => ADHERENCE_OPTIONS.find((opt) => opt.value === adherence) || null, [adherence])
+
+  const canContinue = useMemo(() => {
+    if (step === 1) return Boolean(feeling)
+    if (step === 2) return sleepStars >= 1
+    if (step === 3) return Boolean(adherence)
+    return true
+  }, [step, feeling, sleepStars, adherence])
+
+  const nextStep = () => {
+    if (!canContinue || step >= totalSteps) return
+    setStep((prev) => prev + 1)
+  }
+
+  const prevStep = () => {
+    if (step <= 1) return
+    setStep((prev) => prev - 1)
+  }
+
+  const submit = async () => {
+    if (!user?.id || submitting) return
+
+    setSubmitting(true)
+    const now = new Date()
+    const payload = {
+      user_id: user.id,
+      week_start: now.toISOString().slice(0, 10),
+      energy_score: selectedFeeling?.score ?? 5,
+      mood_score: selectedFeeling?.score ?? 5,
+      sleep_quality: Math.max(1, Math.min(10, sleepStars * 2)),
+      protocol_adherence: selectedAdherence?.score ?? 3,
+      symptom_changes: changes.trim(),
+      new_complaints: '',
+      notes: [
+        selectedFeeling ? `Weekly feeling: ${selectedFeeling.label}` : '',
+        `Sleep rating: ${sleepStars}/5`,
+        selectedAdherence ? `Protocol adherence: ${selectedAdherence.label}` : '',
+      ]
+        .filter(Boolean)
+        .join(' | '),
+    }
+
+    const { error } = await supabase.from('weekly_checkins').insert(payload)
+    setSubmitting(false)
+
+    if (!error) {
       setDone(true)
-      toast.success('Check-in submitted!')
-    } catch (_error) {
-    } finally {
-      setSaving(false)
+      setTimeout(() => navigate('/dashboard'), 900)
     }
   }
 
-  if (done) {
-    return (
-      <div style={s.wrap}>
-        <div style={{ width: '100%', maxWidth: 760 }}>
-          <CabinetPageHeader
-            title="Weekly Check-In"
-            subtitle="Record weekly adherence and symptom changes in under 2 minutes."
-            helper="These answers are used to adjust recommendations and task priorities."
-          />
-          <motion.div style={{ ...s.card, textAlign: 'center' }} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-            <CheckCircle size={56} style={{ color: '#1d9e75', margin: '0 auto 20px' }} />
-            <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>Check-in complete</div>
-            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 28 }}>Your weekly data has been recorded. We'll use it to personalize your guidance.</div>
-            <button style={{ ...s.btn, marginTop: 0 }} onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
-          </motion.div>
+  const renderStep = () => {
+    if (step === 1) {
+      return (
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900">How are you feeling this week?</h2>
+          <p className="mt-1 text-sm text-slate-600">Choose the option that best matches your overall state.</p>
+          <div className="mt-4 grid gap-3">
+            {FEELING_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setFeeling(opt.value)}
+                className={`rounded-2xl border p-4 text-left transition ${
+                  feeling === opt.value
+                    ? 'border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200'
+                    : 'border-slate-200 bg-white hover:border-emerald-200'
+                }`}
+              >
+                <div className="text-sm font-semibold text-slate-900">{opt.label}</div>
+                <div className="mt-1 text-xs text-slate-500">{opt.hint}</div>
+              </button>
+            ))}
+          </div>
         </div>
+      )
+    }
+
+    if (step === 2) {
+      return (
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900">How was your sleep quality?</h2>
+          <p className="mt-1 text-sm text-slate-600">Rate your average sleep for the week.</p>
+          <div className="mt-6 flex items-center gap-2">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setSleepStars(n)}
+                className={`h-11 w-11 rounded-xl border text-lg font-semibold transition ${
+                  n <= sleepStars
+                    ? 'border-amber-300 bg-amber-100 text-amber-800'
+                    : 'border-slate-200 bg-white text-slate-400 hover:border-amber-200'
+                }`}
+                aria-label={`Rate sleep ${n} out of 5`}
+              >
+                {n <= sleepStars ? '*' : '+'}
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-sm text-slate-600">Selected: {sleepStars}/5</p>
+        </div>
+      )
+    }
+
+    if (step === 3) {
+      return (
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900">Did you follow your protocol?</h2>
+          <p className="mt-1 text-sm text-slate-600">Honest tracking helps personalize your next recommendations.</p>
+          <div className="mt-4 grid gap-3">
+            {ADHERENCE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setAdherence(opt.value)}
+                className={`rounded-2xl border p-4 text-left transition ${
+                  adherence === opt.value
+                    ? 'border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200'
+                    : 'border-slate-200 bg-white hover:border-emerald-200'
+                }`}
+              >
+                <div className="text-sm font-semibold text-slate-900">{opt.label}</div>
+                <div className="mt-1 text-xs text-slate-500">{opt.hint}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div>
+        <h2 className="text-xl font-semibold text-slate-900">Any notable changes this week?</h2>
+        <p className="mt-1 text-sm text-slate-600">Optional: symptoms, side effects, wins, or challenges.</p>
+        <textarea
+          rows={6}
+          className="mt-4 w-full rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+          placeholder="Example: Better morning energy, less bloating, mild headaches on day 2..."
+          value={changes}
+          onChange={(e) => setChanges(e.target.value)}
+        />
       </div>
     )
   }
 
-  const sliders = [
-    { key: 'energy_score', label: 'Energy level', color: '#f59e0b' },
-    { key: 'sleep_quality', label: 'Sleep quality', color: '#818cf8' },
-    { key: 'mood_score', label: 'Mood', color: '#f472b6' },
-    { key: 'protocol_adherence', label: 'Protocol adherence', color: '#1d9e75' },
-  ]
-
   return (
-    <div style={s.wrap}>
-      <div style={{ width: '100%', maxWidth: 760 }}>
+    <main className="min-h-screen bg-slate-50 px-6 py-8">
+      <div className="mx-auto max-w-3xl space-y-6">
         <CabinetPageHeader
-          title="Weekly Check-In"
-          subtitle={`Week of ${form.week_start} - takes ~2 minutes`}
-          helper="Concrete weekly signal check for adherence, symptoms, mood and recovery."
+          title="Weekly Check-in"
+          subtitle="A quick 4-step reflection to keep your protocol adaptive and accurate."
         />
 
-        <motion.div style={s.card} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <Heart size={22} style={{ color: '#f472b6' }} />
-            <div style={s.title}>Weekly Check-In</div>
-          </div>
-          <div style={s.sub}>Update this week and submit.</div>
-          <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 20 }}>
-            This page records concrete weekly adherence and symptom changes that feed your protocol updates.
-          </div>
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          {!done ? (
+            <>
+              <div className="mb-6">
+                <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <span>Step {step} of {totalSteps}</span>
+                  <span>{progress}% complete</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
 
-          <div style={{ marginBottom: 18, border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.08)', borderRadius: 12, padding: '10px 12px', fontSize: 12, color: '#065f46' }}>
-            Adherence uses a 1-5 score: 1 = not followed, 3 = partial, 5 = fully followed this week.
-          </div>
+              {renderStep()}
 
-        {/* Sliders */}
-        {sliders.map(({ key, label, color }) => {
-          const max = key === 'protocol_adherence' ? 5 : 10
-          return (
-          <div key={key} style={{ marginBottom: 24 }}>
-            <div style={s.scoreRow}>
-              <span style={s.scoreLabel}>{label}</span>
-              <input
-                type="range" min={1} max={max} value={form[key]}
-                onChange={e => set(key, Number(e.target.value))}
-                style={{ flex: 1, accentColor: color }}
-              />
-              <span style={{ ...s.scoreVal, color }}>{form[key]}/{max}</span>
+              <div className="mt-8 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  disabled={step === 1 || submitting}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Back
+                </button>
+
+                {step < totalSteps ? (
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    disabled={!canContinue || submitting}
+                    className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={submit}
+                    disabled={submitting}
+                    className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {submitting ? 'Saving...' : 'Complete check-in'}
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+              <h3 className="text-lg font-semibold text-emerald-900">Check-in saved</h3>
+              <p className="mt-1 text-sm text-emerald-700">Thanks. Redirecting to your dashboard...</p>
             </div>
-          </div>
-          )
-        })}
-
-        {/* Text fields */}
-        <div style={{ marginTop: 8, marginBottom: 16 }}>
-          <span style={s.label}>Any symptom changes this week?</span>
-          <textarea style={s.textarea} placeholder="e.g. Better energy in the morning, headaches subsided..." value={form.symptom_changes} onChange={e => set('symptom_changes', e.target.value)} />
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <span style={s.label}>New complaints or concerns?</span>
-          <textarea style={s.textarea} placeholder="e.g. Started experiencing lower back pain..." value={form.new_complaints} onChange={e => set('new_complaints', e.target.value)} />
-        </div>
-        <div>
-          <span style={s.label}>Anything else to note?</span>
-          <textarea style={s.textarea} placeholder="Optional notes..." value={form.notes} onChange={e => set('notes', e.target.value)} />
-        </div>
-
-        <button style={{ ...s.btn, opacity: saving ? 0.6 : 1 }} onClick={handleSubmit} disabled={saving}>
-          {saving ? 'Submitting…' : 'Submit Check-In'}
-        </button>
-        <div style={{ textAlign: 'center', marginTop: 14 }}>
-          <button style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }} onClick={() => navigate('/dashboard')}>Cancel</button>
-        </div>
-        </motion.div>
+          )}
+        </section>
       </div>
-    </div>
+    </main>
   )
 }

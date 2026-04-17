@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth.js'
 import { supabase } from '../lib/supabase.js'
 import BodyAvatar from '../components/BodyAvatar.jsx'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 
 export default function Avatar() {
   const { user } = useAuth()
@@ -17,21 +18,40 @@ export default function Avatar() {
       .then(({ data }) => setBiomarkers(data ?? []))
   }, [user])
 
-  return (
-    <div className="min-h-screen p-6 max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-green-400 mb-6">Digital Health Avatar</h2>
-      <p className="text-gray-400 text-sm mb-8">
-        Tap a zone to see related biomarkers and supplement recommendations.
-      </p>
+  const counts = biomarkers.reduce((acc, item) => {
+    const status = String(item?.status || '').toUpperCase()
+    if (status === 'OPTIMAL') acc.optimal += 1
+    else if (status === 'BORDERLINE') acc.borderline += 1
+    else if (status === 'DEFICIENT' || status === 'ELEVATED') acc.attention += 1
+    return acc
+  }, { optimal: 0, borderline: 0, attention: 0 })
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6 text-xs">
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 text-center text-green-300">Optimal</div>
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 text-center text-yellow-300">Borderline</div>
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 text-center text-red-300">Deficient</div>
-        <div className="bg-gray-900 border border-gray-800 rounded-lg p-2 text-center text-orange-300">Elevated</div>
+  return (
+    <div className="mx-auto w-full max-w-6xl space-y-6">
+      <CabinetPageHeader
+        title="Digital Health Avatar"
+        subtitle="Tap a body zone to see connected biomarkers and protocol recommendations."
+        helper="This view translates your biomarker data into an interactive body map for faster interpretation."
+      />
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="vtl-light-card rounded-2xl p-4 text-center">
+          <div className="text-2xl font-bold text-emerald-700">{counts.optimal}</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Optimal</div>
+        </div>
+        <div className="vtl-light-card rounded-2xl p-4 text-center">
+          <div className="text-2xl font-bold text-amber-600">{counts.borderline}</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Borderline</div>
+        </div>
+        <div className="vtl-light-card rounded-2xl p-4 text-center">
+          <div className="text-2xl font-bold text-rose-600">{counts.attention}</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Needs attention</div>
+        </div>
       </div>
 
-      <BodyAvatar biomarkers={biomarkers} />
+      <section className="vtl-light-card rounded-3xl p-5 sm:p-6">
+        <BodyAvatar biomarkers={biomarkers} />
+      </section>
     </div>
   )
 }

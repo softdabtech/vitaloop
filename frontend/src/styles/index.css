@@ -2,16 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --brand: #1d9e75;
+  --brand-rgb: 29, 158, 117;
+}
+
 body {
   margin: 0;
   padding: 0;
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background:
-    radial-gradient(circle at 12% 6%, rgba(45, 184, 135, 0.14), transparent 34%),
-    radial-gradient(circle at 88% 2%, rgba(13, 110, 86, 0.1), transparent 30%),
-    #f8fbfa;
+  background: #f8fafc;
   color: #1d1d1f;
   min-height: 100vh;
 }
@@ -33,6 +35,6 @@ a {
 }
 
 :focus-visible {
-  outline: 2px solid #10b981;
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
