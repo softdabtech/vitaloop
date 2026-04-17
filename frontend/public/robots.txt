@@ -1,4 +1,11 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://vitaloop.softdab.tech/sitemap.xml
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /upload
+Disallow: /results/
+Disallow: /protocol/
+Disallow: /settings
+
+Sitemap: https://vitaloop.today/sitemap.xml

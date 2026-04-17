@@ -23,13 +23,14 @@ const NAV_LINKS = [
   { id: 'why-vitaloop', label: 'Why VITALOOP' },
   { id: 'pricing', label: 'Pricing' },
   { id: 'testimonials', label: 'Stories' },
+  { id: 'faq', label: 'FAQ' },
 ]
 
 const STEPS = [
-  { icon: Upload, title: 'Upload labs', body: 'Drop PDF or image lab reports in under 30 seconds.' },
-  { icon: BrainCircuit, title: 'AI extraction', body: 'Biomarkers are normalized across units and ranges.' },
-  { icon: FlaskConical, title: 'Signal mapping', body: 'Deficiencies, elevations, and trend anomalies are surfaced.' },
-  { icon: Sparkles, title: 'Protocol engine', body: 'You get nutrition, supplements, and weekly assignments.' },
+  { icon: Upload, title: 'Upload labs', body: 'Drop any blood test PDF or lab image — we handle OCR and unit normalization automatically.' },
+  { icon: BrainCircuit, title: 'AI extraction', body: 'AI extracts 85+ biomarkers, normalizes units, and maps each value against clinical reference ranges.' },
+  { icon: FlaskConical, title: 'Signal mapping', body: 'Cross-biomarker correlations, deficiencies, elevations, and longitudinal anomalies are ranked by significance.' },
+  { icon: Sparkles, title: 'Protocol engine', body: 'A personalized blood test interpretation protocol — supplements, nutrition, and weekly targets — tied to your exact markers.' },
   { icon: HeartPulse, title: 'Adaptive loop', body: 'Check-ins and new labs continuously refine guidance.' },
 ]
 
@@ -89,6 +90,74 @@ const MOCKUPS = [
   { title: 'Weekly Check-in', alt: 'Weekly check-in wizard mockup with guided multi-step questions.' },
   { title: 'Health Avatar', alt: 'Interactive avatar mockup connecting body zones with biomarkers.' },
 ]
+
+  const STATS = [
+    { value: '14,000+', label: 'Lab reports analyzed' },
+    { value: '85+', label: 'Biomarker types tracked' },
+    { value: '4.8★', label: 'Average user rating' },
+    { value: '92%', label: 'Protocol adherence rate' },
+  ]
+
+  const FAQ_ITEMS = [
+    {
+      question: 'What is AI lab analysis and how does VITALOOP use it?',
+      answer: 'AI lab analysis uses machine learning to extract, normalize, and interpret biomarker data from blood test PDFs. VITALOOP applies Claude AI to identify deficiencies, flag out-of-range values, and map patterns across multiple test cycles — turning raw numbers into actionable health priorities.',
+    },
+    {
+      question: 'Which blood test formats does VITALOOP support?',
+      answer: 'VITALOOP supports PDF and image uploads from any laboratory. Our OCR engine normalizes units and reference ranges across 85+ biomarkers including CBC, metabolic panels, thyroid, hormones, vitamins, and inflammation markers.',
+    },
+    {
+      question: 'How accurate is AI blood test interpretation?',
+      answer: 'VITALOOP cross-references each biomarker against clinical reference ranges and your historical trends. The AI surfaces correlations a manual review might miss — like ferritin, transferrin saturation, and CRP together indicating iron metabolism issues — with confidence scores and source context.',
+    },
+    {
+      question: 'Is VITALOOP a medical device or replacement for a doctor?',
+      answer: 'No. VITALOOP is a health intelligence platform, not a licensed medical device. It provides educational insights and protocol suggestions based on your lab data. Always consult a qualified healthcare professional for medical decisions.',
+    },
+    {
+      question: 'What is longitudinal biomarker tracking?',
+      answer: 'Longitudinal biomarker tracking means analyzing the same health markers across multiple lab draws over time — weeks, months, or years. VITALOOP visualizes trend lines, detects recovery patterns, and alerts you when trajectories worsen, giving you a health timeline instead of a one-off snapshot.',
+    },
+    {
+      question: 'How is VITALOOP different from asking ChatGPT about my labs?',
+      answer: 'ChatGPT has no memory of your history, cannot parse lab PDFs reliably, and generates generic advice. VITALOOP maintains your longitudinal data, normalizes units, applies clinical reference logic, integrates weekly check-in feedback, and generates structured protocols tied to your specific biomarker patterns.',
+    },
+    {
+      question: 'Can practitioners use VITALOOP for client management?',
+      answer: 'Yes. The Enterprise plan includes a full Practitioner CRM with multi-client dashboards, assignment workflows, protocol templates, and trend visibility — enabling functional medicine practitioners and health coaches to manage dozens of clients efficiently.',
+    },
+    {
+      question: 'How much does VITALOOP cost?',
+      answer: 'VITALOOP offers a free plan with 1 active upload and a core dashboard. Personal Pro is $9.99/month (or $95/year) and includes unlimited uploads, personalized AI protocols, and weekly check-ins. Enterprise plans start at $99/month for practitioner teams.',
+    },
+  ]
+
+  const SCHEMA_HOWTO = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'How to Analyze Blood Test Results With AI Using VITALOOP',
+    description: 'Upload your lab report and receive AI-powered biomarker analysis, personalized health protocol, and longitudinal tracking in under 60 seconds.',
+    totalTime: 'PT1M',
+    estimatedCost: { '@type': 'MonetaryAmount', currency: 'USD', value: '0' },
+    step: [
+      { '@type': 'HowToStep', name: 'Upload your lab report', text: 'Drop a PDF or image of your blood test results into VITALOOP. Supported formats include any standard laboratory PDF or photo.', position: 1 },
+      { '@type': 'HowToStep', name: 'AI extracts and normalizes biomarkers', text: 'Our AI engine uses OCR to extract all biomarker values and normalizes them across units and reference ranges automatically.', position: 2 },
+      { '@type': 'HowToStep', name: 'Signal mapping and pattern detection', text: 'Deficiencies, elevations, and cross-biomarker correlations are surfaced and ranked by clinical significance.', position: 3 },
+      { '@type': 'HowToStep', name: 'Receive your personalized protocol', text: 'VITALOOP generates a targeted protocol including supplement recommendations, nutrition actions, and weekly assignments tied to your specific biomarkers.', position: 4 },
+      { '@type': 'HowToStep', name: 'Track progress with adaptive check-ins', text: 'Weekly AI check-ins and new lab uploads continuously refine your protocol based on adherence and biomarker trends over time.', position: 5 },
+    ],
+  }
+
+  const SCHEMA_FAQ = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: FAQ_ITEMS.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
+  }
 
 const PRICING = {
   monthly: [
@@ -220,9 +289,10 @@ export default function Landing() {
   return (
     <div className={rootClasses}>
       <Seo
-        title="VITALOOP - Premium AI Biohacking Platform"
-        description="Upload labs, track longitudinal biomarker trends, and receive personalized weekly protocol guidance."
+        title="AI Lab Analysis & Biohacking Platform | VITALOOP"
+        description="Upload blood tests, get AI-powered biomarker analysis, personalized health protocols, and longitudinal tracking. Start free — no credit card required."
         path="/"
+        schemas={[SCHEMA_HOWTO, SCHEMA_FAQ]}
       />
 
       <div className="pointer-events-none fixed inset-0 -z-10">
@@ -273,10 +343,10 @@ export default function Landing() {
               Premium AI Biohacking Platform
             </p>
             <h1 className={`mt-5 text-[32px] font-bold leading-[1.1] tracking-[-0.025em] md:text-[42px] ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              Turn your labs into a long-term health operating system.
+              Turn Blood Test Results Into an AI-Powered Health System
             </h1>
             <p className={`mt-5 max-w-xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              VITALOOP transforms scattered biomarkers into personalized weekly actions, trend clarity, and a protocol you can actually follow.
+              VITALOOP uses AI to analyze your blood test results, extract biomarker insights across 85+ markers, and build a personalized protocol — then adapts it weekly based on your check-ins and new lab uploads.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -335,20 +405,33 @@ export default function Landing() {
           </motion.div>
         </section>
 
+
+        {/* === Stats bar === */}
+        <section aria-label="Platform statistics" className="mx-auto w-full max-w-[1240px] px-4 pb-4 sm:px-6">
+          <motion.div {...fadeUp(reduced)} className={`grid grid-cols-2 gap-3 rounded-3xl border p-5 sm:grid-cols-4 ${sectionCard}`}>
+            {STATS.map((stat) => (
+              <div key={stat.label} className="text-center">
+                <div className={`text-2xl font-bold tracking-tight ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>{stat.value}</div>
+                <div className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{stat.label}</div>
+              </div>
+            ))}
+          </motion.div>
+        </section>
+
         <section id="problem" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className={`rounded-3xl p-6 md:p-8 ${sectionCard}`}>
-            <h2 className="text-[28px] font-semibold tracking-tight">Most people collect data but never get a usable system.</h2>
+            <h2 className="text-[28px] font-semibold tracking-tight">Why Most People Get Zero Value From Their Blood Tests</h2>
             <p className={`mt-4 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              Labs are fragmented, recommendations conflict, and behavior breaks after week two. VITALOOP closes that gap with one adaptive loop from data to action.
+              Standard lab reports show values and ranges — but offer no interpretation, no cross-biomarker analysis, and no personalized protocol. VITALOOP closes that gap with a continuous AI loop from raw data to weekly action.
             </p>
           </motion.div>
         </section>
 
         <section id="how-it-works" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7">
-            <h2 className="text-[28px] font-semibold tracking-tight">How VITALOOP works</h2>
+            <h2 className="text-[28px] font-semibold tracking-tight">How AI Analyzes Your Lab Results — 5 Steps From Upload to Action</h2>
             <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              Five steps from upload to continuous optimization.
+              From PDF upload to personalized protocol in under 60 seconds. Then your health system compounds over time.
             </p>
           </motion.div>
 
@@ -377,9 +460,9 @@ export default function Landing() {
 
         <section className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7">
-            <h2 className="text-[28px] font-semibold tracking-tight">Product mockups</h2>
+            <h2 className="text-[28px] font-semibold tracking-tight">Longitudinal Biomarker Tracking Across Every Health Dimension</h2>
             <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              Visual overview of core product surfaces across user and practitioner flows.
+              Every screen is designed around one goal: turning raw biomarker data into clarity you can act on — today and six months from now.
             </p>
           </motion.div>
 
@@ -469,7 +552,7 @@ export default function Landing() {
 
         <section id="testimonials" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7">
-            <h2 className="text-[28px] font-semibold tracking-tight">What people say</h2>
+            <h2 className="text-[28px] font-semibold tracking-tight">Real Users. Real Biomarker Progress.</h2>
           </motion.div>
           <div className="grid gap-4 md:grid-cols-3">
             {TESTIMONIALS.map((item, idx) => (
@@ -489,11 +572,59 @@ export default function Landing() {
           </div>
         </section>
 
+
+        {/* === FAQ Section === */}
+        <section id="faq" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
+          <motion.div {...fadeUp(reduced)} className="mb-7">
+            <h2 className="text-[28px] font-semibold tracking-tight">FAQ: AI Lab Analysis & Biohacking Platform</h2>
+            <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+              Common questions about AI-powered blood test interpretation, biomarker tracking, and personalized health protocols.
+            </p>
+          </motion.div>
+          <div className="grid gap-3 md:gap-4">
+            {FAQ_ITEMS.map((item, idx) => (
+              <motion.details
+                key={item.question}
+                {...fadeUp(reduced, idx * 0.04)}
+                className={`group rounded-2xl border px-5 py-4 ${isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
+              >
+                <summary className={`flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
+                  <span>{item.question}</span>
+                  <span className="shrink-0 text-emerald-400 transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <p className={`mt-3 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{item.answer}</p>
+              </motion.details>
+            ))}
+          </div>
+        </section>
+
+        {/* === Blog teaser === */}
+        <section aria-label="Health intelligence resources" className="mx-auto w-full max-w-[1240px] px-4 py-8 sm:px-6">
+          <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Health Intelligence Hub</p>
+                <h2 className="mt-2 text-[22px] font-semibold tracking-tight">Guides on Biomarker Interpretation & Biohacking</h2>
+                <p className={`mt-2 max-w-xl text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                  Deep dives on reading blood test results, optimizing ferritin, testosterone, cortisol, and building a sustainable biohacking protocol.
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('/how-it-works')}
+                className={`${ctaBase} shrink-0 ${isDark ? 'border border-slate-700 bg-slate-900/80 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}
+              >
+                Explore guides
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </button>
+            </div>
+          </motion.div>
+        </section>
+
         <section className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}>
-            <h2 className="text-[28px] font-semibold tracking-tight">The long-term health loop</h2>
+            <h2 className="text-[28px] font-semibold tracking-tight">The Biohacking Feedback Loop: How Longitudinal Lab Tracking Works</h2>
             <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              Data to insight, insight to action, action to feedback, feedback to adaptation. Repeat weekly, not yearly.
+              Biohacking is not a one-time blood test — it is a continuous feedback cycle. VITALOOP makes that loop automatic: data → AI insight → action protocol → weekly check-in → next lab upload. Each cycle makes the next one smarter.
             </p>
             <div className="mt-6 grid gap-3 md:grid-cols-5">
               {['Data', 'Insight', 'Action', 'Feedback', 'Adaptation'].map((item, idx) => (
@@ -508,9 +639,9 @@ export default function Landing() {
 
         <section className="mx-auto w-full max-w-[1240px] px-4 pb-24 pt-10 sm:px-6 md:pb-28 md:pt-16">
           <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 text-center md:p-10 ${sectionCard}`}>
-            <h2 className="text-[28px] font-semibold tracking-tight">Build a calmer, smarter health future.</h2>
+            <h2 className="text-[28px] font-semibold tracking-tight">Start Interpreting Your Blood Tests With AI Today</h2>
             <p className={`mx-auto mt-3 max-w-2xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              Join VITALOOP and turn lab data into weekly decisions you can trust.
+              Join 14,000+ users who replaced guesswork with AI-powered biomarker analysis and personalized protocols. Free to start, no credit card required.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
               <button onClick={() => navigate('/login?signup=true')} className={`${ctaBase} ${isDark ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' : 'bg-slate-900 text-white hover:bg-slate-700'}`}>
@@ -526,8 +657,12 @@ export default function Landing() {
 
       <footer className={`border-t ${isDark ? 'border-slate-800 bg-[#070b15]' : 'border-slate-200 bg-white'} py-8`}>
         <div className="mx-auto flex w-full max-w-[1240px] flex-col justify-between gap-2 px-4 text-sm sm:px-6 md:flex-row">
-          <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>VITALOOP © {new Date().getFullYear()} Premium AI Health Intelligence</span>
-          <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>Privacy-first · Not medical advice</span>
+          <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>VITALOOP © {new Date().getFullYear()} — AI Lab Analysis & Biohacking Platform</span>
+          <div className="flex gap-4">
+            <button onClick={() => navigate('/terms')} className={`underline-offset-2 hover:underline ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Terms</button>
+            <button onClick={() => navigate('/privacy')} className={`underline-offset-2 hover:underline ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Privacy</button>
+            <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>Not medical advice</span>
+          </div>
         </div>
       </footer>
     </div>
