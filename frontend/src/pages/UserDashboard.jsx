@@ -30,10 +30,10 @@ function SectionSkeleton({ rows = 3, rowClass = 'h-12' }) {
 
 function StatSkeleton() {
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-5">
-      <div className="skeleton h-10 w-10 mb-3" />
-      <div className="skeleton h-4 w-28 mb-3" />
-      <div className="skeleton h-8 w-24" />
+    <div className="vtl-light-card rounded-xl p-5">
+      <div className="animate-pulse h-10 w-10 mb-3 rounded-lg bg-slate-200" />
+      <div className="animate-pulse h-4 w-28 mb-3 rounded-lg bg-slate-200" />
+      <div className="animate-pulse h-8 w-24 rounded-lg bg-slate-200" />
     </div>
   );
 }
@@ -113,7 +113,7 @@ export default function UserDashboard() {
   const ringProgress = Math.max(0, Math.min(100, healthScore));
 
   return (
-    <div className="vtl-shell flex min-h-screen">
+    <div className="vtl-page flex min-h-screen">
       <div className="hidden lg:block">
         <UserDashboardSidebar
           collapsed={sidebarCollapsed}
@@ -124,7 +124,7 @@ export default function UserDashboard() {
       </div>
 
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)}>
+        <div className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)}>
           <div className="h-full w-72" onClick={(event) => event.stopPropagation()}>
             <UserDashboardSidebar
               collapsed={false}
@@ -140,17 +140,17 @@ export default function UserDashboard() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <div className="vtl-header-glass flex h-[76px] items-center justify-between gap-3 border-b border-slate-700/40 px-4 sm:px-6">
+        <div className="flex h-[76px] items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 shadow-sm sm:px-6">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="vtl-focus-ring rounded-xl p-2 transition hover:bg-slate-800 lg:hidden"
+              className="vtl-focus-ring rounded-xl p-2 transition hover:bg-slate-100 lg:hidden"
             >
-              <Menu className="w-5 h-5 text-white" />
+              <Menu className="w-5 h-5 text-slate-700" />
             </button>
             <div>
-              <h1 className="text-lg font-semibold tracking-tight text-slate-100 sm:text-2xl">Welcome back, {displayName}</h1>
-              <p className="text-xs text-slate-400 sm:text-sm">{onboardingLabel}</p>
+              <h1 className="text-lg font-semibold tracking-tight text-slate-900 sm:text-2xl">Welcome back, {displayName}</h1>
+              <p className="text-xs text-slate-500 sm:text-sm">{onboardingLabel}</p>
             </div>
           </div>
           <div className="hidden items-center gap-3 sm:flex">
@@ -175,24 +175,24 @@ export default function UserDashboard() {
           <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
             {/* Error Banner */}
             {error && (
-              <div className="bg-red-500/10 border border-red-500 rounded-lg p-4 flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                <p className="text-red-400">{error}</p>
+              <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
+                <p className="text-rose-700">{error}</p>
               </div>
             )}
 
             {/* Start Here */}
             {startHere?.enabled && (
-              <div className="bg-gradient-to-r from-emerald-500/15 via-cyan-500/10 to-slate-800 border border-emerald-500/30 rounded-2xl p-4 sm:p-6">
+              <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-cyan-50/50 to-white p-4 shadow-sm sm:p-6">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   <div className="space-y-2">
-                    <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wide">First value in 30 seconds</p>
-                    <h2 className="text-white text-xl sm:text-2xl font-semibold flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-emerald-300" />
+                    <p className="text-emerald-700 text-xs font-semibold uppercase tracking-wide">First value in 30 seconds</p>
+                    <h2 className="text-slate-900 text-xl sm:text-2xl font-semibold flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-emerald-500" />
                       {startHere.title}
                     </h2>
-                    <p className="text-slate-300 text-sm">{startHere.description}</p>
-                    <ul className="text-xs sm:text-sm text-slate-300 space-y-1">
+                    <p className="text-slate-600 text-sm">{startHere.description}</p>
+                    <ul className="text-xs sm:text-sm text-slate-600 space-y-1">
                       {(startHere.steps || []).slice(0, 3).map((step, idx) => (
                         <li key={`start-${idx}`}>{idx + 1}. {step}</li>
                       ))}
@@ -211,15 +211,15 @@ export default function UserDashboard() {
 
             {/* Next Best Action */}
             {!loading && nextBestAction?.title && (
-              <div className="bg-slate-900/70 border border-slate-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="vtl-light-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-400">Next best action</p>
-                  <p className="text-white font-semibold">{nextBestAction.title}</p>
-                  <p className="text-slate-400 text-sm">{nextBestAction.description}</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Next best action</p>
+                  <p className="text-slate-900 font-semibold">{nextBestAction.title}</p>
+                  <p className="text-slate-500 text-sm">{nextBestAction.description}</p>
                 </div>
                 <button
                   onClick={() => navigate(nextBestAction.path || '/dashboard')}
-                  className="px-4 py-2 rounded-lg bg-slate-800 border border-slate-600 text-emerald-300 hover:text-emerald-200 hover:border-emerald-500/40 transition"
+                  className="px-4 py-2 rounded-xl border border-slate-200 bg-slate-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50 transition"
                 >
                   {nextBestAction.cta_label || 'Open'}
                 </button>
@@ -232,9 +232,9 @@ export default function UserDashboard() {
                 initial={reduced ? false : { opacity: 0, y: 12 }}
                 animate={reduced ? {} : { opacity: 1, y: 0 }}
                 transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-                className="vtl-card vtl-card-hover p-6"
+                className="vtl-light-card p-6"
               >
-                <p className="mb-3 text-sm text-slate-400">Health Score</p>
+                <p className="mb-3 text-sm text-slate-500">Health Score</p>
                 <div className="mx-auto flex h-[240px] w-[240px] items-center justify-center">
                   <div
                     className="relative h-[220px] w-[220px] rounded-full"
@@ -242,10 +242,10 @@ export default function UserDashboard() {
                       background: `conic-gradient(#10B981 ${ringProgress * 3.6}deg, rgba(148,163,184,0.2) 0deg)`,
                     }}
                   >
-                    <div className="absolute inset-[18px] flex items-center justify-center rounded-full bg-[#0b111f] shadow-inner">
+                    <div className="absolute inset-[18px] flex items-center justify-center rounded-full bg-white shadow-md">
                       <div className="text-center">
-                        <p className="text-5xl font-bold text-slate-50">{stats?.health_score ?? '--'}</p>
-                        <p className="text-xs uppercase tracking-[0.12em] text-slate-400">out of 100</p>
+                        <p className="text-5xl font-bold text-slate-900">{stats?.health_score ?? '--'}</p>
+                        <p className="text-xs uppercase tracking-[0.12em] text-slate-500">out of 100</p>
                       </div>
                     </div>
                   </div>
@@ -296,7 +296,7 @@ export default function UserDashboard() {
 
               <div>
                 {loading ? (
-                  <div className="vtl-card p-6">
+                  <div className="vtl-light-card p-6">
                     <SectionSkeleton rows={6} rowClass="h-10" />
                   </div>
                 ) : (
@@ -308,7 +308,7 @@ export default function UserDashboard() {
             {/* Health Trends chart */}
             <div>
               {loading ? (
-                <div className="vtl-card p-6">
+                <div className="vtl-light-card p-6">
                   <SectionSkeleton rows={4} rowClass="h-14" />
                 </div>
               ) : (
@@ -318,15 +318,15 @@ export default function UserDashboard() {
 
             <div className="dashboard-grid-auto dashboard-work-grid gap-4 sm:gap-6">
               {/* Assignments Section */}
-              <div className="vtl-card p-6">
+              <div className="vtl-light-card p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-emerald-500" />
+                  <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-emerald-600" />
                     Active Assignments
                   </h2>
                   <button
                     onClick={() => navigate('/assignments')}
-                    className="flex items-center gap-2 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded transition text-sm"
+                    className="vtl-button-primary flex items-center gap-2 px-3 py-1.5 text-sm"
                   >
                     <Plus className="w-4 h-4" />
                     New
@@ -347,7 +347,7 @@ export default function UserDashboard() {
                     {assignments.length > 5 && (
                       <button
                         onClick={() => navigate('/assignments')}
-                        className="w-full text-center py-2 text-slate-400 hover:text-emerald-400 transition text-sm"
+                        className="w-full text-center py-2 text-slate-500 hover:text-emerald-600 transition text-sm"
                       >
                         View all {assignments.length} assignments
                       </button>
@@ -355,11 +355,11 @@ export default function UserDashboard() {
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-10 gap-4 text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center ring-1 ring-emerald-500/20">
-                      <Calendar className="w-6 h-6 text-emerald-400" />
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center ring-1 ring-emerald-200">
+                      <Calendar className="w-6 h-6 text-emerald-600" />
                     </div>
                     <div>
-                      <p className="text-slate-200 font-medium">No assignments yet</p>
+                      <p className="text-slate-800 font-medium">No assignments yet</p>
                       <p className="text-slate-500 text-sm mt-1">Upload your labs to generate your first protocol.</p>
                     </div>
                     <button
@@ -374,15 +374,15 @@ export default function UserDashboard() {
               </div>
 
               {/* Today Focus */}
-              <div className="vtl-card p-6 ring-1 ring-emerald-500/25">
+              <div className="vtl-light-card p-6 ring-1 ring-emerald-200">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-emerald-600" />
                     Today Focus
                   </h2>
                   <button
                     onClick={() => navigate('/assignments')}
-                    className="text-sm text-emerald-300 hover:text-emerald-200 transition"
+                    className="text-sm text-emerald-600 hover:text-emerald-700 transition"
                   >
                     Open planner
                   </button>
@@ -402,16 +402,16 @@ export default function UserDashboard() {
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center ring-1 ring-emerald-500/20">
-                      <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center ring-1 ring-emerald-200">
+                      <CheckCircle className="w-5 h-5 text-emerald-600" />
                     </div>
                     <div>
-                      <p className="text-slate-200 text-sm font-medium">All clear for today!</p>
-                      <p className="text-slate-500 text-xs mt-0.5">Log your weekly check-in to get tomorrow\'s focus tasks.</p>
+                      <p className="text-slate-800 text-sm font-medium">All clear for today!</p>
+                      <p className="text-slate-500 text-xs mt-0.5">Log your weekly check-in to get tomorrow's focus tasks.</p>
                     </div>
                     <button
                       onClick={() => navigate('/check-ins')}
-                      className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-emerald-300 hover:border-emerald-500/40 transition"
+                      className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50 transition"
                     >
                       Weekly check-in
                     </button>
@@ -423,14 +423,14 @@ export default function UserDashboard() {
             {/* Recommendations & Progress Timeline */}
             <div className="dashboard-grid-auto dashboard-insights-grid gap-4 sm:gap-6">
               {loading ? (
-                <div className="vtl-card p-6">
+                <div className="vtl-light-card p-6">
                   <SectionSkeleton rows={4} rowClass="h-12" />
                 </div>
               ) : (
                 <RecommendationsPanel insights={insights} />
               )}
               {loading ? (
-                <div className="vtl-card p-6">
+                <div className="vtl-light-card p-6">
                   <SectionSkeleton rows={5} rowClass="h-11" />
                 </div>
               ) : (
@@ -442,21 +442,21 @@ export default function UserDashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pb-6">
               <button
                 onClick={() => navigate('/upload')}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition"
+                className="vtl-button-primary flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium"
               >
                 <Download className="w-4 h-4" />
                 Upload Lab Results
               </button>
               <button
                 onClick={() => navigate('/settings')}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition"
+                className="vtl-button-secondary flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium"
               >
                 <Settings className="w-4 h-4" />
                 Settings
               </button>
               <button
                 onClick={() => navigate('/check-ins')}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition"
+                className="vtl-button-secondary flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium"
               >
                 Schedule Check-in
               </button>

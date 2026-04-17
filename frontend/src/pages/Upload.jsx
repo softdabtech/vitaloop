@@ -115,45 +115,45 @@ export default function Upload() {
   }
 
   return (
-    <div className="vtl-shell min-h-screen px-4 py-8 sm:px-6">
+    <div className="vtl-page px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-5xl">
-        <div className="vtl-card mb-6 p-6 sm:p-7">
-          <h2 className="mb-2 text-2xl font-bold tracking-tight text-slate-100">Upload Lab Results</h2>
-          <p className="text-sm text-slate-300">
+        <div className="vtl-light-card mb-6 p-6 sm:p-7">
+          <h2 className="mb-2 text-2xl font-bold tracking-tight text-slate-900">Upload Lab Results</h2>
+          <p className="text-sm text-slate-500">
             Your file is processed locally first. Only extracted text is sent for analysis.
           </p>
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
-          <div className={`rounded-xl border px-3 py-2 ${isProcessing ? 'border-emerald-500 bg-emerald-500/15 text-emerald-200' : 'border-slate-700 bg-slate-900/50 text-slate-400'}`}>
+          <div className={`rounded-xl border px-3 py-2 ${isProcessing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
             1. Read document
           </div>
-          <div className={`rounded-xl border px-3 py-2 ${analyzing ? 'border-emerald-500 bg-emerald-500/15 text-emerald-200' : 'border-slate-700 bg-slate-900/50 text-slate-400'}`}>
+          <div className={`rounded-xl border px-3 py-2 ${analyzing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
             2. Analyze biomarkers
           </div>
-          <div className={`rounded-xl border px-3 py-2 ${!isBusy && selectedFileName ? 'border-emerald-500 bg-emerald-500/15 text-emerald-200' : 'border-slate-700 bg-slate-900/50 text-slate-400'}`}>
+          <div className={`rounded-xl border px-3 py-2 ${!isBusy && selectedFileName ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
             3. Open results
           </div>
         </div>
 
         {errorMessage && (
-          <div className="mb-5 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" role="alert">
+          <div className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">
             {errorMessage}
           </div>
         )}
 
-        <p className="mb-6 text-sm text-slate-400">
+        <p className="mb-6 text-sm text-slate-500">
           Tip: upload a clear full-page PDF or a sharp photo in good lighting.
         </p>
 
         <div className="mb-6">
-          <label className="mb-1 block text-sm text-slate-300">Lab / Clinic name (optional)</label>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Lab / Clinic name (optional)</label>
           <input
             value={labName}
             disabled={isBusy}
             onChange={(e) => setLabName(e.target.value)}
             placeholder="Quest, LabCorp, Other..."
-            className="vtl-focus-ring w-full rounded-xl border border-slate-600 bg-slate-900/65 px-4 py-3 text-slate-100 placeholder-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="vtl-focus-ring w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-800 placeholder-slate-400 disabled:cursor-not-allowed disabled:opacity-60 focus:border-emerald-400 focus:outline-none"
           />
         </div>
 
@@ -161,17 +161,17 @@ export default function Upload() {
 
         <div className="mt-6">
           {isProcessing && (
-            <div className="mb-4 rounded-xl border border-emerald-500/35 bg-emerald-500/10 p-4">
-              <div className="mb-2 text-sm text-emerald-200">Reading document... {progress}%</div>
-              <div className="h-2.5 w-full rounded-full bg-emerald-900/40">
+            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <div className="mb-2 text-sm text-emerald-700">Reading document... {progress}%</div>
+              <div className="h-2.5 w-full rounded-full bg-emerald-100">
                 <div className="h-2.5 rounded-full bg-emerald-500 transition-all" style={{ width: `${progress}%` }} />
               </div>
-              {selectedFileName && <div className="mt-2 truncate text-xs text-emerald-300">{selectedFileName}</div>}
+              {selectedFileName && <div className="mt-2 truncate text-xs text-emerald-600">{selectedFileName}</div>}
             </div>
           )}
 
           {analyzing && (
-            <div className="mb-4 animate-pulse rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            <div className="mb-4 animate-pulse rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
               AI is analyzing your results. This usually takes under a minute.
             </div>
           )}

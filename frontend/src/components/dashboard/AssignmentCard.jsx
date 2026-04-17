@@ -3,10 +3,10 @@ import { Clock, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
 
 export default function AssignmentCard({ assignment, onClick }) {
   const statusColors = {
-    pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-    in_progress: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    completed: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    overdue: 'bg-red-500/10 text-red-400 border-red-500/20',
+    pending: 'bg-amber-50 text-amber-700 border-amber-200',
+    in_progress: 'bg-blue-50 text-blue-700 border-blue-200',
+    completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    overdue: 'bg-rose-50 text-rose-700 border-rose-200',
   };
 
   const statusIcons = {
@@ -24,22 +24,22 @@ export default function AssignmentCard({ assignment, onClick }) {
   const priority = assignment?.priority;
 
   const impactTone = {
-    critical: 'text-red-300 border-red-500/30 bg-red-500/10',
-    high: 'text-orange-300 border-orange-500/30 bg-orange-500/10',
-    medium: 'text-blue-300 border-blue-500/30 bg-blue-500/10',
-    low: 'text-slate-300 border-slate-500/30 bg-slate-500/10',
+    critical: 'text-rose-600 border-rose-200 bg-rose-50',
+    high: 'text-orange-600 border-orange-200 bg-orange-50',
+    medium: 'text-blue-600 border-blue-200 bg-blue-50',
+    low: 'text-slate-500 border-slate-200 bg-slate-50',
   };
 
   const urgencyTone = {
-    overdue: 'text-red-300',
-    today: 'text-orange-300',
-    soon: 'text-yellow-300',
+    overdue: 'text-rose-600',
+    today: 'text-orange-600',
+    soon: 'text-amber-600',
     normal: 'text-slate-400',
   };
 
   return (
     <div
-      className={`bg-slate-700 hover:bg-slate-600/80 border border-slate-600 rounded-lg p-4 flex items-start gap-4 transition group ${onClick ? 'cursor-pointer' : ''}`}
+      className={`vtl-light-card vtl-light-card-hover p-4 flex items-start gap-4 transition group ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
       onKeyDown={(event) => {
         if (!onClick) return;
@@ -52,22 +52,22 @@ export default function AssignmentCard({ assignment, onClick }) {
       tabIndex={onClick ? 0 : undefined}
     >
       {/* Icon */}
-      <div className={`p-3 rounded-lg flex-shrink-0 ${statusClass} border`}>
-        <StatusIcon className="w-5 h-5" />
+      <div className={`p-2.5 rounded-xl flex-shrink-0 ${statusClass} border`}>
+        <StatusIcon className="w-4 h-4" />
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <h3 className="text-white font-semibold truncate group-hover:text-emerald-400 transition">
+        <h3 className="text-slate-900 font-semibold truncate group-hover:text-emerald-700 transition text-sm">
           {assignment.title || assignment.name || 'Untitled Assignment'}
         </h3>
-        <p className="text-slate-400 text-sm truncate mb-2">
+        <p className="text-slate-500 text-xs truncate mb-2">
           {assignment.description || 'Complete this assignment'}
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-slate-500 text-xs">{dueDate}</p>
+          <p className="text-slate-400 text-xs">{dueDate}</p>
           {priority?.urgency && (
-            <span className={`text-[11px] ${urgencyTone[priority.urgency] || urgencyTone.normal}`}>
+            <span className={`text-[11px] font-semibold ${urgencyTone[priority.urgency] || urgencyTone.normal}`}>
               {priority.urgency.toUpperCase()}
             </span>
           )}
@@ -80,16 +80,16 @@ export default function AssignmentCard({ assignment, onClick }) {
       </div>
 
       {/* Status Badge & Arrow */}
-      <div className="flex items-center gap-3 flex-shrink-0">
+      <div className="flex items-center gap-2 flex-shrink-0">
         {priority?.score != null && (
-          <span className="px-2 py-1 rounded text-xs font-semibold bg-slate-800 border border-slate-600 text-slate-200">
+          <span className="px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 border border-slate-200 text-slate-600">
             {priority.score}
           </span>
         )}
-        <span className={`px-2 py-1 rounded text-xs font-semibold ${statusClass} border`}>
+        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${statusClass} border`}>
           {status.replace('_', ' ').toUpperCase()}
         </span>
-        <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 transition" />
+        <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition" />
       </div>
     </div>
   );

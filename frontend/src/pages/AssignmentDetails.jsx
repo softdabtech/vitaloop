@@ -6,10 +6,10 @@ import { useAuth } from '../hooks/useAuth.js'
 import { resolveAssignmentPath } from '../lib/assignmentRouting.js'
 
 const STATUS_STYLE = {
-  pending: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300',
-  in_progress: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
-  completed: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
-  overdue: 'border-red-500/30 bg-red-500/10 text-red-300',
+  pending: 'border-amber-200 bg-amber-50 text-amber-700',
+  in_progress: 'border-blue-200 bg-blue-50 text-blue-700',
+  completed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  overdue: 'border-rose-200 bg-rose-50 text-rose-700',
 }
 
 function normalizeAssignmentsPayload(data) {
@@ -78,66 +78,70 @@ export default function AssignmentDetails() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-6 max-w-4xl mx-auto">
-        <div className="animate-pulse h-8 w-64 bg-gray-700 rounded-xl mb-6" />
-        <div className="animate-pulse h-40 bg-gray-800 rounded-xl" />
+      <div className="vtl-page min-h-screen p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="animate-pulse h-8 w-64 bg-slate-200 rounded-xl mb-6" />
+          <div className="animate-pulse h-40 bg-slate-100 rounded-xl" />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen p-6 max-w-4xl mx-auto">
-      <button
-        onClick={() => navigate('/assignments')}
-        className="inline-flex items-center gap-2 text-gray-300 hover:text-white transition mb-5"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to assignments
-      </button>
+    <div className="vtl-page min-h-screen p-6">
+      <div className="max-w-4xl mx-auto">
+        <button
+          onClick={() => navigate('/assignments')}
+          className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 transition mb-5"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to assignments
+        </button>
 
-      {error ? (
-        <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-5 text-red-300 text-sm">{error}</div>
-      ) : (
-        <>
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-5">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-2">{item?.title || item?.name || 'Assignment'}</h2>
-                <p className="text-gray-400 text-sm">{item?.description || 'Complete this assignment to improve your health plan quality and recommendations.'}</p>
+        {error ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-5 text-rose-700 text-sm">{error}</div>
+        ) : (
+          <>
+            <div className="vtl-light-card p-6 mb-5">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900 mb-2">{item?.title || item?.name || 'Assignment'}</h2>
+                  <p className="text-slate-500 text-sm">{item?.description || 'Complete this assignment to improve your health plan quality and recommendations.'}</p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusClass}`}>
+                  {status.replace('_', ' ').toUpperCase()}
+                </span>
               </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusClass}`}>
-                {status.replace('_', ' ').toUpperCase()}
-              </span>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-slate-400 text-xs uppercase mb-1">Due Date</p>
+                  <p className="text-slate-700 inline-flex items-center gap-2"><Calendar className="w-4 h-4" />{dueDate}</p>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-slate-400 text-xs uppercase mb-1">Assignment ID</p>
+                  <p className="text-slate-600 break-all">{item?.id || assignmentId}</p>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
-                <p className="text-gray-500 text-xs uppercase mb-1">Due Date</p>
-                <p className="text-gray-200 inline-flex items-center gap-2"><Calendar className="w-4 h-4" />{dueDate}</p>
-              </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
-                <p className="text-gray-500 text-xs uppercase mb-1">Assignment ID</p>
-                <p className="text-gray-300 break-all">{item?.id || assignmentId}</p>
-              </div>
+            <div className="vtl-light-card p-6">
+              <h3 className="text-slate-900 font-semibold mb-3 inline-flex items-center gap-2">
+                <Target className="w-5 h-5 text-emerald-600" />
+                Recommended next step
+              </h3>
+              <p className="text-slate-500 text-sm mb-4">Open the most relevant workflow for this task based on its type and content.</p>
+              <button
+                onClick={() => navigate(resolveAssignmentPath(item))}
+                className="vtl-button-primary inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold"
+              >
+                <Sparkles className="w-4 h-4" />
+                Open task workflow
+              </button>
             </div>
-          </div>
-
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-            <h3 className="text-white font-semibold mb-3 inline-flex items-center gap-2">
-              <Target className="w-5 h-5 text-green-400" />
-              Recommended next step
-            </h3>
-            <p className="text-gray-400 text-sm mb-4">Open the most relevant workflow for this task based on its type and content.</p>
-            <button
-              onClick={() => navigate(resolveAssignmentPath(item))}
-              className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
-            >
-              <Sparkles className="w-4 h-4" />
-              Open task workflow
-            </button>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   )
 }

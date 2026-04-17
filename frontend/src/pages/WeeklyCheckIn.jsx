@@ -6,17 +6,17 @@ import api from '../lib/api.js'
 import toast from 'react-hot-toast'
 
 const s = {
-  wrap: { minHeight: '100vh', background: '#080808', color: '#fff', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' },
-  card: { width: '100%', maxWidth: 560, background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 24, padding: '40px 36px' },
-  title: { fontSize: 24, fontWeight: 700, color: '#fff', marginBottom: 6 },
-  sub: { fontSize: 14, color: 'rgba(255,255,255,0.4)', marginBottom: 32 },
-  label: { display: 'block', fontSize: 13, color: 'rgba(255,255,255,0.55)', marginBottom: 8, fontWeight: 500, letterSpacing: '0.03em' },
-  input: { width: '100%', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 15, outline: 'none', boxSizing: 'border-box' },
-  textarea: { width: '100%', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box', resize: 'vertical', minHeight: 80 },
-  btn: { width: '100%', padding: '14px', background: '#1d9e75', borderRadius: 12, color: '#fff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', marginTop: 28 },
+  wrap: { minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' },
+  card: { width: '100%', maxWidth: 560, background: '#ffffff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 24, padding: '40px 36px', boxShadow: '0 1px 3px rgba(15,23,42,0.06)' },
+  title: { fontSize: 24, fontWeight: 700, color: '#0f172a', marginBottom: 6 },
+  sub: { fontSize: 14, color: '#64748b', marginBottom: 32 },
+  label: { display: 'block', fontSize: 13, color: '#475569', marginBottom: 8, fontWeight: 500, letterSpacing: '0.03em' },
+  input: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box' },
+  textarea: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 14, outline: 'none', boxSizing: 'border-box', resize: 'vertical', minHeight: 80 },
+  btn: { width: '100%', padding: '14px', background: '#10b981', borderRadius: 12, color: '#ffffff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', marginTop: 28 },
   scoreRow: { display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 },
-  scoreLabel: { fontSize: 14, color: 'rgba(255,255,255,0.7)', flex: '0 0 140px' },
-  scoreVal: { fontSize: 16, fontWeight: 700, color: '#1d9e75', width: 24, textAlign: 'right' },
+  scoreLabel: { fontSize: 14, color: '#475569', flex: '0 0 140px' },
+  scoreVal: { fontSize: 16, fontWeight: 700, color: '#10b981', width: 24, textAlign: 'right' },
 }
 
 function getMonday(d = new Date()) {
@@ -61,7 +61,7 @@ export default function WeeklyCheckIn() {
         <motion.div style={{ ...s.card, textAlign: 'center' }} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
           <CheckCircle size={56} style={{ color: '#1d9e75', margin: '0 auto 20px' }} />
           <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>Check-in complete</div>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', marginBottom: 28 }}>Your weekly data has been recorded. We'll use it to personalize your guidance.</div>
+          <div style={{ fontSize: 14, color: '#64748b', marginBottom: 28 }}>Your weekly data has been recorded. We'll use it to personalize your guidance.</div>
           <button style={{ ...s.btn, marginTop: 0 }} onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
         </motion.div>
       </div>
@@ -117,7 +117,7 @@ export default function WeeklyCheckIn() {
           {saving ? 'Submitting…' : 'Submit Check-In'}
         </button>
         <div style={{ textAlign: 'center', marginTop: 14 }}>
-          <button style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 13 }} onClick={() => navigate('/dashboard')}>Cancel</button>
+          <button style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }} onClick={() => navigate('/dashboard')}>Cancel</button>
         </div>
       </motion.div>
     </div>

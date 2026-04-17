@@ -18,25 +18,25 @@ const GOAL_OPTIONS = [
 ]
 
 const s = {
-  wrap: { minHeight: '100vh', background: '#080808', color: '#fff', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' },
-  card: { width: '100%', maxWidth: 560, background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 24, padding: '40px 36px' },
-  title: { fontSize: 26, fontWeight: 700, color: '#fff', marginBottom: 6 },
-  sub: { fontSize: 15, color: 'rgba(255,255,255,0.45)', marginBottom: 32 },
-  label: { display: 'block', fontSize: 13, color: 'rgba(255,255,255,0.55)', marginBottom: 8, fontWeight: 500, letterSpacing: '0.03em' },
-  input: { width: '100%', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 15, outline: 'none', boxSizing: 'border-box' },
-  select: { width: '100%', background: '#1a1a1a', border: '0.5px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 15, outline: 'none', boxSizing: 'border-box' },
-  btnPrimary: { width: '100%', padding: '14px', background: '#1d9e75', borderRadius: 12, color: '#fff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', marginTop: 24 },
-  btnSec: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 14, marginTop: 12 },
+  wrap: { minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' },
+  card: { width: '100%', maxWidth: 560, background: '#ffffff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 24, padding: '40px 36px', boxShadow: '0 1px 3px rgba(15,23,42,0.06)' },
+  title: { fontSize: 26, fontWeight: 700, color: '#0f172a', marginBottom: 6 },
+  sub: { fontSize: 15, color: '#64748b', marginBottom: 32 },
+  label: { display: 'block', fontSize: 13, color: '#475569', marginBottom: 8, fontWeight: 500, letterSpacing: '0.03em' },
+  input: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box' },
+  select: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box' },
+  btnPrimary: { width: '100%', padding: '14px', background: '#10b981', borderRadius: 12, color: '#ffffff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', marginTop: 24 },
+  btnSec: { background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 14, marginTop: 12 },
   row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
   goalChip: (active) => ({
-    padding: '10px 14px', borderRadius: 10, border: `0.5px solid ${active ? '#1d9e75' : 'rgba(255,255,255,0.1)'}`,
-    background: active ? 'rgba(29,158,117,0.15)' : 'rgba(255,255,255,0.03)',
-    color: active ? '#1d9e75' : 'rgba(255,255,255,0.65)', cursor: 'pointer', fontSize: 14, fontWeight: 500, transition: 'all 0.15s',
+    padding: '10px 14px', borderRadius: 10, border: `1px solid ${active ? '#10b981' : 'rgba(15,23,42,0.1)'}`,
+    background: active ? 'rgba(16,185,129,0.08)' : '#f8fafc',
+    color: active ? '#059669' : '#475569', cursor: 'pointer', fontSize: 14, fontWeight: 500, transition: 'all 0.15s',
   }),
   progress: { display: 'flex', gap: 6, marginBottom: 32 },
   dot: (active, done) => ({
     height: 4, flex: 1, borderRadius: 2,
-    background: done ? '#1d9e75' : active ? 'rgba(29,158,117,0.6)' : 'rgba(255,255,255,0.1)',
+    background: done ? '#10b981' : active ? 'rgba(16,185,129,0.5)' : 'rgba(15,23,42,0.1)',
     transition: 'background 0.3s',
   }),
 }
@@ -174,8 +174,8 @@ export default function Onboarding() {
         {/* ── Org-setup screen (shown only before health profile, when user has no org) ── */}
         {!orgCheckDone && (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid #1d9e75', borderTopColor: 'transparent', margin: '0 auto', animation: 'spin 0.7s linear infinite' }} />
-            <div style={{ marginTop: 16, color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>Загружаем данные...</div>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid #10b981', borderTopColor: 'transparent', margin: '0 auto', animation: 'spin 0.7s linear infinite' }} />
+            <div style={{ marginTop: 16, color: '#64748b', fontSize: 14 }}>Загружаем данные...</div>
           </div>
         )}
 
@@ -213,14 +213,14 @@ export default function Onboarding() {
         <div style={s.progress}>
           {steps.map((_, i) => <div key={i} style={s.dot(i === step, i < step)} />)}
         </div>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginBottom: 24, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 24, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
           Step {step + 1} of {TOTAL} — {steps[step]}
         </div>
 
         {/* Step 0: Basics */}
         {step === 0 && (
           <motion.div key="basics" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div style={s.title}><User size={22} style={{ display: 'inline', marginRight: 10, color: '#1d9e75' }} />Your basics</div>
+              <div style={s.title}><User size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />Your basics</div>
             <div style={s.sub}>Help us personalize your health guidance.</div>
             <div style={s.row}>
               <label>
@@ -261,7 +261,7 @@ export default function Onboarding() {
         {/* Step 2: Location */}
         {step === 2 && (
           <motion.div key="location" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div style={s.title}><MapPin size={22} style={{ display: 'inline', marginRight: 10, color: '#1d9e75' }} />Your location</div>
+              <div style={s.title}><MapPin size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />Your location</div>
             <div style={s.sub}>Used for future physician referral support and local care assistance.</div>
             <div style={s.row}>
               <label>
@@ -290,7 +290,7 @@ export default function Onboarding() {
             <div style={s.title}><AlertTriangle size={22} style={{ display: 'inline', marginRight: 10, color: '#f5a623' }} />Recurring complaints</div>
             <div style={s.sub}>What has been bothering you? We'll factor this into your analysis.</div>
             {complaints.map((c, i) => (
-              <div key={i} style={{ marginBottom: 20, padding: 16, background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '0.5px solid rgba(255,255,255,0.07)' }}>
+              <div key={i} style={{ marginBottom: 20, padding: 16, background: '#f8fafc', borderRadius: 12, border: '1px solid rgba(15,23,42,0.07)' }}>
                 <span style={s.label}>Complaint {i + 1}</span>
                 <input style={{ ...s.input, marginBottom: 10 }} placeholder="e.g. Persistent fatigue" value={c.complaint} onChange={e => updateComplaint(i, 'complaint', e.target.value)} />
                 <span style={s.label}>How long has this been present?</span>
@@ -306,7 +306,7 @@ export default function Onboarding() {
         {/* Navigation */}
         <div style={{ display: 'flex', gap: 12, marginTop: 28, alignItems: 'center' }}>
           {step > 0 && (
-            <button style={{ ...s.btnPrimary, flex: 0.4, background: 'rgba(255,255,255,0.05)', marginTop: 0 }} onClick={() => setStep(s => s - 1)}>
+            <button style={{ ...s.btnPrimary, flex: 0.4, background: '#e2e8f0', color: '#475569', marginTop: 0 }} onClick={() => setStep(s => s - 1)}>
               <ChevronLeft size={18} style={{ display: 'inline' }} /> Back
             </button>
           )}
