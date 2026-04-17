@@ -6,12 +6,17 @@ import {
   BrainCircuit,
   CheckCircle2,
   CirclePlay,
+  Clock3,
+  FileText,
   FlaskConical,
   HeartPulse,
   LayoutDashboard,
+  Lock,
+  Shield,
   ShieldCheck,
   Sparkles,
   Stethoscope,
+  TrendingUp,
   Upload,
   Users,
 } from 'lucide-react'
@@ -81,14 +86,32 @@ const TESTIMONIALS = [
 ]
 
 const MOCKUPS = [
-  { title: 'Dashboard', alt: 'VITALOOP dashboard mockup showing score, priorities, and recent health events.' },
-  { title: 'Lab Upload', alt: 'Upload interface mockup with drag-and-drop area for lab PDFs and images.' },
-  { title: 'Lab Results', alt: 'Results mockup with prioritized biomarkers and severity labels.' },
-  { title: 'Personalized Protocol', alt: 'Protocol mockup with supplements, nutrition actions, and timeline.' },
-  { title: 'Timeline', alt: 'Longitudinal timeline mockup with markers across multiple test cycles.' },
-  { title: 'Practitioner CRM', alt: 'CRM mockup for practitioner oversight, assignments, and client trends.' },
-  { title: 'Weekly Check-in', alt: 'Weekly check-in wizard mockup with guided multi-step questions.' },
-  { title: 'Health Avatar', alt: 'Interactive avatar mockup connecting body zones with biomarkers.' },
+  { title: 'Dashboard', alt: 'Dashboard with biomarker score, priority flags, and adherence trend.', device: 'desktop' },
+  { title: 'Lab Upload', alt: 'Upload workspace with PDF intake, OCR status, and validation checks.', device: 'desktop' },
+  { title: 'Lab Results', alt: 'Structured lab results with severity chips and high-risk markers.', device: 'desktop' },
+  { title: 'Personalized Protocol', alt: 'Protocol plan with supplements, nutrition actions, and progress targets.', device: 'desktop' },
+  { title: 'Timeline', alt: 'Longitudinal timeline with biomarker trajectories across multiple test cycles.', device: 'desktop' },
+  { title: 'Practitioner CRM', alt: 'Practitioner CRM dashboard with client panels and assignment overview.', device: 'desktop' },
+  { title: 'Weekly Check-in', alt: 'Mobile check-in flow with daily energy, sleep, and symptom entries.', device: 'mobile' },
+  { title: 'Health Avatar', alt: 'Interactive health avatar connected to marker zones and recommendations.', device: 'mobile' },
+]
+
+const HERO_TRUST_SIGNALS = [
+  {
+    title: 'Clinical-grade interpretation',
+    body: '85+ biomarkers normalized by range, unit, and trend context.',
+    icon: FileText,
+  },
+  {
+    title: 'Privacy-first architecture',
+    body: 'Strict auth controls and secure processing for sensitive lab data.',
+    icon: Lock,
+  },
+  {
+    title: 'Action in under 60 seconds',
+    body: 'From upload to personalized protocol with weekly adaptation loop.',
+    icon: Clock3,
+  },
 ]
 
   const STATS = [
@@ -224,38 +247,73 @@ function fadeUp(reduced, delay = 0) {
   }
 }
 
-function MockupCard({ title, alt, index }) {
+function MockupCard({ title, alt, index, reduced, isDark, device = 'desktop' }) {
+  const mobile = device === 'mobile'
+
   return (
     <motion.article
-      {...fadeUp(false, Math.min(index * 0.05, 0.25))}
-      className="group relative overflow-hidden rounded-3xl border border-slate-800/80 bg-slate-950/70 p-4 backdrop-blur"
+      {...fadeUp(reduced, Math.min(index * 0.05, 0.25))}
+      whileHover={reduced ? undefined : { y: -4, scale: 1.01 }}
+      className={`group relative overflow-hidden rounded-3xl border p-4 backdrop-blur transition duration-300 ${
+        isDark ? 'border-slate-800/80 bg-slate-950/70' : 'border-slate-200 bg-white/90'
+      }`}
       style={{
         boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.32), 0 8px 10px -6px rgb(0 0 0 / 0.28), inset 0 1px 0 rgba(16,185,129,0.08)',
       }}
+      aria-label={alt}
     >
-      {/* Image placement suggestion:
-          Place optimized mockup image in /public/mockups/{slug}.webp
-          Recommended dimensions: 1440x900
-          Alt text should describe function, not decoration.
-      */}
-      <div className="relative mb-3 h-40 rounded-2xl border border-slate-700/70 bg-[linear-gradient(145deg,#0f172a,#111827_55%,#0b1220)] p-3">
-        <div className="grid h-full grid-rows-[auto_1fr] gap-2 rounded-xl border border-slate-700/60 bg-slate-900/60 p-3">
-          <div className="flex gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-rose-400/70" />
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-400/70" />
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/70" />
-          </div>
-          <div className="grid grid-cols-[1fr_0.9fr] gap-2">
-            <div className="rounded-lg border border-slate-700/70 bg-slate-800/75" />
-            <div className="grid gap-2">
-              <div className="rounded-lg border border-slate-700/70 bg-slate-800/75" />
-              <div className="rounded-lg border border-slate-700/70 bg-slate-800/75" />
+      <div className={`pointer-events-none absolute inset-0 opacity-60 ${isDark ? 'bg-[radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.16),transparent_48%)]' : 'bg-[radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.12),transparent_52%)]'}`} />
+
+      <div className={`relative mb-3 rounded-2xl border p-2 ${isDark ? 'border-slate-700/80 bg-slate-900/80' : 'border-slate-200 bg-slate-50'}`}>
+        {!mobile ? (
+          <div className="rounded-xl border border-slate-700/60 bg-[linear-gradient(150deg,#0e182c,#0f1d35_55%,#0b1326)] p-2">
+            <div className="mb-2 flex items-center justify-between rounded-lg border border-slate-700/70 bg-slate-900/80 px-2.5 py-1.5">
+              <div className="flex gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-rose-400/75" />
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-400/75" />
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/75" />
+              </div>
+              <div className="h-1.5 w-20 rounded-full bg-slate-700" />
+            </div>
+
+            <div className="grid h-36 grid-cols-[1.05fr_0.95fr] gap-2">
+              <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
+                <div className="mb-2 h-2 w-24 rounded-full bg-slate-700" />
+                <div className="grid gap-1.5">
+                  <div className="h-6 rounded-md bg-emerald-500/20" />
+                  <div className="h-6 rounded-md bg-sky-500/20" />
+                  <div className="h-6 rounded-md bg-violet-500/20" />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
+                  <div className="mb-1.5 h-2 w-14 rounded-full bg-slate-700" />
+                  <div className="h-7 rounded-md bg-emerald-500/25" />
+                </div>
+                <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
+                  <div className="mb-1.5 h-2 w-12 rounded-full bg-slate-700" />
+                  <div className="h-7 rounded-md bg-sky-500/25" />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="mx-auto w-[170px] rounded-[24px] border border-slate-700/80 bg-[linear-gradient(180deg,#0f172a,#0b1224)] p-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.45)]">
+            <div className="mb-2 h-4 w-16 rounded-full bg-slate-800 mx-auto" />
+            <div className="rounded-[18px] border border-slate-700/70 bg-slate-900/90 p-2">
+              <div className="mb-2 h-1.5 w-10 rounded-full bg-slate-700" />
+              <div className="grid gap-1.5">
+                <div className="h-7 rounded-md bg-emerald-500/25" />
+                <div className="h-7 rounded-md bg-sky-500/20" />
+                <div className="h-7 rounded-md bg-violet-500/20" />
+                <div className="h-7 rounded-md bg-slate-700/60" />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-      <div className="text-sm font-semibold text-slate-100">{title}</div>
-      <p className="mt-1 text-xs leading-relaxed text-slate-400">{alt}</p>
+      <div className={isDark ? 'text-sm font-semibold text-slate-100' : 'text-sm font-semibold text-slate-900'}>{title}</div>
+      <p className={isDark ? 'mt-1 text-xs leading-relaxed text-slate-400' : 'mt-1 text-xs leading-relaxed text-slate-600'}>{alt}</p>
     </motion.article>
   )
 }
@@ -277,7 +335,7 @@ export default function Landing() {
     ? 'border border-slate-800/80 bg-slate-900/55 backdrop-blur'
     : 'border border-slate-200 bg-white/85 backdrop-blur'
 
-  const ctaBase = 'inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50'
+  const ctaBase = 'inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50'
 
   const navTextClass = isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'
 
@@ -329,7 +387,7 @@ export default function Landing() {
             >
               {isDark ? 'Light mode' : 'Dark mode'}
             </button>
-            <button onClick={() => navigate('/login')} className={`${ctaBase} ${isDark ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' : 'bg-slate-900 text-white hover:bg-slate-700'}`}>
+            <button onClick={() => navigate('/login?signup=true')} className={`${ctaBase} ${isDark ? 'bg-emerald-500 text-slate-950 shadow-[0_0_0_0_rgba(16,185,129,0.35)] hover:bg-emerald-400 hover:shadow-[0_0_0_6px_rgba(16,185,129,0.16)]' : 'bg-slate-900 text-white hover:bg-slate-700'}`}>
               Start free
             </button>
           </div>
@@ -352,9 +410,9 @@ export default function Landing() {
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <button
                 onClick={() => navigate('/login?signup=true')}
-                className={`${ctaBase} ${isDark ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' : 'bg-slate-900 text-white hover:bg-slate-700'}`}
+                className={`${ctaBase} ${isDark ? 'bg-emerald-500 text-slate-950 shadow-[0_0_0_0_rgba(16,185,129,0.35)] hover:bg-emerald-400 hover:shadow-[0_0_0_6px_rgba(16,185,129,0.16)]' : 'bg-slate-900 text-white hover:bg-slate-700'}`}
               >
-                Start Free - No card required
+                Start Free Account - No card required
                 <ArrowRight className="ml-2 h-4 w-4" />
               </button>
               <button
@@ -367,38 +425,77 @@ export default function Landing() {
             </div>
 
             <div className="mt-9 grid gap-3 sm:grid-cols-3">
-              {['Built for longevity', 'Privacy-first architecture', 'Clinically readable outputs'].map((item) => (
-                <div key={item} className={`rounded-2xl border px-4 py-3 text-sm ${isDark ? 'border-slate-800 bg-slate-900/55 text-slate-300' : 'border-slate-200 bg-white text-slate-600'}`}>
-                  {item}
-                </div>
-              ))}
+              {HERO_TRUST_SIGNALS.map((item, idx) => {
+                const Icon = item.icon
+                return (
+                  <motion.div
+                    key={item.title}
+                    {...fadeUp(reduced, idx * 0.04)}
+                    whileHover={reduced ? undefined : { y: -3, scale: 1.01 }}
+                    className={`rounded-2xl border p-4 ${isDark ? 'border-slate-800 bg-slate-900/60 text-slate-300' : 'border-slate-200 bg-white text-slate-600'}`}
+                    style={{ boxShadow: '0 12px 20px -8px rgb(2 6 23 / 0.3), inset 0 1px 0 rgba(16,185,129,0.1)' }}
+                  >
+                    <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-300">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className={isDark ? 'text-sm font-semibold text-slate-100' : 'text-sm font-semibold text-slate-900'}>{item.title}</div>
+                    <p className="mt-1 text-xs leading-relaxed">{item.body}</p>
+                  </motion.div>
+                )
+              })}
             </div>
           </motion.div>
 
-          <motion.div {...fadeUp(reduced, 0.12)} className={`rounded-3xl p-4 sm:p-5 ${sectionCard}`} style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1), inset 0 1px 0 rgba(16,185,129,0.12)' }}>
-            <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-950/85' : 'border-slate-200 bg-slate-50'}`}>
-              <div className="mb-4 flex items-center justify-between">
+          <motion.div
+            {...fadeUp(reduced, 0.12)}
+            whileHover={reduced ? undefined : { y: -4 }}
+            className={`rounded-3xl p-4 sm:p-5 ${sectionCard}`}
+            style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.18), 0 8px 10px -6px rgb(0 0 0 / 0.16), inset 0 1px 0 rgba(16,185,129,0.12)' }}
+          >
+            <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-950/88' : 'border-slate-200 bg-slate-50'}`}>
+              <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <div className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>Health Command Center</div>
-                  <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Realtime longitudinal overview</div>
+                  <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Realtime biomarker intelligence overview</div>
                 </div>
-                <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-300">+12 this month</span>
+                <span className="rounded-full border border-emerald-400/30 bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-300">+12% risk reduction</span>
+              </div>
+
+              <div className="mb-3 grid grid-cols-3 gap-2">
+                {[
+                  { label: 'Health score', value: '78/100', icon: TrendingUp },
+                  { label: 'Open priorities', value: '3', icon: Shield },
+                  { label: 'Last sync', value: '2h ago', icon: Clock3 },
+                ].map((metric) => {
+                  const Icon = metric.icon
+                  return (
+                    <div key={metric.label} className={`rounded-xl border p-2.5 ${isDark ? 'border-slate-700 bg-slate-900/80' : 'border-slate-200 bg-white'}`}>
+                      <div className="mb-1 inline-flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/15 text-emerald-300">
+                        <Icon className="h-3.5 w-3.5" />
+                      </div>
+                      <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{metric.label}</div>
+                      <div className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{metric.value}</div>
+                    </div>
+                  )
+                })}
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className={`rounded-xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/80' : 'border-slate-200 bg-white'}`}>
                   <div className="text-xs uppercase tracking-wide text-slate-400">Top priority</div>
-                  <div className={`mt-1 text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Ferritin recovery</div>
+                  <div className={`mt-1 text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Ferritin recovery protocol</div>
                   <div className="mt-2 h-1.5 rounded-full bg-slate-700/40">
-                    <div className="h-1.5 w-[68%] rounded-full bg-emerald-500" />
+                    <div className="h-1.5 w-[72%] rounded-full bg-emerald-500" />
                   </div>
+                  <p className={`mt-2 text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>3 actions due this week</p>
                 </div>
                 <div className={`rounded-xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/80' : 'border-slate-200 bg-white'}`}>
                   <div className="text-xs uppercase tracking-wide text-slate-400">Weekly adherence</div>
-                  <div className={`mt-1 text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>4 / 5 habits complete</div>
+                  <div className={`mt-1 text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>4 / 5 habit targets complete</div>
                   <div className="mt-2 h-1.5 rounded-full bg-slate-700/40">
                     <div className="h-1.5 w-[80%] rounded-full bg-emerald-500" />
                   </div>
+                  <p className={`mt-2 text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Trend: +9% vs last cycle</p>
                 </div>
               </div>
             </div>
@@ -462,13 +559,21 @@ export default function Landing() {
           <motion.div {...fadeUp(reduced)} className="mb-7">
             <h2 className="text-[28px] font-semibold tracking-tight">Longitudinal Biomarker Tracking Across Every Health Dimension</h2>
             <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              Every screen is designed around one goal: turning raw biomarker data into clarity you can act on — today and six months from now.
+              Real product interfaces across desktop and mobile: from upload and extraction to protocol execution, check-ins, and practitioner oversight.
             </p>
           </motion.div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {MOCKUPS.map((mockup, index) => (
-              <MockupCard key={mockup.title} index={index} title={mockup.title} alt={mockup.alt} />
+              <MockupCard
+                key={mockup.title}
+                index={index}
+                title={mockup.title}
+                alt={mockup.alt}
+                reduced={reduced}
+                isDark={isDark}
+                device={mockup.device}
+              />
             ))}
           </div>
         </section>
@@ -484,8 +589,8 @@ export default function Landing() {
                 <motion.article
                   key={benefit.title}
                   {...fadeUp(reduced, idx * 0.06)}
-                  whileHover={reduced ? undefined : { scale: 1.02, boxShadow: '0 0 0 4px rgba(16,185,129,0.12)' }}
-                  className={`rounded-3xl border p-6 ${isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
+                  whileHover={reduced ? undefined : { y: -4, scale: 1.01, boxShadow: '0 0 0 4px rgba(16,185,129,0.12)' }}
+                  className={`rounded-3xl border p-6 min-h-[208px] ${isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
                   style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08), inset 0 1px 0 rgba(16,185,129,0.08)' }}
                 >
                   <Icon className="h-6 w-6 text-emerald-400" />
@@ -503,12 +608,18 @@ export default function Landing() {
               <h2 className="text-[28px] font-semibold tracking-tight">Pricing</h2>
               <p className={`mt-3 text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Freemium entry, premium personal plan, and scalable practitioner ops.</p>
             </div>
-            <div className={`inline-flex rounded-2xl border p-1 ${isDark ? 'border-slate-700 bg-slate-900/80' : 'border-slate-300 bg-white'}`}>
+            <div className={`relative inline-flex rounded-2xl border p-1 ${isDark ? 'border-slate-700 bg-slate-900/80' : 'border-slate-300 bg-white'}`}>
+              <motion.span
+                layout
+                transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+                className="absolute inset-y-1 w-[calc(50%-4px)] rounded-xl bg-emerald-500"
+                style={{ left: pricingMode === 'monthly' ? 4 : 'calc(50% + 0px)' }}
+              />
               {['monthly', 'yearly'].map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setPricingMode(mode)}
-                  className={`rounded-xl px-4 py-2 text-sm font-semibold capitalize transition ${pricingMode === mode ? 'bg-emerald-500 text-slate-950' : isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}
+                  className={`relative z-10 rounded-xl px-5 py-2 text-sm font-semibold capitalize transition ${pricingMode === mode ? 'text-slate-950' : isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}
                 >
                   {mode}
                 </button>
@@ -521,11 +632,12 @@ export default function Landing() {
               <motion.article
                 key={plan.name}
                 {...fadeUp(reduced)}
+                whileHover={reduced ? undefined : { y: -4, scale: 1.01 }}
                 className={`relative rounded-3xl border p-6 ${plan.featured ? 'border-emerald-300 bg-emerald-500/10' : isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
                 style={{ boxShadow: plan.featured ? '0 0 0 4px rgba(16,185,129,0.12), 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' : '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08)' }}
               >
                 {plan.featured && (
-                  <span className="absolute right-4 top-4 rounded-full bg-emerald-400 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-950">
+                  <span className="absolute right-4 top-4 rounded-full border border-emerald-300 bg-emerald-400 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-slate-950 shadow-[0_6px_16px_rgba(16,185,129,0.35)]">
                     Most popular
                   </span>
                 )}
