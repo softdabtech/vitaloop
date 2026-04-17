@@ -31,7 +31,7 @@ export default function ProgramsPage() {
   return (
     <div>
       <CRMPageHeader title="Programs" subtitle="Template library for client lifecycle plans" />
-      <div style={{ display: 'grid', gap: 14, marginBottom: 14 }}>
+      <div className="mb-3 grid gap-3">
         <ProgramForm onSubmit={handleCreate} submitting={createMutation.loading} canManage={canManagePrograms} />
       </div>
       <ProgramList

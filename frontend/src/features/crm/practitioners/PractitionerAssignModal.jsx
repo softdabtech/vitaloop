@@ -7,18 +7,18 @@ export default function PractitionerAssignModal({ open, onClose, onAssign, loadi
   if (!open) return null
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'grid', placeItems: 'center', zIndex: 80 }}>
-      <div style={{ width: 520, maxWidth: '94vw', background: '#111827', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: 16 }}>
-        <h3 style={{ margin: '0 0 10px', color: '#fff' }}>Assign Practitioner to Client</h3>
-        <p style={{ margin: '0 0 10px', color: 'rgba(255,255,255,0.62)', fontSize: 13 }}>Uses real endpoint POST /crm/practitioners/assign.</p>
-        <input value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="Client ID" style={inputStyle} />
-        <input value={practitionerId} onChange={(e) => setPractitionerId(e.target.value)} placeholder="Practitioner ID" style={{ ...inputStyle, marginTop: 8 }} />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-          <button onClick={onClose} style={ghostBtn}>Cancel</button>
+    <div className="fixed inset-0 z-[80] grid place-items-center bg-slate-950/60 px-3">
+      <div className="vtl-card w-full max-w-[520px] rounded-2xl p-4">
+        <h3 className="mb-2 mt-0 text-lg font-semibold text-slate-100">Assign Practitioner to Client</h3>
+        <p className="mb-3 text-sm text-slate-400">Uses real endpoint POST /crm/practitioners/assign.</p>
+        <input value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="Client ID" className={inputClassName} />
+        <input value={practitionerId} onChange={(e) => setPractitionerId(e.target.value)} placeholder="Practitioner ID" className={`${inputClassName} mt-2`} />
+        <div className="mt-3 flex justify-end gap-2">
+          <button onClick={onClose} className="vtl-button-secondary px-4 py-2 text-sm">Cancel</button>
           <button
             disabled={!clientId || !practitionerId || loading}
             onClick={() => onAssign({ client_id: clientId, practitioner_id: practitionerId })}
-            style={primaryBtn}
+            className="vtl-button-primary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? 'Assigning...' : 'Assign'}
           </button>
@@ -28,29 +28,4 @@ export default function PractitionerAssignModal({ open, onClose, onAssign, loadi
   )
 }
 
-const inputStyle = {
-  width: '100%',
-  background: 'rgba(0,0,0,0.25)',
-  color: '#fff',
-  border: '1px solid rgba(255,255,255,0.18)',
-  borderRadius: 8,
-  padding: '8px 10px',
-}
-
-const ghostBtn = {
-  border: '1px solid rgba(255,255,255,0.2)',
-  background: 'transparent',
-  color: '#fff',
-  borderRadius: 8,
-  padding: '8px 12px',
-  cursor: 'pointer',
-}
-
-const primaryBtn = {
-  border: 'none',
-  background: '#1d9e75',
-  color: '#fff',
-  borderRadius: 8,
-  padding: '8px 12px',
-  cursor: 'pointer',
-}
+const inputClassName = 'w-full rounded-xl border border-slate-600 bg-slate-900/65 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40'

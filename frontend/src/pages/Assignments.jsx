@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth.js'
 import AssignmentCard from '../components/dashboard/AssignmentCard.jsx'
 import { resolveAssignmentPath } from '../lib/assignmentRouting.js'
 import { enrichAssignments } from '../lib/assignmentScoring.js'
+import '../styles/dashboard2026.css'
 
 const FILTERS = [
   { key: 'all', label: 'All' },
@@ -82,43 +83,46 @@ export default function Assignments() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-6 max-w-5xl mx-auto">
-        <div className="animate-pulse h-8 w-64 bg-gray-700 rounded-xl mb-6" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="vtl-shell min-h-screen px-4 py-8 sm:px-6">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-6 h-8 w-64 animate-pulse rounded-xl bg-slate-700" />
+          <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
           {[1, 2, 3, 4].map((n) => (
-            <div key={n} className="animate-pulse bg-gray-800 rounded-xl h-20" />
+              <div key={n} className="h-20 animate-pulse rounded-xl bg-slate-800" />
           ))}
-        </div>
-        <div className="space-y-3">
-          {[1, 2, 3].map((n) => (
-            <div key={n} className="animate-pulse bg-gray-800 rounded-xl h-24" />
-          ))}
+          </div>
+          <div className="space-y-3">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="h-24 animate-pulse rounded-xl bg-slate-800" />
+            ))}
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen p-6 max-w-5xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+    <div className="vtl-shell min-h-screen px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-6xl">
+        <div className="vtl-card mb-6 flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-green-400 mb-1 flex items-center gap-2">
-            <ClipboardList className="w-6 h-6" />
+            <h2 className="mb-1 flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-100">
+            <ClipboardList className="h-6 w-6 text-emerald-300" />
             Assignments
           </h2>
-          <p className="text-gray-400 text-sm">Track active tasks from your care protocol and coaching workflow.</p>
-          <p className="text-green-300/80 text-xs mt-1">Sorted by Health Impact Score to surface the most important actions first.</p>
+            <p className="text-sm text-slate-300">Track active tasks from your care protocol and coaching workflow.</p>
+            <p className="mt-1 text-xs text-emerald-300/85">Sorted by Health Impact Score to surface the most important actions first.</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => navigate('/questionnaire')}
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
+              className="vtl-button-primary px-4 text-sm"
           >
             Open Questionnaire
           </button>
           <button
             onClick={() => navigate('/checkin')}
-            className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition border border-gray-700"
+              className="vtl-button-secondary px-4 text-sm"
           >
             Weekly Check-in
           </button>
@@ -126,76 +130,77 @@ export default function Assignments() {
       </div>
 
       {error && (
-        <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-4 mb-4 text-red-300 text-sm">
+          <div className="mb-4 rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-300">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div className="bg-gray-900 border border-yellow-500/30 rounded-xl p-3">
-          <p className="text-xs uppercase text-gray-500">Pending</p>
-          <p className="text-xl font-bold text-yellow-300 mt-1">{summary.pending}</p>
+        <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="vtl-card p-3">
+            <p className="text-xs uppercase text-slate-500">Pending</p>
+            <p className="mt-1 text-xl font-bold text-amber-300">{summary.pending}</p>
         </div>
-        <div className="bg-gray-900 border border-blue-500/30 rounded-xl p-3">
-          <p className="text-xs uppercase text-gray-500">In Progress</p>
-          <p className="text-xl font-bold text-blue-300 mt-1">{summary.in_progress}</p>
+          <div className="vtl-card p-3">
+            <p className="text-xs uppercase text-slate-500">In Progress</p>
+            <p className="mt-1 text-xl font-bold text-sky-300">{summary.in_progress}</p>
         </div>
-        <div className="bg-gray-900 border border-emerald-500/30 rounded-xl p-3">
-          <p className="text-xs uppercase text-gray-500">Completed</p>
-          <p className="text-xl font-bold text-emerald-300 mt-1">{summary.completed}</p>
+          <div className="vtl-card p-3">
+            <p className="text-xs uppercase text-slate-500">Completed</p>
+            <p className="mt-1 text-xl font-bold text-emerald-300">{summary.completed}</p>
         </div>
-        <div className="bg-gray-900 border border-red-500/30 rounded-xl p-3">
-          <p className="text-xs uppercase text-gray-500">Overdue</p>
-          <p className="text-xl font-bold text-red-300 mt-1">{summary.overdue}</p>
+          <div className="vtl-card p-3">
+            <p className="text-xs uppercase text-slate-500">Overdue</p>
+            <p className="mt-1 text-xl font-bold text-rose-300">{summary.overdue}</p>
+          </div>
         </div>
-      </div>
 
-      <div className="flex items-center gap-2 flex-wrap mb-4">
-        <Filter className="w-4 h-4 text-gray-400" />
-        {FILTERS.map((item) => (
-          <button
-            key={item.key}
-            onClick={() => setFilter(item.key)}
-            className={`px-3 py-1.5 text-xs rounded-full border transition ${
-              filter === item.key
-                ? 'border-green-500/50 bg-green-500/10 text-green-300'
-                : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-10 text-center">
-          {filter === 'completed' ? (
-            <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
-          ) : filter === 'overdue' ? (
-            <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-3" />
-          ) : (
-            <Clock3 className="w-10 h-10 text-gray-500 mx-auto mb-3" />
-          )}
-          <p className="text-white font-semibold mb-1">No assignments in this filter</p>
-          <p className="text-gray-400 text-sm">Try another filter or complete the questionnaire for new tasks.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map((assignment, idx) => (
-            <AssignmentCard
-              key={assignment.id || `${assignment.title || 'a'}-${idx}`}
-              assignment={assignment}
-              onClick={() => {
-                if (assignment?.id) {
-                  navigate(`/assignments/${assignment.id}`)
-                  return
-                }
-                navigate(resolveAssignmentPath(assignment))
-              }}
-            />
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Filter className="h-4 w-4 text-slate-400" />
+          {FILTERS.map((item) => (
+            <button
+              key={item.key}
+              onClick={() => setFilter(item.key)}
+              className={`rounded-full border px-3 py-1.5 text-xs transition ${
+                filter === item.key
+                  ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                  : 'border-slate-700 bg-slate-900/70 text-slate-400 hover:border-slate-600'
+              }`}
+            >
+              {item.label}
+            </button>
           ))}
         </div>
+
+      {filtered.length === 0 ? (
+          <div className="vtl-card p-10 text-center">
+          {filter === 'completed' ? (
+              <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-400" />
+          ) : filter === 'overdue' ? (
+              <AlertTriangle className="mx-auto mb-3 h-10 w-10 text-rose-400" />
+          ) : (
+              <Clock3 className="mx-auto mb-3 h-10 w-10 text-slate-500" />
+          )}
+            <p className="mb-1 font-semibold text-slate-100">No assignments in this filter</p>
+            <p className="text-sm text-slate-400">Try another filter or complete the questionnaire for new tasks.</p>
+        </div>
+      ) : (
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            {filtered.map((assignment, idx) => (
+              <AssignmentCard
+                key={assignment.id || `${assignment.title || 'a'}-${idx}`}
+                assignment={assignment}
+                onClick={() => {
+                  if (assignment?.id) {
+                    navigate(`/assignments/${assignment.id}`)
+                    return
+                  }
+                  navigate(resolveAssignmentPath(assignment))
+                }}
+              />
+            ))}
+          </div>
       )}
+      </div>
     </div>
   )
 }

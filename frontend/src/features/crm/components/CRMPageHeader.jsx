@@ -1,11 +1,11 @@
 export default function CRMPageHeader({ title, subtitle, actions }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 18 }}>
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 style={{ margin: 0, color: '#fff', fontSize: 24 }}>{title}</h1>
-        {subtitle ? <p style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>{subtitle}</p> : null}
+        <h1 className="m-0 text-2xl font-semibold tracking-tight text-slate-100">{title}</h1>
+        {subtitle ? <p className="mt-1.5 text-sm text-slate-400">{subtitle}</p> : null}
       </div>
-      {actions ? <div style={{ display: 'flex', gap: 8 }}>{actions}</div> : null}
+      {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
     </div>
   )
 }

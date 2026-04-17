@@ -1,8 +1,8 @@
 export default function CRMEmptyState({ title = 'No data yet', description = 'Try adjusting filters or create a new record.', action }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 14, padding: 20, textAlign: 'center' }}>
-      <h3 style={{ margin: 0, color: '#fff', fontSize: 16 }}>{title}</h3>
-      <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.55)', fontSize: 13 }}>{description}</p>
+    <div className="rounded-2xl border border-dashed border-slate-600 bg-slate-900/30 p-5 text-center">
+      <h3 className="m-0 text-base text-slate-100">{title}</h3>
+      <p className="mt-2 text-sm text-slate-400">{description}</p>
       {action || null}
     </div>
   )

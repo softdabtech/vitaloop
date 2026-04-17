@@ -19,10 +19,10 @@ export default function AuditLogPage() {
   return (
     <div>
       <CRMPageHeader title="Activity / Audit" subtitle="Operational trail for CRM actions" />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 8, marginBottom: 12 }}>
-        <input value={filters.entityType} onChange={(e) => setFilters((prev) => ({ ...prev, entityType: e.target.value }))} placeholder="Filter by entity type" style={inputStyle} />
-        <input value={filters.userId} onChange={(e) => setFilters((prev) => ({ ...prev, userId: e.target.value }))} placeholder="Filter by user id" style={inputStyle} />
-        <button onClick={() => refetch()} style={buttonStyle}>Apply</button>
+      <div className="mb-3 grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+        <input value={filters.entityType} onChange={(e) => setFilters((prev) => ({ ...prev, entityType: e.target.value }))} placeholder="Filter by entity type" className={inputClassName} />
+        <input value={filters.userId} onChange={(e) => setFilters((prev) => ({ ...prev, userId: e.target.value }))} placeholder="Filter by user id" className={inputClassName} />
+        <button onClick={() => refetch()} className="vtl-button-primary px-4 py-2 text-sm">Apply</button>
       </div>
 
       <CRMTableState
@@ -33,28 +33,28 @@ export default function AuditLogPage() {
         emptyTitle="No activity events"
         emptyDescription="No recent records for selected filters."
       >
-        <div style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+        <div className="overflow-x-auto rounded-2xl border border-slate-700/70 bg-slate-950/40">
+          <table className="w-full min-w-[900px] border-collapse">
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)' }}>
-                <th style={{ padding: 10, textAlign: 'left' }}>Created</th>
-                <th style={{ padding: 10, textAlign: 'left' }}>Action</th>
-                <th style={{ padding: 10, textAlign: 'left' }}>Entity</th>
-                <th style={{ padding: 10, textAlign: 'left' }}>Entity ID</th>
-                <th style={{ padding: 10, textAlign: 'left' }}>User ID</th>
-                <th style={{ padding: 10, textAlign: 'left' }}>Changes</th>
+              <tr className="border-b border-slate-700/70 text-slate-400">
+                <th className="p-3 text-left text-xs font-semibold uppercase tracking-wide">Created</th>
+                <th className="p-3 text-left text-xs font-semibold uppercase tracking-wide">Action</th>
+                <th className="p-3 text-left text-xs font-semibold uppercase tracking-wide">Entity</th>
+                <th className="p-3 text-left text-xs font-semibold uppercase tracking-wide">Entity ID</th>
+                <th className="p-3 text-left text-xs font-semibold uppercase tracking-wide">User ID</th>
+                <th className="p-3 text-left text-xs font-semibold uppercase tracking-wide">Changes</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item, idx) => (
-                <tr key={`${item.id || idx}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  <td style={{ padding: 10 }}>{item.created_at ? new Date(item.created_at).toLocaleString() : '-'}</td>
-                  <td style={{ padding: 10 }}>{item.action || '-'}</td>
-                  <td style={{ padding: 10 }}>{item.entity_type || '-'}</td>
-                  <td style={{ padding: 10 }}><code>{item.entity_id || '-'}</code></td>
-                  <td style={{ padding: 10 }}><code>{item.user_id || '-'}</code></td>
-                  <td style={{ padding: 10 }}>
-                    <pre style={{ margin: 0, maxHeight: 120, overflowY: 'auto', background: 'rgba(0,0,0,0.2)', padding: 8, borderRadius: 8 }}>{JSON.stringify(item.changes || {}, null, 2)}</pre>
+                <tr key={`${item.id || idx}`} className="border-b border-slate-800/80 text-sm text-slate-200">
+                  <td className="p-3 text-slate-300">{item.created_at ? new Date(item.created_at).toLocaleString() : '-'}</td>
+                  <td className="p-3">{item.action || '-'}</td>
+                  <td className="p-3">{item.entity_type || '-'}</td>
+                  <td className="p-3"><code className="text-slate-300">{item.entity_id || '-'}</code></td>
+                  <td className="p-3"><code className="text-slate-300">{item.user_id || '-'}</code></td>
+                  <td className="p-3">
+                    <pre className="m-0 max-h-[120px] overflow-y-auto rounded-lg bg-slate-950/55 p-2 text-xs text-slate-200">{JSON.stringify(item.changes || {}, null, 2)}</pre>
                   </td>
                 </tr>
               ))}
@@ -66,20 +66,4 @@ export default function AuditLogPage() {
   )
 }
 
-const inputStyle = {
-  width: '100%',
-  background: 'rgba(0,0,0,0.25)',
-  color: '#fff',
-  border: '1px solid rgba(255,255,255,0.18)',
-  borderRadius: 8,
-  padding: '8px 10px',
-}
-
-const buttonStyle = {
-  border: 'none',
-  background: '#1d9e75',
-  color: '#fff',
-  borderRadius: 8,
-  padding: '8px 12px',
-  cursor: 'pointer',
-}
+const inputClassName = 'w-full rounded-xl border border-slate-600 bg-slate-900/65 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40'

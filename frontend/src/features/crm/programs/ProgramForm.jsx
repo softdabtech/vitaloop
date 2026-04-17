@@ -43,34 +43,27 @@ export default function ProgramForm({ onSubmit, submitting, canManage }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 16 }}>
-      <h3 style={{ margin: '0 0 10px', color: '#fff' }}>Create Program</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <input value={form.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="Program name" style={inputStyle} />
-        <select value={form.category} onChange={(e) => handleChange('category', e.target.value)} style={inputStyle}>
+    <form onSubmit={handleSubmit} className="vtl-card rounded-2xl p-4">
+      <h3 className="mb-3 mt-0 text-lg font-semibold text-slate-100">Create Program</h3>
+      <div className="grid gap-2 md:grid-cols-2">
+        <input value={form.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="Program name" className={inputClassName} />
+        <select value={form.category} onChange={(e) => handleChange('category', e.target.value)} className={inputClassName}>
           <option value="wellness">Wellness</option>
           <option value="metabolic-optimization">Metabolic Optimization</option>
           <option value="longevity">Longevity</option>
           <option value="athletic-performance">Athletic Performance</option>
           <option value="custom">Custom</option>
         </select>
-        <input type="number" min="1" value={form.duration_days} onChange={(e) => handleChange('duration_days', e.target.value)} placeholder="Duration days" style={inputStyle} />
-        <input value={form.checkpoint_intervals} onChange={(e) => handleChange('checkpoint_intervals', e.target.value)} placeholder="7,14,30" style={inputStyle} />
-        <textarea value={form.description} onChange={(e) => handleChange('description', e.target.value)} placeholder="Description" style={{ ...inputStyle, gridColumn: '1 / span 2', minHeight: 76, resize: 'vertical' }} />
+        <input type="number" min="1" value={form.duration_days} onChange={(e) => handleChange('duration_days', e.target.value)} placeholder="Duration days" className={inputClassName} />
+        <input value={form.checkpoint_intervals} onChange={(e) => handleChange('checkpoint_intervals', e.target.value)} placeholder="7,14,30" className={inputClassName} />
+        <textarea value={form.description} onChange={(e) => handleChange('description', e.target.value)} placeholder="Description" className={`${inputClassName} min-h-[76px] resize-y md:col-span-2`} />
       </div>
-      {error ? <p style={{ color: '#ff9c9c', margin: '8px 0 0' }}>{error}</p> : null}
-      <button disabled={!canManage || submitting} type="submit" style={{ marginTop: 10, border: 'none', background: canManage ? '#1d9e75' : '#64748b', color: '#fff', borderRadius: 8, padding: '8px 12px', cursor: canManage ? 'pointer' : 'not-allowed' }}>
+      {error ? <p className="mt-2 text-sm text-rose-300">{error}</p> : null}
+      <button disabled={!canManage || submitting} type="submit" className="vtl-button-primary mt-3 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60">
         {submitting ? 'Creating...' : 'Create Program'}
       </button>
     </form>
   )
 }
 
-const inputStyle = {
-  width: '100%',
-  background: 'rgba(0,0,0,0.25)',
-  color: '#fff',
-  border: '1px solid rgba(255,255,255,0.18)',
-  borderRadius: 8,
-  padding: '8px 10px',
-}
+const inputClassName = 'w-full rounded-xl border border-slate-600 bg-slate-900/65 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40'

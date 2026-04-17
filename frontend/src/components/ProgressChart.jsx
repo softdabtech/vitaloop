@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea } from 'recharts'
+import '../styles/dashboard2026.css'
 
 export default function ProgressChart({ data }) {
   // Build per-biomarker timeseries across uploads
@@ -54,26 +55,26 @@ export default function ProgressChart({ data }) {
 
   if (chartData.length < 2) {
     return (
-      <div className="bg-gray-800 rounded-xl p-6 text-center text-gray-400">
+      <div className="vtl-card p-6 text-center text-slate-400">
         Upload at least 2 lab results to see trend charts.
       </div>
     )
   }
 
   return (
-    <div className="bg-gray-900 rounded-xl p-5">
-      <h3 className="text-white font-semibold mb-4">Biomarker Trends</h3>
-      <div className="flex flex-wrap gap-2 mb-4">
+    <div className="vtl-card p-5 sm:p-6">
+      <h3 className="mb-4 text-lg font-semibold text-slate-100">Biomarker Trends</h3>
+      <div className="mb-4 flex flex-wrap gap-2">
         {markerCatalog.map((m) => {
           const active = activeNames.includes(m.name)
           return (
             <button
               key={m.name}
               onClick={() => toggleName(m.name)}
-              className={`px-2 py-1 rounded text-xs border transition ${
+              className={`rounded-lg border px-2 py-1 text-xs transition ${
                 active
-                  ? 'border-green-500/50 bg-green-500/10 text-green-300'
-                  : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600'
+                  ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                  : 'border-slate-700 bg-slate-900/70 text-slate-400 hover:border-slate-600'
               }`}
             >
               {m.name}
@@ -83,15 +84,15 @@ export default function ProgressChart({ data }) {
       </div>
 
       {firstSelected?.unit && (
-        <p className="text-xs text-gray-500 mb-2">Primary axis unit: {firstSelected.unit}</p>
+        <p className="mb-2 text-xs text-slate-500">Primary axis unit: {firstSelected.unit}</p>
       )}
 
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={420}>
         <LineChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis dataKey="date" stroke="#6b7280" tick={{ fontSize: 11 }} />
-          <YAxis stroke="#6b7280" tick={{ fontSize: 11 }} />
-          <Tooltip contentStyle={{ background: '#1f2937', border: '1px solid #374151', borderRadius: 8 }} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+          <XAxis dataKey="date" stroke="#94a3b8" tick={{ fontSize: 11 }} />
+          <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} />
+          <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 12 }} />
           <Legend />
 
           {firstSelected?.ref_low != null && firstSelected?.ref_high != null && (
@@ -118,7 +119,7 @@ export default function ProgressChart({ data }) {
       </ResponsiveContainer>
 
       {firstSelected?.ref_low != null && firstSelected?.ref_high != null && (
-        <p className="text-xs text-gray-500 mt-3">
+        <p className="mt-3 text-xs text-slate-500">
           Reference band for {firstSelected.name}: {firstSelected.ref_low} - {firstSelected.ref_high}{firstSelected.unit ? ` ${firstSelected.unit}` : ''}
         </p>
       )}

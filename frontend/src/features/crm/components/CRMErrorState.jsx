@@ -1,14 +1,14 @@
 export default function CRMErrorState({ title = 'Failed to load data', error, onRetry }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,100,100,0.3)', borderRadius: 14, padding: 20 }}>
-      <h3 style={{ margin: 0, color: '#ff7d7d', fontSize: 16 }}>{title}</h3>
-      <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.72)', fontSize: 13 }}>
+    <div className="rounded-2xl border border-rose-500/35 bg-rose-500/10 p-5">
+      <h3 className="m-0 text-base text-rose-300">{title}</h3>
+      <p className="mt-2 text-sm text-slate-200">
         {error?.message || 'Unexpected error occurred while loading this screen.'}
       </p>
       {onRetry && (
         <button
           onClick={onRetry}
-          style={{ marginTop: 14, border: 'none', background: '#1d9e75', color: '#fff', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' }}
+          className="vtl-button-primary mt-3 px-4 py-2 text-sm"
         >
           Retry
         </button>

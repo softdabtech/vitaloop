@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { FlaskConical, Calendar, ChevronRight, Upload } from 'lucide-react'
 import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
+import '../styles/dashboard2026.css'
 
 function normalizeStatus(status) {
   const value = String(status || '').toLowerCase()
@@ -60,93 +61,118 @@ export default function LabResultsList() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-6 max-w-5xl mx-auto">
-        <div className="animate-pulse h-8 w-56 bg-gray-700 rounded-xl mb-6" />
-        <div className="space-y-3">
+      <div className="vtl-shell min-h-screen px-4 py-8 sm:px-6">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-6 h-8 w-56 animate-pulse rounded-xl bg-slate-700" />
+          <div className="space-y-3">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="animate-pulse bg-gray-800 rounded-xl h-24" />
+              <div key={n} className="h-24 animate-pulse rounded-xl bg-slate-800" />
           ))}
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen p-6 max-w-5xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-green-400 mb-1">Lab Results</h2>
-          <p className="text-gray-400 text-sm">History of uploaded tests and biomarker quality snapshot.</p>
-        </div>
-        <button
-          onClick={() => navigate('/upload')}
-          className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
-        >
-          <Upload className="w-4 h-4" />
-          Upload New Test
-        </button>
-      </div>
-
-      {error && (
-        <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-4 mb-4 text-red-300 text-sm">
-          {error}
-        </div>
-      )}
-
-      {sortedItems.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-10 text-center">
-          <FlaskConical className="w-10 h-10 text-gray-500 mx-auto mb-3" />
-          <p className="text-white font-semibold mb-1">No lab uploads yet</p>
-          <p className="text-gray-400 text-sm mb-4">Upload your first document to generate biomarkers and protocol.</p>
+    <div className="vtl-shell min-h-screen px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-6xl">
+        <div className="vtl-card mb-6 flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="mb-1 text-2xl font-bold tracking-tight text-slate-100">Lab Results</h2>
+            <p className="text-sm text-slate-300">History of uploaded tests and biomarker quality snapshot.</p>
+          </div>
           <button
             onClick={() => navigate('/upload')}
-            className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-semibold"
+            className="vtl-button-primary inline-flex items-center justify-center gap-2 px-5 text-sm"
           >
-            Go to Upload
+            <Upload className="h-4 w-4" />
+            Upload New Test
           </button>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {sortedItems.map((item, index) => {
-            const date = item?.test_date || item?.created_at?.slice(0, 10) || 'Unknown date'
-            const biomarkers = Array.isArray(item?.biomarkers) ? item.biomarkers : []
-            const optimal = biomarkers.filter((b) => normalizeStatus(b?.status) === 'optimal').length
-            const warning = biomarkers.filter((b) => normalizeStatus(b?.status) === 'warning').length
-            const critical = biomarkers.filter((b) => normalizeStatus(b?.status) === 'critical').length
-            const uploadId = item?.upload_id || item?.id
 
-            return (
-              <button
-                key={uploadId || `${date}-${index}`}
-                onClick={() => uploadId && navigate(`/results/${uploadId}`)}
-                disabled={!uploadId}
-                className="w-full text-left bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-green-500/60 hover:bg-gray-900/90 transition disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-white font-semibold truncate">{item?.lab_name || `Upload #${sortedItems.length - index}`}</p>
-                    <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {date}
-                    </p>
-                  </div>
+        {error && (
+          <div className="mb-4 rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm text-rose-300">
+            {error}
+          </div>
+        )}
 
-                  <div className="grid grid-cols-3 gap-2 md:gap-3 text-xs">
-                    <div className="px-2 py-1 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-300">Optimal: {optimal}</div>
-                    <div className="px-2 py-1 rounded border border-yellow-500/30 bg-yellow-500/10 text-yellow-300">Warning: {warning}</div>
-                    <div className="px-2 py-1 rounded border border-red-500/30 bg-red-500/10 text-red-300">Critical: {critical}</div>
-                  </div>
+        {sortedItems.length === 0 ? (
+          <div className="vtl-card p-10 text-center">
+            <FlaskConical className="mx-auto mb-3 h-10 w-10 text-slate-500" />
+            <p className="mb-1 font-semibold text-slate-100">No lab uploads yet</p>
+            <p className="mb-4 text-sm text-slate-400">Upload your first document to generate biomarkers and protocol.</p>
+            <button
+              onClick={() => navigate('/upload')}
+              className="vtl-button-primary px-5 text-sm"
+            >
+              Go to Upload
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_340px]">
+            <div className="space-y-3">
+              {sortedItems.map((item, index) => {
+                const date = item?.test_date || item?.created_at?.slice(0, 10) || 'Unknown date'
+                const biomarkers = Array.isArray(item?.biomarkers) ? item.biomarkers : []
+                const optimal = biomarkers.filter((b) => normalizeStatus(b?.status) === 'optimal').length
+                const warning = biomarkers.filter((b) => normalizeStatus(b?.status) === 'warning').length
+                const critical = biomarkers.filter((b) => normalizeStatus(b?.status) === 'critical').length
+                const uploadId = item?.upload_id || item?.id
 
-                  <div className="text-gray-400 text-sm inline-flex items-center gap-1 self-start md:self-center">
-                    Open
-                    <ChevronRight className="w-4 h-4" />
-                  </div>
+                return (
+                  <button
+                    key={uploadId || `${date}-${index}`}
+                    onClick={() => uploadId && navigate(`/results/${uploadId}`)}
+                    disabled={!uploadId}
+                    className="vtl-card vtl-card-hover h-16 w-full rounded-2xl px-4 text-left disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <div className="flex h-full flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
+                      <div className="min-w-0 pr-2">
+                        <p className="truncate text-sm font-semibold text-slate-100">{item?.lab_name || `Upload #${sortedItems.length - index}`}</p>
+                        <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
+                          <Calendar className="h-3 w-3" />
+                          {date}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="vtl-status-pill border border-emerald-500/35 bg-emerald-500/15 text-emerald-200">Optimal {optimal}</span>
+                        <span className="vtl-status-pill border border-amber-500/35 bg-amber-500/15 text-amber-200">Warning {warning}</span>
+                        <span className="vtl-status-pill border border-rose-500/35 bg-rose-500/15 text-rose-200">Critical {critical}</span>
+                      </div>
+
+                      <div className="inline-flex items-center gap-1 text-sm text-slate-300">
+                        Open
+                        <ChevronRight className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            <aside className="vtl-card h-fit p-5">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Results Insight</h3>
+              <p className="mt-3 text-sm text-slate-400">Most recent trend snapshot from all uploaded biomarkers.</p>
+              <div className="mt-4 space-y-3">
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+                  <p className="text-xs uppercase tracking-wide text-emerald-300">Stable zone</p>
+                  <p className="mt-1 text-sm text-slate-100">Focus on maintaining optimal markers with current protocol.</p>
                 </div>
-              </button>
-            )
-          })}
-        </div>
-      )}
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+                  <p className="text-xs uppercase tracking-wide text-amber-300">Needs attention</p>
+                  <p className="mt-1 text-sm text-slate-100">Watch warning markers and repeat test in 8-12 weeks.</p>
+                </div>
+                <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3">
+                  <p className="text-xs uppercase tracking-wide text-rose-300">Red flags</p>
+                  <p className="mt-1 text-sm text-slate-100">Discuss critical markers with your practitioner promptly.</p>
+                </div>
+              </div>
+            </aside>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

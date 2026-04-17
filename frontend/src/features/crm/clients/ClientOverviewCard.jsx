@@ -2,9 +2,9 @@ import StatusBadge from '../components/StatusBadge.jsx'
 
 export default function ClientOverviewCard({ client }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 16 }}>
-      <h3 style={{ margin: '0 0 10px', color: '#fff' }}>Client Overview</h3>
-      <div style={{ display: 'grid', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>
+    <div className="vtl-card rounded-2xl p-4">
+      <h3 className="mb-3 mt-0 text-lg font-semibold text-slate-100">Client Overview</h3>
+      <div className="grid gap-2 text-sm text-slate-300">
         <div><strong>Client ID:</strong> <code>{client?.id || '-'}</code></div>
         <div><strong>User ID:</strong> <code>{client?.user_id || '-'}</code></div>
         <div><strong>Onboarding:</strong> <StatusBadge status={client?.onboarding_status} /></div>

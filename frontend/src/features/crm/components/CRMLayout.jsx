@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../hooks/useAuth.js'
 import { useCRMRoleAccess } from '../../../hooks/useCRMRoleAccess.js'
 import RoleBadge from './RoleBadge.jsx'
+import '../../../styles/dashboard2026.css'
 
 const NAV_ITEMS = [
   { to: '/ops', label: 'Ops', roles: ['super_admin'] },
@@ -24,58 +25,54 @@ export default function CRMLayout({ title = 'CRM', children }) {
   const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(role))
 
   return (
-    <div style={{ minHeight: '100vh', background: '#090d12', color: '#fff' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', minHeight: '100vh' }}>
-        <aside style={{ borderRight: '1px solid rgba(255,255,255,0.1)', padding: 20, background: 'linear-gradient(180deg, #0f1722, #0a1019)' }}>
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '0.04em' }}>VITALOOP CRM</div>
-            <div style={{ marginTop: 8 }}><RoleBadge role={role} /></div>
+    <div className="vtl-shell min-h-screen text-slate-100">
+      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[320px_1fr]">
+        <aside className="border-b border-slate-700/50 bg-slate-950/70 p-5 lg:border-b-0 lg:border-r">
+          <div className="mb-6">
+            <div className="text-xl font-extrabold tracking-[0.08em]">VITALOOP CRM</div>
+            <div className="mt-2"><RoleBadge role={role} /></div>
           </div>
 
-          <nav style={{ display: 'grid', gap: 6 }}>
+          <nav className="grid gap-2">
             {visibleItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
-                style={({ isActive }) => ({
-                  textDecoration: 'none',
-                  color: isActive ? '#8de9c9' : 'rgba(255,255,255,0.65)',
-                  background: isActive ? 'rgba(29,158,117,0.2)' : 'transparent',
-                  border: isActive ? '1px solid rgba(29,158,117,0.5)' : '1px solid transparent',
-                  padding: '10px 12px',
-                  borderRadius: 10,
-                  fontSize: 14,
-                  fontWeight: 600,
-                })}
+                className={({ isActive }) => [
+                  'rounded-xl border px-3 py-2.5 text-sm font-semibold transition',
+                  isActive
+                    ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-200'
+                    : 'border-transparent text-slate-400 hover:border-slate-700 hover:bg-slate-900/70 hover:text-slate-200',
+                ].join(' ')}
               >
                 {item.label}
               </NavLink>
             ))}
           </nav>
 
-          <div style={{ marginTop: 22 }}>
+          <div className="mt-6">
             <button
               onClick={() => navigate('/dashboard')}
-              style={{ width: '100%', marginBottom: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', borderRadius: 10, padding: '10px 12px', cursor: 'pointer' }}
+              className="vtl-button-secondary mb-2 w-full text-sm"
             >
               User Dashboard
             </button>
             <button
               onClick={handleSignOut}
-              style={{ width: '100%', border: '1px solid rgba(255,120,120,0.4)', background: 'rgba(255,120,120,0.1)', color: '#ffb4b4', borderRadius: 10, padding: '10px 12px', cursor: 'pointer' }}
+              className="w-full rounded-2xl border border-rose-500/45 bg-rose-500/10 px-4 py-2.5 text-sm font-semibold text-rose-200 transition hover:bg-rose-500/20"
             >
               Sign out
             </button>
           </div>
 
-          <div style={{ marginTop: 18, fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
+          <div className="mt-4 text-xs text-slate-500">
             {user?.email || 'Unknown user'}
           </div>
         </aside>
 
-        <main style={{ padding: 24 }}>
-          <div style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: 20, paddingBottom: 10 }}>
-            <h2 style={{ margin: 0, fontSize: 20 }}>{title}</h2>
+        <main className="px-4 py-5 sm:px-6 lg:px-8">
+          <div className="mb-5 border-b border-slate-700/50 pb-3">
+            <h2 className="m-0 text-xl font-semibold tracking-tight text-slate-100">{title}</h2>
           </div>
           {children}
         </main>
