@@ -54,7 +54,25 @@ class Settings(BaseSettings):
 
     @property
     def origins_list(self) -> List[str]:
-        return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+        parsed = [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+
+        # Keep critical frontend origins available even if env config is missing
+        # or partially overwritten on a server.
+        fallback_origins = [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "https://vitaloop.today",
+            "https://www.vitaloop.today",
+            "https://crm.vitaloop.today",
+        ]
+
+        seen = set()
+        merged: List[str] = []
+        for origin in [*parsed, *fallback_origins]:
+            if origin and origin not in seen:
+                seen.add(origin)
+                merged.append(origin)
+        return merged
 
     @property
     def active_llm_api_key(self) -> str:
