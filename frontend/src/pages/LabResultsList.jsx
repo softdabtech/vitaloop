@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FlaskConical, Calendar, ChevronRight, Upload } from 'lucide-react'
+import { FlaskConical, Calendar, ChevronRight, Upload, Activity } from 'lucide-react'
 import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import '../styles/dashboard2026.css'
@@ -121,20 +121,22 @@ export default function LabResultsList() {
                 const uploadId = item?.upload_id || item?.id
 
                 return (
-                  <button
+                  <div
                     key={uploadId || `${date}-${index}`}
-                    onClick={() => uploadId && navigate(`/results/${uploadId}`)}
-                    disabled={!uploadId}
-                    className="vtl-light-card vtl-light-card-hover h-16 w-full rounded-2xl px-4 text-left disabled:cursor-not-allowed disabled:opacity-60"
+                    className="vtl-light-card vtl-light-card-hover rounded-2xl px-4 py-3 transition"
                   >
-                    <div className="flex h-full flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
-                      <div className="min-w-0 pr-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
+                      <button
+                        onClick={() => uploadId && navigate(`/results/${uploadId}`)}
+                        disabled={!uploadId}
+                        className="flex-1 min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
+                      >
                         <p className="truncate text-sm font-semibold text-slate-800">{item?.lab_name || `Upload #${sortedItems.length - index}`}</p>
                         <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
                           <Calendar className="h-3 w-3" />
                           {date}
                         </p>
-                      </div>
+                      </button>
 
                       <div className="flex items-center gap-2 text-xs">
                         <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">Optimal {optimal}</span>
@@ -142,12 +144,27 @@ export default function LabResultsList() {
                         <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">Critical {critical}</span>
                       </div>
 
-                      <div className="inline-flex items-center gap-1 text-sm text-slate-500">
-                        Open
-                        <ChevronRight className="h-4 w-4" />
+                      <div className="flex items-center gap-2">
+                        {uploadId && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/protocol/${uploadId}`) }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-semibold transition-colors"
+                          >
+                            <Activity className="h-3.5 w-3.5" />
+                            Protocol
+                          </button>
+                        )}
+                        <button
+                          onClick={() => uploadId && navigate(`/results/${uploadId}`)}
+                          disabled={!uploadId}
+                          className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-40"
+                        >
+                          Results
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 )
               })}
             </div>
