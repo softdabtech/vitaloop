@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 import { useOCR } from '../hooks/useOCR.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import UploadZone from '../components/UploadZone.jsx'
@@ -125,10 +126,21 @@ export default function Upload() {
   return (
     <div className="vtl-page px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-5xl">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="mb-4 inline-flex items-center gap-2 rounded-lg px-1 py-1 text-sm text-slate-500 hover:text-slate-800"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to dashboard
+        </button>
+
         <div className="vtl-light-card mb-6 p-6 sm:p-7">
           <h2 className="mb-2 text-2xl font-bold tracking-tight text-slate-900">Upload Lab Results</h2>
           <p className="text-sm text-slate-500">
             Your file is processed locally first. Only extracted text is sent for analysis.
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            In this section you upload a report, add optional symptoms, and open a ready protocol.
           </p>
           {!subLoading && !isPremium && (
             <div className={`mt-4 flex items-center justify-between rounded-xl px-4 py-3 text-sm ${uploadsRemaining === 0 ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-amber-200 bg-amber-50 text-amber-700'}`}>

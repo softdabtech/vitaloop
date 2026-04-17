@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ClipboardList, Filter, CheckCircle2, Clock3, AlertTriangle } from 'lucide-react'
+import { ClipboardList, Filter, CheckCircle2, Clock3, AlertTriangle, ArrowLeft } from 'lucide-react'
 import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import AssignmentCard from '../components/dashboard/AssignmentCard.jsx'
@@ -104,6 +104,14 @@ export default function Assignments() {
   return (
     <div className="vtl-page px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-6xl">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="mb-4 inline-flex items-center gap-2 rounded-lg px-1 py-1 text-sm text-slate-500 hover:text-slate-800"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to dashboard
+        </button>
+
         <div className="vtl-light-card mb-6 flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
         <div>
             <h2 className="mb-1 flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900">
@@ -112,6 +120,7 @@ export default function Assignments() {
           </h2>
             <p className="text-sm text-slate-500">Track active tasks from your care protocol and coaching workflow.</p>
             <p className="mt-1 text-xs text-emerald-600">Sorted by Health Impact Score to surface the most important actions first.</p>
+            <p className="mt-1 text-xs text-slate-400">This page shows concrete next actions, due dates, urgency and impact for each task.</p>
         </div>
         <div className="flex items-center gap-2">
           <button
