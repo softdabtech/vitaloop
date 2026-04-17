@@ -1,9 +1,10 @@
+import asyncio
 import json
 import logging
 import re
 import time
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -366,3 +367,131 @@ async def generate_protocol(biomarkers: List[Dict], symptoms: List[str]) -> List
     except Exception as ex:
         logger.warning("abacus_protocol_fallback reason=%s", ex)
         return _fallback_generate_protocol(biomarkers, symptoms)
+
+
+# ---------------------------------------------------------------------------
+# Questionnaire Engine v2 — LLM-driven follow-up + summary
+# ---------------------------------------------------------------------------
+
+_QUESTIONNAIRE_FOLLOWUP_SYSTEM = (
+    "You are a health assessment assistant. Return only valid JSON. "
+    "Do not include markdown, code fences, or commentary."
+)
+
+_QUESTIONNAIRE_FOLLOWUP_TMPL = """A user answered a health questionnaire question with a very low score indicating a concern.
+
+Question: "{question_text}"
+Dimension: {dimension}
+User score: {answer_value}/10
+User comment: {answer_text}
+
+Generate ONE concise follow-up question (under 20 words) that helps understand the root cause.
+Return JSON: {{"text": "Follow-up question here?"}}"""
+
+_QUESTIONNAIRE_SUMMARY_TMPL = """A user completed an adaptive health questionnaire.
+
+Questions and scores (1–10, higher = better):
+{answers_text}
+
+Dimension scores (0–100):
+{dimension_text}
+
+Overall health score: {completion_score}/100
+
+Write a warm, personalized 3-sentence summary:
+1. Acknowledge their 1–2 strongest areas.
+2. Identify their most concerning area and what it might mean.
+3. One encouraging and specific next step they can take today.
+
+Return JSON: {{"summary": "Your summary text here."}}"""
+
+
+async def generate_questionnaire_followup(
+    question_text: str,
+    dimension: str,
+    answer_value: int,
+    answer_text: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Generate a contextual follow-up question for a low-score answer.
+
+    Returns a dict with `text` and `dimension`, or None if LLM unavailable/fails.
+    """
+    if not is_llm_configured():
+        return None
+    prompt = _QUESTIONNAIRE_FOLLOWUP_TMPL.format(
+        question_text=question_text,
+        dimension=dimension,
+        answer_value=answer_value,
+        answer_text=answer_text or "(none)",
+    )
+    client = _get_client()
+    try:
+        raw = await asyncio.wait_for(
+            client.post(
+                "/chat/completions",
+                json={
+                    "model": settings.active_llm_model,
+                    "temperature": 0.3,
+                    "messages": [
+                        {"role": "system", "content": _QUESTIONNAIRE_FOLLOWUP_SYSTEM},
+                        {"role": "user", "content": prompt},
+                    ],
+                },
+            ),
+            timeout=8.0,
+        )
+        raw.raise_for_status()
+        choices = raw.json().get("choices") or []
+        content = ((choices[0] or {}).get("message") or {}).get("content", "")
+        parsed = json.loads(_strip_code_block(content))
+        text = (parsed.get("text") or "").strip()
+        if not text:
+            return None
+        return {"text": text, "dimension": dimension}
+    except Exception as ex:
+        logger.warning("questionnaire_followup_failed reason=%s", ex)
+        return None
+
+
+async def generate_questionnaire_summary(
+    answers_text: str,
+    dimension_scores: Dict[str, float],
+    completion_score: float,
+) -> Optional[str]:
+    """Generate a personalized health summary from completed questionnaire.
+
+    Returns summary string or None if LLM unavailable/fails.
+    """
+    if not is_llm_configured():
+        return None
+    dim_text = "\n".join(f"- {k}: {v:.0f}/100" for k, v in sorted(dimension_scores.items()))
+    prompt = _QUESTIONNAIRE_SUMMARY_TMPL.format(
+        answers_text=answers_text,
+        dimension_text=dim_text,
+        completion_score=f"{completion_score:.0f}",
+    )
+    client = _get_client()
+    try:
+        raw = await asyncio.wait_for(
+            client.post(
+                "/chat/completions",
+                json={
+                    "model": settings.active_llm_model,
+                    "temperature": 0.4,
+                    "messages": [
+                        {"role": "system", "content": _QUESTIONNAIRE_FOLLOWUP_SYSTEM},
+                        {"role": "user", "content": prompt},
+                    ],
+                },
+            ),
+            timeout=18.0,
+        )
+        raw.raise_for_status()
+        choices = raw.json().get("choices") or []
+        content = ((choices[0] or {}).get("message") or {}).get("content", "")
+        parsed = json.loads(_strip_code_block(content))
+        summary = (parsed.get("summary") or "").strip()
+        return summary or None
+    except Exception as ex:
+        logger.warning("questionnaire_summary_failed reason=%s", ex)
+        return None

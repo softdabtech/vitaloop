@@ -1,9 +1,37 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import api from '../lib/api.js'
 import toast from 'react-hot-toast'
 import { trackFunnelEvent } from '../lib/funnel.js'
+
+const DIMENSION_LABELS = {
+  energy: 'Daytime Energy',
+  sleep: 'Sleep Quality',
+  stress: 'Stress Level',
+  digestion: 'Digestion',
+  cognition: 'Focus & Clarity',
+  recovery: 'Recovery',
+  mood: 'Mood Stability',
+  metabolic: 'Metabolic Health',
+  inflammation: 'Inflammation',
+  behavior: 'Healthy Habits',
+}
+
+function ScoreBar({ label, value }) {
+  const color = value >= 70 ? '#10b981' : value >= 45 ? '#f59e0b' : '#ef4444'
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13, color: '#475569' }}>
+        <span>{label}</span>
+        <span style={{ fontWeight: 700, color }}>{value?.toFixed(0) ?? '—'}</span>
+      </div>
+      <div style={{ height: 6, borderRadius: 10, background: 'rgba(15,23,42,0.08)', overflow: 'hidden' }}>
+        <div style={{ width: `${Math.min(value ?? 0, 100)}%`, height: '100%', background: color, transition: 'width 0.8s ease' }} />
+      </div>
+    </div>
+  )
+}
 
 const s = {
   wrap: {
@@ -38,6 +66,7 @@ export default function Questionnaire() {
   const [remainingCount, setRemainingCount] = useState(0)
   const [answerValue, setAnswerValue] = useState(5)
   const [answerText, setAnswerText] = useState('')
+  const [results, setResults] = useState(null)  // { completion_score, dimension_scores, llm_summary }
 
   const totalCount = useMemo(() => answeredCount + remainingCount, [answeredCount, remainingCount])
   const progressPct = useMemo(() => {
@@ -84,12 +113,17 @@ export default function Questionnaire() {
       setAnswerText('')
 
       if (data?.completed) {
-        await api.post('/questionnaire/complete', { mark_onboarding_complete: true })
+        const completeResp = await api.post('/questionnaire/complete', { mark_onboarding_complete: true })
         trackFunnelEvent('funnel_questionnaire_completed', 'User completed adaptive questionnaire', {
           answered_count: Number(data?.answered_count || 0),
         }, { oncePerSession: true })
+        const completedSession = completeResp?.data?.session || {}
+        setResults({
+          completion_score: completedSession.completion_score ?? null,
+          dimension_scores: completedSession.dimension_scores ?? {},
+          llm_summary: completedSession.llm_summary ?? null,
+        })
         toast.success('Questionnaire completed!')
-        navigate('/dashboard', { replace: true })
       }
     } catch (err) {
       toast.error(err?.response?.data?.detail || 'Failed to save answer.')
@@ -121,7 +155,7 @@ export default function Questionnaire() {
     )
   }
 
-  if (!nextQuestion) {
+  if (!nextQuestion && !results) {
     return (
       <div style={s.wrap}>
         <div style={s.card}>
@@ -129,6 +163,57 @@ export default function Questionnaire() {
           <div style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>You are all set for now.</div>
           <button onClick={() => navigate('/dashboard')} style={{ background: '#10b981', border: 'none', color: '#fff', borderRadius: 10, padding: '10px 16px', cursor: 'pointer' }}>Continue to dashboard</button>
         </div>
+      </div>
+    )
+  }
+
+  if (results) {
+    const score = results.completion_score
+    const scoreColor = score >= 70 ? '#10b981' : score >= 45 ? '#f59e0b' : '#ef4444'
+    const dims = results.dimension_scores || {}
+    return (
+      <div style={s.wrap}>
+        <motion.div style={s.card} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 6 }}>Assessment Complete</div>
+            <div style={{ fontSize: 28, fontWeight: 900, color: scoreColor, marginBottom: 2 }}>
+              {score != null ? `${score.toFixed(0)}/100` : '—'}
+            </div>
+            <div style={{ fontSize: 13, color: '#94a3b8' }}>Overall Health Score</div>
+          </div>
+
+          {results.llm_summary && (
+            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '14px 16px', marginBottom: 20, fontSize: 14, color: '#166534', lineHeight: 1.6 }}>
+              {results.llm_summary}
+            </div>
+          )}
+
+          {Object.keys(dims).length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 12 }}>Dimension Breakdown</div>
+              {Object.entries(dims)
+                .sort(([, a], [, b]) => b - a)
+                .map(([dim, val]) => (
+                  <ScoreBar key={dim} label={DIMENSION_LABELS[dim] || dim} value={val} />
+                ))}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={() => navigate('/dashboard', { replace: true })}
+              style={{ flex: 1, background: '#10b981', border: 'none', color: '#fff', borderRadius: 10, padding: '12px 18px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+            >
+              View My Dashboard
+            </button>
+            <button
+              onClick={() => navigate('/insights')}
+              style={{ flex: 1, background: '#f1f5f9', border: '1px solid rgba(15,23,42,0.1)', color: '#475569', borderRadius: 10, padding: '12px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
+            >
+              See Insights
+            </button>
+          </div>
+        </motion.div>
       </div>
     )
   }
