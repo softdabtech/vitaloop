@@ -107,6 +107,153 @@ function deriveNutritionGroups(biomarkers) {
   return [...matched, ...unmatched].slice(0, Math.max(3, matched.length))
 }
 
+function formatPriority(priority) {
+  return String(priority || 'LOW').toUpperCase()
+}
+
+function buildPdfRows(protocolRows) {
+  return protocolRows.map((rec) => {
+    const schedule = TIMING_TO_SCHEDULE[rec.timing] ?? (rec.timing?.replace(/_/g, ' ') ?? '-')
+    return [
+      rec.supplement || '-',
+      rec.dosage || '-',
+      schedule,
+      formatPriority(rec.priority),
+      rec.rationale || '-',
+    ]
+  })
+}
+
+async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSections, uploadId }) {
+  const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ])
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const margin = 44
+  const contentWidth = pageWidth - margin * 2
+
+  doc.setFillColor(16, 185, 129)
+  doc.rect(0, 0, pageWidth, 96, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(20)
+  doc.text('VITALOOP - 7-Day Health Protocol', margin, 44)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.text(`Upload: ${uploadId}`, margin, 62)
+  doc.text(`Generated: ${new Date().toLocaleString()}`, margin, 76)
+
+  doc.setTextColor(31, 41, 55)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.text('Supplement Protocol', margin, 126)
+
+  autoTable(doc, {
+    startY: 136,
+    margin: { left: margin, right: margin },
+    head: [['Supplement', 'Dosage', 'Schedule', 'Priority', 'Rationale']],
+    body: buildPdfRows(protocolRows),
+    styles: {
+      font: 'helvetica',
+      fontSize: 9,
+      cellPadding: 6,
+      textColor: [31, 41, 55],
+      lineColor: [226, 232, 240],
+      lineWidth: 0.5,
+      valign: 'top',
+    },
+    headStyles: {
+      fillColor: [240, 253, 250],
+      textColor: [15, 118, 110],
+      fontStyle: 'bold',
+    },
+    columnStyles: {
+      0: { cellWidth: 90 },
+      1: { cellWidth: 70 },
+      2: { cellWidth: 85 },
+      3: { cellWidth: 55 },
+      4: { cellWidth: contentWidth - 300 },
+    },
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.column.index === 3) {
+        const value = String(data.cell.raw || '').toUpperCase()
+        if (value === 'HIGH') data.cell.styles.textColor = [190, 18, 60]
+        if (value === 'MEDIUM') data.cell.styles.textColor = [180, 83, 9]
+      }
+    },
+  })
+
+  const tableY = doc.lastAutoTable?.finalY || 160
+  let y = tableY + 22
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.setTextColor(31, 41, 55)
+  doc.text('Nutrition Plan', margin, y)
+  y += 14
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  nutritionGroups.forEach((group) => {
+    const foods = (group.foods || []).join(', ')
+    const line = `${group.name}: ${foods}`
+    const lines = doc.splitTextToSize(line, contentWidth)
+    if (y + lines.length * 12 > 760) {
+      doc.addPage()
+      y = 56
+    }
+    doc.setFont('helvetica', 'bold')
+    doc.text(`${group.name}`, margin, y)
+    y += 12
+    doc.setFont('helvetica', 'normal')
+    const wrapped = doc.splitTextToSize(foods, contentWidth - 4)
+    doc.text(wrapped, margin + 4, y)
+    y += wrapped.length * 12 + 8
+  })
+
+  y += 4
+  if (y > 730) {
+    doc.addPage()
+    y = 56
+  }
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.text('Lifestyle Recommendations', margin, y)
+  y += 16
+
+  doc.setFont('helvetica', 'normal')
+  lifestyleSections.forEach((section) => {
+    if (y > 730) {
+      doc.addPage()
+      y = 56
+    }
+    doc.setFont('helvetica', 'bold')
+    doc.text(section.title, margin, y)
+    y += 12
+    doc.setFont('helvetica', 'normal')
+    section.items.forEach((item) => {
+      const wrapped = doc.splitTextToSize(`- ${item}`, contentWidth - 8)
+      if (y + wrapped.length * 12 > 760) {
+        doc.addPage()
+        y = 56
+      }
+      doc.text(wrapped, margin + 4, y)
+      y += wrapped.length * 12 + 2
+    })
+    y += 8
+  })
+
+  const stampY = doc.internal.pageSize.getHeight() - 24
+  doc.setFontSize(9)
+  doc.setTextColor(100, 116, 139)
+  doc.text('VITALOOP - Personalized protocol generated from your latest lab data.', margin, stampY)
+
+  const safeUpload = String(uploadId || 'protocol').replace(/[^a-zA-Z0-9_-]/g, '')
+  const datePart = new Date().toISOString().slice(0, 10)
+  doc.save(`vitaloop-protocol-${safeUpload}-${datePart}.pdf`)
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
@@ -216,6 +363,7 @@ export default function ProtocolPage() {
   const [protocol, setProtocol] = useState([])
   const [loading, setLoading] = useState(true)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -244,6 +392,21 @@ export default function ProtocolPage() {
   const deficientCount = biomarkers.filter(
     (b) => b.status === 'DEFICIENT' || b.status === 'ELEVATED'
   ).length
+
+  const handleExportPdf = async () => {
+    if (!isActive || sortedProtocol.length === 0 || exporting) return
+    try {
+      setExporting(true)
+      await exportProtocolPdf({
+        protocolRows: sortedProtocol,
+        nutritionGroups,
+        lifestyleSections: LIFESTYLE_SECTIONS,
+        uploadId,
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   if (loading || subLoading) {
     return (
@@ -283,11 +446,12 @@ export default function ProtocolPage() {
             <h1 className="text-base sm:text-lg font-semibold text-slate-900">7-Day Health Protocol</h1>
           </div>
           <button
-            onClick={() => window.print()}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-800 hover:border-slate-300 transition-colors text-sm"
+            onClick={handleExportPdf}
+            disabled={!isActive || sortedProtocol.length === 0 || exporting}
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-800 hover:border-slate-300 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" />
-            Print
+            {exporting ? 'Exporting...' : 'Export PDF'}
           </button>
         </div>
 
