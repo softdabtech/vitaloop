@@ -3,12 +3,15 @@ import json
 import logging
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from typing import Optional
 
 from app.config import settings
 from app.dependencies import get_current_user
 from app.services.supabase_service import (
     update_user_subscription,
     get_user_by_stripe_sub,
+    get_user_active_subscription,
     record_stripe_event,
     sync_stripe_subscription_to_subscriptions_table,
     get_user_account,
@@ -20,29 +23,68 @@ logger = logging.getLogger("uvicorn.error")
 
 router = APIRouter()
 
+# ---------------------------------------------------------------------------
+# Plan → Stripe price ID mapping
+# ---------------------------------------------------------------------------
+
+VALID_PLANS = {"personal", "practitioner"}
+
+
+def _price_id_for_plan(plan_id: str) -> str:
+    """Return the configured Stripe price ID for a given plan slug."""
+    mapping = {
+        "personal": settings.stripe_price_id_personal or settings.stripe_price_id,
+        "practitioner": settings.stripe_price_id_practitioner,
+    }
+    price_id = mapping.get(plan_id, "")
+    if not price_id:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Stripe price not configured for plan '{plan_id}'",
+        )
+    return price_id
+
+
+# ---------------------------------------------------------------------------
+# Request schemas
+# ---------------------------------------------------------------------------
+
+class CheckoutRequest(BaseModel):
+    plan_id: str = "personal"  # "personal" | "practitioner"
+
+
+# ---------------------------------------------------------------------------
+# POST /billing/checkout
+# ---------------------------------------------------------------------------
 
 @router.post("/checkout")
 async def create_checkout_session(
+    body: CheckoutRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    """Create a Stripe Checkout session for the $49/mo subscription."""
-    if not settings.stripe_secret_key or not settings.stripe_price_id:
+    """Create a Stripe Checkout session for the requested subscription plan."""
+    if not settings.stripe_secret_key:
         raise HTTPException(status_code=503, detail="Stripe not configured")
 
+    plan_id = body.plan_id.lower()
+    if plan_id not in VALID_PLANS:
+        raise HTTPException(status_code=422, detail=f"Invalid plan_id. Choose from: {', '.join(VALID_PLANS)}")
+
+    price_id = _price_id_for_plan(plan_id)
     user_id: str = current_user["sub"]
     user_email: str = current_user.get("email", "")
 
     session = stripe.checkout.Session.create(
         mode="subscription",
-        line_items=[{"price": settings.stripe_price_id, "quantity": 1}],
+        line_items=[{"price": price_id, "quantity": 1}],
         success_url=settings.stripe_success_url,
         cancel_url=settings.stripe_cancel_url,
         customer_email=user_email or None,
-        metadata={"user_id": user_id},
+        metadata={"user_id": user_id, "plan_name": plan_id},
         client_reference_id=user_id,
     )
 
-    return {"checkout_url": session.url}
+    return {"checkout_url": session.url, "plan_id": plan_id}
 
 
 @router.post("/webhook")
@@ -106,13 +148,14 @@ async def _handle_checkout_session_completed(data: dict):
     user_id = data.get("client_reference_id") or (data.get("metadata") or {}).get("user_id")
     sub_id = data.get("subscription")
     customer_id = data.get("customer")
+    plan_name = (data.get("metadata") or {}).get("plan_name") or "personal"
 
     if not user_id or not sub_id:
         logger.warning(f"stripe_checkout_missing_ids user_id={user_id} sub_id={sub_id}")
         return
 
     # Update users table for legacy compatibility
-    await update_user_subscription(user_id, sub_status="active", sub_id=sub_id)
+    await update_user_subscription(user_id, sub_status="active", sub_id=sub_id, plan_tier=plan_name)
 
     # Sync to normalized subscriptions table
     await sync_stripe_subscription_to_subscriptions_table(
@@ -120,10 +163,10 @@ async def _handle_checkout_session_completed(data: dict):
         stripe_subscription_id=sub_id,
         stripe_customer_id=customer_id,
         stripe_status="active",
-        plan_name="core",
+        plan_name=plan_name,
     )
 
-    logger.info(f"stripe_subscription_created user_id={user_id} sub_id={sub_id[:20]}")
+    logger.info(f"stripe_subscription_created user_id={user_id} sub_id={sub_id[:20]} plan={plan_name}")
 
 
 async def _handle_subscription_updated(data: dict):
@@ -154,8 +197,12 @@ async def _handle_subscription_updated(data: dict):
     }
     internal_status = status_map.get(stripe_status, stripe_status)
 
+    # Preserve existing plan_name from subscriptions table
+    existing = await get_user_active_subscription(user_id)
+    plan_name = (existing or {}).get("plan_name") or "personal"
+
     # Update users table
-    await update_user_subscription(user_id, sub_status=internal_status, sub_id=sub_id)
+    await update_user_subscription(user_id, sub_status=internal_status, sub_id=sub_id, plan_tier=plan_name)
 
     # Sync to subscriptions table
     await sync_stripe_subscription_to_subscriptions_table(
@@ -166,10 +213,10 @@ async def _handle_subscription_updated(data: dict):
         current_period_start=data.get("current_period_start"),
         current_period_end=data.get("current_period_end"),
         cancel_at_period_end=data.get("cancel_at_period_end", False),
-        plan_name="core",
+        plan_name=plan_name,
     )
 
-    logger.info(f"stripe_subscription_updated user_id={user_id} status={stripe_status}")
+    logger.info(f"stripe_subscription_updated user_id={user_id} status={stripe_status} plan={plan_name}")
 
 
 async def _handle_subscription_deleted(data: dict):
@@ -248,19 +295,71 @@ async def _handle_payment_failed(data: dict):
 
 @router.get("/subscription")
 async def get_subscription_status(current_user: dict = Depends(get_current_user)):
-    """Return current subscription status + freemium upload usage for the authenticated user."""
+    """Return current subscription status + plan + freemium upload usage for the authenticated user."""
     user_id: str = current_user["sub"]
     account = await get_user_account(user_id)
     upload_count = await get_user_upload_count(user_id)
+    active_sub = await get_user_active_subscription(user_id)
     sub_status = str(account.get("sub_status") or "free").lower()
     global_role = str(account.get("global_role") or "end_user").lower()
+    plan_name = (active_sub or {}).get("plan_name") or account.get("plan_tier") or None
     limit = settings.freemium_upload_limit
+    is_free = sub_status != "active" and global_role == "end_user"
 
     return {
         "sub_status": sub_status,
+        "plan_name": plan_name,  # "personal" | "practitioner" | None
         "global_role": global_role,
         "is_premium": sub_status == "active" or global_role != "end_user",
+        "cancel_at_period_end": (active_sub or {}).get("cancel_at_period_end", False),
+        "current_period_end": (active_sub or {}).get("current_period_end"),
         "upload_count": upload_count,
-        "upload_limit": limit if (sub_status != "active" and global_role == "end_user") else None,
-        "uploads_remaining": max(0, limit - upload_count) if (sub_status != "active" and global_role == "end_user") else None,
+        "upload_limit": limit if is_free else None,
+        "uploads_remaining": max(0, limit - upload_count) if is_free else None,
     }
+
+
+@router.post("/cancel")
+async def cancel_subscription(current_user: dict = Depends(get_current_user)):
+    """Schedule the current subscription to cancel at period end."""
+    if not settings.stripe_secret_key:
+        raise HTTPException(status_code=503, detail="Stripe not configured")
+
+    user_id: str = current_user["sub"]
+    active_sub = await get_user_active_subscription(user_id)
+    if not active_sub or not active_sub.get("stripe_subscription_id"):
+        raise HTTPException(status_code=404, detail="No active subscription found")
+
+    stripe_sub_id = active_sub["stripe_subscription_id"]
+    updated = stripe.Subscription.modify(stripe_sub_id, cancel_at_period_end=True)
+
+    await sync_stripe_subscription_to_subscriptions_table(
+        user_id=user_id,
+        stripe_subscription_id=stripe_sub_id,
+        stripe_status=updated.get("status", "active"),
+        cancel_at_period_end=True,
+        plan_name=active_sub.get("plan_name", "personal"),
+    )
+
+    logger.info(f"stripe_subscription_cancel_requested user_id={user_id} sub_id={stripe_sub_id[:20]}")
+    return {"ok": True, "cancel_at_period_end": True, "period_end": updated.get("current_period_end")}
+
+
+@router.post("/portal")
+async def create_customer_portal(current_user: dict = Depends(get_current_user)):
+    """Create a Stripe Customer Portal session so the user can manage billing details."""
+    if not settings.stripe_secret_key:
+        raise HTTPException(status_code=503, detail="Stripe not configured")
+
+    user_id: str = current_user["sub"]
+    active_sub = await get_user_active_subscription(user_id)
+    customer_id = (active_sub or {}).get("stripe_customer_id")
+    if not customer_id:
+        raise HTTPException(status_code=404, detail="No billing account found. Subscribe first.")
+
+    portal_session = stripe.billing_portal.Session.create(
+        customer=customer_id,
+        return_url=settings.stripe_portal_return_url,
+    )
+
+    return {"portal_url": portal_session.url}

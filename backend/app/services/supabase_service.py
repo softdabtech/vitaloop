@@ -426,17 +426,34 @@ async def get_platform_symptom_summary(days: int = 30) -> Dict[str, Any]:
     return summary
 
 
-async def update_user_subscription(user_id: str, sub_status: str, sub_id: Optional[str] = None) -> None:
+async def update_user_subscription(user_id: str, sub_status: str, sub_id: Optional[str] = None, plan_tier: Optional[str] = None) -> None:
     supabase = _get_supabase()
     payload: Dict[str, Any] = {"sub_status": sub_status}
     if sub_id:
         payload["sub_id"] = sub_id
+    if plan_tier:
+        payload["plan_tier"] = plan_tier
     await _run(lambda: supabase.table("users").update(payload).eq("id", user_id).execute())
 
 
 async def get_user_by_stripe_sub(sub_id: str) -> Optional[Dict]:
     supabase = _get_supabase()
     resp = await _run(lambda: supabase.table("users").select("id").eq("sub_id", sub_id).execute())
+    return resp.data[0] if resp.data else None
+
+
+async def get_user_active_subscription(user_id: str) -> Optional[Dict]:
+    """Return the most recent active subscription row from the subscriptions table."""
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("subscriptions")
+        .select("plan_name, status, stripe_subscription_id, stripe_customer_id, current_period_end, cancel_at_period_end")
+        .eq("user_id", user_id)
+        .in_("status", ["active", "past_due", "paused"])
+        .order("updated_at", desc=True)
+        .limit(1)
+        .execute()
+    )
     return resp.data[0] if resp.data else None
 
 
