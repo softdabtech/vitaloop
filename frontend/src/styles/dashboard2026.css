@@ -103,3 +103,59 @@
     transition: none !important;
   }
 }
+
+/* ─────────────────────────────────────────
+   Light theme — user cabinet
+   ───────────────────────────────────────── */
+.vtl-page {
+  min-height: 100svh;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.vtl-light-card {
+  border-radius: var(--vtl-radius-card);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.vtl-light-card-hover {
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.vtl-light-card-hover:hover {
+  transform: scale(1.015);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.09), 0 1px 3px rgba(15, 23, 42, 0.05);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* Override vtl-card when nested inside light page */
+.vtl-page .vtl-card {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.vtl-page .vtl-card-hover:hover {
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.09);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* Light sidebar */
+.vtl-sidebar-light {
+  background: #ffffff;
+  border-right: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+/* Light skeleton */
+.vtl-page .skeleton,
+.vtl-page .animate-pulse.rounded-xl {
+  background-color: #e2e8f0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vtl-light-card-hover {
+    transition: none !important;
+  }
+}

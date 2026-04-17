@@ -93,10 +93,10 @@ export default function HealthChart({ progress }) {
   const LINE_COLORS = ['#22c55e', '#38bdf8', '#f59e0b', '#a78bfa'];
 
   return (
-    <div className="vtl-card p-6">
+    <div className="vtl-light-card p-6">
       <div className="mb-6">
-        <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold tracking-tight text-slate-100">
-          <TrendingUp className="w-5 h-5 text-emerald-500" />
+        <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold tracking-tight text-slate-900">
+          <TrendingUp className="w-5 h-5 text-emerald-600" />
           Health Trends
         </h2>
       </div>
@@ -108,15 +108,15 @@ export default function HealthChart({ progress }) {
             <p className="text-slate-400 text-sm mb-3">Biomarker Status Distribution</p>
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={biomarkerTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="date" stroke="#94a3b8" />
                 <YAxis stroke="#94a3b8" />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: '1px solid #475569',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
                     borderRadius: '8px',
-                    color: '#f1f5f9',
+                    color: '#0f172a',
                   }}
                 />
                 <Legend />
@@ -133,15 +133,15 @@ export default function HealthChart({ progress }) {
               <p className="text-slate-400 text-sm mb-3">Lab Upload Activity</p>
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="date" stroke="#94a3b8" />
                   <YAxis stroke="#94a3b8" />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#1e293b',
-                      border: '1px solid #475569',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e2e8f0',
                       borderRadius: '8px',
-                      color: '#f1f5f9',
+                      color: '#0f172a',
                     }}
                   />
                   <Legend />
@@ -174,8 +174,8 @@ export default function HealthChart({ progress }) {
                       onClick={() => toggleMarker(marker.name)}
                       className={`px-2 py-1 text-xs rounded border transition ${
                         enabled
-                          ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-200'
-                          : 'border-slate-600 bg-slate-700/40 text-slate-300 hover:border-slate-500'
+                          ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                       }`}
                     >
                       {marker.name}
@@ -199,22 +199,22 @@ export default function HealthChart({ progress }) {
                   });
 
                   return (
-                    <div key={marker.name} className="rounded-2xl border border-slate-700/70 bg-slate-900/45 p-4">
+                    <div key={marker.name} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm text-white font-medium truncate pr-2">{marker.name}</p>
+                        <p className="text-sm text-slate-900 font-medium truncate pr-2">{marker.name}</p>
                         {marker.unit && <span className="text-xs text-slate-400">{marker.unit}</span>}
                       </div>
                       <ResponsiveContainer width="100%" height={260}>
                         <LineChart data={markerTrend}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                           <XAxis dataKey="date" stroke="#94a3b8" />
                           <YAxis stroke="#94a3b8" />
                           <Tooltip
                             contentStyle={{
-                              backgroundColor: '#1e293b',
-                              border: '1px solid #475569',
+                              backgroundColor: '#ffffff',
+                              border: '1px solid #e2e8f0',
                               borderRadius: '8px',
-                              color: '#f1f5f9',
+                              color: '#0f172a',
                             }}
                           />
                           {marker.refLow != null && marker.refHigh != null && (

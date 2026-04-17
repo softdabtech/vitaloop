@@ -16,9 +16,9 @@ const TIMEZONES = [
 
 const fieldStyle = {
   width: '100%', padding: '10px 14px',
-  background: 'rgba(15,23,42,0.6)',
-  border: '1px solid rgba(148,163,184,0.2)',
-  borderRadius: 12, color: 'var(--vtl-text-primary-dark)',
+  background: '#f8fafc',
+  border: '1px solid rgba(15,23,42,0.12)',
+  borderRadius: 12, color: '#0f172a',
   fontSize: 15, outline: 'none',
   transition: 'border-color 200ms, box-shadow 200ms',
 }
@@ -26,7 +26,7 @@ const fieldStyle = {
 function Field({ label, children }) {
   return (
     <div>
-      <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--vtl-text-secondary-dark)', display: 'block', marginBottom: 6 }}>
+      <label style={{ fontSize: 13, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>
         {label}
       </label>
       {children}
@@ -59,11 +59,11 @@ export default function Settings() {
   }, [user])
 
   const focusStyle = (e) => {
-    e.target.style.borderColor = 'var(--vtl-accent)'
-    e.target.style.boxShadow = 'var(--vtl-emerald-glow)'
+    e.target.style.borderColor = '#10b981'
+    e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.15)'
   }
   const blurStyle = (e) => {
-    e.target.style.borderColor = 'rgba(148,163,184,0.2)'
+    e.target.style.borderColor = 'rgba(15,23,42,0.12)'
     e.target.style.boxShadow = 'none'
   }
 
@@ -88,7 +88,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="vtl-shell" style={{ minHeight: '100svh', padding: '24px 16px' }}>
+    <div className="vtl-page" style={{ minHeight: '100svh', padding: '24px 16px' }}>
       <div style={{ maxWidth: 520, margin: '0 auto' }}>
 
         {/* Back nav */}
@@ -97,7 +97,7 @@ export default function Settings() {
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--vtl-text-secondary-dark)', fontSize: 14, marginBottom: 28,
+            color: '#64748b', fontSize: 14, marginBottom: 28,
             padding: 0,
           }}
         >
@@ -105,7 +105,7 @@ export default function Settings() {
         </button>
 
         {/* Avatar + name header */}
-        <div className="vtl-card" style={{ padding: '28px 28px 24px', marginBottom: 16 }}>
+        <div className="vtl-light-card" style={{ padding: '28px 28px 24px', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
             <div style={{
               width: 56, height: 56, borderRadius: '50%',
@@ -116,14 +116,14 @@ export default function Settings() {
               {initials}
             </div>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--vtl-text-primary-dark)' }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>
                 {profile.full_name || 'Your Profile'}
               </div>
-              <div style={{ fontSize: 13, color: 'var(--vtl-text-secondary-dark)', marginTop: 2 }}>
+              <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
                 {user?.email}
               </div>
             </div>
-            <User size={18} style={{ marginLeft: 'auto', color: 'var(--vtl-text-secondary-dark)', opacity: 0.5 }} />
+            <User size={18} style={{ marginLeft: 'auto', color: '#94a3b8', opacity: 0.7 }} />
           </div>
 
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -186,7 +186,7 @@ export default function Settings() {
         </div>
 
         {/* Danger / navigation zone */}
-        <div className="vtl-card" style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="vtl-light-card" style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {isSuperAdmin && (
             <button
               onClick={() => navigate('/ops')}

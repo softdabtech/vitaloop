@@ -8,8 +8,8 @@ import { trackFunnelEvent } from '../lib/funnel.js'
 const s = {
   wrap: {
     minHeight: '100vh',
-    background: '#080808',
-    color: '#fff',
+    background: '#f8fafc',
+    color: '#0f172a',
     fontFamily: 'system-ui, sans-serif',
     display: 'flex',
     alignItems: 'center',
@@ -19,10 +19,11 @@ const s = {
   card: {
     width: '100%',
     maxWidth: 720,
-    background: 'rgba(255,255,255,0.04)',
-    border: '0.5px solid rgba(255,255,255,0.1)',
+    background: '#ffffff',
+    border: '1px solid rgba(15,23,42,0.08)',
     borderRadius: 24,
     padding: '34px 30px',
+    boxShadow: '0 1px 3px rgba(15,23,42,0.06)',
   },
 }
 
@@ -109,11 +110,11 @@ export default function Questionnaire() {
     return (
       <div style={s.wrap}>
         <div style={s.card}>
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Questionnaire unavailable</div>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)', marginBottom: 16 }}>{error}</div>
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#0f172a' }}>Questionnaire unavailable</div>
+          <div style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>{error}</div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={loadSession} style={{ background: '#1d9e75', border: 'none', color: '#fff', borderRadius: 10, padding: '10px 16px', cursor: 'pointer' }}>Retry</button>
-            <button onClick={() => navigate('/dashboard')} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: '#fff', borderRadius: 10, padding: '10px 16px', cursor: 'pointer' }}>Back to dashboard</button>
+            <button onClick={loadSession} style={{ background: '#10b981', border: 'none', color: '#fff', borderRadius: 10, padding: '10px 16px', cursor: 'pointer' }}>Retry</button>
+            <button onClick={() => navigate('/dashboard')} style={{ background: '#f1f5f9', border: '1px solid rgba(15,23,42,0.1)', color: '#475569', borderRadius: 10, padding: '10px 16px', cursor: 'pointer' }}>Back to dashboard</button>
           </div>
         </div>
       </div>
@@ -124,9 +125,9 @@ export default function Questionnaire() {
     return (
       <div style={s.wrap}>
         <div style={s.card}>
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>No pending questions</div>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)', marginBottom: 16 }}>You are all set for now.</div>
-          <button onClick={() => navigate('/dashboard')} style={{ background: '#1d9e75', border: 'none', color: '#fff', borderRadius: 10, padding: '10px 16px', cursor: 'pointer' }}>Continue to dashboard</button>
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#0f172a' }}>No pending questions</div>
+          <div style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>You are all set for now.</div>
+          <button onClick={() => navigate('/dashboard')} style={{ background: '#10b981', border: 'none', color: '#fff', borderRadius: 10, padding: '10px 16px', cursor: 'pointer' }}>Continue to dashboard</button>
         </div>
       </div>
     )
@@ -137,22 +138,22 @@ export default function Questionnaire() {
       <motion.div style={s.card} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 14, alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 4 }}>Adaptive Questionnaire</div>
-            <div style={{ fontSize: 22, fontWeight: 800 }}>Question {answeredCount + 1} of {totalCount || '?'}</div>
+            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>Adaptive Questionnaire</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>Question {answeredCount + 1} of {totalCount || '?'}</div>
           </div>
           <div style={{ minWidth: 120, textAlign: 'right', fontSize: 13, color: '#1d9e75', fontWeight: 700 }}>{progressPct}% complete</div>
         </div>
 
-        <div style={{ height: 6, borderRadius: 10, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: 22 }}>
-          <div style={{ width: `${progressPct}%`, height: '100%', background: '#1d9e75' }} />
+        <div style={{ height: 6, borderRadius: 10, background: 'rgba(15,23,42,0.08)', overflow: 'hidden', marginBottom: 22 }}>
+          <div style={{ width: `${progressPct}%`, height: '100%', background: '#10b981' }} />
         </div>
 
-        <div style={{ fontSize: 21, lineHeight: 1.4, fontWeight: 700, marginBottom: 22 }}>
+        <div style={{ fontSize: 21, lineHeight: 1.4, fontWeight: 700, marginBottom: 22, color: '#0f172a' }}>
           {nextQuestion.text}
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', marginBottom: 6 }}>Rate from 1 (very poor) to 10 (excellent)</div>
+          <div style={{ fontSize: 13, color: '#64748b', marginBottom: 6 }}>Rate from 1 (very poor) to 10 (excellent)</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <input
               type="range"
@@ -162,12 +163,12 @@ export default function Questionnaire() {
               onChange={(e) => setAnswerValue(Number(e.target.value))}
               style={{ flex: 1, accentColor: '#1d9e75' }}
             />
-            <div style={{ width: 46, textAlign: 'right', fontSize: 18, fontWeight: 700, color: '#1d9e75' }}>{answerValue}/10</div>
+            <div style={{ width: 46, textAlign: 'right', fontSize: 18, fontWeight: 700, color: '#10b981' }}>{answerValue}/10</div>
           </div>
         </div>
 
         <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', marginBottom: 6 }}>Optional context</div>
+          <div style={{ fontSize: 13, color: '#64748b', marginBottom: 6 }}>Optional context</div>
           <textarea
             value={answerText}
             onChange={(e) => setAnswerText(e.target.value)}
@@ -176,11 +177,11 @@ export default function Questionnaire() {
               width: '100%',
               minHeight: 88,
               resize: 'vertical',
-              background: 'rgba(255,255,255,0.06)',
-              border: '0.5px solid rgba(255,255,255,0.15)',
+              background: '#f8fafc',
+              border: '1px solid rgba(15,23,42,0.12)',
               borderRadius: 10,
               padding: '10px 12px',
-              color: '#fff',
+              color: '#0f172a',
               fontSize: 14,
               outline: 'none',
               boxSizing: 'border-box',
@@ -193,7 +194,7 @@ export default function Questionnaire() {
             onClick={submitAnswer}
             disabled={saving}
             style={{
-              background: '#1d9e75',
+              background: '#10b981',
               border: 'none',
               color: '#fff',
               borderRadius: 10,
@@ -209,9 +210,9 @@ export default function Questionnaire() {
           <button
             onClick={() => navigate('/dashboard')}
             style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: 'none',
-              color: '#fff',
+              background: '#f1f5f9',
+              border: '1px solid rgba(15,23,42,0.1)',
+              color: '#475569',
               borderRadius: 10,
               padding: '11px 18px',
               fontWeight: 600,

@@ -36,17 +36,17 @@ function fmt(iso) {
 }
 
 const s = {
-  page: { minHeight: '100vh', background: '#080808', color: '#fff', fontFamily: 'system-ui, sans-serif', padding: '0 16px 48px' },
+  page: { minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif', padding: '0 16px 48px' },
   header: { maxWidth: 860, margin: '0 auto', padding: '32px 0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  back: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 },
+  back: { background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 },
   body: { maxWidth: 860, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, alignItems: 'start' },
-  card: { background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: 24 },
-  cardTitle: { fontSize: 17, fontWeight: 700, color: '#fff', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 },
-  insightCard: (color) => ({ background: `${color}10`, border: `0.5px solid ${color}30`, borderRadius: 14, padding: '16px 18px', marginBottom: 12, position: 'relative' }),
-  dismissBtn: { position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: 'rgba(255,255,255,0.25)', cursor: 'pointer' },
+  card: { background: '#ffffff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 20, padding: 24, boxShadow: '0 1px 3px rgba(15,23,42,0.06)' },
+  cardTitle: { fontSize: 17, fontWeight: 700, color: '#0f172a', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 },
+  insightCard: (color) => ({ background: `${color}10`, border: `1px solid ${color}30`, borderRadius: 14, padding: '16px 18px', marginBottom: 12, position: 'relative' }),
+  dismissBtn: { position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' },
   timelineItem: { display: 'flex', gap: 16, paddingBottom: 20, position: 'relative' },
-  timelineDot: { width: 10, height: 10, borderRadius: '50%', background: '#1d9e75', flexShrink: 0, marginTop: 5 },
-  timelineLine: { position: 'absolute', left: 4, top: 15, bottom: 0, width: '2px', background: 'rgba(255,255,255,0.06)' },
+  timelineDot: { width: 10, height: 10, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 5 },
+  timelineLine: { position: 'absolute', left: 4, top: 15, bottom: 0, width: '2px', background: 'rgba(15,23,42,0.08)' },
 }
 
 export default function Timeline() {
@@ -100,12 +100,12 @@ export default function Timeline() {
       {/* Health Score summary bar */}
       {healthScore && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-          style={{ maxWidth: 860, margin: '0 auto 24px', background: `${scoreColor}15`, border: `0.5px solid ${scoreColor}40`, borderRadius: 16, padding: '16px 24px', display: 'flex', gap: 32, alignItems: 'center' }}
+          style={{ maxWidth: 860, margin: '0 auto 24px', background: `${scoreColor}12`, border: `1px solid ${scoreColor}30`, borderRadius: 16, padding: '16px 24px', display: 'flex', gap: 32, alignItems: 'center' }}
         >
           <div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>Health Score</div>
+            <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>Health Score</div>
             <div style={{ fontSize: 42, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>{healthScore.score}</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>/ 100</div>
+            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>/ 100</div>
           </div>
           {[
             { label: 'Symptom', val: healthScore.symptom_component },
@@ -113,8 +113,8 @@ export default function Timeline() {
             { label: 'Adherence', val: healthScore.adherence_component },
           ].map(({ label, val }) => (
             <div key={label} style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 6 }}>{label}</div>
-              <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>{label}</div>
+              <div style={{ height: 5, background: 'rgba(15,23,42,0.08)', borderRadius: 3, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${val}%`, background: scoreColor, borderRadius: 3 }} />
               </div>
               <div style={{ fontSize: 12, color: scoreColor, marginTop: 4 }}>{val}</div>
@@ -124,9 +124,9 @@ export default function Timeline() {
       )}
 
       {/* Tabs */}
-      <div style={{ maxWidth: 860, margin: '0 auto 24px', display: 'flex', gap: 4, borderBottom: '0.5px solid rgba(255,255,255,0.08)', paddingBottom: 0 }}>
+        <div style={{ maxWidth: 860, margin: '0 auto 24px', display: 'flex', gap: 4, borderBottom: '1px solid rgba(15,23,42,0.08)', paddingBottom: 0 }}>
         {[{ id: 'timeline', label: 'Timeline', icon: Clock }, { id: 'insights', label: 'Insights', icon: Sparkles }].map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setTab(id)} style={{ padding: '12px 20px', background: 'none', border: 'none', color: tab === id ? '#1d9e75' : 'rgba(255,255,255,0.4)', fontWeight: tab === id ? 700 : 400, borderBottom: `2px solid ${tab === id ? '#1d9e75' : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, fontSize: 14 }}>
+          <button key={id} onClick={() => setTab(id)} style={{ padding: '12px 20px', background: 'none', border: 'none', color: tab === id ? '#10b981' : '#64748b', fontWeight: tab === id ? 700 : 400, borderBottom: `2px solid ${tab === id ? '#10b981' : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, fontSize: 14 }}>
             <Icon size={15} />{label}
           </button>
         ))}
@@ -138,17 +138,17 @@ export default function Timeline() {
           {tab === 'timeline' && (
             <div style={s.card}>
               <div style={s.cardTitle}><Clock size={18} style={{ color: '#1d9e75' }} /> Activity Timeline</div>
-              {timeline.length === 0 && <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>No activity yet. Upload labs or log symptoms to see your timeline.</p>}
+              {timeline.length === 0 && <p style={{ fontSize: 14, color: '#94a3b8' }}>No activity yet. Upload labs or log symptoms to see your timeline.</p>}
               <div style={{ position: 'relative' }}>
                 {timeline.map((ev, i) => (
                   <motion.div key={ev.id || i} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }} style={s.timelineItem}>
                     {i < timeline.length - 1 && <div style={s.timelineLine} />}
                     <div style={s.timelineDot} />
                     <div>
-                      <div style={{ fontSize: 14, color: '#fff', fontWeight: 500, marginBottom: 3 }}>
+                      <div style={{ fontSize: 14, color: '#0f172a', fontWeight: 500, marginBottom: 3 }}>
                         {EVENT_ICONS[ev.event_type] || '•'} {ev.summary}
                       </div>
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>{fmt(ev.occurred_at)}</div>
+                      <div style={{ fontSize: 12, color: '#94a3b8' }}>{fmt(ev.occurred_at)}</div>
                     </div>
                   </motion.div>
                 ))}
@@ -161,20 +161,20 @@ export default function Timeline() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                 <div style={s.cardTitle}><Sparkles size={18} style={{ color: '#f472b6' }} /> Your Insights</div>
                 <button onClick={generateInsights} disabled={loadingInsights}
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 14px', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  style={{ background: '#f1f5f9', border: '1px solid rgba(15,23,42,0.1)', borderRadius: 8, padding: '8px 14px', color: '#475569', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <RefreshCw size={13} style={{ animation: loadingInsights ? 'spin 1s linear infinite' : 'none' }} />
                   {loadingInsights ? 'Generating…' : 'Refresh'}
                 </button>
               </div>
-              {insights.length === 0 && <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>No insights yet. Click Refresh to generate your first personalised insights.</p>}
+              {insights.length === 0 && <p style={{ fontSize: 14, color: '#94a3b8' }}>No insights yet. Click Refresh to generate your first personalised insights.</p>}
               {insights.map((ins, i) => {
                 const color = INSIGHT_COLORS[ins.insight_type] || INSIGHT_COLORS.general
                 return (
                   <motion.div key={ins.id || i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} style={s.insightCard(color)}>
                     <button style={s.dismissBtn} onClick={() => dismissInsight(ins.id)}><X size={14} /></button>
                     <div style={{ fontSize: 13, color, fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{ins.insight_type?.replace('_', ' ')}</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6 }}>{ins.title}</div>
-                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>{ins.body}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>{ins.title}</div>
+                    <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{ins.body}</div>
                   </motion.div>
                 )
               })}
@@ -193,7 +193,7 @@ export default function Timeline() {
               { label: '👤 Update Profile', path: '/onboarding' },
             ].map(({ label, path }) => (
               <button key={path} onClick={() => navigate(path)}
-                style={{ display: 'block', width: '100%', textAlign: 'left', background: 'rgba(255,255,255,0.03)', border: '0.5px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '11px 14px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 14, marginBottom: 8 }}>
+                style={{ display: 'block', width: '100%', textAlign: 'left', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.07)', borderRadius: 10, padding: '11px 14px', color: '#475569', cursor: 'pointer', fontSize: 14, marginBottom: 8 }}>
                 {label}
               </button>
             ))}
