@@ -8,7 +8,7 @@
     "dev": "vite",
     "validate:env": "node ./scripts/validate-env.mjs",
     "build": "npm run validate:env && vite build",
-    "build:prod": "npm run validate:env && vite build --mode production",
+    "build:prod": "npm run validate:env && NODE_OPTIONS=--max-old-space-size=1536 vite build --mode production",
     "postbuild": "react-snap",
     "preview": "vite preview"
   },
