@@ -3,52 +3,52 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const TESTIMONIALS = [
   {
-    quote: "I finally understood why I felt constantly tired. The protocol was simple and actually worked.",
+    quote: 'I finally understood the root cause of persistent fatigue. The protocol was clear and practical.',
     name: 'Alex', age: 34, tag: 'Energy · Vitamin D',
     initials: 'AL',
   },
   {
-    quote: "Stopped wasting money on random supplements. Now I know exactly what I need.",
+    quote: 'I stopped guessing with supplements. Now every action is tied to my actual markers.',
     name: 'Nina', age: 29, tag: 'Iron · Focus',
     initials: 'NI',
   },
   {
-    quote: "Discovered low ferritin I didn't even think about. Fixed it in a few weeks.",
+    quote: "VITALOOP highlighted low ferritin early. I corrected it before it became a larger issue.",
     name: 'James', age: 41, tag: 'Ferritin · Sleep',
     initials: 'JA',
   },
   {
-    quote: "The questionnaire was surprisingly accurate — it caught things my tests didn't.",
+    quote: 'The context questions were highly relevant and improved the quality of recommendations.',
     name: 'Maria', age: 36, tag: 'Brain fog · Magnesium',
     initials: 'MA',
   },
   {
-    quote: "I'd been dealing with afternoon crashes forever. Turns out it was a B12 issue. Simple fix.",
+    quote: 'I had recurring afternoon crashes. The analysis identified a B12 pattern quickly.',
     name: 'Tom', age: 27, tag: 'Energy · B12',
     initials: 'TO',
   },
   {
-    quote: "My sleep was terrible for two years. VITALOOP connected the dots between my labs and lifestyle.",
+    quote: 'Sleep improved once my labs and habits were reviewed together, not in isolation.',
     name: 'Sarah', age: 38, tag: 'Sleep · Cortisol',
     initials: 'SA',
   },
   {
-    quote: "I thought I was just stressed. Turned out my iron was borderline low. One month in and I feel different.",
+    quote: 'What looked like stress was a biomarker imbalance. The protocol made progress visible within weeks.',
     name: 'Dmitri', age: 33, tag: 'Stress · Iron',
     initials: 'DM',
   },
   {
-    quote: "What I liked most: no generic advice. Every suggestion matched my actual numbers.",
+    quote: 'No generic advice. Recommendations were tied directly to my data.',
     name: 'Yuki', age: 31, tag: 'Personalization · Omega-3',
     initials: 'YU',
   },
   {
-    quote: "Finally a tool that doesn't tell me to 'eat more vegetables.' It told me exactly what was off.",
+    quote: 'The platform explained exactly what needed attention and in what order.',
     name: 'Priya', age: 45, tag: 'Thyroid · Vitamin D',
     initials: 'PR',
   },
   {
-    quote: "Uploaded my lab PDF and had a clear picture in under 5 minutes. That alone was worth it.",
+    quote: 'I uploaded a lab PDF and had a structured action plan in minutes.',
     name: 'Lucas', age: 30, tag: 'Brain fog · Zinc',
     initials: 'LU',
   },
@@ -110,7 +110,7 @@ export default function Testimonials() {
             Early users are already seeing measurable gains
           </h2>
           <p style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 620, margin: '0 auto', lineHeight: 1.65 }}>
-            Individual users get clarity faster. Practitioners deliver protocols in less time.
+            Individuals gain clarity faster, while practitioners deliver higher-quality protocols in less time.
           </p>
         </div>
 

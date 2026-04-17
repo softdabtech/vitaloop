@@ -253,7 +253,7 @@ export default function Hero() {
           maxWidth: 580, margin: '0 auto 12px',
           lineHeight: 1.6,
         }}>
-          Upload any lab PDF or photo and get instant analysis powered by OCR + Claude LLM.
+          Upload any lab PDF or photo and get instant analysis powered by OCR and Claude LLM.
         </motion.p>
         <motion.p variants={childVariants} style={{
           fontSize: 'clamp(14px, 2vw, 17px)', color: 'var(--gray-400)',
@@ -261,7 +261,7 @@ export default function Hero() {
           lineHeight: 1.6,
         }}>
           50+ biomarkers, red flags, personalized protocols, timeline tracking, and practitioner CRM in one place.
-          Product is 80% ready and onboarding early customers now.
+          80% complete and onboarding early customers.
         </motion.p>
 
         {/* CTA row */}
@@ -315,7 +315,7 @@ export default function Hero() {
           }}
         >
           <span style={{ fontSize: 13, color: 'var(--gray-500)' }}>
-            <span style={{ color: 'var(--teal-500)' }}>★★★★★</span> 4.9 · Trusted by early biohackers and practitioners
+            <span style={{ color: 'var(--teal-500)' }}>★★★★★</span> 4.9 early-user rating
           </span>
           <span aria-hidden="true" className="hero-proof-divider" style={{ width: '0.5px', height: 16, background: 'var(--gray-100)', display: 'inline-block' }} />
           <span style={{ fontSize: 13, color: 'var(--gray-500)' }}>Works with any laboratory worldwide</span>
