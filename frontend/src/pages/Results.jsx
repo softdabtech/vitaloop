@@ -69,7 +69,15 @@ export default function Results() {
           {biomarkers.map((b) => <BiomarkerCard key={b.id} biomarker={b} />)}
         </div>
 
-        <h3 className="text-xl font-bold text-slate-900 mb-4">Your Supplement Protocol</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold text-slate-900">Your Supplement Protocol</h3>
+          <button
+            onClick={() => navigate(`/protocol/${uploadId}`)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-semibold text-sm transition-colors shadow-sm"
+          >
+            View Full Protocol →
+          </button>
+        </div>
 
         {isActive ? (
           <div className="space-y-3">

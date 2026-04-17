@@ -18,6 +18,7 @@ import EmailConfirmation from './pages/EmailConfirmation.jsx'
 const UserDashboard = lazy(() => import('./pages/UserDashboard.jsx'))
 const Upload = lazy(() => import('./pages/Upload.jsx'))
 const Results = lazy(() => import('./pages/Results.jsx'))
+const ProtocolPage = lazy(() => import('./pages/ProtocolPage.jsx'))
 const Progress = lazy(() => import('./pages/Progress.jsx'))
 const Insights = lazy(() => import('./pages/Insights.jsx'))
 const LabResultsList = lazy(() => import('./pages/LabResultsList.jsx'))
@@ -120,6 +121,7 @@ export default function App() {
           <Route path="/dashboard" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><UserDashboard /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/upload" element={<ProtectedRoute><EndUserFlowRoute><Upload /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/results/:uploadId" element={<ProtectedRoute><EndUserFlowRoute><Results /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/protocol/:uploadId" element={<ProtectedRoute><EndUserFlowRoute><ProtocolPage /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/avatar" element={<ProtectedRoute><EndUserFlowRoute><Avatar /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/progress" element={<ProtectedRoute><EndUserFlowRoute><Progress /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/assignments" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Assignments /></EndUserFlowRoute></ProtectedRoute>} />
