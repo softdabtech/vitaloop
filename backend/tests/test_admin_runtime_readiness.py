@@ -1,6 +1,6 @@
 import pytest
 
-from app.routers import admin
+from app.routers.admin import admin
 
 
 @pytest.mark.asyncio

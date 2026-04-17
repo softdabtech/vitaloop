@@ -4,9 +4,9 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
-from app.dependencies import get_current_user
-from app.routers import analyze as analyze_router
-from app.routers import protocol as protocol_router
+from app.dependencies import get_current_user, require_freemium_analyze, require_active_subscription
+from app.routers.analysis import analyze as analyze_router
+from app.routers.protocol import protocol as protocol_router
 
 
 @pytest.mark.asyncio
@@ -142,10 +142,14 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
     monkeypatch.setattr(protocol_router, "build_iherb_url", fake_iherb_url)
     monkeypatch.setattr(protocol_router, "assert_upload_belongs_to_user", fake_assert_upload_belongs_to_user)
 
-    app.dependency_overrides[get_current_user] = lambda: {
+    fake_user = {
         "sub": fake_user_id,
         "email": "e2e@vitaloop.test",
     }
+
+    app.dependency_overrides[get_current_user] = lambda: fake_user
+    app.dependency_overrides[require_freemium_analyze] = lambda: fake_user
+    app.dependency_overrides[require_active_subscription] = lambda: fake_user
 
     try:
         transport = ASGITransport(app=app)
