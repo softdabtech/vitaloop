@@ -18,7 +18,7 @@ export default defineConfig({
           
           // Feature-based chunks
           'feature-dashboard': [
-            'src/pages/Dashboard.jsx',
+            'src/pages/UserDashboard.jsx',
             'src/components/dashboard/AssignmentCard.jsx',
             'src/components/dashboard/HealthChart.jsx',
             'src/components/dashboard/ProgressTimeline.jsx',
