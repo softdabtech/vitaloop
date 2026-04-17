@@ -70,7 +70,7 @@ export default function Insights() {
   const scoreColor = healthScore ? (healthScore.score >= 70 ? '#1d9e75' : healthScore.score >= 50 ? '#f59e0b' : '#ef4444') : '#64748b'
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-6">
       <CabinetPageHeader
         title="Insights"
         subtitle="Interpretation layer for uploads, adherence, timeline, and follow-up signals."
@@ -221,7 +221,7 @@ export default function Insights() {
           )}
         </div>
 
-        <aside className="vtl-light-card rounded-3xl p-6">
+        <aside className="vtl-light-card rounded-3xl p-6 xl:sticky xl:top-24 xl:h-fit">
           <div className="mb-4 text-lg font-semibold text-slate-900">Why this page matters</div>
           <div className="space-y-3 text-sm text-slate-500">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">This page should explain the meaning of the data, not just repeat numbers from results.</div>

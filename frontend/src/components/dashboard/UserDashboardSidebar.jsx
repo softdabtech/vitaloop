@@ -64,7 +64,7 @@ export default function UserDashboardSidebar({
   }
 
   return (
-    <aside className={`${sidebarWidth} h-screen border-r border-slate-200 bg-white transition-[width] duration-300`}>
+    <aside className={`${sidebarWidth} flex h-screen flex-col border-r border-slate-200 bg-white transition-[width] duration-300`}>
       <div className="flex h-[72px] items-center justify-between border-b border-slate-100 px-4">
         <div className={`flex items-center gap-3 ${collapsed ? 'justify-center w-full' : ''}`}>
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-500/25">
@@ -89,7 +89,7 @@ export default function UserDashboardSidebar({
         )}
       </div>
 
-      <nav className="space-y-0.5 p-3">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
         {MENU_ITEMS.map((item) => {
           const ItemIcon = item.icon
           const badgeValue = item.badgeKey ? Number(user?.[item.badgeKey] || 0) : item.badge
@@ -138,7 +138,7 @@ export default function UserDashboardSidebar({
         })}
       </nav>
 
-      <div className="mt-auto border-t border-slate-100 p-3">
+      <div className="border-t border-slate-100 p-3">
         {!collapsed && !subscriptionLoading && !hasPremium && (
           <button
             onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED', source: 'sidebar-upgrade' } }))}

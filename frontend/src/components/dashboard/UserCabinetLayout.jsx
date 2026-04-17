@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
-import { useLocation } from 'react-router-dom'
-import { Crown, LogOut, Menu } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { BarChart3, ClipboardList, Crown, Home, LogOut, Menu, Settings, Upload } from 'lucide-react'
 import UserDashboardSidebar from './UserDashboardSidebar.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { PREMIUM_PRICE_LABEL } from '../../lib/pricing.js'
+import '../../styles/dashboard2026.css'
 
 const PAGE_META = {
   '/dashboard': { title: 'Dashboard', subtitle: 'Your current health command center.' },
@@ -28,8 +29,23 @@ function resolvePageMeta(pathname) {
   return { title: 'Vitaloop Cabinet', subtitle: 'Personalized health workspace.' }
 }
 
+const MOBILE_NAV_ITEMS = [
+  { path: '/dashboard', label: 'Home', icon: Home },
+  { path: '/upload', label: 'Upload', icon: Upload },
+  { path: '/assignments', label: 'Tasks', icon: ClipboardList },
+  { path: '/insights', label: 'Insights', icon: BarChart3 },
+  { path: '/settings', label: 'Settings', icon: Settings },
+]
+
+function isActivePath(currentPath, itemPath) {
+  if (currentPath === itemPath) return true
+  if (itemPath === '/dashboard') return currentPath === '/dashboard'
+  return currentPath.startsWith(`${itemPath}/`)
+}
+
 export default function UserCabinetLayout({ children }) {
   const location = useLocation()
+  const navigate = useNavigate()
   const { user, signOut } = useAuth()
   const { isActive, loading: subLoading } = useSubscription()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -46,8 +62,13 @@ export default function UserCabinetLayout({ children }) {
   }
 
   return (
-    <div className="vtl-page flex min-h-screen bg-slate-50 text-slate-900">
-      <div className="hidden lg:block">
+    <div
+      className="vtl-page flex min-h-screen text-slate-900"
+      style={{
+        background: 'radial-gradient(circle at top left, rgba(16,185,129,0.08), transparent 20%), linear-gradient(180deg, #f8fafc 0%, #f3f7f5 100%)',
+      }}
+    >
+      <div className="hidden md:sticky md:top-0 md:block md:self-start">
         <UserDashboardSidebar
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
@@ -57,7 +78,7 @@ export default function UserCabinetLayout({ children }) {
       </div>
 
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)}>
+        <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm md:hidden" onClick={() => setSidebarOpen(false)}>
           <div className="h-full w-72" onClick={(event) => event.stopPropagation()}>
             <UserDashboardSidebar
               collapsed={false}
@@ -76,7 +97,7 @@ export default function UserCabinetLayout({ children }) {
             <div className="flex min-w-0 items-center gap-3">
               <button
                 onClick={() => setSidebarOpen((prev) => !prev)}
-                className="vtl-focus-ring rounded-xl p-2 transition hover:bg-slate-100 lg:hidden"
+                className="vtl-focus-ring rounded-xl p-2 transition hover:bg-slate-100 md:hidden"
                 aria-label="Open navigation"
               >
                 <Menu className="h-5 w-5 text-slate-700" />
@@ -99,10 +120,7 @@ export default function UserCabinetLayout({ children }) {
                 </button>
               )}
 
-              <button
-                onClick={() => setSidebarCollapsed((prev) => !prev)}
-                className="vtl-button-secondary hidden px-3 text-sm lg:inline-flex"
-              >
+              <button onClick={() => setSidebarCollapsed((prev) => !prev)} className="vtl-button-secondary hidden px-3 text-sm md:inline-flex">
                 {sidebarCollapsed ? 'Expand menu' : 'Collapse menu'}
               </button>
 
@@ -118,10 +136,30 @@ export default function UserCabinetLayout({ children }) {
         </div>
 
         <main className="flex-1 overflow-x-hidden">
-          <div className="mx-auto w-full max-w-[1480px] px-4 py-6 sm:px-6 sm:py-8">
+          <div className="mx-auto w-full max-w-[1480px] px-4 py-6 pb-24 sm:px-6 sm:py-8 md:pb-8">
             {children}
           </div>
         </main>
+
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/96 px-3 py-2 backdrop-blur md:hidden">
+          <div className="grid grid-cols-5 gap-2">
+            {MOBILE_NAV_ITEMS.map((item) => {
+              const Icon = item.icon
+              const active = isActivePath(location.pathname, item.path)
+
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 transition ${active ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500'}`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="text-[11px] font-semibold">{item.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
     </div>
   )

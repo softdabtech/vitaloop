@@ -51,23 +51,20 @@ export default function Progress() {
   }, [user, navigate])
 
   if (loading) return (
-    <div className="vtl-page px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-6xl">
+    <div className="mx-auto w-full max-w-6xl">
         <div className="mb-6 h-8 w-48 animate-pulse rounded-xl bg-slate-200" />
         <div className="mb-6 grid gap-3 sm:grid-cols-3">
           {[1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-slate-100" />)}
         </div>
         <div className="mb-4 h-56 animate-pulse rounded-xl bg-slate-100" />
         <div className="h-32 animate-pulse rounded-xl bg-slate-100" />
-      </div>
     </div>
   )
 
   // Premium error
   if (error === 'premium') {
     return (
-      <div className="vtl-page px-4 py-8 sm:px-6">
-        <div className="mx-auto max-w-4xl">
+      <div className="mx-auto w-full max-w-4xl">
           <CabinetPageHeader
             title="Progress Tracker"
             subtitle="Track concrete biomarker movement between uploads and monitor protocol effect over time."
@@ -83,7 +80,6 @@ export default function Progress() {
           </button>
             <p className="mt-4 text-sm text-slate-400">You can still upload new tests as a free user.</p>
           </div>
-        </div>
       </div>
     )
   }
@@ -91,8 +87,7 @@ export default function Progress() {
   // Error state
   if (error === 'failed') {
     return (
-      <div className="vtl-page px-4 py-8 sm:px-6">
-        <div className="mx-auto max-w-4xl">
+      <div className="mx-auto w-full max-w-4xl">
           <CabinetPageHeader
             title="Progress Tracker"
             subtitle="Track concrete biomarker movement between uploads and monitor protocol effect over time."
@@ -106,7 +101,6 @@ export default function Progress() {
             Retry
           </button>
           </div>
-        </div>
       </div>
     )
   }
@@ -134,8 +128,7 @@ export default function Progress() {
     .filter((d) => d.pct != null)
 
   return (
-    <div className="vtl-page px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-6xl">
+    <div className="mx-auto w-full max-w-6xl">
         <CabinetPageHeader
           title="Progress Tracker"
           subtitle="Track concrete biomarker movement between uploads and monitor protocol effect over time."
@@ -204,7 +197,6 @@ export default function Progress() {
             </div>
           </>
         )}
-      </div>
     </div>
   )
 }
