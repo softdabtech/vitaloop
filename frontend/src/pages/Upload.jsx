@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AlertCircle, Building2, ShieldCheck, Sparkles } from 'lucide-react'
 import { useOCR } from '../hooks/useOCR.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import UploadZone from '../components/UploadZone.jsx'
@@ -8,6 +9,7 @@ import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
 import toast from 'react-hot-toast'
+import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import '../styles/dashboard2026.css'
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
@@ -143,10 +145,25 @@ export default function Upload() {
               onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'UPLOAD_LIMIT_REACHED' } }))}
               className="ml-4 rounded-lg bg-emerald-500 hover:bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition"
             >
-              Upgrade
+              Upgrade {PREMIUM_PRICE_LABEL}
             </button>
           </div>
         )}
+
+        <div className="mb-6 grid gap-3 lg:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Private first</div>
+            <p className="text-sm text-slate-500">Your file is read in the browser first. Only extracted text continues into the analysis workflow.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" /> What unlocks next</div>
+            <p className="text-sm text-slate-500">One upload should open biomarkers, protocol, trends, and clearer assignments instead of a dead-end result page.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><AlertCircle className="h-4 w-4 text-amber-500" /> Best results</div>
+            <p className="text-sm text-slate-500">Use a full-page PDF or a sharp photo where marker names, values, ranges, and units are clearly visible.</p>
+          </div>
+        </div>
 
         <div className="mb-6 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
           <div className={`rounded-xl border px-3 py-2 ${isProcessing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
@@ -179,6 +196,10 @@ export default function Upload() {
             placeholder="Quest, LabCorp, Other..."
             className="vtl-focus-ring w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-800 placeholder-slate-400 disabled:cursor-not-allowed disabled:opacity-60 focus:border-emerald-400 focus:outline-none"
           />
+          <p className="mt-2 flex items-start gap-2 text-xs text-slate-500">
+            <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+            <span>* If your clinic or lab is not recognized yet, it is still fine. Our lab database is still growing and more providers will be added soon.</span>
+          </p>
         </div>
 
         <SymptomSelector selected={symptoms} onChange={setSymptoms} />

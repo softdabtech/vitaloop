@@ -58,10 +58,14 @@ function mapAuthErrorMessage(message) {
 }
 
 // Abstract particle art panels
-function AbstractPanel({ side }) {
+function AbstractPanel({ side, variant = 'signin' }) {
   const isLeft = side === 'left'
-  const baseColor = isLeft ? '#1D9E75' : '#085041'
-  const accent = isLeft ? '#5DCAA5' : '#1D9E75'
+  const signup = variant === 'signup'
+  const baseColor = signup ? (isLeft ? '#1e3a8a' : '#1e40af') : (isLeft ? '#1D9E75' : '#085041')
+  const accent = signup ? (isLeft ? '#60a5fa' : '#93c5fd') : (isLeft ? '#5DCAA5' : '#1D9E75')
+  const gradient = signup
+    ? `linear-gradient(${isLeft ? '135deg' : '225deg'}, #0b173f 0%, #1e3a8a 45%, #020617 100%)`
+    : `linear-gradient(${isLeft ? '135deg' : '225deg'}, #04342C 0%, #085041 40%, #0a0a0a 100%)`
 
   // Deterministic particles based on side
   const particles = Array.from({ length: 60 }, (_, i) => ({
@@ -84,7 +88,7 @@ function AbstractPanel({ side }) {
   return (
     <div style={{
       position: 'absolute', inset: 0,
-      background: `linear-gradient(${isLeft ? '135deg' : '225deg'}, #04342C 0%, #085041 40%, #0a0a0a 100%)`,
+      background: gradient,
       overflow: 'hidden',
     }}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none"
@@ -123,12 +127,18 @@ function AbstractPanel({ side }) {
           fontSize: 11, fontWeight: 700, letterSpacing: '0.15em',
           color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', marginBottom: 6,
         }}>
-          {isLeft ? 'Your biology,\ndecoded.' : 'HIPAA-ready\narchitecture.'}
+          {signup
+            ? (isLeft ? 'Create your\nhealth baseline.' : 'Secure\nmember onboarding.')
+            : (isLeft ? 'Your biology,\ndecoded.' : 'HIPAA-ready\narchitecture.')}
         </div>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.12)', lineHeight: 1.5 }}>
-          {isLeft
-            ? 'Upload any lab result - AI extracts every biomarker in 60 seconds.'
-            : 'Your PDF never leaves your device. OCR runs 100% client-side.'}
+          {signup
+            ? (isLeft
+              ? 'Set up your profile and unlock a personalized health cabinet.'
+              : 'Protected onboarding flow with verified session and secure storage.')
+            : (isLeft
+              ? 'Upload any lab result - AI extracts every biomarker in 60 seconds.'
+              : 'Your PDF never leaves your device. OCR runs 100% client-side.')}
         </div>
       </div>
     </div>
@@ -149,6 +159,18 @@ export default function Login() {
   const [honeypot, setHoneypot] = useState('')  // bot trap
   const [authAlert, setAuthAlert] = useState(null)
   const [rateLimitedUntil, setRateLimitedUntil] = useState(0)
+
+  const authTheme = isSignUp
+    ? {
+        appBg: '#071024',
+        centerBg: '#0b173f',
+        borderColor: 'rgba(96,165,250,0.25)',
+      }
+    : {
+        appBg: '#050e09',
+        centerBg: '#0a0a0a',
+        borderColor: 'rgba(255,255,255,0.05)',
+      }
 
   useEffect(() => {
     let active = true
@@ -321,11 +343,11 @@ export default function Login() {
     <div style={{
       minHeight: '100svh', display: 'flex',
       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
-      background: '#050e09',
+      background: authTheme.appBg,
     }}>
       {/* Left abstract panel - hidden on mobile */}
       <div className="hidden lg:block" style={{ flex: 1, position: 'relative' }}>
-        <AbstractPanel side="left"/>
+        <AbstractPanel side="left" variant={isSignUp ? 'signup' : 'signin'} />
       </div>
 
       {/* Center form */}
@@ -333,9 +355,9 @@ export default function Login() {
         width: '100%', maxWidth: 440,
         display: 'flex', flexDirection: 'column',
         justifyContent: 'center', padding: '48px 40px',
-        background: '#0a0a0a', position: 'relative', zIndex: 1,
-        borderLeft: '0.5px solid rgba(255,255,255,0.05)',
-        borderRight: '0.5px solid rgba(255,255,255,0.05)',
+        background: authTheme.centerBg, position: 'relative', zIndex: 1,
+        borderLeft: `0.5px solid ${authTheme.borderColor}`,
+        borderRight: `0.5px solid ${authTheme.borderColor}`,
       }}>
 
         {/* Back to site */}
@@ -625,7 +647,7 @@ export default function Login() {
 
       {/* Right abstract panel - hidden on mobile */}
       <div className="hidden lg:block" style={{ flex: 1, position: 'relative' }}>
-        <AbstractPanel side="right"/>
+        <AbstractPanel side="right" variant={isSignUp ? 'signup' : 'signin'} />
       </div>
     </div>
   )

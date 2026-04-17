@@ -114,6 +114,21 @@ export default function LabResultsList() {
         ) : (
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_340px]">
             <div className="space-y-3">
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="vtl-light-card p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Uploads</p>
+                  <p className="mt-1 text-2xl font-bold text-slate-900">{sortedItems.length}</p>
+                </div>
+                <div className="vtl-light-card p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Most recent lab</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{sortedItems[0]?.lab_name || 'Upload history'}</p>
+                </div>
+                <div className="vtl-light-card p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Cabinet standard</p>
+                  <p className="mt-1 text-sm text-slate-500">This screen should feel like a premium archive, not only a raw list of files.</p>
+                </div>
+              </div>
+
               {sortedItems.map((item, index) => {
                 const date = item?.test_date || item?.created_at?.slice(0, 10) || 'Unknown date'
                 const biomarkers = Array.isArray(item?.biomarkers) ? item.biomarkers : []
@@ -186,6 +201,10 @@ export default function LabResultsList() {
                 <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
                   <p className="text-xs uppercase tracking-wide text-rose-700 font-semibold">Red flags</p>
                   <p className="mt-1 text-sm text-slate-700">Discuss critical markers with your practitioner promptly.</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">What good history looks like</p>
+                  <p className="mt-1 text-sm text-slate-700">Clear summaries, recent uploads, and direct protocol access should make this page feel expensive before any detail screen opens.</p>
                 </div>
               </div>
             </aside>

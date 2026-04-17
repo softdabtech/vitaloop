@@ -102,20 +102,27 @@ export default function WeeklyCheckIn() {
             This page records concrete weekly adherence and symptom changes that feed your protocol updates.
           </div>
 
+          <div style={{ marginBottom: 18, border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.08)', borderRadius: 12, padding: '10px 12px', fontSize: 12, color: '#065f46' }}>
+            Adherence uses a 1-5 score: 1 = not followed, 3 = partial, 5 = fully followed this week.
+          </div>
+
         {/* Sliders */}
-        {sliders.map(({ key, label, color }) => (
+        {sliders.map(({ key, label, color }) => {
+          const max = key === 'protocol_adherence' ? 5 : 10
+          return (
           <div key={key} style={{ marginBottom: 24 }}>
             <div style={s.scoreRow}>
               <span style={s.scoreLabel}>{label}</span>
               <input
-                type="range" min={1} max={10} value={form[key]}
+                type="range" min={1} max={max} value={form[key]}
                 onChange={e => set(key, Number(e.target.value))}
                 style={{ flex: 1, accentColor: color }}
               />
-              <span style={{ ...s.scoreVal, color }}>{form[key]}/10</span>
+              <span style={{ ...s.scoreVal, color }}>{form[key]}/{max}</span>
             </div>
           </div>
-        ))}
+          )
+        })}
 
         {/* Text fields */}
         <div style={{ marginTop: 8, marginBottom: 16 }}>
