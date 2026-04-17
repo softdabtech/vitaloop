@@ -2,6 +2,7 @@ import { useState } from 'react'
 import api from '../lib/api.js'
 import toast from 'react-hot-toast'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
+import { gaBeginCheckout } from '../lib/analytics.js'
 
 export default function Paywall() {
   const [loading, setLoading] = useState(false)
@@ -9,6 +10,7 @@ export default function Paywall() {
   async function handleCheckout() {
     setLoading(true)
     try {
+      gaBeginCheckout()
       const { data } = await api.post('/stripe/checkout')
       window.location.href = data.checkout_url
     } catch {

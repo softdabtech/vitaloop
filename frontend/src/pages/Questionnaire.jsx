@@ -5,6 +5,7 @@ import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import api from '../lib/api.js'
 import toast from 'react-hot-toast'
 import { trackFunnelEvent } from '../lib/funnel.js'
+import { gaQuestionnaireComplete } from '../lib/analytics.js'
 
 const DIMENSION_LABELS = {
   energy: 'Daytime Energy',
@@ -119,6 +120,7 @@ export default function Questionnaire() {
           answered_count: Number(data?.answered_count || 0),
         }, { oncePerSession: true })
         const completedSession = completeResp?.data?.session || {}
+        gaQuestionnaireComplete(completedSession.completion_score ?? undefined)
         setResults({
           completion_score: completedSession.completion_score ?? null,
           dimension_scores: completedSession.dimension_scores ?? {},

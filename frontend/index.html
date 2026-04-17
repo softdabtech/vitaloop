@@ -19,6 +19,16 @@
     <meta name="twitter:description" content="Interactive biomarker insights and AI-generated health protocols." />
     <meta name="twitter:image" content="https://vitaloop.softdab.tech/og-cover.jpg" />
     <link rel="canonical" href="https://vitaloop.softdab.tech/" />
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-LG0BCMBJJE"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      /* send_page_view: false — SPA page views are tracked manually via GAPageTracker in App.jsx */
+      gtag('config', 'G-LG0BCMBJJE', { send_page_view: false });
+    </script>
   </head>
   <body>
     <div id="root"></div>

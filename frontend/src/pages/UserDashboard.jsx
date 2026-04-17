@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   Activity,
   ArrowRight,
@@ -26,7 +27,12 @@ import '../styles/dashboard2026.css'
 
 function DashboardCard({ title, eyebrow, children, action }) {
   return (
-    <section className="vtl-light-card rounded-3xl p-5 sm:p-6">
+    <section
+      className="rounded-3xl border border-slate-200/80 bg-white/95 p-5 backdrop-blur-sm sm:p-6"
+      style={{
+        boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.06), inset 0 1px 0 rgba(29,158,117,0.08)',
+      }}
+    >
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           {eyebrow && <div className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-600">{eyebrow}</div>}
@@ -41,7 +47,7 @@ function DashboardCard({ title, eyebrow, children, action }) {
 
 function EmptyBlock({ title, body, cta, onClick }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-5 text-center">
+    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/85 p-5 text-center">
       <div className="text-sm font-semibold text-slate-800">{title}</div>
       <p className="mt-2 text-sm text-slate-500">{body}</p>
       {cta && (
@@ -121,6 +127,7 @@ function HealthRing({ value }) {
 export default function UserDashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const reduced = useReducedMotion()
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -186,6 +193,15 @@ export default function UserDashboard() {
 
   const greeting = useMemo(() => profile?.first_name || user?.email?.split('@')?.[0] || 'there', [profile?.first_name, user?.email])
 
+  const fadeUp = (delay = 0) => reduced
+    ? {}
+    : {
+        initial: { opacity: 0, y: 18 },
+        whileInView: { opacity: 1, y: 0 },
+        transition: { duration: 0.55, delay, ease: [0.2, 0.65, 0.3, 1] },
+        viewport: { once: true, margin: '-10% 0px -10% 0px' },
+      }
+
   return (
     <div className="space-y-6">
       <CabinetPageHeader
@@ -205,7 +221,11 @@ export default function UserDashboard() {
       )}
 
       {startHere?.enabled && (
-        <section className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_48%),linear-gradient(135deg,_#ffffff,_#effcf6_55%,_#f8fafc)] p-5 shadow-sm sm:p-6">
+        <motion.section
+          {...fadeUp()}
+          className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_48%),linear-gradient(135deg,_#ffffff,_#effcf6_55%,_#f8fafc)] p-5 shadow-sm sm:p-6"
+          style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.06), inset 0 1px 0 rgba(29,158,117,0.14)' }}
+        >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Start here</div>
@@ -227,7 +247,7 @@ export default function UserDashboard() {
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
-        </section>
+        </motion.section>
       )}
 
       {!loading && !hasUploads ? (
@@ -245,7 +265,7 @@ export default function UserDashboard() {
         </div>
       )}
 
-      <div className="grid items-start gap-4 xl:grid-cols-[1.1fr_0.95fr_320px]">
+      <motion.div {...fadeUp(0.04)} className="grid items-start gap-4 xl:grid-cols-[1.1fr_0.95fr_320px]">
         <DashboardCard title="Current account state" eyebrow="Live summary">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
@@ -313,9 +333,9 @@ export default function UserDashboard() {
         </DashboardCard>
 
         <QuickActionsPanel />
-      </div>
+      </motion.div>
 
-      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+      <motion.div {...fadeUp(0.08)} className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <DashboardCard
           title="Today focus"
           eyebrow="Priority queue"
@@ -372,9 +392,9 @@ export default function UserDashboard() {
             />
           )}
         </DashboardCard>
-      </div>
+      </motion.div>
 
-      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+      <motion.div {...fadeUp(0.12)} className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <DashboardCard title="Progress trend" eyebrow="Biomarker history">
           {progress.length > 0 ? <HealthChart progress={progress} /> : (
             <EmptyBlock
@@ -396,9 +416,10 @@ export default function UserDashboard() {
             />
           )}
         </DashboardCard>
-      </div>
+      </motion.div>
 
-      <DashboardCard title="Health activity timeline" eyebrow="Historical context">
+      <motion.div {...fadeUp(0.14)}>
+        <DashboardCard title="Health activity timeline" eyebrow="Historical context">
         {progress.length > 0 ? <ProgressTimeline progress={progress} /> : (
           <EmptyBlock
             title="Your timeline starts with the first upload"
@@ -407,7 +428,8 @@ export default function UserDashboard() {
             onClick={() => navigate('/upload')}
           />
         )}
-      </DashboardCard>
+        </DashboardCard>
+      </motion.div>
     </div>
   )
 }

@@ -8,6 +8,7 @@ import SymptomSelector from '../components/SymptomSelector.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
+import { gaLabUpload } from '../lib/analytics.js'
 import toast from 'react-hot-toast'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import '../styles/dashboard2026.css'
@@ -107,6 +108,7 @@ export default function Upload() {
         symptoms_count: symptoms.length,
         has_lab_name: Boolean(labName),
       }, { oncePerSession: true })
+      gaLabUpload()
 
       toast.success('Analysis complete!')
       navigate(`/results/${data.upload_id}`)
