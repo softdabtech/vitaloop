@@ -39,11 +39,14 @@ if settings.sentry_dsn and sentry_sdk is not None:
     )
 elif settings.sentry_dsn and sentry_sdk is None:
     logger.warning("sentry_dsn_set_but_sdk_missing")
-from app.routers import (
-    analyze, protocol, progress, health, symptoms, stripe_router, admin,
-    profile, complaints, checkins, timeline, insights, red_flags, notifications, auth, crm,
-    crm_clients, assignments, onboarding, questionnaire, dashboard,
-)
+from app.routers import health
+from app.routers.identity import auth, profile, onboarding
+from app.routers.analysis import analyze, insights, red_flags, timeline, dashboard
+from app.routers.protocol import protocol, progress, symptoms, checkins, questionnaire, assignments
+from app.routers.notifications import notifications, complaints
+from app.routers.billing import stripe_router
+from app.routers.crm import crm, crm_clients
+from app.routers.admin import admin
 
 
 def _check_runtime_readiness() -> None:
