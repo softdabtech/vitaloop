@@ -141,14 +141,25 @@ export default function Progress() {
           subtitle="Track concrete biomarker movement between uploads and monitor protocol effect over time."
         />
         {data.length === 0 ? (
-          <div className="py-20 text-center">
-            <EmptyState
-              icon="📈"
-              title="No lab results yet"
-              subtitle="Upload your first blood test to start tracking biomarker progress over time."
-              action="Upload First Test"
-              onAction={() => navigate('/upload')}
-            />
+          <div className="space-y-4 py-8">
+            <div className="grid gap-4 md:grid-cols-3">
+              {[
+                'Expected biomarker movement between uploads',
+                'What improved after protocol adherence',
+                'Where retesting or deeper follow-up is needed',
+              ].map((item) => (
+                <div key={item} className="vtl-light-card p-5 text-sm text-slate-500">{item}</div>
+              ))}
+            </div>
+            <div className="py-10 text-center">
+              <EmptyState
+                icon="📈"
+                title="No lab results yet"
+                subtitle="Upload your first blood test to start tracking biomarker progress over time."
+                action="Upload First Test"
+                onAction={() => navigate('/upload')}
+              />
+            </div>
           </div>
         ) : (
           <>

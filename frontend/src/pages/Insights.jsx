@@ -1,24 +1,24 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Sparkles, Clock, BarChart2, Activity, X, RefreshCw } from 'lucide-react'
+import { Activity, Clock, RefreshCw, Sparkles, TrendingUp, TriangleAlert } from 'lucide-react'
 import api from '../lib/api.js'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import toast from 'react-hot-toast'
 
-const EVENT_ICONS = {
-  lab_uploaded: '🧪',
-  biomarkers_extracted: '📊',
-  protocol_generated: '📋',
-  symptoms_logged: '💊',
-  weekly_checkin_submitted: '✅',
-  complaint_added: '⚠️',
-  insight_created: '✨',
-  red_flag_triggered: '🚨',
-  notification_sent: '📬',
-  profile_updated: '👤',
-  onboarding_completed: '🎉',
-  adherence_updated: '📌',
-  integration_synced: '🔗',
+const EVENT_LABELS = {
+  lab_uploaded: 'Upload',
+  biomarkers_extracted: 'Biomarkers',
+  protocol_generated: 'Protocol',
+  symptoms_logged: 'Symptoms',
+  weekly_checkin_submitted: 'Check-in',
+  complaint_added: 'Complaint',
+  insight_created: 'Insight',
+  red_flag_triggered: 'Alert',
+  notification_sent: 'Notification',
+  profile_updated: 'Profile',
+  onboarding_completed: 'Onboarding',
+  adherence_updated: 'Adherence',
+  integration_synced: 'Sync',
 }
 
 const INSIGHT_COLORS = {
@@ -26,54 +26,39 @@ const INSIGHT_COLORS = {
   biomarker_trend: '#818cf8',
   adherence: '#f59e0b',
   retest_suggestion: '#1d9e75',
-  general: 'rgba(255,255,255,0.5)',
+  general: '#cbd5e1',
 }
 
-function fmt(iso) {
+function formatDate(iso) {
   if (!iso) return ''
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  const date = new Date(iso)
+  return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
 }
 
-const s = {
-  page: { minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif', padding: '0 16px 48px' },
-  header: { maxWidth: 860, margin: '0 auto', padding: '32px 0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  back: { background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 },
-  body: { maxWidth: 860, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, alignItems: 'start' },
-  card: { background: '#ffffff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 20, padding: 24, boxShadow: '0 1px 3px rgba(15,23,42,0.06)' },
-  cardTitle: { fontSize: 17, fontWeight: 700, color: '#0f172a', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 },
-  insightCard: (color) => ({ background: `${color}10`, border: `1px solid ${color}30`, borderRadius: 14, padding: '16px 18px', marginBottom: 12, position: 'relative' }),
-  dismissBtn: { position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' },
-  timelineItem: { display: 'flex', gap: 16, paddingBottom: 20, position: 'relative' },
-  timelineDot: { width: 10, height: 10, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 5 },
-  timelineLine: { position: 'absolute', left: 4, top: 15, bottom: 0, width: '2px', background: 'rgba(15,23,42,0.08)' },
-}
-
-export default function Timeline() {
-  const navigate = useNavigate()
+export default function Insights() {
   const [timeline, setTimeline] = useState([])
   const [insights, setInsights] = useState([])
   const [healthScore, setHealthScore] = useState(null)
   const [loadingInsights, setLoadingInsights] = useState(false)
-  const [tab, setTab] = useState('timeline')
+  const [tab, setTab] = useState('insights')
 
   useEffect(() => {
     Promise.allSettled([
       api.get('/timeline'),
       api.get('/insights'),
       api.get('/insights/health-score'),
-    ]).then(([t, i, h]) => {
-      if (t.status === 'fulfilled') setTimeline(t.value.data || [])
-      if (i.status === 'fulfilled') setInsights(i.value.data || [])
-      if (h.status === 'fulfilled') setHealthScore(h.value.data)
+    ]).then(([timelineResult, insightsResult, healthResult]) => {
+      if (timelineResult.status === 'fulfilled') setTimeline(timelineResult.value.data || [])
+      if (insightsResult.status === 'fulfilled') setInsights(insightsResult.value.data || [])
+      if (healthResult.status === 'fulfilled') setHealthScore(healthResult.value.data || null)
     })
   }, [])
 
-  const generateInsights = async () => {
+  async function generateInsights() {
     setLoadingInsights(true)
     try {
       const { data } = await api.post('/insights/generate')
-      setInsights(prev => [...(data || []).map(i => ({ ...i, _new: true })), ...prev])
+      setInsights((prev) => [...(data || []), ...prev])
       toast.success(`${data?.length || 0} new insight(s) generated`)
     } catch {
       toast.error('Failed to generate insights')
@@ -82,128 +67,168 @@ export default function Timeline() {
     }
   }
 
-  const dismissInsight = async (id) => {
-    setInsights(prev => prev.filter(i => i.id !== id))
-    await api.post(`/insights/${id}/dismiss`).catch(() => {})
-  }
-
-  const scoreColor = healthScore ? (healthScore.score >= 70 ? '#1d9e75' : healthScore.score >= 50 ? '#f59e0b' : '#ef4444') : '#555'
+  const scoreColor = healthScore ? (healthScore.score >= 70 ? '#1d9e75' : healthScore.score >= 50 ? '#f59e0b' : '#ef4444') : '#64748b'
 
   return (
-    <div style={s.page}>
-      <div style={s.header}>
-        <button style={s.back} onClick={() => navigate('/dashboard')}>← Back to dashboard</button>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 700, textAlign: 'center' }}>Health Timeline</div>
-          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2, textAlign: 'center' }}>
-            See concrete events, generated insights and what to do next.
-          </div>
-        </div>
-        <div style={{ width: 100 }} />
-      </div>
+    <div className="space-y-6">
+      <CabinetPageHeader
+        title="Insights"
+        subtitle="Interpretation layer for uploads, adherence, timeline, and follow-up signals."
+        helper="If live insights are not available yet, this page should still preview what the user will unlock next."
+        action={(
+          <button onClick={generateInsights} disabled={loadingInsights} className="vtl-button-primary inline-flex items-center gap-2 px-4 text-sm disabled:opacity-60">
+            <RefreshCw className="h-4 w-4" style={{ animation: loadingInsights ? 'spin 1s linear infinite' : 'none' }} />
+            {loadingInsights ? 'Generating...' : 'Refresh insights'}
+          </button>
+        )}
+      />
 
-      {/* Health Score summary bar */}
       {healthScore && (
-        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-          style={{ maxWidth: 860, margin: '0 auto 24px', background: `${scoreColor}12`, border: `1px solid ${scoreColor}30`, borderRadius: 16, padding: '16px 24px', display: 'flex', gap: 32, alignItems: 'center' }}
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-3xl px-6 py-5"
+          style={{ background: `${scoreColor}12`, border: `1px solid ${scoreColor}30` }}
         >
-          <div>
-            <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>Health Score</div>
-            <div style={{ fontSize: 42, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>{healthScore.score}</div>
-            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>/ 100</div>
-          </div>
-          {[
-            { label: 'Symptom', val: healthScore.symptom_component },
-            { label: 'Biomarker', val: healthScore.biomarker_component },
-            { label: 'Adherence', val: healthScore.adherence_component },
-          ].map(({ label, val }) => (
-            <div key={label} style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>{label}</div>
-              <div style={{ height: 5, background: 'rgba(15,23,42,0.08)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${val}%`, background: scoreColor, borderRadius: 3 }} />
-              </div>
-              <div style={{ fontSize: 12, color: scoreColor, marginTop: 4 }}>{val}</div>
+          <div className="grid gap-6 md:grid-cols-[180px_1fr] md:items-center">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Health score</div>
+              <div className="mt-2 text-5xl font-bold" style={{ color: scoreColor }}>{healthScore.score}</div>
+              <div className="mt-1 text-xs text-slate-500">out of 100</div>
             </div>
-          ))}
+            <div className="grid gap-4 md:grid-cols-3">
+              {[
+                { label: 'Symptom', value: healthScore.symptom_component },
+                { label: 'Biomarker', value: healthScore.biomarker_component },
+                { label: 'Adherence', value: healthScore.adherence_component },
+              ].map((item) => (
+                <div key={item.label}>
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{item.label}</div>
+                  <div className="h-2 overflow-hidden rounded-full bg-white/60">
+                    <div className="h-full rounded-full" style={{ width: `${item.value}%`, background: scoreColor }} />
+                  </div>
+                  <div className="mt-2 text-sm font-semibold" style={{ color: scoreColor }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </motion.div>
       )}
 
-      {/* Tabs */}
-        <div style={{ maxWidth: 860, margin: '0 auto 24px', display: 'flex', gap: 4, borderBottom: '1px solid rgba(15,23,42,0.08)', paddingBottom: 0 }}>
-        {[{ id: 'timeline', label: 'Timeline', icon: Clock }, { id: 'insights', label: 'Insights', icon: Sparkles }].map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setTab(id)} style={{ padding: '12px 20px', background: 'none', border: 'none', color: tab === id ? '#10b981' : '#64748b', fontWeight: tab === id ? 700 : 400, borderBottom: `2px solid ${tab === id ? '#10b981' : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, fontSize: 14 }}>
-            <Icon size={15} />{label}
+      <div className="flex gap-2 border-b border-slate-200">
+        {[
+          { id: 'insights', label: 'Insights', icon: Sparkles },
+          { id: 'timeline', label: 'Timeline', icon: Clock },
+        ].map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={`inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition ${tab === id ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
           </button>
         ))}
       </div>
 
-      <div style={s.body}>
-        {/* Main content */}
+      <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
         <div>
-          {tab === 'timeline' && (
-            <div style={s.card}>
-              <div style={s.cardTitle}><Clock size={18} style={{ color: '#1d9e75' }} /> Activity Timeline</div>
-              {timeline.length === 0 && <p style={{ fontSize: 14, color: '#94a3b8' }}>No activity yet. Upload labs or log symptoms to see your timeline.</p>}
-              <div style={{ position: 'relative' }}>
-                {timeline.map((ev, i) => (
-                  <motion.div key={ev.id || i} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }} style={s.timelineItem}>
-                    {i < timeline.length - 1 && <div style={s.timelineLine} />}
-                    <div style={s.timelineDot} />
-                    <div>
-                      <div style={{ fontSize: 14, color: '#0f172a', fontWeight: 500, marginBottom: 3 }}>
-                        {EVENT_ICONS[ev.event_type] || '•'} {ev.summary}
+          {tab === 'insights' && (
+            <section className="vtl-light-card rounded-3xl p-6">
+              <div className="mb-5 text-lg font-semibold text-slate-900">Current insights</div>
+
+              {insights.length === 0 && (
+                <div className="grid gap-3 md:grid-cols-3">
+                  {[
+                    {
+                      title: 'Trend interpretation',
+                      body: 'You will see which biomarkers are stabilizing, worsening, or worth retesting next.',
+                      icon: TrendingUp,
+                    },
+                    {
+                      title: 'Risk context',
+                      body: 'The system will highlight critical markers, adherence gaps, and symptoms that deserve attention.',
+                      icon: TriangleAlert,
+                    },
+                    {
+                      title: 'Concrete next step',
+                      body: 'Each insight should end with what to do next: upload, recheck, protocol, or practitioner discussion.',
+                      icon: Activity,
+                    },
+                  ].map((card) => {
+                    const Icon = card.icon
+                    return (
+                      <div key={card.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="mb-2 inline-flex rounded-xl bg-white p-2 text-emerald-600 shadow-sm"><Icon className="h-4 w-4" /></div>
+                        <div className="text-sm font-semibold text-slate-900">{card.title}</div>
+                        <p className="mt-2 text-sm text-slate-500">{card.body}</p>
                       </div>
-                      <div style={{ fontSize: 12, color: '#94a3b8' }}>{fmt(ev.occurred_at)}</div>
+                    )
+                  })}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {insights.map((insight, index) => {
+                  const color = INSIGHT_COLORS[insight.insight_type] || INSIGHT_COLORS.general
+                  return (
+                    <motion.div
+                      key={insight.id || index}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="rounded-2xl border p-4"
+                      style={{ background: `${color}10`, borderColor: `${color}30` }}
+                    >
+                      <div className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color }}>{String(insight.insight_type || 'general').replaceAll('_', ' ')}</div>
+                      <div className="mt-2 text-base font-semibold text-slate-900">{insight.title}</div>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{insight.body}</p>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {tab === 'timeline' && (
+            <section className="vtl-light-card rounded-3xl p-6">
+              <div className="mb-5 text-lg font-semibold text-slate-900">Activity timeline</div>
+
+              {timeline.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+                  No activity yet. After uploads, questionnaire completion, insights, and check-ins, this area becomes a chronological product memory instead of an empty feed.
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {timeline.map((event, index) => (
+                  <motion.div
+                    key={event.id || index}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.04 }}
+                    className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4"
+                  >
+                    <div className="flex h-10 min-w-10 items-center justify-center rounded-2xl bg-emerald-50 px-3 text-xs font-semibold text-emerald-700">{EVENT_LABELS[event.event_type] || 'Event'}</div>
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900">{event.summary}</div>
+                      <div className="mt-1 text-xs text-slate-500">{formatDate(event.occurred_at)}</div>
                     </div>
                   </motion.div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {tab === 'insights' && (
-            <div style={s.card}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <div style={s.cardTitle}><Sparkles size={18} style={{ color: '#f472b6' }} /> Your Insights</div>
-                <button onClick={generateInsights} disabled={loadingInsights}
-                  style={{ background: '#f1f5f9', border: '1px solid rgba(15,23,42,0.1)', borderRadius: 8, padding: '8px 14px', color: '#475569', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <RefreshCw size={13} style={{ animation: loadingInsights ? 'spin 1s linear infinite' : 'none' }} />
-                  {loadingInsights ? 'Generating…' : 'Refresh'}
-                </button>
-              </div>
-              {insights.length === 0 && <p style={{ fontSize: 14, color: '#94a3b8' }}>No insights yet. Click Refresh to generate your first personalised insights.</p>}
-              {insights.map((ins, i) => {
-                const color = INSIGHT_COLORS[ins.insight_type] || INSIGHT_COLORS.general
-                return (
-                  <motion.div key={ins.id || i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} style={s.insightCard(color)}>
-                    <button style={s.dismissBtn} onClick={() => dismissInsight(ins.id)}><X size={14} /></button>
-                    <div style={{ fontSize: 13, color, fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{ins.insight_type?.replace('_', ' ')}</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>{ins.title}</div>
-                    <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{ins.body}</div>
-                  </motion.div>
-                )
-              })}
-            </div>
+            </section>
           )}
         </div>
 
-        {/* Sidebar: quick stats */}
-        <div>
-          <div style={{ ...s.card, marginBottom: 16 }}>
-            <div style={s.cardTitle}><Activity size={16} style={{ color: '#818cf8' }} /> Quick Actions</div>
-            {[
-              { label: '📋 Weekly Check-In', path: '/check-ins' },
-              { label: '🧪 Upload Labs', path: '/upload' },
-              { label: '💊 Log Symptoms', path: '/admin' },
-              { label: '👤 Update Profile', path: '/onboarding' },
-            ].map(({ label, path }) => (
-              <button key={path} onClick={() => navigate(path)}
-                style={{ display: 'block', width: '100%', textAlign: 'left', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.07)', borderRadius: 10, padding: '11px 14px', color: '#475569', cursor: 'pointer', fontSize: 14, marginBottom: 8 }}>
-                {label}
-              </button>
-            ))}
+        <aside className="vtl-light-card rounded-3xl p-6">
+          <div className="mb-4 text-lg font-semibold text-slate-900">Why this page matters</div>
+          <div className="space-y-3 text-sm text-slate-500">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">This page should explain the meaning of the data, not just repeat numbers from results.</div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">If there is no data yet, the product must still preview the value the user will see later.</div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">Timeline and insights together turn the cabinet into a coherent premium product surface.</div>
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   )

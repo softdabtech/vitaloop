@@ -1,0 +1,2 @@
+export const PREMIUM_MONTHLY_PRICE = 49
+export const PREMIUM_PRICE_LABEL = `$${PREMIUM_MONTHLY_PRICE} / month`

@@ -29,6 +29,7 @@ const Settings = lazy(() => import('./pages/Settings.jsx'))
 const Onboarding = lazy(() => import('./pages/Onboarding.jsx'))
 const WeeklyCheckIn = lazy(() => import('./pages/WeeklyCheckIn.jsx'))
 const Questionnaire = lazy(() => import('./pages/Questionnaire.jsx'))
+const UserCabinetLayout = lazy(() => import('./components/dashboard/UserCabinetLayout.jsx'))
 
 // Marketing pages — lazy
 const ExampleReport = lazy(() => import('./pages/ExampleReport.jsx'))
@@ -105,6 +106,17 @@ function RouteFallback() {
 export default function App() {
   const [chatOpen, setChatOpen] = useState(false)
 
+  const renderCabinetRoute = (page, options = {}) => (
+    <ProtectedRoute>
+      <EndUserFlowRoute
+        allowBeforeOnboarding={Boolean(options.allowBeforeOnboarding)}
+        redirectIfOnboardingComplete={Boolean(options.redirectIfOnboardingComplete)}
+      >
+        <UserCabinetLayout>{page}</UserCabinetLayout>
+      </EndUserFlowRoute>
+    </ProtectedRoute>
+  )
+
   return (
     <BrowserRouter>
       <PaywallModal />
@@ -118,16 +130,16 @@ export default function App() {
           <Route path="/terms" element={<Terms />} />
           <Route path="/login" element={<Login />} />
           <Route path="/auth/confirmation" element={<EmailConfirmation />} />
-          <Route path="/dashboard" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><UserDashboard /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/upload" element={<ProtectedRoute><EndUserFlowRoute><Upload /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/results/:uploadId" element={<ProtectedRoute><EndUserFlowRoute><Results /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/protocol/:uploadId" element={<ProtectedRoute><EndUserFlowRoute><ProtocolPage /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/avatar" element={<ProtectedRoute><EndUserFlowRoute><Avatar /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/progress" element={<ProtectedRoute><EndUserFlowRoute><Progress /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/assignments" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Assignments /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/assignments/:assignmentId" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><AssignmentDetails /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/lab-results" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><LabResultsList /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><EndUserFlowRoute><Settings /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/dashboard" element={renderCabinetRoute(<UserDashboard />, { allowBeforeOnboarding: true })} />
+          <Route path="/upload" element={renderCabinetRoute(<Upload />)} />
+          <Route path="/results/:uploadId" element={renderCabinetRoute(<Results />)} />
+          <Route path="/protocol/:uploadId" element={renderCabinetRoute(<ProtocolPage />)} />
+          <Route path="/avatar" element={renderCabinetRoute(<Avatar />)} />
+          <Route path="/progress" element={renderCabinetRoute(<Progress />)} />
+          <Route path="/assignments" element={renderCabinetRoute(<Assignments />, { allowBeforeOnboarding: true })} />
+          <Route path="/assignments/:assignmentId" element={renderCabinetRoute(<AssignmentDetails />, { allowBeforeOnboarding: true })} />
+          <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />, { allowBeforeOnboarding: true })} />
+          <Route path="/settings" element={renderCabinetRoute(<Settings />)} />
           <Route path="/admin" element={<ProtectedRoute><ClientAdmin /></ProtectedRoute>} />
           <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<ProtectedRoute><CRMRoute><OpsDashboard /></CRMRoute></ProtectedRoute>} />
@@ -136,10 +148,10 @@ export default function App() {
           <Route path="/crm/clients/:id" element={<ProtectedRoute><CRMRoute><CRMClientDetails /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/practitioners" element={<ProtectedRoute><CRMRoute><CRMPractitioners /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
-          <Route path="/onboarding" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Onboarding /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/questionnaire" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Questionnaire /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/check-ins" element={<ProtectedRoute><EndUserFlowRoute><WeeklyCheckIn /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/insights" element={<ProtectedRoute><EndUserFlowRoute><Insights /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/onboarding" element={renderCabinetRoute(<Onboarding />, { allowBeforeOnboarding: true })} />
+          <Route path="/questionnaire" element={renderCabinetRoute(<Questionnaire />, { allowBeforeOnboarding: true })} />
+          <Route path="/check-ins" element={renderCabinetRoute(<WeeklyCheckIn />)} />
+          <Route path="/insights" element={renderCabinetRoute(<Insights />)} />
           {/* Legacy route redirects */}
           <Route path="/checkin" element={<Navigate to="/check-ins" replace />} />
           <Route path="/timeline" element={<Navigate to="/insights" replace />} />

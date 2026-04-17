@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   Activity,
   BarChart3,
@@ -13,15 +13,17 @@ import {
   TrendingUp,
   Upload,
 } from 'lucide-react'
+import { useSubscription } from '../../hooks/useSubscription.js'
+import { PREMIUM_PRICE_LABEL } from '../../lib/pricing.js'
 
 const MENU_ITEMS = [
   { icon: Home,       label: 'Dashboard',     path: '/dashboard',   badge: null },
   { icon: Upload,     label: 'Upload Labs',   path: '/upload',      badge: null },
   { icon: FileText,   label: 'Lab Results',   path: '/lab-results', badge: null },
-  { icon: Target,     label: 'Assignments',   path: '/assignments', badgeKey: 'pending_assignments' },
-  { icon: TrendingUp, label: 'Progress',      path: '/progress',    badge: null },
-  { icon: BarChart3,  label: 'Insights',      path: '/insights',    badge: null },
-  { icon: Clock,      label: 'Check-ins',     path: '/check-ins',   badge: null },
+  { icon: Target,     label: 'Assignments',   path: '/assignments', badgeKey: 'pending_assignments', premium: true },
+  { icon: TrendingUp, label: 'Progress',      path: '/progress',    badge: null, premium: true },
+  { icon: BarChart3,  label: 'Insights',      path: '/insights',    badge: null, premium: true },
+  { icon: Clock,      label: 'Check-ins',     path: '/check-ins',   badge: null, premium: true },
   { icon: Flame,      label: 'Onboarding',    path: '/onboarding',  badge: null },
 ]
 
@@ -33,7 +35,33 @@ export default function UserDashboardSidebar({
   mobile = false,
   onCloseMobile,
 }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { isActive: hasPremium, loading: subscriptionLoading } = useSubscription()
   const sidebarWidth = collapsed ? 'w-[72px]' : 'w-[280px]'
+
+  function handleLockedFeature(item, event) {
+    if (!item.premium || subscriptionLoading || hasPremium) {
+      return
+    }
+
+    event.preventDefault()
+    event.stopPropagation()
+    window.dispatchEvent(new CustomEvent('paywall:trigger', {
+      detail: {
+        reason: 'SUBSCRIPTION_REQUIRED',
+        feature: item.label,
+        source: item.path,
+      },
+    }))
+
+    if (location.pathname !== '/dashboard') {
+      navigate('/dashboard')
+    }
+    if (mobile) {
+      onCloseMobile?.()
+    }
+  }
 
   return (
     <aside className={`${sidebarWidth} h-screen border-r border-slate-200 bg-white transition-[width] duration-300`}>
@@ -70,7 +98,12 @@ export default function UserDashboardSidebar({
             <NavLink
               key={item.path}
               to={item.path}
-              onClick={mobile ? onCloseMobile : undefined}
+              onClick={(event) => {
+                handleLockedFeature(item, event)
+                if (!event.defaultPrevented && mobile) {
+                  onCloseMobile?.()
+                }
+              }}
               className={({ isActive }) =>
                 `group relative flex h-11 items-center gap-3 rounded-xl px-3 transition ${
                   isActive
@@ -86,6 +119,11 @@ export default function UserDashboardSidebar({
                   {!collapsed && (
                     <>
                       <span className="flex-1 text-sm font-medium">{item.label}</span>
+                      {item.premium && !hasPremium && !subscriptionLoading && (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                          Pro
+                        </span>
+                      )}
                       {badgeValue > 0 && (
                         <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 ring-1 ring-emerald-500/25">
                           {badgeValue}
@@ -101,6 +139,17 @@ export default function UserDashboardSidebar({
       </nav>
 
       <div className="mt-auto border-t border-slate-100 p-3">
+        {!collapsed && !subscriptionLoading && !hasPremium && (
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED', source: 'sidebar-upgrade' } }))}
+            className="mb-2 w-full rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-3 py-3 text-left transition hover:border-amber-300 hover:shadow-sm"
+          >
+            <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">Premium access</div>
+            <div className="mt-1 text-sm font-semibold text-slate-800">Unlock protocols, trends, and check-ins</div>
+            <div className="mt-1 text-xs text-slate-500">{PREMIUM_PRICE_LABEL}</div>
+          </button>
+        )}
+
         <NavLink
           to="/settings"
           onClick={mobile ? onCloseMobile : undefined}
