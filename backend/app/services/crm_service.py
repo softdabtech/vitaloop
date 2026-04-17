@@ -9,7 +9,7 @@ from typing import Optional, List, Dict, Any
 from uuid import UUID
 from datetime import datetime, timedelta, timezone
 
-from app.models.crm_stage5 import (
+from app.models.crm_clients import (
     ClientOnboardingStatus,
     ClientProgramStatus,
     SubscriptionPlan,

@@ -1,8 +1,8 @@
 import pytest
 from fastapi import HTTPException
 
-from app.routers.analyze import _normalize_lab_text, _normalize_symptoms as normalize_analyze_symptoms
-from app.routers.protocol import _normalize_symptoms as normalize_protocol_symptoms
+from app.routers.analysis.analyze import _normalize_lab_text, _normalize_symptoms as normalize_analyze_symptoms
+from app.routers.protocol.protocol import _normalize_symptoms as normalize_protocol_symptoms
 
 
 def test_normalize_lab_text_removes_null_and_collapses_spacing():

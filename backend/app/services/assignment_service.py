@@ -15,7 +15,13 @@ ACTIVE_ASSIGNMENT_STATUSES = {"pending", "active"}
 
 class AssignmentService:
     def __init__(self):
-        self.sb = svc._get_supabase()
+        self._sb = None
+
+    @property
+    def sb(self):
+        if self._sb is None:
+            self._sb = svc._get_supabase()
+        return self._sb
 
     async def _get_assignment(self, assignment_id: UUID) -> Optional[Dict[str, Any]]:
         resp = await svc._run(

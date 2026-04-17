@@ -23,9 +23,15 @@ def _build_jwks_url() -> str:
         raise RuntimeError("SUPABASE_URL is not configured; cannot build JWKS URL")
     return f"{base}/auth/v1/.well-known/jwks.json"
 
-# Cache JWKS for 5 minutes; auto-refreshes on expiry so key rotations are
-# picked up without a restart (PyJWT default is no TTL → keys cached forever).
-jwks_client = PyJWKClient(_build_jwks_url(), cache_keys=True, lifespan=300)
+# Lazy singleton — built on first auth request so unit tests that never
+# call get_current_user can import this module without SUPABASE_URL set.
+_jwks_client: PyJWKClient | None = None
+
+def _get_jwks_client() -> PyJWKClient:
+    global _jwks_client
+    if _jwks_client is None:
+        _jwks_client = PyJWKClient(_build_jwks_url(), cache_keys=True, lifespan=300)
+    return _jwks_client
 
 
 def get_current_user(
@@ -36,7 +42,7 @@ def get_current_user(
 
     token = credentials.credentials
     try:
-        signing_key = jwks_client.get_signing_key_from_jwt(token)
+        signing_key = _get_jwks_client().get_signing_key_from_jwt(token)
         payload = jwt.decode(
             token,
             signing_key.key,

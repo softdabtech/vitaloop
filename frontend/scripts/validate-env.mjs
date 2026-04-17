@@ -4,6 +4,13 @@ import path from 'node:path'
 const root = process.cwd()
 const mode = process.env.MODE || process.env.NODE_ENV || 'production'
 
+// In CI environments the build runs without real secrets — skip strict validation.
+// Set SKIP_ENV_VALIDATION=1 to allow the build to proceed with stub values.
+if (process.env.CI === 'true' || process.env.SKIP_ENV_VALIDATION === '1') {
+  console.log(`Environment validation skipped (CI=${process.env.CI})`)
+  process.exit(0)
+}
+
 const requiredKeys = [
   'VITE_SUPABASE_URL',
   'VITE_SUPABASE_ANON_KEY',
