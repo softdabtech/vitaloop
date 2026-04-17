@@ -103,9 +103,52 @@ function RouteFallback() {
   return <div className="flex items-center justify-center h-screen">Loading…</div>
 }
 
-export default function App() {
+function FloatingSupportChat() {
+  const location = useLocation()
   const [chatOpen, setChatOpen] = useState(false)
 
+  const isCabinetRoute = [
+    '/dashboard',
+    '/upload',
+    '/results/',
+    '/protocol/',
+    '/avatar',
+    '/progress',
+    '/assignments',
+    '/lab-results',
+    '/settings',
+    '/onboarding',
+    '/questionnaire',
+    '/check-ins',
+    '/insights',
+  ].some((prefix) => location.pathname === prefix || location.pathname.startsWith(prefix))
+
+  return (
+    <>
+      <button
+        onClick={() => setChatOpen((v) => !v)}
+        aria-label="Open support chat"
+        className={`fixed right-6 z-[2999] flex h-[52px] w-[52px] items-center justify-center rounded-full border-0 bg-[var(--teal-800,#085041)] shadow-[0_4px_20px_rgba(8,80,65,0.35)] transition hover:bg-[var(--teal-600,#0F6E56)] ${isCabinetRoute ? 'bottom-24 md:bottom-6' : 'bottom-6'}`}
+        style={{ bottom: isCabinetRoute ? 'max(96px, calc(env(safe-area-inset-bottom) + 76px))' : 'max(24px, calc(env(safe-area-inset-bottom) + 12px))' }}
+      >
+        {chatOpen
+          ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="white" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          : <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="white" strokeWidth="2" strokeLinecap="round">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </svg>
+        }
+      </button>
+
+      {chatOpen && <SupportChat onClose={() => setChatOpen(false)} />}
+    </>
+  )
+}
+
+export default function App() {
   const renderCabinetRoute = (page, options = {}) => (
     <ProtectedRoute>
       <EndUserFlowRoute
@@ -161,36 +204,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
-
-      {/* Floating chat button - visible on all pages */}
-      <button
-        onClick={() => setChatOpen(v => !v)}
-        aria-label="Open support chat"
-        style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 2999,
-          width: 52, height: 52, borderRadius: '50%',
-          background: 'var(--teal-800,#085041)',
-          border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 20px rgba(8,80,65,0.35)',
-          transition: 'transform 200ms, background 200ms',
-        }}
-        onMouseEnter={e => e.currentTarget.style.background = 'var(--teal-600,#0F6E56)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'var(--teal-800,#085041)'}
-      >
-        {chatOpen
-          ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                 stroke="white" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          : <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                 stroke="white" strokeWidth="2" strokeLinecap="round">
-              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-            </svg>
-        }
-      </button>
-
-      {chatOpen && <SupportChat onClose={() => setChatOpen(false)} />}
+      <FloatingSupportChat />
     </BrowserRouter>
   )
 }

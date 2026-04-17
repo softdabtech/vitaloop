@@ -29,10 +29,11 @@ const GOAL_OPTIONS = [
 
 const fieldStyle = {
   width: '100%',
+  minHeight: 44,
   padding: '10px 14px',
   background: '#f8fafc',
   border: '1px solid rgba(15,23,42,0.12)',
-  borderRadius: 12,
+  borderRadius: 14,
   color: '#0f172a',
   fontSize: 15,
   outline: 'none',
@@ -42,7 +43,7 @@ const fieldStyle = {
 function Field({ label, children }) {
   return (
     <div>
-      <label style={{ fontSize: 13, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>
+      <label style={{ fontSize: 13, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6, lineHeight: 1.3 }}>
         {label}
       </label>
       {children}
@@ -152,8 +153,8 @@ export default function Settings() {
   }, [meta, user])
 
   function focusStyle(event) {
-    event.target.style.borderColor = '#10b981'
-    event.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.15)'
+    event.target.style.borderColor = 'rgba(29,158,117,0.72)'
+    event.target.style.boxShadow = '0 0 0 3px rgba(29,158,117,0.16)'
   }
 
   function blurStyle(event) {
@@ -256,12 +257,13 @@ export default function Settings() {
           title="Settings"
           subtitle="Profile, reminders, goals, and identity in one place."
           helper="Compact account controls for daily use."
+          className="mb-4"
         />
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
           <div style={{ display: 'grid', gap: 16 }}>
-            <div className="vtl-light-card" style={{ padding: '28px 28px 24px', background: 'linear-gradient(135deg, rgba(255,255,255,1), rgba(240,253,247,0.92))' }}>
-              <div className="grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center">
+            <div className="vtl-light-card p-5 sm:p-6" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,1), rgba(240,253,247,0.92))' }}>
+              <div className="grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-start">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                   <div style={{ position: 'relative' }}>
                     <div style={{
@@ -276,12 +278,12 @@ export default function Settings() {
                       fontSize: 24,
                       fontWeight: 700,
                       color: '#052e16',
-                      boxShadow: '0 12px 30px rgba(16,185,129,0.18)',
+                      boxShadow: '0 12px 30px rgba(29,158,117,0.18)',
                     }}>
                       {avatarUrl ? <img src={avatarUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
                     </div>
                     <label style={{ position: 'absolute', right: -2, bottom: -2, width: 34, height: 34, borderRadius: '50%', background: '#ffffff', border: '1px solid rgba(15,23,42,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                      <Camera size={16} style={{ color: '#10b981' }} />
+                      <Camera size={16} style={{ color: '#1d9e75' }} />
                       <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
                     </label>
                   </div>
@@ -289,13 +291,13 @@ export default function Settings() {
                   <div>
                     <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: '#0f172a' }}>{account.full_name || 'Your Profile'}</div>
                     <div style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>{user?.email}</div>
-                    <div style={{ marginTop: 10, display: 'inline-flex', borderRadius: 999, background: 'rgba(16,185,129,0.1)', color: '#047857', padding: '7px 12px', fontSize: 12, fontWeight: 700 }}>
+                    <div style={{ marginTop: 10, display: 'inline-flex', borderRadius: 999, background: 'rgba(29,158,117,0.1)', color: '#047857', padding: '7px 12px', fontSize: 12, fontWeight: 700 }}>
                       Profile completion {profileCompletion}%
                     </div>
                   </div>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-3 lg:self-start">
                   <MetricTile label="Profile" value={`${profileCompletion}%`} tone={profileCompletion >= 70 ? 'success' : 'warm'} />
                   <MetricTile label="Channels" value={String(activeChannels)} />
                   <MetricTile label="Reminders on" value={`${enabledReminders}/3`} />
@@ -303,9 +305,9 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="vtl-light-card" style={{ padding: '28px 28px 24px' }}>
+            <div className="vtl-light-card p-5 sm:p-6">
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-                <User size={18} style={{ color: '#10b981' }} />
+                <User size={18} style={{ color: '#1d9e75' }} />
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>Identity and baseline</div>
                   <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>Core data that shapes reminders, assignments, and interpretation quality.</div>
@@ -359,8 +361,8 @@ export default function Settings() {
                           className="vtl-focus-ring"
                           style={{
                             borderRadius: 999,
-                            border: `1px solid ${active ? 'rgba(16,185,129,0.28)' : 'rgba(15,23,42,0.08)'}`,
-                            background: active ? 'rgba(16,185,129,0.1)' : '#f8fafc',
+                            border: `1px solid ${active ? 'rgba(29,158,117,0.28)' : 'rgba(15,23,42,0.08)'}`,
+                            background: active ? 'rgba(29,158,117,0.1)' : '#f8fafc',
                             color: active ? '#047857' : '#334155',
                             padding: '10px 14px',
                             fontSize: 13,
@@ -383,10 +385,10 @@ export default function Settings() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gap: 16 }}>
-            <div className="vtl-light-card" style={{ padding: '24px 28px' }}>
+          <div className="xl:sticky xl:top-[96px] xl:self-start" style={{ display: 'grid', gap: 16 }}>
+            <div className="vtl-light-card p-5 sm:p-6">
               <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Link2 size={16} style={{ color: '#10b981' }} /> Connected presence
+                <Link2 size={16} style={{ color: '#1d9e75' }} /> Connected presence
               </div>
               <div style={{ display: 'grid', gap: 12 }}>
                 <Field label="Telegram">
@@ -401,9 +403,9 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="vtl-light-card" style={{ padding: '24px 28px' }}>
+            <div className="vtl-light-card p-5 sm:p-6">
               <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Clock3 size={16} style={{ color: '#10b981' }} /> Reminders
+                <Clock3 size={16} style={{ color: '#1d9e75' }} /> Reminders
               </div>
               <div style={{ display: 'grid', gap: 10 }}>
                 {[
@@ -433,9 +435,9 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="vtl-light-card" style={{ padding: '24px 28px' }}>
+            <div className="vtl-light-card p-5 sm:p-6">
               <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Target size={16} style={{ color: '#10b981' }} /> Completion checklist
+                <Target size={16} style={{ color: '#1d9e75' }} /> Completion checklist
               </div>
               <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.45, marginBottom: 12 }}>
                 Complete these for better analysis quality.
@@ -459,7 +461,7 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="vtl-light-card" style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="vtl-light-card p-5 sm:p-6" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Account actions</div>
               {isSuperAdmin && (
                 <button

@@ -65,7 +65,7 @@ export default function UserCabinetLayout({ children }) {
     <div
       className="vtl-page flex min-h-screen text-slate-900"
       style={{
-        background: 'radial-gradient(circle at top left, rgba(16,185,129,0.08), transparent 20%), linear-gradient(180deg, #f8fafc 0%, #f3f7f5 100%)',
+        background: 'radial-gradient(circle at top left, rgba(var(--brand-rgb,29,158,117),0.1), transparent 20%), linear-gradient(180deg, #f8fafc 0%, #f3f7f5 100%)',
       }}
     >
       <div className="hidden md:sticky md:top-0 md:block md:self-start">
@@ -93,7 +93,7 @@ export default function UserCabinetLayout({ children }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/92 backdrop-blur">
-          <div className="mx-auto flex h-[74px] max-w-[1480px] items-center justify-between gap-4 px-4 sm:px-6">
+          <div className="mx-auto flex h-[72px] max-w-[1380px] items-center justify-between gap-4 px-3 sm:px-5 lg:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <button
                 onClick={() => setSidebarOpen((prev) => !prev)}
@@ -136,12 +136,15 @@ export default function UserCabinetLayout({ children }) {
         </div>
 
         <main className="flex-1 overflow-x-hidden">
-          <div className="mx-auto w-full max-w-[1480px] px-4 py-6 pb-24 sm:px-6 sm:py-8 md:pb-8">
+          <div className="mx-auto w-full max-w-[1380px] px-3 py-5 pb-28 sm:px-5 sm:py-7 md:pb-8 lg:px-6">
             {children}
           </div>
         </main>
 
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/96 px-3 py-2 backdrop-blur md:hidden">
+        <div
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/96 px-3 py-2 backdrop-blur md:hidden"
+          style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}
+        >
           <div className="grid grid-cols-5 gap-2">
             {MOBILE_NAV_ITEMS.map((item) => {
               const Icon = item.icon

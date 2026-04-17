@@ -22,10 +22,10 @@ export default function CabinetPageHeader({
         {backLabel}
       </button>
 
-      <div className="vtl-light-card flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className={`vtl-light-card p-5 sm:p-6 ${action ? 'flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between' : ''}`}>
         <div>
-          <h2 className="mb-1 text-2xl font-bold tracking-tight text-slate-900">{title}</h2>
-          {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
+          <h2 className="mb-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{title}</h2>
+          {subtitle && <p className="text-sm leading-relaxed text-slate-500">{subtitle}</p>}
           {helper && <p className="mt-1 text-xs text-slate-400">{helper}</p>}
         </div>
         {action ? <div className="flex items-center gap-2">{action}</div> : null}
