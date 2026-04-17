@@ -20,6 +20,101 @@ const BLOCKS = [
   },
 ]
 
+const TRACKING_MOCKUPS = [
+  {
+    title: 'Dashboard',
+    alt: 'Dashboard with biomarker score, priority flags, and adherence trend.',
+    image: '/mockups/dashboard.png',
+    device: 'desktop',
+  },
+  {
+    title: 'Lab Upload',
+    alt: 'Upload workspace with PDF intake, OCR status, and validation checks.',
+    image: '/mockups/upload.png',
+    device: 'desktop',
+  },
+  {
+    title: 'Lab Results',
+    alt: 'Structured lab results with severity chips and high-risk markers.',
+    image: '/mockups/lab-results.png',
+    device: 'desktop',
+  },
+  {
+    title: 'Personalized Protocol',
+    alt: 'Protocol plan with supplements, nutrition actions, and progress targets.',
+    image: '/mockups/progress.png',
+    device: 'desktop',
+  },
+  {
+    title: 'Timeline',
+    alt: 'Longitudinal timeline with biomarker trajectories across multiple test cycles.',
+    image: '/mockups/progress.png',
+    device: 'desktop',
+  },
+  {
+    title: 'Practitioner CRM',
+    alt: 'Practitioner CRM dashboard with client panels and assignment overview.',
+    image: '/mockups/crm.png',
+    device: 'desktop',
+  },
+  {
+    title: 'Weekly Check-in',
+    alt: 'Mobile check-in flow with daily energy, sleep, and symptom entries.',
+    image: '/mockups/check-in.png',
+    device: 'mobile',
+  },
+]
+
+function TrackingMockupCard({ title, alt, image, device }) {
+  const isMobile = device === 'mobile'
+
+  return (
+    <figure style={{
+      borderRadius: 20,
+      border: '0.5px solid var(--gray-100)',
+      background: 'white',
+      padding: 12,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10,
+    }}>
+      <div style={{
+        borderRadius: 14,
+        border: '0.5px solid var(--gray-100)',
+        overflow: 'hidden',
+        background: 'var(--gray-50)',
+        minHeight: isMobile ? 260 : 190,
+      }}>
+        <img
+          src={image}
+          alt={alt}
+          loading="lazy"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: isMobile ? 'top center' : 'center',
+            aspectRatio: isMobile ? '9 / 16' : '16 / 10',
+          }}
+          onError={(event) => {
+            // Keep layout stable when screenshots are not deployed yet.
+            event.currentTarget.style.display = 'none'
+            event.currentTarget.parentElement.style.background =
+              'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(15,23,42,0.08))'
+          }}
+        />
+      </div>
+      <figcaption style={{
+        fontSize: 13,
+        color: 'var(--gray-500)',
+        lineHeight: 1.5,
+      }}>
+        <strong style={{ color: 'var(--gray-900)', fontWeight: 700 }}>{title}</strong>
+      </figcaption>
+    </figure>
+  )
+}
+
 export default function LongevitySection() {
   return (
     <section style={{ padding: 'var(--py-lg) 24px', backgroundColor: 'var(--white)' }}>
@@ -124,6 +219,36 @@ export default function LongevitySection() {
                 </div>
               )
             })}
+          </div>
+        </div>
+
+        {/* Product screenshots */}
+        <div className="reveal" style={{ marginBottom: 72 }}>
+          <div style={{ marginBottom: 18 }}>
+            <h3 style={{
+              fontSize: 'clamp(24px, 3vw, 34px)',
+              fontWeight: 700,
+              letterSpacing: '-0.02em',
+              color: 'var(--gray-900)',
+              marginBottom: 10,
+            }}>
+              Longitudinal Biomarker Tracking Across Every Health Dimension
+            </h3>
+            <p style={{ fontSize: 15, color: 'var(--gray-500)', lineHeight: 1.65, margin: 0 }}>
+              Every cycle is captured as structured evidence: upload, interpret, adapt protocol, and follow progress over time.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            {TRACKING_MOCKUPS.map((mockup) => (
+              <TrackingMockupCard
+                key={mockup.title}
+                title={mockup.title}
+                alt={mockup.alt}
+                image={mockup.image}
+                device={mockup.device}
+              />
+            ))}
           </div>
         </div>
 
