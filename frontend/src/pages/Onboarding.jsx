@@ -170,6 +170,12 @@ export default function Onboarding() {
   return (
     <div style={s.wrap}>
       <motion.div style={s.card} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
+        <button
+          onClick={() => navigate('/dashboard')}
+          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 14, marginBottom: 14 }}
+        >
+          ← Back to dashboard
+        </button>
 
         {/* ── Org-setup screen (shown only before health profile, when user has no org) ── */}
         {!orgCheckDone && (
@@ -212,6 +218,9 @@ export default function Onboarding() {
         {/* Progress bar */}
         <div style={s.progress}>
           {steps.map((_, i) => <div key={i} style={s.dot(i === step, i < step)} />)}
+        </div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 10 }}>
+          This onboarding captures practical baseline data for personalized tasks and protocol adjustments.
         </div>
           <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 24, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
           Step {step + 1} of {TOTAL} — {steps[step]}

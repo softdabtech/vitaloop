@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FlaskConical, Calendar, ChevronRight, Upload, Activity } from 'lucide-react'
+import { FlaskConical, Calendar, ChevronRight, Upload, Activity, ArrowLeft } from 'lucide-react'
 import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import '../styles/dashboard2026.css'
@@ -77,10 +77,19 @@ export default function LabResultsList() {
   return (
     <div className="vtl-page px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-6xl">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="mb-4 inline-flex items-center gap-2 rounded-lg px-1 py-1 text-sm text-slate-500 hover:text-slate-800"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to dashboard
+        </button>
+
         <div className="vtl-light-card mb-6 flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="mb-1 text-2xl font-bold tracking-tight text-slate-900">Lab Results</h2>
             <p className="text-sm text-slate-500">History of uploaded tests and biomarker quality snapshot.</p>
+            <p className="mt-1 text-xs text-slate-400">Open any upload to see full biomarkers and jump directly to the generated protocol.</p>
           </div>
           <button
             onClick={() => navigate('/upload')}

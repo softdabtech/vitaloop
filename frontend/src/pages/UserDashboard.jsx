@@ -226,33 +226,9 @@ export default function UserDashboard() {
               </div>
             )}
 
-            {/* Hero metrics: Health score + key stats + quick actions */}
+            {/* Hero metrics: key stats + health score + quick actions */}
             <div className="grid items-start gap-4 xl:grid-cols-[300px_1fr_320px]">
-              <motion.div
-                initial={reduced ? false : { opacity: 0, y: 12 }}
-                animate={reduced ? {} : { opacity: 1, y: 0 }}
-                transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-                className="vtl-light-card p-6"
-              >
-                <p className="mb-3 text-sm text-slate-500">Health Score</p>
-                <div className="mx-auto flex h-[240px] w-[240px] items-center justify-center">
-                  <div
-                    className="relative h-[220px] w-[220px] rounded-full"
-                    style={{
-                      background: `conic-gradient(#10B981 ${ringProgress * 3.6}deg, rgba(148,163,184,0.2) 0deg)`,
-                    }}
-                  >
-                    <div className="absolute inset-[18px] flex items-center justify-center rounded-full bg-white shadow-md">
-                      <div className="text-center">
-                        <p className="text-5xl font-bold text-slate-900">{stats?.health_score ?? '--'}</p>
-                        <p className="text-xs uppercase tracking-[0.12em] text-slate-500">out of 100</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-
-              <div className="grid items-start content-start auto-rows-min gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+              <div className="grid items-start content-start auto-rows-min gap-4 sm:grid-cols-2 2xl:grid-cols-4 xl:order-1">
                 {loading ? (
                   <>
                     <StatSkeleton />
@@ -294,7 +270,31 @@ export default function UserDashboard() {
                 )}
               </div>
 
-              <div>
+              <motion.div
+                initial={reduced ? false : { opacity: 0, y: 12 }}
+                animate={reduced ? {} : { opacity: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+                className="vtl-light-card p-6 xl:order-2"
+              >
+                <p className="mb-3 text-sm text-slate-500">Health Score</p>
+                <div className="mx-auto flex h-[240px] w-[240px] items-center justify-center">
+                  <div
+                    className="relative h-[220px] w-[220px] rounded-full"
+                    style={{
+                      background: `conic-gradient(#10B981 ${ringProgress * 3.6}deg, rgba(148,163,184,0.2) 0deg)`,
+                    }}
+                  >
+                    <div className="absolute inset-[18px] flex items-center justify-center rounded-full bg-white shadow-md">
+                      <div className="text-center">
+                        <p className="text-5xl font-bold text-slate-900">{stats?.health_score ?? '--'}</p>
+                        <p className="text-xs uppercase tracking-[0.12em] text-slate-500">out of 100</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              <div className="xl:order-3">
                 {loading ? (
                   <div className="vtl-light-card p-6">
                     <SectionSkeleton rows={6} rowClass="h-10" />

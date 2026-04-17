@@ -221,10 +221,18 @@ export default function Questionnaire() {
   return (
     <div style={s.wrap}>
       <motion.div style={s.card} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+        <button
+          onClick={() => navigate('/dashboard')}
+          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 14, marginBottom: 14 }}
+        >
+          ← Back to dashboard
+        </button>
+
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 14, alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>Adaptive Questionnaire</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>Question {answeredCount + 1} of {totalCount || '?'}</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Concrete weekly signal check for energy, sleep, stress and recovery.</div>
           </div>
           <div style={{ minWidth: 120, textAlign: 'right', fontSize: 13, color: '#1d9e75', fontWeight: 700 }}>{progressPct}% complete</div>
         </div>
