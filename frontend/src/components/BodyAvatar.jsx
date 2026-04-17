@@ -58,16 +58,16 @@ export default function BodyAvatar({ biomarkers }) {
 
   return (
     <div className="flex flex-col md:flex-row gap-8 items-start">
-      <svg viewBox="0 0 400 600" className="w-full max-w-xs mx-auto" style={{ filter: 'drop-shadow(0 0 16px #22c55e33)' }}>
+      <svg viewBox="0 0 400 600" className="w-full max-w-xs mx-auto" style={{ filter: 'drop-shadow(0 8px 22px rgba(29,158,117,0.16))' }}>
         {/* Simple body outline */}
-        <ellipse cx="200" cy="60" rx="40" ry="48" fill="#1f2937" stroke="#374151" strokeWidth="2" />
-        <rect x="155" y="108" width="90" height="140" rx="18" fill="#1f2937" stroke="#374151" strokeWidth="2" />
-        <rect x="100" y="112" width="52" height="110" rx="14" fill="#1f2937" stroke="#374151" strokeWidth="2" />
-        <rect x="248" y="112" width="52" height="110" rx="14" fill="#1f2937" stroke="#374151" strokeWidth="2" />
-        <rect x="155" y="246" width="38" height="130" rx="14" fill="#1f2937" stroke="#374151" strokeWidth="2" />
-        <rect x="208" y="246" width="38" height="130" rx="14" fill="#1f2937" stroke="#374151" strokeWidth="2" />
-        <rect x="150" y="374" width="40" height="80" rx="10" fill="#1f2937" stroke="#374151" strokeWidth="2" />
-        <rect x="210" y="374" width="40" height="80" rx="10" fill="#1f2937" stroke="#374151" strokeWidth="2" />
+        <ellipse cx="200" cy="60" rx="40" ry="48" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="2" />
+        <rect x="155" y="108" width="90" height="140" rx="18" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="2" />
+        <rect x="100" y="112" width="52" height="110" rx="14" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="2" />
+        <rect x="248" y="112" width="52" height="110" rx="14" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="2" />
+        <rect x="155" y="246" width="38" height="130" rx="14" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="2" />
+        <rect x="208" y="246" width="38" height="130" rx="14" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="2" />
+        <rect x="150" y="374" width="40" height="80" rx="10" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="2" />
+        <rect x="210" y="374" width="40" height="80" rx="10" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="2" />
 
         {/* Hotspot zones */}
         {ZONES.map((zone) => (
@@ -88,20 +88,20 @@ export default function BodyAvatar({ biomarkers }) {
       </svg>
 
       {active && (
-        <div className="bg-gray-800 rounded-xl p-5 md:max-w-xs w-full">
-          <h4 className="font-bold text-white text-lg mb-2">{active.label}</h4>
-          <p className="text-xs text-gray-400 mb-3">Related markers: {active.keywords.join(', ')}</p>
+        <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-5 md:max-w-xs">
+          <h4 className="mb-2 text-lg font-bold text-slate-900">{active.label}</h4>
+          <p className="mb-3 text-xs text-slate-500">Related markers: {active.keywords.join(', ')}</p>
           {matched.length > 0 ? (
             <div className="mb-3 space-y-1">
               {matched.slice(0, 4).map((m) => (
                 <div key={m.id} className="flex items-center justify-between text-xs">
-                  <span className="text-gray-300">{m.name}</span>
+                  <span className="text-slate-700">{m.name}</span>
                   <span
                     className={
-                      m.status === 'OPTIMAL' ? 'text-green-400' :
-                      m.status === 'BORDERLINE' ? 'text-yellow-400' :
-                      m.status === 'DEFICIENT' ? 'text-red-400' :
-                      m.status === 'ELEVATED' ? 'text-orange-400' : 'text-gray-400'
+                      m.status === 'OPTIMAL' ? 'text-emerald-600' :
+                      m.status === 'BORDERLINE' ? 'text-amber-600' :
+                      m.status === 'DEFICIENT' ? 'text-rose-600' :
+                      m.status === 'ELEVATED' ? 'text-orange-600' : 'text-slate-500'
                     }
                   >
                     {m.status}
@@ -110,10 +110,10 @@ export default function BodyAvatar({ biomarkers }) {
               ))}
             </div>
           ) : (
-            <p className="text-xs text-gray-500 mb-3">No matching markers in your latest data.</p>
+            <p className="mb-3 text-xs text-slate-500">No matching markers in your latest data.</p>
           )}
-          <p className="text-xs text-green-400 font-medium mb-1">Recommended supplements:</p>
-          <p className="text-sm text-gray-300">{active.supplements}</p>
+          <p className="mb-1 text-xs font-medium text-emerald-700">Recommended supplements:</p>
+          <p className="text-sm text-slate-700">{active.supplements}</p>
         </div>
       )}
     </div>

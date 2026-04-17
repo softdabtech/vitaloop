@@ -3,25 +3,25 @@
   --vtl-bg-light: #f8fafc;
   --vtl-surface-dark: #111827;
   --vtl-surface-light: #ffffff;
-  --vtl-accent: #10b981;
+  --vtl-accent: var(--brand, #1d9e75);
   --vtl-text-primary-dark: #f1f5f9;
   --vtl-text-secondary-dark: #94a3b8;
   --vtl-text-primary-light: #0f172a;
   --vtl-text-secondary-light: #64748b;
   --vtl-danger: #ef4444;
-  --vtl-success: #10b981;
+  --vtl-success: var(--brand, #1d9e75);
   --vtl-radius-card: 20px;
   --vtl-radius-btn: 16px;
   --vtl-radius-sm: 12px;
   --vtl-shadow-dark: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.2);
   --vtl-shadow-light: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --vtl-emerald-glow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  --vtl-emerald-glow: 0 0 0 3px rgba(var(--brand-rgb, 29, 158, 117), 0.18);
 }
 
 .vtl-shell {
   min-height: 100vh;
-  background: radial-gradient(circle at 8% 5%, rgba(16, 185, 129, 0.12), transparent 28%),
-              radial-gradient(circle at 92% 0%, rgba(16, 185, 129, 0.08), transparent 26%),
+  background: radial-gradient(circle at 8% 5%, rgba(var(--brand-rgb, 29, 158, 117), 0.14), transparent 28%),
+              radial-gradient(circle at 92% 0%, rgba(var(--brand-rgb, 29, 158, 117), 0.1), transparent 26%),
               var(--vtl-bg-dark);
   color: var(--vtl-text-primary-dark);
 }
@@ -52,8 +52,8 @@
 .vtl-button-primary {
   min-height: 44px;
   border-radius: var(--vtl-radius-btn);
-  border: 1px solid rgba(16, 185, 129, 0.7);
-  background: linear-gradient(135deg, #10b981, #059669);
+  border: 1px solid rgba(var(--brand-rgb, 29, 158, 117), 0.72);
+  background: linear-gradient(135deg, var(--vtl-accent), #0f7f5f);
   color: #052e16;
   font-weight: 700;
   transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
@@ -77,9 +77,9 @@
 .vtl-upload-zone {
   min-height: 420px;
   border-radius: var(--vtl-radius-card);
-  border: 3px dashed rgba(16, 185, 129, 0.85);
-  background: rgba(16, 185, 129, 0.05);
-  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.2), 0 0 42px rgba(16, 185, 129, 0.08);
+  border: 3px dashed rgba(var(--brand-rgb, 29, 158, 117), 0.86);
+  background: rgba(var(--brand-rgb, 29, 158, 117), 0.06);
+  box-shadow: inset 0 0 0 1px rgba(var(--brand-rgb, 29, 158, 117), 0.22), 0 0 42px rgba(var(--brand-rgb, 29, 158, 117), 0.1);
 }
 
 .vtl-status-pill {
