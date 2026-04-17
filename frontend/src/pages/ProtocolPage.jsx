@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import UserDashboardSidebar from '../components/dashboard/UserDashboardSidebar.jsx'
+import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import {
   ArrowLeft, Pill, Droplets, Moon, Zap, Check,
   ExternalLink, UtensilsCrossed, Clock, Download,
@@ -454,7 +455,7 @@ function PaywallTeaser({ onUpgrade }) {
           onClick={onUpgrade}
           className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-semibold text-sm transition-colors shadow-sm"
         >
-          Upgrade — $49/month
+          Upgrade — {PREMIUM_PRICE_LABEL}
         </button>
       </div>
     </div>
