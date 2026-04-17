@@ -77,7 +77,7 @@ export default function PricingSection() {
           className="mb-9 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4"
         >
           {LANDING_PRICING_PLANS.map((plan) => {
-            const { id, name, annualNote, desc, badge, dark, premium, cta, features } = plan
+            const { id, name, annualNote, desc, badge, dark, featured, premium, pricePrefix, cta, features } = plan
             const display = getPlanPrice(plan)
             const yearlyHighlight = id === PRICING_PLAN_IDS.PERSONAL || id === PRICING_PLAN_IDS.PRACTITIONER
             return (
@@ -87,7 +87,9 @@ export default function PricingSection() {
             >
               <motion.div
                 className={`relative flex h-full flex-col overflow-hidden rounded-3xl border p-8 md:p-9 ${
-                  dark
+                  featured
+                    ? 'border-indigo-700 bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-900 text-white shadow-lg shadow-indigo-900/20'
+                    : dark
                     ? 'border-zinc-800 bg-zinc-900 text-white shadow-lg shadow-zinc-900/15'
                     : premium
                     ? 'border-emerald-300 bg-white shadow-md shadow-emerald-100/60'
@@ -98,24 +100,29 @@ export default function PricingSection() {
               {/* Badge */}
               {badge && (
                 <div className={`absolute right-5 top-5 rounded-md px-2.5 py-1 text-[10px] font-bold tracking-[0.08em] ${
-                  dark ? 'bg-emerald-500 text-white' : 'border border-emerald-300 bg-emerald-50 text-emerald-700'
+                  featured ? 'bg-indigo-400 text-white' : dark ? 'bg-emerald-500 text-white' : 'border border-emerald-300 bg-emerald-50 text-emerald-700'
                 }`}>
                   {badge}
                 </div>
               )}
 
               {/* Plan name */}
-              <div className={`mb-3 text-sm font-semibold ${dark ? 'text-emerald-100' : 'text-zinc-500'}`}>
+              <div className={`mb-3 text-sm font-semibold ${featured || dark ? 'text-indigo-200' : 'text-zinc-500'}`}>
                 {name}
               </div>
 
               {/* Price */}
               <div className="mb-1 flex items-baseline gap-1">
-                <span className={`text-5xl font-bold leading-none tracking-tight ${dark ? 'text-white' : 'text-zinc-900'}`}>
+                {pricePrefix && billing === 'monthly' && (
+                  <span className={`text-lg font-semibold ${featured || dark ? 'text-indigo-300' : 'text-zinc-500'}`}>
+                    {pricePrefix}
+                  </span>
+                )}
+                <span className={`text-5xl font-bold leading-none tracking-tight ${featured || dark ? 'text-white' : 'text-zinc-900'}`}>
                   {display.value}
                 </span>
                 {display.period && (
-                  <span className={`mb-0.5 text-base ${dark ? 'text-emerald-300' : 'text-zinc-400'}`}>
+                  <span className={`mb-0.5 text-base ${featured ? 'text-indigo-300' : dark ? 'text-emerald-300' : 'text-zinc-400'}`}>
                     {display.period}
                   </span>
                 )}
@@ -123,11 +130,13 @@ export default function PricingSection() {
               {annualNote && (
                 <div className={`mb-4 inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-medium ${
                   yearlyHighlight
-                    ? dark
+                    ? featured
+                      ? 'bg-indigo-400/20 text-indigo-200'
+                      : dark
                       ? 'bg-emerald-500/20 text-emerald-200'
                       : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
-                    : dark
-                    ? 'text-emerald-200'
+                    : featured || dark
+                    ? 'text-indigo-200'
                     : 'text-emerald-700'
                 }`}>
                   {annualNote}
@@ -135,7 +144,7 @@ export default function PricingSection() {
               )}
 
               {/* Description */}
-              <p className={`mb-7 text-sm leading-6 ${dark ? 'text-emerald-100' : 'text-zinc-600'}`}>
+              <p className={`mb-7 text-sm leading-6 ${featured ? 'text-indigo-200' : dark ? 'text-emerald-100' : 'text-zinc-600'}`}>
                 {desc}
               </p>
 
@@ -144,10 +153,10 @@ export default function PricingSection() {
                 {features.map(({ text, ok }) => (
                   <li key={text} className="flex items-center gap-2.5 text-sm">
                     {ok
-                      ? <Check size={14} className={`shrink-0 ${dark ? 'text-emerald-300' : 'text-emerald-600'}`} aria-hidden="true" />
-                      : <Minus size={14} className={`shrink-0 ${dark ? 'text-white/30' : 'text-zinc-300'}`} aria-hidden="true" />
+                      ? <Check size={14} className={`shrink-0 ${featured ? 'text-indigo-300' : dark ? 'text-emerald-300' : 'text-emerald-600'}`} aria-hidden="true" />
+                      : <Minus size={14} className={`shrink-0 ${featured || dark ? 'text-white/30' : 'text-zinc-300'}`} aria-hidden="true" />
                     }
-                    <span className={`${ok ? (dark ? 'text-emerald-100' : 'text-zinc-700') : (dark ? 'text-white/35' : 'text-zinc-300')}`}>
+                    <span className={`${ok ? (featured ? 'text-indigo-100' : dark ? 'text-emerald-100' : 'text-zinc-700') : (featured || dark ? 'text-white/35' : 'text-zinc-300')}`}>
                       {text}
                     </span>
                   </li>

@@ -33,7 +33,8 @@ export const LANDING_PRICING_PLANS = [
 		annualNote: 'Save 17% on yearly billing',
 		desc: 'Unlimited analysis, full protocols, and personal timeline tracking.',
 		badge: 'MOST POPULAR',
-		dark: true,
+		dark: false,
+		featured: true,
 		cta: 'Get Personal Pro',
 		features: [
 			{ text: 'Unlimited analyses', ok: true },
@@ -66,9 +67,10 @@ export const LANDING_PRICING_PLANS = [
 	{
 		id: PRICING_PLAN_IDS.ENTERPRISE,
 		name: 'Enterprise',
-		monthly: 'From $99',
+		monthly: '$99',
 		yearly: 'Custom',
-		period: '/mo',
+		period: '/mo+',
+		pricePrefix: 'From',
 		annualNote: '5 seats included in entry plan',
 		desc: 'Multi-tenancy CRM, API access, and advanced org-level controls.',
 		badge: null,

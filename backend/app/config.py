@@ -35,9 +35,12 @@ class Settings(BaseSettings):
     iherb_base_url: str = "https://www.iherb.com/search"
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
-    stripe_price_id: str = ""  # Price ID for $49/mo plan
+    stripe_price_id: str = ""  # Legacy fallback (same as stripe_price_id_personal)
+    stripe_price_id_personal: str = ""  # Personal Pro $9.99/mo
+    stripe_price_id_practitioner: str = ""  # Practitioner Pro $29/mo
     stripe_success_url: str = "http://localhost:5173/dashboard?sub=success"
     stripe_cancel_url: str = "http://localhost:5173/dashboard?sub=cancelled"
+    stripe_portal_return_url: str = "http://localhost:5173/dashboard"
     freemium_upload_limit: int = 1  # free-tier lab uploads allowed before paywall
     resend_api_key: str = ""
     resend_from_email: str = "onboarding@resend.dev"
