@@ -11,6 +11,10 @@ from app.services.assignment_service import AssignmentService
 from app.utils.roles import normalize_global_role as _normalize_role, as_bool as _as_bool
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+
+def _get_assignment_service() -> AssignmentService:
+    return AssignmentService()
+
 _assignment_service = AssignmentService()
 
 
