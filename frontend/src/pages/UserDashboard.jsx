@@ -5,9 +5,7 @@ import {
   Activity,
   ArrowRight,
   Brain,
-  CheckCircle2,
   ClipboardList,
-  Circle,
   Crown,
   FlaskConical,
   Sparkles,
@@ -21,6 +19,7 @@ import QuickActionsPanel from '../components/dashboard/QuickActionsPanel.jsx'
 import ProgressTimeline from '../components/dashboard/ProgressTimeline.jsx'
 import RecommendationsPanel from '../components/dashboard/RecommendationsPanel.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import PremiumEmptyDashboardState from '../components/dashboard/PremiumEmptyDashboardState.jsx'
 import { enrichAssignments } from '../lib/assignmentScoring.js'
 import '../styles/userDashboard.css'
 import '../styles/dashboard2026.css'
@@ -57,51 +56,6 @@ function EmptyBlock({ title, body, cta, onClick }) {
         </button>
       )}
     </div>
-  )
-}
-
-function WelcomeJourney({ steps, completedCount, onPrimaryClick }) {
-  const total = steps.length
-  const progress = total > 0 ? Math.round((completedCount / total) * 100) : 0
-
-  return (
-    <section className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(29,158,117,0.14),_transparent_45%),linear-gradient(135deg,_#ffffff,_#f4fbf8_58%,_#f8fafc)] p-5 shadow-sm sm:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Welcome</div>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Your health journey starts here</h2>
-          <p className="mt-1 text-sm text-slate-600">Follow these 5 steps to unlock your personalized protocol and weekly tracking.</p>
-        </div>
-        <button
-          onClick={onPrimaryClick}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
-        >
-          Upload your first lab
-          <ArrowRight className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="mb-4">
-        <div className="mb-1 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
-          <span>Progress</span>
-          <span>{completedCount}/{total}</span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-white/80 ring-1 ring-slate-200">
-          <div className="h-full rounded-full bg-emerald-500" style={{ width: `${progress}%` }} />
-        </div>
-      </div>
-
-      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-1">
-        {steps.map((step) => (
-          <div key={step.id} className="rounded-2xl border border-white/70 bg-white/85 px-4 py-3 text-sm text-slate-700 shadow-sm">
-            <div className="flex items-center gap-2.5">
-              {step.done ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Circle className="h-4 w-4 text-slate-300" />}
-              <span className="font-medium">{step.label}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
   )
 }
 
@@ -180,16 +134,6 @@ export default function UserDashboard() {
   const latestUpload = summary?.blocks?.latest_upload || null
   const latestCheckin = summary?.blocks?.latest_checkin || null
   const hasUploads = Number(stats.total_uploads || 0) > 0
-  const onboardingComplete = Boolean(user?.onboarding_complete || profile?.onboarding_complete)
-  const hasProtocol = Boolean(stats.active_program && String(stats.active_program).toLowerCase() !== 'not started')
-  const journeySteps = [
-    { id: 'account', label: 'Step 1 - Account created', done: true },
-    { id: 'upload', label: 'Step 2 - Upload your first lab', done: hasUploads },
-    { id: 'profile', label: 'Step 3 - Complete health profile', done: onboardingComplete },
-    { id: 'symptoms', label: 'Step 4 - Add your symptoms', done: Boolean(latestCheckin) },
-    { id: 'protocol', label: 'Step 5 - Get your protocol', done: hasProtocol },
-  ]
-  const completedJourneyCount = journeySteps.filter((step) => step.done).length
 
   const greeting = useMemo(() => profile?.first_name || user?.email?.split('@')?.[0] || 'there', [profile?.first_name, user?.email])
 
@@ -201,6 +145,30 @@ export default function UserDashboard() {
         transition: { duration: 0.55, delay, ease: [0.2, 0.65, 0.3, 1] },
         viewport: { once: true, margin: '-10% 0px -10% 0px' },
       }
+
+  if (!loading && !hasUploads) {
+    return (
+      <div className="space-y-6">
+        <CabinetPageHeader
+          title={`Welcome back, ${greeting}`}
+          subtitle="Your AI-powered health intelligence platform"
+          helper="Upload your first lab to activate biomarker analysis, personalized protocols, and longitudinal tracking."
+          action={(
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => navigate('/upload')} className="vtl-button-primary px-4 text-sm">Upload first lab</button>
+              <button onClick={() => navigate('/how-it-works')} className="vtl-button-secondary px-4 text-sm">How it works</button>
+            </div>
+          )}
+        />
+
+        {error && (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
+        )}
+
+        <PremiumEmptyDashboardState userName={greeting} onUploadClick={() => navigate('/upload')} />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -250,20 +218,12 @@ export default function UserDashboard() {
         </motion.section>
       )}
 
-      {!loading && !hasUploads ? (
-        <WelcomeJourney
-          steps={journeySteps}
-          completedCount={completedJourneyCount}
-          onPrimaryClick={() => navigate('/upload')}
-        />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard title="Lab uploads" value={loading ? '...' : (stats.total_uploads ?? 0)} unit="total" icon={FlaskConical} color="emerald" />
-          <StatCard title="Active assignments" value={loading ? '...' : (stats.active_assignments ?? 0)} unit="live" icon={ClipboardList} color="blue" />
-          <StatCard title="Insights ready" value={loading ? '...' : (stats.insights_count ?? 0)} unit="cards" icon={Brain} color="purple" />
-          <StatCard title="Subscription" value={loading ? '...' : String(stats.subscription || 'free').replace('_', ' ')} unit="plan" icon={Crown} color="orange" />
-        </div>
-      )}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard title="Lab uploads" value={loading ? '...' : (stats.total_uploads ?? 0)} unit="total" icon={FlaskConical} color="emerald" />
+        <StatCard title="Active assignments" value={loading ? '...' : (stats.active_assignments ?? 0)} unit="live" icon={ClipboardList} color="blue" />
+        <StatCard title="Insights ready" value={loading ? '...' : (stats.insights_count ?? 0)} unit="cards" icon={Brain} color="purple" />
+        <StatCard title="Subscription" value={loading ? '...' : String(stats.subscription || 'free').replace('_', ' ')} unit="plan" icon={Crown} color="orange" />
+      </div>
 
       <motion.div {...fadeUp(0.04)} className="grid items-start gap-4 xl:grid-cols-[1.1fr_0.95fr_320px]">
         <DashboardCard title="Current account state" eyebrow="Live summary">
