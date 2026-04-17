@@ -4,9 +4,9 @@ import api from '../lib/api.js'
 import ProgressChart from '../components/ProgressChart.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import LockedFeatureOverlay from '../components/LockedFeatureOverlay.jsx'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useSubscription } from '../hooks/useSubscription.js'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
 import '../styles/dashboard2026.css'
 
 function getBiomarkerValue(upload, name) {
@@ -68,14 +68,10 @@ export default function Progress() {
     return (
       <div className="vtl-page px-4 py-8 sm:px-6">
         <div className="mx-auto max-w-4xl">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="mb-4 inline-flex items-center gap-2 rounded-lg px-1 py-1 text-sm text-slate-500 hover:text-slate-800"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to dashboard
-          </button>
-          <h2 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">Progress Tracker</h2>
+          <CabinetPageHeader
+            title="Progress Tracker"
+            subtitle="Track concrete biomarker movement between uploads and monitor protocol effect over time."
+          />
           <div className="vtl-light-card p-8 text-center">
             <h3 className="mb-2 text-xl font-semibold text-slate-800">Advanced Tracking</h3>
             <p className="mb-6 text-slate-500">Detailed progress tracking is available with Vitaloop Premium.</p>
@@ -97,14 +93,10 @@ export default function Progress() {
     return (
       <div className="vtl-page px-4 py-8 sm:px-6">
         <div className="mx-auto max-w-4xl">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="mb-4 inline-flex items-center gap-2 rounded-lg px-1 py-1 text-sm text-slate-500 hover:text-slate-800"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to dashboard
-          </button>
-          <h2 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">Progress Tracker</h2>
+          <CabinetPageHeader
+            title="Progress Tracker"
+            subtitle="Track concrete biomarker movement between uploads and monitor protocol effect over time."
+          />
           <div className="rounded-xl border border-rose-200 bg-rose-50 p-8 text-center">
             <p className="mb-4 text-rose-700">Unable to load progress data. Please try again.</p>
           <button 
@@ -144,15 +136,10 @@ export default function Progress() {
   return (
     <div className="vtl-page px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-6xl">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="mb-4 inline-flex items-center gap-2 rounded-lg px-1 py-1 text-sm text-slate-500 hover:text-slate-800"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to dashboard
-        </button>
-        <h2 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">Progress Tracker</h2>
-        <p className="-mt-4 mb-6 text-sm text-slate-500">Track concrete biomarker movement between uploads and see whether your protocol is moving numbers in the right direction.</p>
+        <CabinetPageHeader
+          title="Progress Tracker"
+          subtitle="Track concrete biomarker movement between uploads and monitor protocol effect over time."
+        />
         {data.length === 0 ? (
           <div className="py-20 text-center">
             <EmptyState
