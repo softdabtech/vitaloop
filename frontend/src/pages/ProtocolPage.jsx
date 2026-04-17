@@ -131,27 +131,125 @@ async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSecti
   ])
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
   const margin = 44
   const contentWidth = pageWidth - margin * 2
+  const createdAt = new Date().toLocaleString()
 
-  doc.setFillColor(16, 185, 129)
-  doc.rect(0, 0, pageWidth, 96, 'F')
-  doc.setTextColor(255, 255, 255)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(20)
-  doc.text('VITALOOP - 7-Day Health Protocol', margin, 44)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  doc.text(`Upload: ${uploadId}`, margin, 62)
-  doc.text(`Generated: ${new Date().toLocaleString()}`, margin, 76)
+  const supplementsTotal = protocolRows.length
+  const highPriority = protocolRows.filter((row) => formatPriority(row.priority) === 'HIGH').length
+  const mediumPriority = protocolRows.filter((row) => formatPriority(row.priority) === 'MEDIUM').length
+  const lowPriority = Math.max(0, supplementsTotal - highPriority - mediumPriority)
 
+  const drawLogo = () => {
+    doc.setFillColor(255, 255, 255)
+    doc.roundedRect(margin, 24, 32, 32, 6, 6, 'F')
+    doc.setTextColor(16, 185, 129)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.text('V', margin + 11, 44)
+    doc.setLineWidth(1.8)
+    doc.setDrawColor(16, 185, 129)
+    doc.line(margin + 19, 42, margin + 23, 46)
+    doc.line(margin + 23, 46, margin + 29, 36)
+  }
+
+  const drawHeader = (title, subtitle) => {
+    doc.setFillColor(16, 185, 129)
+    doc.rect(0, 0, pageWidth, 86, 'F')
+    drawLogo()
+
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(17)
+    doc.text(title, margin + 42, 40)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    if (subtitle) {
+      doc.text(subtitle, margin + 42, 56)
+    }
+
+    doc.setFontSize(9)
+    doc.text(`Upload: ${uploadId}`, pageWidth - margin - 120, 38)
+    doc.text(`Generated: ${createdAt}`, pageWidth - margin - 120, 52)
+  }
+
+  const drawFooter = (pageNum, totalPages) => {
+    doc.setDrawColor(226, 232, 240)
+    doc.setLineWidth(0.6)
+    doc.line(margin, pageHeight - 34, pageWidth - margin, pageHeight - 34)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.setTextColor(100, 116, 139)
+    doc.text('VITALOOP Confidential Protocol', margin, pageHeight - 20)
+    doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth - margin - 54, pageHeight - 20)
+  }
+
+  const addPage = (title, subtitle) => {
+    doc.addPage()
+    drawHeader(title, subtitle)
+    return 112
+  }
+
+  const ensureSpace = (cursorY, requiredHeight, title, subtitle) => {
+    if (cursorY + requiredHeight <= pageHeight - 52) {
+      return cursorY
+    }
+    return addPage(title, subtitle)
+  }
+
+  // Summary page
+  drawHeader('VITALOOP - 7-Day Health Protocol', 'Personalized summary and action plan')
+
+  let y = 112
   doc.setTextColor(31, 41, 55)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.text('Supplement Protocol', margin, 126)
+  doc.setFontSize(13)
+  doc.text('Executive Summary', margin, y)
+  y += 16
 
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  const summaryLines = [
+    `Total supplements in current protocol: ${supplementsTotal}`,
+    `Priority split: HIGH ${highPriority}, MEDIUM ${mediumPriority}, LOW ${lowPriority}`,
+    `Nutrition focus groups: ${nutritionGroups.map((group) => group.name).slice(0, 4).join(', ') || 'N/A'}`,
+    `Lifestyle blocks included: ${lifestyleSections.map((item) => item.title).join(', ')}`,
+  ]
+  summaryLines.forEach((line) => {
+    const wrapped = doc.splitTextToSize(`- ${line}`, contentWidth)
+    doc.text(wrapped, margin, y)
+    y += wrapped.length * 12 + 2
+  })
+
+  y += 8
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.text('Top Priority Supplements', margin, y)
+  y += 14
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+
+  const topRows = protocolRows.slice(0, 5)
+  if (topRows.length === 0) {
+    doc.text('- No supplements available for this upload yet.', margin, y)
+    y += 12
+  } else {
+    topRows.forEach((row) => {
+      const schedule = TIMING_TO_SCHEDULE[row.timing] ?? (row.timing?.replace(/_/g, ' ') ?? '-')
+      const line = `${row.supplement || '-'} (${row.dosage || '-'}) - ${schedule} [${formatPriority(row.priority)}]`
+      const wrapped = doc.splitTextToSize(`- ${line}`, contentWidth)
+      y = ensureSpace(y, wrapped.length * 12 + 4, 'Protocol Summary (cont.)', 'Auto-generated continuation')
+      doc.text(wrapped, margin, y)
+      y += wrapped.length * 12 + 2
+    })
+  }
+
+  // Detailed table starts on a new page
+  addPage('Supplement Protocol', 'Detailed dosage, schedule, and rationale')
   autoTable(doc, {
-    startY: 136,
+    startY: 112,
     margin: { left: margin, right: margin },
     head: [['Supplement', 'Dosage', 'Schedule', 'Priority', 'Rationale']],
     body: buildPdfRows(protocolRows),
@@ -183,10 +281,19 @@ async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSecti
         if (value === 'MEDIUM') data.cell.styles.textColor = [180, 83, 9]
       }
     },
+    didDrawPage: () => {
+      drawHeader('Supplement Protocol', 'Detailed dosage, schedule, and rationale')
+    },
   })
 
-  const tableY = doc.lastAutoTable?.finalY || 160
-  let y = tableY + 22
+  const tableY = (doc.lastAutoTable?.finalY || 112) + 18
+  y = tableY
+
+  y = ensureSpace(y, 24, 'Protocol Details', 'Nutrition and lifestyle guidance')
+  if (y === 112) {
+    drawHeader('Protocol Details', 'Nutrition and lifestyle guidance')
+  }
+
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
   doc.setTextColor(31, 41, 55)
@@ -197,26 +304,26 @@ async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSecti
   doc.setFontSize(10)
   nutritionGroups.forEach((group) => {
     const foods = (group.foods || []).join(', ')
-    const line = `${group.name}: ${foods}`
-    const lines = doc.splitTextToSize(line, contentWidth)
-    if (y + lines.length * 12 > 760) {
-      doc.addPage()
-      y = 56
+    const wrappedFoods = doc.splitTextToSize(foods, contentWidth - 8)
+    const blockHeight = 12 + wrappedFoods.length * 12 + 8
+    y = ensureSpace(y, blockHeight, 'Protocol Details (cont.)', 'Nutrition and lifestyle guidance')
+    if (y === 112) {
+      drawHeader('Protocol Details (cont.)', 'Nutrition and lifestyle guidance')
     }
     doc.setFont('helvetica', 'bold')
-    doc.text(`${group.name}`, margin, y)
+    doc.text(group.name, margin, y)
     y += 12
     doc.setFont('helvetica', 'normal')
-    const wrapped = doc.splitTextToSize(foods, contentWidth - 4)
-    doc.text(wrapped, margin + 4, y)
-    y += wrapped.length * 12 + 8
+    doc.text(wrappedFoods, margin + 4, y)
+    y += wrappedFoods.length * 12 + 8
   })
 
-  y += 4
-  if (y > 730) {
-    doc.addPage()
-    y = 56
+  y += 2
+  y = ensureSpace(y, 24, 'Protocol Details (cont.)', 'Lifestyle guidance')
+  if (y === 112) {
+    drawHeader('Protocol Details (cont.)', 'Lifestyle guidance')
   }
+
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
   doc.text('Lifestyle Recommendations', margin, y)
@@ -224,30 +331,34 @@ async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSecti
 
   doc.setFont('helvetica', 'normal')
   lifestyleSections.forEach((section) => {
-    if (y > 730) {
-      doc.addPage()
-      y = 56
+    const sectionLines = section.items.reduce((acc, item) => {
+      const wrapped = doc.splitTextToSize(`- ${item}`, contentWidth - 8)
+      return acc + wrapped.length
+    }, 0)
+    const requiredHeight = 12 + sectionLines * 12 + 10
+    y = ensureSpace(y, requiredHeight, 'Protocol Details (cont.)', 'Lifestyle guidance')
+    if (y === 112) {
+      drawHeader('Protocol Details (cont.)', 'Lifestyle guidance')
     }
+
     doc.setFont('helvetica', 'bold')
     doc.text(section.title, margin, y)
     y += 12
     doc.setFont('helvetica', 'normal')
+
     section.items.forEach((item) => {
       const wrapped = doc.splitTextToSize(`- ${item}`, contentWidth - 8)
-      if (y + wrapped.length * 12 > 760) {
-        doc.addPage()
-        y = 56
-      }
       doc.text(wrapped, margin + 4, y)
       y += wrapped.length * 12 + 2
     })
-    y += 8
+    y += 6
   })
 
-  const stampY = doc.internal.pageSize.getHeight() - 24
-  doc.setFontSize(9)
-  doc.setTextColor(100, 116, 139)
-  doc.text('VITALOOP - Personalized protocol generated from your latest lab data.', margin, stampY)
+  const totalPages = doc.getNumberOfPages()
+  for (let page = 1; page <= totalPages; page += 1) {
+    doc.setPage(page)
+    drawFooter(page, totalPages)
+  }
 
   const safeUpload = String(uploadId || 'protocol').replace(/[^a-zA-Z0-9_-]/g, '')
   const datePart = new Date().toISOString().slice(0, 10)
