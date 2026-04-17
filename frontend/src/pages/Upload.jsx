@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
 import { useOCR } from '../hooks/useOCR.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import UploadZone from '../components/UploadZone.jsx'
 import SymptomSelector from '../components/SymptomSelector.jsx'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
 import toast from 'react-hot-toast'
@@ -126,38 +126,27 @@ export default function Upload() {
   return (
     <div className="vtl-page px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-5xl">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="mb-4 inline-flex items-center gap-2 rounded-lg px-1 py-1 text-sm text-slate-500 hover:text-slate-800"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to dashboard
-        </button>
+        <CabinetPageHeader
+          title="Upload Lab Results"
+          subtitle="Your file is processed locally first. Only extracted text is sent for analysis."
+          helper="Upload report -> add optional symptoms -> open biomarkers and generated protocol."
+        />
 
-        <div className="vtl-light-card mb-6 p-6 sm:p-7">
-          <h2 className="mb-2 text-2xl font-bold tracking-tight text-slate-900">Upload Lab Results</h2>
-          <p className="text-sm text-slate-500">
-            Your file is processed locally first. Only extracted text is sent for analysis.
-          </p>
-          <p className="mt-1 text-xs text-slate-400">
-            In this section you upload a report, add optional symptoms, and open a ready protocol.
-          </p>
-          {!subLoading && !isPremium && (
-            <div className={`mt-4 flex items-center justify-between rounded-xl px-4 py-3 text-sm ${uploadsRemaining === 0 ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-amber-200 bg-amber-50 text-amber-700'}`}>
-              <span>
-                {uploadsRemaining === 0
-                  ? `Free upload limit reached (${uploadCount}/${uploadLimit}).`
-                  : `Free plan: ${uploadsRemaining} upload${uploadsRemaining !== 1 ? 's' : ''} remaining.`}
-              </span>
-              <button
-                onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'UPLOAD_LIMIT_REACHED' } }))}
-                className="ml-4 rounded-lg bg-emerald-500 hover:bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition"
-              >
-                Upgrade
-              </button>
-            </div>
-          )}
-        </div>
+        {!subLoading && !isPremium && (
+          <div className={`mb-6 flex items-center justify-between rounded-xl px-4 py-3 text-sm ${uploadsRemaining === 0 ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-amber-200 bg-amber-50 text-amber-700'}`}>
+            <span>
+              {uploadsRemaining === 0
+                ? `Free upload limit reached (${uploadCount}/${uploadLimit}).`
+                : `Free plan: ${uploadsRemaining} upload${uploadsRemaining !== 1 ? 's' : ''} remaining.`}
+            </span>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'UPLOAD_LIMIT_REACHED' } }))}
+              className="ml-4 rounded-lg bg-emerald-500 hover:bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition"
+            >
+              Upgrade
+            </button>
+          </div>
+        )}
 
         <div className="mb-6 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
           <div className={`rounded-xl border px-3 py-2 ${isProcessing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>

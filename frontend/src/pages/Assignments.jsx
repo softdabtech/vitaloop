@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ClipboardList, Filter, CheckCircle2, Clock3, AlertTriangle, ArrowLeft } from 'lucide-react'
+import { ClipboardList, Filter, CheckCircle2, Clock3, AlertTriangle } from 'lucide-react'
 import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import AssignmentCard from '../components/dashboard/AssignmentCard.jsx'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { resolveAssignmentPath } from '../lib/assignmentRouting.js'
 import { enrichAssignments } from '../lib/assignmentScoring.js'
 import '../styles/dashboard2026.css'
@@ -104,39 +105,29 @@ export default function Assignments() {
   return (
     <div className="vtl-page px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-6xl">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="mb-4 inline-flex items-center gap-2 rounded-lg px-1 py-1 text-sm text-slate-500 hover:text-slate-800"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to dashboard
-        </button>
+        <CabinetPageHeader
+          title="Assignments"
+          subtitle="Track active tasks from your care protocol and coaching workflow."
+          helper="Concrete next actions with due dates, urgency and health-impact scoring."
+          action={(
+            <>
+              <button
+                onClick={() => navigate('/questionnaire')}
+                className="vtl-button-primary px-4 text-sm"
+              >
+                Open Questionnaire
+              </button>
+              <button
+                onClick={() => navigate('/check-ins')}
+                className="vtl-button-secondary px-4 text-sm"
+              >
+                Weekly Check-in
+              </button>
+            </>
+          )}
+        />
 
-        <div className="vtl-light-card mb-6 flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
-        <div>
-            <h2 className="mb-1 flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900">
-            <ClipboardList className="h-6 w-6 text-emerald-600" />
-            Assignments
-          </h2>
-            <p className="text-sm text-slate-500">Track active tasks from your care protocol and coaching workflow.</p>
-            <p className="mt-1 text-xs text-emerald-600">Sorted by Health Impact Score to surface the most important actions first.</p>
-            <p className="mt-1 text-xs text-slate-400">This page shows concrete next actions, due dates, urgency and impact for each task.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate('/questionnaire')}
-              className="vtl-button-primary px-4 text-sm"
-          >
-            Open Questionnaire
-          </button>
-          <button
-            onClick={() => navigate('/check-ins')}
-              className="vtl-button-secondary px-4 text-sm"
-          >
-            Weekly Check-in
-          </button>
-        </div>
-      </div>
+        <div className="-mt-2 mb-6 text-xs text-emerald-600">Sorted by Health Impact Score to surface the most important actions first.</div>
 
       {error && (
           <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">

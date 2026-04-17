@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
 import { supabase } from '../lib/supabase.js'
-import { ArrowLeft, User, LogOut, ShieldCheck } from 'lucide-react'
+import { User, LogOut, ShieldCheck } from 'lucide-react'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import toast from 'react-hot-toast'
 import '../styles/dashboard2026.css'
 
@@ -90,19 +91,11 @@ export default function Settings() {
   return (
     <div className="vtl-page" style={{ minHeight: '100svh', padding: '24px 16px' }}>
       <div style={{ maxWidth: 520, margin: '0 auto' }}>
-
-        {/* Back nav */}
-        <button
-          onClick={() => navigate('/dashboard')}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: '#64748b', fontSize: 14, marginBottom: 28,
-            padding: 0,
-          }}
-        >
-          <ArrowLeft size={16} /> Back to Dashboard
-        </button>
+        <CabinetPageHeader
+          title="Settings"
+          subtitle="Manage profile, timezone and account-level preferences."
+          helper="Changes here directly affect your dashboard personalization and reminders."
+        />
 
         {/* Avatar + name header */}
         <div className="vtl-light-card" style={{ padding: '28px 28px 24px', marginBottom: 16 }}>

@@ -92,8 +92,13 @@ export default function Timeline() {
   return (
     <div style={s.page}>
       <div style={s.header}>
-        <button style={s.back} onClick={() => navigate('/dashboard')}>← Dashboard</button>
-        <div style={{ fontSize: 22, fontWeight: 700 }}>Health Timeline</div>
+        <button style={s.back} onClick={() => navigate('/dashboard')}>← Back to dashboard</button>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 700, textAlign: 'center' }}>Health Timeline</div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2, textAlign: 'center' }}>
+            See concrete events, generated insights and what to do next.
+          </div>
+        </div>
         <div style={{ width: 100 }} />
       </div>
 
