@@ -1,5 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, Send } from 'lucide-react'
+import { LANDING_PRICING_PLANS, PRICING_PLAN_IDS } from '../lib/pricing.js'
+
+const PERSONAL_PLAN = LANDING_PRICING_PLANS.find((plan) => plan.id === PRICING_PLAN_IDS.PERSONAL)
+const PRACTITIONER_PLAN = LANDING_PRICING_PLANS.find((plan) => plan.id === PRICING_PLAN_IDS.PRACTITIONER)
 
 const QUICK_QUESTIONS = [
   'How does the AI analysis work?',
@@ -17,7 +21,7 @@ const AUTO_ANSWERS = {
   'Is my data secure?':
     'Your PDF never leaves your device - OCR runs 100% in your browser. Only the extracted text values are stored, encrypted in our database. You can delete your data anytime.',
   'How much does it cost?':
-    'Free plan to try: upload 1 lab and see basic results. Core plan is $29/month with unlimited uploads, full protocol, and progress tracking. Cancel anytime.',
+    `Free plan to try: upload 1 lab and see basic results. Personal Pro is ${PERSONAL_PLAN.monthly}${PERSONAL_PLAN.period}, and Practitioner Pro is ${PRACTITIONER_PLAN.monthly}${PRACTITIONER_PLAN.period}. Cancel anytime.`,
   'Can I cancel anytime?':
     'Yes, 1-click cancellation from your account settings. No questions asked, no fees.',
 }

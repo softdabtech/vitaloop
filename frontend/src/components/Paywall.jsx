@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import api from '../lib/api.js'
 import toast from 'react-hot-toast'
+import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 
 export default function Paywall() {
   const [loading, setLoading] = useState(false)
@@ -33,7 +34,7 @@ export default function Paywall() {
           disabled={loading}
           className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl transition"
         >
-          {loading ? 'Redirecting…' : 'Start — $49/month'}
+          {loading ? 'Redirecting…' : `Start — ${PREMIUM_PRICE_LABEL}`}
         </button>
       </div>
     </div>

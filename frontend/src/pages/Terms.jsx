@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 
 export default function Terms() {
   const navigate = useNavigate()
@@ -37,7 +38,7 @@ export default function Terms() {
         </div>
         <div>
           <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>3. Subscription</h2>
-          <p>Access to full features requires a paid subscription at $49/month. Subscriptions auto-renew monthly. You may cancel at any time from your account settings. No refunds are provided for partial months.</p>
+          <p>Access to full features requires a paid subscription at {PREMIUM_PRICE_LABEL}. Subscriptions auto-renew monthly. You may cancel at any time from your account settings. No refunds are provided for partial months.</p>
         </div>
         <div>
           <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>4. Acceptable use</h2>

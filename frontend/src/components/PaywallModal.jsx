@@ -10,6 +10,7 @@
 import { useState, useEffect } from 'react'
 import api from '../lib/api.js'
 import toast from 'react-hot-toast'
+import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 
 const FEATURES = [
   'Unlimited lab uploads & analyses',
@@ -99,7 +100,7 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
             disabled={loading}
             className="w-full rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-semibold py-3.5 transition"
           >
-            {loading ? 'Redirecting to Stripe…' : 'Start — $49 / month'}
+            {loading ? 'Redirecting to Stripe…' : `Start — ${PREMIUM_PRICE_LABEL}`}
           </button>
           <p className="mt-2 text-center text-xs text-slate-400">
             Cancel anytime · Secure checkout via Stripe

@@ -1,2 +1,89 @@
-export const PREMIUM_MONTHLY_PRICE = 49
-export const PREMIUM_PRICE_LABEL = `$${PREMIUM_MONTHLY_PRICE} / month`
+export const PRICING_PLAN_IDS = {
+	FREE: 'free',
+	PERSONAL: 'personal',
+	PRACTITIONER: 'practitioner',
+	ENTERPRISE: 'enterprise',
+}
+
+export const LANDING_PRICING_PLANS = [
+	{
+		id: PRICING_PLAN_IDS.FREE,
+		name: 'Free / Starter',
+		monthly: '$0',
+		yearly: '$0',
+		period: '',
+		desc: 'Start with core insights for your first reports.',
+		badge: null,
+		dark: false,
+		cta: 'Start Free',
+		features: [
+			{ text: '1-2 analyses per month', ok: true },
+			{ text: 'Basic flags and summary', ok: true },
+			{ text: 'Full protocols', ok: false },
+			{ text: 'Timeline tracking', ok: false },
+			{ text: 'Practitioner CRM tools', ok: false },
+		],
+	},
+	{
+		id: PRICING_PLAN_IDS.PERSONAL,
+		name: 'Personal Pro',
+		monthly: '$9.99',
+		yearly: '$99',
+		period: '/mo',
+		annualNote: 'Save 17% on yearly billing',
+		desc: 'Unlimited analysis, full protocols, and personal timeline tracking.',
+		badge: 'MOST POPULAR',
+		dark: true,
+		cta: 'Get Personal Pro',
+		features: [
+			{ text: 'Unlimited analyses', ok: true },
+			{ text: 'Full biomarker protocols', ok: true },
+			{ text: 'Personalized recommendations', ok: true },
+			{ text: 'Timeline tracking', ok: true },
+			{ text: 'Priority product updates', ok: true },
+		],
+	},
+	{
+		id: PRICING_PLAN_IDS.PRACTITIONER,
+		name: 'Practitioner Pro',
+		monthly: '$29',
+		yearly: '$299',
+		period: '/mo',
+		annualNote: 'Annual option available',
+		desc: 'Everything in Personal plus CRM workflows and white-label reporting.',
+		badge: 'FOR PROFESSIONALS',
+		dark: false,
+		premium: true,
+		cta: 'Get Practitioner Pro',
+		features: [
+			{ text: 'Everything in Personal Pro', ok: true },
+			{ text: 'Built-in practitioner CRM', ok: true },
+			{ text: 'White-label reports', ok: true },
+			{ text: 'Up to 10 patients', ok: true },
+			{ text: 'Team collaboration workflows', ok: true },
+		],
+	},
+	{
+		id: PRICING_PLAN_IDS.ENTERPRISE,
+		name: 'Enterprise',
+		monthly: 'From $99',
+		yearly: 'Custom',
+		period: '/mo',
+		annualNote: '5 seats included in entry plan',
+		desc: 'Multi-tenancy CRM, API access, and advanced org-level controls.',
+		badge: null,
+		dark: false,
+		cta: 'Contact Sales',
+		features: [
+			{ text: 'Full multi-tenancy CRM', ok: true },
+			{ text: 'API access', ok: true },
+			{ text: 'Role-based organization control', ok: true },
+			{ text: 'Dedicated support', ok: true },
+			{ text: 'Custom integrations', ok: true },
+		],
+	},
+]
+
+export const CLIENT_PREMIUM_PLAN = LANDING_PRICING_PLANS.find((plan) => plan.id === PRICING_PLAN_IDS.PERSONAL)
+export const PREMIUM_MONTHLY_PRICE = 9.99
+export const PREMIUM_PRICE_LABEL = `${CLIENT_PREMIUM_PLAN.monthly} / month`

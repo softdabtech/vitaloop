@@ -1,6 +1,7 @@
 import api from '../lib/api.js'
 import toast from 'react-hot-toast'
 import { useAppStore } from '../lib/store.js'
+import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 
 const FEATURES = [
   '📈 Full biomarker progress charts',
@@ -49,7 +50,7 @@ export default function LockedFeatureOverlay({ children, locked = true }) {
           onClick={handleCheckout}
           className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-xl transition"
         >
-          Start — $49 / month
+          Start — {PREMIUM_PRICE_LABEL}
         </button>
         <p className="text-gray-600 text-xs mt-3">Cancel anytime · Secure checkout via Stripe</p>
       </div>

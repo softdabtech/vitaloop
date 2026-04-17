@@ -3,85 +3,7 @@ import { useState } from 'react'
 import { Check, Minus } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { stagger, staggerChild, cardHoverProps, viewport } from '../../lib/motion.js'
-
-const PLANS = [
-  {
-    id: 'free',
-    name: 'Free / Starter',
-    monthly: '$0',
-    yearly: '$0',
-    period: '',
-    desc: 'Start with core insights for your first reports.',
-    badge: null,
-    dark: false,
-    cta: 'Start Free',
-    features: [
-      { text: '1-2 analyses per month',       ok: true  },
-      { text: 'Basic flags and summary',      ok: true  },
-      { text: 'Full protocols',               ok: false },
-      { text: 'Timeline tracking',            ok: false },
-      { text: 'Practitioner CRM tools',       ok: false },
-    ],
-  },
-  {
-    id: 'personal',
-    name: 'Personal Pro',
-    monthly: '$9.99',
-    yearly: '$99',
-    period: '/mo',
-    annualNote: 'Save 17% on yearly billing',
-    desc: 'Unlimited analysis, full protocols, and personal timeline tracking.',
-    badge: 'MOST POPULAR',
-    dark: true,
-    cta: 'Get Personal Pro',
-    features: [
-      { text: 'Unlimited analyses',            ok: true },
-      { text: 'Full biomarker protocols',      ok: true },
-      { text: 'Personalized recommendations',  ok: true },
-      { text: 'Timeline tracking',             ok: true },
-      { text: 'Priority product updates',      ok: true },
-    ],
-  },
-  {
-    id: 'practitioner',
-    name: 'Practitioner Pro',
-    monthly: '$29',
-    yearly: '$299',
-    period: '/mo',
-    annualNote: 'Annual option available',
-    desc: 'Everything in Personal plus CRM workflows and white-label reporting.',
-    badge: 'FOR PROFESSIONALS',
-    dark: false,
-    premium: true,
-    cta: 'Get Practitioner Pro',
-    features: [
-      { text: 'Everything in Personal Pro',      ok: true },
-      { text: 'Built-in practitioner CRM',       ok: true },
-      { text: 'White-label reports',             ok: true },
-      { text: 'Up to 10 patients',               ok: true },
-      { text: 'Team collaboration workflows',    ok: true },
-    ],
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    monthly: 'From $99',
-    yearly: 'Custom',
-    period: '/mo',
-    annualNote: '5 seats included in entry plan',
-    desc: 'Multi-tenancy CRM, API access, and advanced org-level controls.',
-    badge: null,
-    dark: false,
-    cta: 'Contact Sales',
-    features: [
-      { text: 'Full multi-tenancy CRM',         ok: true },
-      { text: 'API access',                     ok: true },
-      { text: 'Role-based organization control',ok: true },
-      { text: 'Dedicated support',              ok: true },
-      { text: 'Custom integrations',            ok: true },
-    ],
-  },
-]
+import { LANDING_PRICING_PLANS, PRICING_PLAN_IDS } from '../../lib/pricing.js'
 
 export default function PricingSection() {
   const navigate = useNavigate()
@@ -89,10 +11,10 @@ export default function PricingSection() {
   const [billing, setBilling] = useState('monthly')
 
   const getPlanPrice = (plan) => {
-    if (plan.id === 'enterprise' && billing === 'yearly') {
+    if (plan.id === PRICING_PLAN_IDS.ENTERPRISE && billing === 'yearly') {
       return { value: plan.yearly, period: '' }
     }
-    if (billing === 'yearly' && plan.id !== 'free') {
+    if (billing === 'yearly' && plan.id !== PRICING_PLAN_IDS.FREE) {
       return { value: plan.yearly, period: '/year' }
     }
     return { value: plan.monthly, period: plan.period }
@@ -154,10 +76,10 @@ export default function PricingSection() {
           viewport={viewport('-40px')}
           className="mb-9 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4"
         >
-          {PLANS.map((plan) => {
+          {LANDING_PRICING_PLANS.map((plan) => {
             const { id, name, annualNote, desc, badge, dark, premium, cta, features } = plan
             const display = getPlanPrice(plan)
-            const yearlyHighlight = id === 'personal' || id === 'practitioner'
+            const yearlyHighlight = id === PRICING_PLAN_IDS.PERSONAL || id === PRICING_PLAN_IDS.PRACTITIONER
             return (
             <motion.div
               key={id}
@@ -235,12 +157,12 @@ export default function PricingSection() {
                 {/* CTA */}
                 <button
                   onClick={() => {
-                    if (id === 'enterprise') {
+                    if (id === PRICING_PLAN_IDS.ENTERPRISE) {
                       const subject = encodeURIComponent('Enterprise Plan Inquiry')
                       window.location.href = `mailto:info@softdab.tech?subject=${subject}`
                       return
                     }
-                    if (id === 'practitioner') {
+                    if (id === PRICING_PLAN_IDS.PRACTITIONER) {
                       const subject = encodeURIComponent('Practitioner Pro Application')
                       const body = encodeURIComponent(
                         'Hi VITALOOP team,\n\nI am interested in the Practitioner Pro plan.\n\n' +
