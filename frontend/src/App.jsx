@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 import { useOnboardingState } from './hooks/useOnboardingState.js'
 import SupportChat from './components/SupportChat.jsx'
 import PaywallModal from './components/PaywallModal.jsx'
+import { gaPageView } from './lib/analytics.js'
 
 // Critical user path — eager
 import EmailConfirmation from './pages/EmailConfirmation.jsx'
@@ -51,6 +52,14 @@ const CRMAuditLog = lazy(() => import('./pages/crm/AuditLog.jsx'))
 function ScrollToTop() {
   const { pathname } = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  return null
+}
+
+function GAPageTracker() {
+  const location = useLocation()
+  useEffect(() => {
+    gaPageView(location.pathname + location.search)
+  }, [location.pathname, location.search])
   return null
 }
 
@@ -163,6 +172,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <PaywallModal />
+      <GAPageTracker />
       <ScrollToTop />
       <Suspense fallback={<RouteFallback />}>
         <Routes>

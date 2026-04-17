@@ -2,6 +2,7 @@ import api from '../lib/api.js'
 import toast from 'react-hot-toast'
 import { useAppStore } from '../lib/store.js'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
+import { gaBeginCheckout } from '../lib/analytics.js'
 
 const FEATURES = [
   '📈 Full biomarker progress charts',
@@ -19,6 +20,7 @@ export default function LockedFeatureOverlay({ children, locked = true }) {
   async function handleCheckout() {
     const toastId = toast.loading('Opening checkout…')
     try {
+      gaBeginCheckout()
       const { data } = await api.post('/stripe/checkout')
       toast.dismiss(toastId)
       window.location.href = data.checkout_url

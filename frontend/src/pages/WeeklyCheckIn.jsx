@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.js'
+import { gaCheckInSubmit } from '../lib/analytics.js'
 
 const FEELING_OPTIONS = [
   { value: 'drained', label: 'Drained', hint: 'Low energy all week', score: 3 },
@@ -78,6 +79,7 @@ export default function WeeklyCheckIn() {
     setSubmitting(false)
 
     if (!error) {
+      gaCheckInSubmit()
       setDone(true)
       setTimeout(() => navigate('/dashboard'), 900)
     }

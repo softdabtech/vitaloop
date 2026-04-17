@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase.js'
 import { navigateToResolvedPath, resolvePostLoginDestination } from '../auth/postLogin.js'
 import { notifyRegistrationAlert } from '../auth/registrationAlert.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
+import { gaSignUp, gaLogin } from '../lib/analytics.js'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 
@@ -297,6 +298,7 @@ export default function Login() {
     }
 
     if (isSignUp) {
+      gaSignUp('email')
       trackFunnelEvent('funnel_signup_completed', 'User completed signup', {
         auth_provider: 'email',
       }, { oncePerSession: true })
@@ -315,6 +317,7 @@ export default function Login() {
     }
 
     try {
+      gaLogin('email')
       console.log('[STEP 1] Login successful, preparing CRM handoff')
       import('./UserDashboard.jsx').catch(() => {})
       const returnUrl = searchParams.get('returnUrl')
@@ -564,7 +567,7 @@ export default function Login() {
 
             {/* Google */}
             <button
-              onClick={signInWithGoogle}
+              onClick={() => { gaLogin('google'); signInWithGoogle() }}
               style={{
                 width: '100%', background: 'rgba(255,255,255,0.04)',
                 border: '0.5px solid rgba(255,255,255,0.1)',
