@@ -72,18 +72,18 @@ export default function QuickActionsPanel() {
   };
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-      <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
+    <div className="vtl-card p-6">
+      <h3 className="mb-4 text-lg font-semibold tracking-tight text-slate-100">Quick Actions</h3>
       <div className="space-y-2">
         {actions.map((action) => (
           <Link
             key={action.label}
             to={action.href}
-            className={`flex items-start gap-3 p-3 rounded-lg transition border border-transparent hover:border-slate-600 ${colorClasses[action.color]}`}
+            className={`flex min-h-[56px] items-start gap-3 rounded-xl border border-transparent p-3 transition ${colorClasses[action.color]} hover:border-emerald-400/30`}
           >
             <action.icon className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">{action.label}</p>
+              <p className="text-sm font-medium">{action.label}</p>
               <p className="text-xs text-slate-400">{action.description}</p>
             </div>
           </Link>

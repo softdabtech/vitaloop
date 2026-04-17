@@ -3,8 +3,8 @@ import { Lightbulb, BookOpen, AlertCircle } from 'lucide-react';
 
 export default function RecommendationsPanel({ insights }) {
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+    <div className="vtl-card p-6">
+      <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-100">
         <Lightbulb className="w-5 h-5 text-yellow-400" />
         AI Recommendations
       </h3>
@@ -14,7 +14,7 @@ export default function RecommendationsPanel({ insights }) {
           {insights.slice(0, 4).map((insight, idx) => (
             <div
               key={idx}
-              className="bg-slate-700/50 border-l-4 border-emerald-500 p-3 rounded hover:bg-slate-700 transition cursor-pointer"
+              className="recommendation-card cursor-pointer rounded-xl border border-slate-700/60 bg-slate-900/55 p-3"
             >
               <p className="text-white text-sm font-medium mb-1">{insight.title || insight.recommendation || 'Recommendation'}</p>
               <p className="text-slate-400 text-xs mb-2">{insight.description || insight.message || ''}</p>

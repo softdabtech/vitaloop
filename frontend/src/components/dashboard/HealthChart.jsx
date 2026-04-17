@@ -93,9 +93,9 @@ export default function HealthChart({ progress }) {
   const LINE_COLORS = ['#22c55e', '#38bdf8', '#f59e0b', '#a78bfa'];
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+    <div className="vtl-card p-6">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-4">
+        <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold tracking-tight text-slate-100">
           <TrendingUp className="w-5 h-5 text-emerald-500" />
           Health Trends
         </h2>
@@ -106,7 +106,7 @@ export default function HealthChart({ progress }) {
           {/* Biomarker Status Trend */}
           <div>
             <p className="text-slate-400 text-sm mb-3">Biomarker Status Distribution</p>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart data={biomarkerTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis dataKey="date" stroke="#94a3b8" />
@@ -131,7 +131,7 @@ export default function HealthChart({ progress }) {
           {chartData.length > 0 && (
             <div>
               <p className="text-slate-400 text-sm mb-3">Lab Upload Activity</p>
-              <ResponsiveContainer width="100%" height={250}>
+              <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                   <XAxis dataKey="date" stroke="#94a3b8" />
@@ -199,12 +199,12 @@ export default function HealthChart({ progress }) {
                   });
 
                   return (
-                    <div key={marker.name} className="bg-slate-900/45 border border-slate-700 rounded-lg p-3">
+                    <div key={marker.name} className="rounded-2xl border border-slate-700/70 bg-slate-900/45 p-4">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-sm text-white font-medium truncate pr-2">{marker.name}</p>
                         {marker.unit && <span className="text-xs text-slate-400">{marker.unit}</span>}
                       </div>
-                      <ResponsiveContainer width="100%" height={220}>
+                      <ResponsiveContainer width="100%" height={260}>
                         <LineChart data={markerTrend}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                           <XAxis dataKey="date" stroke="#94a3b8" />

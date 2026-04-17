@@ -4,21 +4,21 @@ export default function InterventionsPanel({ assignmentId, interventions, onAdd,
   const items = interventions || []
 
   return (
-    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 16 }}>
-      <h3 style={{ margin: '0 0 10px', color: '#fff' }}>Interventions</h3>
+    <div className="vtl-card rounded-2xl p-4">
+      <h3 className="mb-3 mt-0 text-lg font-semibold text-slate-100">Interventions</h3>
       {!assignmentId ? (
-        <p style={{ margin: '0 0 12px', color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>Assign a client program first to enable intervention timeline.</p>
+        <p className="mb-3 text-sm text-slate-400">Assign a client program first to enable intervention timeline.</p>
       ) : null}
       <AddInterventionForm assignmentId={assignmentId} onSubmit={onAdd} loading={loading} canSubmit={canSubmit} />
-      <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
+      <div className="mt-4 grid gap-2.5">
         {!items.length ? (
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>No interventions recorded in this session yet.</div>
+          <div className="text-sm text-slate-500">No interventions recorded in this session yet.</div>
         ) : (
           items.map((item, idx) => (
-            <div key={`${item?.id || 'local'}-${idx}`} style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: 10 }}>
-              <div style={{ color: '#fff', fontWeight: 700, marginBottom: 4 }}>{item.change_type || 'update'}</div>
-              <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>{item.description || '-'}</div>
-              <pre style={{ marginTop: 6, background: 'rgba(0,0,0,0.25)', borderRadius: 8, padding: 8, overflowX: 'auto' }}>{JSON.stringify(item.changes || {}, null, 2)}</pre>
+            <div key={`${item?.id || 'local'}-${idx}`} className="rounded-xl border border-slate-700/70 bg-slate-950/45 p-3">
+              <div className="mb-1 text-sm font-semibold text-slate-100">{item.change_type || 'update'}</div>
+              <div className="text-sm text-slate-300">{item.description || '-'}</div>
+              <pre className="mt-2 overflow-x-auto rounded-lg bg-slate-950/60 p-2 text-xs text-slate-200">{JSON.stringify(item.changes || {}, null, 2)}</pre>
             </div>
           ))
         )}

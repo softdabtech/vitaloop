@@ -17,31 +17,31 @@ export default function UploadZone({ onFile, disabled = false }) {
   return (
     <div
       {...getRootProps()}
-      className={`border-2 border-dashed rounded-2xl p-6 sm:p-10 text-center transition ${
+      className={`vtl-upload-zone flex flex-col items-center justify-center px-6 py-10 text-center transition ${
         disabled
-          ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+          ? 'cursor-not-allowed border-slate-600 bg-slate-900/70'
           : isDragActive
-            ? 'border-teal-500 bg-teal-50 cursor-copy'
-            : 'border-gray-300 bg-white hover:border-teal-400 cursor-pointer'
+            ? 'cursor-copy border-emerald-300 bg-emerald-500/15'
+            : 'cursor-pointer hover:border-emerald-300 hover:bg-emerald-500/10'
       }`}
     >
       <input {...getInputProps()} />
-      <div className="text-4xl mb-3">📄</div>
-      <p className="text-gray-800 font-semibold">
+      <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-500/20 text-4xl ring-1 ring-emerald-400/35">📄</div>
+      <p className="text-xl font-semibold text-slate-100 sm:text-2xl">
         {isDragActive ? 'Drop your file here' : 'Drag and drop your lab PDF or photo'}
       </p>
-      <p className="text-gray-500 text-sm mt-1">PDF, JPG, PNG supported. Max 20MB.</p>
+      <p className="mt-2 text-sm text-slate-400">PDF, JPG, PNG supported. Max 20MB.</p>
 
       <button
         type="button"
         disabled={disabled}
         onClick={open}
-        className="mt-4 inline-flex items-center justify-center rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:opacity-60 disabled:cursor-not-allowed"
+        className="vtl-button-primary vtl-focus-ring mt-5 inline-flex items-center justify-center px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
       >
         Choose File
       </button>
 
-      <p className="text-teal-700 text-xs mt-3">Local-first OCR. Raw file does not leave your device.</p>
+      <p className="mt-3 text-xs text-emerald-300">Local-first OCR. Raw file does not leave your device.</p>
     </div>
   )
 }

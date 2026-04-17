@@ -1,9 +1,9 @@
 export default function CRMStatCard({ label, value, hint, tone = '#1d9e75' }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${tone}33`, borderRadius: 14, padding: 16 }}>
-      <div style={{ color: tone, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700 }}>{label}</div>
-      <div style={{ color: '#fff', marginTop: 8, fontSize: 30, fontWeight: 700, lineHeight: 1 }}>{value}</div>
-      <div style={{ color: 'rgba(255,255,255,0.55)', marginTop: 8, fontSize: 12 }}>{hint || '\u00a0'}</div>
+    <div className="vtl-card rounded-2xl p-4">
+      <div className="text-[11px] font-bold uppercase tracking-[0.06em]" style={{ color: tone }}>{label}</div>
+      <div className="mt-2 text-3xl font-bold leading-none text-slate-100">{value}</div>
+      <div className="mt-2 text-xs text-slate-400">{hint || '\u00a0'}</div>
     </div>
   )
 }

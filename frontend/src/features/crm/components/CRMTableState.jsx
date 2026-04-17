@@ -4,7 +4,7 @@ import CRMEmptyState from './CRMEmptyState.jsx'
 export default function CRMTableState({ loading, error, isEmpty, emptyTitle, emptyDescription, onRetry, children }) {
   if (loading) {
     return (
-      <div style={{ padding: 22, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, color: 'rgba(255,255,255,0.6)' }}>
+      <div className="vtl-card rounded-2xl p-6 text-slate-400">
         Loading...
       </div>
     )

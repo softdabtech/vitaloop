@@ -15,6 +15,8 @@ import ProgressTimeline from '../components/dashboard/ProgressTimeline';
 import RecommendationsPanel from '../components/dashboard/RecommendationsPanel';
 import { enrichAssignments } from '../lib/assignmentScoring.js';
 import '../styles/userDashboard.css';
+import '../styles/dashboard2026.css';
+import { motion, useReducedMotion } from 'framer-motion';
 
 function SectionSkeleton({ rows = 3, rowClass = 'h-12' }) {
   return (
@@ -40,6 +42,7 @@ export default function UserDashboard() {
   const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -105,23 +108,28 @@ export default function UserDashboard() {
     ? onboarding?.current_stage_label || 'Continue onboarding'
     : 'Dashboard ready';
 
+  const reduced = useReducedMotion();
+  const healthScore = Number(stats?.health_score || 0);
+  const ringProgress = Math.max(0, Math.min(100, healthScore));
+
   return (
-    <div className="flex min-h-screen bg-slate-950">
+    <div className="vtl-shell flex min-h-screen">
       <div className="hidden lg:block">
         <UserDashboardSidebar
-          isOpen={sidebarOpen}
-          toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
           user={user}
           onLogout={handleLogout}
         />
       </div>
 
       {sidebarOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm" onClick={() => setSidebarOpen(false)}>
+        <div className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)}>
           <div className="h-full w-72" onClick={(event) => event.stopPropagation()}>
             <UserDashboardSidebar
-              isOpen={true}
-              toggleSidebar={() => setSidebarOpen(false)}
+              collapsed={false}
+              mobile
+              onCloseMobile={() => setSidebarOpen(false)}
               user={user}
               onLogout={handleLogout}
             />
@@ -132,26 +140,34 @@ export default function UserDashboard() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <div className="bg-slate-900 border-b border-slate-700 px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+        <div className="vtl-header-glass flex h-[76px] items-center justify-between gap-3 border-b border-slate-700/40 px-4 sm:px-6">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-slate-800 rounded-lg transition"
+              className="vtl-focus-ring rounded-xl p-2 transition hover:bg-slate-800 lg:hidden"
             >
               <Menu className="w-5 h-5 text-white" />
             </button>
             <div>
-              <h1 className="text-lg sm:text-2xl font-bold text-white">Welcome back, {displayName}</h1>
-              <p className="text-xs sm:text-sm text-slate-400">{onboardingLabel}</p>
+              <h1 className="text-lg font-semibold tracking-tight text-slate-100 sm:text-2xl">Welcome back, {displayName}</h1>
+              <p className="text-xs text-slate-400 sm:text-sm">{onboardingLabel}</p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition text-sm"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Logout</span>
-          </button>
+          <div className="hidden items-center gap-3 sm:flex">
+            <button
+              onClick={() => setSidebarCollapsed((prev) => !prev)}
+              className="vtl-button-secondary vtl-focus-ring px-3 text-sm"
+            >
+              {sidebarCollapsed ? 'Expand' : 'Collapse'} sidebar
+            </button>
+            <button
+              onClick={handleLogout}
+              className="vtl-button-secondary vtl-focus-ring flex items-center gap-2 px-4 text-sm"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Content */}
@@ -210,67 +226,78 @@ export default function UserDashboard() {
               </div>
             )}
 
-            {/* Quick Stats Row */}
-            <div className="dashboard-grid-auto dashboard-stats-grid gap-3 sm:gap-4">
-              {loading ? (
-                <>
-                  <StatSkeleton />
-                  <StatSkeleton />
-                  <StatSkeleton />
-                  <StatSkeleton />
-                </>
-              ) : (
-                <>
-                  <StatCard
-                    title="Health Score"
-                    value={stats?.health_score ?? '--'}
-                    unit="/100"
-                    icon={Heart}
-                    color="emerald"
-                    change={stats?.health_score_change || 0}
-                  />
-                  <StatCard
-                    title="Active Program"
-                    value={stats?.active_program || 'None'}
-                    unit=""
-                    icon={Activity}
-                    color="blue"
-                  />
-                  <StatCard
-                    title="Completed Tasks"
-                    value={stats?.completed_tasks || 0}
-                    unit="total"
-                    icon={CheckCircle}
-                    color="purple"
-                  />
-                  <StatCard
-                    title="Subscription"
-                    value={String(stats?.subscription || 'free').replace('_', ' ')}
-                    unit=""
-                    icon={Calendar}
-                    color="orange"
-                  />
-                </>
-              )}
-            </div>
-
-            {/* Main Content Grid */}
-            <div className="dashboard-main-grid gap-4 sm:gap-6">
-              {/* Health Trends Chart */}
-              <div className="dashboard-main-grid__chart">
-                {loading ? (
-                  <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-                    <SectionSkeleton rows={4} rowClass="h-14" />
+            {/* Hero metrics: Health score + key stats + quick actions */}
+            <div className="grid gap-4 xl:grid-cols-[300px_1fr_320px]">
+              <motion.div
+                initial={reduced ? false : { opacity: 0, y: 12 }}
+                animate={reduced ? {} : { opacity: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+                className="vtl-card vtl-card-hover p-6"
+              >
+                <p className="mb-3 text-sm text-slate-400">Health Score</p>
+                <div className="mx-auto flex h-[240px] w-[240px] items-center justify-center">
+                  <div
+                    className="relative h-[220px] w-[220px] rounded-full"
+                    style={{
+                      background: `conic-gradient(#10B981 ${ringProgress * 3.6}deg, rgba(148,163,184,0.2) 0deg)`,
+                    }}
+                  >
+                    <div className="absolute inset-[18px] flex items-center justify-center rounded-full bg-[#0b111f] shadow-inner">
+                      <div className="text-center">
+                        <p className="text-5xl font-bold text-slate-50">{stats?.health_score ?? '--'}</p>
+                        <p className="text-xs uppercase tracking-[0.12em] text-slate-400">out of 100</p>
+                      </div>
+                    </div>
                   </div>
+                </div>
+              </motion.div>
+
+              <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+                {loading ? (
+                  <>
+                    <StatSkeleton />
+                    <StatSkeleton />
+                    <StatSkeleton />
+                    <StatSkeleton />
+                  </>
                 ) : (
-                  <HealthChart progress={progress} />
+                  <>
+                    <StatCard
+                      title="Health Score"
+                      value={stats?.health_score ?? '--'}
+                      unit="/100"
+                      icon={Heart}
+                      color="emerald"
+                      change={stats?.health_score_change || 0}
+                    />
+                    <StatCard
+                      title="Active Program"
+                      value={stats?.active_program || 'None'}
+                      unit=""
+                      icon={Activity}
+                      color="blue"
+                    />
+                    <StatCard
+                      title="Completed Tasks"
+                      value={stats?.completed_tasks || 0}
+                      unit="total"
+                      icon={CheckCircle}
+                      color="purple"
+                    />
+                    <StatCard
+                      title="Subscription"
+                      value={String(stats?.subscription || 'free').replace('_', ' ')}
+                      unit=""
+                      icon={Calendar}
+                      color="orange"
+                    />
+                  </>
                 )}
               </div>
 
-              {/* Quick Actions */}
-              <div className="dashboard-main-grid__actions">
+              <div>
                 {loading ? (
-                  <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+                  <div className="vtl-card p-6">
                     <SectionSkeleton rows={6} rowClass="h-10" />
                   </div>
                 ) : (
@@ -279,9 +306,20 @@ export default function UserDashboard() {
               </div>
             </div>
 
+            {/* Health Trends chart */}
+            <div>
+              {loading ? (
+                <div className="vtl-card p-6">
+                  <SectionSkeleton rows={4} rowClass="h-14" />
+                </div>
+              ) : (
+                <HealthChart progress={progress} />
+              )}
+            </div>
+
             <div className="dashboard-grid-auto dashboard-work-grid gap-4 sm:gap-6">
               {/* Assignments Section */}
-              <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+              <div className="vtl-card p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-emerald-500" />
@@ -325,7 +363,7 @@ export default function UserDashboard() {
               </div>
 
               {/* Today Focus */}
-              <div className="bg-slate-800 border border-emerald-500/30 rounded-lg p-6">
+              <div className="vtl-card p-6 ring-1 ring-emerald-500/25">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                     <CheckCircle className="w-5 h-5 text-emerald-400" />
@@ -363,14 +401,14 @@ export default function UserDashboard() {
             {/* Recommendations & Progress Timeline */}
             <div className="dashboard-grid-auto dashboard-insights-grid gap-4 sm:gap-6">
               {loading ? (
-                <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+                <div className="vtl-card p-6">
                   <SectionSkeleton rows={4} rowClass="h-12" />
                 </div>
               ) : (
                 <RecommendationsPanel insights={insights} />
               )}
               {loading ? (
-                <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+                <div className="vtl-card p-6">
                   <SectionSkeleton rows={5} rowClass="h-11" />
                 </div>
               ) : (

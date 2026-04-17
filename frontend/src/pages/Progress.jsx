@@ -6,6 +6,7 @@ import EmptyState from '../components/EmptyState.jsx'
 import LockedFeatureOverlay from '../components/LockedFeatureOverlay.jsx'
 import { useSubscription } from '../hooks/useSubscription.js'
 import { useNavigate } from 'react-router-dom'
+import '../styles/dashboard2026.css'
 
 function getBiomarkerValue(upload, name) {
   const marker = upload.biomarkers.find((b) => b.name.toLowerCase().includes(name.toLowerCase()))
@@ -49,34 +50,38 @@ export default function Progress() {
   }, [user, navigate])
 
   if (loading) return (
-    <div className="min-h-screen p-6 max-w-3xl mx-auto">
-      <div className="animate-pulse h-8 w-48 bg-gray-700 rounded-xl mb-6" />
-      <div className="grid sm:grid-cols-3 gap-3 mb-6">
-        {[1,2,3].map(i => <div key={i} className="animate-pulse bg-gray-800 rounded-xl h-20" />)}
+    <div className="vtl-shell min-h-screen px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-6 h-8 w-48 animate-pulse rounded-xl bg-slate-700" />
+        <div className="mb-6 grid gap-3 sm:grid-cols-3">
+          {[1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-slate-800" />)}
+        </div>
+        <div className="mb-4 h-56 animate-pulse rounded-xl bg-slate-800" />
+        <div className="h-32 animate-pulse rounded-xl bg-slate-800" />
       </div>
-      <div className="animate-pulse bg-gray-800 rounded-xl h-48 mb-4" />
-      <div className="animate-pulse bg-gray-800 rounded-xl h-32" />
     </div>
   )
 
   // Premium error
   if (error === 'premium') {
     return (
-      <div className="min-h-screen p-6 max-w-3xl mx-auto">
-        <h2 className="text-2xl font-bold text-green-400 mb-6">Progress Tracker</h2>
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-8 text-center border border-green-500/20">
-          <h3 className="text-xl font-semibold text-white mb-2">Advanced Tracking</h3>
-          <p className="text-gray-400 mb-6">Detailed progress tracking is available with Vitaloop Premium.</p>
+      <div className="vtl-shell min-h-screen px-4 py-8 sm:px-6">
+        <div className="mx-auto max-w-4xl">
+          <h2 className="mb-6 text-2xl font-bold tracking-tight text-slate-100">Progress Tracker</h2>
+          <div className="vtl-card p-8 text-center">
+            <h3 className="mb-2 text-xl font-semibold text-slate-100">Advanced Tracking</h3>
+            <p className="mb-6 text-slate-400">Detailed progress tracking is available with Vitaloop Premium.</p>
           <button 
             onClick={() => {
               // /checkout does not exist; route user to landing pricing block.
               window.location.href = '/#pricing'
             }} 
-            className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg font-semibold transition"
+              className="vtl-button-primary px-8"
           >
             Upgrade to Premium
           </button>
-          <p className="text-gray-500 text-sm mt-4">You can still upload new tests as a free user.</p>
+            <p className="mt-4 text-sm text-slate-500">You can still upload new tests as a free user.</p>
+          </div>
         </div>
       </div>
     )
@@ -85,16 +90,18 @@ export default function Progress() {
   // Error state
   if (error === 'failed') {
     return (
-      <div className="min-h-screen p-6 max-w-3xl mx-auto">
-        <h2 className="text-2xl font-bold text-green-400 mb-6">Progress Tracker</h2>
-        <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-8 text-center">
-          <p className="text-red-300 mb-4">Unable to load progress data. Please try again.</p>
+      <div className="vtl-shell min-h-screen px-4 py-8 sm:px-6">
+        <div className="mx-auto max-w-4xl">
+          <h2 className="mb-6 text-2xl font-bold tracking-tight text-slate-100">Progress Tracker</h2>
+          <div className="rounded-xl border border-rose-500/50 bg-rose-500/10 p-8 text-center">
+            <p className="mb-4 text-rose-300">Unable to load progress data. Please try again.</p>
           <button 
             onClick={() => window.location.reload()} 
-            className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg"
+              className="vtl-button-primary px-6"
           >
             Retry
           </button>
+          </div>
         </div>
       </div>
     )
@@ -123,61 +130,63 @@ export default function Progress() {
     .filter((d) => d.pct != null)
 
   return (
-    <div className="min-h-screen p-6 max-w-3xl mx-auto">
-      <h2 className="text-2xl font-bold text-green-400 mb-6">Progress Tracker</h2>
-      {data.length === 0 ? (
-        <div className="text-center py-20">
-        <EmptyState
-          icon="📈"
-          title="No lab results yet"
-          subtitle="Upload your first blood test to start tracking biomarker progress over time."
-          action="Upload First Test"
-          onAction={() => navigate('/upload')}
-        />
-      </div>
-      ) : (
-        <>
-          {deltas.length > 0 && (
-            <div className="grid sm:grid-cols-3 gap-3 mb-6">
-              {deltas.map((d) => (
-                <div key={d.key} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-                  <p className="text-xs text-gray-500 uppercase mb-1">{d.label}</p>
-                  <p className={`text-xl font-bold ${d.pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {d.pct >= 0 ? '+' : ''}{d.pct}%
-                  </p>
-                  <p className="text-[11px] text-gray-500 mt-1">{d.start} → {d.end}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <LockedFeatureOverlay locked={!isPro}>
-            <ProgressChart data={data} />
-          </LockedFeatureOverlay>
-
-          <div className="mt-6 bg-gray-900 border border-gray-800 rounded-xl p-5">
-            <p className="text-sm text-gray-300 mb-3">Upload Timeline</p>
-            <div className="space-y-3">
-              {data.map((upload, index) => (
-                <div key={upload.id} className="flex items-start gap-3">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-green-500" />
-                  <div>
-                    <p className="text-sm text-gray-200">Upload #{index + 1}</p>
-                    <p className="text-xs text-gray-500">{upload.test_date || upload.created_at?.slice(0, 10)} · {upload.lab_name || 'Unknown lab'}</p>
+    <div className="vtl-shell min-h-screen px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-6xl">
+        <h2 className="mb-6 text-2xl font-bold tracking-tight text-slate-100">Progress Tracker</h2>
+        {data.length === 0 ? (
+          <div className="py-20 text-center">
+            <EmptyState
+              icon="📈"
+              title="No lab results yet"
+              subtitle="Upload your first blood test to start tracking biomarker progress over time."
+              action="Upload First Test"
+              onAction={() => navigate('/upload')}
+            />
+          </div>
+        ) : (
+          <>
+            {deltas.length > 0 && (
+              <div className="mb-6 grid gap-3 sm:grid-cols-3">
+                {deltas.map((d) => (
+                  <div key={d.key} className="vtl-card p-4">
+                    <p className="mb-1 text-xs uppercase text-slate-500">{d.label}</p>
+                    <p className={`text-xl font-bold ${d.pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {d.pct >= 0 ? '+' : ''}{d.pct}%
+                    </p>
+                    <p className="mt-1 text-[11px] text-slate-500">{d.start} to {d.end}</p>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
+                ))}
+              </div>
+            )}
 
-          <div className="mt-8 bg-gray-800 rounded-xl p-5 text-center">
-            <p className="text-gray-400 text-sm">Retest recommended every 90 days to track improvements.</p>
-            <button onClick={() => navigate('/upload')} className="mt-3 bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg text-sm">
-              Upload New Test
-            </button>
-          </div>
-        </>
-      )}
+            <LockedFeatureOverlay locked={!isPro}>
+              <ProgressChart data={data} />
+            </LockedFeatureOverlay>
+
+            <div className="vtl-card mt-6 p-5">
+              <p className="mb-3 text-sm text-slate-200">Upload Timeline</p>
+              <div className="space-y-3">
+                {data.map((upload, index) => (
+                  <div key={upload.id} className="flex items-start gap-3">
+                    <div className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
+                    <div>
+                      <p className="text-sm text-slate-100">Upload #{index + 1}</p>
+                      <p className="text-xs text-slate-400">{upload.test_date || upload.created_at?.slice(0, 10)} · {upload.lab_name || 'Unknown lab'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="vtl-card mt-8 p-5 text-center">
+              <p className="text-sm text-slate-400">Retest recommended every 90 days to track improvements.</p>
+              <button onClick={() => navigate('/upload')} className="vtl-button-primary mt-3 px-6 text-sm">
+                Upload New Test
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }

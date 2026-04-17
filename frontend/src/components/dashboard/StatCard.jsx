@@ -10,9 +10,9 @@ export default function StatCard({ title, value, unit, icon: Icon, color, change
   };
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-5 hover:border-slate-600 transition">
+    <div className="vtl-card vtl-card-hover min-h-[180px] p-6">
       <div className="flex items-start justify-between mb-3">
-        <div className={`p-3 rounded-lg bg-gradient-to-br ${colorClasses[color]} bg-opacity-10`}>
+        <div className={`rounded-2xl border border-white/5 bg-gradient-to-br p-3 ${colorClasses[color]} bg-opacity-10`}>
           <Icon className={`w-6 h-6 ${colorClasses[color].split(' ')[2]}`} />
         </div>
         {change !== undefined && change !== 0 && (
@@ -24,10 +24,10 @@ export default function StatCard({ title, value, unit, icon: Icon, color, change
           </div>
         )}
       </div>
-      <p className="text-slate-400 text-sm mb-1">{title}</p>
-      <p className="text-white text-2xl font-bold">
+      <p className="mb-1 text-sm text-slate-400">{title}</p>
+      <p className="text-3xl font-bold tracking-tight text-slate-100">
         {value}
-        <span className="text-slate-400 text-lg ml-1">{unit}</span>
+        <span className="ml-1 text-lg text-slate-400">{unit}</span>
       </p>
     </div>
   );

@@ -94,7 +94,7 @@ export default function ClientDetailsPage() {
     <div>
       <CRMPageHeader title="Client Profile" subtitle="Lifecycle center: onboarding, program, interventions, questionnaire" />
       <CRMTableState loading={loading} error={error} onRetry={refetch} isEmpty={!client} emptyTitle="Client not found" emptyDescription="This client may be unavailable for your role.">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="grid gap-3 lg:grid-cols-2">
           <ClientOverviewCard client={client} />
           <ClientProgramCard
             client={client}

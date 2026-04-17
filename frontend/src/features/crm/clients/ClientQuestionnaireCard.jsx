@@ -29,24 +29,17 @@ export default function ClientQuestionnaireCard({ clientId, onSubmit, loading })
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 16 }}>
-      <h3 style={{ margin: '0 0 10px', color: '#fff' }}>Questionnaire Review</h3>
-      <p style={{ margin: '0 0 10px', color: 'rgba(255,255,255,0.65)', fontSize: 13 }}>Submit validated questionnaire responses to continue lifecycle pipeline.</p>
-      <input value={questionnaireId} onChange={(e) => setQuestionnaireId(e.target.value)} placeholder="Questionnaire ID" style={inputStyle} />
-      <textarea value={responsesJson} onChange={(e) => setResponsesJson(e.target.value)} style={{ ...inputStyle, marginTop: 8, minHeight: 100, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }} />
-      {error ? <p style={{ margin: '8px 0 0', color: '#ff9c9c' }}>{error}</p> : null}
-      <button disabled={loading} type="submit" style={{ marginTop: 8, border: 'none', background: '#1d9e75', color: '#fff', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}>
+    <form onSubmit={handleSubmit} className="vtl-card rounded-2xl p-4">
+      <h3 className="mb-2 mt-0 text-lg font-semibold text-slate-100">Questionnaire Review</h3>
+      <p className="mb-3 text-sm text-slate-400">Submit validated questionnaire responses to continue lifecycle pipeline.</p>
+      <input value={questionnaireId} onChange={(e) => setQuestionnaireId(e.target.value)} placeholder="Questionnaire ID" className={inputClassName} />
+      <textarea value={responsesJson} onChange={(e) => setResponsesJson(e.target.value)} className={`${inputClassName} mt-2 min-h-[100px] font-mono text-xs`} />
+      {error ? <p className="mt-2 text-sm text-rose-300">{error}</p> : null}
+      <button disabled={loading} type="submit" className="vtl-button-primary mt-3 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60">
         {loading ? 'Submitting...' : 'Submit Questionnaire'}
       </button>
     </form>
   )
 }
 
-const inputStyle = {
-  width: '100%',
-  background: 'rgba(0,0,0,0.25)',
-  color: '#fff',
-  border: '1px solid rgba(255,255,255,0.18)',
-  borderRadius: 8,
-  padding: '8px 10px',
-}
+const inputClassName = 'w-full rounded-xl border border-slate-600 bg-slate-900/65 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40'

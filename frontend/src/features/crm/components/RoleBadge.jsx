@@ -1,23 +1,14 @@
 const ROLE_COLORS = {
-  super_admin: { bg: 'rgba(79,70,229,0.2)', text: '#a5b4fc' },
-  org_admin: { bg: 'rgba(29,158,117,0.2)', text: '#65d6b1' },
-  practitioner: { bg: 'rgba(249,115,22,0.2)', text: '#fdba74' },
-  end_user: { bg: 'rgba(148,163,184,0.2)', text: '#cbd5e1' },
+  super_admin: 'border-indigo-500/35 bg-indigo-500/15 text-indigo-200',
+  org_admin: 'border-emerald-500/35 bg-emerald-500/15 text-emerald-200',
+  practitioner: 'border-orange-500/35 bg-orange-500/15 text-orange-200',
+  end_user: 'border-slate-500/35 bg-slate-500/15 text-slate-300',
 }
 
 export default function RoleBadge({ role = 'end_user' }) {
   const palette = ROLE_COLORS[role] || ROLE_COLORS.end_user
   return (
-    <span style={{
-      fontSize: 11,
-      textTransform: 'uppercase',
-      letterSpacing: '0.06em',
-      padding: '4px 8px',
-      borderRadius: 999,
-      background: palette.bg,
-      color: palette.text,
-      fontWeight: 700,
-    }}>
+    <span className={`inline-flex items-center rounded-full border px-2 py-1 text-[11px] font-bold uppercase tracking-[0.06em] ${palette}`}>
       {role.replace('_', ' ')}
     </span>
   )
