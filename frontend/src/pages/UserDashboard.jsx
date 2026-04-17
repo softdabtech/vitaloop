@@ -433,7 +433,7 @@ export default function UserDashboard() {
                 Settings
               </button>
               <button
-                onClick={() => navigate('/checkin')}
+                onClick={() => navigate('/check-ins')}
                 className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition"
               >
                 Schedule Check-in

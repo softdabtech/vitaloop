@@ -11,10 +11,10 @@ export function resolveAssignmentPath(assignment) {
     return '/questionnaire'
   }
   if (text.includes('check') || text.includes('weekly')) {
-    return '/checkin'
+    return '/check-ins'
   }
   if (text.includes('upload') || text.includes('lab') || text.includes('test')) {
     return '/upload'
   }
-  return '/timeline'
+  return '/insights'
 }

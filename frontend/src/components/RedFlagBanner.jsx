@@ -59,7 +59,7 @@ export default function RedFlagBanner() {
               I've seen this
             </button>
             <button
-              onClick={() => navigate('/checkin')}
+              onClick={() => navigate('/check-ins')}
               style={{ padding: '7px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.07)', border: 'none', color: 'rgba(255,255,255,0.6)', fontSize: 13, cursor: 'pointer' }}
             >
               Log this week's check-in
