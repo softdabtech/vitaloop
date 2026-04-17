@@ -94,7 +94,7 @@ _FALLBACK_PROTOCOLS = [
 
 
 def is_llm_configured() -> bool:
-    return bool((settings.active_abacus_ai_api_key or "").strip())
+    return bool((settings.active_llm_api_key or "").strip())
 
 
 def _to_float(value: str | None) -> float | None:
@@ -219,10 +219,10 @@ def _fallback_generate_protocol(biomarkers: List[Dict[str, Any]], symptoms: List
 def _get_client() -> httpx.AsyncClient:
     global _client
     if _client is None:
-        base_url = settings.active_abacus_ai_base_url.rstrip("/")
-        api_key = settings.active_abacus_ai_api_key
+        base_url = settings.active_llm_base_url.rstrip("/")
+        api_key = settings.active_llm_api_key
         if not api_key:
-            raise RuntimeError("ABACUS_AI_API_KEY is not configured.")
+            raise RuntimeError("ROUTELLM_API_KEY is not configured.")
         _client = httpx.AsyncClient(
             base_url=base_url,
             headers={
@@ -246,12 +246,12 @@ def _strip_code_block(raw: str) -> str:
 
 async def _chat_completion(prompt: str, *, task_name: str) -> str:
     client = _get_client()
-    model = settings.active_abacus_ai_model
-    base_url = settings.active_abacus_ai_base_url.rstrip("/")
-    key_suffix = settings.active_abacus_ai_api_key[-4:] if settings.active_abacus_ai_api_key else "none"
+    model = settings.active_llm_model
+    base_url = settings.active_llm_base_url.rstrip("/")
+    key_suffix = settings.active_llm_api_key[-4:] if settings.active_llm_api_key else "none"
     started = time.perf_counter()
     logger.info(
-        "abacus_request_start task=%s base_url=%s model=%s key_suffix=%s",
+        "llm_request_start task=%s base_url=%s model=%s key_suffix=%s",
         task_name,
         base_url,
         model,
@@ -273,12 +273,12 @@ async def _chat_completion(prompt: str, *, task_name: str) -> str:
     response_id = payload.get("id")
     choices = payload.get("choices") or []
     if not choices:
-        raise ValueError("Abacus API returned no choices")
+        raise ValueError("LLM API returned no choices")
     content = ((choices[0] or {}).get("message") or {}).get("content")
     if not isinstance(content, str) or not content.strip():
-        raise ValueError("Abacus API returned empty content")
+        raise ValueError("LLM API returned empty content")
     logger.info(
-        "abacus_request_ok task=%s model=%s response_id=%s duration_ms=%s",
+        "llm_request_ok task=%s model=%s response_id=%s duration_ms=%s",
         task_name,
         model,
         response_id,

@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api.js';
 import { 
-  Heart, Calendar, AlertCircle, CheckCircle,
+  Calendar, AlertCircle, CheckCircle,
   Activity, Download, Settings, LogOut, Menu, Plus, Sparkles, ArrowRight
 } from 'lucide-react';
 import UserDashboardSidebar from '../components/dashboard/UserDashboardSidebar';
@@ -263,12 +263,11 @@ export default function UserDashboard() {
                 ) : (
                   <>
                     <StatCard
-                      title="Health Score"
-                      value={stats?.health_score ?? '--'}
-                      unit="/100"
-                      icon={Heart}
+                      title="Lab Uploads"
+                      value={stats?.total_uploads ?? 0}
+                      unit="total"
+                      icon={Activity}
                       color="emerald"
-                      change={stats?.health_score_change || 0}
                     />
                     <StatCard
                       title="Active Program"
@@ -355,9 +354,21 @@ export default function UserDashboard() {
                     )}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <p className="text-slate-300">No active assignments yet</p>
-                    <p className="text-slate-500 text-sm mt-1">Start with onboarding or upload labs to generate your first task list.</p>
+                  <div className="flex flex-col items-center justify-center py-10 gap-4 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center ring-1 ring-emerald-500/20">
+                      <Calendar className="w-6 h-6 text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-slate-200 font-medium">No assignments yet</p>
+                      <p className="text-slate-500 text-sm mt-1">Upload your labs to generate your first protocol.</p>
+                    </div>
+                    <button
+                      onClick={() => navigate('/upload')}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl font-semibold text-sm transition"
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                      Upload Labs
+                    </button>
                   </div>
                 )}
               </div>
@@ -390,9 +401,20 @@ export default function UserDashboard() {
                     ))}
                   </div>
                 ) : (
-                  <div>
-                    <p className="text-slate-300 text-sm">No active focus tasks today.</p>
-                    <p className="text-slate-500 text-xs mt-1">Use weekly check-in to generate the next recommended action.</p>
+                  <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center ring-1 ring-emerald-500/20">
+                      <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-slate-200 text-sm font-medium">All clear for today!</p>
+                      <p className="text-slate-500 text-xs mt-0.5">Log your weekly check-in to get tomorrow\'s focus tasks.</p>
+                    </div>
+                    <button
+                      onClick={() => navigate('/check-ins')}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-emerald-300 hover:border-emerald-500/40 transition"
+                    >
+                      Weekly check-in
+                    </button>
                   </div>
                 )}
               </div>

@@ -115,6 +115,9 @@ class RedisRateLimiterBackend:
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Adds baseline API security headers to every response."""
 
+    # Pure JSON API — forbid all content except what the client explicitly fetched.
+    _CSP = "default-src 'none'; frame-ancestors 'none'"
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -122,8 +125,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         response.headers["Cache-Control"] = "no-store"
+        response.headers["Content-Security-Policy"] = self._CSP
+        response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
         if request.url.scheme == "https":
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
         return response
 
 

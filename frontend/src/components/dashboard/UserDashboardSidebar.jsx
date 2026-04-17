@@ -1,28 +1,28 @@
 import { NavLink } from 'react-router-dom'
 import {
   Activity,
-  AlertCircle,
   BarChart3,
   ChevronLeft,
   Clock,
   FileText,
+  Flame,
   Home,
   LogOut,
   Settings,
   Target,
   TrendingUp,
+  Upload,
 } from 'lucide-react'
 
 const MENU_ITEMS = [
-  { icon: Home, label: 'Dashboard', path: '/dashboard', badge: null },
-  { icon: FileText, label: 'Upload Labs', path: '/upload', badge: null },
-  { icon: FileText, label: 'Lab Results', path: '/lab-results', badge: null },
-  { icon: Target, label: 'Assignments', path: '/assignments', badgeKey: 'pending_assignments' },
-  { icon: TrendingUp, label: 'Progress', path: '/progress', badge: null },
-  { icon: BarChart3, label: 'Insights', path: '/insights', badge: null },
-  { icon: Clock, label: 'Check-ins', path: '/check-ins', badge: null },
-  { icon: Activity, label: 'Onboarding', path: '/onboarding', badge: null },
-  { icon: AlertCircle, label: 'Legacy Dashboard', path: '/dashboard-legacy', badge: null },
+  { icon: Home,       label: 'Dashboard',     path: '/dashboard',   badge: null },
+  { icon: Upload,     label: 'Upload Labs',   path: '/upload',      badge: null },
+  { icon: FileText,   label: 'Lab Results',   path: '/lab-results', badge: null },
+  { icon: Target,     label: 'Assignments',   path: '/assignments', badgeKey: 'pending_assignments' },
+  { icon: TrendingUp, label: 'Progress',      path: '/progress',    badge: null },
+  { icon: BarChart3,  label: 'Insights',      path: '/insights',    badge: null },
+  { icon: Clock,      label: 'Check-ins',     path: '/check-ins',   badge: null },
+  { icon: Flame,      label: 'Onboarding',    path: '/onboarding',  badge: null },
 ]
 
 export default function UserDashboardSidebar({

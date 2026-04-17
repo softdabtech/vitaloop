@@ -121,7 +121,7 @@ export default function PricingSection() {
           </motion.p>
           <motion.div variants={reduced ? {} : staggerChild} className="mt-5">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-700">
-              80% complete - launching soon
+              Early access — join before public launch
             </span>
           </motion.div>
           <motion.div variants={reduced ? {} : staggerChild} className="mt-6 flex justify-center">

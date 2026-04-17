@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import HTTPException
 from fastapi.exceptions import RequestValidationError
+from contextlib import asynccontextmanager
 from app.errors import http_exception_handler, validation_exception_handler
 from app.config import settings
 from app.middleware.request_context import RequestContextMiddleware
@@ -41,18 +42,11 @@ elif settings.sentry_dsn and sentry_sdk is None:
 from app.routers import (
     analyze, protocol, progress, health, symptoms, stripe_router, admin,
     profile, complaints, checkins, timeline, insights, red_flags, notifications, auth, crm,
-    crm_stage5, assignments, onboarding, questionnaire, dashboard,
-)
-
-app = FastAPI(
-    title="VITALOOP API",
-    version="2.1.2",
-    description="Biohacking-as-a-Service backend",
+    crm_clients, assignments, onboarding, questionnaire, dashboard,
 )
 
 
-@app.on_event("startup")
-async def _log_runtime_readiness_summary():
+def _check_runtime_readiness() -> None:
     checks = {
         "supabase_url": bool((settings.supabase_url or "").strip()),
         "supabase_service_role_key": bool((settings.supabase_service_role_key or "").strip()),
@@ -67,6 +61,20 @@ async def _log_runtime_readiness_summary():
         logger.warning("runtime_readiness_missing count=%s keys=%s", len(missing), ",".join(missing))
     else:
         logger.info("runtime_readiness_ok")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _check_runtime_readiness()
+    yield
+
+
+app = FastAPI(
+    title="VITALOOP API",
+    version="2.1.2",
+    description="Biohacking-as-a-Service backend",
+    lifespan=lifespan,
+)
 
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
@@ -106,8 +114,15 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-Idempotency-Key",
+        "X-Request-ID",
+        "stripe-signature",
+    ],
+    expose_headers=["X-Request-ID"],
 )
 
 app.include_router(health.router, tags=["health"])
@@ -117,7 +132,7 @@ app.include_router(progress.router, prefix="/progress", tags=["progress"])
 app.include_router(symptoms.router, prefix="/symptoms", tags=["symptoms"])
 app.include_router(stripe_router.router, prefix="/stripe", tags=["stripe"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
-app.include_router(crm_stage5.router, tags=["crm-stage5"])
+app.include_router(crm_clients.router, tags=["crm"])
 app.include_router(assignments.router, tags=["crm-assignments"])
 app.include_router(crm.router, prefix="/admin", tags=["crm"])
 app.include_router(profile.router, prefix="/profile", tags=["profile"])

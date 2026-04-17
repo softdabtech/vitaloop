@@ -15,13 +15,11 @@ from app.services.supabase_service import (
     write_audit_log,
 )
 from app.services.affiliate import build_iherb_url
+from app.constants import PROTOCOL_GENERATION_TIMEOUT_SECONDS
+from app.utils.validation import normalize_symptoms as _normalize_symptoms
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
-
-MAX_SYMPTOMS = 20
-MAX_SYMPTOM_LENGTH = 60
-PROTOCOL_GENERATION_TIMEOUT_SECONDS = 75
 
 
 class ProtocolRequest(BaseModel):
@@ -34,32 +32,6 @@ class ProtocolResponse(BaseModel):
     user_id: str
     upload_id: str
     recommendations: list[dict]
-
-
-def _normalize_symptoms(symptoms: list[str]) -> list[str]:
-    normalized: list[str] = []
-    seen = set()
-
-    for raw in symptoms:
-        item = (raw or "").strip().lower()
-        if not item:
-            continue
-        if len(item) > MAX_SYMPTOM_LENGTH:
-            raise HTTPException(
-                status_code=422,
-                detail={"detail": f"Symptom is too long (max {MAX_SYMPTOM_LENGTH} chars)", "code": "SYMPTOM_TOO_LONG"},
-            )
-        if item not in seen:
-            seen.add(item)
-            normalized.append(item)
-
-    if len(normalized) > MAX_SYMPTOMS:
-        raise HTTPException(
-            status_code=422,
-            detail={"detail": f"Too many symptoms provided (max {MAX_SYMPTOMS})", "code": "TOO_MANY_SYMPTOMS"},
-        )
-
-    return normalized
 
 
 @router.post("", response_model=ProtocolResponse)
