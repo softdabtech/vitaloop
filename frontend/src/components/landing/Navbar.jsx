@@ -34,6 +34,27 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [activeSection, setActive]  = useState('')
 
+  // Lock body scroll when mobile menu is open (iOS fix)
+  useEffect(() => {
+    if (mobileOpen) {
+      const y = window.scrollY
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${y}px`
+      document.body.style.width = '100%'
+    } else {
+      const y = parseInt(document.body.style.top || '0', 10)
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      if (y) window.scrollTo(0, -y)
+    }
+    return () => {
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+    }
+  }, [mobileOpen])
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -136,11 +157,13 @@ export default function Navbar() {
           </button>
           <button
             onClick={() => navigate('/login?signup=true')}
+            className="hidden md:block"
             style={{
               background: 'var(--teal-800)', color: 'white',
               border: 'none', borderRadius: 980,
               padding: '8px 20px', fontSize: 14, fontWeight: 600,
               cursor: 'pointer', transition: 'background 200ms, transform 200ms',
+              touchAction: 'manipulation',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'var(--teal-600)'
@@ -162,10 +185,11 @@ export default function Navbar() {
             aria-controls="mobile-nav"
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--gray-700)', padding: '8px',
+              color: 'var(--gray-700)',
               display: 'flex', flexDirection: 'column',
               gap: 5, alignItems: 'center', justifyContent: 'center',
-              width: 36, height: 36,
+              width: 44, height: 44,
+              touchAction: 'manipulation',
             }}
           >
             <motion.span
@@ -199,6 +223,7 @@ export default function Navbar() {
             animate={{ opacity: 1, x: 0 }}
             exit={reduced ? { opacity: 0 } : { opacity: 0, x: '100%' }}
             transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+            onClick={() => setMobileOpen(false)}
             style={{
               position: 'fixed', inset: 0, zIndex: 999,
               background: 'rgba(10,10,10,0.97)',
@@ -210,13 +235,15 @@ export default function Navbar() {
           >
             {/* Close button top-right */}
             <button
-              onClick={() => setMobileOpen(false)}
+              onClick={(e) => { e.stopPropagation(); setMobileOpen(false) }}
               aria-label="Close menu"
               style={{
                 position: 'absolute', top: 16, right: 20,
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: 'rgba(255,255,255,0.5)', fontSize: 28, lineHeight: 1,
-                padding: 8,
+                padding: 8, width: 44, height: 44,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                touchAction: 'manipulation',
               }}
             >
               ×
@@ -225,7 +252,7 @@ export default function Navbar() {
             {NAV_LINKS.map(({ label, href }, i) => (
               <motion.button
                 key={label}
-                onClick={() => scrollTo(href)}
+                onClick={(e) => { e.stopPropagation(); scrollTo(href) }}
                 initial={reduced ? {} : { opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.07, duration: 0.32, ease: EASE }}
@@ -233,7 +260,7 @@ export default function Navbar() {
                   background: 'none', border: 'none', cursor: 'pointer',
                   fontSize: 'clamp(24px, 7vw, 32px)', color: 'white', fontWeight: 600,
                   padding: '12px 0', letterSpacing: '-0.01em',
-                  minHeight: 56,
+                  minHeight: 56, touchAction: 'manipulation',
                 }}
                 whileHover={{ color: 'var(--teal-400)', x: 4 }}
                 whileTap={{ scale: 0.97 }}
@@ -243,7 +270,7 @@ export default function Navbar() {
             ))}
 
             <motion.button
-              onClick={() => { setMobileOpen(false); navigate('/login?signup=true') }}
+              onClick={(e) => { e.stopPropagation(); setMobileOpen(false); navigate('/login?signup=true') }}
               initial={reduced ? {} : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: NAV_LINKS.length * 0.07 + 0.06, duration: 0.32, ease: EASE }}
@@ -253,7 +280,7 @@ export default function Navbar() {
                 background: 'var(--teal-500)', color: 'white',
                 border: 'none', borderRadius: 980,
                 padding: '16px 48px', fontSize: 18, fontWeight: 600, cursor: 'pointer',
-                minHeight: 56,
+                minHeight: 56, touchAction: 'manipulation',
               }}
             >
               Get started free
