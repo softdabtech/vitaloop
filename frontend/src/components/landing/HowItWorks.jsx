@@ -1,250 +1,128 @@
-import { Activity, ArrowRight, ClipboardList, FileUp, LineChart, Search } from 'lucide-react'
+import { Activity, ArrowRight, CheckCircle2, FileUp, LineChart, Sparkles, Zap } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
-import { fadeUp, slideIn, cardHoverProps, viewport, EASE } from '../../lib/motion.js'
+import { fadeUp, stagger, staggerChild, viewport } from '../../lib/motion.js'
 
-function StepLabel({ n }) {
-  return (
-    <div style={{
-      fontSize: 11,
-      fontWeight: 700,
-      letterSpacing: '0.12em',
-      textTransform: 'uppercase',
-      color: 'var(--teal-500)',
-      marginBottom: 12,
-    }}>
-      Step {n}
-    </div>
-  )
-}
+const USER_FLOW = [
+  {
+    icon: FileUp,
+    step: '1 min',
+    title: 'Upload labs',
+    text: 'Drop PDF/JPG/PNG and get biomarkers extracted automatically.',
+  },
+  {
+    icon: Sparkles,
+    step: '2 min',
+    title: 'Get clear priorities',
+    text: 'See what matters now: deficiencies, borderline markers, and next actions.',
+  },
+  {
+    icon: Activity,
+    step: 'Every week',
+    title: 'Follow your protocol',
+    text: 'Track adherence, adjust by trends, and stay consistent with less effort.',
+  },
+]
 
-function StepCard({ icon, title, subtitle, lines }) {
+const PREMIUM_UNLOCKS = [
+  '7-Day Supplement Protocol',
+  'Nutrition Plan by biomarker flags',
+  'Lifestyle Recommendations',
+  'Progress trends and Insights',
+  'Weekly Check-ins and PDF export',
+]
+
+function FlowCard({ icon: Icon, step, title, text }) {
   return (
     <motion.div
-      {...cardHoverProps}
-      style={{
-        background: 'var(--gray-50)',
-        borderRadius: 18,
-        border: '0.5px solid var(--gray-100)',
-        padding: 24,
-        height: '100%',
-        cursor: 'default',
-      }}>
-      <div style={{
-        width: 40,
-        height: 40,
-        borderRadius: 10,
-        background: 'var(--teal-50)',
-        border: '0.5px solid var(--teal-300)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--teal-600)',
-        marginBottom: 14,
-      }}>
-        {icon}
+      variants={staggerChild}
+      className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.18 }}
+    >
+      <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600">
+        <Icon size={18} aria-hidden="true" />
       </div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 6 }}>{title}</div>
-      {subtitle && <div style={{ fontSize: 13, color: 'var(--teal-600)', marginBottom: 10 }}>{subtitle}</div>}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {lines.map((line) => (
-          <div key={line} style={{ fontSize: 14, color: 'var(--gray-500)', lineHeight: 1.55 }}>
-            {line}
-          </div>
-        ))}
-      </div>
+      <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-600">{step}</div>
+      <h3 className="mb-1 text-base font-semibold text-slate-900">{title}</h3>
+      <p className="text-sm leading-6 text-slate-600">{text}</p>
     </motion.div>
   )
 }
-
-const STEPS = [
-  {
-    n: 1,
-    title: 'Upload your labs',
-    desc: 'Upload any lab results in seconds. Biomarkers are extracted automatically.',
-    card: {
-      icon: <FileUp size={18} aria-hidden="true" />,
-      title: 'Lab upload',
-      lines: ['PDF, JPG, PNG accepted', 'Auto biomarker extraction starts instantly'],
-    },
-  },
-  {
-    n: 2,
-    title: "Understand what's wrong",
-    desc: 'AI identifies deficiencies, risks, and meaningful patterns in your data.',
-    card: {
-      icon: <Search size={18} aria-hidden="true" />,
-      title: 'AI analysis summary',
-      lines: ['Deficiencies and borderline markers highlighted', 'Clear priorities for the next actions'],
-    },
-  },
-  {
-    n: 3,
-    title: 'Answer a few questions',
-    desc: 'Add symptoms and lifestyle context to refine your analysis.',
-    micro: 'Takes less than 60 seconds',
-    card: {
-      icon: <ClipboardList size={18} aria-hidden="true" />,
-      title: 'Symptom and lifestyle check-in',
-      subtitle: 'Takes less than 60 seconds',
-      lines: ['Energy, sleep, mood, digestion', 'Context improves recommendation quality'],
-    },
-  },
-  {
-    n: 4,
-    title: 'Get your protocol',
-    desc: 'Receive a personalized protocol with clear, prioritized actions.',
-    card: {
-      icon: <Activity size={18} aria-hidden="true" />,
-      title: 'Your weekly protocol',
-      lines: ['Prioritized recommendations with guidance', 'Built for practical daily execution'],
-    },
-  },
-  {
-    n: 5,
-    title: 'Track your progress',
-    desc: 'Track trends over time and adjust before small issues grow.',
-    card: {
-      icon: <LineChart size={18} aria-hidden="true" />,
-      title: 'Progress tracking',
-      lines: ['Weekly trend view across key markers', 'Refine protocol as your data evolves'],
-    },
-  },
-]
 
 export default function HowItWorksSection() {
   const reduced = useReducedMotion()
   const navigate = useNavigate()
 
   return (
-    <section id="how-it-works" style={{ padding: 'var(--py-xl) 24px', backgroundColor: 'var(--white)' }}>
-      <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+    <section id="how-it-works" className="border-y border-slate-100 bg-slate-50/70 px-6 py-14 md:py-16">
+      <div className="mx-auto max-w-6xl">
         <motion.div
-          variants={reduced ? {} : { hidden: {}, visible: { transition: { staggerChildren: 0 } } }}
+          variants={reduced ? {} : stagger(0.08)}
           initial="hidden"
           whileInView="visible"
           viewport={viewport('-40px')}
-          style={{ textAlign: 'center', marginBottom: 'clamp(48px, 7vw, 84px)' }}
+          className="mb-8 text-center md:mb-10"
         >
-          <motion.div
-            variants={reduced ? {} : fadeUp}
-            custom={0}
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: 'var(--teal-500)',
-              marginBottom: 16,
-            }}>
+          <motion.div variants={reduced ? {} : fadeUp} className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-600">
             How VITALOOP improves your health
           </motion.div>
-          <motion.h2
-            variants={reduced ? {} : fadeUp}
-            custom={0.08}
-            style={{
-              fontSize: 'clamp(32px, 4vw, 52px)',
-              fontWeight: 700,
-              letterSpacing: '-0.02em',
-              color: 'var(--gray-900)',
-              marginBottom: 20,
-            }}
-          >
-            From raw labs to weekly progress
+          <motion.h2 variants={reduced ? {} : fadeUp} className="mx-auto mb-3 max-w-3xl text-balance text-3xl font-bold leading-tight tracking-tight text-slate-900 md:text-4xl">
+            Less noise. Faster decisions. Better weekly results.
           </motion.h2>
-          <motion.p
-            variants={reduced ? {} : fadeUp}
-            custom={0.16}
-            style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 620, margin: '0 auto', lineHeight: 1.65 }}
-          >
-            OCR extracts your data, Claude LLM interprets 50+ biomarkers, and VITALOOP delivers practical next steps.
+          <motion.p variants={reduced ? {} : fadeUp} className="mx-auto max-w-2xl text-sm leading-7 text-slate-600 md:text-base">
+            A compact workflow built for real users: upload once, see priorities instantly, and follow a plan you can actually stick to.
           </motion.p>
         </motion.div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 72 }}>
-          {STEPS.map((step, i) => (
-            <motion.div
-              key={step.n}
-              className="how-step-row grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center"
-              variants={reduced ? {} : (i % 2 === 0 ? slideIn('left') : slideIn('right'))}
-              custom={0}
-              initial="hidden"
-              whileInView="visible"
-              viewport={viewport('-40px')}
-            >
-              <motion.div
-                className={i % 2 === 0 ? '' : 'md:order-2'}
-                style={{
-                  background: 'white',
-                  borderRadius: 18,
-                  border: '0.5px solid var(--gray-100)',
-                  padding: '28px 24px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                }}
-              >
-                {/* Step number badge — springs in */}
-                <motion.div
-                  initial={reduced ? {} : { scale: 0.5, opacity: 0 }}
-                  whileInView={reduced ? {} : { scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', stiffness: 320, damping: 18, delay: 0.15 }}
-                  viewport={{ once: true }}
-                >
-                  <StepLabel n={step.n} />
-                </motion.div>
-                <h3 style={{
-                  fontSize: 'clamp(26px, 3.4vw, 38px)',
-                  fontWeight: 700,
-                  letterSpacing: '-0.02em',
-                  color: 'var(--gray-900)',
-                  marginBottom: 12,
-                  lineHeight: 1.18,
-                }}>
-                  {step.title}
-                </h3>
-                <p style={{ fontSize: 17, color: 'var(--gray-500)', lineHeight: 1.65, marginBottom: step.micro ? 8 : 0 }}>
-                  {step.desc}
-                </p>
-                {step.micro && (
-                  <p style={{ fontSize: 13, color: 'var(--teal-600)', fontWeight: 600 }}>
-                    {step.micro}
-                  </p>
-                )}
-              </motion.div>
-              <div className={i % 2 === 0 ? '' : 'md:order-1'}>
-                <StepCard
-                  icon={step.card.icon}
-                  title={step.card.title}
-                  subtitle={step.card.subtitle}
-                  lines={step.card.lines}
-                />
-              </div>
-              <div className="how-step-connector" aria-hidden="true" />
-            </motion.div>
-          ))}
-        </div>
-
-        <div style={{ textAlign: 'center', marginTop: 48 }}>
-          <button
-            onClick={() => navigate('/login?signup=true')}
-            className="btn-primary"
-            style={{
-              background: 'var(--teal-500)',
-              color: 'white',
-              border: 'none',
-              borderRadius: 980,
-              padding: '12px 24px',
-              fontSize: 15,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+          <motion.div
+            variants={reduced ? {} : stagger(0.06)}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport('-40px')}
+            className="grid grid-cols-1 gap-4 sm:grid-cols-3"
           >
-            Try it for Free <ArrowRight size={14} aria-hidden="true" />
-          </button>
+            {USER_FLOW.map((item) => (
+              <FlowCard key={item.title} {...item} />
+            ))}
+          </motion.div>
+
+          <motion.div
+            variants={reduced ? {} : fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport('-40px')}
+            className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-5 shadow-sm"
+          >
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-emerald-700">
+              <Zap size={12} />
+              Premium unlock
+            </div>
+            <h3 className="mb-3 text-xl font-bold tracking-tight text-slate-900">What you get after upgrade</h3>
+            <ul className="space-y-2.5">
+              {PREMIUM_UNLOCKS.map((line) => (
+                <li key={line} className="flex items-start gap-2.5 text-sm text-slate-700">
+                  <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-emerald-600" aria-hidden="true" />
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-5 flex flex-wrap gap-2.5">
+              <button
+                onClick={() => navigate('/login?signup=true')}
+                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500"
+              >
+                Start free <ArrowRight size={14} aria-hidden="true" />
+              </button>
+              <button
+                onClick={() => navigate('/#pricing')}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
+              >
+                Compare plans <LineChart size={14} aria-hidden="true" />
+              </button>
+            </div>
+          </motion.div>
         </div>
       </div>
     </section>
