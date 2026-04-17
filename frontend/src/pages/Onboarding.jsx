@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ChevronRight, ChevronLeft, CheckCircle, User, MapPin, AlertTriangle } from 'lucide-react'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
 import toast from 'react-hot-toast'
@@ -18,7 +19,7 @@ const GOAL_OPTIONS = [
 ]
 
 const s = {
-  wrap: { minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' },
+  wrap: { minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '24px 16px' },
   card: { width: '100%', maxWidth: 560, background: '#ffffff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 24, padding: '40px 36px', boxShadow: '0 1px 3px rgba(15,23,42,0.06)' },
   title: { fontSize: 26, fontWeight: 700, color: '#0f172a', marginBottom: 6 },
   sub: { fontSize: 15, color: '#64748b', marginBottom: 32 },
@@ -169,13 +170,14 @@ export default function Onboarding() {
 
   return (
     <div style={s.wrap}>
-      <motion.div style={s.card} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
-        <button
-          onClick={() => navigate('/dashboard')}
-          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 14, marginBottom: 14 }}
-        >
-          ← Back to dashboard
-        </button>
+      <div style={{ width: '100%', maxWidth: 760 }}>
+        <CabinetPageHeader
+          title="Onboarding"
+          subtitle="Set baseline profile and goals for personalized protocol generation."
+          helper="Concrete profile data here influences your assignments, insights and recommendations."
+        />
+
+        <motion.div style={s.card} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
 
         {/* ── Org-setup screen (shown only before health profile, when user has no org) ── */}
         {!orgCheckDone && (
@@ -334,7 +336,8 @@ export default function Onboarding() {
         </div>
           </>
         )}
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   )
 }
