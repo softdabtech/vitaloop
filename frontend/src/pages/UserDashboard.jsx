@@ -172,7 +172,7 @@ export default function UserDashboard() {
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-auto">
-          <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+          <div className="mx-auto w-full max-w-[1320px] p-4 sm:p-6 space-y-4 sm:space-y-6">
             {/* Error Banner */}
             {error && (
               <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 flex items-center gap-3">
@@ -227,7 +227,7 @@ export default function UserDashboard() {
             )}
 
             {/* Hero metrics: Health score + key stats + quick actions */}
-            <div className="grid gap-4 xl:grid-cols-[300px_1fr_320px]">
+            <div className="grid items-start gap-4 xl:grid-cols-[300px_1fr_320px]">
               <motion.div
                 initial={reduced ? false : { opacity: 0, y: 12 }}
                 animate={reduced ? {} : { opacity: 1, y: 0 }}
@@ -252,7 +252,7 @@ export default function UserDashboard() {
                 </div>
               </motion.div>
 
-              <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+              <div className="grid items-start content-start auto-rows-min gap-4 sm:grid-cols-2 2xl:grid-cols-4">
                 {loading ? (
                   <>
                     <StatSkeleton />

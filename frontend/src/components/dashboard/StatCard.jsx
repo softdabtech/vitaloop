@@ -28,7 +28,7 @@ export default function StatCard({ title, value, unit, icon: Icon, color, change
   const c = colorConfig[color] ?? colorConfig.emerald;
 
   return (
-    <div className={`vtl-light-card vtl-light-card-hover min-h-[160px] p-5 border-t-2 ${c.border} overflow-hidden relative`}>
+    <div className={`vtl-light-card vtl-light-card-hover self-start min-h-[160px] p-5 border-t-2 ${c.border} overflow-hidden relative`}>
       <div className="flex items-start justify-between mb-3">
         <div className={`rounded-xl p-2.5 shadow-lg ${c.icon}`}>
           <Icon className="w-5 h-5" />
