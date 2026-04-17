@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, Clock3, Globe2, Link2, LogOut, ShieldCheck, User } from 'lucide-react'
-import { useAuth } from '../hooks/useAuth.js'
-import { supabase } from '../lib/supabase.js'
-import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
-import api from '../lib/api.js'
+import { Camera, CheckCircle2, Clock3, Link2, LogOut, ShieldCheck, Target, User } from 'lucide-react'
 import toast from 'react-hot-toast'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { useAuth } from '../hooks/useAuth.js'
+import api from '../lib/api.js'
+import { supabase } from '../lib/supabase.js'
 import '../styles/dashboard2026.css'
 
 const TIMEZONES = [
@@ -14,6 +14,17 @@ const TIMEZONES = [
   'Europe/Berlin', 'Europe/Helsinki', 'Europe/Moscow', 'Asia/Dubai',
   'Asia/Kolkata', 'Asia/Bangkok', 'Asia/Tokyo', 'Asia/Shanghai',
   'Australia/Sydney', 'Pacific/Auckland',
+]
+
+const GOAL_OPTIONS = [
+  'More energy',
+  'Better sleep',
+  'Hormone balance',
+  'Improve digestion',
+  'Cardiometabolic health',
+  'Reduce inflammation',
+  'Sports performance',
+  'Healthy aging',
 ]
 
 const fieldStyle = {
@@ -39,6 +50,22 @@ function Field({ label, children }) {
   )
 }
 
+function MetricTile({ label, value, tone = 'default' }) {
+  const themes = {
+    default: { bg: '#f8fafc', border: 'rgba(15,23,42,0.08)', title: '#64748b', value: '#0f172a' },
+    success: { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.18)', title: '#047857', value: '#065f46' },
+    warm: { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.18)', title: '#b45309', value: '#92400e' },
+  }
+  const theme = themes[tone] || themes.default
+
+  return (
+    <div style={{ borderRadius: 18, padding: '16px 18px', background: theme.bg, border: `1px solid ${theme.border}` }}>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: theme.title, marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: theme.value }}>{value}</div>
+    </div>
+  )
+}
+
 export default function Settings() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
@@ -60,6 +87,7 @@ export default function Settings() {
   const app = user?.app_metadata || {}
   const isSuperAdmin = meta.is_super_admin || app.is_super_admin
   const avatarUrl = extras.avatar_url || ''
+
   const initials = (account.full_name || user?.email || 'U')
     .split(' ')
     .map((word) => word[0])
@@ -76,8 +104,12 @@ export default function Settings() {
       Array.isArray(medical.goals) && medical.goals.length > 0,
       Boolean(avatarUrl),
     ]
+
     return Math.round((checks.filter(Boolean).length / checks.length) * 100)
   }, [account.full_name, account.timezone, medical.height_cm, medical.weight_kg, medical.goals, avatarUrl])
+
+  const activeChannels = [extras.telegram, extras.instagram, extras.linkedin].filter(Boolean).length
+  const enabledReminders = [extras.weekly_digest, extras.checkin_reminders, extras.product_updates].filter(Boolean).length
 
   useEffect(() => {
     if (!user) return
@@ -117,7 +149,7 @@ export default function Settings() {
         product_updates: Boolean(meta.product_updates),
       }))
     })
-  }, [user])
+  }, [meta, user])
 
   function focusStyle(event) {
     event.target.style.borderColor = '#10b981'
@@ -127,6 +159,15 @@ export default function Settings() {
   function blurStyle(event) {
     event.target.style.borderColor = 'rgba(15,23,42,0.12)'
     event.target.style.boxShadow = 'none'
+  }
+
+  function toggleGoal(goal) {
+    setMedical((prev) => {
+      const goals = Array.isArray(prev.goals) ? prev.goals : []
+      return goals.includes(goal)
+        ? { ...prev, goals: goals.filter((item) => item !== goal) }
+        : { ...prev, goals: [...goals, goal] }
+    })
   }
 
   async function handleSave(event) {
@@ -167,6 +208,7 @@ export default function Settings() {
       toast.error('Save failed — please try again.')
       return
     }
+
     toast.success('Profile updated')
   }
 
@@ -191,6 +233,7 @@ export default function Settings() {
           toast.error('Could not process image.')
           return
         }
+
         context.drawImage(image, 0, 0, size, size)
         const dataUrl = canvas.toDataURL('image/jpeg', 0.78)
         setExtras((prev) => ({ ...prev, avatar_url: dataUrl }))
@@ -208,87 +251,136 @@ export default function Settings() {
 
   return (
     <div className="vtl-page" style={{ minHeight: '100svh' }}>
-      <div style={{ maxWidth: 1040, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto' }}>
         <CabinetPageHeader
           title="Settings"
-          subtitle="Manage profile, account preferences, connected identities, and profile completeness."
-          helper="This area now acts as your account center: photo, social links, reminder toggles, and baseline health context."
+          subtitle="Profile, reminders, health goals, and connected identity now live in one account center."
+          helper="This page should feel like the control room for the user account, not a leftover form."
         />
 
-        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="vtl-light-card" style={{ padding: '28px 28px 24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-              <div style={{ position: 'relative' }}>
-                <div style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                  background: 'linear-gradient(135deg, var(--vtl-accent), #059669)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 22,
-                  fontWeight: 700,
-                  color: '#052e16',
-                }}>
-                  {avatarUrl ? <img src={avatarUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
-                </div>
-                <label style={{ position: 'absolute', right: -2, bottom: -2, width: 30, height: 30, borderRadius: '50%', background: '#ffffff', border: '1px solid rgba(15,23,42,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <Camera size={14} style={{ color: '#10b981' }} />
-                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
-                </label>
-              </div>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div className="vtl-light-card" style={{ padding: '28px 28px 24px', background: 'linear-gradient(135deg, rgba(255,255,255,1), rgba(240,253,247,0.92))' }}>
+              <div className="grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{
+                      width: 84,
+                      height: 84,
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      background: 'linear-gradient(135deg, var(--vtl-accent), #059669)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 24,
+                      fontWeight: 700,
+                      color: '#052e16',
+                      boxShadow: '0 12px 30px rgba(16,185,129,0.18)',
+                    }}>
+                      {avatarUrl ? <img src={avatarUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+                    </div>
+                    <label style={{ position: 'absolute', right: -2, bottom: -2, width: 34, height: 34, borderRadius: '50%', background: '#ffffff', border: '1px solid rgba(15,23,42,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                      <Camera size={16} style={{ color: '#10b981' }} />
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
+                    </label>
+                  </div>
 
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>{account.full_name || 'Your Profile'}</div>
-                <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{user?.email}</div>
-                <div style={{ marginTop: 8, display: 'inline-flex', borderRadius: 999, background: 'rgba(16,185,129,0.1)', color: '#047857', padding: '6px 10px', fontSize: 12, fontWeight: 700 }}>
-                  Profile completion {profileCompletion}%
+                  <div>
+                    <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: '#0f172a' }}>{account.full_name || 'Your Profile'}</div>
+                    <div style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>{user?.email}</div>
+                    <div style={{ marginTop: 10, display: 'inline-flex', borderRadius: 999, background: 'rgba(16,185,129,0.1)', color: '#047857', padding: '7px 12px', fontSize: 12, fontWeight: 700 }}>
+                      Profile completion {profileCompletion}%
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <MetricTile label="Profile" value={`${profileCompletion}%`} tone={profileCompletion >= 70 ? 'success' : 'warm'} />
+                  <MetricTile label="Channels" value={String(activeChannels)} />
+                  <MetricTile label="Reminders on" value={`${enabledReminders}/3`} />
                 </div>
               </div>
-
-              <User size={18} style={{ marginLeft: 'auto', color: '#94a3b8', opacity: 0.7 }} />
             </div>
 
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <Field label="Full Name">
-                <input value={account.full_name} onChange={(event) => setAccount({ ...account, full_name: event.target.value })} placeholder="Your name" style={fieldStyle} onFocus={focusStyle} onBlur={blurStyle} />
-              </Field>
+            <div className="vtl-light-card" style={{ padding: '28px 28px 24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
+                <User size={18} style={{ color: '#10b981' }} />
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>Identity and baseline</div>
+                  <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>Core data that shapes reminders, assignments, and interpretation quality.</div>
+                </div>
+              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <Field label="Age">
-                  <input type="number" min="1" max="120" value={account.age} onChange={(event) => setAccount({ ...account, age: event.target.value })} placeholder="—" style={fieldStyle} onFocus={focusStyle} onBlur={blurStyle} />
+              <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <Field label="Full Name">
+                  <input value={account.full_name} onChange={(event) => setAccount({ ...account, full_name: event.target.value })} placeholder="Your name" style={fieldStyle} onFocus={focusStyle} onBlur={blurStyle} />
                 </Field>
-                <Field label="Biological Sex">
-                  <select value={account.sex} onChange={(event) => setAccount({ ...account, sex: event.target.value })} style={{ ...fieldStyle, cursor: 'pointer' }} onFocus={focusStyle} onBlur={blurStyle}>
-                    <option value="">Prefer not to say</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label="Age">
+                    <input type="number" min="1" max="120" value={account.age} onChange={(event) => setAccount({ ...account, age: event.target.value })} placeholder="—" style={fieldStyle} onFocus={focusStyle} onBlur={blurStyle} />
+                  </Field>
+                  <Field label="Biological Sex">
+                    <select value={account.sex} onChange={(event) => setAccount({ ...account, sex: event.target.value })} style={{ ...fieldStyle, cursor: 'pointer' }} onFocus={focusStyle} onBlur={blurStyle}>
+                      <option value="">Prefer not to say</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </Field>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label="Height (cm)">
+                    <input value={medical.height_cm} onChange={(event) => setMedical((prev) => ({ ...prev, height_cm: event.target.value }))} placeholder="175" style={fieldStyle} onFocus={focusStyle} onBlur={blurStyle} />
+                  </Field>
+                  <Field label="Weight (kg)">
+                    <input value={medical.weight_kg} onChange={(event) => setMedical((prev) => ({ ...prev, weight_kg: event.target.value }))} placeholder="72" style={fieldStyle} onFocus={focusStyle} onBlur={blurStyle} />
+                  </Field>
+                </div>
+
+                <Field label="Timezone">
+                  <select value={account.timezone} onChange={(event) => setAccount({ ...account, timezone: event.target.value })} style={{ ...fieldStyle, cursor: 'pointer' }} onFocus={focusStyle} onBlur={blurStyle}>
+                    {TIMEZONES.map((timezone) => <option key={timezone} value={timezone}>{timezone.replace('_', ' ')}</option>)}
                   </select>
                 </Field>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <Field label="Height (cm)">
-                  <input value={medical.height_cm} onChange={(event) => setMedical((prev) => ({ ...prev, height_cm: event.target.value }))} placeholder="175" style={fieldStyle} onFocus={focusStyle} onBlur={blurStyle} />
-                </Field>
-                <Field label="Weight (kg)">
-                  <input value={medical.weight_kg} onChange={(event) => setMedical((prev) => ({ ...prev, weight_kg: event.target.value }))} placeholder="72" style={fieldStyle} onFocus={focusStyle} onBlur={blurStyle} />
-                </Field>
-              </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 10 }}>Primary goals</div>
+                  <div className="flex flex-wrap gap-2">
+                    {GOAL_OPTIONS.map((goal) => {
+                      const active = medical.goals.includes(goal)
+                      return (
+                        <button
+                          key={goal}
+                          type="button"
+                          onClick={() => toggleGoal(goal)}
+                          className="vtl-focus-ring"
+                          style={{
+                            borderRadius: 999,
+                            border: `1px solid ${active ? 'rgba(16,185,129,0.28)' : 'rgba(15,23,42,0.08)'}`,
+                            background: active ? 'rgba(16,185,129,0.1)' : '#f8fafc',
+                            color: active ? '#047857' : '#334155',
+                            padding: '10px 14px',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {goal}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 10 }}>These goals help tailor assignments, insights, and recommended protocol direction.</div>
+                </div>
 
-              <Field label="Timezone">
-                <select value={account.timezone} onChange={(event) => setAccount({ ...account, timezone: event.target.value })} style={{ ...fieldStyle, cursor: 'pointer' }} onFocus={focusStyle} onBlur={blurStyle}>
-                  {TIMEZONES.map((timezone) => <option key={timezone} value={timezone}>{timezone.replace('_', ' ')}</option>)}
-                </select>
-              </Field>
-
-              <button type="submit" disabled={saving} className="vtl-button-primary vtl-focus-ring" style={{ width: '100%', fontSize: 15, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.65 : 1 }}>
-                {saving ? 'Saving…' : 'Save Changes'}
-              </button>
-            </form>
+                <button type="submit" disabled={saving} className="vtl-button-primary vtl-focus-ring" style={{ width: '100%', fontSize: 15, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.65 : 1 }}>
+                  {saving ? 'Saving…' : 'Save Changes'}
+                </button>
+              </form>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gap: 16 }}>
@@ -315,12 +407,15 @@ export default function Settings() {
               </div>
               <div style={{ display: 'grid', gap: 10 }}>
                 {[
-                  { key: 'weekly_digest', label: 'Weekly dashboard digest' },
-                  { key: 'checkin_reminders', label: 'Check-in reminder email' },
-                  { key: 'product_updates', label: 'Product and feature updates' },
+                  { key: 'weekly_digest', label: 'Weekly dashboard digest', body: 'Receive a compact overview of progress and open actions.' },
+                  { key: 'checkin_reminders', label: 'Check-in reminder email', body: 'Get nudges to keep weekly adherence and symptom tracking alive.' },
+                  { key: 'product_updates', label: 'Product and feature updates', body: 'Hear about meaningful improvements without noise.' },
                 ].map((item) => (
-                  <label key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 14px', borderRadius: 14, background: '#f8fafc', border: '1px solid rgba(15,23,42,0.08)' }}>
-                    <span style={{ fontSize: 14, color: '#334155', fontWeight: 500 }}>{item.label}</span>
+                  <label key={item.key} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '14px 14px', borderRadius: 14, background: '#f8fafc', border: '1px solid rgba(15,23,42,0.08)' }}>
+                    <span>
+                      <span style={{ display: 'block', fontSize: 14, color: '#334155', fontWeight: 600 }}>{item.label}</span>
+                      <span style={{ display: 'block', fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.5 }}>{item.body}</span>
+                    </span>
                     <input type="checkbox" checked={Boolean(extras[item.key])} onChange={(event) => setExtras((prev) => ({ ...prev, [item.key]: event.target.checked }))} />
                   </label>
                 ))}
@@ -338,36 +433,48 @@ export default function Settings() {
 
             <div className="vtl-light-card" style={{ padding: '24px 28px' }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Globe2 size={16} style={{ color: '#10b981' }} /> Complete your health profile
+                <Target size={16} style={{ color: '#10b981' }} /> Completion checklist
               </div>
               <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, marginBottom: 14 }}>
-                After registration, the product should keep nudging the user to finish this data because it directly improves assignments, insights, protocol quality, and reminders.
+                The product should keep the user moving toward a complete profile because that directly improves interpretation and protocol quality.
               </p>
               <div style={{ display: 'grid', gap: 8 }}>
                 {[
                   { label: 'Name and timezone', done: Boolean(account.full_name && account.timezone) },
                   { label: 'Height and weight', done: Boolean(medical.height_cm && medical.weight_kg) },
+                  { label: 'At least one health goal', done: medical.goals.length > 0 },
                   { label: 'Profile photo', done: Boolean(avatarUrl) },
                   { label: 'At least one communication channel', done: Boolean(extras.telegram || extras.instagram || extras.linkedin) },
                 ].map((item) => (
-                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 12, background: '#f8fafc', border: '1px solid rgba(15,23,42,0.08)', padding: '10px 12px' }}>
+                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 14, background: '#f8fafc', border: '1px solid rgba(15,23,42,0.08)', padding: '11px 12px', gap: 12 }}>
                     <span style={{ fontSize: 14, color: '#334155' }}>{item.label}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: item.done ? '#059669' : '#94a3b8' }}>{item.done ? 'Done' : 'Missing'}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: item.done ? '#059669' : '#94a3b8' }}>
+                      {item.done && <CheckCircle2 size={14} />}
+                      {item.done ? 'Done' : 'Missing'}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="vtl-light-card" style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Account actions</div>
               {isSuperAdmin && (
                 <button
                   onClick={() => navigate('/ops')}
                   className="vtl-focus-ring"
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.3)',
-                    borderRadius: 12, padding: '12px 16px', cursor: 'pointer',
-                    color: '#f59e0b', fontSize: 14, fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    background: 'rgba(234,179,8,0.08)',
+                    border: '1px solid rgba(234,179,8,0.3)',
+                    borderRadius: 12,
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    color: '#f59e0b',
+                    fontSize: 14,
+                    fontWeight: 600,
                   }}
                 >
                   <ShieldCheck size={16} /> Ops Console
@@ -377,10 +484,17 @@ export default function Settings() {
                 onClick={handleSignOut}
                 className="vtl-focus-ring"
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.25)',
-                  borderRadius: 12, padding: '12px 16px', cursor: 'pointer',
-                  color: '#ef4444', fontSize: 14, fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  background: 'rgba(239,68,68,0.07)',
+                  border: '1px solid rgba(239,68,68,0.25)',
+                  borderRadius: 12,
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  color: '#ef4444',
+                  fontSize: 14,
+                  fontWeight: 600,
                 }}
               >
                 <LogOut size={16} /> Sign out

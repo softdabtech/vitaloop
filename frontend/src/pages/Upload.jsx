@@ -126,8 +126,8 @@ export default function Upload() {
   }
 
   return (
-    <div className="vtl-page px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-5xl">
+    <div className="space-y-6">
+      <div className="mx-auto w-full max-w-6xl">
         <CabinetPageHeader
           title="Upload Lab Results"
           subtitle="Your file is processed locally first. Only extracted text is sent for analysis."
@@ -183,9 +183,9 @@ export default function Upload() {
           </div>
         )}
 
-        <p className="mb-6 text-sm text-slate-500">
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
           Tip: upload a clear full-page PDF or a sharp photo in good lighting.
-        </p>
+        </div>
 
         <div className="mb-6">
           <label className="mb-1 block text-sm font-medium text-slate-700">Lab / Clinic name (optional)</label>

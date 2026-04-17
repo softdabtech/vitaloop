@@ -1,8 +1,298 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Shield, Activity, Zap, FlaskConical, BarChart2, Heart, Droplets, ScanLine, ClipboardList } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { ArrowRight, Shield, Activity, Zap, FlaskConical, BarChart2, Heart, Droplets, ScanLine, ClipboardList, CheckCircle2, LayoutDashboard, Upload, X } from 'lucide-react'
 import { stagger, staggerChild, buttonHoverProps, EASE } from '../../lib/motion.js'
+
+const CABINET_STEPS = [
+  {
+    title: 'Upload a new lab report',
+    body: 'A user drops in a PDF and VITALOOP starts extracting biomarkers immediately.',
+    accent: '#1d9e75',
+    status: 'Upload recognized',
+    metrics: [
+      { label: 'Biomarkers found', value: '54' },
+      { label: 'Red flags', value: '3' },
+      { label: 'Protocol tasks', value: '7' },
+    ],
+  },
+  {
+    title: 'Cabinet interprets the data',
+    body: 'The dashboard surfaces latest upload, active assignments, and what matters today.',
+    accent: '#0f766e',
+    status: 'Dashboard updated',
+    metrics: [
+      { label: 'Health score', value: '78' },
+      { label: 'Active assignments', value: '4' },
+      { label: 'Insights ready', value: '5' },
+    ],
+  },
+  {
+    title: 'Weekly loop stays active',
+    body: 'Check-ins, insights, and progress tracking keep the cabinet alive between uploads.',
+    accent: '#0f766e',
+    status: 'Weekly guidance ready',
+    metrics: [
+      { label: 'Check-in adherence', value: '5/5' },
+      { label: 'Trend movement', value: '+12' },
+      { label: 'Next action', value: 'Retest iron' },
+    ],
+  },
+]
+
+function CabinetPreviewModal({ open, onClose, reduced }) {
+  const [stepIndex, setStepIndex] = useState(0)
+
+  useEffect(() => {
+    if (!open) {
+      setStepIndex(0)
+      return
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const timer = window.setInterval(() => {
+      setStepIndex((current) => (current + 1) % CABINET_STEPS.length)
+    }, 2400)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.clearInterval(timer)
+    }
+  }, [open])
+
+  const activeStep = CABINET_STEPS[stepIndex]
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={reduced ? { opacity: 1 } : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1200,
+            background: 'rgba(15, 23, 42, 0.55)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            padding: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={onClose}
+        >
+          <motion.div
+            initial={reduced ? { opacity: 1 } : { opacity: 0, y: 18, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, y: 14, scale: 0.98 }}
+            transition={{ duration: 0.28, ease: EASE }}
+            style={{
+              width: 'min(1100px, 100%)',
+              maxHeight: 'min(92vh, 860px)',
+              overflow: 'auto',
+              borderRadius: 28,
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.97), rgba(247,250,249,0.98))',
+              border: '1px solid rgba(148, 163, 184, 0.18)',
+              boxShadow: '0 40px 120px rgba(15, 23, 42, 0.28)',
+              padding: '24px',
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--teal-500)', marginBottom: 10 }}>
+                  Animated cabinet preview
+                </div>
+                <h3 style={{ fontSize: 'clamp(24px, 4vw, 40px)', lineHeight: 1.1, letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 10 }}>
+                  See how a user moves through the VITALOOP cabinet
+                </h3>
+                <p style={{ fontSize: 15, lineHeight: 1.7, color: 'var(--gray-500)', maxWidth: 700 }}>
+                  This is the product story in motion: upload, interpretation, assignments, check-ins, and progress all living inside one premium cabinet surface.
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                aria-label="Close preview"
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 999,
+                  border: '1px solid var(--gray-200)',
+                  background: 'rgba(255,255,255,0.9)',
+                  color: 'var(--gray-700)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]" style={{ gap: 18 }}>
+              <div
+                style={{
+                  borderRadius: 24,
+                  border: '1px solid rgba(148,163,184,0.16)',
+                  background: 'linear-gradient(180deg, #f8fafc 0%, #eefaf4 100%)',
+                  padding: 18,
+                  minHeight: 520,
+                }}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-[92px_minmax(0,1fr)]" style={{ gap: 16, minHeight: '100%' }}>
+                  <div className="grid grid-cols-4 md:grid-cols-1" style={{ borderRadius: 20, background: '#ffffff', border: '1px solid rgba(148,163,184,0.16)', padding: '18px 12px', gap: 12 }}>
+                    {[LayoutDashboard, Upload, ClipboardList, BarChart2].map((Icon, index) => (
+                      <motion.div
+                        key={index}
+                        animate={{
+                          scale: stepIndex === index || (stepIndex === 2 && index === 3) ? 1.04 : 1,
+                          backgroundColor: stepIndex === index || (stepIndex === 2 && index === 3) ? 'rgba(29,158,117,0.12)' : 'rgba(248,250,252,1)',
+                          borderColor: stepIndex === index || (stepIndex === 2 && index === 3) ? 'rgba(29,158,117,0.35)' : 'rgba(148,163,184,0.12)',
+                        }}
+                        transition={{ duration: 0.35, ease: EASE }}
+                        style={{ borderRadius: 16, border: '1px solid rgba(148,163,184,0.12)', height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--teal-700)' }}
+                      >
+                        <Icon size={18} />
+                      </motion.div>
+                    ))}
+                  </div>
+
+                    <div style={{ display: 'grid', gap: 14, gridTemplateRows: 'auto auto 1fr auto' }}>
+                    <div style={{ borderRadius: 20, background: '#ffffff', border: '1px solid rgba(148,163,184,0.16)', padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div>
+                        <div style={{ fontSize: 13, color: 'var(--gray-400)', marginBottom: 4 }}>VITALOOP user cabinet</div>
+                        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--gray-900)', letterSpacing: '-0.02em' }}>{activeStep.title}</div>
+                      </div>
+                      <div style={{ borderRadius: 999, padding: '8px 12px', background: `${activeStep.accent}16`, color: activeStep.accent, fontSize: 12, fontWeight: 700 }}>
+                        {activeStep.status}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3" style={{ gap: 12 }}>
+                      {activeStep.metrics.map((metric, index) => (
+                        <motion.div
+                          key={metric.label}
+                          animate={{ y: [0, -3, 0] }}
+                          transition={{ duration: 1.1, delay: index * 0.08, repeat: Infinity, repeatDelay: 1.3 }}
+                          style={{ borderRadius: 18, background: '#ffffff', border: '1px solid rgba(148,163,184,0.16)', padding: '16px 14px' }}
+                        >
+                          <div style={{ fontSize: 12, color: 'var(--gray-400)', marginBottom: 8 }}>{metric.label}</div>
+                          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--gray-900)', letterSpacing: '-0.02em' }}>{metric.value}</div>
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    <div style={{ borderRadius: 22, background: '#ffffff', border: '1px solid rgba(148,163,184,0.16)', padding: 18, display: 'grid', gap: 14 }}>
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={activeStep.title}
+                          initial={reduced ? { opacity: 1 } : { opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={reduced ? { opacity: 0 } : { opacity: 0, y: -12 }}
+                          transition={{ duration: 0.28, ease: EASE }}
+                          style={{ display: 'grid', gap: 14 }}
+                        >
+                          <div style={{ display: 'grid', gap: 10 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--gray-900)' }}>Active flow</div>
+                              <div style={{ fontSize: 12, color: 'var(--gray-400)' }}>step {stepIndex + 1} / {CABINET_STEPS.length}</div>
+                            </div>
+                            <p style={{ fontSize: 14, color: 'var(--gray-500)', lineHeight: 1.7 }}>{activeStep.body}</p>
+                          </div>
+
+                          <div style={{ display: 'grid', gap: 10 }}>
+                            {[0, 1, 2].map((row) => (
+                              <div key={row} style={{ borderRadius: 16, background: row === stepIndex ? `${activeStep.accent}10` : 'var(--gray-50)', border: `1px solid ${row === stepIndex ? `${activeStep.accent}35` : 'rgba(148,163,184,0.12)'}`, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                                <div>
+                                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-900)' }}>
+                                    {row === 0 ? 'Latest upload summary' : row === 1 ? 'Insights and assignments' : 'Weekly check-in pulse'}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: 4 }}>
+                                    {row === 0 ? 'Biomarkers, ranges, and source lab' : row === 1 ? 'Protocol tasks, red flags, and next action' : 'Adherence, mood, energy, and follow-up'}
+                                  </div>
+                                </div>
+                                {row === stepIndex ? <CheckCircle2 size={18} color={activeStep.accent} /> : <div style={{ width: 18, height: 18, borderRadius: 999, border: '1px solid rgba(148,163,184,0.25)' }} />}
+                              </div>
+                            ))}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            {CABINET_STEPS.map((step, index) => (
+                              <motion.div
+                                key={step.title}
+                                animate={{ flex: index === stepIndex ? 1.45 : 1, backgroundColor: index === stepIndex ? step.accent : 'rgba(203,213,225,0.8)' }}
+                                transition={{ duration: 0.25 }}
+                                style={{ height: 6, borderRadius: 999 }}
+                              />
+                            ))}
+                          </div>
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row" style={{ borderRadius: 18, padding: '16px 18px', background: 'linear-gradient(135deg, rgba(29,158,117,0.12), rgba(255,255,255,0.86))', border: '1px solid rgba(29,158,117,0.18)', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-900)' }}>This is what “See how it works” should feel like</div>
+                        <div style={{ fontSize: 13, color: 'var(--gray-500)', marginTop: 4 }}>A product demo, not a redirect away from the main page.</div>
+                      </div>
+                      <button
+                        onClick={onClose}
+                        style={{
+                          borderRadius: 999,
+                          border: 'none',
+                          background: 'var(--teal-800)',
+                          color: '#fff',
+                          padding: '11px 16px',
+                          fontSize: 13,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                        }}
+                      >
+                        Close preview
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gap: 14 }}>
+                {CABINET_STEPS.map((step, index) => (
+                  <motion.button
+                    key={step.title}
+                    onClick={() => setStepIndex(index)}
+                    whileHover={reduced ? undefined : { y: -2 }}
+                    style={{
+                      textAlign: 'left',
+                      borderRadius: 20,
+                      border: `1px solid ${index === stepIndex ? `${step.accent}35` : 'rgba(148,163,184,0.14)'}`,
+                      background: index === stepIndex ? `${step.accent}12` : '#ffffff',
+                      padding: '18px 18px 16px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: index === stepIndex ? step.accent : 'var(--gray-400)', marginBottom: 8 }}>
+                      Stage {index + 1}
+                    </div>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 8 }}>{step.title}</div>
+                    <div style={{ fontSize: 14, color: 'var(--gray-500)', lineHeight: 1.65 }}>{step.body}</div>
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
 
 function ParticleCanvas() {
   const canvasRef = useRef(null)
@@ -147,6 +437,7 @@ function ParticleCanvas() {
 export default function Hero() {
   const navigate = useNavigate()
   const reduced = useReducedMotion()
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   // Stagger container: chip → h1 → p1 → p2 → ctas → proof
   const containerVariants = reduced ? {} : stagger(0.1, 0)
@@ -288,7 +579,7 @@ export default function Hero() {
             Start Free — No card required <ArrowRight size={16} aria-hidden="true" />
           </motion.button>
           <motion.button
-            onClick={() => navigate('/login?signup=true')}
+            onClick={() => setPreviewOpen(true)}
             className="hero-cta-secondary"
             {...buttonHoverProps}
             style={{
@@ -324,6 +615,8 @@ export default function Hero() {
         </motion.div>
 
       </motion.div>
+
+      <CabinetPreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} reduced={reduced} />
     </section>
   )
 }
