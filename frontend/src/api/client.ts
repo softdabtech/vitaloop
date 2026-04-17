@@ -76,7 +76,9 @@ api.interceptors.response.use(
     }
 
     if (status === 402) {
-      window.dispatchEvent(new CustomEvent('vitaloop:paywall'))
+      window.dispatchEvent(
+        new CustomEvent('paywall:trigger', { detail: { reason: code ?? 'SUBSCRIPTION_REQUIRED' } })
+      )
       return Promise.reject(error)
     }
 

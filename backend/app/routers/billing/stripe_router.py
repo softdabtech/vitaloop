@@ -11,6 +11,8 @@ from app.services.supabase_service import (
     get_user_by_stripe_sub,
     record_stripe_event,
     sync_stripe_subscription_to_subscriptions_table,
+    get_user_account,
+    get_user_upload_count,
 )
 
 stripe.api_key = settings.stripe_secret_key
@@ -242,3 +244,23 @@ async def _handle_payment_failed(data: dict):
     )
 
     logger.info(f"stripe_payment_failed user_id={user_id}")
+
+
+@router.get("/subscription")
+async def get_subscription_status(current_user: dict = Depends(get_current_user)):
+    """Return current subscription status + freemium upload usage for the authenticated user."""
+    user_id: str = current_user["sub"]
+    account = await get_user_account(user_id)
+    upload_count = await get_user_upload_count(user_id)
+    sub_status = str(account.get("sub_status") or "free").lower()
+    global_role = str(account.get("global_role") or "end_user").lower()
+    limit = settings.freemium_upload_limit
+
+    return {
+        "sub_status": sub_status,
+        "global_role": global_role,
+        "is_premium": sub_status == "active" or global_role != "end_user",
+        "upload_count": upload_count,
+        "upload_limit": limit if (sub_status != "active" and global_role == "end_user") else None,
+        "uploads_remaining": max(0, limit - upload_count) if (sub_status != "active" and global_role == "end_user") else None,
+    }

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from uuid import UUID
 import logging
 
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, require_active_subscription
 from app.services.claude_service import generate_protocol, PROTOCOL_PROMPT_VERSION, is_llm_configured
 from app.services.supabase_service import (
     assert_upload_belongs_to_user,
@@ -37,7 +37,7 @@ class ProtocolResponse(BaseModel):
 @router.post("", response_model=ProtocolResponse)
 async def create_protocol(
     request: ProtocolRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_active_subscription),
 ):
     user_id: str = current_user["sub"]
     upload_id = str(request.upload_id)

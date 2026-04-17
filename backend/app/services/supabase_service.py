@@ -551,6 +551,18 @@ async def get_user_account(user_id: str) -> Dict[str, Any]:
     )
 
 
+async def get_user_upload_count(user_id: str) -> int:
+    """Return the total number of lab uploads for a user (used for freemium gating)."""
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .select("id", count="exact")
+        .eq("user_id", user_id)
+        .execute()
+    )
+    return resp.count if resp.count is not None else len(resp.data or [])
+
+
 async def get_user_progress(user_id: str) -> List[Dict]:
     supabase = _get_supabase()
     uploads = await _run(

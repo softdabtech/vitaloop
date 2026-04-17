@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 import logging
 
-from app.dependencies import get_current_user
+from app.dependencies import require_freemium_analyze
 from app.services.claude_service import extract_biomarkers, EXTRACT_PROMPT_VERSION, is_llm_configured
 from app.services.supabase_service import save_lab_upload, save_biomarkers, save_timeline_event, write_audit_log
 from app.constants import (
@@ -135,7 +135,7 @@ async def _drop_idempotency(*, user_id: str, idempotency_key: str) -> None:
 @router.post("", response_model=AnalyzeResponse)
 async def analyze_lab(
     request: AnalyzeRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_freemium_analyze),
     idempotency_key: Optional[str] = Header(default=None, alias="X-Idempotency-Key"),
 ):
     user_id: str = current_user["sub"]

@@ -77,3 +77,37 @@ async def require_active_subscription(current_user: dict = Depends(get_current_u
         status_code=status.HTTP_402_PAYMENT_REQUIRED,
         detail={"detail": "Active subscription required", "code": "SUBSCRIPTION_REQUIRED"},
     )
+
+
+async def require_freemium_analyze(current_user: dict = Depends(get_current_user)) -> dict:
+    """Allow free users up to `settings.freemium_upload_limit` lab analyses.
+
+    Premium users and non-end-user roles (admin/ops/practitioner) bypass this gate.
+    Free users who have reached the limit receive 402 with code UPLOAD_LIMIT_REACHED.
+    """
+    user_id = current_user.get("sub")
+    jwt_role = str(current_user.get("global_role") or current_user.get("role") or "").lower()
+
+    account = await svc.get_user_account(user_id)
+    global_role = str(account.get("global_role") or jwt_role or "end_user").lower()
+    sub_status = str(account.get("sub_status") or "").lower()
+
+    # Non-end-users and active subscribers pass through unconditionally.
+    if global_role != "end_user" or sub_status == "active":
+        return current_user
+
+    upload_count = await svc.get_user_upload_count(user_id)
+    limit = settings.freemium_upload_limit
+
+    if upload_count >= limit:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail={
+                "detail": f"Free plan allows {limit} lab upload(s). Upgrade to analyze more.",
+                "code": "UPLOAD_LIMIT_REACHED",
+                "upload_count": upload_count,
+                "upload_limit": limit,
+            },
+        )
+
+    return current_user

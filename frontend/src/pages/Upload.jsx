@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOCR } from '../hooks/useOCR.js'
+import { useSubscription } from '../hooks/useSubscription.js'
 import UploadZone from '../components/UploadZone.jsx'
 import SymptomSelector from '../components/SymptomSelector.jsx'
 import api from '../lib/api.js'
@@ -14,6 +15,7 @@ const SUPPORTED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
 export default function Upload() {
   const navigate = useNavigate()
   const { processFile, progress, isProcessing } = useOCR()
+  const { isPremium, uploadCount, uploadLimit, uploadsRemaining, loading: subLoading, refresh: refreshSub } = useSubscription()
   const [symptoms, setSymptoms] = useState([])
   const [labName, setLabName] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
@@ -106,6 +108,12 @@ export default function Upload() {
       toast.success('Analysis complete!')
       navigate(`/results/${data.upload_id}`)
     } catch (err) {
+      const status = err.response?.status
+      if (status === 402) {
+        // PaywallModal is triggered globally via client.ts — just refresh sub state
+        refreshSub()
+        return
+      }
       const message = err.response?.data?.detail || 'Analysis failed. Please try again.'
       setErrorMessage(message)
       toast.error(message)
@@ -122,6 +130,21 @@ export default function Upload() {
           <p className="text-sm text-slate-500">
             Your file is processed locally first. Only extracted text is sent for analysis.
           </p>
+          {!subLoading && !isPremium && (
+            <div className={`mt-4 flex items-center justify-between rounded-xl px-4 py-3 text-sm ${uploadsRemaining === 0 ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-amber-200 bg-amber-50 text-amber-700'}`}>
+              <span>
+                {uploadsRemaining === 0
+                  ? `Free upload limit reached (${uploadCount}/${uploadLimit}).`
+                  : `Free plan: ${uploadsRemaining} upload${uploadsRemaining !== 1 ? 's' : ''} remaining.`}
+              </span>
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'UPLOAD_LIMIT_REACHED' } }))}
+                className="ml-4 rounded-lg bg-emerald-500 hover:bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition"
+              >
+                Upgrade
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
