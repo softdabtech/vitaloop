@@ -9,6 +9,7 @@ import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
 import { useEffect, useState } from 'react'
 import { useOnboardingState } from './hooks/useOnboardingState.js'
 import SupportChat from './components/SupportChat.jsx'
+import PaywallModal from './components/PaywallModal.jsx'
 
 // Critical user path — eager
 import EmailConfirmation from './pages/EmailConfirmation.jsx'
@@ -87,7 +88,7 @@ function PremiumRoute({ children }) {
 
   useEffect(() => {
     if (!loading && !isActive) {
-      window.dispatchEvent(new CustomEvent('vitaloop:paywall'))
+      window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))
     }
   }, [loading, isActive])
 
@@ -105,6 +106,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <PaywallModal />
       <ScrollToTop />
       <Suspense fallback={<RouteFallback />}>
         <Routes>

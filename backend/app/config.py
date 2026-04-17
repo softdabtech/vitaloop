@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     stripe_price_id: str = ""  # Price ID for $49/mo plan
     stripe_success_url: str = "http://localhost:5173/dashboard?sub=success"
     stripe_cancel_url: str = "http://localhost:5173/dashboard?sub=cancelled"
+    freemium_upload_limit: int = 1  # free-tier lab uploads allowed before paywall
     resend_api_key: str = ""
     resend_from_email: str = "onboarding@resend.dev"
     sendgrid_api_key: str = ""
