@@ -113,7 +113,7 @@ export default function App() {
           <Route path="/upload" element={<ProtectedRoute><EndUserFlowRoute><Upload /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/results/:uploadId" element={<ProtectedRoute><EndUserFlowRoute><Results /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/avatar" element={<ProtectedRoute><EndUserFlowRoute><Avatar /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/progress" element={<ProtectedRoute><EndUserFlowRoute><PremiumRoute><Progress /></PremiumRoute></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/progress" element={<ProtectedRoute><EndUserFlowRoute><Progress /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/assignments" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Assignments /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/assignments/:assignmentId" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><AssignmentDetails /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/lab-results" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><LabResultsList /></EndUserFlowRoute></ProtectedRoute>} />
@@ -127,10 +127,13 @@ export default function App() {
           <Route path="/crm/clients/:id" element={<ProtectedRoute><CRMRoute><CRMClientDetails /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/practitioners" element={<ProtectedRoute><CRMRoute><CRMPractitioners /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
-          <Route path="/onboarding" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding redirectIfOnboardingComplete><Onboarding /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/onboarding" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Onboarding /></EndUserFlowRoute></ProtectedRoute>} />
           <Route path="/questionnaire" element={<ProtectedRoute><EndUserFlowRoute allowBeforeOnboarding><Questionnaire /></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/checkin" element={<ProtectedRoute><EndUserFlowRoute><PremiumRoute><WeeklyCheckIn /></PremiumRoute></EndUserFlowRoute></ProtectedRoute>} />
-          <Route path="/timeline" element={<ProtectedRoute><EndUserFlowRoute><PremiumRoute><Insights /></PremiumRoute></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/check-ins" element={<ProtectedRoute><EndUserFlowRoute><WeeklyCheckIn /></EndUserFlowRoute></ProtectedRoute>} />
+          <Route path="/insights" element={<ProtectedRoute><EndUserFlowRoute><Insights /></EndUserFlowRoute></ProtectedRoute>} />
+          {/* Legacy aliases for backward compatibility */}
+          <Route path="/checkin" element={<Navigate to="/check-ins" replace />} />
+          <Route path="/timeline" element={<Navigate to="/insights" replace />} />
           <Route path="/404.html" element={<NotFound />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

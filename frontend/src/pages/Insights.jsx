@@ -187,7 +187,7 @@ export default function Timeline() {
           <div style={{ ...s.card, marginBottom: 16 }}>
             <div style={s.cardTitle}><Activity size={16} style={{ color: '#818cf8' }} /> Quick Actions</div>
             {[
-              { label: '📋 Weekly Check-In', path: '/checkin' },
+              { label: '📋 Weekly Check-In', path: '/check-ins' },
               { label: '🧪 Upload Labs', path: '/upload' },
               { label: '💊 Log Symptoms', path: '/admin' },
               { label: '👤 Update Profile', path: '/onboarding' },

@@ -146,8 +146,8 @@ ssh $SSH_OPTS "$REMOTE_HOST" "
     
     CHANGED_FILES=\"\$(git diff --name-only ORIG_HEAD HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || true)\"
 
-    # Frontend build (when frontend changed, or when build artifacts are missing)
-    if echo \"\$CHANGED_FILES\" | grep -qE '^(frontend/|frontend/package.json|frontend/package-lock.json)$' || [[ ! -f frontend/dist/index.html ]]; then
+    # Frontend build (when any frontend file changed, or when build artifacts are missing)
+    if echo \"\$CHANGED_FILES\" | grep -qE '^frontend/' || [[ ! -f frontend/dist/index.html ]]; then
         echo 'Building frontend...'
         cd frontend
         npm ci --prefer-offline || npm ci

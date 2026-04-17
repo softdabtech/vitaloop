@@ -43,14 +43,14 @@ export default function QuickActionsPanel() {
       icon: MessageSquare,
       label: 'Message',
       description: 'Open support chat',
-      href: '/timeline',
+      href: '/insights',
       color: 'orange',
     },
     {
       icon: Calendar,
       label: 'Check-in',
       description: 'Weekly check-in',
-      href: '/checkin',
+      href: '/check-ins',
       color: 'pink',
     },
     {

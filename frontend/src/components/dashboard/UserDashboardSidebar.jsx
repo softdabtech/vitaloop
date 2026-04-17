@@ -19,8 +19,8 @@ const MENU_ITEMS = [
   { icon: FileText, label: 'Lab Results', path: '/lab-results', badge: null },
   { icon: Target, label: 'Assignments', path: '/assignments', badgeKey: 'pending_assignments' },
   { icon: TrendingUp, label: 'Progress', path: '/progress', badge: null },
-  { icon: BarChart3, label: 'Insights', path: '/timeline', badge: null },
-  { icon: Clock, label: 'Check-ins', path: '/checkin', badge: null },
+  { icon: BarChart3, label: 'Insights', path: '/insights', badge: null },
+  { icon: Clock, label: 'Check-ins', path: '/check-ins', badge: null },
   { icon: Activity, label: 'Onboarding', path: '/onboarding', badge: null },
   { icon: AlertCircle, label: 'Legacy Dashboard', path: '/dashboard-legacy', badge: null },
 ]

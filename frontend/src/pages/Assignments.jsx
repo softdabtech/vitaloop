@@ -121,7 +121,7 @@ export default function Assignments() {
             Open Questionnaire
           </button>
           <button
-            onClick={() => navigate('/checkin')}
+            onClick={() => navigate('/check-ins')}
               className="vtl-button-secondary px-4 text-sm"
           >
             Weekly Check-in
