@@ -99,8 +99,8 @@ export default function PricingSection() {
   }
 
   return (
-    <section id="pricing" style={{ padding: 'var(--py-lg) 24px', background: 'var(--gray-50)' }}>
-      <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+    <section id="pricing" className="bg-zinc-50 px-6 py-20 md:py-24">
+      <div className="mx-auto max-w-7xl">
 
         {/* Header */}
         <motion.div
@@ -108,75 +108,37 @@ export default function PricingSection() {
           initial="hidden"
           whileInView="visible"
           viewport={viewport('-60px')}
-          style={{ textAlign: 'center', marginBottom: 64 }}
+          className="mb-12 text-center md:mb-16"
         >
-          <motion.div variants={reduced ? {} : staggerChild} style={{
-            fontSize: 12, fontWeight: 600, letterSpacing: '0.12em',
-            textTransform: 'uppercase', color: 'var(--teal-500)', marginBottom: 16,
-          }}>
+          <motion.div variants={reduced ? {} : staggerChild} className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-600">
             Pricing
           </motion.div>
-          <motion.h2 variants={reduced ? {} : staggerChild} style={{
-            fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 700,
-            letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 16,
-          }}>
+          <motion.h2 variants={reduced ? {} : staggerChild} className="mb-4 text-balance text-3xl font-bold leading-tight tracking-tight text-zinc-900 sm:text-4xl lg:text-5xl">
             Freemium pricing built for users and practitioners
           </motion.h2>
-          <motion.p variants={reduced ? {} : staggerChild} style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 460, margin: '0 auto', lineHeight: 1.65 }}>
+          <motion.p variants={reduced ? {} : staggerChild} className="mx-auto max-w-2xl text-base leading-7 text-zinc-600 md:text-lg">
             Start free, upgrade to Pro, and scale with multi-tenancy CRM when your team is ready.
           </motion.p>
-          <motion.div variants={reduced ? {} : staggerChild} style={{ marginTop: 20 }}>
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 12,
-              color: 'var(--teal-600)',
-              background: 'rgba(16,185,129,0.08)',
-              border: '0.5px solid var(--teal-300)',
-              borderRadius: 980,
-              padding: '6px 14px',
-              fontWeight: 600,
-            }}>
+          <motion.div variants={reduced ? {} : staggerChild} className="mt-5">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-700">
               80% complete - launching soon
             </span>
           </motion.div>
-          <motion.div variants={reduced ? {} : staggerChild} style={{ marginTop: 24, display: 'flex', justifyContent: 'center' }}>
-            <div style={{
-              display: 'inline-flex',
-              background: 'white',
-              borderRadius: 980,
-              border: '0.5px solid var(--gray-100)',
-              padding: 4,
-              gap: 4,
-            }}>
+          <motion.div variants={reduced ? {} : staggerChild} className="mt-6 flex justify-center">
+            <div className="inline-flex gap-1 rounded-full border border-zinc-200 bg-white p-1 shadow-sm">
               <button
                 onClick={() => setBilling('monthly')}
-                style={{
-                  border: 'none',
-                  borderRadius: 980,
-                  padding: '10px 18px',
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: billing === 'monthly' ? 'var(--teal-500)' : 'transparent',
-                  color: billing === 'monthly' ? 'white' : 'var(--gray-600)',
-                }}
+                className={`min-h-[44px] rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                  billing === 'monthly' ? 'bg-emerald-600 text-white' : 'text-zinc-600 hover:bg-zinc-100'
+                }`}
               >
                 Monthly
               </button>
               <button
                 onClick={() => setBilling('yearly')}
-                style={{
-                  border: 'none',
-                  borderRadius: 980,
-                  padding: '10px 18px',
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: billing === 'yearly' ? 'var(--teal-500)' : 'transparent',
-                  color: billing === 'yearly' ? 'white' : 'var(--gray-600)',
-                }}
+                className={`min-h-[44px] rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                  billing === 'yearly' ? 'bg-emerald-600 text-white' : 'text-zinc-600 hover:bg-zinc-100'
+                }`}
               >
                 Yearly (save up to 17%)
               </button>
@@ -190,108 +152,80 @@ export default function PricingSection() {
           initial="hidden"
           whileInView="visible"
           viewport={viewport('-40px')}
-          className="pricing-scroll-wrapper grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6"
-          style={{ marginBottom: 36 }}
+          className="mb-9 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4"
         >
           {PLANS.map((plan) => {
             const { id, name, annualNote, desc, badge, dark, premium, cta, features } = plan
             const display = getPlanPrice(plan)
+            const yearlyHighlight = id === 'personal' || id === 'practitioner'
             return (
             <motion.div
               key={id}
               variants={reduced ? {} : staggerChild}
             >
               <motion.div
-                style={{
-                  borderRadius: 28,
-                  padding: '44px 36px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  height: '100%',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  background: dark
-                    ? 'var(--teal-800)'
+                className={`relative flex h-full flex-col overflow-hidden rounded-3xl border p-8 md:p-9 ${
+                  dark
+                    ? 'border-zinc-800 bg-zinc-900 text-white shadow-lg shadow-zinc-900/15'
                     : premium
-                    ? 'var(--white)'
-                    : 'var(--white)',
-                  border: dark
-                    ? 'none'
-                    : premium
-                    ? '1px solid rgba(16,185,129,0.35)'
-                    : '0.5px solid var(--gray-100)',
-                  boxShadow: dark
-                    ? '0 12px 40px rgba(16,185,129,0.18)'
-                    : premium
-                    ? '0 4px 20px rgba(16,185,129,0.08)'
-                    : 'none',
-                  transition: 'transform 220ms ease, box-shadow 220ms ease',
-                }}
+                    ? 'border-emerald-300 bg-white shadow-md shadow-emerald-100/60'
+                    : 'border-zinc-200 bg-white shadow-sm'
+                }`}
                 {...(reduced ? {} : cardHoverProps)}
               >
               {/* Badge */}
               {badge && (
-                <div style={{
-                  position: 'absolute', top: 24, right: 24,
-                  background: dark ? 'var(--teal-500)' : 'rgba(16,185,129,0.1)',
-                  color: dark ? 'white' : 'var(--teal-600)',
-                  border: dark ? 'none' : '0.5px solid var(--teal-300)',
-                  borderRadius: 6, padding: '3px 10px',
-                  fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
-                }}>
+                <div className={`absolute right-5 top-5 rounded-md px-2.5 py-1 text-[10px] font-bold tracking-[0.08em] ${
+                  dark ? 'bg-emerald-500 text-white' : 'border border-emerald-300 bg-emerald-50 text-emerald-700'
+                }`}>
                   {badge}
                 </div>
               )}
 
               {/* Plan name */}
-              <div style={{
-                fontSize: 13, fontWeight: 600, marginBottom: 12,
-                color: dark ? 'var(--teal-100)' : 'var(--gray-500)',
-              }}>
+              <div className={`mb-3 text-sm font-semibold ${dark ? 'text-emerald-100' : 'text-zinc-500'}`}>
                 {name}
               </div>
 
               {/* Price */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, marginBottom: 4 }}>
-                <span style={{
-                  fontSize: 48, fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1,
-                  color: dark ? 'white' : 'var(--gray-900)',
-                }}>
+              <div className="mb-1 flex items-baseline gap-1">
+                <span className={`text-5xl font-bold leading-none tracking-tight ${dark ? 'text-white' : 'text-zinc-900'}`}>
                   {display.value}
                 </span>
                 {display.period && (
-                  <span style={{
-                    fontSize: 16,
-                    color: dark ? 'var(--teal-300)' : 'var(--gray-400)',
-                    marginBottom: 2,
-                  }}>
+                  <span className={`mb-0.5 text-base ${dark ? 'text-emerald-300' : 'text-zinc-400'}`}>
                     {display.period}
                   </span>
                 )}
               </div>
               {annualNote && (
-                <div style={{ fontSize: 12, color: dark ? 'var(--teal-200)' : 'var(--teal-600)', marginBottom: 16 }}>
+                <div className={`mb-4 inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-medium ${
+                  yearlyHighlight
+                    ? dark
+                      ? 'bg-emerald-500/20 text-emerald-200'
+                      : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                    : dark
+                    ? 'text-emerald-200'
+                    : 'text-emerald-700'
+                }`}>
                   {annualNote}
                 </div>
               )}
 
               {/* Description */}
-              <p style={{
-                fontSize: 14, lineHeight: 1.65, marginBottom: 32,
-                color: dark ? 'var(--teal-100)' : 'var(--gray-500)',
-              }}>
+              <p className={`mb-7 text-sm leading-6 ${dark ? 'text-emerald-100' : 'text-zinc-600'}`}>
                 {desc}
               </p>
 
               {/* Features */}
-              <ul style={{ listStyle: 'none', padding: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 36 }}>
+              <ul className="mb-8 flex flex-1 flex-col gap-3">
                 {features.map(({ text, ok }) => (
-                  <li key={text} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14 }}>
+                  <li key={text} className="flex items-center gap-2.5 text-sm">
                     {ok
-                      ? <Check size={14} style={{ color: dark ? 'var(--teal-300)' : 'var(--teal-500)', flexShrink: 0 }} aria-hidden="true" />
-                      : <Minus size={14} style={{ color: dark ? 'rgba(255,255,255,0.2)' : 'var(--gray-300)', flexShrink: 0 }} aria-hidden="true" />
+                      ? <Check size={14} className={`shrink-0 ${dark ? 'text-emerald-300' : 'text-emerald-600'}`} aria-hidden="true" />
+                      : <Minus size={14} className={`shrink-0 ${dark ? 'text-white/30' : 'text-zinc-300'}`} aria-hidden="true" />
                     }
-                    <span style={{ color: ok ? (dark ? 'var(--teal-100)' : 'var(--gray-700)') : (dark ? 'rgba(255,255,255,0.3)' : 'var(--gray-300)') }}>
+                    <span className={`${ok ? (dark ? 'text-emerald-100' : 'text-zinc-700') : (dark ? 'text-white/35' : 'text-zinc-300')}`}>
                       {text}
                     </span>
                   </li>
@@ -317,29 +251,7 @@ export default function PricingSection() {
                     }
                     navigate('/login?signup=true')
                   }}
-                  className="btn-primary"
-                  style={{
-                    borderRadius: 980,
-                    padding: '14px 24px',
-                    fontSize: 15,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    border: 'none',
-                    background: dark
-                      ? 'white'
-                      : id === 'free'
-                      ? 'var(--teal-500)'
-                      : premium
-                      ? 'var(--teal-500)'
-                      : 'var(--gray-100)',
-                    color: dark
-                      ? 'var(--teal-800)'
-                      : id === 'free'
-                      ? 'white'
-                      : premium
-                      ? 'white'
-                      : 'var(--gray-700)',
-                  }}
+                  className="btn-primary min-h-[46px] rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-500"
                 >
                   {cta}
                 </button>
@@ -354,7 +266,7 @@ export default function PricingSection() {
           initial="hidden"
           whileInView="visible"
           viewport={viewport('-40px')}
-          style={{ textAlign: 'center', fontSize: 13, color: 'var(--gray-500)' }}
+          className="text-center text-sm text-zinc-500"
         >
           All paid plans include secure storage, protocol updates, and onboarding support.
         </motion.div>

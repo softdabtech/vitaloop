@@ -32,91 +32,93 @@ const CARDS = [
 
 export default function ValueBlock() {
   const reduced = useReducedMotion()
+  const primaryCards = CARDS.slice(0, 4)
+  const privacyCard = CARDS[4]
+
+  const cardClass = 'rounded-2xl border border-zinc-200 bg-white p-7 md:p-8 shadow-sm transition-shadow duration-200'
+  const iconWrapClass = 'mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20'
 
   return (
-    <section
-      id="why-vitaloop"
-      style={{
-        backgroundColor: 'var(--white)',
-        padding: 'var(--py-md) 24px',
-      }}
-    >
-      <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+    <section id="why-vitaloop" className="bg-white px-6 py-20 md:py-24">
+      <div className="mx-auto max-w-6xl">
         {/* Header */}
         <motion.div
           variants={reduced ? {} : stagger(0.1)}
           initial="hidden"
           whileInView="visible"
           viewport={viewport('-60px')}
-          style={{ textAlign: 'center', marginBottom: 56 }}
+          className="mb-12 text-center md:mb-14"
         >
-          <motion.div variants={reduced ? {} : staggerChild} style={{
-            fontSize: 12, fontWeight: 600, letterSpacing: '0.12em',
-            textTransform: 'uppercase', color: 'var(--teal-500)', marginBottom: 16,
-          }}>
+          <motion.div variants={reduced ? {} : staggerChild} className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-600">
             Why VITALOOP
           </motion.div>
           <motion.h2
             variants={reduced ? {} : staggerChild}
-            style={{
-              fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 700,
-              color: 'var(--gray-900)', letterSpacing: '-0.5px', lineHeight: 1.2, margin: 0,
-            }}
+            className="text-balance text-3xl font-bold leading-tight tracking-tight text-zinc-900 sm:text-4xl lg:text-5xl"
           >
             Why practitioners and biohackers choose VITALOOP
           </motion.h2>
         </motion.div>
 
-        {/* Cards grid */}
+        {/* Primary cards: 4-up on desktop, stacked below lg */}
         <motion.div
           variants={reduced ? {} : stagger(0.08)}
           initial="hidden"
           whileInView="visible"
           viewport={viewport('-40px')}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: 20,
-          }}
+          className="grid grid-cols-1 gap-5 lg:grid-cols-4"
         >
-          {CARDS.map(({ Icon, title, body }) => (
+          {primaryCards.map(({ Icon, title, body }) => (
             <motion.div
               key={title}
               variants={reduced ? {} : staggerChild}
-              whileHover={reduced ? {} : { scale: 1.025, boxShadow: '0 8px 28px rgba(16,185,129,0.12)', borderColor: 'rgba(16,185,129,0.25)' }}
+              whileHover={reduced ? {} : { scale: 1.02, y: -2 }}
               transition={{ type: 'spring', stiffness: 340, damping: 22 }}
-              style={{
-                background: 'var(--gray-50, #f9fafb)',
-                border: '0.5px solid rgba(0,0,0,0.07)',
-                borderRadius: 16,
-                padding: '28px 24px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 12,
-                cursor: 'default',
-              }}
+              className={cardClass}
             >
               <motion.div
                 whileHover={reduced ? {} : { rotate: [0, -8, 8, 0] }}
                 transition={{ duration: 0.35 }}
-                style={{
-                  width: 40, height: 40, borderRadius: 10,
-                  background: 'rgba(16,185,129,0.1)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}
+                className={iconWrapClass}
               >
-                <Icon size={20} color="var(--teal-500)" strokeWidth={1.8} />
+                <Icon size={20} className="text-emerald-600" strokeWidth={1.8} />
               </motion.div>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--gray-900)', marginBottom: 6 }}>
+                <div className="mb-2 text-base font-semibold text-zinc-900">
                   {title}
                 </div>
-                <div style={{ fontSize: 14, color: 'var(--gray-500)', lineHeight: 1.6 }}>
+                <div className="text-sm leading-6 text-zinc-600">
                   {body}
                 </div>
               </div>
             </motion.div>
           ))}
+        </motion.div>
+
+        {/* Privacy card: full-width row on desktop, naturally stacked on tablet/mobile */}
+        <motion.div
+          variants={reduced ? {} : fadeUp}
+          custom={0}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport('-40px')}
+          className="mt-5"
+        >
+          <motion.div
+            whileHover={reduced ? {} : { scale: 1.02, y: -2 }}
+            transition={{ type: 'spring', stiffness: 340, damping: 22 }}
+            className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white p-7 md:p-8"
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20">
+                <privacyCard.Icon size={20} className="text-emerald-600" strokeWidth={1.8} />
+              </div>
+              <div>
+                <div className="mb-2 text-base font-semibold text-zinc-900">{privacyCard.title}</div>
+                <div className="text-sm leading-6 text-zinc-700">{privacyCard.body}</div>
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
 
         {/* Bottom tagline */}
@@ -126,26 +128,12 @@ export default function ValueBlock() {
           initial="hidden"
           whileInView="visible"
           viewport={viewport('-40px')}
-          style={{ marginTop: 56, textAlign: 'center', borderTop: '0.5px solid rgba(0,0,0,0.07)', paddingTop: 40 }}
+          className="mt-12 border-t border-zinc-200 pt-10 text-center"
         >
-          <p
-            style={{
-              fontSize: 'clamp(18px, 2.5vw, 24px)',
-              fontWeight: 500,
-              color: 'var(--gray-500)',
-              margin: '0 0 8px',
-            }}
-          >
+          <p className="mb-2 text-lg font-medium text-zinc-600 sm:text-xl md:text-2xl">
             Most people don't lack data — they lack clarity.
           </p>
-          <p
-            style={{
-              fontSize: 'clamp(18px, 2.5vw, 24px)',
-              fontWeight: 700,
-              color: 'var(--gray-900)',
-              margin: 0,
-            }}
-          >
+          <p className="text-lg font-bold text-zinc-900 sm:text-xl md:text-2xl">
             VITALOOP gives you both.
           </p>
         </motion.div>
