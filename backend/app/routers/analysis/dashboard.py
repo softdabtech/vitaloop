@@ -269,6 +269,7 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
 
     global_role = _normalize_role(account.get("global_role"), current_user.get("global_role"), current_user.get("role"))
     assignments = await _fetch_assignments(user_id, global_role)
+    upload_count = await svc.get_user_upload_count(user_id)
 
     health_latest = None
     try:
@@ -306,6 +307,36 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
         if str(item.get("status") or "").lower() in {"pending", "active", "in_progress"}
     ]
     completed_assignments = [item for item in assignments if str(item.get("status") or "").lower() == "completed"]
+    latest_upload = progress[-1] if progress else None
+
+    weekly_checkin = None
+    questionnaire_latest = None
+    try:
+        sb = svc._get_supabase()
+        weekly_checkin_resp, questionnaire_resp = await asyncio.gather(
+            svc._run(
+                lambda: sb.table("weekly_checkins")
+                .select("week_start, created_at, energy_score, sleep_quality, mood_score, protocol_adherence")
+                .eq("user_id", user_id)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            ),
+            svc._run(
+                lambda: sb.table("questionnaire_sessions")
+                .select("id, completed_at, completion_score")
+                .eq("user_id", user_id)
+                .eq("status", "completed")
+                .order("completed_at", desc=True)
+                .limit(1)
+                .execute()
+            ),
+        )
+        weekly_checkin = (weekly_checkin_resp.data or [None])[0]
+        questionnaire_latest = (questionnaire_resp.data or [None])[0]
+    except Exception:
+        weekly_checkin = None
+        questionnaire_latest = None
 
     next_best_action = _build_next_best_action(onboarding, assignments, progress)
     start_here = _build_start_here(onboarding, progress, account.get("created_at"))
@@ -326,6 +357,9 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
             "active_program": "Personal Protocol" if progress else "Not started",
             "completed_tasks": len(completed_assignments),
             "active_assignments": len(active_assignments),
+            "total_uploads": upload_count,
+            "insights_count": len(insights),
+            "questionnaire_score": questionnaire_latest.get("completion_score") if isinstance(questionnaire_latest, dict) else None,
             "subscription": account.get("sub_status") or "free",
         },
         "next_best_action": next_best_action,
@@ -335,6 +369,9 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
             "today_focus": active_assignments[:3],
             "progress": progress[-12:],
             "insights": insights,
+            "latest_upload": latest_upload,
+            "latest_checkin": weekly_checkin,
+            "latest_questionnaire": questionnaire_latest,
         },
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
