@@ -2,32 +2,52 @@ import React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
 export default function StatCard({ title, value, unit, icon: Icon, color, change }) {
-  const colorClasses = {
-    emerald: 'bg-emerald-50 ring-1 ring-emerald-500/20 text-emerald-600',
-    blue: 'bg-blue-50 ring-1 ring-blue-500/20 text-blue-600',
-    purple: 'bg-purple-50 ring-1 ring-purple-500/20 text-purple-600',
-    orange: 'bg-orange-50 ring-1 ring-orange-500/20 text-orange-600',
+  const colorConfig = {
+    emerald: {
+      icon: 'bg-emerald-500 text-white shadow-emerald-500/25',
+      border: 'border-emerald-100',
+      bar: 'bg-emerald-500',
+    },
+    blue: {
+      icon: 'bg-blue-500 text-white shadow-blue-500/25',
+      border: 'border-blue-100',
+      bar: 'bg-blue-500',
+    },
+    purple: {
+      icon: 'bg-purple-500 text-white shadow-purple-500/25',
+      border: 'border-purple-100',
+      bar: 'bg-purple-500',
+    },
+    orange: {
+      icon: 'bg-orange-400 text-white shadow-orange-400/25',
+      border: 'border-orange-100',
+      bar: 'bg-orange-400',
+    },
   };
 
+  const c = colorConfig[color] ?? colorConfig.emerald;
+
   return (
-    <div className="vtl-light-card vtl-light-card-hover min-h-[160px] p-5">
+    <div className={`vtl-light-card vtl-light-card-hover min-h-[160px] p-5 border-t-2 ${c.border} overflow-hidden relative`}>
       <div className="flex items-start justify-between mb-3">
-        <div className={`rounded-xl p-2.5 ${colorClasses[color]}`}>
+        <div className={`rounded-xl p-2.5 shadow-lg ${c.icon}`}>
           <Icon className="w-5 h-5" />
         </div>
         {change !== undefined && change !== 0 && (
-          <div className={`flex items-center gap-1 text-xs font-semibold ${
-            change > 0 ? 'text-emerald-600' : 'text-rose-500'
+          <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+            change > 0
+              ? 'bg-emerald-50 text-emerald-600'
+              : 'bg-rose-50 text-rose-500'
           }`}>
-            {change > 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+            {change > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
             {Math.abs(change)}%
           </div>
         )}
       </div>
-      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">{title}</p>
-      <p className="text-2xl font-bold tracking-tight text-slate-900">
+      <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-slate-400">{title}</p>
+      <p className="text-2xl font-bold tracking-tight text-slate-900 leading-none">
         {value}
-        <span className="ml-1 text-sm font-normal text-slate-400">{unit}</span>
+        {unit && <span className="ml-1.5 text-sm font-normal text-slate-400">{unit}</span>}
       </p>
     </div>
   );
