@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import api from '../lib/api.js'
 import toast from 'react-hot-toast'
 import { trackFunnelEvent } from '../lib/funnel.js'
@@ -41,7 +42,7 @@ const s = {
     fontFamily: 'system-ui, sans-serif',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     padding: '24px 16px',
   },
   card: {
@@ -220,103 +221,105 @@ export default function Questionnaire() {
 
   return (
     <div style={s.wrap}>
-      <motion.div style={s.card} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-        <button
-          onClick={() => navigate('/dashboard')}
-          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 14, marginBottom: 14 }}
-        >
-          ← Back to dashboard
-        </button>
+      <div style={{ width: '100%', maxWidth: 760 }}>
+        <CabinetPageHeader
+          title="Adaptive Questionnaire"
+          subtitle="Capture weekly health signals across energy, sleep, stress, digestion and recovery."
+          helper="Your answers update scorecards by dimension and improve protocol personalization."
+        />
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 14, alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>Adaptive Questionnaire</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>Question {answeredCount + 1} of {totalCount || '?'}</div>
-            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Concrete weekly signal check for energy, sleep, stress and recovery.</div>
+        <motion.div style={s.card} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 14, alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>Adaptive Questionnaire</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>Question {answeredCount + 1} of {totalCount || '?'}</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Concrete weekly signal check for energy, sleep, stress and recovery.</div>
+            </div>
+            <div style={{ minWidth: 120, textAlign: 'right', fontSize: 13, color: '#1d9e75', fontWeight: 700 }}>{progressPct}% complete</div>
           </div>
-          <div style={{ minWidth: 120, textAlign: 'right', fontSize: 13, color: '#1d9e75', fontWeight: 700 }}>{progressPct}% complete</div>
-        </div>
 
-        <div style={{ height: 6, borderRadius: 10, background: 'rgba(15,23,42,0.08)', overflow: 'hidden', marginBottom: 22 }}>
-          <div style={{ width: `${progressPct}%`, height: '100%', background: '#10b981' }} />
-        </div>
+          <div style={{ height: 6, borderRadius: 10, background: 'rgba(15,23,42,0.08)', overflow: 'hidden', marginBottom: 22 }}>
+            <div style={{ width: `${progressPct}%`, height: '100%', background: '#10b981' }} />
+          </div>
 
-        <div style={{ fontSize: 21, lineHeight: 1.4, fontWeight: 700, marginBottom: 22, color: '#0f172a' }}>
-          {nextQuestion.text}
-        </div>
+          <div style={{ fontSize: 21, lineHeight: 1.4, fontWeight: 700, marginBottom: 22, color: '#0f172a' }}>
+            {nextQuestion.text}
+          </div>
 
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 13, color: '#64748b', marginBottom: 6 }}>Rate from 1 (very poor) to 10 (excellent)</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <input
-              type="range"
-              min={1}
-              max={10}
-              value={answerValue}
-              onChange={(e) => setAnswerValue(Number(e.target.value))}
-              style={{ flex: 1, accentColor: '#1d9e75' }}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 6 }}>Rate from 1 (very poor) to 10 (excellent)</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <input
+                type="range"
+                min={1}
+                max={10}
+                value={answerValue}
+                onChange={(e) => setAnswerValue(Number(e.target.value))}
+                style={{ flex: 1, accentColor: '#1d9e75' }}
+              />
+              <div style={{ width: 46, textAlign: 'right', fontSize: 18, fontWeight: 700, color: '#10b981' }}>{answerValue}/10</div>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 6 }}>Optional context</div>
+            <textarea
+              value={answerText}
+              onChange={(e) => setAnswerText(e.target.value)}
+              placeholder="Add details that can help personalize your plan"
+              style={{
+                width: '100%',
+                minHeight: 88,
+                resize: 'vertical',
+                background: '#f8fafc',
+                border: '1px solid rgba(15,23,42,0.12)',
+                borderRadius: 10,
+                padding: '10px 12px',
+                color: '#0f172a',
+                fontSize: 14,
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
             />
-            <div style={{ width: 46, textAlign: 'right', fontSize: 18, fontWeight: 700, color: '#10b981' }}>{answerValue}/10</div>
           </div>
-        </div>
 
-        <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 13, color: '#64748b', marginBottom: 6 }}>Optional context</div>
-          <textarea
-            value={answerText}
-            onChange={(e) => setAnswerText(e.target.value)}
-            placeholder="Add details that can help personalize your plan"
-            style={{
-              width: '100%',
-              minHeight: 88,
-              resize: 'vertical',
-              background: '#f8fafc',
-              border: '1px solid rgba(15,23,42,0.12)',
-              borderRadius: 10,
-              padding: '10px 12px',
-              color: '#0f172a',
-              fontSize: 14,
-              outline: 'none',
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            onClick={submitAnswer}
-            disabled={saving}
-            style={{
-              background: '#10b981',
-              border: 'none',
-              color: '#fff',
-              borderRadius: 10,
-              padding: '11px 18px',
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: 'pointer',
-              opacity: saving ? 0.65 : 1,
-            }}
-          >
-            {saving ? 'Saving...' : 'Next Question'}
-          </button>
-          <button
-            onClick={() => navigate('/dashboard')}
-            style={{
-              background: '#f1f5f9',
-              border: '1px solid rgba(15,23,42,0.1)',
-              color: '#475569',
-              borderRadius: 10,
-              padding: '11px 18px',
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: 'pointer',
-            }}
-          >
-            Pause for now
-          </button>
-        </div>
-      </motion.div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={submitAnswer}
+              disabled={saving}
+              style={{
+                background: '#10b981',
+                border: 'none',
+                color: '#fff',
+                borderRadius: 10,
+                padding: '11px 18px',
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: 'pointer',
+                opacity: saving ? 0.65 : 1,
+              }}
+            >
+              {saving ? 'Saving...' : 'Next Question'}
+            </button>
+            <button
+              onClick={() => navigate('/dashboard')}
+              style={{
+                background: '#f1f5f9',
+                border: '1px solid rgba(15,23,42,0.1)',
+                color: '#475569',
+                borderRadius: 10,
+                padding: '11px 18px',
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: 'pointer',
+              }}
+            >
+              Pause for now
+            </button>
+          </div>
+        </motion.div>
+      </div>
     </div>
   )
 }

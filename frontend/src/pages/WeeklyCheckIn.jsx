@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Heart, CheckCircle } from 'lucide-react'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import api from '../lib/api.js'
 import toast from 'react-hot-toast'
 
 const s = {
-  wrap: { minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' },
+  wrap: { minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '24px 16px' },
   card: { width: '100%', maxWidth: 560, background: '#ffffff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 24, padding: '40px 36px', boxShadow: '0 1px 3px rgba(15,23,42,0.06)' },
   title: { fontSize: 24, fontWeight: 700, color: '#0f172a', marginBottom: 6 },
   sub: { fontSize: 14, color: '#64748b', marginBottom: 32 },
@@ -58,12 +59,19 @@ export default function WeeklyCheckIn() {
   if (done) {
     return (
       <div style={s.wrap}>
-        <motion.div style={{ ...s.card, textAlign: 'center' }} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-          <CheckCircle size={56} style={{ color: '#1d9e75', margin: '0 auto 20px' }} />
-          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>Check-in complete</div>
-          <div style={{ fontSize: 14, color: '#64748b', marginBottom: 28 }}>Your weekly data has been recorded. We'll use it to personalize your guidance.</div>
-          <button style={{ ...s.btn, marginTop: 0 }} onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
-        </motion.div>
+        <div style={{ width: '100%', maxWidth: 760 }}>
+          <CabinetPageHeader
+            title="Weekly Check-In"
+            subtitle="Record weekly adherence and symptom changes in under 2 minutes."
+            helper="These answers are used to adjust recommendations and task priorities."
+          />
+          <motion.div style={{ ...s.card, textAlign: 'center' }} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+            <CheckCircle size={56} style={{ color: '#1d9e75', margin: '0 auto 20px' }} />
+            <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>Check-in complete</div>
+            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 28 }}>Your weekly data has been recorded. We'll use it to personalize your guidance.</div>
+            <button style={{ ...s.btn, marginTop: 0 }} onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+          </motion.div>
+        </div>
       </div>
     )
   }
@@ -77,22 +85,22 @@ export default function WeeklyCheckIn() {
 
   return (
     <div style={s.wrap}>
-      <motion.div style={s.card} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <button
-          onClick={() => navigate('/dashboard')}
-          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 14, marginBottom: 14 }}
-        >
-          ← Back to dashboard
-        </button>
+      <div style={{ width: '100%', maxWidth: 760 }}>
+        <CabinetPageHeader
+          title="Weekly Check-In"
+          subtitle={`Week of ${form.week_start} - takes ~2 minutes`}
+          helper="Concrete weekly signal check for adherence, symptoms, mood and recovery."
+        />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <Heart size={22} style={{ color: '#f472b6' }} />
-          <div style={s.title}>Weekly Check-In</div>
-        </div>
-        <div style={s.sub}>Week of {form.week_start} — takes ~2 minutes</div>
-        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 20 }}>
-          This page records concrete weekly adherence and symptom changes that feed your protocol updates.
-        </div>
+        <motion.div style={s.card} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <Heart size={22} style={{ color: '#f472b6' }} />
+            <div style={s.title}>Weekly Check-In</div>
+          </div>
+          <div style={s.sub}>Update this week and submit.</div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 20 }}>
+            This page records concrete weekly adherence and symptom changes that feed your protocol updates.
+          </div>
 
         {/* Sliders */}
         {sliders.map(({ key, label, color }) => (
@@ -129,7 +137,8 @@ export default function WeeklyCheckIn() {
         <div style={{ textAlign: 'center', marginTop: 14 }}>
           <button style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }} onClick={() => navigate('/dashboard')}>Cancel</button>
         </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   )
 }
