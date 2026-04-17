@@ -254,8 +254,8 @@ export default function Settings() {
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
         <CabinetPageHeader
           title="Settings"
-          subtitle="Profile, reminders, health goals, and connected identity now live in one account center."
-          helper="This page should feel like the control room for the user account, not a leftover form."
+          subtitle="Profile, reminders, goals, and identity in one place."
+          helper="Compact account controls for daily use."
         />
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
@@ -373,7 +373,7 @@ export default function Settings() {
                       )
                     })}
                   </div>
-                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 10 }}>These goals help tailor assignments, insights, and recommended protocol direction.</div>
+                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 10 }}>Goals improve recommendations and insights.</div>
                 </div>
 
                 <button type="submit" disabled={saving} className="vtl-button-primary vtl-focus-ring" style={{ width: '100%', fontSize: 15, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.65 : 1 }}>
@@ -403,20 +403,22 @@ export default function Settings() {
 
             <div className="vtl-light-card" style={{ padding: '24px 28px' }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Clock3 size={16} style={{ color: '#10b981' }} /> Reminder preferences
+                <Clock3 size={16} style={{ color: '#10b981' }} /> Reminders
               </div>
               <div style={{ display: 'grid', gap: 10 }}>
                 {[
-                  { key: 'weekly_digest', label: 'Weekly dashboard digest', body: 'Receive a compact overview of progress and open actions.' },
-                  { key: 'checkin_reminders', label: 'Check-in reminder email', body: 'Get nudges to keep weekly adherence and symptom tracking alive.' },
-                  { key: 'product_updates', label: 'Product and feature updates', body: 'Hear about meaningful improvements without noise.' },
+                  { key: 'weekly_digest', label: 'Weekly digest' },
+                  { key: 'checkin_reminders', label: 'Check-in email' },
+                  { key: 'product_updates', label: 'Product updates' },
                 ].map((item) => (
-                  <label key={item.key} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '14px 14px', borderRadius: 14, background: '#f8fafc', border: '1px solid rgba(15,23,42,0.08)' }}>
-                    <span>
-                      <span style={{ display: 'block', fontSize: 14, color: '#334155', fontWeight: 600 }}>{item.label}</span>
-                      <span style={{ display: 'block', fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.5 }}>{item.body}</span>
-                    </span>
-                    <input type="checkbox" checked={Boolean(extras[item.key])} onChange={(event) => setExtras((prev) => ({ ...prev, [item.key]: event.target.checked }))} />
+                  <label key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 12px', borderRadius: 12, background: '#f8fafc', border: '1px solid rgba(15,23,42,0.08)' }}>
+                    <span style={{ fontSize: 13, color: '#334155', fontWeight: 600, lineHeight: 1.35 }}>{item.label}</span>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(extras[item.key])}
+                      onChange={(event) => setExtras((prev) => ({ ...prev, [item.key]: event.target.checked }))}
+                      style={{ width: 16, height: 16, flexShrink: 0 }}
+                    />
                   </label>
                 ))}
               </div>
@@ -435,19 +437,19 @@ export default function Settings() {
               <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Target size={16} style={{ color: '#10b981' }} /> Completion checklist
               </div>
-              <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, marginBottom: 14 }}>
-                The product should keep the user moving toward a complete profile because that directly improves interpretation and protocol quality.
+              <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.45, marginBottom: 12 }}>
+                Complete these for better analysis quality.
               </p>
               <div style={{ display: 'grid', gap: 8 }}>
                 {[
-                  { label: 'Name and timezone', done: Boolean(account.full_name && account.timezone) },
-                  { label: 'Height and weight', done: Boolean(medical.height_cm && medical.weight_kg) },
-                  { label: 'At least one health goal', done: medical.goals.length > 0 },
+                  { label: 'Name + timezone', done: Boolean(account.full_name && account.timezone) },
+                  { label: 'Height + weight', done: Boolean(medical.height_cm && medical.weight_kg) },
+                  { label: 'One health goal', done: medical.goals.length > 0 },
                   { label: 'Profile photo', done: Boolean(avatarUrl) },
-                  { label: 'At least one communication channel', done: Boolean(extras.telegram || extras.instagram || extras.linkedin) },
+                  { label: 'One contact channel', done: Boolean(extras.telegram || extras.instagram || extras.linkedin) },
                 ].map((item) => (
                   <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 14, background: '#f8fafc', border: '1px solid rgba(15,23,42,0.08)', padding: '11px 12px', gap: 12 }}>
-                    <span style={{ fontSize: 14, color: '#334155' }}>{item.label}</span>
+                    <span style={{ fontSize: 13, color: '#334155', lineHeight: 1.35 }}>{item.label}</span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: item.done ? '#059669' : '#94a3b8' }}>
                       {item.done && <CheckCircle2 size={14} />}
                       {item.done ? 'Done' : 'Missing'}
