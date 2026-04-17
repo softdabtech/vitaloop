@@ -12,7 +12,6 @@ export default defineConfig({
           // Vendor libraries
           'vendor-react': ['react', 'react-dom'],
           'vendor-ui': ['lucide-react', 'framer-motion'],
-          'vendor-charts': ['recharts'],
           'vendor-state': ['zustand'],
           'vendor-http': ['axios'],
           
