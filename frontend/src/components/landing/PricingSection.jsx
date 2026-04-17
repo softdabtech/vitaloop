@@ -11,7 +11,7 @@ const PLANS = [
     monthly: '$0',
     yearly: '$0',
     period: '',
-    desc: 'Start with core insights and evaluate your first reports.',
+    desc: 'Start with core insights for your first reports.',
     badge: null,
     dark: false,
     cta: 'Start Free',
@@ -30,7 +30,7 @@ const PLANS = [
     yearly: '$99',
     period: '/mo',
     annualNote: 'Save 17% on yearly billing',
-    desc: 'Unlimited analysis with complete biomarker protocols and personal timeline.',
+    desc: 'Unlimited analysis, full protocols, and personal timeline tracking.',
     badge: 'MOST POPULAR',
     dark: true,
     cta: 'Get Personal Pro',
@@ -49,7 +49,7 @@ const PLANS = [
     yearly: '$299',
     period: '/mo',
     annualNote: 'Annual option available',
-    desc: 'Everything in Personal plus CRM workflows and white-label reporting for practice use.',
+    desc: 'Everything in Personal plus CRM workflows and white-label reporting.',
     badge: 'FOR PROFESSIONALS',
     dark: false,
     premium: true,
@@ -69,7 +69,7 @@ const PLANS = [
     yearly: 'Custom',
     period: '/mo',
     annualNote: '5 seats included in entry plan',
-    desc: 'Multi-tenancy CRM, API access, and security controls for organizations.',
+    desc: 'Multi-tenancy CRM, API access, and advanced org-level controls.',
     badge: null,
     dark: false,
     cta: 'Contact Sales',
@@ -123,7 +123,7 @@ export default function PricingSection() {
             Freemium pricing built for users and practitioners
           </motion.h2>
           <motion.p variants={reduced ? {} : staggerChild} style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 460, margin: '0 auto', lineHeight: 1.65 }}>
-            Start on Free, grow into Pro, and scale with multi-tenancy CRM when your organization is ready.
+            Start free, upgrade to Pro, and scale with multi-tenancy CRM when your team is ready.
           </motion.p>
           <motion.div variants={reduced ? {} : staggerChild} style={{ marginTop: 20 }}>
             <span style={{
@@ -138,7 +138,7 @@ export default function PricingSection() {
               padding: '6px 14px',
               fontWeight: 600,
             }}>
-              80% ready - launching soon
+              80% complete - launching soon
             </span>
           </motion.div>
           <motion.div variants={reduced ? {} : staggerChild} style={{ marginTop: 24, display: 'flex', justifyContent: 'center' }}>
@@ -327,11 +327,15 @@ export default function PricingSection() {
                     border: 'none',
                     background: dark
                       ? 'white'
+                      : id === 'free'
+                      ? 'var(--teal-500)'
                       : premium
                       ? 'var(--teal-500)'
                       : 'var(--gray-100)',
                     color: dark
                       ? 'var(--teal-800)'
+                      : id === 'free'
+                      ? 'white'
                       : premium
                       ? 'white'
                       : 'var(--gray-700)',
@@ -352,7 +356,7 @@ export default function PricingSection() {
           viewport={viewport('-40px')}
           style={{ textAlign: 'center', fontSize: 13, color: 'var(--gray-500)' }}
         >
-          All paid plans include secure storage, regular protocol updates, and onboarding support.
+          All paid plans include secure storage, protocol updates, and onboarding support.
         </motion.div>
 
       </div>

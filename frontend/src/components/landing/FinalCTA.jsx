@@ -16,7 +16,6 @@ export default function FinalCTA() {
       padding: 'var(--py-sm) 24px',
       position: 'relative', overflow: 'hidden',
     }}>
-      {/* Radial glow */}
       {/* Radial glow — breathes slowly */}
       <div
         aria-hidden="true"
@@ -58,7 +57,7 @@ export default function FinalCTA() {
           fontSize: 17, color: 'var(--gray-300)',
           maxWidth: 480, margin: '0 auto 40px', lineHeight: 1.65,
         }}>
-          No credit card required. Instant results.
+          No credit card required. Results in minutes.
         </motion.p>
         <motion.button
           onClick={() => navigate('/login?signup=true')}
@@ -72,7 +71,7 @@ export default function FinalCTA() {
             display: 'inline-flex', alignItems: 'center', gap: 8,
           }}
         >
-          Upload Labs Now — Start Free <ArrowRight size={18} aria-hidden="true" />
+          Upload Your First Lab Report — Free <ArrowRight size={18} aria-hidden="true" />
         </motion.button>
         <div style={{ marginTop: 20 }}>
           <button

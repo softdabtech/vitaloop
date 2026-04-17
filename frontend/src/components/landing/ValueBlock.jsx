@@ -26,7 +26,7 @@ const CARDS = [
   {
     Icon: ShieldCheck,
     title: 'Privacy and security by design',
-    body: 'Your data is never sold. Supabase RLS, end-to-end secure processing. HIPAA/GDPR-ready roadmap.',
+    body: 'Your data is never sold. Supabase RLS and secure-by-default processing protect every record.',
   },
 ]
 

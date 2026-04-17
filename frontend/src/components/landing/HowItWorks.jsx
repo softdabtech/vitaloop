@@ -61,7 +61,7 @@ const STEPS = [
   {
     n: 1,
     title: 'Upload your labs',
-    desc: 'Upload any lab results in seconds - we extract all biomarkers automatically.',
+    desc: 'Upload any lab results in seconds. Biomarkers are extracted automatically.',
     card: {
       icon: <FileUp size={18} aria-hidden="true" />,
       title: 'Lab upload',
@@ -71,7 +71,7 @@ const STEPS = [
   {
     n: 2,
     title: "Understand what's wrong",
-    desc: 'AI identifies deficiencies, risks, and hidden patterns in your data.',
+    desc: 'AI identifies deficiencies, risks, and meaningful patterns in your data.',
     card: {
       icon: <Search size={18} aria-hidden="true" />,
       title: 'AI analysis summary',
@@ -81,7 +81,7 @@ const STEPS = [
   {
     n: 3,
     title: 'Answer a few questions',
-    desc: 'Tell us about your symptoms and lifestyle - we refine your results.',
+    desc: 'Add symptoms and lifestyle context to refine your analysis.',
     micro: 'Takes less than 60 seconds',
     card: {
       icon: <ClipboardList size={18} aria-hidden="true" />,
@@ -93,7 +93,7 @@ const STEPS = [
   {
     n: 4,
     title: 'Get your protocol',
-    desc: 'Personalized nutrition and supplement plan - clear and actionable.',
+    desc: 'Receive a personalized protocol with clear, prioritized actions.',
     card: {
       icon: <Activity size={18} aria-hidden="true" />,
       title: 'Your weekly protocol',
@@ -103,7 +103,7 @@ const STEPS = [
   {
     n: 5,
     title: 'Track your progress',
-    desc: 'Monitor improvements over time and adjust before problems grow.',
+    desc: 'Track trends over time and adjust before small issues grow.',
     card: {
       icon: <LineChart size={18} aria-hidden="true" />,
       title: 'Progress tracking',
@@ -157,7 +157,7 @@ export default function HowItWorksSection() {
             custom={0.16}
             style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 620, margin: '0 auto', lineHeight: 1.65 }}
           >
-            OCR extracts your data, Claude LLM interprets 50+ biomarkers, and VITALOOP builds practical next steps.
+            OCR extracts your data, Claude LLM interprets 50+ biomarkers, and VITALOOP delivers practical next steps.
           </motion.p>
         </motion.div>
 
@@ -243,7 +243,7 @@ export default function HowItWorksSection() {
               gap: 8,
             }}
           >
-            Try it free <ArrowRight size={14} aria-hidden="true" />
+            Try it for Free <ArrowRight size={14} aria-hidden="true" />
           </button>
         </div>
       </div>

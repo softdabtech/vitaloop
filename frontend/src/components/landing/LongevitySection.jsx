@@ -8,15 +8,15 @@ const LOOP_STEPS = [
 const BLOCKS = [
   {
     title: 'Your data evolves',
-    body: 'Every new report updates your baseline and priorities.',
+    body: 'Each new report updates your baseline and priorities.',
   },
   {
     title: 'Your protocol adapts automatically',
-    body: 'Recommendations adjust as biomarkers and symptoms change.',
+    body: 'Recommendations adapt as biomarkers and symptoms change.',
   },
   {
     title: 'Your practitioner can collaborate',
-    body: 'CRM workflows keep individual and team care aligned over time.',
+    body: 'Built-in CRM workflows keep individual and team care aligned.',
   },
 ]
 
@@ -44,8 +44,8 @@ export default function LongevitySection() {
             Long-term health is a continuous loop
           </h2>
           <p style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 540, margin: '0 auto', lineHeight: 1.65 }}>
-            Your body changes over time. VITALOOP keeps your decisions current with every new test,
-            symptom update, and protocol adjustment.
+            Your body changes over time. VITALOOP keeps decisions current with each test,
+            symptom update, and protocol iteration.
           </p>
         </div>
 
