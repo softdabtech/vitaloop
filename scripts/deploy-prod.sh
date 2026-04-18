@@ -145,9 +145,29 @@ ssh $SSH_OPTS "$REMOTE_HOST" "
     cd $REMOTE_DIR
     
     CHANGED_FILES=\"\$(git diff --name-only ORIG_HEAD HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || true)\"
+    CURRENT_HEAD=\"\$(git rev-parse HEAD)\"
+    FRONTEND_BUILD_STAMP=frontend/dist/.build_commit
+    NEED_FRONTEND_BUILD=0
+
+    if echo \"\$CHANGED_FILES\" | grep -qE '^frontend/'; then
+        NEED_FRONTEND_BUILD=1
+    fi
+
+    if [[ ! -f frontend/dist/index.html ]]; then
+        NEED_FRONTEND_BUILD=1
+    fi
+
+    if [[ -f \"\$FRONTEND_BUILD_STAMP\" ]]; then
+        LAST_BUILT_HEAD=\"\$(cat \"\$FRONTEND_BUILD_STAMP\" 2>/dev/null || true)\"
+        if [[ \"\$LAST_BUILT_HEAD\" != \"\$CURRENT_HEAD\" ]]; then
+            NEED_FRONTEND_BUILD=1
+        fi
+    else
+        NEED_FRONTEND_BUILD=1
+    fi
 
     # Frontend build (when any frontend file changed, or when build artifacts are missing)
-    if echo \"\$CHANGED_FILES\" | grep -qE '^frontend/' || [[ ! -f frontend/dist/index.html ]]; then
+    if [[ \"\$NEED_FRONTEND_BUILD\" == \"1\" ]]; then
         echo 'Building frontend...'
         cd frontend
         npm ci --prefer-offline || npm ci
@@ -156,6 +176,7 @@ ssh $SSH_OPTS "$REMOTE_HOST" "
             echo 'ERROR: Frontend build failed'
             exit 1
         }
+        echo \"\$CURRENT_HEAD\" > dist/.build_commit
         cd ..
     else
         echo 'Skipping frontend build (no frontend changes)'
