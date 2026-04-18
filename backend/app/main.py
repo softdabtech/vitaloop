@@ -42,7 +42,7 @@ elif settings.sentry_dsn and sentry_sdk is None:
 from app.routers import health
 from app.routers.identity import auth, profile, onboarding
 from app.routers.analysis import analyze, insights, red_flags, timeline, dashboard
-from app.routers.protocol import protocol, progress, symptoms, checkins, questionnaire, assignments
+from app.routers.protocol import protocol, progress, symptoms, checkins, questionnaire, assignments, compatibility
 from app.routers.notifications import notifications, complaints
 from app.routers.billing import stripe_router
 from app.routers.crm import crm, crm_clients
@@ -149,3 +149,4 @@ app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(onboarding.router)
 app.include_router(questionnaire.router, prefix="/questionnaire", tags=["questionnaire"])
 app.include_router(dashboard.router)
+app.include_router(compatibility.router)
