@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   ArrowRight,
   BrainCircuit,
@@ -13,6 +13,7 @@ import {
   HeartPulse,
   LayoutDashboard,
   Lock,
+  Menu,
   Shield,
   ShieldCheck,
   Sparkles,
@@ -20,6 +21,7 @@ import {
   TrendingUp,
   Upload,
   Users,
+  X,
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
 import { CabinetPreviewModal } from '../components/landing/Hero.jsx'
@@ -536,7 +538,14 @@ export default function Landing() {
   const [theme, setTheme] = useState('dark')
   const [demoOpen, setDemoOpen] = useState(false)
   const [loopActive, setLoopActive] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user } = useAuth()
+
+  const closeMobileMenu = () => setMobileMenuOpen(false)
+  const navScrollTo = (id) => {
+    closeMobileMenu()
+    setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }), mobileMenuOpen ? 280 : 0)
+  }
 
   const pricingCards = PRICING[pricingMode]
 
@@ -585,7 +594,7 @@ export default function Landing() {
             {NAV_LINKS.map((item) => (
               <button
                 key={item.id}
-                onClick={() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() => navScrollTo(item.id)}
                 className={`text-sm transition ${navTextClass}`}
               >
                 {item.label}
@@ -617,6 +626,16 @@ export default function Landing() {
               <span className={`text-[11px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>🌙</span>
             </button>
 
+            {/* Log in link — only for non-authenticated visitors */}
+            {!user && (
+              <button
+                onClick={() => navigate('/login')}
+                className={`hidden sm:inline-flex text-sm font-medium transition ${isDark ? 'text-slate-400 hover:text-slate-100' : 'text-slate-500 hover:text-slate-900'}`}
+              >
+                Log in
+              </button>
+            )}
+
             {/* Cabinet / Sign Up button */}
             <button
               onClick={() => navigate(user ? '/dashboard' : '/login?signup=true')}
@@ -624,8 +643,87 @@ export default function Landing() {
             >
               {user ? 'Cabinet' : 'Sign Up'}
             </button>
+
+            {/* Mobile hamburger */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              aria-label="Open navigation menu"
+              className={`inline-flex items-center justify-center rounded-lg p-2 md:hidden ${isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100'} transition`}
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile slide-down menu */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              key="mobile-menu"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+              className={`border-t md:hidden ${isDark ? 'border-slate-800 bg-[#0A0F1C]' : 'border-slate-200 bg-white'}`}
+            >
+              <div className="mx-auto flex max-w-[1240px] flex-col gap-1 px-4 py-4">
+                {NAV_LINKS.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => navScrollTo(item.id)}
+                    className={`rounded-xl px-4 py-3 text-left text-sm font-medium transition ${isDark ? 'text-slate-300 hover:bg-slate-800/80 hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+                <div className={`my-2 h-px ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`} />
+                {/* Theme toggle in mobile menu */}
+                <div className="flex items-center justify-between rounded-xl px-4 py-3">
+                  <span className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    {isDark ? 'Dark mode' : 'Light mode'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+                    aria-label="Toggle theme"
+                    className="flex items-center gap-1.5"
+                  >
+                    <span className={`text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>☀</span>
+                    <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border transition-colors duration-200 ${isDark ? 'border-slate-600 bg-slate-700' : 'border-emerald-300 bg-emerald-500'}`}>
+                      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${isDark ? 'translate-x-0.5' : 'translate-x-[18px]'}`} />
+                    </span>
+                    <span className={`text-[11px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>🌙</span>
+                  </button>
+                </div>
+                <div className={`my-1 h-px ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`} />
+                {user ? (
+                  <button
+                    onClick={() => { closeMobileMenu(); navigate('/dashboard') }}
+                    className="mt-1 w-full rounded-xl bg-emerald-500 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-emerald-400"
+                  >
+                    Cabinet
+                  </button>
+                ) : (
+                  <div className="mt-1 flex flex-col gap-2">
+                    <button
+                      onClick={() => { closeMobileMenu(); navigate('/login?signup=true') }}
+                      className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-emerald-400"
+                    >
+                      Sign Up — Free
+                    </button>
+                    <button
+                      onClick={() => { closeMobileMenu(); navigate('/login') }}
+                      className={`w-full rounded-xl border px-4 py-3 text-center text-sm font-semibold transition ${isDark ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                    >
+                      Log in
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       <main>
