@@ -927,21 +927,21 @@ export default function Landing() {
             </div>
           </motion.div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-5 lg:grid-cols-3">
             {pricingCards.map((plan) => (
               <motion.article
                 key={plan.name}
                 {...fadeUp(reduced)}
                 whileHover={reduced ? undefined : { y: -4, scale: 1.01 }}
-                className={`flex h-full flex-col rounded-3xl border p-6 ${plan.featured ? 'border-emerald-300 bg-emerald-500/10' : isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
-                style={{ boxShadow: plan.featured ? '0 0 0 4px rgba(16,185,129,0.12), 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' : '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08)' }}
+                className={`flex h-full flex-col rounded-3xl border p-7 md:p-8 ${plan.featured ? 'border-emerald-400 bg-gradient-to-b from-emerald-50 to-white' : isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
+                style={{ boxShadow: plan.featured ? '0 0 0 4px rgba(16,185,129,0.15), 0 24px 32px -8px rgb(0 0 0 / 0.12), 0 12px 16px -10px rgb(0 0 0 / 0.12)' : '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08)' }}
               >
-                <div className="mb-3 flex min-h-[28px] items-start justify-between gap-3">
-                  <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${plan.featured ? 'text-emerald-200' : isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                <div className="mb-4 flex min-h-[36px] items-center justify-between gap-3">
+                  <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${plan.featured ? (isDark ? 'text-emerald-200' : 'text-emerald-700') : isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
                     {PLAN_DETAILS[plan.name]?.eyebrow}
                   </p>
                   {plan.featured && (
-                    <span className="shrink-0 rounded-full border border-emerald-300 bg-emerald-400 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-[0_6px_16px_rgba(16,185,129,0.35)]">
+                    <span className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-extrabold uppercase tracking-[0.14em] shadow-[0_10px_24px_rgba(16,185,129,0.35)] ${isDark ? 'border border-emerald-300/70 bg-emerald-300 text-slate-950' : 'border border-emerald-700 bg-emerald-600 text-white'}`}>
                       Most popular
                     </span>
                   )}
@@ -951,19 +951,21 @@ export default function Landing() {
                   <span className="text-4xl font-bold tracking-tight">{plan.price}</span>
                   <span className={`pb-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{plan.period}</span>
                 </div>
-                <p className={`mt-4 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                  {PLAN_DETAILS[plan.name]?.description}
-                </p>
-                <ul className="mt-5 space-y-2">
-                  {plan.points.map((point) => (
-                    <li key={point} className="flex items-start gap-2 text-sm">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-400" />
-                      <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>{point}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className={`mt-5 rounded-2xl border px-4 py-4 text-sm leading-relaxed ${isDark ? 'border-slate-800 bg-slate-950/60 text-slate-200' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
-                  {PLAN_DETAILS[plan.name]?.idealFor}
+                <div className="mt-5 flex flex-1 flex-col gap-5">
+                  <p className={`text-base leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                    {PLAN_DETAILS[plan.name]?.description}
+                  </p>
+                  <ul className="space-y-2.5">
+                    {plan.points.map((point) => (
+                      <li key={point} className="flex items-start gap-2.5 text-sm">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
+                        <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className={`rounded-2xl border px-4 py-4 text-base leading-relaxed ${isDark ? 'border-slate-800 bg-slate-950/60 text-slate-200' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
+                    {PLAN_DETAILS[plan.name]?.idealFor}
+                  </div>
                 </div>
                 <button onClick={() => {
                   if (plan.name === 'Enterprise') {
@@ -971,7 +973,7 @@ export default function Landing() {
                     return
                   }
                   navigate('/login?signup=true')
-                }} className={`mt-6 w-full ${ctaBase} mt-auto ${plan.featured ? isDark ? 'border border-emerald-400/60 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/15' : 'border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+                }} className={`mt-6 w-full ${ctaBase} ${plan.featured ? isDark ? 'border border-emerald-400/60 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/15' : 'border border-emerald-400 bg-emerald-100 text-emerald-900 hover:bg-emerald-200' : isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                   {plan.cta}
                 </button>
                 {plan.name === 'Enterprise' && (
