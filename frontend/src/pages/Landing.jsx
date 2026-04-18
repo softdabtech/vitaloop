@@ -1044,15 +1044,15 @@ export default function Landing() {
                 key={plan.name}
                 {...fadeUp(reduced)}
                 whileHover={reduced ? undefined : { y: -4, scale: 1.01 }}
-                className={`flex h-full flex-col rounded-3xl border p-7 md:p-8 ${plan.featured ? 'border-emerald-400 bg-gradient-to-b from-emerald-50 to-white' : isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
-                style={{ boxShadow: plan.featured ? '0 0 0 4px rgba(16,185,129,0.15), 0 24px 32px -8px rgb(0 0 0 / 0.12), 0 12px 16px -10px rgb(0 0 0 / 0.12)' : '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08)' }}
+                className={`flex h-full flex-col rounded-3xl border p-7 md:p-8 ${plan.featured ? 'border-emerald-400 bg-gradient-to-b from-[#f3fff9] to-[#ecfff6] text-slate-900' : isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
+                style={{ boxShadow: plan.featured ? '0 0 0 4px rgba(16,185,129,0.16), 0 24px 32px -8px rgb(0 0 0 / 0.16), 0 12px 16px -10px rgb(0 0 0 / 0.14)' : '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08)' }}
               >
                 <div className="mb-4 flex min-h-[36px] items-center justify-between gap-3">
-                  <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${plan.featured ? (isDark ? 'text-emerald-200' : 'text-emerald-700') : isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                  <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${plan.featured ? 'text-emerald-600' : isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
                     {PLAN_DETAILS[plan.name]?.eyebrow}
                   </p>
                   {plan.featured && (
-                    <span className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-extrabold uppercase tracking-[0.14em] shadow-[0_10px_24px_rgba(16,185,129,0.35)] ${isDark ? 'border border-emerald-300/70 bg-emerald-300 text-slate-950' : 'border border-emerald-700 bg-emerald-600 text-white'}`}>
+                    <span className="shrink-0 rounded-full border border-emerald-400 bg-emerald-300 px-4 py-1.5 text-xs font-extrabold uppercase tracking-[0.14em] text-slate-900 shadow-[0_10px_24px_rgba(16,185,129,0.35)]">
                       Most popular
                     </span>
                   )}
@@ -1060,21 +1060,21 @@ export default function Landing() {
                 <h3 className="text-xl font-semibold">{plan.name}</h3>
                 <div className="mt-4 flex items-end gap-1">
                   <span className="text-4xl font-bold tracking-tight">{plan.price}</span>
-                  <span className={`pb-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{plan.period}</span>
+                  <span className={`pb-1 text-sm ${plan.featured ? 'text-slate-500' : isDark ? 'text-slate-400' : 'text-slate-500'}`}>{plan.period}</span>
                 </div>
                 <div className="mt-5 flex flex-1 flex-col gap-5">
-                  <p className={`text-base leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                  <p className={`text-base leading-relaxed ${plan.featured ? 'text-slate-600' : isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                     {PLAN_DETAILS[plan.name]?.description}
                   </p>
                   <ul className="space-y-2.5">
                     {plan.points.map((point) => (
                       <li key={point} className="flex items-start gap-2.5 text-sm">
                         <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
-                        <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>{point}</span>
+                        <span className={plan.featured ? 'text-slate-600' : isDark ? 'text-slate-300' : 'text-slate-600'}>{point}</span>
                       </li>
                     ))}
                   </ul>
-                  <div className={`rounded-2xl border px-4 py-4 text-base leading-relaxed ${isDark ? 'border-slate-800 bg-slate-950/60 text-slate-200' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
+                  <div className={`mt-auto rounded-2xl border px-4 py-4 text-base leading-relaxed ${plan.featured ? 'border-slate-300 bg-slate-600 text-slate-100' : isDark ? 'border-slate-800 bg-slate-950/60 text-slate-200' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
                     {PLAN_DETAILS[plan.name]?.idealFor}
                   </div>
                 </div>
@@ -1084,7 +1084,7 @@ export default function Landing() {
                     return
                   }
                   navigate('/login?signup=true')
-                }} className={`mt-6 w-full ${ctaBase} ${plan.featured ? isDark ? 'border border-emerald-400/60 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/15' : 'border border-emerald-400 bg-emerald-100 text-emerald-900 hover:bg-emerald-200' : isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+                }} className={`mt-6 w-full ${ctaBase} ${plan.featured ? 'border border-emerald-400 bg-emerald-200 text-emerald-900 hover:bg-emerald-300' : isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                   {plan.cta}
                 </button>
                 {plan.name === 'Enterprise' && (
@@ -1140,7 +1140,7 @@ export default function Landing() {
                 </div>
                 <div className={`rounded-2xl border px-4 py-3 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
                   <div className={`text-[11px] uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Launch and stack</div>
-                  <div className="mt-1 text-sm font-semibold">Launch: April 2026 · FastAPI + Claude AI + Supabase</div>
+                  <div className="mt-1 text-sm font-semibold">Launch: May 2026 · FastAPI + Claude AI + Supabase</div>
                 </div>
                 <div className={`rounded-2xl border px-4 py-3 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
                   <div className={`text-[11px] uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Contact</div>
@@ -1208,7 +1208,7 @@ export default function Landing() {
         {/* === Blog teaser === */}
         <section aria-label="Health intelligence resources" className="mx-auto w-full max-w-[1240px] px-4 py-8 sm:px-6">
           <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}>
-            <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+            <div className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
               <div>
                 <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Health Intelligence Hub</p>
                 <h2 className="mt-2 text-[22px] font-semibold tracking-tight">Guides on Biomarker Interpretation & Biohacking</h2>
@@ -1232,14 +1232,14 @@ export default function Landing() {
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {HUB_GUIDES.map((guide, idx) => {
                   const Icon = guide.icon
                   return (
                     <motion.article
                       key={guide.title}
                       {...fadeUp(reduced, idx * 0.05)}
-                      className={`rounded-3xl border p-5 ${isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'}`}
+                      className={`rounded-3xl border p-6 ${isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'}`}
                     >
                       <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${isDark ? 'bg-emerald-500/14 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
                         <Icon className="h-4 w-4" />
