@@ -28,7 +28,7 @@ const NAV_LINKS = [
   { id: 'why-vitaloop', label: 'Features' },
   { id: 'pricing', label: 'Pricing' },
   { id: 'testimonials', label: 'Stories' },
-  { id: 'investors', label: 'Investors' },
+  { id: 'traction', label: 'Investors' },
   { id: 'faq', label: 'FAQ' },
 ]
 
@@ -211,38 +211,6 @@ const HERO_TRUST_SIGNALS = [
     body: 'From upload to personalized protocol with weekly adaptation loop.',
     icon: Clock3,
   },
-]
-
-const INVESTOR_METRICS = [
-  { value: '85+', label: 'Biomarkers normalized' },
-  { value: '<60s', label: 'Upload to protocol draft' },
-  { value: '3', label: 'Revenue layers live' },
-  { value: 'Weekly', label: 'Retention loop cadence' },
-]
-
-const TEAM_SNIPPETS = [
-  {
-    name: 'Product and Platform',
-    role: 'Founding team',
-    linkedin: 'https://www.linkedin.com/company/softdab/',
-  },
-  {
-    name: 'AI and Data Infrastructure',
-    role: 'Founding team',
-    linkedin: 'https://www.linkedin.com/company/softdab/',
-  },
-  {
-    name: 'Clinical Workflow Design',
-    role: 'Advisory network',
-    linkedin: 'https://www.linkedin.com/company/softdab/',
-  },
-]
-
-const COMPETITOR_SNAPSHOT = [
-  'LabCorp / MyChart',
-  'Everlywell',
-  'Levels',
-  'Function Health',
 ]
 
   const STATS = [
@@ -1022,6 +990,56 @@ export default function Landing() {
           </div>
         </section>
 
+        <section id="traction" className="mx-auto w-full max-w-[1240px] px-4 py-8 sm:px-6 md:py-10">
+          <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Traction</p>
+              <button
+                onClick={() => navigate('/for-investors')}
+                className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-700 hover:text-emerald-600'}`}
+              >
+                Open full investor page
+              </button>
+            </div>
+
+            <div className={`mt-4 rounded-3xl border p-5 md:p-6 ${isDark ? 'border-slate-800 bg-slate-950/65' : 'border-slate-200 bg-white'}`}>
+              <p className={`text-sm leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+                Built by Alex Bombela - founder at SoftDAB Tech, building AI infrastructure products and leading VITALOOP execution.
+                {' '}
+                <a
+                  href="https://www.linkedin.com/in/aleksey-bombela/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`${isDark ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-700 hover:text-emerald-600'} font-semibold`}
+                >
+                  LinkedIn
+                </a>
+              </p>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className={`rounded-2xl border px-4 py-3 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
+                  <div className={`text-[11px] uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Early access</div>
+                  <div className="mt-1 text-sm font-semibold">10 users</div>
+                </div>
+                <div className={`rounded-2xl border px-4 py-3 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
+                  <div className={`text-[11px] uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Lab integrations</div>
+                  <div className="mt-1 text-sm font-semibold">Quest, LabCorp, +50 formats</div>
+                </div>
+                <div className={`rounded-2xl border px-4 py-3 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
+                  <div className={`text-[11px] uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Launch and stack</div>
+                  <div className="mt-1 text-sm font-semibold">Launch: April 2026 · FastAPI + Claude AI + Supabase</div>
+                </div>
+                <div className={`rounded-2xl border px-4 py-3 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
+                  <div className={`text-[11px] uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Contact</div>
+                  <a href="mailto:bombela@softdab.tech" className={`mt-1 inline-flex text-sm font-semibold ${isDark ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-700 hover:text-emerald-600'}`}>
+                    bombela@softdab.tech
+                  </a>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+
         <section id="testimonials" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7">
             <h2 className="text-[28px] font-semibold tracking-tight">Real Users. Real Biomarker Progress.</h2>
@@ -1048,65 +1066,6 @@ export default function Landing() {
             ))}
           </div>
         </section>
-
-        <section id="investors" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
-          <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}>
-            <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-              <div>
-                <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>For investors</p>
-                <h2 className="mt-3 text-[28px] font-semibold tracking-tight">Team, traction, enterprise thesis</h2>
-                <p className={`mt-3 max-w-2xl text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                  VITALOOP is built by a product and infrastructure team focused on longitudinal health intelligence. The enterprise path targets practitioner workflow pain where fragmented tools block fast, consistent client review.
-                </p>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {INVESTOR_METRICS.map((item) => (
-                    <div key={item.label} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white'}`}>
-                      <div className={`text-xl font-bold tracking-tight ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>{item.value}</div>
-                      <div className={`mt-1 text-xs uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item.label}</div>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={() => navigate('/for-investors')}
-                  className={`mt-5 ${ctaBase} ${isDark ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' : 'bg-slate-900 text-white hover:bg-slate-700'}`}
-                >
-                  Open For Investors page
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className={`rounded-3xl border p-5 ${isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'}`}>
-                  <h3 className="text-lg font-semibold">Built by</h3>
-                  <div className="mt-3 space-y-3">
-                    {TEAM_SNIPPETS.map((member) => (
-                      <div key={member.name} className={`rounded-2xl border p-3 ${isDark ? 'border-slate-800 bg-slate-900/65' : 'border-slate-200 bg-white'}`}>
-                        <div className="text-sm font-semibold">{member.name}</div>
-                        <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{member.role}</div>
-                        <a href={member.linkedin} target="_blank" rel="noreferrer" className={`mt-2 inline-flex text-xs font-semibold uppercase tracking-[0.14em] ${isDark ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-700 hover:text-emerald-600'}`}>
-                          LinkedIn
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className={`rounded-3xl border p-5 ${isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'}`}>
-                  <h3 className="text-lg font-semibold">Competitive snapshot</h3>
-                  <p className={`mt-2 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                    We position against record portals, test-commerce products, and single-domain tracking tools by owning longitudinal execution.
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {COMPETITOR_SNAPSHOT.map((name) => (
-                      <span key={name} className={`rounded-full border px-3 py-1 text-xs ${isDark ? 'border-slate-700 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>{name}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </section>
-
 
         {/* === FAQ Section === */}
         <section id="faq" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
