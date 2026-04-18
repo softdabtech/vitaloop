@@ -268,8 +268,16 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     insights = insights_result if isinstance(insights_result, list) else []
 
     global_role = _normalize_role(account.get("global_role"), current_user.get("global_role"), current_user.get("role"))
-    assignments = await _fetch_assignments(user_id, global_role)
-    upload_count = await svc.get_user_upload_count(user_id)
+
+    try:
+        assignments = await _fetch_assignments(user_id, global_role)
+    except Exception:
+        assignments = []
+
+    try:
+        upload_count = await svc.get_user_upload_count(user_id)
+    except Exception:
+        upload_count = len(progress)
 
     health_latest = None
     try:
@@ -338,8 +346,20 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
         weekly_checkin = None
         questionnaire_latest = None
 
-    next_best_action = _build_next_best_action(onboarding, assignments, progress)
-    start_here = _build_start_here(onboarding, progress, account.get("created_at"))
+    try:
+        next_best_action = _build_next_best_action(onboarding, assignments, progress)
+    except Exception:
+        next_best_action = {
+            "title": "Upload your first lab",
+            "description": "This unlocks biomarker trends and AI recommendations.",
+            "cta_label": "Upload labs",
+            "path": "/upload",
+        }
+
+    try:
+        start_here = _build_start_here(onboarding, progress, account.get("created_at"))
+    except Exception:
+        start_here = {"enabled": False}
 
     return {
         "profile": {
