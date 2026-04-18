@@ -7,7 +7,6 @@ import {
   Brain,
   CheckCircle2,
   ClipboardList,
-  Circle,
   Crown,
   FlaskConical,
   Sparkles,
@@ -60,48 +59,104 @@ function EmptyBlock({ title, body, cta, onClick }) {
   )
 }
 
-function WelcomeJourney({ steps, completedCount, onPrimaryClick }) {
-  const total = steps.length
-  const progress = total > 0 ? Math.round((completedCount / total) * 100) : 0
-
+function DashboardLoadingState() {
   return (
-    <section className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(29,158,117,0.14),_transparent_45%),linear-gradient(135deg,_#ffffff,_#f4fbf8_58%,_#f8fafc)] p-5 shadow-sm sm:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Welcome</div>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Your health journey starts here</h2>
-          <p className="mt-1 text-sm text-slate-600">Follow these 5 steps to unlock your personalized protocol and weekly tracking.</p>
-        </div>
-        <button
-          onClick={onPrimaryClick}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
-        >
-          Upload your first lab
-          <ArrowRight className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="mb-4">
-        <div className="mb-1 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
-          <span>Progress</span>
-          <span>{completedCount}/{total}</span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-white/80 ring-1 ring-slate-200">
-          <div className="h-full rounded-full bg-emerald-500" style={{ width: `${progress}%` }} />
-        </div>
-      </div>
-
-      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-1">
-        {steps.map((step) => (
-          <div key={step.id} className="rounded-2xl border border-white/70 bg-white/85 px-4 py-3 text-sm text-slate-700 shadow-sm">
-            <div className="flex items-center gap-2.5">
-              {step.done ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Circle className="h-4 w-4 text-slate-300" />}
-              <span className="font-medium">{step.label}</span>
-            </div>
-          </div>
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="h-[128px] animate-pulse rounded-3xl border border-slate-200/80 bg-white/90" />
         ))}
       </div>
-    </section>
+      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.95fr_320px]">
+        <div className="h-[320px] animate-pulse rounded-3xl border border-slate-200/80 bg-white/90" />
+        <div className="h-[320px] animate-pulse rounded-3xl border border-slate-200/80 bg-white/90" />
+        <div className="h-[320px] animate-pulse rounded-3xl border border-slate-200/80 bg-white/90" />
+      </div>
+    </div>
+  )
+}
+
+function FirstRunDashboard({ startHere, steps, completedCount, onboardingComplete, onUploadClick, onProfileClick }) {
+  const total = steps.length
+  const progress = total > 0 ? Math.round((completedCount / total) * 100) : 0
+  const title = startHere?.title || 'Start here: get first value in 30 seconds'
+  const description = startHere?.description || 'Upload one lab file to unlock trends, tasks, and recommendations.'
+  const topSteps = (startHere?.steps || steps.map((step) => step.label)).slice(0, 3)
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_48%),linear-gradient(135deg,_#ffffff,_#effcf6_55%,_#f8fafc)] p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Start here</div>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h2>
+            <p className="max-w-2xl text-sm text-slate-600">{description}</p>
+            <div className="grid gap-2 pt-2 sm:grid-cols-3">
+              {topSteps.map((step, index) => (
+                <div key={step} className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3 text-sm text-slate-600 shadow-sm">
+                  <span className="mr-2 font-semibold text-emerald-600">{index + 1}.</span>{step}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:min-w-[220px]">
+            <button
+              onClick={onUploadClick}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
+            >
+              {startHere?.cta_label || 'Upload first lab'}
+              <ArrowRight className="h-4 w-4" />
+            </button>
+            {!onboardingComplete && (
+              <button
+                onClick={onProfileClick}
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:text-emerald-700"
+              >
+                Complete health profile
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <DashboardCard title="What unlocks after the first upload" eyebrow="Immediate value">
+          <div className="space-y-3">
+            {[
+              'Structured biomarker extraction from your report',
+              'A readable results view instead of raw PDF numbers',
+              'Insight cards, next actions, and protocol context',
+            ].map((item) => (
+              <div key={item} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </DashboardCard>
+
+        <DashboardCard title="Account readiness" eyebrow="Setup progress">
+          <div className="mb-4">
+            <div className="mb-1 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <span>Progress</span>
+              <span>{completedCount}/{total}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full rounded-full bg-emerald-500" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {steps.map((step) => (
+              <div key={step.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                <CheckCircle2 className={`h-4 w-4 shrink-0 ${step.done ? 'text-emerald-600' : 'text-slate-300'}`} />
+                <span className={step.done ? 'font-medium text-slate-900' : ''}>{step.label}</span>
+              </div>
+            ))}
+          </div>
+        </DashboardCard>
+      </div>
+    </div>
   )
 }
 
@@ -182,7 +237,8 @@ export default function UserDashboard() {
   const hasUploads = Number(stats.total_uploads || 0) > 0
   const onboardingComplete = Boolean(user?.onboarding_complete || profile?.onboarding_complete)
   const hasProtocol = Boolean(stats.active_program && String(stats.active_program).toLowerCase() !== 'not started')
-  const showStartHere = Boolean(startHere?.enabled && !hasUploads)
+  const isFirstRun = !loading && !hasUploads
+  const showStartHere = Boolean(startHere?.enabled && isFirstRun)
   const journeySteps = [
     { id: 'account', label: 'Step 1 - Account created', done: true },
     { id: 'upload', label: 'Step 2 - Upload your first lab', done: hasUploads },
@@ -209,7 +265,7 @@ export default function UserDashboard() {
         title={`Welcome back, ${greeting}`}
         subtitle={profile?.onboarding?.requires_onboarding ? profile?.onboarding?.current_stage_label || 'Continue onboarding' : 'Your dashboard is assembled from current uploads, assignments, and check-ins.'}
         helper="Every block below should either show your live data or explain exactly what will unlock after the next action."
-        action={!showStartHere ? (
+        action={!loading && !isFirstRun ? (
           <div className="flex flex-wrap gap-2">
             <button onClick={() => navigate('/upload')} className="vtl-button-primary px-4 text-sm">Upload labs</button>
             {hasUploads && <button onClick={() => navigate('/lab-results')} className="vtl-button-secondary px-4 text-sm">Open results</button>}
@@ -221,52 +277,27 @@ export default function UserDashboard() {
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
       )}
 
-      {showStartHere && (
-        <motion.section
-          {...fadeUp()}
-          className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_48%),linear-gradient(135deg,_#ffffff,_#effcf6_55%,_#f8fafc)] p-5 shadow-sm sm:p-6"
-          style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.06), inset 0 1px 0 rgba(29,158,117,0.14)' }}
-        >
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Start here</div>
-              <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{startHere.title}</h2>
-              <p className="max-w-2xl text-sm text-slate-600">{startHere.description}</p>
-              <div className="grid gap-2 pt-2 sm:grid-cols-3">
-                {(startHere.steps || []).slice(0, 3).map((step, index) => (
-                  <div key={step} className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3 text-sm text-slate-600 shadow-sm">
-                    <span className="mr-2 font-semibold text-emerald-600">{index + 1}.</span>{step}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <button
-              onClick={() => navigate(startHere.cta_path || '/upload')}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
-            >
-              {startHere.cta_label || 'Continue'}
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </motion.section>
-      )}
-
-      {!loading && !hasUploads && !showStartHere ? (
-        <WelcomeJourney
+      {loading ? (
+        <DashboardLoadingState />
+      ) : isFirstRun ? (
+        <FirstRunDashboard
+          startHere={showStartHere ? startHere : null}
           steps={journeySteps}
           completedCount={completedJourneyCount}
-          onPrimaryClick={() => navigate('/upload')}
+          onboardingComplete={onboardingComplete}
+          onUploadClick={() => navigate((showStartHere && startHere?.cta_path) || '/upload')}
+          onProfileClick={() => navigate('/settings')}
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard title="Lab uploads" value={loading ? '...' : (stats.total_uploads ?? 0)} unit="total" icon={FlaskConical} color="emerald" />
-          <StatCard title="Active assignments" value={loading ? '...' : (stats.active_assignments ?? 0)} unit="live" icon={ClipboardList} color="blue" />
-          <StatCard title="Insights ready" value={loading ? '...' : (stats.insights_count ?? 0)} unit="cards" icon={Brain} color="purple" />
-          <StatCard title="Subscription" value={loading ? '...' : String(stats.subscription || 'free').replace('_', ' ')} unit="plan" icon={Crown} color="orange" />
-        </div>
-      )}
+        <>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard title="Lab uploads" value={stats.total_uploads ?? 0} unit="total" icon={FlaskConical} color="emerald" />
+            <StatCard title="Active assignments" value={stats.active_assignments ?? 0} unit="live" icon={ClipboardList} color="blue" />
+            <StatCard title="Insights ready" value={stats.insights_count ?? 0} unit="cards" icon={Brain} color="purple" />
+            <StatCard title="Subscription" value={String(stats.subscription || 'free').replace('_', ' ')} unit="plan" icon={Crown} color="orange" />
+          </div>
 
-      <motion.div {...fadeUp(0.04)} className="grid items-start gap-4 xl:grid-cols-[1.1fr_0.95fr_320px]">
+          <motion.div {...fadeUp(0.04)} className="grid items-start gap-4 xl:grid-cols-[1.1fr_0.95fr_320px]">
         <DashboardCard title="Current account state" eyebrow="Live summary">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
@@ -333,10 +364,10 @@ export default function UserDashboard() {
           </div>
         </DashboardCard>
 
-        <QuickActionsPanel />
-      </motion.div>
+            <QuickActionsPanel />
+          </motion.div>
 
-      <motion.div {...fadeUp(0.08)} className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+          <motion.div {...fadeUp(0.08)} className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <DashboardCard
           title="Today focus"
           eyebrow="Priority queue"
@@ -393,9 +424,9 @@ export default function UserDashboard() {
             />
           )}
         </DashboardCard>
-      </motion.div>
+          </motion.div>
 
-      <motion.div {...fadeUp(0.12)} className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+          <motion.div {...fadeUp(0.12)} className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <DashboardCard title="Progress trend" eyebrow="Biomarker history">
           {progress.length > 0 ? <HealthChart progress={progress} /> : (
             <EmptyBlock
@@ -417,20 +448,22 @@ export default function UserDashboard() {
             />
           )}
         </DashboardCard>
-      </motion.div>
+          </motion.div>
 
-      <motion.div {...fadeUp(0.14)}>
-        <DashboardCard title="Health activity timeline" eyebrow="Historical context">
-        {progress.length > 0 ? <ProgressTimeline progress={progress} /> : (
-          <EmptyBlock
-            title="Your timeline starts with the first upload"
-            body="After the first lab, timeline events will record uploads, generated protocols, insights, and follow-up actions in one place."
-            cta="Go to upload"
-            onClick={() => navigate('/upload')}
-          />
-        )}
-        </DashboardCard>
-      </motion.div>
+          <motion.div {...fadeUp(0.14)}>
+            <DashboardCard title="Health activity timeline" eyebrow="Historical context">
+              {progress.length > 0 ? <ProgressTimeline progress={progress} /> : (
+                <EmptyBlock
+                  title="Your timeline starts with the first upload"
+                  body="After the first lab, timeline events will record uploads, generated protocols, insights, and follow-up actions in one place."
+                  cta="Go to upload"
+                  onClick={() => navigate('/upload')}
+                />
+              )}
+            </DashboardCard>
+          </motion.div>
+        </>
+      )}
     </div>
   )
 }
