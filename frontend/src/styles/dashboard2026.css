@@ -16,6 +16,58 @@
   --vtl-shadow-dark: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.2);
   --vtl-shadow-light: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --vtl-emerald-glow: 0 0 0 3px rgba(var(--brand-rgb, 29, 158, 117), 0.18);
+  /* Bottom nav height so pages can account for it */
+  --vtl-bottom-bar-height: 72px;
+}
+
+/* ── Mobile PWA baseline ───────────────────────────────────────────────── */
+
+/* Prevent iOS auto-zoom on input focus (must be ≥16px) */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Smooth momentum scrolling on iOS */
+html {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-y: none;
+}
+
+/* Prevent pull-to-refresh on chrome mobile for app-like feel */
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* Tap highlight reset for app-like feel */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Minimum touch target 44×44px for accessibility */
+button,
+[role="button"],
+a {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Exception: inline/icon-only elements that are explicitly sized */
+button.vtl-icon-only,
+button[aria-label].inline-icon {
+  min-height: unset;
+  min-width: unset;
+}
+
+/* PWA standalone mode: remove top padding from header (already accounts for status bar via env) */
+@media (display-mode: standalone) {
+  .vtl-topbar-standalone-pad {
+    padding-top: env(safe-area-inset-top);
+  }
 }
 
 .vtl-shell {

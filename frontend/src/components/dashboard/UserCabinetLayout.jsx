@@ -1,51 +1,38 @@
 import { useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { BarChart3, ClipboardList, Crown, Home, LogOut, Menu, Settings, Upload } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
+import { Crown, LogOut, Menu } from 'lucide-react'
 import UserDashboardSidebar from './UserDashboardSidebar.jsx'
+import MobileBottomBar from './MobileBottomBar.jsx'
+import PWAInstallBanner from './PWAInstallBanner.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { PREMIUM_PRICE_LABEL } from '../../lib/pricing.js'
 import '../../styles/dashboard2026.css'
 
 const PAGE_META = {
-  '/dashboard': { title: 'Dashboard', subtitle: 'Your current health command center.' },
-  '/upload': { title: 'Upload Labs', subtitle: 'Add a new report and unlock biomarkers, protocol, and trends.' },
-  '/lab-results': { title: 'Lab Results', subtitle: 'Review upload history, examples, and biomarker signal quality.' },
-  '/assignments': { title: 'Assignments', subtitle: 'Actionable tasks generated from onboarding, labs, and weekly signals.' },
-  '/progress': { title: 'Progress', subtitle: 'Follow real changes between uploads and protocol cycles.' },
-  '/insights': { title: 'Insights', subtitle: 'Understand what your data means and what you will unlock next.' },
-  '/check-ins': { title: 'Check-ins', subtitle: 'Log weekly adherence, symptoms, and recovery signals.' },
-  '/onboarding': { title: 'Onboarding', subtitle: 'Complete baseline health data for more accurate recommendations.' },
-  '/questionnaire': { title: 'Questionnaire', subtitle: 'Adaptive health intake that feeds your personalized plan.' },
-  '/settings': { title: 'Settings', subtitle: 'Manage profile, account preferences, and connected identities.' },
+  '/dashboard': { title: 'Dashboard', subtitle: null },
+  '/upload': { title: 'Upload Labs', subtitle: null },
+  '/lab-results': { title: 'Lab Results', subtitle: null },
+  '/assignments': { title: 'Assignments', subtitle: null },
+  '/progress': { title: 'Progress', subtitle: null },
+  '/insights': { title: 'Insights', subtitle: null },
+  '/check-ins': { title: 'Check-ins', subtitle: null },
+  '/onboarding': { title: 'Onboarding', subtitle: null },
+  '/questionnaire': { title: 'Questionnaire', subtitle: null },
+  '/settings': { title: 'Settings', subtitle: null },
 }
 
 function resolvePageMeta(pathname) {
   const direct = PAGE_META[pathname]
   if (direct) return direct
-  if (pathname.startsWith('/results/')) return { title: 'Results', subtitle: 'Detailed upload biomarkers and recommendation context.' }
-  if (pathname.startsWith('/protocol/')) return { title: 'Protocol', subtitle: 'Structured nutrition, supplements, and lifestyle recommendations.' }
-  if (pathname.startsWith('/assignments/')) return { title: 'Assignment Details', subtitle: 'A concrete task with context, urgency, and next action.' }
-  return { title: 'Vitaloop Cabinet', subtitle: 'Personalized health workspace.' }
-}
-
-const MOBILE_NAV_ITEMS = [
-  { path: '/dashboard', label: 'Home', icon: Home },
-  { path: '/upload', label: 'Upload', icon: Upload },
-  { path: '/assignments', label: 'Tasks', icon: ClipboardList },
-  { path: '/insights', label: 'Insights', icon: BarChart3 },
-  { path: '/settings', label: 'Settings', icon: Settings },
-]
-
-function isActivePath(currentPath, itemPath) {
-  if (currentPath === itemPath) return true
-  if (itemPath === '/dashboard') return currentPath === '/dashboard'
-  return currentPath.startsWith(`${itemPath}/`)
+  if (pathname.startsWith('/results/')) return { title: 'Results', subtitle: null }
+  if (pathname.startsWith('/protocol/')) return { title: 'Protocol', subtitle: null }
+  if (pathname.startsWith('/assignments/')) return { title: 'Assignment', subtitle: null }
+  return { title: 'Vitaloop', subtitle: null }
 }
 
 export default function UserCabinetLayout({ children }) {
   const location = useLocation()
-  const navigate = useNavigate()
   const { user, signOut } = useAuth()
   const { isActive, loading: subLoading } = useSubscription()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -92,8 +79,8 @@ export default function UserCabinetLayout({ children }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/92 backdrop-blur">
-          <div className="mx-auto flex h-[72px] max-w-[1380px] items-center justify-between gap-4 px-3 sm:px-5 lg:px-6">
+        <div className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/92 backdrop-blur vtl-topbar-standalone-pad">
+          <div className="mx-auto flex h-[60px] max-w-[1380px] items-center justify-between gap-4 px-3 sm:h-[72px] sm:px-5 lg:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <button
                 onClick={() => setSidebarOpen((prev) => !prev)}
@@ -104,7 +91,6 @@ export default function UserCabinetLayout({ children }) {
               </button>
               <div className="min-w-0">
                 <h1 className="truncate text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">{pageMeta.title}</h1>
-                <p className="truncate text-xs text-slate-500 sm:text-sm">{pageMeta.subtitle}</p>
               </div>
             </div>
 
@@ -132,32 +118,12 @@ export default function UserCabinetLayout({ children }) {
 
         <main className="flex-1 overflow-x-hidden">
           <div className="mx-auto w-full max-w-[1380px] px-3 py-5 pb-28 sm:px-5 sm:py-7 md:pb-8 lg:px-6">
+            {location.pathname === '/dashboard' && <PWAInstallBanner />}
             {children}
           </div>
         </main>
 
-        <div
-          className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/96 px-3 py-2 backdrop-blur md:hidden"
-          style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}
-        >
-          <div className="grid grid-cols-5 gap-2">
-            {MOBILE_NAV_ITEMS.map((item) => {
-              const Icon = item.icon
-              const active = isActivePath(location.pathname, item.path)
-
-              return (
-                <button
-                  key={item.path}
-                  onClick={() => navigate(item.path)}
-                  className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 transition ${active ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500'}`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="text-[11px] font-semibold">{item.label}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
+        <MobileBottomBar />
       </div>
     </div>
   )
