@@ -93,7 +93,6 @@ const MOCKUPS = [
   { title: 'Timeline', alt: 'Longitudinal timeline with biomarker trajectories across multiple test cycles.', device: 'desktop' },
   { title: 'Practitioner CRM', alt: 'Practitioner CRM dashboard with client panels and assignment overview.', device: 'desktop' },
   { title: 'Weekly Check-in', alt: 'Mobile check-in flow with daily energy, sleep, and symptom entries.', device: 'mobile' },
-  { title: 'Health Avatar', alt: 'Interactive health avatar connected to marker zones and recommendations.', device: 'mobile' },
 ]
 
 const HERO_TRUST_SIGNALS = [
