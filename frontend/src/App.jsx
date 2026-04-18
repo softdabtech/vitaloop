@@ -35,6 +35,7 @@ const UserCabinetLayout = lazy(() => import('./components/dashboard/UserCabinetL
 // Marketing pages — lazy
 const ExampleReport = lazy(() => import('./pages/ExampleReport.jsx'))
 const HowItWorks = lazy(() => import('./pages/HowItWorks.jsx'))
+const ForInvestors = lazy(() => import('./pages/ForInvestors.jsx'))
 const Privacy = lazy(() => import('./pages/Privacy.jsx'))
 const Terms = lazy(() => import('./pages/Terms.jsx'))
 
@@ -179,6 +180,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/example-report" element={<ExampleReport />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/for-investors" element={<ForInvestors />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/login" element={<Login />} />

@@ -28,6 +28,7 @@ const NAV_LINKS = [
   { id: 'why-vitaloop', label: 'Features' },
   { id: 'pricing', label: 'Pricing' },
   { id: 'testimonials', label: 'Stories' },
+  { id: 'investors', label: 'Investors' },
   { id: 'faq', label: 'FAQ' },
 ]
 
@@ -212,6 +213,38 @@ const HERO_TRUST_SIGNALS = [
   },
 ]
 
+const INVESTOR_METRICS = [
+  { value: '85+', label: 'Biomarkers normalized' },
+  { value: '<60s', label: 'Upload to protocol draft' },
+  { value: '3', label: 'Revenue layers live' },
+  { value: 'Weekly', label: 'Retention loop cadence' },
+]
+
+const TEAM_SNIPPETS = [
+  {
+    name: 'Product and Platform',
+    role: 'Founding team',
+    linkedin: 'https://www.linkedin.com/company/softdab/',
+  },
+  {
+    name: 'AI and Data Infrastructure',
+    role: 'Founding team',
+    linkedin: 'https://www.linkedin.com/company/softdab/',
+  },
+  {
+    name: 'Clinical Workflow Design',
+    role: 'Advisory network',
+    linkedin: 'https://www.linkedin.com/company/softdab/',
+  },
+]
+
+const COMPETITOR_SNAPSHOT = [
+  'LabCorp / MyChart',
+  'Everlywell',
+  'Levels',
+  'Function Health',
+]
+
   const STATS = [
     { value: '85+', label: 'Biomarker types tracked' },
     { value: '<60s', label: 'From upload to protocol' },
@@ -243,6 +276,10 @@ const HERO_TRUST_SIGNALS = [
     {
       question: 'How is VITALOOP different from asking ChatGPT about my labs?',
       answer: 'ChatGPT has no memory of your history, cannot parse lab PDFs reliably, and generates generic advice. VITALOOP maintains your longitudinal data, normalizes units, applies clinical reference logic, integrates weekly check-in feedback, and generates structured protocols tied to your specific biomarker patterns.',
+    },
+    {
+      question: 'How does VITALOOP compare with LabCorp MyChart, Everlywell, Levels, and Function Health?',
+      answer: 'Those platforms focus on record delivery, diagnostics access, or single-domain tracking. VITALOOP focuses on longitudinal decision-making and execution: prioritized protocol actions, weekly adherence loops, and practitioner workflows in one operating system.',
     },
     {
       question: 'Can practitioners use VITALOOP for client management?',
@@ -970,7 +1007,15 @@ export default function Landing() {
                   {plan.cta}
                 </button>
                 {plan.name === 'Enterprise' && (
-                  <p className={`mt-3 text-center text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Custom seats, onboarding, and workflow setup are scoped with your team.</p>
+                  <div className="mt-3 space-y-2">
+                    <p className={`text-center text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Custom seats, onboarding, and workflow setup are scoped with your team.</p>
+                    <button
+                      onClick={() => navigate('/for-investors')}
+                      className={`mx-auto block text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-700 hover:text-emerald-600'}`}
+                    >
+                      View enterprise workflow details
+                    </button>
+                  </div>
                 )}
               </motion.article>
             ))}
@@ -1002,6 +1047,64 @@ export default function Landing() {
               </motion.article>
             ))}
           </div>
+        </section>
+
+        <section id="investors" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
+          <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}>
+            <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+              <div>
+                <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>For investors</p>
+                <h2 className="mt-3 text-[28px] font-semibold tracking-tight">Team, traction, enterprise thesis</h2>
+                <p className={`mt-3 max-w-2xl text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                  VITALOOP is built by a product and infrastructure team focused on longitudinal health intelligence. The enterprise path targets practitioner workflow pain where fragmented tools block fast, consistent client review.
+                </p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {INVESTOR_METRICS.map((item) => (
+                    <div key={item.label} className={`rounded-2xl border p-4 ${isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white'}`}>
+                      <div className={`text-xl font-bold tracking-tight ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>{item.value}</div>
+                      <div className={`mt-1 text-xs uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item.label}</div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => navigate('/for-investors')}
+                  className={`mt-5 ${ctaBase} ${isDark ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' : 'bg-slate-900 text-white hover:bg-slate-700'}`}
+                >
+                  Open For Investors page
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className={`rounded-3xl border p-5 ${isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'}`}>
+                  <h3 className="text-lg font-semibold">Built by</h3>
+                  <div className="mt-3 space-y-3">
+                    {TEAM_SNIPPETS.map((member) => (
+                      <div key={member.name} className={`rounded-2xl border p-3 ${isDark ? 'border-slate-800 bg-slate-900/65' : 'border-slate-200 bg-white'}`}>
+                        <div className="text-sm font-semibold">{member.name}</div>
+                        <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{member.role}</div>
+                        <a href={member.linkedin} target="_blank" rel="noreferrer" className={`mt-2 inline-flex text-xs font-semibold uppercase tracking-[0.14em] ${isDark ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-700 hover:text-emerald-600'}`}>
+                          LinkedIn
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={`rounded-3xl border p-5 ${isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'}`}>
+                  <h3 className="text-lg font-semibold">Competitive snapshot</h3>
+                  <p className={`mt-2 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                    We position against record portals, test-commerce products, and single-domain tracking tools by owning longitudinal execution.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {COMPETITOR_SNAPSHOT.map((name) => (
+                      <span key={name} className={`rounded-full border px-3 py-1 text-xs ${isDark ? 'border-slate-700 bg-slate-900 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>{name}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </section>
 
 
@@ -1180,6 +1283,7 @@ export default function Landing() {
               </button>
               <button onClick={() => navigate('/terms')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Terms</button>
               <button onClick={() => navigate('/privacy')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Privacy</button>
+              <button onClick={() => navigate('/for-investors')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>For Investors</button>
               <a href="mailto:info@softdab.tech" className={`underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>info@softdab.tech</a>
               <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>© {new Date().getFullYear()} VITALOOP</span>
             </div>
