@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle, Building2, ShieldCheck, Sparkles } from 'lucide-react'
+import { AlertCircle, Building2, ShieldCheck, Sparkles, UserCircle2 } from 'lucide-react'
 import { useOCR } from '../hooks/useOCR.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import UploadZone from '../components/UploadZone.jsx'
@@ -25,6 +25,17 @@ export default function Upload() {
   const [analyzing, setAnalyzing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [selectedFileName, setSelectedFileName] = useState('')
+  const [profileIncomplete, setProfileIncomplete] = useState(false)
+
+  useEffect(() => {
+    api.get('/auth/onboarding/state').then(r => {
+      const checklist = r.data?.checklist || {}
+      const isComplete = r.data?.completed === true
+      if (!isComplete && !checklist.profile_basics) {
+        setProfileIncomplete(true)
+      }
+    }).catch(() => {})
+  }, [])
 
   const isBusy = isProcessing || analyzing
 
@@ -135,6 +146,22 @@ export default function Upload() {
           subtitle="Your file is processed locally first. Only extracted text is sent for analysis."
           helper="Upload report -> add optional symptoms -> open biomarkers and generated protocol."
         />
+
+        {profileIncomplete && (
+          <div className="mb-6 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5 text-sm">
+            <UserCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
+            <div className="flex-1">
+              <p className="font-semibold text-blue-800">Your health profile is incomplete</p>
+              <p className="mt-0.5 text-blue-700">A complete profile (height, weight, goals, medications) helps the AI and nutritionist give you more accurate, personalized analysis. You can still upload, but completing your profile first is recommended.</p>
+            </div>
+            <button
+              onClick={() => navigate('/onboarding')}
+              className="ml-1 shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition"
+            >
+              Complete profile
+            </button>
+          </div>
+        )}
 
         {!subLoading && !isPremium && (
           <div className={`mb-6 flex items-center justify-between rounded-xl px-4 py-3 text-sm ${uploadsRemaining === 0 ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-amber-200 bg-amber-50 text-amber-700'}`}>
