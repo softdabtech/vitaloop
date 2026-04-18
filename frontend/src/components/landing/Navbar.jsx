@@ -5,11 +5,11 @@ import { EASE } from '../../lib/motion.js'
 import { useAuth } from '../../hooks/useAuth.js'
 
 const NAV_LINKS = [
-  { label: 'Why it matters',      href: '#problem' },
-  { label: 'How it works', href: '#how-it-works' },
-  { label: 'Why VITALOOP', href: '#why-vitaloop' },
-  { label: 'Pricing',      href: '#pricing' },
-  { label: 'Stories',      href: '#stories' },
+  { label: 'Product', href: '#how-it-works' },
+  { label: 'Features', href: '#why-vitaloop' },
+  { label: 'Pricing', href: '#pricing' },
+  { label: 'Stories', href: '#testimonials' },
+  { label: 'FAQ', href: '#faq' },
 ]
 
 function LogoIcon() {

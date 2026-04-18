@@ -24,9 +24,8 @@ import Seo from '../components/Seo.jsx'
 import { CabinetPreviewModal } from '../components/landing/Hero.jsx'
 
 const NAV_LINKS = [
-  { id: 'problem', label: 'Why it matters' },
-  { id: 'how-it-works', label: 'How it works' },
-  { id: 'why-vitaloop', label: 'Why VITALOOP' },
+  { id: 'how-it-works', label: 'Product' },
+  { id: 'why-vitaloop', label: 'Features' },
   { id: 'pricing', label: 'Pricing' },
   { id: 'testimonials', label: 'Stories' },
   { id: 'faq', label: 'FAQ' },
@@ -348,6 +347,9 @@ function fadeUp(reduced, delay = 0) {
 
 function MockupCard({ title, alt, index, reduced, isDark, device = 'desktop' }) {
   const mobile = device === 'mobile'
+  const previewGradient = isDark
+    ? 'linear-gradient(135deg, rgba(16,185,129,0.22), rgba(14,165,233,0.12), rgba(168,85,247,0.18))'
+    : 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(14,165,233,0.10), rgba(168,85,247,0.12))'
 
   const desktopContent = (() => {
     if (title === 'Dashboard') return (
@@ -481,22 +483,25 @@ function MockupCard({ title, alt, index, reduced, isDark, device = 'desktop' }) 
     >
       <div className={`pointer-events-none absolute inset-0 opacity-60 ${isDark ? 'bg-[radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.16),transparent_48%)]' : 'bg-[radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.12),transparent_52%)]'}`} />
 
-      <div className={`relative mb-3 rounded-2xl border p-2 ${isDark ? 'border-slate-700/80 bg-slate-900/80' : 'border-slate-200 bg-slate-50'}`}>
+      <div
+        className={`relative mb-3 rounded-2xl border p-2 ${isDark ? 'border-slate-700/80 bg-slate-900/90' : 'border-slate-200 bg-white/95'}`}
+        style={{ backgroundImage: previewGradient }}
+      >
         {!mobile ? (
-          <div className="rounded-xl border border-slate-700/60 bg-[linear-gradient(150deg,#0e182c,#0f1d35_55%,#0b1326)] p-2">
+          <div className="rounded-xl border border-slate-700/60 bg-[linear-gradient(150deg,#0f1a31,#10223c_48%,#102b3f_72%,#10242f)] p-2">
             <div className="mb-2 flex items-center justify-between rounded-lg border border-slate-700/70 bg-slate-900/80 px-2.5 py-1.5">
               <div className="flex gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-rose-400/75" />
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-400/75" />
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/75" />
               </div>
-              <div className="h-1.5 w-20 rounded-full bg-slate-700" />
+              <div className="h-1.5 w-20 rounded-full bg-gradient-to-r from-emerald-400/80 via-sky-400/70 to-violet-400/70" />
             </div>
             {desktopContent}
           </div>
         ) : (
-          <div className="mx-auto w-[170px] rounded-[24px] border border-slate-700/80 bg-[linear-gradient(180deg,#0f172a,#0b1224)] p-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.45)]">
-            <div className="mx-auto mb-2 h-4 w-16 rounded-full bg-slate-800" />
+          <div className="mx-auto w-[170px] rounded-[24px] border border-slate-700/80 bg-[linear-gradient(180deg,#102035,#0f1b31)] p-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.45)]">
+            <div className="mx-auto mb-2 h-4 w-16 rounded-full bg-gradient-to-r from-emerald-400/55 to-sky-400/45" />
             <div className="rounded-[18px] border border-slate-700/70 bg-slate-900/90 p-2">
               <div className="mb-2 h-1.5 w-10 rounded-full bg-slate-700" />
               <div className="grid gap-1.5">
@@ -510,6 +515,9 @@ function MockupCard({ title, alt, index, reduced, isDark, device = 'desktop' }) 
         )}
       </div>
       <div className={isDark ? 'text-sm font-semibold text-slate-100' : 'text-sm font-semibold text-slate-900'}>{title}</div>
+      <div className={`mt-1 inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${isDark ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+        {mobile ? 'Mobile preview' : 'Product preview'}
+      </div>
       <p className={isDark ? 'mt-1 text-xs leading-relaxed text-slate-400' : 'mt-1 text-xs leading-relaxed text-slate-600'}>{alt}</p>
     </motion.article>
   )
@@ -1082,7 +1090,7 @@ export default function Landing() {
             <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
               Biohacking is not a one-time blood test — it is a continuous feedback cycle. VITALOOP makes that loop automatic: data → AI insight → action protocol → weekly check-in → next lab upload. Each cycle makes the next one smarter.
             </p>
-            <div className="mt-6 grid gap-4 xl:grid-cols-[repeat(5,minmax(0,1fr))]">
+            <div className="mt-6 grid grid-cols-2 gap-4 xl:grid-cols-[repeat(5,minmax(0,1fr))]">
               {LOOP_FLOW.map((item, idx) => {
                 const Icon = item.icon
                 return (
