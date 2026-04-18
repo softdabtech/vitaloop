@@ -45,35 +45,35 @@ export default function AdminShell({ title, subtitle, children, variant = 'clien
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif' }}>
       {/* Top bar */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(10,10,10,0.9)', backdropFilter: 'blur(12px)', borderBottom: '0.5px solid rgba(255,255,255,0.08)', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(12px)', borderBottom: '0.5px solid rgba(15,23,42,0.12)', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', gap: 16 }}>
         {/* Back button */}
         <button
           onClick={handleBack}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.55)', fontSize: 14, fontWeight: 500, padding: '6px 0', transition: 'color 0.2s' }}
-          onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.55)'}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(15,23,42,0.62)', fontSize: 14, fontWeight: 500, padding: '6px 0', transition: 'color 0.2s' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#0f172a'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(15,23,42,0.62)'}
         >
           <ArrowLeft size={16} />
           Back
         </button>
 
         {/* Divider */}
-        <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)' }} />
+        <div style={{ width: 1, height: 20, background: 'rgba(15,23,42,0.12)' }} />
 
         {/* Title / breadcrumb */}
         <div style={{ flex: 1 }}>
-          <span style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>{title}</span>
-          {subtitle && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginLeft: 10 }}>{subtitle}</span>}
+          <span style={{ fontSize: 15, fontWeight: 600, color: '#0f172a' }}>{title}</span>
+          {subtitle && <span style={{ fontSize: 13, color: 'rgba(15,23,42,0.5)', marginLeft: 10 }}>{subtitle}</span>}
         </div>
 
         {/* Sign out */}
         <button
           onClick={handleSignOut}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 13, fontWeight: 500, padding: '6px 8px', borderRadius: 8, transition: 'color 0.2s, background 0.2s' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(15,23,42,0.55)', fontSize: 13, fontWeight: 500, padding: '6px 8px', borderRadius: 8, transition: 'color 0.2s, background 0.2s' }}
           onMouseEnter={e => { e.currentTarget.style.color = '#ff4d4d'; e.currentTarget.style.background = 'rgba(255,77,77,0.1)' }}
-          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; e.currentTarget.style.background = 'none' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(15,23,42,0.55)'; e.currentTarget.style.background = 'none' }}
         >
           <LogOut size={14} />
           Sign out
@@ -81,7 +81,7 @@ export default function AdminShell({ title, subtitle, children, variant = 'clien
       </div>
 
       {/* Sub-nav */}
-      <div style={{ borderBottom: '0.5px solid rgba(255,255,255,0.07)', padding: '0 24px', display: 'flex', gap: 4 }}>
+      <div style={{ borderBottom: '0.5px solid rgba(15,23,42,0.1)', padding: '0 24px', display: 'flex', gap: 4 }}>
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -93,7 +93,7 @@ export default function AdminShell({ title, subtitle, children, variant = 'clien
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '10px 14px',
               fontSize: 13, fontWeight: 500,
-              color: active ? '#1d9e75' : 'rgba(255,255,255,0.45)',
+              color: active ? '#1d9e75' : 'rgba(15,23,42,0.58)',
               borderBottom: active ? '2px solid #1d9e75' : '2px solid transparent',
               textDecoration: 'none', transition: 'color 0.2s',
               marginBottom: -1,
