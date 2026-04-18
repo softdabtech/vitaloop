@@ -49,7 +49,6 @@ export default function UserCabinetLayout({ children }) {
   const { user, signOut } = useAuth()
   const { isActive, loading: subLoading } = useSubscription()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const pageMeta = useMemo(() => resolvePageMeta(location.pathname), [location.pathname])
 
@@ -70,8 +69,7 @@ export default function UserCabinetLayout({ children }) {
     >
       <div className="hidden md:sticky md:top-0 md:block md:self-start">
         <UserDashboardSidebar
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+          collapsed={false}
           user={user}
           onLogout={handleLogout}
         />
@@ -119,13 +117,6 @@ export default function UserCabinetLayout({ children }) {
                   <span className="sm:hidden">Upgrade</span>
                 </button>
               )}
-              <button
-                onClick={() => setSidebarCollapsed((prev) => !prev)}
-                className="vtl-button-secondary hidden shrink-0 whitespace-nowrap px-4 text-sm md:inline-flex"
-              >
-                {sidebarCollapsed ? 'Expand menu' : 'Collapse menu'}
-              </button>
-
               <button
                 onClick={handleLogout}
                 className="vtl-button-secondary inline-flex shrink-0 items-center gap-2 px-3 text-sm"
