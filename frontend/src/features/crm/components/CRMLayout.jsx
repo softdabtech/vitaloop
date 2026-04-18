@@ -52,6 +52,12 @@ export default function CRMLayout({ title = 'CRM', children }) {
 
           <div className="mt-6">
             <button
+              onClick={() => navigate('/')}
+              className="vtl-button-secondary mb-2 w-full text-sm"
+            >
+              Back to site
+            </button>
+            <button
               onClick={() => navigate('/dashboard')}
               className="vtl-button-secondary mb-2 w-full text-sm"
             >

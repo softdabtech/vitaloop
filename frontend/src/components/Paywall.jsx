@@ -11,10 +11,11 @@ export default function Paywall() {
     setLoading(true)
     try {
       gaBeginCheckout()
-      const { data } = await api.post('/stripe/checkout')
+      const { data } = await api.post('/stripe/checkout', { plan_id: 'personal' })
       window.location.href = data.checkout_url
-    } catch {
-      toast.error('Could not start checkout. Please try again.')
+    } catch (error) {
+      const message = error?.response?.data?.detail || 'Could not start checkout. Please try again.'
+      toast.error(message)
       setLoading(false)
     }
   }

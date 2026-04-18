@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { EASE } from '../../lib/motion.js'
+import { useAuth } from '../../hooks/useAuth.js'
 
 const NAV_LINKS = [
   { label: 'Problem',      href: '#problem' },
@@ -29,10 +30,12 @@ function LogoIcon() {
 
 export default function Navbar() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const reduced = useReducedMotion()
   const [scrolled, setScrolled]     = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [activeSection, setActive]  = useState('')
+  const displayName = (user?.user_metadata?.full_name || user?.email || '').split('@')[0]
 
   // Lock body scroll when mobile menu is open (iOS fix)
   useEffect(() => {
@@ -143,39 +146,67 @@ export default function Navbar() {
 
         {/* Right actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button
-            onClick={() => navigate('/login')}
-            className="hidden md:block"
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 14, color: 'var(--gray-500)',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--gray-900)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--gray-500)' }}
-          >
-            Sign in
-          </button>
-          <button
-            onClick={() => navigate('/login?signup=true')}
-            className="hidden md:block"
-            style={{
-              background: 'var(--teal-800)', color: 'white',
-              border: 'none', borderRadius: 980,
-              padding: '8px 20px', fontSize: 14, fontWeight: 600,
-              cursor: 'pointer', transition: 'background 200ms, transform 200ms',
-              touchAction: 'manipulation',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--teal-600)'
-              e.currentTarget.style.transform = 'scale(1.02)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--teal-800)'
-              e.currentTarget.style.transform = 'scale(1)'
-            }}
-          >
-            Get started free
-          </button>
+          {user ? (
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="hidden md:block"
+              style={{
+                background: 'var(--teal-800)', color: 'white',
+                border: 'none', borderRadius: 980,
+                padding: '8px 20px', fontSize: 14, fontWeight: 600,
+                cursor: 'pointer', transition: 'background 200ms, transform 200ms',
+                maxWidth: 220, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                touchAction: 'manipulation',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--teal-600)'
+                e.currentTarget.style.transform = 'scale(1.02)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--teal-800)'
+                e.currentTarget.style.transform = 'scale(1)'
+              }}
+              title={displayName}
+            >
+              {displayName || 'My account'}
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => navigate('/login')}
+                className="hidden md:block"
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 14, color: 'var(--gray-500)',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--gray-900)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--gray-500)' }}
+              >
+                Sign in
+              </button>
+              <button
+                onClick={() => navigate('/login?signup=true')}
+                className="hidden md:block"
+                style={{
+                  background: 'var(--teal-800)', color: 'white',
+                  border: 'none', borderRadius: 980,
+                  padding: '8px 20px', fontSize: 14, fontWeight: 600,
+                  cursor: 'pointer', transition: 'background 200ms, transform 200ms',
+                  touchAction: 'manipulation',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--teal-600)'
+                  e.currentTarget.style.transform = 'scale(1.02)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--teal-800)'
+                  e.currentTarget.style.transform = 'scale(1)'
+                }}
+              >
+                Get started free
+              </button>
+            </>
+          )}
           {/* Hamburger — animated bars → X */}
           <button
             className="md:hidden hamburger-btn"
@@ -270,7 +301,11 @@ export default function Navbar() {
             ))}
 
             <motion.button
-              onClick={(e) => { e.stopPropagation(); setMobileOpen(false); navigate('/login?signup=true') }}
+              onClick={(e) => {
+                e.stopPropagation()
+                setMobileOpen(false)
+                navigate(user ? '/dashboard' : '/login?signup=true')
+              }}
               initial={reduced ? {} : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: NAV_LINKS.length * 0.07 + 0.06, duration: 0.32, ease: EASE }}
@@ -283,7 +318,7 @@ export default function Navbar() {
                 minHeight: 56, touchAction: 'manipulation',
               }}
             >
-              Get started free
+              {user ? (displayName || 'My account') : 'Get started free'}
             </motion.button>
           </motion.div>
         )}

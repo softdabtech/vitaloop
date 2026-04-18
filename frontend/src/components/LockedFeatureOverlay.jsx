@@ -21,11 +21,13 @@ export default function LockedFeatureOverlay({ children, locked = true }) {
     const toastId = toast.loading('Opening checkout…')
     try {
       gaBeginCheckout()
-      const { data } = await api.post('/stripe/checkout')
+      const { data } = await api.post('/stripe/checkout', { plan_id: 'personal' })
       toast.dismiss(toastId)
       window.location.href = data.checkout_url
-    } catch {
+    } catch (error) {
       toast.dismiss(toastId)
+      const message = error?.response?.data?.detail || 'Could not start checkout. Please try again.'
+      toast.error(message)
     }
     setShowPaywall(false)
   }
