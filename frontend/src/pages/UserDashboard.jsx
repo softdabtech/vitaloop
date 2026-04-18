@@ -182,6 +182,7 @@ export default function UserDashboard() {
   const hasUploads = Number(stats.total_uploads || 0) > 0
   const onboardingComplete = Boolean(user?.onboarding_complete || profile?.onboarding_complete)
   const hasProtocol = Boolean(stats.active_program && String(stats.active_program).toLowerCase() !== 'not started')
+  const showStartHere = Boolean(startHere?.enabled && !hasUploads)
   const journeySteps = [
     { id: 'account', label: 'Step 1 - Account created', done: true },
     { id: 'upload', label: 'Step 2 - Upload your first lab', done: hasUploads },
@@ -208,19 +209,19 @@ export default function UserDashboard() {
         title={`Welcome back, ${greeting}`}
         subtitle={profile?.onboarding?.requires_onboarding ? profile?.onboarding?.current_stage_label || 'Continue onboarding' : 'Your dashboard is assembled from current uploads, assignments, and check-ins.'}
         helper="Every block below should either show your live data or explain exactly what will unlock after the next action."
-        action={(
+        action={!showStartHere ? (
           <div className="flex flex-wrap gap-2">
             <button onClick={() => navigate('/upload')} className="vtl-button-primary px-4 text-sm">Upload labs</button>
-            <button onClick={() => navigate('/lab-results')} className="vtl-button-secondary px-4 text-sm">Open results</button>
+            {hasUploads && <button onClick={() => navigate('/lab-results')} className="vtl-button-secondary px-4 text-sm">Open results</button>}
           </div>
-        )}
+        ) : null}
       />
 
       {error && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
       )}
 
-      {startHere?.enabled && (
+      {showStartHere && (
         <motion.section
           {...fadeUp()}
           className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_48%),linear-gradient(135deg,_#ffffff,_#effcf6_55%,_#f8fafc)] p-5 shadow-sm sm:p-6"
@@ -250,7 +251,7 @@ export default function UserDashboard() {
         </motion.section>
       )}
 
-      {!loading && !hasUploads ? (
+      {!loading && !hasUploads && !showStartHere ? (
         <WelcomeJourney
           steps={journeySteps}
           completedCount={completedJourneyCount}
