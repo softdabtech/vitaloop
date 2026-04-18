@@ -602,35 +602,29 @@ export default function Landing() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Theme toggle tumbler */}
             <button
               type="button"
               onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
               aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              className="hidden sm:flex items-center gap-1.5 text-xs font-medium transition"
+              className={`hidden sm:inline-flex h-11 w-16 items-center rounded-full border px-1 transition ${
+                isDark ? 'border-slate-600 bg-slate-800' : 'border-slate-300 bg-slate-100'
+              }`}
               title={isDark ? 'Light mode' : 'Dark mode'}
             >
-              <span className={`text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>☀</span>
               <span
-                className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border transition-colors duration-200 ${
-                  isDark ? 'border-slate-600 bg-slate-700' : 'border-emerald-300 bg-emerald-500'
+                className={`h-9 w-9 rounded-full shadow-sm transition-transform duration-200 ${
+                  isDark ? 'translate-x-0 bg-slate-950' : 'translate-x-5 bg-white'
                 }`}
-              >
-                <span
-                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
-                    isDark ? 'translate-x-0.5' : 'translate-x-[18px]'
-                  }`}
-                />
-              </span>
-              <span className={`text-[11px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>🌙</span>
+              />
             </button>
 
             {/* Log in link — only for non-authenticated visitors */}
             {!user && (
               <button
                 onClick={() => navigate('/login')}
-                className={`hidden sm:inline-flex text-sm font-medium transition ${isDark ? 'text-slate-400 hover:text-slate-100' : 'text-slate-500 hover:text-slate-900'}`}
+                className={`hidden sm:inline-flex h-11 items-center justify-center rounded-2xl border px-4 text-sm font-semibold transition ${isDark ? 'border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-500 hover:text-white' : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'}`}
               >
                 Log in
               </button>
@@ -687,13 +681,13 @@ export default function Landing() {
                     type="button"
                     onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
                     aria-label="Toggle theme"
-                    className="flex items-center gap-1.5"
+                    className={`inline-flex h-10 w-14 items-center rounded-full border px-1 transition ${isDark ? 'border-slate-600 bg-slate-800' : 'border-slate-300 bg-slate-100'}`}
                   >
-                    <span className={`text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>☀</span>
-                    <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border transition-colors duration-200 ${isDark ? 'border-slate-600 bg-slate-700' : 'border-emerald-300 bg-emerald-500'}`}>
-                      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${isDark ? 'translate-x-0.5' : 'translate-x-[18px]'}`} />
-                    </span>
-                    <span className={`text-[11px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>🌙</span>
+                    <span
+                      className={`h-8 w-8 rounded-full shadow-sm transition-transform duration-200 ${
+                        isDark ? 'translate-x-0 bg-slate-950' : 'translate-x-4 bg-white'
+                      }`}
+                    />
                   </button>
                 </div>
                 <div className={`my-1 h-px ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`} />
