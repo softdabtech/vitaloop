@@ -10,7 +10,10 @@
     "build": "npm run validate:env && vite build",
     "build:prod": "npm run validate:env && NODE_OPTIONS=--max-old-space-size=1536 vite build --mode production",
     "postbuild": "react-snap",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "qa:routes": "node ./scripts/qa-routes-links.mjs",
+    "qa:endpoints": "node ./scripts/qa-endpoints.mjs",
+    "qa": "npm run qa:routes && npm run qa:endpoints"
   },
   "reactSnap": {
     "source": "dist",
