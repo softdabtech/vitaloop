@@ -80,29 +80,29 @@ function FirstRunDashboard({ startHere, steps, completedCount, onboardingComplet
   const total = steps.length
   const progress = total > 0 ? Math.round((completedCount / total) * 100) : 0
   const title = startHere?.title || 'Start here: get first value in 30 seconds'
-  const description = startHere?.description || 'Upload one lab file to unlock trends, tasks, and recommendations.'
+  const description = startHere?.description || 'Upload one lab file to unlock results, insights, and your first protocol direction.'
   const topSteps = (startHere?.steps || steps.map((step) => step.label)).slice(0, 3)
 
   return (
     <div className="space-y-4">
-      <section className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_48%),linear-gradient(135deg,_#ffffff,_#effcf6_55%,_#f8fafc)] p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
+      <section className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_48%),linear-gradient(135deg,_#ffffff,_#effcf6_55%,_#f8fafc)] p-4 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2.5">
             <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Start here</div>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h2>
-            <p className="max-w-2xl text-sm text-slate-600">{description}</p>
+            <h2 className="max-w-2xl text-xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-2xl">{title}</h2>
+            <p className="max-w-2xl text-sm leading-6 text-slate-600">{description}</p>
             <div className="grid gap-2 pt-2 sm:grid-cols-3">
               {topSteps.map((step, index) => (
-                <div key={step} className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3 text-sm text-slate-600 shadow-sm">
+                <div key={step} className="rounded-2xl border border-white/70 bg-white/80 px-3.5 py-3 text-sm leading-5 text-slate-600 shadow-sm sm:px-4">
                   <span className="mr-2 font-semibold text-emerald-600">{index + 1}.</span>{step}
                 </div>
               ))}
             </div>
           </div>
-          <div className="flex flex-col gap-2 sm:min-w-[220px]">
+          <div className="flex w-full flex-col gap-2 sm:max-w-[280px] lg:min-w-[240px] lg:max-w-[240px]">
             <button
               onClick={onUploadClick}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
+              className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
             >
               {startHere?.cta_label || 'Upload first lab'}
               <ArrowRight className="h-4 w-4" />
@@ -110,7 +110,7 @@ function FirstRunDashboard({ startHere, steps, completedCount, onboardingComplet
             {!onboardingComplete && (
               <button
                 onClick={onProfileClick}
-                className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:text-emerald-700"
+                className="inline-flex min-h-[48px] w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:text-emerald-700"
               >
                 Complete health profile
               </button>
@@ -124,10 +124,10 @@ function FirstRunDashboard({ startHere, steps, completedCount, onboardingComplet
           <div className="space-y-3">
             {[
               'Structured biomarker extraction from your report',
-              'A readable results view instead of raw PDF numbers',
-              'Insight cards, next actions, and protocol context',
+              'A readable results screen instead of raw PDF numbers',
+              'Insight cards and your next best action',
             ].map((item) => (
-              <div key={item} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <div key={item} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm leading-5 text-slate-700 sm:px-4">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                 <span>{item}</span>
               </div>
@@ -136,7 +136,7 @@ function FirstRunDashboard({ startHere, steps, completedCount, onboardingComplet
         </DashboardCard>
 
         <DashboardCard title="Account readiness" eyebrow="Setup progress">
-          <div className="mb-4">
+          <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 sm:px-4">
             <div className="mb-1 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
               <span>Progress</span>
               <span>{completedCount}/{total}</span>
@@ -148,7 +148,7 @@ function FirstRunDashboard({ startHere, steps, completedCount, onboardingComplet
 
           <div className="space-y-2">
             {steps.map((step) => (
-              <div key={step.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <div key={step.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm leading-5 text-slate-700 sm:px-4">
                 <CheckCircle2 className={`h-4 w-4 shrink-0 ${step.done ? 'text-emerald-600' : 'text-slate-300'}`} />
                 <span className={step.done ? 'font-medium text-slate-900' : ''}>{step.label}</span>
               </div>
@@ -240,11 +240,11 @@ export default function UserDashboard() {
   const isFirstRun = !loading && !hasUploads
   const showStartHere = Boolean(startHere?.enabled && isFirstRun)
   const journeySteps = [
-    { id: 'account', label: 'Step 1 - Account created', done: true },
-    { id: 'upload', label: 'Step 2 - Upload your first lab', done: hasUploads },
-    { id: 'profile', label: 'Step 3 - Complete health profile', done: onboardingComplete },
-    { id: 'symptoms', label: 'Step 4 - Add your symptoms', done: Boolean(latestCheckin) },
-    { id: 'protocol', label: 'Step 5 - Get your protocol', done: hasProtocol },
+    { id: 'account', label: 'Account created', done: true },
+    { id: 'upload', label: 'Upload your first lab', done: hasUploads },
+    { id: 'profile', label: 'Complete health profile', done: onboardingComplete },
+    { id: 'symptoms', label: 'Add symptoms or check-in', done: Boolean(latestCheckin) },
+    { id: 'protocol', label: 'Unlock first protocol', done: hasProtocol },
   ]
   const completedJourneyCount = journeySteps.filter((step) => step.done).length
 
@@ -264,7 +264,7 @@ export default function UserDashboard() {
       <CabinetPageHeader
         title={`Welcome back, ${greeting}`}
         subtitle={profile?.onboarding?.requires_onboarding ? profile?.onboarding?.current_stage_label || 'Continue onboarding' : 'Your dashboard is assembled from current uploads, assignments, and check-ins.'}
-        helper="Every block below should either show your live data or explain exactly what will unlock after the next action."
+        helper={isFirstRun ? 'Start with one upload. The dashboard expands as soon as your first lab is processed.' : 'Every block below should either show your live data or explain exactly what will unlock after the next action.'}
         action={!loading && !isFirstRun ? (
           <div className="flex flex-wrap gap-2">
             <button onClick={() => navigate('/upload')} className="vtl-button-primary px-4 text-sm">Upload labs</button>
