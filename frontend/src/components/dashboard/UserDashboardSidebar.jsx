@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   Activity,
   BarChart3,
+  ChevronLeft,
   Clock,
   FileText,
   Flame,
@@ -47,6 +48,7 @@ function isItemActive(currentPath, itemPath) {
 
 export default function UserDashboardSidebar({
   collapsed = false,
+  onToggleCollapse,
   user,
   onLogout,
   mobile = false,
@@ -84,7 +86,16 @@ export default function UserDashboardSidebar({
           )}
         </div>
 
-        {!mobile && <div className="h-8 w-8" aria-hidden="true" />}
+        {!mobile && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <ChevronLeft className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
+          </button>
+        )}
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">

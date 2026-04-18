@@ -151,7 +151,6 @@ export default function Questionnaire() {
           <div style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>{error}</div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={loadSession} style={{ background: '#10b981', border: 'none', color: '#fff', borderRadius: 10, padding: '10px 16px', cursor: 'pointer' }}>Retry</button>
-            <button onClick={() => navigate('/dashboard')} style={{ background: '#f1f5f9', border: '1px solid rgba(15,23,42,0.1)', color: '#475569', borderRadius: 10, padding: '10px 16px', cursor: 'pointer' }}>Back to dashboard</button>
           </div>
         </div>
       </div>

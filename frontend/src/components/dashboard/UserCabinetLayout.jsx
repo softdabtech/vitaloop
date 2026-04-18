@@ -49,6 +49,7 @@ export default function UserCabinetLayout({ children }) {
   const { user, signOut } = useAuth()
   const { isActive, loading: subLoading } = useSubscription()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const pageMeta = useMemo(() => resolvePageMeta(location.pathname), [location.pathname])
 
@@ -69,7 +70,8 @@ export default function UserCabinetLayout({ children }) {
     >
       <div className="hidden md:sticky md:top-0 md:block md:self-start">
         <UserDashboardSidebar
-          collapsed={false}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
           user={user}
           onLogout={handleLogout}
         />
