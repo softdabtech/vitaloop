@@ -288,7 +288,7 @@ const PRICING = {
       price: '$0',
       period: '/month',
       points: ['1 active upload', 'Basic biomarker summary', 'Core dashboard'],
-      cta: 'Start free',
+      cta: 'Try free',
       featured: false,
     },
     {
@@ -296,7 +296,7 @@ const PRICING = {
       price: '$9.99',
       period: '/month',
       points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
-      cta: 'Upgrade to Pro',
+      cta: 'Upgrade',
       featured: true,
     },
     {
@@ -304,7 +304,7 @@ const PRICING = {
       price: '$99+',
       period: '/month',
       points: ['Team seats', 'Practitioner CRM', 'Workflow automation', 'Dedicated onboarding'],
-      cta: 'Talk to sales',
+      cta: 'Contact sales',
       featured: false,
     },
   ],
@@ -314,7 +314,7 @@ const PRICING = {
       price: '$0',
       period: '/year',
       points: ['1 active upload', 'Basic biomarker summary', 'Core dashboard'],
-      cta: 'Start free',
+      cta: 'Try free',
       featured: false,
     },
     {
@@ -322,7 +322,7 @@ const PRICING = {
       price: '$95',
       period: '/year',
       points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
-      cta: 'Get yearly plan',
+      cta: 'Upgrade',
       featured: true,
     },
     {
@@ -330,7 +330,7 @@ const PRICING = {
       price: '$990+',
       period: '/year',
       points: ['Team seats', 'Practitioner CRM', 'Workflow automation', 'Dedicated onboarding'],
-      cta: 'Talk to sales',
+      cta: 'Contact sales',
       featured: false,
     },
   ],
@@ -586,8 +586,11 @@ export default function Landing() {
             >
               {isDark ? 'Light mode' : 'Dark mode'}
             </button>
-            <button onClick={() => navigate('/login?signup=true')} className={`${ctaBase} ${isDark ? 'bg-emerald-500 text-slate-950 shadow-[0_0_0_0_rgba(16,185,129,0.35)] hover:bg-emerald-400 hover:shadow-[0_0_0_6px_rgba(16,185,129,0.16)]' : 'bg-slate-900 text-white hover:bg-slate-700'}`}>
-              Start free
+            <button
+              onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
+              className={`${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}
+            >
+              Explore plans
             </button>
           </div>
         </div>
@@ -955,7 +958,7 @@ export default function Landing() {
                     return
                   }
                   navigate('/login?signup=true')
-                }} className={`mt-6 w-full ${ctaBase} mt-auto ${plan.featured ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' : isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+                }} className={`mt-6 w-full ${ctaBase} mt-auto ${plan.featured ? isDark ? 'border border-emerald-400/60 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/15' : 'border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                   {plan.cta}
                 </button>
                 {plan.name === 'Enterprise' && (
@@ -1117,11 +1120,11 @@ export default function Landing() {
           <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 text-center md:p-10 ${sectionCard}`}>
             <h2 className="text-[28px] font-semibold tracking-tight">Start Interpreting Your Blood Tests With AI Today</h2>
             <p className={`mx-auto mt-3 max-w-2xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              Join 14,000+ users who replaced guesswork with AI-powered biomarker analysis and personalized protocols. Free to start, no credit card required.
+              Replace guesswork with AI-powered biomarker analysis and personalized protocols. Free to start, no credit card required.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <button onClick={() => navigate('/login?signup=true')} className={`${ctaBase} ${isDark ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' : 'bg-slate-900 text-white hover:bg-slate-700'}`}>
-                Start free now
+              <button onClick={() => navigate('/login?signup=true')} className={`${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+                Create free account
               </button>
               <button onClick={() => navigate('/how-it-works')} className={`${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900/80 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                 Explore product
