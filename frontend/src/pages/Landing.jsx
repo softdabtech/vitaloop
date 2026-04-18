@@ -912,17 +912,19 @@ export default function Landing() {
                 key={plan.name}
                 {...fadeUp(reduced)}
                 whileHover={reduced ? undefined : { y: -4, scale: 1.01 }}
-                className={`relative flex h-full flex-col rounded-3xl border p-6 ${plan.featured ? 'border-emerald-300 bg-emerald-500/10' : isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
+                className={`flex h-full flex-col rounded-3xl border p-6 ${plan.featured ? 'border-emerald-300 bg-emerald-500/10' : isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
                 style={{ boxShadow: plan.featured ? '0 0 0 4px rgba(16,185,129,0.12), 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' : '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08)' }}
               >
-                {plan.featured && (
-                  <span className="absolute right-4 top-4 rounded-full border border-emerald-300 bg-emerald-400 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-slate-950 shadow-[0_6px_16px_rgba(16,185,129,0.35)]">
-                    Most popular
-                  </span>
-                )}
-                <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${plan.featured ? 'text-emerald-200' : isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
-                  {PLAN_DETAILS[plan.name]?.eyebrow}
-                </p>
+                <div className="mb-3 flex min-h-[28px] items-start justify-between gap-3">
+                  <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${plan.featured ? 'text-emerald-200' : isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                    {PLAN_DETAILS[plan.name]?.eyebrow}
+                  </p>
+                  {plan.featured && (
+                    <span className="shrink-0 rounded-full border border-emerald-300 bg-emerald-400 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-[0_6px_16px_rgba(16,185,129,0.35)]">
+                      Most popular
+                    </span>
+                  )}
+                </div>
                 <h3 className="text-xl font-semibold">{plan.name}</h3>
                 <div className="mt-4 flex items-end gap-1">
                   <span className="text-4xl font-bold tracking-tight">{plan.price}</span>
