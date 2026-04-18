@@ -54,7 +54,7 @@
   border-radius: var(--vtl-radius-btn);
   border: 1px solid rgba(var(--brand-rgb, 29, 158, 117), 0.72);
   background: linear-gradient(135deg, var(--vtl-accent), #0f7f5f);
-  color: #052e16;
+  color: #ffffff;
   font-weight: 700;
   transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
 }

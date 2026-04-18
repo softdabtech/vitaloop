@@ -119,8 +119,7 @@ export default function UserCabinetLayout({ children }) {
                   <span className="sm:hidden">Upgrade</span>
                 </button>
               )}
-
-              <button onClick={() => setSidebarCollapsed((prev) => !prev)} className="vtl-button-secondary hidden px-3 text-sm md:inline-flex">
+              <button onClick={() => setSidebarCollapsed((prev) => !prev)} className="vtl-button-secondary hidden whitespace-nowrap px-4 text-sm md:inline-flex">
                 {sidebarCollapsed ? 'Expand menu' : 'Collapse menu'}
               </button>
 

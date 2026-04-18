@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, CheckCircle2, Clock3, Link2, LogOut, ShieldCheck, Target, User } from 'lucide-react'
+import { CheckCircle2, Clock3, Link2, LogOut, ShieldCheck, Target, User } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.js'
@@ -73,7 +73,6 @@ export default function Settings() {
   const [account, setAccount] = useState({ full_name: '', age: '', sex: '', timezone: 'America/New_York' })
   const [medical, setMedical] = useState({ height_cm: '', weight_kg: '', goals: [] })
   const [extras, setExtras] = useState({
-    avatar_url: '',
     telegram: '',
     instagram: '',
     linkedin: '',
@@ -87,7 +86,6 @@ export default function Settings() {
   const meta = user?.user_metadata || {}
   const app = user?.app_metadata || {}
   const isSuperAdmin = meta.is_super_admin || app.is_super_admin
-  const avatarUrl = extras.avatar_url || ''
 
   const initials = (account.full_name || user?.email || 'U')
     .split(' ')
@@ -103,11 +101,10 @@ export default function Settings() {
       Boolean(medical.height_cm),
       Boolean(medical.weight_kg),
       Array.isArray(medical.goals) && medical.goals.length > 0,
-      Boolean(avatarUrl),
     ]
 
     return Math.round((checks.filter(Boolean).length / checks.length) * 100)
-  }, [account.full_name, account.timezone, medical.height_cm, medical.weight_kg, medical.goals, avatarUrl])
+  }, [account.full_name, account.timezone, medical.height_cm, medical.weight_kg, medical.goals])
 
   const activeChannels = [extras.telegram, extras.instagram, extras.linkedin].filter(Boolean).length
   const enabledReminders = [extras.weekly_digest, extras.checkin_reminders, extras.product_updates].filter(Boolean).length
@@ -140,7 +137,6 @@ export default function Settings() {
 
       setExtras((prev) => ({
         ...prev,
-        avatar_url: meta.avatar_url || '',
         telegram: meta.telegram || '',
         instagram: meta.instagram || '',
         linkedin: meta.linkedin || '',
@@ -191,7 +187,7 @@ export default function Settings() {
       supabase.auth.updateUser({
         data: {
           ...meta,
-          avatar_url: extras.avatar_url || null,
+          avatar_url: null,
           telegram: extras.telegram || null,
           instagram: extras.instagram || null,
           linkedin: extras.linkedin || null,
@@ -211,38 +207,6 @@ export default function Settings() {
     }
 
     toast.success('Profile updated')
-  }
-
-  function handleAvatarUpload(event) {
-    const file = event.target.files?.[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please choose an image file.')
-      return
-    }
-
-    const reader = new FileReader()
-    reader.onload = () => {
-      const image = new Image()
-      image.onload = () => {
-        const canvas = document.createElement('canvas')
-        const size = 160
-        canvas.width = size
-        canvas.height = size
-        const context = canvas.getContext('2d')
-        if (!context) {
-          toast.error('Could not process image.')
-          return
-        }
-
-        context.drawImage(image, 0, 0, size, size)
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.78)
-        setExtras((prev) => ({ ...prev, avatar_url: dataUrl }))
-        toast.success('Photo added. Save changes to keep it.')
-      }
-      image.src = String(reader.result || '')
-    }
-    reader.readAsDataURL(file)
   }
 
   async function handleSignOut() {
@@ -280,12 +244,8 @@ export default function Settings() {
                       color: '#052e16',
                       boxShadow: '0 12px 30px rgba(29,158,117,0.18)',
                     }}>
-                      {avatarUrl ? <img src={avatarUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+                      {initials}
                     </div>
-                    <label style={{ position: 'absolute', right: -2, bottom: -2, width: 34, height: 34, borderRadius: '50%', background: '#ffffff', border: '1px solid rgba(15,23,42,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                      <Camera size={16} style={{ color: '#1d9e75' }} />
-                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
-                    </label>
                   </div>
 
                   <div>
@@ -447,7 +407,6 @@ export default function Settings() {
                   { label: 'Name + timezone', done: Boolean(account.full_name && account.timezone) },
                   { label: 'Height + weight', done: Boolean(medical.height_cm && medical.weight_kg) },
                   { label: 'One health goal', done: medical.goals.length > 0 },
-                  { label: 'Profile photo', done: Boolean(avatarUrl) },
                   { label: 'One contact channel', done: Boolean(extras.telegram || extras.instagram || extras.linkedin) },
                 ].map((item) => (
                   <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 14, background: '#f8fafc', border: '1px solid rgba(15,23,42,0.08)', padding: '11px 12px', gap: 12 }}>

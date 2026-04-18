@@ -31,6 +31,15 @@ api.interceptors.response.use(
     const code = error.response?.data?.code
     const detail = error.response?.data?.detail
     const validationErrors = error.response?.data?.errors || []
+    const requestUrl = String(error?.config?.url || '')
+    const isPassiveCabinetRequest = [
+      '/dashboard/summary',
+      '/stripe/subscription',
+      '/progress',
+      '/timeline',
+      '/insights',
+      '/assignments',
+    ].some((path) => requestUrl.includes(path))
 
     const resolveMessage = () => {
       if (status === 422) {
@@ -61,7 +70,6 @@ api.interceptors.response.use(
     }
 
     if (status === 401) {
-      const requestUrl = String(error?.config?.url || '')
       const authBoundary = requestUrl.includes('/auth/me')
 
       // Only force global sign-out on auth boundary calls.
@@ -72,6 +80,10 @@ api.interceptors.response.use(
         }
         window.location.href = '/login'
       }
+      return Promise.reject(error)
+    }
+
+    if (isPassiveCabinetRequest) {
       return Promise.reject(error)
     }
 
