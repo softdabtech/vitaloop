@@ -40,7 +40,7 @@ const CABINET_STEPS = [
   },
 ]
 
-function CabinetPreviewModal({ open, onClose, reduced }) {
+export function CabinetPreviewModal({ open, onClose, reduced }) {
   const [stepIndex, setStepIndex] = useState(0)
 
   useEffect(() => {

@@ -21,9 +21,10 @@ import {
   Users,
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
+import { CabinetPreviewModal } from '../components/landing/Hero.jsx'
 
 const NAV_LINKS = [
-  { id: 'problem', label: 'Problem' },
+  { id: 'problem', label: 'Why it matters' },
   { id: 'how-it-works', label: 'How it works' },
   { id: 'why-vitaloop', label: 'Why VITALOOP' },
   { id: 'pricing', label: 'Pricing' },
@@ -168,16 +169,19 @@ const TESTIMONIALS = [
     quote: 'I stopped guessing. VITALOOP gave me a clear sequence and my energy stabilized in six weeks.',
     author: 'Nora, 34',
     role: 'Product lead, Berlin',
+    result: 'Ferritin: 14 to 68 ng/mL in 12 weeks',
   },
   {
     quote: 'The weekly check-ins made me actually follow the plan. My ferritin trend finally moved in the right direction.',
     author: 'Alex, 41',
     role: 'Founder, London',
+    result: 'CRP: 5.2 to 1.8 mg/L in 8 weeks',
   },
   {
     quote: 'As a clinician, I value how quickly I can see risk patterns and adherence context in one place.',
     author: 'Dr. Sam R.',
     role: 'Functional medicine practitioner',
+    result: 'Client review prep: 45 min to 12 min',
   },
 ]
 
@@ -210,10 +214,10 @@ const HERO_TRUST_SIGNALS = [
 ]
 
   const STATS = [
-    { value: '14,000+', label: 'Lab reports analyzed' },
     { value: '85+', label: 'Biomarker types tracked' },
-    { value: '4.8★', label: 'Average user rating' },
-    { value: '92%', label: 'Protocol adherence rate' },
+    { value: '<60s', label: 'From upload to protocol' },
+    { value: '$9.99', label: 'Personal Pro per month' },
+    { value: '3 plans', label: 'Free, Pro, Enterprise' },
   ]
 
   const FAQ_ITEMS = [
@@ -516,6 +520,7 @@ export default function Landing() {
   const reduced = useReducedMotion()
   const [pricingMode, setPricingMode] = useState('monthly')
   const [theme, setTheme] = useState('dark')
+  const [demoOpen, setDemoOpen] = useState(false)
   const [loopActive, setLoopActive] = useState(false)
 
   const pricingCards = PRICING[pricingMode]
@@ -576,7 +581,7 @@ export default function Landing() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-              className={`${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900 text-slate-200' : 'border border-slate-300 bg-white text-slate-700'} px-3 py-2 text-xs`}
+              className={`hidden sm:inline-flex ${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900 text-slate-200' : 'border border-slate-300 bg-white text-slate-700'} px-3 py-2 text-xs`}
               aria-label="Toggle dark and light mode"
             >
               {isDark ? 'Light mode' : 'Dark mode'}
@@ -610,7 +615,7 @@ export default function Landing() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </button>
               <button
-                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() => setDemoOpen(true)}
                 className={`${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900/80 text-slate-100 hover:border-emerald-400/50' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'} `}
               >
                 <CirclePlay className="mr-2 h-4 w-4" />
@@ -969,6 +974,11 @@ export default function Landing() {
             {TESTIMONIALS.map((item, idx) => (
               <motion.article key={item.author} {...fadeUp(reduced, idx * 0.06)} className={`rounded-3xl border p-6 ${isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}>
                 <p className={`text-[17px] leading-[1.7] ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>"{item.quote}"</p>
+                {item.result && (
+                  <div className={`mt-3 rounded-xl border px-3 py-2 text-xs font-semibold ${isDark ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                    {item.result}
+                  </div>
+                )}
                 <div className="mt-5 flex items-center gap-3">
                   <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-semibold text-emerald-300">
                     {item.author[0]}
@@ -1121,6 +1131,8 @@ export default function Landing() {
         </section>
       </main>
 
+      <CabinetPreviewModal open={demoOpen} onClose={() => setDemoOpen(false)} reduced={reduced} />
+
       <footer className={`border-t ${isDark ? 'border-slate-800 bg-[#070b15]' : 'border-slate-200 bg-white'} py-10`}>
         <div className="mx-auto grid w-full max-w-[1240px] gap-8 px-4 text-sm sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
           <div>
@@ -1148,6 +1160,13 @@ export default function Landing() {
           <div>
             <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Company</div>
             <div className="mt-4 flex flex-col gap-3">
+              <button
+                onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+                className={`inline-flex w-fit items-center justify-center rounded-2xl border px-3 py-2 text-xs font-semibold transition ${isDark ? 'border-slate-700 bg-slate-900 text-slate-200 hover:border-emerald-400/50' : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-300'}`}
+                aria-label="Toggle dark and light mode"
+              >
+                {isDark ? 'Light mode' : 'Dark mode'}
+              </button>
               <button onClick={() => navigate('/terms')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Terms</button>
               <button onClick={() => navigate('/privacy')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Privacy</button>
               <a href="mailto:info@softdab.tech" className={`underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>info@softdab.tech</a>

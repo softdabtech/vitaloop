@@ -5,7 +5,7 @@ import { EASE } from '../../lib/motion.js'
 import { useAuth } from '../../hooks/useAuth.js'
 
 const NAV_LINKS = [
-  { label: 'Problem',      href: '#problem' },
+  { label: 'Why it matters',      href: '#problem' },
   { label: 'How it works', href: '#how-it-works' },
   { label: 'Why VITALOOP', href: '#why-vitaloop' },
   { label: 'Pricing',      href: '#pricing' },
