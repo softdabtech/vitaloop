@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Shield, Activity, Zap, FlaskConical, BarChart2, Heart, Droplets, ScanLine, ClipboardList, CheckCircle2, LayoutDashboard, Upload, X } from 'lucide-react'
+import { ArrowRight, Shield, Activity, Zap, FlaskConical, BarChart2, Heart, Droplets, ScanLine, ClipboardList, CheckCircle2, FileText, Upload, X } from 'lucide-react'
 import { stagger, staggerChild, buttonHoverProps, EASE } from '../../lib/motion.js'
 
 const CABINET_STEPS = [
@@ -17,25 +17,36 @@ const CABINET_STEPS = [
     ],
   },
   {
-    title: 'Cabinet interprets the data',
-    body: 'The dashboard surfaces latest upload, active assignments, and what matters today.',
+    title: 'Lab results become readable',
+    body: 'The Lab Results page turns raw values into ranges, biomarker context, and actionable interpretation.',
     accent: '#0f766e',
-    status: 'Dashboard updated',
+    status: 'Results interpreted',
     metrics: [
-      { label: 'Health score', value: '78' },
-      { label: 'Active assignments', value: '4' },
-      { label: 'Insights ready', value: '5' },
+      { label: 'Biomarkers interpreted', value: '54' },
+      { label: 'Priority flags', value: '3' },
+      { label: 'Insight cards', value: '5' },
     ],
   },
   {
-    title: 'Weekly loop stays active',
-    body: 'Check-ins, insights, and progress tracking keep the cabinet alive between uploads.',
-    accent: '#0f766e',
+    title: 'Assignments and check-ins activate',
+    body: 'Assignments and weekly check-ins keep the protocol alive between uploads.',
+    accent: '#0e7490',
     status: 'Weekly guidance ready',
     metrics: [
+      { label: 'Active assignments', value: '4' },
       { label: 'Check-in adherence', value: '5/5' },
-      { label: 'Trend movement', value: '+12' },
       { label: 'Next action', value: 'Retest iron' },
+    ],
+  },
+  {
+    title: 'Progress trend closes the loop',
+    body: 'Progress and timeline views show what changed and what to do in the next cycle.',
+    accent: '#0f766e',
+    status: 'Trend updated',
+    metrics: [
+      { label: 'Trend movement', value: '+12' },
+      { label: 'Health score', value: '78' },
+      { label: 'Completed tasks', value: '9' },
     ],
   },
 ]
@@ -148,13 +159,13 @@ export function CabinetPreviewModal({ open, onClose, reduced }) {
               >
                 <div className="grid grid-cols-1 md:grid-cols-[92px_minmax(0,1fr)]" style={{ gap: 16, minHeight: '100%' }}>
                   <div className="grid grid-cols-4 md:grid-cols-1" style={{ borderRadius: 20, background: '#ffffff', border: '1px solid rgba(148,163,184,0.16)', padding: '18px 12px', gap: 12 }}>
-                    {[LayoutDashboard, Upload, ClipboardList, BarChart2].map((Icon, index) => (
+                    {[Upload, FileText, ClipboardList, BarChart2].map((Icon, index) => (
                       <motion.div
                         key={index}
                         animate={{
-                          scale: stepIndex === index || (stepIndex === 2 && index === 3) ? 1.04 : 1,
-                          backgroundColor: stepIndex === index || (stepIndex === 2 && index === 3) ? 'rgba(29,158,117,0.12)' : 'rgba(248,250,252,1)',
-                          borderColor: stepIndex === index || (stepIndex === 2 && index === 3) ? 'rgba(29,158,117,0.35)' : 'rgba(148,163,184,0.12)',
+                          scale: stepIndex === index ? 1.04 : 1,
+                          backgroundColor: stepIndex === index ? 'rgba(29,158,117,0.12)' : 'rgba(248,250,252,1)',
+                          borderColor: stepIndex === index ? 'rgba(29,158,117,0.35)' : 'rgba(148,163,184,0.12)',
                         }}
                         transition={{ duration: 0.35, ease: EASE }}
                         style={{ borderRadius: 16, border: '1px solid rgba(148,163,184,0.12)', height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--teal-700)' }}
@@ -208,14 +219,14 @@ export function CabinetPreviewModal({ open, onClose, reduced }) {
                           </div>
 
                           <div style={{ display: 'grid', gap: 10 }}>
-                            {[0, 1, 2].map((row) => (
+                            {[0, 1, 2, 3].map((row) => (
                               <div key={row} style={{ borderRadius: 16, background: row === stepIndex ? `${activeStep.accent}10` : 'var(--gray-50)', border: `1px solid ${row === stepIndex ? `${activeStep.accent}35` : 'rgba(148,163,184,0.12)'}`, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                                 <div>
                                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-900)' }}>
-                                    {row === 0 ? 'Latest upload summary' : row === 1 ? 'Insights and assignments' : 'Weekly check-in pulse'}
+                                    {row === 0 ? 'Upload labs' : row === 1 ? 'Lab results interpretation' : row === 2 ? 'Assignments and check-ins' : 'Progress and timeline'}
                                   </div>
                                   <div style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: 4 }}>
-                                    {row === 0 ? 'Biomarkers, ranges, and source lab' : row === 1 ? 'Protocol tasks, red flags, and next action' : 'Adherence, mood, energy, and follow-up'}
+                                    {row === 0 ? 'PDF upload and biomarker extraction' : row === 1 ? 'Ranges, red flags, and result context' : row === 2 ? 'Protocol tasks, adherence, and follow-up' : 'Score movement and historical events'}
                                   </div>
                                 </div>
                                 {row === stepIndex ? <CheckCircle2 size={18} color={activeStep.accent} /> : <div style={{ width: 18, height: 18, borderRadius: 999, border: '1px solid rgba(148,163,184,0.25)' }} />}
