@@ -7,11 +7,19 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png', 'favicon.svg'],
       manifest: false, // we use our own /public/manifest.json
       workbox: {
         // App shell caching strategy
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Exclude heavy marketing mockups from precache to keep service worker footprint lower.
+        globIgnores: ['mockups/**'],
+        // Keep default limit high enough to prevent build-time hard failures.
+        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
         // Don't cache API calls or Supabase auth
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [
