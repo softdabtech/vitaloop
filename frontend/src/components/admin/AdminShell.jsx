@@ -68,6 +68,15 @@ export default function AdminShell({ title, subtitle, children, variant = 'clien
           {subtitle && <span style={{ fontSize: 13, color: 'rgba(15,23,42,0.5)', marginLeft: 10 }}>{subtitle}</span>}
         </div>
 
+        <button
+          onClick={() => navigate('/')}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(15,23,42,0.62)', fontSize: 13, fontWeight: 500, padding: '6px 8px', borderRadius: 8, transition: 'color 0.2s, background 0.2s' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#0f172a'; e.currentTarget.style.background = 'rgba(15,23,42,0.06)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(15,23,42,0.62)'; e.currentTarget.style.background = 'none' }}
+        >
+          Site
+        </button>
+
         {/* Sign out */}
         <button
           onClick={handleSignOut}

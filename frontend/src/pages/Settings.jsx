@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, Clock3, Link2, LogOut, ShieldCheck, Target, User } from 'lucide-react'
+import { CheckCircle2, Clock3, Link2, Target, User } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.js'
@@ -68,15 +67,13 @@ function MetricTile({ label, value, tone = 'default' }) {
 }
 
 export default function Settings() {
-  const { user, signOut } = useAuth()
-  const navigate = useNavigate()
+  const { user } = useAuth()
   const [account, setAccount] = useState({ full_name: '', age: '', sex: '', timezone: 'America/New_York' })
   const [medical, setMedical] = useState({ height_cm: '', weight_kg: '', goals: [] })
   const [extras, setExtras] = useState({
     telegram: '',
     instagram: '',
     linkedin: '',
-    language: 'en',
     weekly_digest: true,
     checkin_reminders: true,
     product_updates: false,
@@ -84,8 +81,6 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
 
   const meta = user?.user_metadata || {}
-  const app = user?.app_metadata || {}
-  const isSuperAdmin = meta.is_super_admin || app.is_super_admin
 
   const initials = (account.full_name || user?.email || 'U')
     .split(' ')
@@ -140,7 +135,6 @@ export default function Settings() {
         telegram: meta.telegram || '',
         instagram: meta.instagram || '',
         linkedin: meta.linkedin || '',
-        language: meta.language || 'en',
         weekly_digest: meta.weekly_digest !== false,
         checkin_reminders: meta.checkin_reminders !== false,
         product_updates: Boolean(meta.product_updates),
@@ -191,7 +185,6 @@ export default function Settings() {
           telegram: extras.telegram || null,
           instagram: extras.instagram || null,
           linkedin: extras.linkedin || null,
-          language: extras.language,
           weekly_digest: extras.weekly_digest,
           checkin_reminders: extras.checkin_reminders,
           product_updates: extras.product_updates,
@@ -207,11 +200,6 @@ export default function Settings() {
     }
 
     toast.success('Profile updated')
-  }
-
-  async function handleSignOut() {
-    await signOut()
-    window.location.assign('/login')
   }
 
   return (
@@ -384,15 +372,6 @@ export default function Settings() {
                   </label>
                 ))}
               </div>
-              <div style={{ marginTop: 14 }}>
-                <Field label="Preferred language">
-                  <select value={extras.language} onChange={(event) => setExtras((prev) => ({ ...prev, language: event.target.value }))} style={{ ...fieldStyle, cursor: 'pointer' }} onFocus={focusStyle} onBlur={blurStyle}>
-                    <option value="en">English</option>
-                    <option value="uk">Ukrainian</option>
-                    <option value="ru">Russian</option>
-                  </select>
-                </Field>
-              </div>
             </div>
 
             <div className="vtl-light-card p-5 sm:p-6">
@@ -418,50 +397,6 @@ export default function Settings() {
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div className="vtl-light-card p-5 sm:p-6" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Account actions</div>
-              {isSuperAdmin && (
-                <button
-                  onClick={() => navigate('/ops')}
-                  className="vtl-focus-ring"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    background: 'rgba(234,179,8,0.08)',
-                    border: '1px solid rgba(234,179,8,0.3)',
-                    borderRadius: 12,
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    color: '#f59e0b',
-                    fontSize: 14,
-                    fontWeight: 600,
-                  }}
-                >
-                  <ShieldCheck size={16} /> Ops Console
-                </button>
-              )}
-              <button
-                onClick={handleSignOut}
-                className="vtl-focus-ring"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  background: 'rgba(239,68,68,0.07)',
-                  border: '1px solid rgba(239,68,68,0.25)',
-                  borderRadius: 12,
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                  color: '#ef4444',
-                  fontSize: 14,
-                  fontWeight: 600,
-                }}
-              >
-                <LogOut size={16} /> Sign out
-              </button>
             </div>
           </div>
         </div>
