@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth.js'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
   ArrowRight,
@@ -535,6 +536,7 @@ export default function Landing() {
   const [theme, setTheme] = useState('dark')
   const [demoOpen, setDemoOpen] = useState(false)
   const [loopActive, setLoopActive] = useState(false)
+  const { user } = useAuth()
 
   const pricingCards = PRICING[pricingMode]
 
@@ -591,19 +593,36 @@ export default function Landing() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Theme toggle tumbler */}
             <button
+              type="button"
               onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-              className={`hidden sm:inline-flex ${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900 text-slate-200' : 'border border-slate-300 bg-white text-slate-700'} px-3 py-2 text-xs`}
-              aria-label="Toggle dark and light mode"
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="hidden sm:flex items-center gap-1.5 text-xs font-medium transition"
+              title={isDark ? 'Light mode' : 'Dark mode'}
             >
-              {isDark ? 'Light mode' : 'Dark mode'}
+              <span className={`text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>☀</span>
+              <span
+                className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border transition-colors duration-200 ${
+                  isDark ? 'border-slate-600 bg-slate-700' : 'border-emerald-300 bg-emerald-500'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                    isDark ? 'translate-x-0.5' : 'translate-x-[18px]'
+                  }`}
+                />
+              </span>
+              <span className={`text-[11px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>🌙</span>
             </button>
+
+            {/* Cabinet / Sign Up button */}
             <button
-              onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
-              className={`${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}
+              onClick={() => navigate(user ? '/dashboard' : '/login?signup=true')}
+              className={`${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60 hover:text-emerald-300' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'} font-semibold`}
             >
-              Explore plans
+              {user ? 'Cabinet' : 'Sign Up'}
             </button>
           </div>
         </div>
@@ -1236,11 +1255,24 @@ export default function Landing() {
             <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Company</div>
             <div className="mt-4 flex flex-col gap-3">
               <button
+                type="button"
                 onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-                className={`inline-flex w-fit items-center justify-center rounded-2xl border px-3 py-2 text-xs font-semibold transition ${isDark ? 'border-slate-700 bg-slate-900 text-slate-200 hover:border-emerald-400/50' : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-300'}`}
-                aria-label="Toggle dark and light mode"
+                aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                className="inline-flex items-center gap-1.5 text-xs font-medium transition"
               >
-                {isDark ? 'Light mode' : 'Dark mode'}
+                <span className={`text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>☀</span>
+                <span
+                  className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border transition-colors duration-200 ${
+                    isDark ? 'border-slate-600 bg-slate-700' : 'border-emerald-300 bg-emerald-500'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                      isDark ? 'translate-x-0.5' : 'translate-x-[18px]'
+                    }`}
+                  />
+                </span>
+                <span className={`text-[11px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>🌙</span>
               </button>
               <button onClick={() => navigate('/terms')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Terms</button>
               <button onClick={() => navigate('/privacy')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Privacy</button>
