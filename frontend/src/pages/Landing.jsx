@@ -345,6 +345,124 @@ function fadeUp(reduced, delay = 0) {
 function MockupCard({ title, alt, index, reduced, isDark, device = 'desktop' }) {
   const mobile = device === 'mobile'
 
+  const desktopContent = (() => {
+    if (title === 'Dashboard') return (
+      <div className="grid h-36 grid-cols-[0.9fr_1.1fr] gap-2">
+        <div className="flex flex-col items-center justify-center rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-emerald-500/40 bg-emerald-500/10">
+            <span className="text-[11px] font-bold text-emerald-300">78</span>
+          </div>
+          <div className="mt-2 h-1.5 w-14 rounded-full bg-slate-700" />
+          <div className="mt-1 h-1 w-10 rounded-full bg-slate-800" />
+        </div>
+        <div className="grid gap-2">
+          <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
+            <div className="mb-1.5 h-1.5 w-10 rounded-full bg-slate-700" />
+            <div className="mt-1 flex items-center gap-1"><div className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400/80" /><div className="ml-0.5 h-1 w-[78%] rounded-full bg-slate-700" /></div>
+            <div className="mt-1 flex items-center gap-1"><div className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400/80" /><div className="ml-0.5 h-1 w-[55%] rounded-full bg-slate-700" /></div>
+            <div className="mt-1 flex items-center gap-1"><div className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400/80" /><div className="ml-0.5 h-1 w-[88%] rounded-full bg-slate-700" /></div>
+          </div>
+          <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
+            <div className="mb-1 h-1.5 w-14 rounded-full bg-slate-700" />
+            <div className="h-2.5 w-full rounded-full bg-slate-800"><div className="h-2.5 w-[72%] rounded-full bg-emerald-500/70" /></div>
+          </div>
+        </div>
+      </div>
+    )
+    if (title === 'Lab Upload') return (
+      <div className="flex h-36 flex-col items-center justify-center gap-2.5 rounded-lg border border-slate-700/70 bg-slate-900/85 p-3">
+        <div className="flex h-12 w-20 items-center justify-center rounded-xl border-2 border-dashed border-emerald-500/40">
+          <div className="h-5 w-4 rounded-sm bg-emerald-500/35" />
+        </div>
+        <div className="w-full">
+          <div className="h-2 w-full rounded-full bg-slate-800"><div className="h-2 w-4/5 rounded-full bg-emerald-500/70" /></div>
+        </div>
+        <div className="w-full space-y-1">
+          <div className="flex items-center gap-1.5"><div className="h-2 w-2 shrink-0 rounded-full bg-emerald-400/80" /><div className="h-1.5 w-3/4 rounded-full bg-slate-700" /></div>
+          <div className="flex items-center gap-1.5"><div className="h-2 w-2 shrink-0 rounded-full bg-emerald-400/80" /><div className="h-1.5 w-[85%] rounded-full bg-slate-700" /></div>
+        </div>
+      </div>
+    )
+    if (title === 'Lab Results') return (
+      <div className="h-36 rounded-lg border border-slate-700/70 bg-slate-900/85 p-2.5">
+        <div className="mb-2 h-1.5 w-16 rounded-full bg-slate-700" />
+        <div className="mb-1.5 flex items-center gap-2"><div className="h-2 w-2 shrink-0 rounded-full bg-rose-400/80" /><div className="h-1.5 w-[78%] rounded-full bg-slate-700" /><div className="ml-auto h-4 w-10 shrink-0 rounded-full border border-slate-700/50 bg-rose-500/20" /></div>
+        <div className="mb-1.5 flex items-center gap-2"><div className="h-2 w-2 shrink-0 rounded-full bg-amber-400/80" /><div className="h-1.5 w-[60%] rounded-full bg-slate-700" /><div className="ml-auto h-4 w-10 shrink-0 rounded-full border border-slate-700/50 bg-amber-500/20" /></div>
+        <div className="mb-1.5 flex items-center gap-2"><div className="h-2 w-2 shrink-0 rounded-full bg-emerald-400/80" /><div className="h-1.5 w-[90%] rounded-full bg-slate-700" /><div className="ml-auto h-4 w-10 shrink-0 rounded-full border border-slate-700/50 bg-emerald-500/20" /></div>
+        <div className="flex items-center gap-2"><div className="h-2 w-2 shrink-0 rounded-full bg-sky-400/80" /><div className="h-1.5 w-[55%] rounded-full bg-slate-700" /><div className="ml-auto h-4 w-10 shrink-0 rounded-full border border-slate-700/50 bg-sky-500/20" /></div>
+      </div>
+    )
+    if (title === 'Personalized Protocol') return (
+      <div className="h-36 rounded-lg border border-slate-700/70 bg-slate-900/85 p-2.5">
+        <div className="mb-2 h-1.5 w-20 rounded-full bg-slate-700" />
+        <div className="mb-1.5 flex items-center gap-2 rounded-md bg-emerald-500/20 px-2 py-1.5"><span className="text-[8px] font-bold text-slate-400">01</span><div className="h-1.5 flex-1 rounded-full bg-slate-700/60" /><div className="h-3.5 w-9 shrink-0 rounded-full bg-slate-700/50" /></div>
+        <div className="mb-1.5 flex items-center gap-2 rounded-md bg-sky-500/15 px-2 py-1.5"><span className="text-[8px] font-bold text-slate-400">02</span><div className="h-1.5 flex-1 rounded-full bg-slate-700/60" /><div className="h-3.5 w-9 shrink-0 rounded-full bg-slate-700/50" /></div>
+        <div className="flex items-center gap-2 rounded-md bg-violet-500/15 px-2 py-1.5"><span className="text-[8px] font-bold text-slate-400">03</span><div className="h-1.5 flex-1 rounded-full bg-slate-700/60" /><div className="h-3.5 w-9 shrink-0 rounded-full bg-slate-700/50" /></div>
+      </div>
+    )
+    if (title === 'Timeline') return (
+      <div className="h-36 rounded-lg border border-slate-700/70 bg-slate-900/85 p-2.5">
+        <div className="mb-2 h-1.5 w-14 rounded-full bg-slate-700" />
+        <div className="flex h-20 items-end gap-[3px] px-1">
+          <div className="flex-1 rounded-t-sm bg-sky-500/30" style={{ height: '30%' }} />
+          <div className="flex-1 rounded-t-sm bg-sky-500/30" style={{ height: '50%' }} />
+          <div className="flex-1 rounded-t-sm bg-sky-500/30" style={{ height: '38%' }} />
+          <div className="flex-1 rounded-t-sm bg-sky-500/30" style={{ height: '62%' }} />
+          <div className="flex-1 rounded-t-sm bg-sky-500/30" style={{ height: '48%' }} />
+          <div className="flex-1 rounded-t-sm bg-emerald-500/55" style={{ height: '70%' }} />
+          <div className="flex-1 rounded-t-sm bg-emerald-500/55" style={{ height: '58%' }} />
+          <div className="flex-1 rounded-t-sm bg-emerald-500/55" style={{ height: '78%' }} />
+          <div className="flex-1 rounded-t-sm bg-emerald-500/55" style={{ height: '65%' }} />
+          <div className="flex-1 rounded-t-sm bg-emerald-500/70" style={{ height: '86%' }} />
+        </div>
+        <div className="mt-1.5 flex justify-between px-1">
+          <div className="h-1.5 w-5 rounded-full bg-slate-700" />
+          <div className="h-1.5 w-5 rounded-full bg-slate-700" />
+          <div className="h-1.5 w-5 rounded-full bg-slate-700" />
+        </div>
+      </div>
+    )
+    if (title === 'Practitioner CRM') return (
+      <div className="h-36 rounded-lg border border-slate-700/70 bg-slate-900/85 p-2.5">
+        <div className="mb-2 h-1.5 w-16 rounded-full bg-slate-700" />
+        <div className="mb-2 flex items-center gap-2">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-700/60 bg-slate-800/60"><div className="h-1.5 w-1.5 rounded-full bg-emerald-400" /></div>
+          <div className="flex-1"><div className="mb-0.5 h-1.5 w-12 rounded-full bg-slate-700" /><div className="h-2 w-full rounded-full bg-slate-800"><div className="h-2 w-[85%] rounded-full bg-emerald-400/60" /></div></div>
+        </div>
+        <div className="mb-2 flex items-center gap-2">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-700/60 bg-slate-800/60"><div className="h-1.5 w-1.5 rounded-full bg-amber-400" /></div>
+          <div className="flex-1"><div className="mb-0.5 h-1.5 w-12 rounded-full bg-slate-700" /><div className="h-2 w-full rounded-full bg-slate-800"><div className="h-2 w-[58%] rounded-full bg-amber-400/60" /></div></div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-700/60 bg-slate-800/60"><div className="h-1.5 w-1.5 rounded-full bg-rose-400" /></div>
+          <div className="flex-1"><div className="mb-0.5 h-1.5 w-12 rounded-full bg-slate-700" /><div className="h-2 w-full rounded-full bg-slate-800"><div className="h-2 w-[32%] rounded-full bg-rose-400/60" /></div></div>
+        </div>
+      </div>
+    )
+    return (
+      <div className="grid h-36 grid-cols-[1.05fr_0.95fr] gap-2">
+        <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
+          <div className="mb-2 h-2 w-24 rounded-full bg-slate-700" />
+          <div className="grid gap-1.5">
+            <div className="h-6 rounded-md bg-emerald-500/20" />
+            <div className="h-6 rounded-md bg-sky-500/20" />
+            <div className="h-6 rounded-md bg-violet-500/20" />
+          </div>
+        </div>
+        <div className="grid gap-2">
+          <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
+            <div className="mb-1.5 h-2 w-14 rounded-full bg-slate-700" />
+            <div className="h-7 rounded-md bg-emerald-500/25" />
+          </div>
+          <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
+            <div className="mb-1.5 h-2 w-12 rounded-full bg-slate-700" />
+            <div className="h-7 rounded-md bg-sky-500/25" />
+          </div>
+        </div>
+      </div>
+    )
+  })()
+
   return (
     <motion.article
       {...fadeUp(reduced, Math.min(index * 0.05, 0.25))}
@@ -370,38 +488,18 @@ function MockupCard({ title, alt, index, reduced, isDark, device = 'desktop' }) 
               </div>
               <div className="h-1.5 w-20 rounded-full bg-slate-700" />
             </div>
-
-            <div className="grid h-36 grid-cols-[1.05fr_0.95fr] gap-2">
-              <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
-                <div className="mb-2 h-2 w-24 rounded-full bg-slate-700" />
-                <div className="grid gap-1.5">
-                  <div className="h-6 rounded-md bg-emerald-500/20" />
-                  <div className="h-6 rounded-md bg-sky-500/20" />
-                  <div className="h-6 rounded-md bg-violet-500/20" />
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
-                  <div className="mb-1.5 h-2 w-14 rounded-full bg-slate-700" />
-                  <div className="h-7 rounded-md bg-emerald-500/25" />
-                </div>
-                <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
-                  <div className="mb-1.5 h-2 w-12 rounded-full bg-slate-700" />
-                  <div className="h-7 rounded-md bg-sky-500/25" />
-                </div>
-              </div>
-            </div>
+            {desktopContent}
           </div>
         ) : (
           <div className="mx-auto w-[170px] rounded-[24px] border border-slate-700/80 bg-[linear-gradient(180deg,#0f172a,#0b1224)] p-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.45)]">
-            <div className="mb-2 h-4 w-16 rounded-full bg-slate-800 mx-auto" />
+            <div className="mx-auto mb-2 h-4 w-16 rounded-full bg-slate-800" />
             <div className="rounded-[18px] border border-slate-700/70 bg-slate-900/90 p-2">
               <div className="mb-2 h-1.5 w-10 rounded-full bg-slate-700" />
               <div className="grid gap-1.5">
-                <div className="h-7 rounded-md bg-emerald-500/25" />
-                <div className="h-7 rounded-md bg-sky-500/20" />
-                <div className="h-7 rounded-md bg-violet-500/20" />
-                <div className="h-7 rounded-md bg-slate-700/60" />
+                <div className="flex h-5 items-center gap-1.5 rounded-md bg-emerald-500/25 px-2"><div className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" /><div className="h-1 flex-1 rounded-full bg-slate-700/60" /></div>
+                <div className="flex h-5 items-center gap-1.5 rounded-md bg-sky-500/20 px-2"><div className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" /><div className="h-1 flex-1 rounded-full bg-slate-700/60" /></div>
+                <div className="flex h-5 items-center gap-1.5 rounded-md bg-violet-500/15 px-2"><div className="h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" /><div className="h-1 flex-1 rounded-full bg-slate-700/60" /></div>
+                <div className="h-5 rounded-md bg-slate-700/40" />
               </div>
             </div>
           </div>
@@ -520,23 +618,14 @@ export default function Landing() {
               </button>
             </div>
 
-            <div className="mt-9 grid gap-3 sm:grid-cols-3">
-              {HERO_TRUST_SIGNALS.map((item, idx) => {
+            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2">
+              {HERO_TRUST_SIGNALS.map((item) => {
                 const Icon = item.icon
                 return (
-                  <motion.div
-                    key={item.title}
-                    {...fadeUp(reduced, idx * 0.04)}
-                    whileHover={reduced ? undefined : { y: -3, scale: 1.01 }}
-                    className={`rounded-2xl border p-4 ${isDark ? 'border-slate-800 bg-slate-900/60 text-slate-300' : 'border-slate-200 bg-white text-slate-600'}`}
-                    style={{ boxShadow: '0 12px 20px -8px rgb(2 6 23 / 0.3), inset 0 1px 0 rgba(16,185,129,0.1)' }}
-                  >
-                    <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-300">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className={isDark ? 'text-sm font-semibold text-slate-100' : 'text-sm font-semibold text-slate-900'}>{item.title}</div>
-                    <p className="mt-1 text-xs leading-relaxed">{item.body}</p>
-                  </motion.div>
+                  <div key={item.title} className={`flex items-center gap-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    <Icon className={`h-3.5 w-3.5 shrink-0 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                    <span className="text-[13px] font-medium">{item.title}</span>
+                  </div>
                 )
               })}
             </div>
@@ -551,10 +640,10 @@ export default function Landing() {
             <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-950/88' : 'border-slate-200 bg-slate-50'}`}>
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <div className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>Health Command Center</div>
-                  <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Realtime biomarker intelligence overview</div>
+                  <div className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>Your VITALOOP dashboard</div>
+                  <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>What you see after your first upload</div>
                 </div>
-                <span className="rounded-full border border-emerald-400/30 bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-300">+12% risk reduction</span>
+                <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">Preview</span>
               </div>
 
               <div className="mb-3 grid grid-cols-3 gap-2">
@@ -621,8 +710,8 @@ export default function Landing() {
               </p>
             </div>
 
-            <div className="mt-8 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-              <div className="grid gap-4 md:grid-cols-3">
+            <div className="mt-8 grid items-start gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+              <div className="grid content-start gap-4 self-start md:grid-cols-3 md:auto-rows-min">
                 {[
                   {
                     title: 'No prioritization',
@@ -653,7 +742,7 @@ export default function Landing() {
 
               <motion.div
                 {...fadeUp(reduced, 0.16)}
-                className={`rounded-3xl border p-5 ${isDark ? 'border-emerald-400/20 bg-[linear-gradient(180deg,rgba(5,15,28,0.98),rgba(9,23,35,0.82))]' : 'border-emerald-200 bg-[linear-gradient(180deg,#ffffff,#edfdf5)]'}`}
+                className={`self-start rounded-3xl border p-5 ${isDark ? 'border-emerald-400/20 bg-[linear-gradient(180deg,rgba(5,15,28,0.98),rgba(9,23,35,0.82))]' : 'border-emerald-200 bg-[linear-gradient(180deg,#ffffff,#edfdf5)]'}`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -752,6 +841,18 @@ export default function Landing() {
               )
             })}
           </div>
+
+          <motion.div {...fadeUp(reduced, 0.12)} className="mt-12">
+            <div className="mb-5 flex items-center gap-3">
+              <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Platform walkthrough</p>
+              <div className={`h-px flex-1 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+            </div>
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {MOCKUPS.map((m, i) => (
+                <MockupCard key={m.title} title={m.title} alt={m.alt} device={m.device} index={i} reduced={reduced} isDark={isDark} />
+              ))}
+            </div>
+          </motion.div>
         </section>
 
         <section id="why-vitaloop" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
