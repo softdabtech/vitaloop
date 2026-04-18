@@ -56,6 +56,11 @@ const BENEFITS = [
     icon: Stethoscope,
   },
   {
+    title: 'Built for weekly follow-through',
+    body: 'Check-ins, assignments, and adherence loops keep your protocol alive after the first upload.',
+    icon: Clock3,
+  },
+  {
     title: 'Secure by design',
     body: 'Privacy-first architecture with strict identity and access controls.',
     icon: ShieldCheck,
@@ -64,6 +69,97 @@ const BENEFITS = [
     title: 'AI + human escalation path',
     body: 'Know when to act alone and when to escalate to a professional.',
     icon: Users,
+  },
+]
+
+const PREMIUM_FEATURES = [
+  {
+    title: 'Longitudinal Biomarker Engine',
+    body: 'Every upload is normalized into one timeline, so ferritin, thyroid, hormones, inflammation, and metabolic markers can be compared across months instead of read as isolated reports.',
+    detail: 'What you get: trend lines, directionality, abnormal persistence, and recovery detection.',
+    icon: TrendingUp,
+  },
+  {
+    title: 'Protocol Command Center',
+    body: 'The platform converts lab patterns into a structured protocol with supplement priorities, nutrition changes, and execution tasks ranked by likely impact.',
+    detail: 'What you get: concrete next steps instead of a PDF full of unexplained numbers.',
+    icon: Sparkles,
+  },
+  {
+    title: 'Weekly Adherence Loop',
+    body: 'Check-ins continuously feed energy, sleep, mood, and compliance data back into your protocol so the system can distinguish low adherence from poor response.',
+    detail: 'What you get: smarter adjustments between lab cycles, not just after them.',
+    icon: HeartPulse,
+  },
+  {
+    title: 'Practitioner-Ready Review Layer',
+    body: 'Results are organized so a practitioner, coach, or care team can immediately see history, risk, assignments, and progress without reconstructing the case manually.',
+    detail: 'What you get: collaboration-ready outputs when self-optimization is not enough.',
+    icon: Stethoscope,
+  },
+]
+
+const PLAN_DETAILS = {
+  Free: {
+    eyebrow: 'Validate the experience',
+    description: 'For first-time users who want to upload one report, see the dashboard structure, and understand how VITALOOP turns raw biomarker values into usable context.',
+    idealFor: 'Best for: trying your first blood test interpretation without commitment.',
+  },
+  'Personal Pro': {
+    eyebrow: 'Most chosen plan',
+    description: 'For users actively running a health protocol who need unlimited uploads, longitudinal tracking, weekly adaptation, and fast feedback between lab cycles.',
+    idealFor: 'Best for: people serious about biohacking, recovery, hormone optimization, or deficiency correction.',
+  },
+  Enterprise: {
+    eyebrow: 'Practitioner operations',
+    description: 'For clinics, functional practitioners, and high-touch teams who need client oversight, workflow coordination, and shared execution visibility.',
+    idealFor: 'Best for: scaling client management without losing biomarker context.',
+  },
+}
+
+const HUB_GUIDES = [
+  {
+    title: 'How to read ferritin in context',
+    body: 'Why ferritin without CRP, iron saturation, symptoms, and trend direction is often misleading.',
+    icon: FileText,
+  },
+  {
+    title: 'Building a repeatable retest loop',
+    body: 'How to time uploads, check-ins, and protocol changes so progress is measurable rather than anecdotal.',
+    icon: BrainCircuit,
+  },
+  {
+    title: 'From biomarkers to action stack',
+    body: 'A guide to translating abnormal markers into nutrition, supplements, and recovery priorities.',
+    icon: LayoutDashboard,
+  },
+]
+
+const LOOP_FLOW = [
+  {
+    title: 'Upload data',
+    body: 'Bring in a new lab report or retest.',
+    icon: Upload,
+  },
+  {
+    title: 'Extract signals',
+    body: 'AI normalizes biomarkers and flags patterns.',
+    icon: BrainCircuit,
+  },
+  {
+    title: 'Run protocol',
+    body: 'You execute the highest-leverage actions.',
+    icon: Sparkles,
+  },
+  {
+    title: 'Check weekly response',
+    body: 'Symptoms and adherence explain what changed.',
+    icon: HeartPulse,
+  },
+  {
+    title: 'Adapt the next cycle',
+    body: 'The next upload becomes more precise than the last.',
+    icon: TrendingUp,
   },
 ]
 
@@ -322,6 +418,7 @@ export default function Landing() {
   const reduced = useReducedMotion()
   const [pricingMode, setPricingMode] = useState('monthly')
   const [theme, setTheme] = useState('dark')
+  const [loopActive, setLoopActive] = useState(false)
 
   const pricingCards = PRICING[pricingMode]
 
@@ -515,11 +612,76 @@ export default function Landing() {
         </section>
 
         <section id="problem" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
-          <motion.div {...fadeUp(reduced)} className={`rounded-3xl p-6 md:p-8 ${sectionCard}`}>
-            <h2 className="text-[28px] font-semibold tracking-tight">Why Most People Get Zero Value From Their Blood Tests</h2>
-            <p className={`mt-4 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              Standard lab reports show values and ranges — but offer no interpretation, no cross-biomarker analysis, and no personalized protocol. VITALOOP closes that gap with a continuous AI loop from raw data to weekly action.
-            </p>
+          <motion.div {...fadeUp(reduced)} className={`rounded-[32px] p-6 md:p-8 ${sectionCard}`}>
+            <div className="mx-auto max-w-4xl text-center">
+              <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Why standard reports fail</p>
+              <h2 className="mt-3 text-[28px] font-semibold tracking-tight md:text-[34px]">Why Most People Get Zero Value From Their Blood Tests</h2>
+              <p className={`mx-auto mt-4 max-w-3xl text-[17px] leading-[1.75] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                A traditional lab PDF gives you reference ranges, not decisions. It rarely explains what matters first, which markers connect to each other, or what to do in the next seven days. That leaves most people with expensive data and no operating system.
+              </p>
+            </div>
+
+            <div className="mt-8 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+              <div className="grid gap-4 md:grid-cols-3">
+                {[
+                  {
+                    title: 'No prioritization',
+                    body: 'You see ten abnormal markers, but no clue which two are driving the most downstream symptoms.',
+                  },
+                  {
+                    title: 'No longitudinal memory',
+                    body: 'Each retest is treated like a fresh document instead of part of a trend that should change your interpretation.',
+                  },
+                  {
+                    title: 'No execution layer',
+                    body: 'Even when something is obviously off, there is no protocol, no weekly loop, and no accountability to act on it.',
+                  },
+                ].map((item, idx) => (
+                  <motion.article
+                    key={item.title}
+                    {...fadeUp(reduced, idx * 0.05)}
+                    className={`rounded-3xl border p-5 text-left ${isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'}`}
+                  >
+                    <div className={`mb-3 inline-flex h-9 w-9 items-center justify-center rounded-2xl ${isDark ? 'bg-rose-500/12 text-rose-300' : 'bg-rose-50 text-rose-700'}`}>
+                      0{idx + 1}
+                    </div>
+                    <h3 className="text-lg font-semibold">{item.title}</h3>
+                    <p className={`mt-2 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{item.body}</p>
+                  </motion.article>
+                ))}
+              </div>
+
+              <motion.div
+                {...fadeUp(reduced, 0.16)}
+                className={`rounded-3xl border p-5 ${isDark ? 'border-emerald-400/20 bg-[linear-gradient(180deg,rgba(5,15,28,0.98),rgba(9,23,35,0.82))]' : 'border-emerald-200 bg-[linear-gradient(180deg,#ffffff,#edfdf5)]'}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>What VITALOOP changes</p>
+                    <h3 className="mt-2 text-xl font-semibold">From numbers to a living health system</h3>
+                  </div>
+                  <Shield className={`h-8 w-8 ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`} />
+                </div>
+                <div className="mt-5 space-y-3">
+                  {[
+                    'Ranks the highest-leverage biomarker issues first',
+                    'Tracks whether changes are improving, flat, or regressing',
+                    'Turns interpretation into an action protocol you can actually follow',
+                  ].map((line) => (
+                    <div key={line} className={`flex items-start gap-3 rounded-2xl border px-4 py-3 ${isDark ? 'border-slate-800 bg-slate-900/65' : 'border-slate-200 bg-white/90'}`}>
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                      <span className={`text-sm leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{line}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className={`mt-5 rounded-2xl border px-4 py-4 ${isDark ? 'border-slate-800 bg-slate-950/70 text-slate-300' : 'border-slate-200 bg-white text-slate-600'}`}>
+                  <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Outcome</div>
+                  <p className="mt-2 text-sm leading-relaxed">
+                    Instead of asking “What do all these numbers mean?”, users get a ranked explanation, a protocol, and a repeatable loop for the next cycle.
+                  </p>
+                </div>
+              </motion.div>
+            </div>
           </motion.div>
         </section>
 
@@ -558,22 +720,37 @@ export default function Landing() {
           <motion.div {...fadeUp(reduced)} className="mb-7">
             <h2 className="text-[28px] font-semibold tracking-tight">Longitudinal Biomarker Tracking Across Every Health Dimension</h2>
             <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              Real product interfaces across desktop and mobile: from upload and extraction to protocol execution, check-ins, and practitioner oversight.
+              Four premium layers work together to turn one upload into a compounding health intelligence system rather than a one-time report review.
             </p>
           </motion.div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {MOCKUPS.map((mockup, index) => (
-              <MockupCard
-                key={mockup.title}
-                index={index}
-                title={mockup.title}
-                alt={mockup.alt}
-                reduced={reduced}
-                isDark={isDark}
-                device={mockup.device}
-              />
-            ))}
+            {PREMIUM_FEATURES.map((feature, index) => {
+              const Icon = feature.icon
+              return (
+                <motion.article
+                  key={feature.title}
+                  {...fadeUp(reduced, index * 0.05)}
+                  whileHover={reduced ? undefined : { y: -5, scale: 1.01 }}
+                  className={`flex min-h-[320px] flex-col rounded-[30px] border p-6 ${isDark ? 'border-slate-800 bg-[linear-gradient(180deg,rgba(8,15,30,0.92),rgba(12,24,38,0.72))]' : 'border-slate-200 bg-white'}`}
+                  style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.1), inset 0 1px 0 rgba(16,185,129,0.08)' }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${isDark ? 'bg-emerald-500/14 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${isDark ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                      Premium
+                    </span>
+                  </div>
+                  <h3 className="mt-6 text-xl font-semibold leading-snug">{feature.title}</h3>
+                  <p className={`mt-3 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{feature.body}</p>
+                  <div className={`mt-auto rounded-2xl border px-4 py-4 text-sm leading-relaxed ${isDark ? 'border-slate-800 bg-slate-950/60 text-slate-200' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
+                    {feature.detail}
+                  </div>
+                </motion.article>
+              )
+            })}
           </div>
         </section>
 
@@ -605,7 +782,9 @@ export default function Landing() {
           <motion.div {...fadeUp(reduced)} className="mb-7 flex flex-wrap items-end justify-between gap-4">
             <div>
               <h2 className="text-[28px] font-semibold tracking-tight">Pricing</h2>
-              <p className={`mt-3 text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Freemium entry, premium personal plan, and scalable practitioner ops.</p>
+              <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                Entry-level access for your first report, a real premium layer for longitudinal self-optimization, and an operations plan for practitioners who need client visibility and workflow control.
+              </p>
             </div>
             <div className={`relative inline-flex rounded-2xl border p-1 ${isDark ? 'border-slate-700 bg-slate-900/80' : 'border-slate-300 bg-white'}`}>
               <motion.span
@@ -632,7 +811,7 @@ export default function Landing() {
                 key={plan.name}
                 {...fadeUp(reduced)}
                 whileHover={reduced ? undefined : { y: -4, scale: 1.01 }}
-                className={`relative rounded-3xl border p-6 ${plan.featured ? 'border-emerald-300 bg-emerald-500/10' : isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
+                className={`relative flex h-full flex-col rounded-3xl border p-6 ${plan.featured ? 'border-emerald-300 bg-emerald-500/10' : isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
                 style={{ boxShadow: plan.featured ? '0 0 0 4px rgba(16,185,129,0.12), 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' : '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08)' }}
               >
                 {plan.featured && (
@@ -640,11 +819,17 @@ export default function Landing() {
                     Most popular
                   </span>
                 )}
+                <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${plan.featured ? 'text-emerald-200' : isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                  {PLAN_DETAILS[plan.name]?.eyebrow}
+                </p>
                 <h3 className="text-xl font-semibold">{plan.name}</h3>
                 <div className="mt-4 flex items-end gap-1">
                   <span className="text-4xl font-bold tracking-tight">{plan.price}</span>
                   <span className={`pb-1 text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{plan.period}</span>
                 </div>
+                <p className={`mt-4 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                  {PLAN_DETAILS[plan.name]?.description}
+                </p>
                 <ul className="mt-5 space-y-2">
                   {plan.points.map((point) => (
                     <li key={point} className="flex items-start gap-2 text-sm">
@@ -653,9 +838,21 @@ export default function Landing() {
                     </li>
                   ))}
                 </ul>
-                <button onClick={() => navigate('/login?signup=true')} className={`mt-6 w-full ${ctaBase} ${plan.featured ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' : isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+                <div className={`mt-5 rounded-2xl border px-4 py-4 text-sm leading-relaxed ${isDark ? 'border-slate-800 bg-slate-950/60 text-slate-200' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
+                  {PLAN_DETAILS[plan.name]?.idealFor}
+                </div>
+                <button onClick={() => {
+                  if (plan.name === 'Enterprise') {
+                    window.location.href = 'mailto:info@softdab.tech?subject=Vitaloop%20Enterprise'
+                    return
+                  }
+                  navigate('/login?signup=true')
+                }} className={`mt-6 w-full ${ctaBase} mt-auto ${plan.featured ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' : isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                   {plan.cta}
                 </button>
+                {plan.name === 'Enterprise' && (
+                  <p className={`mt-3 text-center text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Custom seats, onboarding, and workflow setup are scoped with your team.</p>
+                )}
               </motion.article>
             ))}
           </div>
@@ -712,38 +909,93 @@ export default function Landing() {
         {/* === Blog teaser === */}
         <section aria-label="Health intelligence resources" className="mx-auto w-full max-w-[1240px] px-4 py-8 sm:px-6">
           <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}>
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
               <div>
                 <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Health Intelligence Hub</p>
                 <h2 className="mt-2 text-[22px] font-semibold tracking-tight">Guides on Biomarker Interpretation & Biohacking</h2>
                 <p className={`mt-2 max-w-xl text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                  Deep dives on reading blood test results, optimizing ferritin, testosterone, cortisol, and building a sustainable biohacking protocol.
+                  Deep dives on reading blood test results, optimizing ferritin, testosterone, cortisol, and building a sustainable biohacking protocol. The guides page now acts like an extension of the product, not a disconnected document dump.
                 </p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button
+                    onClick={() => navigate('/how-it-works')}
+                    className={`${ctaBase} shrink-0 ${isDark ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' : 'bg-slate-900 text-white hover:bg-slate-700'}`}
+                  >
+                    Explore guides
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
+                    className={`${ctaBase} shrink-0 ${isDark ? 'border border-slate-700 bg-slate-900/80 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}
+                  >
+                    Compare plans
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => navigate('/how-it-works')}
-                className={`${ctaBase} shrink-0 ${isDark ? 'border border-slate-700 bg-slate-900/80 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}
-              >
-                Explore guides
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </button>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                {HUB_GUIDES.map((guide, idx) => {
+                  const Icon = guide.icon
+                  return (
+                    <motion.article
+                      key={guide.title}
+                      {...fadeUp(reduced, idx * 0.05)}
+                      className={`rounded-3xl border p-5 ${isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'}`}
+                    >
+                      <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${isDark ? 'bg-emerald-500/14 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <h3 className="mt-4 text-base font-semibold">{guide.title}</h3>
+                      <p className={`mt-2 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{guide.body}</p>
+                    </motion.article>
+                  )
+                })}
+              </div>
             </div>
           </motion.div>
         </section>
 
         <section className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
-          <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}>
+          <motion.div
+            {...fadeUp(reduced)}
+            onMouseEnter={() => setLoopActive(true)}
+            onMouseLeave={() => setLoopActive(false)}
+            className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}
+          >
             <h2 className="text-[28px] font-semibold tracking-tight">The Biohacking Feedback Loop: How Longitudinal Lab Tracking Works</h2>
             <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
               Biohacking is not a one-time blood test — it is a continuous feedback cycle. VITALOOP makes that loop automatic: data → AI insight → action protocol → weekly check-in → next lab upload. Each cycle makes the next one smarter.
             </p>
-            <div className="mt-6 grid gap-3 md:grid-cols-5">
-              {['Data', 'Insight', 'Action', 'Feedback', 'Adaptation'].map((item, idx) => (
-                <div key={item} className={`rounded-2xl border px-4 py-4 text-center ${isDark ? 'border-slate-700 bg-slate-900/60' : 'border-slate-200 bg-white'}`}>
-                  <div className={`text-xs font-semibold uppercase tracking-[0.14em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>{idx + 1}</div>
-                  <div className="mt-1 text-sm font-semibold">{item}</div>
-                </div>
-              ))}
+            <div className="mt-6 grid gap-4 xl:grid-cols-[repeat(5,minmax(0,1fr))]">
+              {LOOP_FLOW.map((item, idx) => {
+                const Icon = item.icon
+                return (
+                  <div key={item.title} className="relative">
+                    {idx < LOOP_FLOW.length - 1 && (
+                      <motion.div
+                        aria-hidden="true"
+                        animate={loopActive && !reduced ? { opacity: [0.25, 1, 0.4], scaleX: [0.92, 1, 0.96] } : { opacity: 0.28, scaleX: 1 }}
+                        transition={{ duration: 0.8, delay: idx * 0.14, ease: 'easeInOut' }}
+                        className={`absolute left-[calc(50%+36px)] top-9 hidden h-px w-[calc(100%-12px)] origin-left xl:block ${isDark ? 'bg-gradient-to-r from-emerald-400/80 to-slate-700/20' : 'bg-gradient-to-r from-emerald-500/80 to-slate-300/20'}`}
+                      />
+                    )}
+                    <motion.article
+                      animate={loopActive && !reduced ? { y: [0, -8, 0], scale: [1, 1.02, 1] } : { y: 0, scale: 1 }}
+                      transition={{ duration: 0.75, delay: idx * 0.14, ease: 'easeInOut' }}
+                      className={`relative h-full rounded-[28px] border px-4 py-5 ${isDark ? 'border-slate-700 bg-slate-900/60' : 'border-slate-200 bg-white'}`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${isDark ? 'bg-emerald-500/14 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
+                          <Icon className="h-5 w-5" />
+                        </span>
+                        <span className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>0{idx + 1}</span>
+                      </div>
+                      <h3 className="mt-4 text-base font-semibold">{item.title}</h3>
+                      <p className={`mt-2 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{item.body}</p>
+                    </motion.article>
+                  </div>
+                )
+              })}
             </div>
           </motion.div>
         </section>
@@ -766,13 +1018,38 @@ export default function Landing() {
         </section>
       </main>
 
-      <footer className={`border-t ${isDark ? 'border-slate-800 bg-[#070b15]' : 'border-slate-200 bg-white'} py-8`}>
-        <div className="mx-auto flex w-full max-w-[1240px] flex-col justify-between gap-2 px-4 text-sm sm:px-6 md:flex-row">
-          <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>VITALOOP © {new Date().getFullYear()} — AI Lab Analysis & Biohacking Platform</span>
-          <div className="flex gap-4">
-            <button onClick={() => navigate('/terms')} className={`underline-offset-2 hover:underline ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Terms</button>
-            <button onClick={() => navigate('/privacy')} className={`underline-offset-2 hover:underline ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Privacy</button>
-            <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>Not medical advice</span>
+      <footer className={`border-t ${isDark ? 'border-slate-800 bg-[#070b15]' : 'border-slate-200 bg-white'} py-10`}>
+        <div className="mx-auto grid w-full max-w-[1240px] gap-8 px-4 text-sm sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/90 text-white">
+                <HeartPulse className="h-5 w-5" />
+              </span>
+              <span className="text-base font-semibold tracking-tight">VITALOOP</span>
+            </div>
+            <p className={`mt-4 max-w-md leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              AI lab analysis, personalized protocols, and longitudinal biomarker tracking for people who want a repeatable health system instead of one-off interpretations.
+            </p>
+            <p className={`mt-4 text-xs uppercase tracking-[0.16em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Not medical advice. Always work with a qualified clinician for diagnosis and treatment decisions.</p>
+          </div>
+
+          <div>
+            <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Product</div>
+            <div className="mt-4 flex flex-col gap-3">
+              <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>How it works</button>
+              <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Pricing</button>
+              <button onClick={() => navigate('/how-it-works')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Health Intelligence Hub</button>
+            </div>
+          </div>
+
+          <div>
+            <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Company</div>
+            <div className="mt-4 flex flex-col gap-3">
+              <button onClick={() => navigate('/terms')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Terms</button>
+              <button onClick={() => navigate('/privacy')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Privacy</button>
+              <a href="mailto:info@softdab.tech" className={`underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>info@softdab.tech</a>
+              <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>© {new Date().getFullYear()} VITALOOP</span>
+            </div>
           </div>
         </div>
       </footer>
