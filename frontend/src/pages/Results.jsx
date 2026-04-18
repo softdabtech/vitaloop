@@ -62,8 +62,6 @@ export default function Results() {
   return (
     <div className="vtl-page min-h-screen p-6">
       <div className="max-w-3xl mx-auto">
-        <button onClick={() => navigate('/dashboard')} className="text-slate-500 hover:text-slate-700 text-sm mb-6">← Back to dashboard</button>
-
         <h2 className="text-2xl font-bold text-slate-900 mb-6">Your Lab Results</h2>
 
         <div className="grid grid-cols-3 gap-3 mb-6">

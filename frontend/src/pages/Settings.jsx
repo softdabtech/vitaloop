@@ -204,30 +204,30 @@ export default function Settings() {
 
   return (
     <div className="vtl-page" style={{ minHeight: '100svh' }}>
-      <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1240, margin: '0 auto' }}>
         <CabinetPageHeader
           title="Settings"
           subtitle="Profile, reminders, goals, and identity in one place."
-          helper="Compact account controls for daily use."
+          helper=""
           className="mb-4"
         />
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
           <div style={{ display: 'grid', gap: 16 }}>
             <div className="vtl-light-card p-5 sm:p-6" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,1), rgba(240,253,247,0.92))' }}>
-              <div className="grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-start">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.95fr)] xl:items-start">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
                   <div style={{ position: 'relative' }}>
                     <div style={{
-                      width: 84,
-                      height: 84,
+                      width: 92,
+                      height: 92,
                       borderRadius: '50%',
                       overflow: 'hidden',
                       background: 'linear-gradient(135deg, var(--vtl-accent), #059669)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 24,
+                      fontSize: 28,
                       fontWeight: 700,
                       color: '#052e16',
                       boxShadow: '0 12px 30px rgba(29,158,117,0.18)',
@@ -236,8 +236,8 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  <div>
-                    <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: '#0f172a' }}>{account.full_name || 'Your Profile'}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.03em', color: '#0f172a', lineHeight: 1.1 }}>{account.full_name || 'Your Profile'}</div>
                     <div style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>{user?.email}</div>
                     <div style={{ marginTop: 10, display: 'inline-flex', borderRadius: 999, background: 'rgba(29,158,117,0.1)', color: '#047857', padding: '7px 12px', fontSize: 12, fontWeight: 700 }}>
                       Profile completion {profileCompletion}%
@@ -245,10 +245,10 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-3 lg:self-start">
+                <div className="grid gap-3 sm:grid-cols-3 xl:self-start">
                   <MetricTile label="Profile" value={`${profileCompletion}%`} tone={profileCompletion >= 70 ? 'success' : 'warm'} />
                   <MetricTile label="Channels" value={String(activeChannels)} />
-                  <MetricTile label="Reminders on" value={`${enabledReminders}/3`} />
+                  <MetricTile label="Reminders" value={`${enabledReminders}/3`} />
                 </div>
               </div>
             </div>
