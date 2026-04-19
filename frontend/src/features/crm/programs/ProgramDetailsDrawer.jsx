@@ -1,9 +1,11 @@
+import { createPortal } from 'react-dom'
+
 export default function ProgramDetailsDrawer({ program, onClose }) {
   if (!program) return null
 
-  return (
-    <div className="fixed inset-0 z-[70] bg-slate-950/45">
-      <div className="absolute right-0 top-0 h-full w-full max-w-[420px] overflow-y-auto border-l border-slate-600/60 bg-[#111827] p-5">
+  const content = (
+    <div className="fixed inset-0 z-[70] bg-slate-950/45 backdrop-blur-sm">
+      <div className="fixed right-0 top-0 bottom-0 h-full w-full max-w-[420px] overflow-y-auto border-l border-slate-600/60 bg-[#111827] p-5">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="m-0 text-lg font-semibold text-slate-100">Program Details</h3>
           <button onClick={onClose} className="vtl-button-secondary min-h-[34px] rounded-lg px-3 py-1.5 text-xs">Close</button>
@@ -31,4 +33,6 @@ export default function ProgramDetailsDrawer({ program, onClose }) {
       </div>
     </div>
   )
+
+  return createPortal(content, document.body)
 }

@@ -197,6 +197,8 @@ class ClientResponse(BaseModel):
     """Client profile detail."""
     id: UUID
     user_id: UUID
+    email: Optional[str] = None
+    display_name: Optional[str] = None
     assigned_practitioner_id: Optional[UUID]
     onboarding_status: ClientOnboardingStatus
     active_program_id: Optional[UUID]
