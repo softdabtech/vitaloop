@@ -148,5 +148,8 @@ app.include_router(notifications.router, prefix="/notifications", tags=["notific
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(onboarding.router)
 app.include_router(questionnaire.router, prefix="/questionnaire", tags=["questionnaire"])
+# Backward-compatible aliases used by older clients/tests.
+app.include_router(auth.router, prefix="/users", tags=["users"])
+app.include_router(questionnaire.router, prefix="/questionnaires", tags=["questionnaire"])
 app.include_router(dashboard.router)
 app.include_router(compatibility.router)

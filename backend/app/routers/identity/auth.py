@@ -83,6 +83,17 @@ async def get_auth_me(current_user: dict = Depends(get_current_user)):
     }
 
 
+@router.get("/subscription")
+async def get_subscription(current_user: dict = Depends(get_current_user)):
+    user_id = current_user.get("sub")
+    account = await svc.get_user_account(user_id)
+    subscription_status = str(account.get("sub_status") or "free").lower()
+    return {
+        "status": subscription_status,
+        "is_active": subscription_status == "active",
+    }
+
+
 class _OrgSetupRequest(BaseModel):
     name: str
 
