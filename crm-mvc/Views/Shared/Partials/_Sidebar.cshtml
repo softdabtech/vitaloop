@@ -33,8 +33,8 @@
 
   var navItemsAccount = new[]
   {
-    new { Href = "/admin/billing",       Label = "Billing",        Group = "Account", Icon = "&#128179;", RequireRole = new[] { "org_admin" } },
-    new { Href = "/admin/settings",      Label = "Settings",       Group = "Account", Icon = "&#9881;",  RequireRole = new string[0] }
+    new { Href = "/billing",       Label = "Billing",        Group = "Account", Icon = "&#128179;", RequireRole = new[] { "org_admin" } },
+    new { Href = "/settings",      Label = "Settings",       Group = "Account", Icon = "&#9881;",  RequireRole = new string[0] }
   };
 
   bool ShouldShowItem(string[] requiredRoles)

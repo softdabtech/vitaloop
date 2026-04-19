@@ -12,7 +12,8 @@ public sealed class HttpCrmDataGateway : ICrmDataGateway
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
     };
 
     private readonly IHttpClientFactory _httpClientFactory;
