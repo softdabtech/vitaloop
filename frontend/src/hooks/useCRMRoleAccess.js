@@ -5,8 +5,20 @@ function deriveRole(user) {
   const meta = user?.user_metadata || {}
   const app = user?.app_metadata || {}
 
-  if (meta.global_role) return meta.global_role
-  if (app.global_role) return app.global_role
+  const normalized = String(
+    meta.global_role
+    || app.global_role
+    || meta.role
+    || app.role
+    || '',
+  ).trim().toLowerCase()
+
+  if (normalized === 'super_admin') return 'super_admin'
+  if (normalized === 'org_admin' || normalized === 'admin' || normalized === 'org_owner' || normalized === 'manager' || normalized === 'client_admin') {
+    return 'org_admin'
+  }
+  if (normalized === 'practitioner') return 'practitioner'
+
   if (meta.is_super_admin || app.is_super_admin) return 'super_admin'
   if (meta.org_role === 'admin' || app.org_role === 'admin') return 'org_admin'
   if (meta.role === 'practitioner' || app.role === 'practitioner') return 'practitioner'

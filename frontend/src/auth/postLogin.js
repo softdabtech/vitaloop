@@ -7,6 +7,11 @@ const CRM_ROLES = new Set(['super_admin', 'admin', 'org_admin', 'org_owner', 'cl
 export const AUTH_POST_LOGIN_PATH = import.meta.env.VITE_AUTH_POST_LOGIN_PATH || `${CRM_BASE_URL}/auth/post-login`
 export const INVITATIONS_ACCEPT_PATH = import.meta.env.VITE_INVITATIONS_ACCEPT_PATH || `${CRM_BASE_URL}/invitations/accept`
 
+function isCrmHost() {
+  const hostname = String(window.location.hostname || '').toLowerCase()
+  return hostname === 'crm.vitaloop.today' || hostname.startsWith('crm.')
+}
+
 function withToken(url, token) {
   if (!token) return url
   const parsed = new URL(url)
@@ -112,6 +117,13 @@ export async function resolvePostLoginDestination(returnUrl = null) {
   }
 
   if (authMeFailed) {
+    if (isCrmHost()) {
+      return {
+        url: '/ops',
+        method: 'GET',
+      }
+    }
+
     return {
       url: normalized && (normalized.startsWith('/dashboard') || normalized.startsWith('/onboarding'))
         ? normalized

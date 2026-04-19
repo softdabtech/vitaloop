@@ -39,9 +39,6 @@ const ForInvestors = lazy(() => import('./pages/ForInvestors.jsx'))
 const Privacy = lazy(() => import('./pages/Privacy.jsx'))
 const Terms = lazy(() => import('./pages/Terms.jsx'))
 
-// Legacy admin pages — lazy (rarely accessed; /admin still active)
-const ClientAdmin = lazy(() => import('./pages/ClientAdmin.jsx'))
-
 // CRM pages — lazy (role-gated, not on main user path)
 const OpsDashboard = lazy(() => import('./pages/crm/OpsDashboard.jsx'))
 const CRMPrograms = lazy(() => import('./pages/crm/Programs.jsx'))
@@ -195,7 +192,7 @@ export default function App() {
           <Route path="/assignments/:assignmentId" element={renderCabinetRoute(<AssignmentDetails />, { allowBeforeOnboarding: true })} />
           <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />, { allowBeforeOnboarding: true })} />
           <Route path="/settings" element={renderCabinetRoute(<Settings />)} />
-          <Route path="/admin" element={<ProtectedRoute><ClientAdmin /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><CRMRoute needsOps><Navigate to="/ops" replace /></CRMRoute></ProtectedRoute>} />
           <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<ProtectedRoute><CRMRoute><OpsDashboard /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/programs" element={<ProtectedRoute><CRMRoute><CRMPrograms /></CRMRoute></ProtectedRoute>} />
