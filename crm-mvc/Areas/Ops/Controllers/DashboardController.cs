@@ -26,25 +26,52 @@ public class DashboardController : Controller
     public async Task<IActionResult> Index(CancellationToken ct)
     {
         var userCtx = await _userContextAccessor.GetOrThrow(ct);
-        IReadOnlyList<GlobalUser> users;
-        Vitaloop.Crm.Web.Models.Crm.PlatformOverview? overview;
-        Vitaloop.Crm.Web.Models.Crm.RuntimeReadinessSnapshot? runtimeReadiness;
-        IReadOnlyList<Vitaloop.Crm.Web.Models.Crm.AuditLogEntry> logs;
+        var warnings = new List<string>();
+
+        IReadOnlyList<GlobalUser> users = Array.Empty<GlobalUser>();
+        Vitaloop.Crm.Web.Models.Crm.PlatformOverview? overview = null;
+        Vitaloop.Crm.Web.Models.Crm.RuntimeReadinessSnapshot? runtimeReadiness = null;
+        IReadOnlyList<Vitaloop.Crm.Web.Models.Crm.AuditLogEntry> logs = Array.Empty<Vitaloop.Crm.Web.Models.Crm.AuditLogEntry>();
+
         try
         {
             users = await _membershipService.GetGlobalUsers(userCtx, ct);
+        }
+        catch (HttpRequestException)
+        {
+            warnings.Add("Global users feed is temporarily unavailable.");
+        }
+
+        try
+        {
             overview = await _membershipService.GetPlatformOverview(userCtx, ct);
+        }
+        catch (HttpRequestException)
+        {
+            warnings.Add("Platform overview is temporarily unavailable.");
+        }
+
+        try
+        {
             runtimeReadiness = await _membershipService.GetRuntimeReadiness(userCtx, ct);
+        }
+        catch (HttpRequestException)
+        {
+            warnings.Add("Runtime readiness is temporarily unavailable.");
+        }
+
+        try
+        {
             logs = await _membershipService.GetAuditLogs(userCtx, null, 20, ct);
         }
         catch (HttpRequestException)
         {
-            // Keep Ops page accessible even when optional admin API is unavailable.
-            users = Array.Empty<GlobalUser>();
-            overview = null;
-            runtimeReadiness = null;
-            logs = Array.Empty<Vitaloop.Crm.Web.Models.Crm.AuditLogEntry>();
-            TempData["WarningMessage"] = "Global users feed is temporarily unavailable.";
+            warnings.Add("Activity log is temporarily unavailable.");
+        }
+
+        if (warnings.Count > 0)
+        {
+            TempData["WarningMessage"] = string.Join(" ", warnings);
         }
 
         var model = new OpsDashboardViewModel
