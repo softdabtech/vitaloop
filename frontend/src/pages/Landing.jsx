@@ -608,14 +608,14 @@ export default function Landing() {
               type="button"
               onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
               aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              className={`hidden sm:inline-flex h-11 w-16 items-center rounded-full border px-1 transition ${
+              className={`hidden sm:inline-flex h-9 w-14 items-center rounded-full border px-1 transition ${
                 isDark ? 'border-slate-600 bg-slate-800' : 'border-slate-300 bg-slate-100'
               }`}
               title={isDark ? 'Light mode' : 'Dark mode'}
             >
               <span
-                className={`h-9 w-9 rounded-full shadow-sm transition-transform duration-200 ${
-                  isDark ? 'translate-x-0 bg-slate-950' : 'translate-x-5 bg-white'
+                className={`h-7 w-7 rounded-full shadow-sm transition-transform duration-200 ${
+                  isDark ? 'translate-x-0 bg-slate-950' : 'translate-x-4 bg-white'
                 }`}
               />
             </button>
@@ -1345,32 +1345,26 @@ export default function Landing() {
 
           <div>
             <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Company</div>
-            <div className="mt-4 flex flex-col gap-3">
+            <div className="mt-4 flex flex-col items-start gap-3 text-left">
               <button
                 type="button"
                 onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
                 aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-                className="inline-flex items-center gap-1.5 text-xs font-medium transition"
+                className={`inline-flex h-8 w-12 items-center rounded-full border px-1 transition ${
+                  isDark ? 'border-slate-600 bg-slate-800' : 'border-slate-300 bg-slate-100'
+                }`}
               >
-                <span className={`text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>☀</span>
                 <span
-                  className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border transition-colors duration-200 ${
-                    isDark ? 'border-slate-600 bg-slate-700' : 'border-emerald-300 bg-emerald-500'
+                  className={`h-6 w-6 rounded-full shadow-sm transition-transform duration-200 ${
+                    isDark ? 'translate-x-0 bg-slate-950' : 'translate-x-3 bg-white'
                   }`}
-                >
-                  <span
-                    className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ${
-                      isDark ? 'translate-x-0.5' : 'translate-x-[18px]'
-                    }`}
-                  />
-                </span>
-                <span className={`text-[11px] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>🌙</span>
+                />
               </button>
               <button onClick={() => navigate('/terms')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Terms</button>
               <button onClick={() => navigate('/privacy')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Privacy</button>
               <button onClick={() => navigate('/for-investors')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>For Investors</button>
-              <a href="mailto:info@softdab.tech" className={`underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>info@softdab.tech</a>
-              <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>© {new Date().getFullYear()} VITALOOP</span>
+              <a href="mailto:info@softdab.tech" className={`self-start text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>info@softdab.tech</a>
+              <span className={`self-start text-left ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>© {new Date().getFullYear()} VITALOOP</span>
             </div>
           </div>
         </div>
