@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Vitaloop.Crm.Web.Models.Crm;
 
 public sealed class Member
@@ -14,9 +16,18 @@ public sealed class Member
 
 public sealed class GlobalUser
 {
+    [JsonPropertyName("id")]
     public Guid UserId { get; init; }
+
+    [JsonPropertyName("email")]
     public string Email { get; init; } = string.Empty;
+
+    [JsonPropertyName("full_name")]
     public string FullName { get; init; } = string.Empty;
+
+    [JsonPropertyName("global_role")]
     public string GlobalRole { get; init; } = "end_user";
+
+    [JsonPropertyName("sub_status")]
     public string Status { get; init; } = "active";
 }
