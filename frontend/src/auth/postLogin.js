@@ -2,6 +2,7 @@ import api from '../lib/api.js'
 import { supabase, hasSupabaseConfig } from '../lib/supabase.js'
 
 const CRM_BASE_URL = (import.meta.env.VITE_CRM_BASE_URL || 'https://crm.vitaloop.today').replace(/\/$/, '')
+const APP_BASE_URL = (import.meta.env.VITE_APP_BASE_URL || 'https://vitaloop.today').replace(/\/$/, '')
 const CRM_ROLES = new Set(['super_admin', 'admin', 'org_admin', 'org_owner', 'client_admin', 'manager', 'practitioner'])
 
 export const AUTH_POST_LOGIN_PATH = import.meta.env.VITE_AUTH_POST_LOGIN_PATH || `${CRM_BASE_URL}/auth/post-login`
@@ -10,6 +11,23 @@ export const INVITATIONS_ACCEPT_PATH = import.meta.env.VITE_INVITATIONS_ACCEPT_P
 function isCrmHost() {
   const hostname = String(window.location.hostname || '').toLowerCase()
   return hostname === 'crm.vitaloop.today' || hostname.startsWith('crm.')
+}
+
+function resolveRoleFromSessionUser(sessionUser) {
+  const meta = sessionUser?.user_metadata || {}
+  const app = sessionUser?.app_metadata || {}
+  const normalized = String(
+    meta.global_role
+    || app.global_role
+    || meta.role
+    || app.role
+    || '',
+  ).trim().toLowerCase()
+
+  if (meta.is_super_admin || app.is_super_admin || normalized === 'super_admin') return 'super_admin'
+  if (CRM_ROLES.has(normalized)) return normalized
+  if (String(meta.org_role || app.org_role || '').toLowerCase() === 'admin') return 'org_admin'
+  return 'end_user'
 }
 
 function withToken(url, token) {
@@ -107,9 +125,15 @@ export async function resolvePostLoginDestination(returnUrl = null) {
     authMeFailed = true
   }
 
-  // End-users should stay in B2C app instead of being redirected to CRM /admin.
+  // End-users should stay in B2C app instead of CRM.
   if (authMe && resolveGlobalRole(authMe) === 'end_user') {
     const localPath = resolveLocalProductPath(authMe, normalized)
+    if (isCrmHost()) {
+      return {
+        url: `${APP_BASE_URL}${localPath}`,
+        method: 'GET',
+      }
+    }
     return {
       url: localPath,
       method: 'GET',
@@ -117,17 +141,53 @@ export async function resolvePostLoginDestination(returnUrl = null) {
   }
 
   if (authMeFailed) {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const sessionUser = sessionData?.session?.user
+    const accessToken = sessionData?.session?.access_token
+    const sessionRole = resolveRoleFromSessionUser(sessionUser)
+
+    if (sessionRole !== 'end_user') {
+      if (isCrmHost()) {
+        return {
+          url: '/ops',
+          method: 'GET',
+        }
+      }
+
+      if (accessToken) {
+        const target = new URL(AUTH_POST_LOGIN_PATH)
+        if (normalized) {
+          target.searchParams.set('returnUrl', normalized)
+        }
+        const baseTarget = target.toString()
+
+        return {
+          url: baseTarget,
+          method: 'POST',
+          token: accessToken,
+          fallbackUrl: withToken(baseTarget, accessToken),
+        }
+      }
+
+      return {
+        url: `${CRM_BASE_URL}/ops`,
+        method: 'GET',
+      }
+    }
+
+    const localFallback = normalized && (normalized.startsWith('/dashboard') || normalized.startsWith('/onboarding'))
+      ? normalized
+      : '/dashboard'
+
     if (isCrmHost()) {
       return {
-        url: '/ops',
+        url: `${APP_BASE_URL}${localFallback}`,
         method: 'GET',
       }
     }
 
     return {
-      url: normalized && (normalized.startsWith('/dashboard') || normalized.startsWith('/onboarding'))
-        ? normalized
-        : '/dashboard',
+      url: localFallback,
       method: 'GET',
     }
   }
