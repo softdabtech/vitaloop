@@ -3,7 +3,6 @@ import { getPrograms } from '../../api/crmPrograms.js'
 import { getClients } from '../../api/crmClients.js'
 import { getPractitioners } from '../../api/crmPractitioners.js'
 import { getFunnelOverview } from '../../api/crmOps.js'
-import { getOpsMetrics, syncUsersToOps } from '../../api/crmOpsData.js'
 import { isNotImplemented } from '../../api/crmClient.js'
 import { useCRMQuery } from '../../hooks/useCRMQuery.js'
 import { useCRMRoleAccess } from '../../hooks/useCRMRoleAccess.js'
@@ -11,7 +10,6 @@ import CRMLayout from '../../features/crm/components/CRMLayout.jsx'
 import CRMPageHeader from '../../features/crm/components/CRMPageHeader.jsx'
 import CRMStatCard from '../../features/crm/components/CRMStatCard.jsx'
 import CRMErrorState from '../../features/crm/components/CRMErrorState.jsx'
-import toast from 'react-hot-toast'
 
 const DROPOFF_QUALITY_PRESETS = [
   { id: 'low', label: 'Low', minReached: 1 },
@@ -25,14 +23,12 @@ export default function OpsDashboard() {
   const [dropoffSortBy, setDropoffSortBy] = useState('count')
   const [dropoffMinReached, setDropoffMinReached] = useState(5)
   const [dropoffLimit] = useState(10)
-  const [syncingUsers, setSyncingUsers] = useState(false)
   const funnelWindowOptions = [7, 14, 30, 90]
   const dropoffMinReachedOptions = [1, 3, 5, 10]
 
   const programsQuery = useCallback(() => getPrograms({ limit: 100, offset: 0 }), [])
   const clientsQuery = useCallback(() => getClients({ limit: 100, offset: 0 }), [])
   const practitionersQuery = useCallback(() => getPractitioners(), [])
-  const metricsQuery = useCallback(() => getOpsMetrics(), [])
   const apiMinDropoffReached = dropoffSortBy === 'rate' ? dropoffMinReached : 1
   const funnelQuery = useCallback(
     () => getFunnelOverview({
@@ -47,22 +43,7 @@ export default function OpsDashboard() {
   const programs = useCRMQuery(programsQuery, [programsQuery], { enabled: canAccessOps })
   const clients = useCRMQuery(clientsQuery, [clientsQuery], { enabled: canAccessOps })
   const practitioners = useCRMQuery(practitionersQuery, [practitionersQuery], { enabled: canAccessOps })
-  const metrics = useCRMQuery(metricsQuery, [metricsQuery], { enabled: canAccessOps })
   const funnel = useCRMQuery(funnelQuery, [funnelQuery, funnelDays, apiMinDropoffReached, dropoffSortBy, dropoffLimit], { enabled: canAccessOps })
-
-  const handleSyncUsers = async () => {
-    setSyncingUsers(true)
-    try {
-      const result = await syncUsersToOps()
-      toast.success(`Sync started: ${result.clients_created} new clients created`)
-      // Refresh metrics after sync
-      setTimeout(() => metrics.refetch(), 1000)
-    } catch (err) {
-      toast.error(err.message || 'Sync failed')
-    } finally {
-      setSyncingUsers(false)
-    }
-  }
 
   if (!canAccessOps) {
     return (
@@ -173,64 +154,17 @@ export default function OpsDashboard() {
       {criticalError ? (
         <CRMErrorState error={criticalError} onRetry={() => { clients.refetch(); programs.refetch() }} />
       ) : (
-        <div style={{ display: 'grid', gap: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-            <CRMStatCard label="Clients" value={clients.data?.total ?? '-'} hint="From GET /crm/clients" tone="#1d9e75" />
-            <CRMStatCard label="Programs" value={programs.data?.total ?? '-'} hint="From GET /crm/programs" tone="#0ea5e9" />
-            <CRMStatCard
-              label="Practitioners"
-              value={practitionerNotAvailable ? 'n/a' : (Array.isArray(practitioners.data?.items) ? practitioners.data.items.length : Array.isArray(practitioners.data) ? practitioners.data.length : '-')}
-              hint={practitionerNotAvailable ? 'List endpoint pending in backend' : 'From GET /crm/practitioners'}
-              tone="#f59e0b"
-            />
-          </div>
-
-          {/* Real service metrics from Supabase */}
-          {metrics.data && (
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <h3 style={{ margin: 0, color: '#fff', fontSize: 14, fontWeight: 600 }}>Real Service Metrics</h3>
-                <button
-                  onClick={handleSyncUsers}
-                  disabled={syncingUsers}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 6,
-                    border: '1px solid rgba(56,189,248,0.55)',
-                    background: syncingUsers ? 'rgba(156,163,175,0.2)' : 'rgba(14,165,233,0.14)',
-                    color: syncingUsers ? '#a3a3a3' : '#e0f2fe',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: syncingUsers ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {syncingUsers ? 'Syncing...' : 'Sync Users'}
-                </button>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-                <CRMStatCard label="Total Users" value={metrics.data?.users?.total ?? '-'} hint="All registered users" tone="#14b8a6" />
-                <CRMStatCard label="With Clients" value={metrics.data?.users?.with_clients ?? '-'} hint="Users synced to CRM" tone="#22c55e" />
-                <CRMStatCard label="Orphaned" value={metrics.data?.users?.orphaned ?? '-'} hint="Not yet in CRM" tone="#ef4444" />
-                <CRMStatCard label="Active Subscriptions" value={metrics.data?.subscriptions?.active ?? '-'} hint="Paid users" tone="#a855f7" />
-                <CRMStatCard label="Onboarding Started" value={metrics.data?.clients?.onboarding_status?.started ?? '-'} hint="Clients in progress" tone="#3b82f6" />
-                <CRMStatCard label="Onboarding Completed" value={metrics.data?.clients?.onboarding_status?.completed ?? '-'} hint="Fully onboarded" tone="#10b981" />
-              </div>
-
-              {metrics.data?.subscriptions?.by_plan && Object.keys(metrics.data.subscriptions.by_plan).length > 0 && (
-                <div style={{ marginTop: 12, padding: 12, background: 'rgba(255,255,255,0.02)', borderRadius: 6 }}>
-                  <p style={{ margin: '0 0 8px', color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Plans:</p>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {Object.entries(metrics.data.subscriptions.by_plan).map(([plan, count]) => (
-                      <span key={plan} style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(56,189,248,0.2)', color: '#e0f2fe', fontSize: 11 }}>
-                        {plan}: <strong>{count}</strong>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+          <CRMStatCard label="Clients" value={clients.data?.total ?? '-'} hint="From GET /crm/clients" tone="#1d9e75" />
+          <CRMStatCard label="Programs" value={programs.data?.total ?? '-'} hint="From GET /crm/programs" tone="#0ea5e9" />
+          <CRMStatCard
+            label="Practitioners"
+            value={practitionerNotAvailable ? 'n/a' : (Array.isArray(practitioners.data?.items) ? practitioners.data.items.length : Array.isArray(practitioners.data) ? practitioners.data.length : '-')}
+            hint={practitionerNotAvailable ? 'List endpoint pending in backend' : 'From GET /crm/practitioners'}
+            tone="#f59e0b"
+          />
+        </div>
+      )}
 
       <div style={{ marginTop: 16 }}>
         <CRMPageHeader
