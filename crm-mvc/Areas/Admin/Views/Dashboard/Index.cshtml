@@ -6,16 +6,16 @@
 @await Html.PartialAsync("~/Views/Shared/Partials/_PageHeader.cshtml", new PageHeaderViewModel { Title = "Admin Dashboard", Subtitle = "Organization and member management overview", Eyebrow = "Admin" })
 
 <nav class="vo-quick-actions" aria-label="Quick actions">
-  <a class="vo-quick-action" href="/members">
+  <a class="vo-quick-action" href="/admin/members">
     <span class="vo-quick-action-icon">👥</span> Members
   </a>
-  <a class="vo-quick-action" href="/invitations">
+  <a class="vo-quick-action" href="/admin/members/invite">
     <span class="vo-quick-action-icon">✉️</span> Invitations
   </a>
-  <a class="vo-quick-action" href="/assignments">
+  <a class="vo-quick-action" href="/admin/assignments">
     <span class="vo-quick-action-icon">🔗</span> Assignments
   </a>
-  <a class="vo-quick-action" href="/organizations">
+  <a class="vo-quick-action" href="/admin/organizations">
     <span class="vo-quick-action-icon">🏢</span> Organizations
   </a>
   <a class="vo-quick-action" href="/organizations/settings">
