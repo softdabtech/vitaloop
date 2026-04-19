@@ -1666,8 +1666,17 @@ async def get_audit_logs(limit: int = 200, organization_id: Optional[str] = None
     query = supabase.table("audit_logs").select("*").order("timestamp", desc=True).limit(limit)
     if organization_id:
         query = query.eq("organization_id", organization_id)
-    resp = await _run(lambda: query.execute())
-    return resp.data or []
+
+    try:
+        resp = await _run(lambda: query.execute())
+        return resp.data or []
+    except Exception as ex:
+        # Do not break Ops pages if audit table is not available in an environment yet.
+        msg = str(ex)
+        if "PGRST205" in msg and "audit_logs" in msg:
+            _logger.warning("audit_logs_table_missing returning_empty_feed")
+            return []
+        raise
 
 
 async def write_audit_log(

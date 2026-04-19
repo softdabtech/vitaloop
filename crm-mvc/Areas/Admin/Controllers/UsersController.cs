@@ -3,6 +3,7 @@ using Vitaloop.Crm.Web.Attributes;
 using Vitaloop.Crm.Web.Services.Contracts;
 using Vitaloop.Crm.Web.Services.Invitations;
 using Vitaloop.Crm.Web.Services.Memberships;
+using Vitaloop.Crm.Web.Services.Organizations;
 using Vitaloop.Crm.Web.ViewModels;
 
 namespace Vitaloop.Crm.Web.Areas.Admin.Controllers;
@@ -13,17 +14,26 @@ namespace Vitaloop.Crm.Web.Areas.Admin.Controllers;
 public class UsersController : Controller
 {
     private readonly IUserContextAccessor _userContextAccessor;
+    private readonly IActiveOrganizationResolver _activeOrganizationResolver;
+    private readonly IAccessPolicyService _accessPolicyService;
+    private readonly OrganizationService _organizationService;
     private readonly MembershipService _membershipService;
     private readonly InvitationService _invitationService;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
         IUserContextAccessor userContextAccessor,
+        IActiveOrganizationResolver activeOrganizationResolver,
+        IAccessPolicyService accessPolicyService,
+        OrganizationService organizationService,
         MembershipService membershipService,
         InvitationService invitationService,
         ILogger<UsersController> logger)
     {
         _userContextAccessor = userContextAccessor;
+        _activeOrganizationResolver = activeOrganizationResolver;
+        _accessPolicyService = accessPolicyService;
+        _organizationService = organizationService;
         _membershipService = membershipService;
         _invitationService = invitationService;
         _logger = logger;
@@ -33,7 +43,7 @@ public class UsersController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken ct)
     {
-        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
 
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
@@ -77,7 +87,7 @@ public class UsersController : Controller
     [RequireOrgRole("org_owner", "client_admin")]
     public async Task<IActionResult> ChangeRole(Guid userId, [FromForm] string newRole, CancellationToken ct)
     {
-        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
 
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
@@ -108,7 +118,7 @@ public class UsersController : Controller
     [RequireOrgRole("org_owner", "client_admin")]
     public async Task<IActionResult> RemoveMember(Guid userId, CancellationToken ct)
     {
-        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
 
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
@@ -139,7 +149,7 @@ public class UsersController : Controller
     [RequireOrgRole("org_owner", "client_admin")]
     public async Task<IActionResult> Invite(CancellationToken ct)
     {
-        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
         return View(new InvitationViewModel { OrganizationId = userCtx.ActiveOrganizationId ?? Guid.Empty, Role = "member" });
     }
 
@@ -148,7 +158,7 @@ public class UsersController : Controller
     [RequireOrgRole("org_owner", "client_admin")]
     public async Task<IActionResult> SendInvite(InvitationViewModel model, CancellationToken ct)
     {
-        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
 
         if (!ModelState.IsValid)
         {
@@ -173,5 +183,30 @@ public class UsersController : Controller
             TempData["ErrorMessage"] = "Failed to send invitation.";
             return View("Invite", model);
         }
+    }
+
+    private async Task<Vitaloop.Crm.Web.Models.Auth.UserContext> EnsureActiveOrganization(
+        Vitaloop.Crm.Web.Models.Auth.UserContext userCtx,
+        CancellationToken ct)
+    {
+        if (userCtx.ActiveOrganizationId.HasValue)
+        {
+            return userCtx;
+        }
+
+        if (!_accessPolicyService.HasGlobalRole(userCtx, "super_admin"))
+        {
+            return userCtx;
+        }
+
+        var organizations = await _organizationService.GetOrganizations(userCtx, ct);
+        var firstOrgId = organizations.FirstOrDefault()?.Id;
+        if (firstOrgId.HasValue)
+        {
+            await _activeOrganizationResolver.SetActiveOrganizationId(firstOrgId.Value, ct);
+            userCtx.ActiveOrganizationId = firstOrgId.Value;
+        }
+
+        return userCtx;
     }
 }

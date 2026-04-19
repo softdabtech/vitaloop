@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Vitaloop.Crm.Web.Attributes;
 using Vitaloop.Crm.Web.Services.Assignments;
 using Vitaloop.Crm.Web.Services.Contracts;
+using Vitaloop.Crm.Web.Services.Organizations;
 using Vitaloop.Crm.Web.ViewModels;
 
 namespace Vitaloop.Crm.Web.Areas.Admin.Controllers;
@@ -12,18 +13,24 @@ namespace Vitaloop.Crm.Web.Areas.Admin.Controllers;
 public class AssignmentsController : Controller
 {
     private readonly IUserContextAccessor _userContextAccessor;
+    private readonly IActiveOrganizationResolver _activeOrganizationResolver;
     private readonly IAccessPolicyService _accessPolicyService;
+    private readonly OrganizationService _organizationService;
     private readonly AssignmentService _assignmentService;
     private readonly ILogger<AssignmentsController> _logger;
 
     public AssignmentsController(
         IUserContextAccessor userContextAccessor,
+        IActiveOrganizationResolver activeOrganizationResolver,
         IAccessPolicyService accessPolicyService,
+        OrganizationService organizationService,
         AssignmentService assignmentService,
         ILogger<AssignmentsController> logger)
     {
         _userContextAccessor = userContextAccessor;
+        _activeOrganizationResolver = activeOrganizationResolver;
         _accessPolicyService = accessPolicyService;
+        _organizationService = organizationService;
         _assignmentService = assignmentService;
         _logger = logger;
     }
@@ -32,7 +39,7 @@ public class AssignmentsController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken ct)
     {
-        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
 
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
@@ -90,7 +97,7 @@ public class AssignmentsController : Controller
     [RequireOrgRole("org_owner", "client_admin", "manager")]
     public async Task<IActionResult> Create(CancellationToken ct)
     {
-        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
 
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
@@ -107,7 +114,7 @@ public class AssignmentsController : Controller
     [RequireOrgRole("org_owner", "client_admin", "manager")]
     public async Task<IActionResult> Create(CreateAssignmentViewModel model, CancellationToken ct)
     {
-        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
 
         if (!ModelState.IsValid)
         {
@@ -150,7 +157,7 @@ public class AssignmentsController : Controller
     [RequireOrgRole("org_owner", "client_admin", "manager")]
     public async Task<IActionResult> Reassign(Guid assignmentId, Guid newPractitionerId, CancellationToken ct)
     {
-        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
 
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
@@ -174,5 +181,30 @@ public class AssignmentsController : Controller
             TempData["ErrorMessage"] = "Failed to reassign client.";
             return RedirectToAction(nameof(Index));
         }
+    }
+
+    private async Task<Vitaloop.Crm.Web.Models.Auth.UserContext> EnsureActiveOrganization(
+        Vitaloop.Crm.Web.Models.Auth.UserContext userCtx,
+        CancellationToken ct)
+    {
+        if (userCtx.ActiveOrganizationId.HasValue)
+        {
+            return userCtx;
+        }
+
+        if (!_accessPolicyService.HasGlobalRole(userCtx, "super_admin"))
+        {
+            return userCtx;
+        }
+
+        var organizations = await _organizationService.GetOrganizations(userCtx, ct);
+        var firstOrgId = organizations.FirstOrDefault()?.Id;
+        if (firstOrgId.HasValue)
+        {
+            await _activeOrganizationResolver.SetActiveOrganizationId(firstOrgId.Value, ct);
+            userCtx.ActiveOrganizationId = firstOrgId.Value;
+        }
+
+        return userCtx;
     }
 }
