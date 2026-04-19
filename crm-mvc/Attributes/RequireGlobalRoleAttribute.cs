@@ -21,17 +21,7 @@ public sealed class RequireGlobalRoleAttribute : Attribute, IAsyncAuthorizationF
         var policy = context.HttpContext.RequestServices.GetRequiredService<IAccessPolicyService>();
         var userCtx = await accessor.GetCurrent(context.HttpContext.RequestAborted);
 
-        static bool IsBrowserPageRequest(HttpRequest request)
-        {
-            if (!HttpMethods.IsGet(request.Method))
-            {
-                return false;
-            }
-
-            var accepts = request.Headers.Accept.ToString();
-            return accepts.Contains("text/html", StringComparison.OrdinalIgnoreCase)
-                   || accepts.Contains("*/*", StringComparison.OrdinalIgnoreCase);
-        }
+        static bool IsPageNavigationRequest(HttpRequest request) => HttpMethods.IsGet(request.Method);
 
         static string BuildLoginRedirect(HttpRequest request)
         {
@@ -42,7 +32,7 @@ public sealed class RequireGlobalRoleAttribute : Attribute, IAsyncAuthorizationF
 
         if (userCtx is null)
         {
-            if (IsBrowserPageRequest(context.HttpContext.Request))
+            if (IsPageNavigationRequest(context.HttpContext.Request))
             {
                 context.Result = new RedirectResult(BuildLoginRedirect(context.HttpContext.Request));
                 return;
@@ -54,7 +44,7 @@ public sealed class RequireGlobalRoleAttribute : Attribute, IAsyncAuthorizationF
 
         if (!policy.HasGlobalRole(userCtx, _roles))
         {
-            if (IsBrowserPageRequest(context.HttpContext.Request))
+            if (IsPageNavigationRequest(context.HttpContext.Request))
             {
                 context.Result = new RedirectResult("/auth/post-login");
                 return;
