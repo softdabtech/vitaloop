@@ -75,15 +75,27 @@ async def _run_invitations_query(query_fn):
         raise
 
 
-def _is_super_admin(current_user: dict) -> bool:
+async def _is_super_admin(current_user: dict) -> bool:
     user_meta = current_user.get("user_metadata") or {}
     app_meta = current_user.get("app_metadata") or {}
     global_role = current_user.get("global_role") or app_meta.get("global_role") or user_meta.get("global_role")
-    return bool(
+    is_super_admin = bool(
         user_meta.get("is_super_admin")
         or app_meta.get("is_super_admin")
         or str(global_role or "").lower() == "super_admin"
     )
+    if is_super_admin:
+        return True
+
+    user_id = current_user.get("sub")
+    if not user_id:
+        return False
+
+    try:
+        account = await svc.get_user_account(user_id)
+        return str((account or {}).get("global_role") or "").lower() == "super_admin"
+    except Exception:
+        return False
 
 
 def _display_name(user: Optional[dict], fallback_email: str = "") -> str:
@@ -97,7 +109,7 @@ async def _get_supabase():
 
 
 async def _require_super_admin(current_user: dict = Depends(get_current_user)) -> dict:
-    if not _is_super_admin(current_user):
+    if not await _is_super_admin(current_user):
         raise HTTPException(status_code=403, detail="Super admin access required")
     return current_user
 
@@ -115,7 +127,7 @@ async def _get_membership(sb, org_id: UUID, user_id: str) -> Optional[dict]:
 
 
 async def _require_org_access(sb, org_id: UUID, current_user: dict) -> Optional[dict]:
-    if _is_super_admin(current_user):
+    if await _is_super_admin(current_user):
         return None
 
     membership = await _get_membership(sb, org_id, current_user["sub"])
@@ -125,7 +137,7 @@ async def _require_org_access(sb, org_id: UUID, current_user: dict) -> Optional[
 
 
 async def _require_org_role(sb, org_id: UUID, current_user: dict, allowed_roles: set[str]) -> Optional[dict]:
-    if _is_super_admin(current_user):
+    if await _is_super_admin(current_user):
         return None
 
     membership = await _get_membership(sb, org_id, current_user["sub"])
@@ -203,7 +215,7 @@ def _serialize_invitation(row: dict) -> dict[str, Any]:
 async def list_organizations(current_user: dict = Depends(get_current_user)):
     sb = await _get_supabase()
 
-    if _is_super_admin(current_user):
+    if await _is_super_admin(current_user):
         org_resp = await svc._run(lambda: sb.table("organizations").select("*").order("created_at").execute())
         owner_ids = [row.get("owner_id") for row in (org_resp.data or [])]
         owners = await _load_users_by_ids(sb, owner_ids)
@@ -928,7 +940,7 @@ async def reassign_assignment(
 
     role = str((membership or {}).get("role") or "").lower()
     is_practitioner = role == "practitioner"
-    is_admin_like = _is_super_admin(current_user) or role in {"org_owner", "client_admin", "manager"}
+    is_admin_like = await _is_super_admin(current_user) or role in {"org_owner", "client_admin", "manager"}
 
     if is_practitioner and str(existing.get("practitioner_id")) != str(current_user["sub"]):
         raise HTTPException(status_code=403, detail="Practitioner can only edit own clients")
