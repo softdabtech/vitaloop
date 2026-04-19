@@ -49,7 +49,6 @@ const CRMClients = lazy(() => import('./pages/crm/Clients.jsx'))
 const CRMClientDetails = lazy(() => import('./pages/crm/ClientDetails.jsx'))
 const CRMPractitioners = lazy(() => import('./pages/crm/Practitioners.jsx'))
 const CRMAuditLog = lazy(() => import('./pages/crm/AuditLog.jsx'))
-const CRMUsers = lazy(() => import('./pages/crm/Users.jsx'))
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -196,7 +195,7 @@ export default function App() {
           <Route path="/assignments/:assignmentId" element={renderCabinetRoute(<AssignmentDetails />, { allowBeforeOnboarding: true })} />
           <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />, { allowBeforeOnboarding: true })} />
           <Route path="/settings" element={renderCabinetRoute(<Settings />)} />
-          <Route path="/admin" element={<Navigate to="/ops" replace />} />
+          <Route path="/admin" element={<ProtectedRoute><ClientAdmin /></ProtectedRoute>} />
           <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<ProtectedRoute><CRMRoute><OpsDashboard /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/programs" element={<ProtectedRoute><CRMRoute><CRMPrograms /></CRMRoute></ProtectedRoute>} />
@@ -204,7 +203,6 @@ export default function App() {
           <Route path="/crm/clients/:id" element={<ProtectedRoute><CRMRoute><CRMClientDetails /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/practitioners" element={<ProtectedRoute><CRMRoute><CRMPractitioners /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
-          <Route path="/crm/users" element={<ProtectedRoute><CRMRoute needsOps><CRMUsers /></CRMRoute></ProtectedRoute>} />
           <Route path="/onboarding" element={renderCabinetRoute(<Onboarding />, { allowBeforeOnboarding: true })} />
           <Route path="/questionnaire" element={renderCabinetRoute(<Questionnaire />, { allowBeforeOnboarding: true })} />
           <Route path="/check-ins" element={renderCabinetRoute(<WeeklyCheckIn />)} />
