@@ -196,7 +196,7 @@ export default function App() {
           <Route path="/assignments/:assignmentId" element={renderCabinetRoute(<AssignmentDetails />, { allowBeforeOnboarding: true })} />
           <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />, { allowBeforeOnboarding: true })} />
           <Route path="/settings" element={renderCabinetRoute(<Settings />)} />
-          <Route path="/admin" element={<ProtectedRoute><ClientAdmin /></ProtectedRoute>} />
+          <Route path="/admin" element={<Navigate to="/ops" replace />} />
           <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<ProtectedRoute><CRMRoute><OpsDashboard /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/programs" element={<ProtectedRoute><CRMRoute><CRMPrograms /></CRMRoute></ProtectedRoute>} />
