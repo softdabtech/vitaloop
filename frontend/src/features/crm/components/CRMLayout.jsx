@@ -9,6 +9,16 @@ const NAV_ITEMS = [
   { to: '/crm/programs', label: 'Programs', roles: ['super_admin', 'org_admin', 'practitioner'] },
   { to: '/crm/clients', label: 'Clients', roles: ['super_admin', 'org_admin', 'practitioner'] },
   { to: '/crm/practitioners', label: 'Practitioners', roles: ['super_admin', 'org_admin'] },
+  { to: '/crm/users', label: 'Users', roles: ['super_admin'] },
+  { to: '/crm/activity', label: 'Activity', roles: ['super_admin', 'org_admin'] },
+] },
+  { to: '/crm/programs', label: 'Programs', roles: ['super_admin', 'org_admin', 'practitioner'] },
+  { to: '/crm/clients', label: 'Clients', roles: ['super_admin', 'org_admin', 'practitioner'] },
+  { to: '/crm/practitioners', label: 'Practitioners', roles: ['super_admin', 'org_admin'] },
+  { to: '/crm/programs', label: 'Programs', roles: ['super_admin', 'org_admin', 'practitioner'] },
+  { to: '/crm/clients', label: 'Clients', roles: ['super_admin', 'org_admin', 'practitioner'] },
+  { to: '/crm/practitioners', label: 'Practitioners', roles: ['super_admin', 'org_admin'] },
+  { to: '/crm/users', label: 'Users', roles: ['super_admin'] },
   { to: '/crm/activity', label: 'Activity', roles: ['super_admin', 'org_admin'] },
 ]
 

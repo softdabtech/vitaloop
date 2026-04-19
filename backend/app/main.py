@@ -45,7 +45,7 @@ from app.routers.analysis import analyze, insights, red_flags, timeline, dashboa
 from app.routers.protocol import protocol, progress, symptoms, checkins, questionnaire, assignments, compatibility
 from app.routers.notifications import notifications, complaints
 from app.routers.billing import stripe_router
-from app.routers.crm import crm, crm_clients
+from app.routers.crm import crm, crm_clients, crm_ops
 from app.routers.admin import admin
 
 
@@ -136,6 +136,7 @@ app.include_router(symptoms.router, prefix="/symptoms", tags=["symptoms"])
 app.include_router(stripe_router.router, prefix="/stripe", tags=["stripe"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
 app.include_router(crm_clients.router, tags=["crm"])
+app.include_router(crm_ops.router, tags=["crm"])
 app.include_router(assignments.router, tags=["crm-assignments"])
 app.include_router(crm.router, prefix="/admin", tags=["crm"])
 app.include_router(profile.router, prefix="/profile", tags=["profile"])
