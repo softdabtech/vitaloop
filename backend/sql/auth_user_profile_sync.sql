@@ -40,4 +40,25 @@ AFTER INSERT ON auth.users
 FOR EACH ROW
 EXECUTE FUNCTION public.handle_new_user();
 
+CREATE OR REPLACE FUNCTION public.handle_new_user_profile()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.user_profile (id)
+  VALUES (NEW.id)
+  ON CONFLICT DO NOTHING;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_user_created_profile ON public.users;
+
+CREATE TRIGGER on_user_created_profile
+AFTER INSERT ON public.users
+FOR EACH ROW
+EXECUTE FUNCTION public.handle_new_user_profile();
+
 COMMIT;

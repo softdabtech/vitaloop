@@ -103,6 +103,12 @@ class QuestionnaireCompleteRequest(BaseModel):
     mark_onboarding_complete: bool = False
 
 
+class QuestionnaireCreateRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    questions: Optional[List[Dict[str, Any]]] = None
+
+
 def _is_missing_questionnaire_tables(ex: Exception) -> bool:
     msg = str(ex)
     return "PGRST205" in msg and (
@@ -144,6 +150,48 @@ async def _update_session(session_id: str, fields: Dict[str, Any]) -> None:
     sb = svc._get_supabase()
     fields["updated_at"] = datetime.now(timezone.utc).isoformat()
     await svc._run(lambda: sb.table("questionnaire_sessions").update(fields).eq("id", session_id).execute())
+
+
+@router.get("")
+async def list_questionnaires(current_user: dict = Depends(get_current_user)):
+    """Backward-compatible list endpoint returning the user's questionnaire sessions."""
+    user_id = current_user.get("sub")
+    try:
+        sb = svc._get_supabase()
+        resp = await svc._run(
+            lambda: sb.table("questionnaire_sessions")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(25)
+            .execute()
+        )
+        items = resp.data or []
+        return {"questionnaires": items, "total": len(items)}
+    except Exception as ex:
+        if _is_missing_questionnaire_tables(ex):
+            raise HTTPException(status_code=503, detail="Questionnaire storage not initialized.")
+        raise
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+async def create_questionnaire(
+    _body: QuestionnaireCreateRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Backward-compatible create endpoint that initializes/returns an active session."""
+    user_id = current_user.get("sub")
+    try:
+        session = await _get_or_create_active_session(user_id)
+        return {
+            "id": session.get("id"),
+            "status": session.get("status"),
+            "session": session,
+        }
+    except Exception as ex:
+        if _is_missing_questionnaire_tables(ex):
+            raise HTTPException(status_code=503, detail="Questionnaire storage not initialized.")
+        raise
 
 
 @router.get("/session")
