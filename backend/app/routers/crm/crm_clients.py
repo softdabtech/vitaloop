@@ -151,12 +151,39 @@ async def list_clients(
 ):
     """
     List all clients (super_admin only).
-    Paginated.
+    Paginated, with email/display_name enrichment from users table.
     """
     try:
+        from app.services import supabase_service as svc
+        
         clients, total = await client_service.repo.get_all(limit, offset)
+        
+        # Enrich with user email and display_name
+        enriched_clients = []
+        for client in clients:
+            enriched_client = dict(client)
+            # Try to fetch user data from users table for email and display_name
+            try:
+                sb = svc._get_supabase()
+                user_data = await svc._run(
+                    lambda: sb.table("users")
+                    .select("email, raw_user_meta_data")
+                    .eq("id", str(client.get("user_id")))
+                    .limit(1)
+                    .execute()
+                )
+                if user_data.data and len(user_data.data) > 0:
+                    user = user_data.data[0]
+                    enriched_client["email"] = user.get("email")
+                    meta = user.get("raw_user_meta_data") or {}
+                    enriched_client["display_name"] = meta.get("display_name") or meta.get("full_name")
+            except Exception as e:
+                logger.warning(f"Failed to enrich user data for client {client.get('id')}: {e}")
+            
+            enriched_clients.append(ClientResponse(**enriched_client))
+        
         return ClientListResponse(
-            items=[ClientResponse(**c) for c in clients],
+            items=enriched_clients,
             total=total,
         )
     except Exception as e:

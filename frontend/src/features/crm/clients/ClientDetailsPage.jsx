@@ -113,6 +113,7 @@ export default function ClientDetailsPage() {
           />
           <InterventionsPanel
             assignmentId={assignment?.id}
+            clientId={client?.id}
             interventions={localInterventions}
             onAdd={handleIntervention}
             loading={interventionMutation.loading}
