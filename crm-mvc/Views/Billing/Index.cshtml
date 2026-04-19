@@ -6,8 +6,8 @@
 @await Html.PartialAsync("Partials/_PageHeader", new PageHeaderViewModel { Title = "Billing", Subtitle = "Subscription and payment overview", Eyebrow = "Account" })
 
 <section class="vo-grid two-up">
-  @await Html.PartialAsync("Ui/_StatCard", new StatCardViewModel { Label = "Current Plan", Value = "&#8212;", Trend = "Managed via Stripe", Tone = "teal" })
-  @await Html.PartialAsync("Ui/_StatCard", new StatCardViewModel { Label = "Next Renewal", Value = "&#8212;", Trend = "Synced from subscription", Tone = "default" })
+  @await Html.PartialAsync("Ui/_StatCard", new StatCardViewModel { Label = "Current Plan", Value = "-", Trend = "Managed via Stripe", Tone = "teal" })
+  @await Html.PartialAsync("Ui/_StatCard", new StatCardViewModel { Label = "Next Renewal", Value = "-", Trend = "Synced from subscription", Tone = "default" })
 </section>
 
 @await Html.PartialAsync("Ui/_EmptyState", new EmptyStateViewModel { Title = "Billing integration", Description = "Real-time Stripe subscription data will appear here once billing wiring is complete." })
