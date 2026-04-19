@@ -36,9 +36,9 @@ public class AssignmentsController : Controller
             Assignments = assignments.Select(a => new AssignmentViewModel
             {
                 Id = a.Id,
-                ClientId = a.ClientId,
+                ClientId = a.ClientId ?? Guid.Empty,
                 ClientName = a.ClientName,
-                PractitionerId = a.PractitionerId,
+                PractitionerId = a.PractitionerId ?? Guid.Empty,
                 PractitionerName = a.PractitionerName,
                 Status = a.Status
             }).ToList()

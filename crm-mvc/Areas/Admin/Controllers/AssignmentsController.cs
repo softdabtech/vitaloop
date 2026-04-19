@@ -70,10 +70,10 @@ public class AssignmentsController : Controller
                     .Select(a => new AssignmentViewModel
                     {
                         Id = a.Id,
-                        OrganizationId = a.OrganizationId,
-                        ClientId = a.ClientId,
+                        OrganizationId = a.OrganizationId ?? Guid.Empty,
+                        ClientId = a.ClientId ?? Guid.Empty,
                         ClientName = a.ClientName,
-                        PractitionerId = a.PractitionerId,
+                        PractitionerId = a.PractitionerId ?? Guid.Empty,
                         PractitionerName = a.PractitionerName,
                         Status = a.Status,
                         Notes = a.Notes,

@@ -56,10 +56,10 @@ public class ClientsController : Controller
                 Clients = visible.Select(a => new AssignmentViewModel
                 {
                     Id = a.Id,
-                    OrganizationId = a.OrganizationId,
-                    ClientId = a.ClientId,
+                    OrganizationId = a.OrganizationId ?? Guid.Empty,
+                    ClientId = a.ClientId ?? Guid.Empty,
                     ClientName = a.ClientName,
-                    PractitionerId = a.PractitionerId,
+                    PractitionerId = a.PractitionerId ?? Guid.Empty,
                     PractitionerName = a.PractitionerName,
                     Status = a.Status,
                     Notes = a.Notes,
@@ -105,10 +105,10 @@ public class ClientsController : Controller
             Assignment = new AssignmentViewModel
             {
                 Id = selected.Id,
-                OrganizationId = selected.OrganizationId,
-                ClientId = selected.ClientId,
+                OrganizationId = selected.OrganizationId ?? Guid.Empty,
+                ClientId = selected.ClientId ?? Guid.Empty,
                 ClientName = selected.ClientName,
-                PractitionerId = selected.PractitionerId,
+                PractitionerId = selected.PractitionerId ?? Guid.Empty,
                 PractitionerName = selected.PractitionerName,
                 Status = selected.Status,
                 Notes = selected.Notes,
