@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Vitaloop.Crm.Web.Attributes;
 using Vitaloop.Crm.Web.Services.Assignments;
 using Vitaloop.Crm.Web.Services.Contracts;
+using Vitaloop.Crm.Web.Services.Organizations;
 using Vitaloop.Crm.Web.ViewModels;
 
 namespace Vitaloop.Crm.Web.Areas.Practitioner.Controllers;
@@ -12,26 +13,32 @@ namespace Vitaloop.Crm.Web.Areas.Practitioner.Controllers;
 public class ClientsController : Controller
 {
     private readonly IUserContextAccessor _userContextAccessor;
+    private readonly IActiveOrganizationResolver _activeOrganizationResolver;
     private readonly AssignmentService _assignmentService;
     private readonly IAccessPolicyService _accessPolicyService;
+    private readonly OrganizationService _organizationService;
     private readonly ILogger<ClientsController> _logger;
 
     public ClientsController(
         IUserContextAccessor userContextAccessor,
+        IActiveOrganizationResolver activeOrganizationResolver,
         AssignmentService assignmentService,
         IAccessPolicyService accessPolicyService,
+        OrganizationService organizationService,
         ILogger<ClientsController> logger)
     {
         _userContextAccessor = userContextAccessor;
+        _activeOrganizationResolver = activeOrganizationResolver;
         _assignmentService = assignmentService;
         _accessPolicyService = accessPolicyService;
+        _organizationService = organizationService;
         _logger = logger;
     }
 
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken ct)
     {
-        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
             TempData["ErrorMessage"] = "No active organization selected.";
@@ -80,7 +87,7 @@ public class ClientsController : Controller
     [HttpGet("{assignmentId:guid}")]
     public async Task<IActionResult> Profile(Guid assignmentId, CancellationToken ct)
     {
-        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
             TempData["ErrorMessage"] = "No active organization selected.";
@@ -121,7 +128,7 @@ public class ClientsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Update(Guid assignmentId, [FromForm] string status, [FromForm] string notes, CancellationToken ct)
     {
-        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
             TempData["ErrorMessage"] = "No active organization selected.";
@@ -140,5 +147,30 @@ public class ClientsController : Controller
             TempData["ErrorMessage"] = "Failed to update client details.";
             return RedirectToAction(nameof(Profile), new { assignmentId });
         }
+    }
+
+    private async Task<Vitaloop.Crm.Web.Models.Auth.UserContext> EnsureActiveOrganization(
+        Vitaloop.Crm.Web.Models.Auth.UserContext userCtx,
+        CancellationToken ct)
+    {
+        if (userCtx.ActiveOrganizationId.HasValue)
+        {
+            return userCtx;
+        }
+
+        if (!_accessPolicyService.HasGlobalRole(userCtx, "super_admin"))
+        {
+            return userCtx;
+        }
+
+        var organizations = await _organizationService.GetOrganizations(userCtx, ct);
+        var firstOrgId = organizations.FirstOrDefault()?.Id;
+        if (firstOrgId.HasValue)
+        {
+            await _activeOrganizationResolver.SetActiveOrganizationId(firstOrgId.Value, ct);
+            userCtx.ActiveOrganizationId = firstOrgId.Value;
+        }
+
+        return userCtx;
     }
 }

@@ -1671,12 +1671,9 @@ async def get_audit_logs(limit: int = 200, organization_id: Optional[str] = None
         resp = await _run(lambda: query.execute())
         return resp.data or []
     except Exception as ex:
-        # Do not break Ops pages if audit table is not available in an environment yet.
-        msg = str(ex)
-        if "PGRST205" in msg and "audit_logs" in msg:
-            _logger.warning("audit_logs_table_missing returning_empty_feed")
-            return []
-        raise
+        # Keep Ops UI available even if audit feed backend storage is misconfigured.
+        _logger.warning("audit_logs_read_failed returning_empty_feed error=%s", ex)
+        return []
 
 
 async def write_audit_log(
