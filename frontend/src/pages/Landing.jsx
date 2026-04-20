@@ -1160,17 +1160,7 @@ export default function Landing() {
             })}
           </div>
 
-          <motion.div {...fadeUp(reduced, 0.12)} className="mt-12">
-            <div className="mb-5 flex items-center gap-3">
-              <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Platform walkthrough</p>
-              <div className={`h-px flex-1 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
-            </div>
-            <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-              {MOCKUPS.map((m, i) => (
-                <MockupCard key={m.title} title={m.title} alt={m.alt} device={m.device} index={i} reduced={reduced} isDark={isDark} />
-              ))}
-            </div>
-          </motion.div>
+
         </section>
 
         <section id="why-vitaloop" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
