@@ -49,8 +49,9 @@ export default defineConfig({
       workbox: {
         // App shell caching strategy
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // Exclude heavy marketing mockups from precache to keep service worker footprint lower.
-        globIgnores: ['mockups/**'],
+        // build-info.json must never be precached — it is fetched fresh on every deploy
+        // verification check. nginx serves it with no-cache headers.
+        globIgnores: ['mockups/**', 'build-info.json'],
         // Keep default limit high enough to prevent build-time hard failures.
         maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
         cleanupOutdatedCaches: true,
