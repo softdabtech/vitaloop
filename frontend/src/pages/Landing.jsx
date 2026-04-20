@@ -40,8 +40,8 @@ const STEPS = [
   { icon: Upload, title: 'Upload labs', body: 'Drop any blood test PDF or lab image — we handle OCR and unit normalization automatically.' },
   { icon: BrainCircuit, title: 'AI extraction', body: 'AI extracts 85+ biomarkers, normalizes units, and maps each value against clinical reference ranges.' },
   { icon: FlaskConical, title: 'Signal mapping', body: 'Cross-biomarker correlations, deficiencies, elevations, and longitudinal anomalies are ranked by significance.' },
-  { icon: Sparkles, title: 'Protocol engine', body: 'A personalized blood test interpretation protocol — supplements, nutrition, and weekly targets — tied to your exact markers.' },
-  { icon: HeartPulse, title: 'Adaptive loop', body: 'Check-ins and new labs continuously refine guidance.' },
+  { icon: Sparkles, title: 'Protocol engine', body: 'Free plan shows core analysis. Personal Pro unlocks the full personalized protocol: supplements, nutrition, and weekly targets tied to your markers.' },
+  { icon: HeartPulse, title: 'Adaptive loop', body: 'Weekly check-ins and ongoing adaptation are available in Personal Pro and Enterprise.' },
 ]
 
 const BENEFITS = [
@@ -268,15 +268,15 @@ const HERO_TRUST_SIGNALS = [
     '@context': 'https://schema.org',
     '@type': 'HowTo',
     name: 'How to Analyze Blood Test Results With AI Using VITALOOP',
-    description: 'Upload your lab report and receive AI-powered biomarker analysis, personalized health protocol, and longitudinal tracking in under 60 seconds.',
+    description: 'Upload your lab report and receive AI-powered biomarker analysis in under 60 seconds. Full personalized protocol and weekly adaptive loop are available on paid plans.',
     totalTime: 'PT1M',
     estimatedCost: { '@type': 'MonetaryAmount', currency: 'USD', value: '0' },
     step: [
       { '@type': 'HowToStep', name: 'Upload your lab report', text: 'Drop a PDF or image of your blood test results into VITALOOP. Supported formats include any standard laboratory PDF or photo.', position: 1 },
       { '@type': 'HowToStep', name: 'AI extracts and normalizes biomarkers', text: 'Our AI engine uses OCR to extract all biomarker values and normalizes them across units and reference ranges automatically.', position: 2 },
       { '@type': 'HowToStep', name: 'Signal mapping and pattern detection', text: 'Deficiencies, elevations, and cross-biomarker correlations are surfaced and ranked by clinical significance.', position: 3 },
-      { '@type': 'HowToStep', name: 'Receive your personalized protocol', text: 'VITALOOP generates a targeted protocol including supplement recommendations, nutrition actions, and weekly assignments tied to your specific biomarkers.', position: 4 },
-      { '@type': 'HowToStep', name: 'Track progress with adaptive check-ins', text: 'Weekly AI check-ins and new lab uploads continuously refine your protocol based on adherence and biomarker trends over time.', position: 5 },
+      { '@type': 'HowToStep', name: 'Unlock your personalized protocol', text: 'Paid plans unlock a targeted protocol with supplement recommendations, nutrition actions, and weekly assignments tied to your biomarkers.', position: 4 },
+      { '@type': 'HowToStep', name: 'Track progress with adaptive check-ins', text: 'Paid plans include weekly AI check-ins and adaptation between lab cycles based on adherence and biomarker trends.', position: 5 },
     ],
   }
 
@@ -1096,7 +1096,7 @@ export default function Landing() {
           <motion.div {...fadeUp(reduced)} className="mb-7">
             <h2 className="text-[28px] font-semibold tracking-tight">How AI Analyzes Your Lab Results — 5 Steps From Upload to Action</h2>
             <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              From PDF upload to personalized protocol in under 60 seconds. Then your health system compounds over time.
+              Free plan covers upload + biomarker analysis. Personal Pro adds full protocol generation and weekly adaptation.
             </p>
           </motion.div>
 
