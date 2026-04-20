@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom'
-import { version } from '../../../package.json'
 
 const COL_PRODUCT = [
   { label: 'The problem',      href: '#problem' },
@@ -9,11 +8,10 @@ const COL_PRODUCT = [
   { label: 'User stories',      href: '#stories' },
 ]
 const COL_COMPANY = [
-  { label: 'About product',     href: '#hero' },
   { label: 'For nutritionists', href: '/for-nutritionists' },
   { label: 'Privacy policy',    href: '/privacy' },
   { label: 'Terms of service',  href: '/terms' },
-  { label: 'Contact',           href: 'mailto:hello@vitaloop.com' },
+  { label: 'For Investors',     href: '/for-investors' },
 ]
 function LogoIcon() {
   return (
@@ -96,14 +94,31 @@ export default function Footer() {
         {/* Bottom bar */}
         <div style={{
           borderTop: '0.5px solid #222', paddingTop: 24,
-          display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8,
+          display: 'flex', justifyContent: 'flex-start', flexWrap: 'wrap', gap: 8,
         }}>
-          <span style={{ fontSize: 12, color: '#6e6e73' }}>
-            VITALOOP © {new Date().getFullYear()} • Privacy-first health intelligence
-          </span>
-          <span style={{ fontSize: 12, color: '#3d3d3f' }}>
-            Secure • Private • Never sells your data · v{version}
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <a
+              href="mailto:info@softdab.tech"
+              style={{ fontSize: 14, color: '#7b869c', textDecoration: 'none' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#7b869c' }}
+            >
+              info@softdab.tech
+            </a>
+            <span style={{ fontSize: 12, color: '#6e6e73' }}>
+              © 2026 VITALOOP. Made by{' '}
+              <a
+                href="https://softdab.tech"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#8aa4ff', textDecoration: 'none' }}
+                onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline' }}
+                onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none' }}
+              >
+                SoftDAB
+              </a>
+            </span>
+          </div>
         </div>
       </div>
     </footer>
