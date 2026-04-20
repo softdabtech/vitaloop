@@ -1332,6 +1332,25 @@ export default function Landing() {
               AI lab analysis, personalized protocols, and longitudinal biomarker tracking for people who want a repeatable health system instead of one-off interpretations.
             </p>
             <p className={`mt-4 text-xs uppercase tracking-[0.16em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Not medical advice. Always work with a qualified clinician for diagnosis and treatment decisions.</p>
+            <div className="mt-6 flex flex-col items-start gap-2">
+              <a
+                href="mailto:info@softdab.tech"
+                className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}
+              >
+                info@softdab.tech
+              </a>
+              <p className={`text-left ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                © 2026 VITALOOP. Made by{' '}
+                <a
+                  href="https://softdab.tech"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${isDark ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-700 hover:text-emerald-600'} underline-offset-2 hover:underline`}
+                >
+                  SoftDAB
+                </a>
+              </p>
+            </div>
           </div>
 
           <div>
@@ -1346,25 +1365,9 @@ export default function Landing() {
           <div>
             <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Company</div>
             <div className="mt-4 flex flex-col items-start gap-3 text-left">
-              <button
-                type="button"
-                onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-                aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-                className={`inline-flex h-8 w-12 items-center rounded-full border px-1 transition ${
-                  isDark ? 'border-slate-600 bg-slate-800' : 'border-slate-300 bg-slate-100'
-                }`}
-              >
-                <span
-                  className={`h-6 w-6 rounded-full shadow-sm transition-transform duration-200 ${
-                    isDark ? 'translate-x-0 bg-slate-950' : 'translate-x-3 bg-white'
-                  }`}
-                />
-              </button>
               <button onClick={() => navigate('/terms')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Terms</button>
               <button onClick={() => navigate('/privacy')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Privacy</button>
               <button onClick={() => navigate('/for-investors')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>For Investors</button>
-              <a href="mailto:info@softdab.tech" className={`self-start text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>info@softdab.tech</a>
-              <span className={`self-start text-left ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>© {new Date().getFullYear()} VITALOOP</span>
             </div>
           </div>
         </div>
