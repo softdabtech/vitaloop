@@ -1756,12 +1756,36 @@ async def write_audit_log(
             "entity_id": payload_full["entity_id"],
         }
 
+        allowed_actions = {"create", "read", "update", "delete", "assign", "reassign"}
+        allowed_entity_types = {"client", "practitioner", "program", "subscription", "questionnaire", "client_program"}
+        legacy_entity_type = entity_type if entity_type in allowed_entity_types else "client"
+
+        payload_legacy = {
+            "user_id": user_id,
+            "action": action if action in allowed_actions else "update",
+            "entity_type": legacy_entity_type,
+            "entity_id": str(uuid4()),
+            "changes": {
+                "source_action": action,
+                "source_entity_type": entity_type,
+                "source_entity_id": payload_full["entity_id"],
+                "old_value": old_value or {},
+                "new_value": new_value or {},
+                "organization_id": organization_id,
+            },
+        }
+
         try:
             await _run(lambda: supabase.table("audit_logs").insert(payload_full).execute())
             return
         except Exception:
             # Fallback for partially migrated schemas where extended audit columns are absent.
-            await _run(lambda: supabase.table("audit_logs").insert(payload_minimal).execute())
+            try:
+                await _run(lambda: supabase.table("audit_logs").insert(payload_minimal).execute())
+                return
+            except Exception:
+                # Final fallback for legacy constraints: action/entity_type/check-limited schema.
+                await _run(lambda: supabase.table("audit_logs").insert(payload_legacy).execute())
     except Exception as ex:
         _logger.warning("audit_log_write_failed action=%s entity_type=%s error=%s", action, entity_type, ex)
 
