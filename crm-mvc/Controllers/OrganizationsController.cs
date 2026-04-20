@@ -45,44 +45,60 @@ public class OrganizationsController : Controller
     [HttpGet("settings")]
     public async Task<IActionResult> Settings(CancellationToken ct)
     {
-        var (userCtx, activeOrgId) = await ResolveContext(ct);
-        var organization = await _organizationService.GetOrganization(userCtx, activeOrgId, ct);
-        var settings = await _organizationService.GetOrganizationSettings(userCtx, activeOrgId, ct);
-
-        var model = new OrganizationSettingsPageViewModel
+        try
         {
-            ActiveOrganizationId = activeOrgId,
-            Organization = organization is null
-                ? null
-                : new OrganizationViewModel
-                {
-                    Id = organization.Id,
-                    Name = organization.Name,
-                    Slug = organization.Slug,
-                    Status = organization.Status,
-                    OwnerName = organization.OwnerName
-                },
-            TimeZone = settings?.TimeZone ?? "UTC",
-            BillingEmail = settings?.BillingEmail ?? string.Empty,
-            SupportEmail = settings?.SupportEmail ?? string.Empty,
-            IsLocked = settings?.IsLocked ?? false
-        };
+            var (userCtx, activeOrgId) = await ResolveContext(ct);
+            var organization = await _organizationService.GetOrganization(userCtx, activeOrgId, ct);
+            var settings = await _organizationService.GetOrganizationSettings(userCtx, activeOrgId, ct);
 
-        return View(model);
+            var model = new OrganizationSettingsPageViewModel
+            {
+                ActiveOrganizationId = activeOrgId,
+                Organization = organization is null
+                    ? null
+                    : new OrganizationViewModel
+                    {
+                        Id = organization.Id,
+                        Name = organization.Name,
+                        Slug = organization.Slug,
+                        Status = organization.Status,
+                        OwnerName = organization.OwnerName
+                    },
+                TimeZone = settings?.TimeZone ?? "UTC",
+                BillingEmail = settings?.BillingEmail ?? string.Empty,
+                SupportEmail = settings?.SupportEmail ?? string.Empty,
+                IsLocked = settings?.IsLocked ?? false
+            };
+
+            return View(model);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            TempData["ErrorMessage"] = "Select an organization first to open settings.";
+            return Redirect("/admin/organizations");
+        }
     }
 
     [HttpPost("settings")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateSettings([FromForm] string name, [FromForm] string status, CancellationToken ct)
     {
-        var (userCtx, activeOrgId) = await ResolveContext(ct);
-        await _organizationService.UpdateOrganization(userCtx, activeOrgId, new UpdateOrganizationRequest
+        try
         {
-            Name = name,
-            Status = status
-        }, ct);
+            var (userCtx, activeOrgId) = await ResolveContext(ct);
+            await _organizationService.UpdateOrganization(userCtx, activeOrgId, new UpdateOrganizationRequest
+            {
+                Name = name,
+                Status = status
+            }, ct);
 
-        return RedirectToAction(nameof(Settings));
+            return RedirectToAction(nameof(Settings));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            TempData["ErrorMessage"] = "Select an organization first to update settings.";
+            return Redirect("/admin/organizations");
+        }
     }
 
     private async Task<(Vitaloop.Crm.Web.Models.Auth.UserContext UserContext, Guid ActiveOrganizationId)> ResolveContext(CancellationToken ct)
