@@ -1,5 +1,6 @@
 import asyncio
 import time
+import httpx
 from fastapi import APIRouter
 from app.config import settings
 from app.services import supabase_service as svc
@@ -8,6 +9,75 @@ import logging
 
 logger = logging.getLogger("vitaloop.health")
 router = APIRouter()
+
+
+def _llm_chat_completions_path() -> str:
+    """Return provider-specific chat completions path.
+
+    Keep path relative to preserve any base URL suffix like `/v1`.
+    """
+    base_url = settings.active_llm_base_url.rstrip("/").lower()
+    if "agents.do-ai.run" in base_url:
+        return "api/v1/chat/completions"
+    return "chat/completions"
+
+
+async def _probe_llm_connectivity(timeout_seconds: float = 5.0) -> dict:
+    base_url = (settings.active_llm_base_url or "").rstrip("/")
+    api_key = settings.active_llm_api_key or ""
+    model = settings.active_llm_model or ""
+
+    configured = bool(base_url and api_key and model)
+    result = {
+        "configured": configured,
+        "base_url": base_url,
+        "model": model,
+        "reachable": False,
+        "probe": None,
+        "status_code": None,
+        "reason": None,
+    }
+    if not configured:
+        result["reason"] = "missing_llm_configuration"
+        return result
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    async with httpx.AsyncClient(base_url=base_url, headers=headers, timeout=timeout_seconds) as client:
+        try:
+            models_resp = await client.get("models")
+            result["probe"] = "models"
+            result["status_code"] = models_resp.status_code
+            if models_resp.is_success:
+                result["reachable"] = True
+                return result
+        except Exception as ex:
+            result["probe"] = "models"
+            result["reason"] = f"models_probe_error: {str(ex)[:80]}"
+
+        try:
+            chat_resp = await client.post(
+                _llm_chat_completions_path(),
+                json={
+                    "model": model,
+                    "messages": [{"role": "user", "content": "ping"}],
+                    "temperature": 0,
+                    "max_tokens": 1,
+                },
+            )
+            result["probe"] = "chat_completions"
+            result["status_code"] = chat_resp.status_code
+            result["reachable"] = chat_resp.is_success
+            if not chat_resp.is_success:
+                result["reason"] = f"http_{chat_resp.status_code}"
+        except Exception as ex:
+            result["probe"] = "chat_completions"
+            result["reason"] = f"chat_probe_error: {str(ex)[:80]}"
+
+    return result
 
 
 @router.get("/health")
@@ -157,3 +227,44 @@ async def readiness_check():
 
     logger.info("readiness_check passed", extra={"checks": checks["checks"]})
     return checks
+
+
+@router.get("/ops/llm/health")
+async def llm_health_check():
+    """Dedicated LLM health endpoint for operational monitoring.
+
+    Checks LLM configuration and provider reachability independently from
+    general `/health` and readiness probes.
+    """
+    started = time.perf_counter()
+    probe = await _probe_llm_connectivity(timeout_seconds=5.0)
+    ok = bool(probe.get("reachable"))
+    payload = {
+        "service": "vitaloop-api",
+        "component": "llm",
+        "ok": ok,
+        "status": "ok" if ok else "degraded",
+        "duration_ms": int((time.perf_counter() - started) * 1000),
+        "provider": {
+            "base_url": probe.get("base_url"),
+            "model": probe.get("model"),
+        },
+        "probe": {
+            "configured": probe.get("configured"),
+            "name": probe.get("probe"),
+            "reachable": probe.get("reachable"),
+            "status_code": probe.get("status_code"),
+            "reason": probe.get("reason"),
+        },
+        "build": get_build_info(),
+        "timestamp": time.time(),
+    }
+    logger.info(
+        "llm_health_check completed",
+        extra={
+            "endpoint": "/ops/llm/health",
+            "ok": payload["ok"],
+            "probe": payload["probe"],
+        },
+    )
+    return payload
