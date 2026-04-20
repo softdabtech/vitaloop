@@ -214,7 +214,8 @@ public class UsersController : Controller
 
         try
         {
-            if (!AllowedInvitationRoles.Contains(model.Role ?? string.Empty))
+            var normalizedRole = model.Role?.Trim();
+            if (!AllowedInvitationRoles.Contains(normalizedRole ?? string.Empty))
             {
                 ModelState.AddModelError(nameof(model.Role), "Selected role is not supported.");
                 return View("Invite", model);
@@ -226,7 +227,7 @@ public class UsersController : Controller
                 return View("Invite", model);
             }
 
-            await _invitationService.CreateInvite(userCtx, userCtx.ActiveOrganizationId.Value, model.Email, model.Role, ct);
+            await _invitationService.CreateInvite(userCtx, userCtx.ActiveOrganizationId.Value, model.Email, normalizedRole!, ct);
             TempData["SuccessMessage"] = $"Invitation sent to {model.Email}";
             return RedirectToAction(nameof(Index));
         }
