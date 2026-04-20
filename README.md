@@ -127,6 +127,18 @@ Typical minimum configuration:
   - `CrmData` settings
   - backend base URL
 
+LLM provider (DigitalOcean Agent endpoint) example:
+
+- `ROUTELLM_BASE_URL=https://e3pm2tikxw26mot2z5zmfzqe.agents.do-ai.run`
+- `ROUTELLM_API_KEY=<agent_endpoint_access_key>`
+- `ROUTELLM_MODEL=<your-agent-model-id-or-default>`
+
+Notes:
+
+- DigitalOcean agent endpoints require an endpoint access key for direct API requests.
+- Backend uses OpenAI-compatible chat completions and automatically routes DigitalOcean endpoints to `api/v1/chat/completions`.
+- If your endpoint is private, generate the key in Agent settings before backend tests.
+
 ### Run Backend
 
 ```bash
