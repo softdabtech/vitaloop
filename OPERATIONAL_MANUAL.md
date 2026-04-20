@@ -96,9 +96,9 @@ Production policy:
 | `SUPABASE_SERVICE_KEY` | Service role key for backend DB ops | Supabase Dashboard -> Settings -> API |
 | `SUPABASE_JWT_PUBLIC_KEY_JWK` | ES256 JWT verification key | Supabase Auth/JWKS |
 | `SUPABASE_JWT_SECRET` | Legacy HS256 fallback | Legacy projects only |
-| `ROUTELLM_API_KEY` | RouteLLM auth | Abacus RouteLLM console |
-| `ROUTELLM_BASE_URL` | OpenAI-compatible endpoint | `https://routellm.abacus.ai/v1` |
-| `ROUTELLM_MODEL` | Routing/model selector | `route-llm` recommended |
+| `ROUTELLM_API_KEY` | LLM endpoint auth (or local placeholder) | Provider console / local runtime config |
+| `ROUTELLM_BASE_URL` | OpenAI-compatible endpoint | `http://127.0.0.1:11434/v1` for internal Ollama |
+| `ROUTELLM_MODEL` | Active model ID | `qwen2.5:0.5b` (internal baseline) |
 | `STRIPE_SECRET_KEY` | Stripe server-side API key | Stripe Dashboard -> Developers -> API Keys |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signature verification | Stripe Dashboard -> Webhooks |
 | `STRIPE_PRICE_ID` | Subscription billing price | Stripe Dashboard -> Products |
@@ -190,8 +190,14 @@ Checks:
 ```bash
 journalctl -u vitaloop-backend -f
 ```
-2. Validate `ROUTELLM_API_KEY`, account status/quota in Abacus.
-3. Confirm model value (`ROUTELLM_MODEL=route-llm`).
+2. Validate LLM runtime health:
+```bash
+curl -sS http://127.0.0.1:8004/ops/llm/health
+```
+3. Confirm endpoint/model values in `/etc/vitaloop/backend.env`:
+	- `ROUTELLM_BASE_URL`
+	- `ROUTELLM_MODEL`
+	- `ROUTELLM_API_KEY`
 4. Inspect API response codes:
 - `502 AI_UPSTREAM_ERROR` -> provider/network/rate limit issue
 - `422 AI_INVALID_RESPONSE` -> provider returned malformed JSON
@@ -205,7 +211,7 @@ journalctl -u vitaloop-backend -f
 | `404` | Domain-specific (`USER_NOT_FOUND`, `UPLOAD_NOT_FOUND`, etc.) | Missing entity | Validate account/upload linkage |
 | `422` | `VALIDATION_ERROR` or `AI_INVALID_RESPONSE` | Invalid input or malformed AI output | Validate payload / retry analyze |
 | `500` | `UNEXPECTED_ERROR`/internal | Backend internal error | Capture `request_id`, inspect logs |
-| `502` | `AI_UPSTREAM_ERROR` | RouteLLM provider failure | Check Abacus/API key/rate limits |
+| `502` | `AI_UPSTREAM_ERROR` | LLM provider failure | Check `/ops/llm/health`, endpoint/key/model, provider/runtime logs |
 
 > RU comment: Для саппорта обязательно сохраняйте `request_id` из ответа API.
 
