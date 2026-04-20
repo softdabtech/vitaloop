@@ -190,13 +190,14 @@ const TESTIMONIALS = [
 ]
 
 const MOCKUPS = [
-  { title: 'Dashboard', alt: 'Dashboard with biomarker score, priority flags, and adherence trend.', device: 'desktop' },
-  { title: 'Lab Upload', alt: 'Upload workspace with PDF intake, OCR status, and validation checks.', device: 'desktop' },
-  { title: 'Lab Results', alt: 'Structured lab results with severity chips and high-risk markers.', device: 'desktop' },
-  { title: 'Personalized Protocol', alt: 'Protocol plan with supplements, nutrition actions, and progress targets.', device: 'desktop' },
-  { title: 'Timeline', alt: 'Longitudinal timeline with biomarker trajectories across multiple test cycles.', device: 'desktop' },
-  { title: 'Practitioner CRM', alt: 'Practitioner CRM dashboard with client panels and assignment overview.', device: 'desktop' },
-  { title: 'Weekly Check-in', alt: 'Mobile check-in flow with daily energy, sleep, and symptom entries.', device: 'mobile' },
+  { title: 'Dashboard', alt: 'Health Score 78/100 with biomarker priority flags and weekly adherence trend.', device: 'desktop' },
+  { title: 'Lab Upload', alt: 'Upload workspace with PDF intake, OCR progress, and 54 biomarkers extracted.', device: 'desktop' },
+  { title: 'Lab Results', alt: 'Structured biomarker table with severity chips, reference ranges, and trend arrows.', device: 'desktop' },
+  { title: 'Personalized Protocol', alt: 'AI protocol plan with ranked supplements, nutrition targets, and weekly tasks.', device: 'desktop' },
+  { title: 'Timeline', alt: 'Longitudinal trend chart showing ferritin, CRP, and vitamin D across 5 test cycles.', device: 'desktop' },
+  { title: 'Practitioner CRM', alt: 'Practitioner CRM with 3 client panels, adherence bars, and assignment overview.', device: 'desktop' },
+  { title: 'Weekly Check-in', alt: 'Mobile weekly check-in with energy, sleep, and symptom sliders plus streak badge.', device: 'mobile' },
+  { title: 'Health Avatar', alt: 'Personalized health avatar showing body system scores and recovery heatmap.', device: 'desktop' },
 ]
 
 const HERO_TRUST_SIGNALS = [
@@ -354,180 +355,347 @@ function fadeUp(reduced, delay = 0) {
   }
 }
 
+// ── Rich screen mockup content per card ─────────────────────────────────────
+function MockupScreenContent({ title }) {
+  if (title === 'Dashboard') return (
+    <div className="grid grid-cols-[0.9fr_1.1fr] gap-2" style={{ height: 168 }}>
+      {/* Left — health score ring */}
+      <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-700/70 bg-slate-900/85 p-3">
+        <div className="relative flex h-20 w-20 items-center justify-center">
+          <svg viewBox="0 0 80 80" className="absolute inset-0" aria-hidden="true">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(16,185,129,0.12)" strokeWidth="7" />
+            <circle cx="40" cy="40" r="34" fill="none" stroke="url(#hsGrad)" strokeWidth="7"
+              strokeDasharray="213" strokeDashoffset="54" strokeLinecap="round"
+              transform="rotate(-90 40 40)" />
+            <defs>
+              <linearGradient id="hsGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#10b981" />
+                <stop offset="100%" stopColor="#34d399" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div className="text-center">
+            <div className="text-lg font-bold leading-none text-emerald-300">78</div>
+            <div className="text-[8px] font-semibold uppercase tracking-wider text-slate-500">score</div>
+          </div>
+        </div>
+        <div className="text-[10px] font-semibold text-emerald-400">↑ +5 this cycle</div>
+      </div>
+      {/* Right — flags + adherence */}
+      <div className="grid gap-2">
+        <div className="rounded-xl border border-slate-700/70 bg-slate-900/85 p-2.5">
+          <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Priority flags</div>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5"><span className="h-2 w-2 shrink-0 rounded-full bg-rose-400" /><span className="text-[10px] text-slate-300">Ferritin — Low (14 ng/mL)</span></div>
+            <div className="flex items-center gap-1.5"><span className="h-2 w-2 shrink-0 rounded-full bg-amber-400" /><span className="text-[10px] text-slate-400">Vitamin D — Borderline</span></div>
+            <div className="flex items-center gap-1.5"><span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400" /><span className="text-[10px] text-slate-400">CRP — Normalizing ↓</span></div>
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-700/70 bg-slate-900/85 p-2.5">
+          <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Weekly adherence</div>
+          <div className="mb-1.5 flex items-end gap-1" style={{ height: 28 }}>
+            {[55, 70, 60, 80, 68, 90, 85].map((h, i) => (
+              <div key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%`, backgroundColor: i >= 5 ? 'rgba(16,185,129,0.7)' : 'rgba(71,85,105,0.5)' }} />
+            ))}
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-slate-800">
+            <div className="h-1.5 w-[78%] rounded-full bg-emerald-500/70" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  if (title === 'Lab Upload') return (
+    <div className="flex flex-col gap-2.5 rounded-xl border border-slate-700/70 bg-slate-900/85 p-3" style={{ height: 168 }}>
+      {/* Drop zone */}
+      <div className="flex items-center justify-center rounded-xl border-2 border-dashed border-emerald-500/40 bg-emerald-500/5" style={{ height: 56 }}>
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-7 flex-col items-center justify-end rounded-md bg-rose-400/20 p-1">
+            <div className="h-1 w-5 rounded-full bg-rose-300/60 mb-0.5" />
+            <div className="h-1 w-3 rounded-full bg-rose-300/40" />
+          </div>
+          <div>
+            <div className="text-[10px] font-semibold text-emerald-300">bloodtest_2024.pdf</div>
+            <div className="text-[9px] text-slate-500">Extracting biomarkers…</div>
+          </div>
+        </div>
+      </div>
+      {/* OCR progress */}
+      <div>
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-[9px] text-slate-500">Biomarkers found</span>
+          <span className="text-[9px] font-bold text-emerald-400">54 / 54</span>
+        </div>
+        <div className="h-2 w-full rounded-full bg-slate-800">
+          <div className="h-2 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400" style={{ width: '100%' }} />
+        </div>
+      </div>
+      {/* Result chips */}
+      <div className="flex flex-wrap gap-1">
+        {[['CBC', 'emerald'], ['Iron panel', 'sky'], ['Thyroid', 'violet'], ['Lipids', 'amber'], ['Metabolic', 'emerald']].map(([label, c]) => (
+          <span key={label} className={`rounded-full border px-1.5 py-0.5 text-[8px] font-semibold`} style={{ borderColor: `var(--${c}-400, #34d399)30`, background: `var(--${c}-500, #10b981)12`, color: `var(--${c}-300, #6ee7b7)` }}>{label}</span>
+        ))}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-emerald-400" />
+        <span className="text-[9px] text-slate-400">3 red flags detected — protocol generating…</span>
+      </div>
+    </div>
+  )
+
+  if (title === 'Lab Results') return (
+    <div className="rounded-xl border border-slate-700/70 bg-slate-900/85 p-2.5" style={{ height: 168 }}>
+      <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">54 biomarkers · 3 flagged</div>
+      <div className="space-y-1.5">
+        {[
+          { name: 'Ferritin', value: '14', unit: 'ng/mL', ref: '13–150', color: 'rose', pct: 8, label: 'Low' },
+          { name: 'CRP', value: '3.2', unit: 'mg/L', ref: '<1.0', color: 'amber', pct: 72, label: 'High' },
+          { name: 'Vitamin D', value: '28', unit: 'ng/mL', ref: '30–100', color: 'amber', pct: 28, label: 'Border' },
+          { name: 'TSH', value: '2.1', unit: 'mIU/L', ref: '0.4–4.0', color: 'emerald', pct: 50, label: 'Normal' },
+          { name: 'Glucose', value: '88', unit: 'mg/dL', ref: '70–99', color: 'emerald', pct: 55, label: 'Normal' },
+        ].map((row) => (
+          <div key={row.name} className="flex items-center gap-2">
+            <div className={`h-2 w-2 shrink-0 rounded-full bg-${row.color}-400`} style={{ background: row.color === 'rose' ? '#f87171' : row.color === 'amber' ? '#fbbf24' : '#34d399' }} />
+            <span className="w-16 shrink-0 text-[9px] text-slate-300">{row.name}</span>
+            <div className="flex-1 rounded-full bg-slate-800" style={{ height: 5 }}>
+              <div className="rounded-full" style={{ width: `${row.pct}%`, height: 5, background: row.color === 'rose' ? '#f87171aa' : row.color === 'amber' ? '#fbbf24aa' : '#34d399aa' }} />
+            </div>
+            <span className="w-10 shrink-0 text-right text-[9px] font-semibold text-slate-300">{row.value}</span>
+            <span className="w-10 shrink-0 rounded-full border px-1.5 text-center text-[8px] font-bold" style={{ borderColor: row.color === 'rose' ? '#f87171' : row.color === 'amber' ? '#fbbf24' : '#34d399', color: row.color === 'rose' ? '#fca5a5' : row.color === 'amber' ? '#fde68a' : '#6ee7b7', background: row.color === 'rose' ? '#f8717120' : row.color === 'amber' ? '#fbbf2420' : '#34d39920' }}>{row.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  if (title === 'Personalized Protocol') return (
+    <div className="rounded-xl border border-slate-700/70 bg-slate-900/85 p-2.5" style={{ height: 168 }}>
+      <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Your protocol · 7 actions</div>
+      <div className="space-y-1.5">
+        {[
+          { rank: '01', label: 'Iron bisglycinate 36mg with Vit C', cat: 'Supplement', prio: 'Critical', bg: '#f8717120', border: '#f87171', col: '#fca5a5', bar: '#f87171aa', pct: 92 },
+          { rank: '02', label: 'Reduce inflammatory foods 4× week', cat: 'Nutrition', prio: 'High', bg: '#fbbf2420', border: '#fbbf24', col: '#fde68a', bar: '#fbbf24aa', pct: 78 },
+          { rank: '03', label: 'Vitamin D3 4000 IU daily with K2', cat: 'Supplement', prio: 'High', bg: '#60a5fa20', border: '#60a5fa', col: '#93c5fd', bar: '#60a5faaa', pct: 70 },
+          { rank: '04', label: 'Weekly check-in — track fatigue', cat: 'Lifestyle', prio: 'Medium', bg: '#34d39920', border: '#34d399', col: '#6ee7b7', bar: '#34d399aa', pct: 55 },
+        ].map((item) => (
+          <div key={item.rank} className="flex items-center gap-2 rounded-lg px-2 py-1.5" style={{ background: item.bg, border: `1px solid ${item.border}35` }}>
+            <span className="text-[8px] font-bold" style={{ color: item.col }}>{item.rank}</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-[9px] font-semibold text-slate-200 truncate">{item.label}</div>
+              <div className="text-[8px] text-slate-500">{item.cat}</div>
+            </div>
+            <div className="w-10 rounded-full" style={{ height: 4, background: 'rgba(71,85,105,0.5)' }}>
+              <div className="rounded-full" style={{ width: `${item.pct}%`, height: 4, background: item.bar }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  if (title === 'Timeline') return (
+    <div className="rounded-xl border border-slate-700/70 bg-slate-900/85 p-2.5" style={{ height: 168 }}>
+      <div className="mb-1 flex items-center justify-between">
+        <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Biomarker trends · 5 cycles</div>
+        <div className="flex items-center gap-2 text-[8px]">
+          <span className="flex items-center gap-1"><span className="h-1.5 w-3 rounded-full bg-rose-400/70" />Ferritin</span>
+          <span className="flex items-center gap-1"><span className="h-1.5 w-3 rounded-full bg-sky-400/70" />Vit D</span>
+          <span className="flex items-center gap-1"><span className="h-1.5 w-3 rounded-full bg-emerald-400/70" />CRP</span>
+        </div>
+      </div>
+      {/* Simple SVG sparkline chart */}
+      <svg viewBox="0 0 200 90" preserveAspectRatio="none" className="w-full" style={{ height: 90 }} aria-hidden="true">
+        {/* Grid lines */}
+        {[0.25, 0.5, 0.75].map((f) => (
+          <line key={f} x1="0" y1={f * 90} x2="200" y2={f * 90} stroke="rgba(71,85,105,0.25)" strokeWidth="0.5" />
+        ))}
+        {/* Ferritin line */}
+        <polyline points="20,78 60,72 100,65 140,50 180,32" fill="none" stroke="rgba(248,113,113,0.75)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="180" cy="32" r="3.5" fill="#f87171" />
+        {/* Vitamin D line */}
+        <polyline points="20,70 60,60 100,55 140,48 180,40" fill="none" stroke="rgba(56,189,248,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="180" cy="40" r="3.5" fill="#38bdf8" />
+        {/* CRP line — improving (going down) */}
+        <polyline points="20,28 60,34 100,40 140,52 180,62" fill="none" stroke="rgba(52,211,153,0.75)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="180" cy="62" r="3.5" fill="#34d399" />
+      </svg>
+      <div className="mt-1.5 flex justify-between text-[8px] text-slate-600 px-1">
+        {['Jan', 'Mar', 'May', 'Aug', 'Nov'].map((m) => <span key={m}>{m}</span>)}
+      </div>
+      <div className="mt-1.5 flex items-center gap-2">
+        <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-bold text-emerald-300">↑ Ferritin recovering</span>
+        <span className="rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[8px] font-bold text-sky-300">↓ CRP normalizing</span>
+      </div>
+    </div>
+  )
+
+  if (title === 'Practitioner CRM') return (
+    <div className="rounded-xl border border-slate-700/70 bg-slate-900/85 p-2.5" style={{ height: 168 }}>
+      <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">3 active clients</div>
+      <div className="space-y-2">
+        {[
+          { init: 'NA', name: 'Nora A.', tag: 'Iron recovery', pct: 85, col: '#34d399', bg: '#34d39920', status: 'On track' },
+          { init: 'MS', name: 'Mark S.', tag: 'Thyroid + CRP', pct: 52, col: '#fbbf24', bg: '#fbbf2420', status: 'Needs review' },
+          { init: 'JR', name: 'Julia R.', tag: 'Hormone panel', pct: 34, col: '#f87171', bg: '#f8717120', status: 'Flagged' },
+        ].map((client) => (
+          <div key={client.init} className="flex items-center gap-2 rounded-lg px-2 py-1.5" style={{ background: client.bg, border: `1px solid ${client.col}25` }}>
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold text-slate-300" style={{ borderColor: `${client.col}50`, background: `${client.col}18` }}>{client.init}</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-semibold text-slate-200">{client.name}</span>
+                <span className="rounded-full px-1.5 py-0.5 text-[7px] font-bold" style={{ background: `${client.col}20`, color: client.col }}>{client.status}</span>
+              </div>
+              <div className="mt-1 flex items-center gap-1.5">
+                <div className="flex-1 rounded-full bg-slate-800" style={{ height: 4 }}>
+                  <div className="rounded-full" style={{ width: `${client.pct}%`, height: 4, background: client.col + 'bb' }} />
+                </div>
+                <span className="text-[8px] text-slate-500">{client.pct}%</span>
+              </div>
+            </div>
+            <span className="text-[8px] text-slate-500 truncate max-w-[52px]">{client.tag}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  if (title === 'Health Avatar') return (
+    <div className="grid grid-cols-[0.75fr_1.25fr] gap-2" style={{ height: 168 }}>
+      {/* Avatar silhouette */}
+      <div className="flex flex-col items-center justify-center rounded-xl border border-slate-700/70 bg-slate-900/85 p-2 gap-1.5">
+        <svg viewBox="0 0 60 100" className="w-10" aria-hidden="true">
+          {/* Head */}
+          <circle cx="30" cy="14" r="10" fill="none" stroke="#34d399" strokeWidth="2" opacity="0.8" />
+          {/* Body */}
+          <path d="M18 30 Q18 26 30 26 Q42 26 42 30 L44 60 Q44 64 30 64 Q16 64 16 60 Z" fill="none" stroke="#34d399" strokeWidth="1.5" opacity="0.7" />
+          {/* Highlight zones */}
+          <circle cx="30" cy="38" r="5" fill="rgba(52,211,153,0.25)" />
+          <circle cx="22" cy="50" r="4" fill="rgba(251,191,36,0.25)" />
+          <circle cx="38" cy="50" r="4" fill="rgba(52,211,153,0.25)" />
+          {/* Legs */}
+          <line x1="22" y1="64" x2="19" y2="88" stroke="#34d399" strokeWidth="1.5" opacity="0.6" />
+          <line x1="38" y1="64" x2="41" y2="88" stroke="#34d399" strokeWidth="1.5" opacity="0.6" />
+        </svg>
+        <span className="text-[8px] text-emerald-400 font-semibold">Body map</span>
+      </div>
+      {/* System scores */}
+      <div className="flex flex-col gap-1.5 rounded-xl border border-slate-700/70 bg-slate-900/85 p-2.5">
+        <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">System scores</div>
+        {[
+          { sys: 'Metabolic', pct: 82, col: '#34d399' },
+          { sys: 'Hormonal', pct: 58, col: '#fbbf24' },
+          { sys: 'Immune', pct: 71, col: '#60a5fa' },
+          { sys: 'Energy', pct: 45, col: '#f87171' },
+          { sys: 'Thyroid', pct: 76, col: '#34d399' },
+        ].map((s) => (
+          <div key={s.sys} className="flex items-center gap-1.5">
+            <span className="w-14 shrink-0 text-[9px] text-slate-400">{s.sys}</span>
+            <div className="flex-1 rounded-full bg-slate-800" style={{ height: 5 }}>
+              <div className="rounded-full" style={{ width: `${s.pct}%`, height: 5, background: s.col + 'bb' }} />
+            </div>
+            <span className="w-6 shrink-0 text-right text-[9px] font-semibold" style={{ color: s.col }}>{s.pct}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  // Weekly Check-in (mobile — rendered differently by parent)
+  return null
+}
+
+// Mobile-specific check-in content
+function MockupMobileContent() {
+  return (
+    <div className="rounded-[18px] border border-slate-700/70 bg-slate-900/90 p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="text-[10px] font-bold text-slate-200">Weekly check-in</div>
+        <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[8px] font-bold text-emerald-300">🔥 7-day streak</span>
+      </div>
+      <div className="space-y-2">
+        {[
+          { label: 'Energy', val: 7, col: '#34d399' },
+          { label: 'Sleep quality', val: 5, col: '#60a5fa' },
+          { label: 'Fatigue', val: 4, col: '#fbbf24' },
+        ].map((item) => (
+          <div key={item.label}>
+            <div className="mb-1 flex justify-between text-[9px]">
+              <span className="text-slate-400">{item.label}</span>
+              <span className="font-bold" style={{ color: item.col }}>{item.val}/10</span>
+            </div>
+            <div className="relative h-4 rounded-full bg-slate-800">
+              <div className="h-4 rounded-full" style={{ width: `${item.val * 10}%`, background: `${item.col}70` }} />
+              <div className="absolute top-0.5 flex h-3 w-3 items-center justify-center rounded-full border-2 shadow" style={{ left: `calc(${item.val * 10}% - 6px)`, borderColor: item.col, background: '#0f172a' }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <button className="mt-3 w-full rounded-xl bg-emerald-500/20 py-2 text-[9px] font-bold text-emerald-300" style={{ border: '1px solid rgba(52,211,153,0.3)' }}>
+        Submit check-in →
+      </button>
+    </div>
+  )
+}
+
 function MockupCard({ title, alt, index, reduced, isDark, device = 'desktop' }) {
   const mobile = device === 'mobile'
-  const previewGradient = isDark
-    ? 'linear-gradient(135deg, rgba(16,185,129,0.22), rgba(14,165,233,0.12), rgba(168,85,247,0.18))'
-    : 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(14,165,233,0.10), rgba(168,85,247,0.12))'
-
-  const desktopContent = (() => {
-    if (title === 'Dashboard') return (
-      <div className="grid h-36 grid-cols-[0.9fr_1.1fr] gap-2">
-        <div className="flex flex-col items-center justify-center rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-emerald-500/40 bg-emerald-500/10">
-            <span className="text-[11px] font-bold text-emerald-300">78</span>
-          </div>
-          <div className="mt-2 h-1.5 w-14 rounded-full bg-slate-700" />
-          <div className="mt-1 h-1 w-10 rounded-full bg-slate-800" />
-        </div>
-        <div className="grid gap-2">
-          <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
-            <div className="mb-1.5 h-1.5 w-10 rounded-full bg-slate-700" />
-            <div className="mt-1 flex items-center gap-1"><div className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400/80" /><div className="ml-0.5 h-1 w-[78%] rounded-full bg-slate-700" /></div>
-            <div className="mt-1 flex items-center gap-1"><div className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400/80" /><div className="ml-0.5 h-1 w-[55%] rounded-full bg-slate-700" /></div>
-            <div className="mt-1 flex items-center gap-1"><div className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400/80" /><div className="ml-0.5 h-1 w-[88%] rounded-full bg-slate-700" /></div>
-          </div>
-          <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
-            <div className="mb-1 h-1.5 w-14 rounded-full bg-slate-700" />
-            <div className="h-2.5 w-full rounded-full bg-slate-800"><div className="h-2.5 w-[72%] rounded-full bg-emerald-500/70" /></div>
-          </div>
-        </div>
-      </div>
-    )
-    if (title === 'Lab Upload') return (
-      <div className="flex h-36 flex-col items-center justify-center gap-2.5 rounded-lg border border-slate-700/70 bg-slate-900/85 p-3">
-        <div className="flex h-12 w-20 items-center justify-center rounded-xl border-2 border-dashed border-emerald-500/40">
-          <div className="h-5 w-4 rounded-sm bg-emerald-500/35" />
-        </div>
-        <div className="w-full">
-          <div className="h-2 w-full rounded-full bg-slate-800"><div className="h-2 w-4/5 rounded-full bg-emerald-500/70" /></div>
-        </div>
-        <div className="w-full space-y-1">
-          <div className="flex items-center gap-1.5"><div className="h-2 w-2 shrink-0 rounded-full bg-emerald-400/80" /><div className="h-1.5 w-3/4 rounded-full bg-slate-700" /></div>
-          <div className="flex items-center gap-1.5"><div className="h-2 w-2 shrink-0 rounded-full bg-emerald-400/80" /><div className="h-1.5 w-[85%] rounded-full bg-slate-700" /></div>
-        </div>
-      </div>
-    )
-    if (title === 'Lab Results') return (
-      <div className="h-36 rounded-lg border border-slate-700/70 bg-slate-900/85 p-2.5">
-        <div className="mb-2 h-1.5 w-16 rounded-full bg-slate-700" />
-        <div className="mb-1.5 flex items-center gap-2"><div className="h-2 w-2 shrink-0 rounded-full bg-rose-400/80" /><div className="h-1.5 w-[78%] rounded-full bg-slate-700" /><div className="ml-auto h-4 w-10 shrink-0 rounded-full border border-slate-700/50 bg-rose-500/20" /></div>
-        <div className="mb-1.5 flex items-center gap-2"><div className="h-2 w-2 shrink-0 rounded-full bg-amber-400/80" /><div className="h-1.5 w-[60%] rounded-full bg-slate-700" /><div className="ml-auto h-4 w-10 shrink-0 rounded-full border border-slate-700/50 bg-amber-500/20" /></div>
-        <div className="mb-1.5 flex items-center gap-2"><div className="h-2 w-2 shrink-0 rounded-full bg-emerald-400/80" /><div className="h-1.5 w-[90%] rounded-full bg-slate-700" /><div className="ml-auto h-4 w-10 shrink-0 rounded-full border border-slate-700/50 bg-emerald-500/20" /></div>
-        <div className="flex items-center gap-2"><div className="h-2 w-2 shrink-0 rounded-full bg-sky-400/80" /><div className="h-1.5 w-[55%] rounded-full bg-slate-700" /><div className="ml-auto h-4 w-10 shrink-0 rounded-full border border-slate-700/50 bg-sky-500/20" /></div>
-      </div>
-    )
-    if (title === 'Personalized Protocol') return (
-      <div className="h-36 rounded-lg border border-slate-700/70 bg-slate-900/85 p-2.5">
-        <div className="mb-2 h-1.5 w-20 rounded-full bg-slate-700" />
-        <div className="mb-1.5 flex items-center gap-2 rounded-md bg-emerald-500/20 px-2 py-1.5"><span className="text-[8px] font-bold text-slate-400">01</span><div className="h-1.5 flex-1 rounded-full bg-slate-700/60" /><div className="h-3.5 w-9 shrink-0 rounded-full bg-slate-700/50" /></div>
-        <div className="mb-1.5 flex items-center gap-2 rounded-md bg-sky-500/15 px-2 py-1.5"><span className="text-[8px] font-bold text-slate-400">02</span><div className="h-1.5 flex-1 rounded-full bg-slate-700/60" /><div className="h-3.5 w-9 shrink-0 rounded-full bg-slate-700/50" /></div>
-        <div className="flex items-center gap-2 rounded-md bg-violet-500/15 px-2 py-1.5"><span className="text-[8px] font-bold text-slate-400">03</span><div className="h-1.5 flex-1 rounded-full bg-slate-700/60" /><div className="h-3.5 w-9 shrink-0 rounded-full bg-slate-700/50" /></div>
-      </div>
-    )
-    if (title === 'Timeline') return (
-      <div className="h-36 rounded-lg border border-slate-700/70 bg-slate-900/85 p-2.5">
-        <div className="mb-2 h-1.5 w-14 rounded-full bg-slate-700" />
-        <div className="flex h-20 items-end gap-[3px] px-1">
-          <div className="flex-1 rounded-t-sm bg-sky-500/30" style={{ height: '30%' }} />
-          <div className="flex-1 rounded-t-sm bg-sky-500/30" style={{ height: '50%' }} />
-          <div className="flex-1 rounded-t-sm bg-sky-500/30" style={{ height: '38%' }} />
-          <div className="flex-1 rounded-t-sm bg-sky-500/30" style={{ height: '62%' }} />
-          <div className="flex-1 rounded-t-sm bg-sky-500/30" style={{ height: '48%' }} />
-          <div className="flex-1 rounded-t-sm bg-emerald-500/55" style={{ height: '70%' }} />
-          <div className="flex-1 rounded-t-sm bg-emerald-500/55" style={{ height: '58%' }} />
-          <div className="flex-1 rounded-t-sm bg-emerald-500/55" style={{ height: '78%' }} />
-          <div className="flex-1 rounded-t-sm bg-emerald-500/55" style={{ height: '65%' }} />
-          <div className="flex-1 rounded-t-sm bg-emerald-500/70" style={{ height: '86%' }} />
-        </div>
-        <div className="mt-1.5 flex justify-between px-1">
-          <div className="h-1.5 w-5 rounded-full bg-slate-700" />
-          <div className="h-1.5 w-5 rounded-full bg-slate-700" />
-          <div className="h-1.5 w-5 rounded-full bg-slate-700" />
-        </div>
-      </div>
-    )
-    if (title === 'Practitioner CRM') return (
-      <div className="h-36 rounded-lg border border-slate-700/70 bg-slate-900/85 p-2.5">
-        <div className="mb-2 h-1.5 w-16 rounded-full bg-slate-700" />
-        <div className="mb-2 flex items-center gap-2">
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-700/60 bg-slate-800/60"><div className="h-1.5 w-1.5 rounded-full bg-emerald-400" /></div>
-          <div className="flex-1"><div className="mb-0.5 h-1.5 w-12 rounded-full bg-slate-700" /><div className="h-2 w-full rounded-full bg-slate-800"><div className="h-2 w-[85%] rounded-full bg-emerald-400/60" /></div></div>
-        </div>
-        <div className="mb-2 flex items-center gap-2">
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-700/60 bg-slate-800/60"><div className="h-1.5 w-1.5 rounded-full bg-amber-400" /></div>
-          <div className="flex-1"><div className="mb-0.5 h-1.5 w-12 rounded-full bg-slate-700" /><div className="h-2 w-full rounded-full bg-slate-800"><div className="h-2 w-[58%] rounded-full bg-amber-400/60" /></div></div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-700/60 bg-slate-800/60"><div className="h-1.5 w-1.5 rounded-full bg-rose-400" /></div>
-          <div className="flex-1"><div className="mb-0.5 h-1.5 w-12 rounded-full bg-slate-700" /><div className="h-2 w-full rounded-full bg-slate-800"><div className="h-2 w-[32%] rounded-full bg-rose-400/60" /></div></div>
-        </div>
-      </div>
-    )
-    return (
-      <div className="grid h-36 grid-cols-[1.05fr_0.95fr] gap-2">
-        <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
-          <div className="mb-2 h-2 w-24 rounded-full bg-slate-700" />
-          <div className="grid gap-1.5">
-            <div className="h-6 rounded-md bg-emerald-500/20" />
-            <div className="h-6 rounded-md bg-sky-500/20" />
-            <div className="h-6 rounded-md bg-violet-500/20" />
-          </div>
-        </div>
-        <div className="grid gap-2">
-          <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
-            <div className="mb-1.5 h-2 w-14 rounded-full bg-slate-700" />
-            <div className="h-7 rounded-md bg-emerald-500/25" />
-          </div>
-          <div className="rounded-lg border border-slate-700/70 bg-slate-900/85 p-2">
-            <div className="mb-1.5 h-2 w-12 rounded-full bg-slate-700" />
-            <div className="h-7 rounded-md bg-sky-500/25" />
-          </div>
-        </div>
-      </div>
-    )
-  })()
 
   return (
     <motion.article
       {...fadeUp(reduced, Math.min(index * 0.05, 0.25))}
-      whileHover={reduced ? undefined : { y: -4, scale: 1.01 }}
+      whileHover={reduced ? undefined : { y: -6, scale: 1.015, boxShadow: '0 32px 56px -8px rgba(15,23,42,0.5), 0 0 0 1px rgba(16,185,129,0.18), inset 0 1px 0 rgba(16,185,129,0.14)' }}
       className={`group relative overflow-hidden rounded-3xl border p-4 backdrop-blur transition duration-300 ${
         isDark ? 'border-slate-800/80 bg-slate-950/70' : 'border-slate-200 bg-white/90'
       }`}
       style={{
-        boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.32), 0 8px 10px -6px rgb(0 0 0 / 0.28), inset 0 1px 0 rgba(16,185,129,0.08)',
+        boxShadow: '0 20px 40px -8px rgba(15,23,42,0.45), 0 8px 16px -6px rgba(15,23,42,0.3), inset 0 1px 0 rgba(16,185,129,0.08)',
       }}
       aria-label={alt}
     >
-      <div className={`pointer-events-none absolute inset-0 opacity-60 ${isDark ? 'bg-[radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.16),transparent_48%)]' : 'bg-[radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.12),transparent_52%)]'}`} />
+      {/* Ambient corner glow */}
+      <div className="pointer-events-none absolute inset-0 opacity-70" style={{ background: 'radial-gradient(circle at 90% 8%, rgba(16,185,129,0.18) 0%, transparent 50%)' }} />
+      <div className="pointer-events-none absolute inset-0 opacity-40" style={{ background: 'radial-gradient(circle at 10% 90%, rgba(14,165,233,0.1) 0%, transparent 50%)' }} />
 
-      <div
-        className={`relative mb-3 rounded-2xl border p-2 ${isDark ? 'border-slate-700/80 bg-slate-900/90' : 'border-slate-200 bg-white/95'}`}
-        style={{ backgroundImage: previewGradient }}
-      >
+      {/* Device chrome */}
+      <div className={`relative mb-3 rounded-2xl border ${isDark ? 'border-slate-700/80 bg-slate-900/90' : 'border-slate-200 bg-white/95'}`} style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(14,165,233,0.06), rgba(168,85,247,0.08))' }}>
         {!mobile ? (
-          <div className="rounded-xl border border-slate-700/60 bg-[linear-gradient(150deg,#0f1a31,#10223c_48%,#102b3f_72%,#10242f)] p-2">
-            <div className="mb-2 flex items-center justify-between rounded-lg border border-slate-700/70 bg-slate-900/80 px-2.5 py-1.5">
+          <div className="rounded-xl border border-slate-700/60 bg-[linear-gradient(150deg,#0c1628,#0e1e38_48%,#0d2236_72%,#0c1d2c)] p-2.5">
+            {/* Browser chrome bar */}
+            <div className="mb-2.5 flex items-center justify-between rounded-lg border border-slate-700/60 bg-slate-900/70 px-3 py-1.5">
               <div className="flex gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-rose-400/75" />
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-400/75" />
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/75" />
+                <span className="h-2.5 w-2.5 rounded-full bg-rose-400/80" />
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
               </div>
-              <div className="h-1.5 w-20 rounded-full bg-gradient-to-r from-emerald-400/80 via-sky-400/70 to-violet-400/70" />
+              <div className="flex items-center gap-1.5 rounded-full border border-slate-700/50 bg-slate-900/60 px-2 py-0.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/60" />
+                <div className="h-1.5 w-24 rounded-full bg-gradient-to-r from-emerald-400/60 via-sky-400/50 to-violet-400/50" />
+              </div>
             </div>
-            {desktopContent}
+            <MockupScreenContent title={title} />
           </div>
         ) : (
-          <div className="mx-auto w-[170px] rounded-[24px] border border-slate-700/80 bg-[linear-gradient(180deg,#102035,#0f1b31)] p-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.45)]">
-            <div className="mx-auto mb-2 h-4 w-16 rounded-full bg-gradient-to-r from-emerald-400/55 to-sky-400/45" />
-            <div className="rounded-[18px] border border-slate-700/70 bg-slate-900/90 p-2">
-              <div className="mb-2 h-1.5 w-10 rounded-full bg-slate-700" />
-              <div className="grid gap-1.5">
-                <div className="flex h-5 items-center gap-1.5 rounded-md bg-emerald-500/25 px-2"><div className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" /><div className="h-1 flex-1 rounded-full bg-slate-700/60" /></div>
-                <div className="flex h-5 items-center gap-1.5 rounded-md bg-sky-500/20 px-2"><div className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" /><div className="h-1 flex-1 rounded-full bg-slate-700/60" /></div>
-                <div className="flex h-5 items-center gap-1.5 rounded-md bg-violet-500/15 px-2"><div className="h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" /><div className="h-1 flex-1 rounded-full bg-slate-700/60" /></div>
-                <div className="h-5 rounded-md bg-slate-700/40" />
-              </div>
+          <div className="flex justify-center py-2">
+            <div className="w-[175px] rounded-[26px] border border-slate-700/80 bg-[linear-gradient(180deg,#0e1e38,#0c1628)] p-3 shadow-[0_16px_48px_rgba(15,23,42,0.6)]">
+              {/* Phone notch */}
+              <div className="mx-auto mb-2.5 h-4 w-20 rounded-full bg-gradient-to-r from-emerald-400/50 to-sky-400/40" />
+              <MockupMobileContent />
             </div>
           </div>
         )}
       </div>
-      <div className={isDark ? 'text-sm font-semibold text-slate-100' : 'text-sm font-semibold text-slate-900'}>{title}</div>
-      <div className={`mt-1 inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${isDark ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
-        {mobile ? 'Mobile preview' : 'Product preview'}
+
+      {/* Card footer */}
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{title}</div>
+          <p className={`mt-0.5 text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{alt}</p>
+        </div>
+        <div className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${isDark ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+          {mobile ? 'Mobile' : 'Preview'}
+        </div>
       </div>
-      <p className={isDark ? 'mt-1 text-xs leading-relaxed text-slate-400' : 'mt-1 text-xs leading-relaxed text-slate-600'}>{alt}</p>
     </motion.article>
   )
 }
@@ -761,13 +929,20 @@ export default function Landing() {
                 </button>
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2">
+            <div className="mt-8 flex flex-wrap items-center gap-2.5">
               {HERO_TRUST_SIGNALS.map((item) => {
                 const Icon = item.icon
                 return (
-                  <div key={item.title} className={`flex items-center gap-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  <div
+                    key={item.title}
+                    className={`flex items-center gap-2 rounded-full border px-3 py-1.5 backdrop-blur-sm transition-colors ${
+                      isDark
+                        ? 'border-slate-700/70 bg-slate-900/70 text-slate-300 hover:border-emerald-400/40 hover:bg-slate-900'
+                        : 'border-slate-200 bg-white/80 text-slate-700 hover:border-emerald-300'
+                    }`}
+                  >
                     <Icon className={`h-3.5 w-3.5 shrink-0 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
-                    <span className="text-[13px] font-medium">{item.title}</span>
+                    <span className="text-[12px] font-semibold">{item.title}</span>
                   </div>
                 )
               })}
@@ -990,7 +1165,7 @@ export default function Landing() {
               <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Platform walkthrough</p>
               <div className={`h-px flex-1 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
             </div>
-            <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
               {MOCKUPS.map((m, i) => (
                 <MockupCard key={m.title} title={m.title} alt={m.alt} device={m.device} index={i} reduced={reduced} isDark={isDark} />
               ))}
