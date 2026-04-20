@@ -3,12 +3,13 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 import os
+import shutil
 import subprocess
 
 
 APP_VERSION = "2.1.2"
 SERVICE_NAME = "vitaloop-api"
-GIT_CANDIDATES = ("git", "/usr/bin/git", "/usr/local/bin/git")
+GIT_CANDIDATES = ("/usr/bin/git", "/usr/local/bin/git")
 
 
 def _repo_root() -> Path:
@@ -25,7 +26,9 @@ def _read_release_version() -> str:
 
 
 def _read_git_value(*args: str) -> str | None:
-    git_binary = next((candidate for candidate in GIT_CANDIDATES if os.path.exists(candidate) or candidate == "git"), None)
+    git_binary = shutil.which("git")
+    if not git_binary:
+        git_binary = next((candidate for candidate in GIT_CANDIDATES if os.path.exists(candidate)), None)
     if not git_binary:
         return None
 
