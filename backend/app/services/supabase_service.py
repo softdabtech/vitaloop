@@ -1738,22 +1738,30 @@ async def write_audit_log(
     """Best-effort audit logging helper that never raises."""
     try:
         supabase = _get_supabase()
-        await _run(
-            lambda: supabase.table("audit_logs")
-            .insert(
-                {
-                    "user_id": user_id,
-                    "action": action,
-                    "entity_type": entity_type,
-                    "entity_id": entity_id or str(uuid4()),
-                    "old_value": old_value or {},
-                    "new_value": new_value or {},
-                    "organization_id": organization_id,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                }
-            )
-            .execute()
-        )
+        payload_full = {
+            "user_id": user_id,
+            "action": action,
+            "entity_type": entity_type,
+            "entity_id": entity_id or str(uuid4()),
+            "old_value": old_value or {},
+            "new_value": new_value or {},
+            "organization_id": organization_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+        payload_minimal = {
+            "user_id": user_id,
+            "action": action,
+            "entity_type": entity_type,
+            "entity_id": payload_full["entity_id"],
+        }
+
+        try:
+            await _run(lambda: supabase.table("audit_logs").insert(payload_full).execute())
+            return
+        except Exception:
+            # Fallback for partially migrated schemas where extended audit columns are absent.
+            await _run(lambda: supabase.table("audit_logs").insert(payload_minimal).execute())
     except Exception as ex:
         _logger.warning("audit_log_write_failed action=%s entity_type=%s error=%s", action, entity_type, ex)
 
@@ -1878,16 +1886,19 @@ async def get_retention_redaction_status() -> Dict[str, Any]:
     supabase = _get_supabase()
     since_24h = datetime.now(timezone.utc) - timedelta(hours=24)
 
-    resp = await _run(
-        lambda: supabase.table("audit_logs")
-        .select("action,timestamp,new_value,entity_type")
-        .eq("entity_type", "lab_uploads")
-        .in_("action", ["retention_redaction_job", "retention_redaction", "retention_redaction_failed"])
-        .order("timestamp", desc=True)
-        .limit(200)
-        .execute()
-    )
-    rows = resp.data or []
+    try:
+        resp = await _run(
+            lambda: supabase.table("audit_logs")
+            .select("action,created_at,new_value,entity_type")
+            .eq("entity_type", "lab_uploads")
+            .in_("action", ["retention_redaction_job", "retention_redaction", "retention_redaction_failed"])
+            .order("created_at", desc=True)
+            .limit(200)
+            .execute()
+        )
+        rows = resp.data or []
+    except Exception:
+        rows = []
 
     def _row_status(row: Dict[str, Any]) -> str:
         action = str(row.get("action") or "")
@@ -1909,7 +1920,7 @@ async def get_retention_redaction_status() -> Dict[str, Any]:
         nv = row.get("new_value") if isinstance(row.get("new_value"), dict) else {}
         return {
             "action": row.get("action"),
-            "timestamp": row.get("timestamp"),
+            "timestamp": row.get("created_at") or row.get("timestamp"),
             "status": _row_status(row),
             "updated": _row_updated(row),
             "dry_run": bool(nv.get("dry_run")) if "dry_run" in nv else None,
@@ -1924,7 +1935,7 @@ async def get_retention_redaction_status() -> Dict[str, Any]:
     failures_24h = 0
     updated_24h = 0
     for row in rows:
-        dt = _parse_iso_datetime(row.get("timestamp"))
+        dt = _parse_iso_datetime(row.get("created_at") or row.get("timestamp"))
         if not dt or dt < since_24h:
             continue
         runs_24h += 1
