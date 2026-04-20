@@ -33,6 +33,7 @@ const NAV_LINKS = [
   { id: 'testimonials', label: 'Stories' },
   { id: 'traction', label: 'Investors' },
   { id: 'faq', label: 'FAQ' },
+  { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
 ]
 
 const STEPS = [
@@ -542,9 +543,13 @@ export default function Landing() {
   const { user } = useAuth()
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
-  const navScrollTo = (id) => {
+  const navAction = (item) => {
     closeMobileMenu()
-    setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }), mobileMenuOpen ? 280 : 0)
+    if (item.route) {
+      navigate(item.route)
+      return
+    }
+    setTimeout(() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' }), mobileMenuOpen ? 280 : 0)
   }
 
   const pricingCards = PRICING[pricingMode]
@@ -594,7 +599,7 @@ export default function Landing() {
             {NAV_LINKS.map((item) => (
               <button
                 key={item.id}
-                onClick={() => navScrollTo(item.id)}
+                  onClick={() => navAction(item)}
                 className={`text-sm transition ${navTextClass}`}
               >
                 {item.label}
@@ -665,7 +670,7 @@ export default function Landing() {
                 {NAV_LINKS.map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => navScrollTo(item.id)}
+                      onClick={() => navAction(item)}
                     className={`rounded-xl px-4 py-3 text-left text-sm font-medium transition ${isDark ? 'text-slate-300 hover:bg-slate-800/80 hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}
                   >
                     {item.label}
@@ -748,6 +753,12 @@ export default function Landing() {
                 <CirclePlay className="mr-2 h-4 w-4" />
                 Watch 45s Demo
               </button>
+                <button
+                  onClick={() => navigate('/for-nutritionists')}
+                  className={`${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900/80 text-emerald-300 hover:border-emerald-400/60 hover:text-emerald-200' : 'border border-emerald-300 bg-emerald-50 text-emerald-800 hover:border-emerald-400'}`}
+                >
+                  For Nutritionists
+                </button>
             </div>
 
             <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -1365,6 +1376,7 @@ export default function Landing() {
           <div>
             <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Company</div>
             <div className="mt-4 flex flex-col items-start gap-3 text-left">
+              <button onClick={() => navigate('/for-nutritionists')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>For Nutritionists</button>
               <button onClick={() => navigate('/terms')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Terms</button>
               <button onClick={() => navigate('/privacy')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Privacy</button>
               <button onClick={() => navigate('/for-investors')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>For Investors</button>
