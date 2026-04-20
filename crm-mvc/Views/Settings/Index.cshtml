@@ -1,3 +1,4 @@
+@model SettingsPageViewModel
 @{
   ViewData["Title"] = "Settings";
 }
@@ -5,18 +6,70 @@
 @await Html.PartialAsync("Partials/_Breadcrumbs")
 @await Html.PartialAsync("Partials/_PageHeader", new PageHeaderViewModel { Title = "Account Settings", Subtitle = "Manage your profile and workspace preferences", Eyebrow = "Account" })
 
-<section class="vo-card">
-  <div class="vo-card-head"><h3>Profile</h3></div>
-  <div class="vo-form-grid">
-    <div class="vo-field">
-      <label class="vo-label">Display name</label>
-      <input class="vo-input" type="text" placeholder="Your name" disabled />
-      <span class="vo-field-hint">Profile settings will be backed by Supabase user metadata.</span>
+<form method="post" action="/settings" class="vo-stack-lg">
+  @Html.AntiForgeryToken()
+
+  <section class="vo-card">
+    <div class="vo-card-head"><h3>Profile</h3></div>
+    <div class="vo-form-grid">
+      <div class="vo-field">
+        <label class="vo-label">Display name</label>
+        <input class="vo-input" type="text" value="@Model.DisplayName" disabled />
+        <span class="vo-field-hint">Managed by account profile and invitation metadata.</span>
+      </div>
+      <div class="vo-field">
+        <label class="vo-label">Email</label>
+        <input class="vo-input" type="email" value="@Model.Email" disabled />
+        <span class="vo-field-hint">Email is managed by your identity provider.</span>
+      </div>
     </div>
-    <div class="vo-field">
-      <label class="vo-label">Email</label>
-      <input class="vo-input" type="email" placeholder="your@email.com" disabled />
-      <span class="vo-field-hint">Email is managed by your identity provider.</span>
+  </section>
+
+  <section class="vo-card">
+    <div class="vo-card-head"><h3>Workspace Preferences</h3></div>
+    <div class="vo-form-grid">
+      <div class="vo-field">
+        <label class="vo-label" for="timeZone">Time zone</label>
+        <select id="timeZone" name="timeZone" class="vo-input">
+          <option value="UTC" selected="@(Model.TimeZone == "UTC" ? "selected" : null)">UTC</option>
+          <option value="Europe/Kyiv" selected="@(Model.TimeZone == "Europe/Kyiv" ? "selected" : null)">Europe/Kyiv</option>
+          <option value="Europe/Berlin" selected="@(Model.TimeZone == "Europe/Berlin" ? "selected" : null)">Europe/Berlin</option>
+          <option value="America/New_York" selected="@(Model.TimeZone == "America/New_York" ? "selected" : null)">America/New_York</option>
+        </select>
+      </div>
+      <div class="vo-field">
+        <label class="vo-label" for="language">Language</label>
+        <select id="language" name="language" class="vo-input">
+          <option value="en" selected="@(Model.Language == "en" ? "selected" : null)">English</option>
+          <option value="uk" selected="@(Model.Language == "uk" ? "selected" : null)">Ukrainian</option>
+          <option value="ru" selected="@(Model.Language == "ru" ? "selected" : null)">Russian</option>
+        </select>
+      </div>
+      <div class="vo-field">
+        <label class="vo-label">
+          <input type="checkbox" name="compactMode" value="true" checked="@(Model.CompactMode ? "checked" : null)" /> Compact tables mode
+        </label>
+      </div>
     </div>
+  </section>
+
+  <section class="vo-card">
+    <div class="vo-card-head"><h3>Notifications & Security</h3></div>
+    <div class="vo-form-grid">
+      <div class="vo-field">
+        <label class="vo-label">
+          <input type="checkbox" name="emailDigestEnabled" value="true" checked="@(Model.EmailDigestEnabled ? "checked" : null)" /> Weekly email digest
+        </label>
+      </div>
+      <div class="vo-field">
+        <label class="vo-label">
+          <input type="checkbox" name="securityAlertsEnabled" value="true" checked="@(Model.SecurityAlertsEnabled ? "checked" : null)" /> Security alerts
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <div class="vo-row-end">
+    <button type="submit" class="vo-btn vo-btn-primary">Save Settings</button>
   </div>
-</section>
+</form>

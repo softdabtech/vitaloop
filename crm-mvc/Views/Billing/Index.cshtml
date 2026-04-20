@@ -1,3 +1,4 @@
+@model BillingPageViewModel
 @{
   ViewData["Title"] = "Billing";
 }
@@ -6,8 +7,38 @@
 @await Html.PartialAsync("Partials/_PageHeader", new PageHeaderViewModel { Title = "Billing", Subtitle = "Subscription and payment overview", Eyebrow = "Account" })
 
 <section class="vo-grid two-up">
-  @await Html.PartialAsync("Ui/_StatCard", new StatCardViewModel { Label = "Current Plan", Value = "-", Trend = "Managed via Stripe", Tone = "teal" })
-  @await Html.PartialAsync("Ui/_StatCard", new StatCardViewModel { Label = "Next Renewal", Value = "-", Trend = "Synced from subscription", Tone = "default" })
+  @await Html.PartialAsync("Ui/_StatCard", new StatCardViewModel { Label = "Current Plan", Value = Model.CurrentPlan, Trend = "Managed via Stripe", Tone = "teal" })
+  @await Html.PartialAsync("Ui/_StatCard", new StatCardViewModel { Label = "Subscription Status", Value = Model.SubscriptionStatus, Trend = Model.StripeReady ? "Checkout ready" : "Setup incomplete", Tone = "default" })
 </section>
 
-@await Html.PartialAsync("Ui/_EmptyState", new EmptyStateViewModel { Title = "Billing integration", Description = "Real-time Stripe subscription data will appear here once billing wiring is complete." })
+<section class="vo-card">
+  <div class="vo-card-head"><h3>Checkout</h3></div>
+  <p class="vo-muted">Select a plan to open Stripe checkout. After successful payment, your subscription status will update automatically.</p>
+  <div class="vo-plan-list" style="margin-top: 14px; display: grid; gap: 12px;">
+    <form class="vo-plan-item" method="post" action="/billing/checkout" style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px;border:1px solid var(--vo-border,#ddd);border-radius:12px;">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="planId" value="personal" />
+      <div>
+        <div class="vo-plan-name" style="font-weight:700;">Personal</div>
+        <div class="vo-plan-desc vo-muted">For individual practitioner workflows.</div>
+      </div>
+      <button type="submit" class="vo-btn vo-btn-sm">Choose</button>
+    </form>
+
+    <form class="vo-plan-item" method="post" action="/billing/checkout" style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px;border:1px solid var(--vo-border,#ddd);border-radius:12px;">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="planId" value="practitioner" />
+      <div>
+        <div class="vo-plan-name" style="font-weight:700;">Practitioner</div>
+        <div class="vo-plan-desc vo-muted">Includes assignment and team management tools.</div>
+      </div>
+      <button type="submit" class="vo-btn vo-btn-sm">Choose</button>
+    </form>
+
+    <form class="vo-row-end" method="post" action="/billing/checkout">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="planId" value="@Model.CurrentPlan" />
+      <button type="submit" class="vo-btn vo-btn-secondary">Open Billing Portal</button>
+    </form>
+  </div>
+</section>

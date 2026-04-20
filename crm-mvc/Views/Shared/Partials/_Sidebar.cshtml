@@ -53,6 +53,14 @@
 
   var allItems = new[] { navItemsOverview, navItemsCrm, navItemsAccount }.SelectMany(x => x).ToArray();
   var visibleItems = allItems.Where(item => ShouldShowItem(item.RequireRole)).ToArray();
+
+  var activeItemHref = visibleItems
+    .Where(item =>
+      currentPath == item.Href ||
+      (item.Href.Length > 1 && currentPath.StartsWith(item.Href + "/", StringComparison.OrdinalIgnoreCase)))
+    .OrderByDescending(item => item.Href.Length)
+    .Select(item => item.Href)
+    .FirstOrDefault() ?? string.Empty;
 }
 
 <aside class="vo-sidebar" id="vo-sidebar" aria-label="Main navigation">
@@ -114,9 +122,7 @@
       <ul class="vo-nav-list">
         @foreach (var item in group)
         {
-          var exactMatch = currentPath == item.Href;
-          var prefixMatch = item.Href.Length > 5 && currentPath.StartsWith(item.Href + "/");
-          var active = exactMatch || prefixMatch;
+          var active = string.Equals(activeItemHref, item.Href, StringComparison.OrdinalIgnoreCase);
           <li>
             <a class="vo-nav-link @(active ? "is-active" : string.Empty)"
                href="@item.Href"

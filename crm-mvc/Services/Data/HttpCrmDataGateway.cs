@@ -73,6 +73,27 @@ public sealed class HttpCrmDataGateway : ICrmDataGateway
     public Task ChangeRole(Guid orgId, Guid userId, string role, CancellationToken ct = default)
         => SendWithoutResponse(new HttpMethod("PATCH"), $"{_options.MembersPath}/{userId}/role", new { org_id = orgId, role }, ct);
 
+    public Task UpdateMemberProfile(
+        Guid orgId,
+        Guid userId,
+        string? fullName,
+        int? age,
+        string? sex,
+        string? subscriptionStatus,
+        CancellationToken ct = default)
+        => SendWithoutResponse(
+            new HttpMethod("PATCH"),
+            $"{_options.MembersPath}/{userId}/profile",
+            new
+            {
+                org_id = orgId,
+                full_name = fullName,
+                age,
+                sex,
+                sub_status = subscriptionStatus,
+            },
+            ct);
+
     public Task RemoveMember(Guid orgId, Guid userId, CancellationToken ct = default)
         => SendWithoutResponse(HttpMethod.Delete, WithOrg($"{_options.MembersPath}/{userId}", orgId), null, ct);
 
