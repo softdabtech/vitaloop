@@ -13,6 +13,11 @@ namespace Vitaloop.Crm.Web.Areas.Admin.Controllers;
 [RequireOrgRole("org_owner", "client_admin", "manager")]
 public class UsersController : Controller
 {
+    private static readonly HashSet<string> AllowedInvitationRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "org_owner", "client_admin", "manager", "practitioner", "support", "member"
+    };
+
     private readonly IUserContextAccessor _userContextAccessor;
     private readonly IActiveOrganizationResolver _activeOrganizationResolver;
     private readonly IAccessPolicyService _accessPolicyService;
@@ -64,6 +69,8 @@ public class UsersController : Controller
                         UserId = m.UserId,
                         Email = m.Email,
                         FullName = m.FullName,
+                        Age = m.Age,
+                        Sex = m.Sex,
                         GlobalRole = m.GlobalRole,
                         OrgRole = m.OrgRole,
                         MembershipStatus = m.MembershipStatus,
@@ -109,6 +116,46 @@ public class UsersController : Controller
         {
             _logger.LogError(ex, "Error changing member role");
             TempData["ErrorMessage"] = "Failed to update member role.";
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
+    /// <summary>Update editable member profile fields (org admin/manager).</summary>
+    [HttpPost("{userId}/profile")]
+    [RequireOrgRole("org_owner", "client_admin", "manager")]
+    public async Task<IActionResult> UpdateProfile(
+        Guid userId,
+        [FromForm] string? fullName,
+        [FromForm] int? age,
+        [FromForm] string? sex,
+        [FromForm] string? subscriptionStatus,
+        CancellationToken ct)
+    {
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
+
+        if (!userCtx.ActiveOrganizationId.HasValue)
+        {
+            return BadRequest("No active organization");
+        }
+
+        try
+        {
+            await _membershipService.UpdateMemberProfile(
+                userCtx,
+                userCtx.ActiveOrganizationId.Value,
+                userId,
+                fullName,
+                age,
+                sex,
+                subscriptionStatus,
+                ct);
+            TempData["SuccessMessage"] = "Member profile updated.";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating member profile");
+            TempData["ErrorMessage"] = "Failed to update member profile.";
             return RedirectToAction(nameof(Index));
         }
     }
@@ -167,6 +214,12 @@ public class UsersController : Controller
 
         try
         {
+            if (!AllowedInvitationRoles.Contains(model.Role ?? string.Empty))
+            {
+                ModelState.AddModelError(nameof(model.Role), "Selected role is not supported.");
+                return View("Invite", model);
+            }
+
             if (!userCtx.ActiveOrganizationId.HasValue)
             {
                 TempData["ErrorMessage"] = "No active organization selected.";

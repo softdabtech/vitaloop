@@ -19,6 +19,25 @@
 
     <div class="tabs-container">
         <div class="tab-panel">
+            <div class="section-header">
+                <h2>Quick Actions</h2>
+            </div>
+            <div class="action-buttons">
+                <a class="btn btn-primary" href="/admin/orgs/@Model?.Id/switch?returnUrl=%2Fadmin%2Forganizations%2F@Model?.Id">Use As Active Org</a>
+                <a class="btn btn-outline" href="/organizations/settings?org_id=@Model?.Id">Open Organization Settings</a>
+                <a class="btn btn-outline" href="/admin/members">Manage Members</a>
+                <a class="btn btn-outline" href="/admin/assignments">Manage Assignments</a>
+            </div>
+            <form method="post" action="/admin/organizations/@Model?.Id/status" style="margin-top:16px;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="status" value="@(string.Equals(Model?.Status, "active", StringComparison.OrdinalIgnoreCase) ? "inactive" : "active")" />
+                <button type="submit" class="btn btn-danger">
+                    @(string.Equals(Model?.Status, "active", StringComparison.OrdinalIgnoreCase) ? "Suspend Organization" : "Activate Organization")
+                </button>
+            </form>
+        </div>
+
+        <div class="tab-panel">
             <h2>Organization Details</h2>
             <div class="details-grid">
                 <div class="detail-row">

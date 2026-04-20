@@ -42,12 +42,22 @@
                         <a href="@Url.Action("Details", new { orgId = org.Id })" class="btn btn-sm btn-secondary">
                             View Details
                         </a>
-                        @if (Model?.IsSuperAdmin == true)
-                        {
-                            <a href="@Url.Action("Edit", new { orgId = org.Id })" class="btn btn-sm btn-outline">
-                                Edit
-                            </a>
-                        }
+                        <a href="/admin/orgs/@org.Id/switch?returnUrl=%2Fadmin%2Forganizations" class="btn btn-sm btn-outline">
+                            Switch
+                        </a>
+                        <a href="/admin/members" class="btn btn-sm btn-outline">
+                            Team
+                        </a>
+                        <a href="/organizations/settings?org_id=@org.Id" class="btn btn-sm btn-outline">
+                            Settings
+                        </a>
+                        <form method="post" action="/admin/organizations/@org.Id/status" style="display:inline;">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="status" value="@(org.Status == "active" ? "inactive" : "active")" />
+                            <button type="submit" class="btn btn-sm btn-outline">
+                                @(org.Status == "active" ? "Suspend" : "Activate")
+                            </button>
+                        </form>
                     </div>
                 </div>
             }

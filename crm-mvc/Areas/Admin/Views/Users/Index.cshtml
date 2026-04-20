@@ -34,6 +34,7 @@
                     <tr>
                         <th>Name</th>
                         <th>Email</th>
+                        <th>Age/Sex</th>
                         <th>Role</th>
                         <th>Status</th>
                         <th>Subscription</th>
@@ -51,6 +52,9 @@
                                 <code>@member.Email</code>
                             </td>
                             <td>
+                                @((member.Age?.ToString() ?? "-") + " / " + (!string.IsNullOrWhiteSpace(member.Sex) ? member.Sex : "-"))
+                            </td>
+                            <td>
                                 <span class="badge badge-@(member.OrgRole == "practitioner" ? "primary" : "secondary")">
                                     @member.OrgRole
                                 </span>
@@ -64,10 +68,42 @@
                                 <small>@member.SubscriptionStatus</small>
                             </td>
                             <td>
-                                <div class="action-menu">
-                                    <button type="button" class="btn btn-xs btn-outline">
-                                        ⋮ Actions
-                                    </button>
+                                <div class="action-buttons">
+                                    <form method="post" action="/admin/members/@member.UserId/profile" class="inline-form">
+                                        @Html.AntiForgeryToken()
+                                        <input type="text" name="fullName" class="inline-input" value="@member.FullName" placeholder="Full name" />
+                                        <input type="number" name="age" class="inline-input inline-input-small" value="@member.Age" min="1" max="120" placeholder="Age" />
+                                        <select name="sex" class="inline-input inline-input-small">
+                                            <option value="" selected="@(string.IsNullOrWhiteSpace(member.Sex) ? "selected" : null)">-</option>
+                                            <option value="m" selected="@(string.Equals(member.Sex, "m", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">m</option>
+                                            <option value="f" selected="@(string.Equals(member.Sex, "f", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">f</option>
+                                        </select>
+                                        <select name="subscriptionStatus" class="inline-input">
+                                            <option value="free" selected="@(string.Equals(member.SubscriptionStatus, "free", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">free</option>
+                                            <option value="active" selected="@(string.Equals(member.SubscriptionStatus, "active", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">active</option>
+                                            <option value="past_due" selected="@(string.Equals(member.SubscriptionStatus, "past_due", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">past_due</option>
+                                            <option value="cancelled" selected="@(string.Equals(member.SubscriptionStatus, "cancelled", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">cancelled</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-xs btn-outline">Save</button>
+                                    </form>
+
+                                    <form method="post" action="/admin/members/@member.UserId/role" class="inline-form">
+                                        @Html.AntiForgeryToken()
+                                        <select name="newRole" class="inline-input">
+                                            <option value="org_owner" selected="@(string.Equals(member.OrgRole, "org_owner", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">org_owner</option>
+                                            <option value="client_admin" selected="@(string.Equals(member.OrgRole, "client_admin", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">client_admin</option>
+                                            <option value="manager" selected="@(string.Equals(member.OrgRole, "manager", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">manager</option>
+                                            <option value="practitioner" selected="@(string.Equals(member.OrgRole, "practitioner", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">practitioner</option>
+                                            <option value="support" selected="@(string.Equals(member.OrgRole, "support", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">support</option>
+                                            <option value="member" selected="@(string.Equals(member.OrgRole, "member", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">member</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-xs btn-outline">Change Role</button>
+                                    </form>
+
+                                    <form method="post" action="/admin/members/@member.UserId/remove" class="inline-form" onsubmit="return confirm('Remove this member from organization?');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-xs btn-danger">Remove</button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>
@@ -215,6 +251,33 @@
     .btn-lg {
         padding: 0.75rem 1.5rem;
         font-size: 1rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 320px;
+    }
+
+    .inline-form {
+        display: flex;
+        gap: 0.4rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .inline-input {
+        min-width: 90px;
+        padding: 0.3rem 0.45rem;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
+
+    .inline-input-small {
+        width: 64px;
+        min-width: 64px;
     }
 
     .empty-state {

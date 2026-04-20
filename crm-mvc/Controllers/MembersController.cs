@@ -39,6 +39,8 @@ public class MembersController : Controller
                 UserId = m.UserId,
                 Email = m.Email,
                 FullName = m.FullName,
+                Age = m.Age,
+                Sex = m.Sex,
                 GlobalRole = m.GlobalRole,
                 OrgRole = m.OrgRole,
                 MembershipStatus = m.MembershipStatus,

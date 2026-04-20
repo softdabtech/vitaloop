@@ -12,6 +12,7 @@ public interface ICrmDataGateway
 
     Task<IReadOnlyList<Member>> GetMembers(Guid orgId, CancellationToken ct = default);
     Task ChangeRole(Guid orgId, Guid userId, string role, CancellationToken ct = default);
+    Task UpdateMemberProfile(Guid orgId, Guid userId, string? fullName, int? age, string? sex, string? subscriptionStatus, CancellationToken ct = default);
     Task RemoveMember(Guid orgId, Guid userId, CancellationToken ct = default);
 
     Task<IReadOnlyList<Invitation>> GetInvitations(Guid orgId, CancellationToken ct = default);

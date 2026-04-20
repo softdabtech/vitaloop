@@ -1669,7 +1669,37 @@ async def get_audit_logs(limit: int = 200, organization_id: Optional[str] = None
 
     try:
         resp = await _run(lambda: query.execute())
-        return resp.data or []
+        rows = resp.data or []
+        if rows:
+            return rows
+
+        # Fallback: if audit feed is empty, expose recent timeline events for Ops visibility.
+        # timeline_events is global (no organization filter), so only use it without org scope.
+        if not organization_id:
+            timeline_resp = await _run(
+                lambda: supabase.table("timeline_events")
+                .select("id,user_id,event_type,occurred_at")
+                .order("occurred_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            timeline_rows = timeline_resp.data or []
+            return [
+                {
+                    "id": row.get("id"),
+                    "user_id": row.get("user_id"),
+                    "action": row.get("event_type") or "timeline_event",
+                    "entity_type": "timeline_event",
+                    "entity_id": row.get("id") or str(uuid4()),
+                    "organization_id": None,
+                    "old_value": {},
+                    "new_value": {},
+                    "timestamp": row.get("occurred_at"),
+                }
+                for row in timeline_rows
+            ]
+
+        return rows
     except Exception as ex:
         # Keep Ops UI available even if audit feed backend storage is misconfigured.
         _logger.warning("audit_logs_read_failed returning_empty_feed error=%s", ex)

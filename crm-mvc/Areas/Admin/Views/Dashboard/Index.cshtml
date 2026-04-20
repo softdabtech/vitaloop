@@ -1,3 +1,4 @@
+@model AdminDashboardViewModel
 @{
   ViewData["Title"] = "Admin Dashboard";
 }
@@ -27,7 +28,7 @@
 </nav>
 
 <section class="vo-grid three-up">
-  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Total Members", Value = "—", Trend = "From active organization", Tone = "teal" })
-  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Pending Invites", Value = "—", Trend = "Awaiting acceptance", Tone = "default" })
-  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Active Assignments", Value = "—", Trend = "Practitioner-client pairs", Tone = "default" })
+  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Total Members", Value = Model.TotalMembers.ToString(), Trend = "From active organization", Tone = "teal" })
+  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Pending Invites", Value = Model.PendingInvites.ToString(), Trend = "Awaiting acceptance", Tone = "default" })
+  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Active Assignments", Value = Model.ActiveAssignments.ToString(), Trend = "Practitioner-client pairs", Tone = "default" })
 </section>

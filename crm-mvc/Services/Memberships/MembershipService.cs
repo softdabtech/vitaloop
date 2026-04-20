@@ -39,6 +39,24 @@ public sealed class MembershipService
         await _gateway.ChangeRole(orgId, userId, role, ct);
     }
 
+    public async Task UpdateMemberProfile(
+        UserContext userCtx,
+        Guid orgId,
+        Guid userId,
+        string? fullName,
+        int? age,
+        string? sex,
+        string? subscriptionStatus,
+        CancellationToken ct = default)
+    {
+        if (!_accessPolicyService.HasOrgRole(userCtx, orgId, "org_owner", "client_admin", "manager"))
+        {
+            throw new UnauthorizedAccessException("Update profile denied.");
+        }
+
+        await _gateway.UpdateMemberProfile(orgId, userId, fullName, age, sex, subscriptionStatus, ct);
+    }
+
     public async Task RemoveMember(UserContext userCtx, Guid orgId, Guid userId, CancellationToken ct = default)
     {
         if (!_accessPolicyService.HasOrgRole(userCtx, orgId, "org_owner", "client_admin"))

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Vitaloop.Crm.Web.Attributes;
 using Vitaloop.Crm.Web.Services.Assignments;
 using Vitaloop.Crm.Web.Services.Contracts;
+using Vitaloop.Crm.Web.Services.Memberships;
 using Vitaloop.Crm.Web.Services.Organizations;
 using Vitaloop.Crm.Web.ViewModels;
 
@@ -16,6 +17,7 @@ public class AssignmentsController : Controller
     private readonly IActiveOrganizationResolver _activeOrganizationResolver;
     private readonly IAccessPolicyService _accessPolicyService;
     private readonly OrganizationService _organizationService;
+    private readonly MembershipService _membershipService;
     private readonly AssignmentService _assignmentService;
     private readonly ILogger<AssignmentsController> _logger;
 
@@ -24,6 +26,7 @@ public class AssignmentsController : Controller
         IActiveOrganizationResolver activeOrganizationResolver,
         IAccessPolicyService accessPolicyService,
         OrganizationService organizationService,
+        MembershipService membershipService,
         AssignmentService assignmentService,
         ILogger<AssignmentsController> logger)
     {
@@ -31,6 +34,7 @@ public class AssignmentsController : Controller
         _activeOrganizationResolver = activeOrganizationResolver;
         _accessPolicyService = accessPolicyService;
         _organizationService = organizationService;
+        _membershipService = membershipService;
         _assignmentService = assignmentService;
         _logger = logger;
     }
@@ -63,6 +67,23 @@ public class AssignmentsController : Controller
                 return false;
             }).ToList();
 
+            var members = await _membershipService.GetMembers(userCtx, userCtx.ActiveOrganizationId.Value, ct);
+            var practitioners = members
+                .Where(m => string.Equals(m.OrgRole, "practitioner", StringComparison.OrdinalIgnoreCase))
+                .Select(m => new MemberViewModel
+                {
+                    UserId = m.UserId,
+                    Email = m.Email,
+                    FullName = m.FullName,
+                    Age = m.Age,
+                    Sex = m.Sex,
+                    GlobalRole = m.GlobalRole,
+                    OrgRole = m.OrgRole,
+                    MembershipStatus = m.MembershipStatus,
+                    SubscriptionStatus = m.SubscriptionStatus,
+                })
+                .ToList();
+
             var model = new AssignmentsPageViewModel
             {
                 ActiveOrganizationId = userCtx.ActiveOrganizationId.Value,
@@ -79,7 +100,8 @@ public class AssignmentsController : Controller
                         Notes = a.Notes,
                         UpdatedAt = a.UpdatedAt,
                     })
-                    .ToList()
+                    .ToList(),
+                PractitionerOptions = practitioners,
             };
 
             return View(model);
@@ -179,6 +201,31 @@ public class AssignmentsController : Controller
         {
             _logger.LogError(ex, "Error reassigning client");
             TempData["ErrorMessage"] = "Failed to reassign client.";
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
+    [HttpPost("{assignmentId}/update")]
+    [RequireOrgRole("org_owner", "client_admin", "manager", "practitioner")]
+    public async Task<IActionResult> Update(Guid assignmentId, [FromForm] string status, [FromForm] string notes, CancellationToken ct)
+    {
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
+        if (!userCtx.ActiveOrganizationId.HasValue)
+        {
+            TempData["ErrorMessage"] = "No active organization selected.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        try
+        {
+            await _assignmentService.UpdateAssignment(userCtx, userCtx.ActiveOrganizationId.Value, assignmentId, status, notes, ct);
+            TempData["SuccessMessage"] = "Assignment updated.";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating assignment {AssignmentId}", assignmentId);
+            TempData["ErrorMessage"] = "Failed to update assignment.";
             return RedirectToAction(nameof(Index));
         }
     }

@@ -15,6 +15,8 @@ from app.services.email_service import send_invitation_accepted_email, send_invi
 
 router = APIRouter()
 
+_ALLOWED_ORG_ROLES = {"org_owner", "client_admin", "manager", "practitioner", "support", "member"}
+
 
 async def _write_audit_log(
     sb,
@@ -154,7 +156,7 @@ async def _load_users_by_ids(sb, user_ids: list[str]) -> dict[str, dict]:
 
     resp = await svc._run(
         lambda: sb.table("users")
-        .select("id, email, full_name, sub_status")
+        .select("id, email, full_name, age, sex, sub_status")
         .in_("id", ids)
         .execute()
     )
@@ -176,6 +178,8 @@ def _serialize_member(row: dict, user: Optional[dict]) -> dict[str, Any]:
         "user_id": row.get("user_id"),
         "email": (user or {}).get("email") or "",
         "full_name": _display_name(user),
+        "age": (user or {}).get("age"),
+        "sex": (user or {}).get("sex"),
         "global_role": (user or {}).get("global_role") or "end_user",
         "org_role": row.get("role") or "member",
         "membership_status": row.get("status") or "active",
@@ -473,6 +477,54 @@ async def change_member_role(
     return _serialize_member(row, users.get(str(user_id)))
 
 
+@router.patch("/members/{user_id}/profile")
+async def update_member_profile(
+    user_id: UUID,
+    body: dict[str, Any] = Body(...),
+    current_user: dict = Depends(get_current_user),
+):
+    org_id_raw = body.get("org_id") or body.get("organization_id")
+    if not org_id_raw:
+        raise HTTPException(status_code=400, detail="org_id is required")
+    org_id = UUID(str(org_id_raw))
+
+    sb = await _get_supabase()
+    await _require_org_role(sb, org_id, current_user, {"org_owner", "client_admin", "manager"})
+
+    profile_update: dict[str, Any] = {}
+    if "full_name" in body:
+        profile_update["full_name"] = str(body.get("full_name") or "").strip()
+    if "age" in body and body.get("age") is not None:
+        profile_update["age"] = body.get("age")
+    if "sex" in body:
+        profile_update["sex"] = str(body.get("sex") or "").strip().lower()
+    if "sub_status" in body:
+        profile_update["sub_status"] = str(body.get("sub_status") or "").strip().lower()
+
+    if profile_update:
+        await svc._run(
+            lambda: sb.table("users")
+            .update(profile_update)
+            .eq("id", str(user_id))
+            .execute()
+        )
+
+    member_resp = await svc._run(
+        lambda: sb.table("organization_members")
+        .select("*")
+        .eq("organization_id", str(org_id))
+        .eq("user_id", str(user_id))
+        .limit(1)
+        .execute()
+    )
+    row = member_resp.data[0] if member_resp.data else None
+    if not row:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    users = await _load_users_by_ids(sb, [str(user_id)])
+    return _serialize_member(row, users.get(str(user_id)))
+
+
 @router.delete("/members/{user_id}")
 async def remove_member(user_id: UUID, org_id: UUID = Query(...), current_user: dict = Depends(get_current_user)):
     sb = await _get_supabase()
@@ -536,6 +588,8 @@ async def create_invitation(body: dict[str, Any] = Body(...), current_user: dict
         raise HTTPException(status_code=400, detail="org_id is required")
     if not email:
         raise HTTPException(status_code=400, detail="email is required")
+    if role not in _ALLOWED_ORG_ROLES:
+        raise HTTPException(status_code=422, detail=f"Unsupported role '{role}'")
     org_id = UUID(str(org_id_raw))
 
     sb = await _get_supabase()

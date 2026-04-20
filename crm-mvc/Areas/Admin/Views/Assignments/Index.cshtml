@@ -17,34 +17,61 @@
 
     @if (Model?.Assignments.Any() == true)
     {
-        <div class="cards-grid-assignments">
-            @foreach (var assignment in Model.Assignments)
-            {
-                <div class="card-assignment">
-                    <div class="card-header">
-                        <h3>@assignment.DisplayName</h3>
-                        <span class="badge badge-@(assignment.Status == "active" ? "success" : "warning")">
-                            @assignment.Status
-                        </span>
-                    </div>
-                    <div class="card-body">
-                        <div class="assignment-detail">
-                            <strong>Practitioner:</strong> @assignment.PractitionerName
-                        </div>
-                        <div class="assignment-detail">
-                            <strong>Client:</strong> @assignment.ClientName
-                        </div>
-                    </div>
-                    <div class="card-actions">
-                        <button type="button" class="btn btn-sm btn-outline">
-                            Edit
-                        </button>
-                        <button type="button" class="btn btn-sm btn-danger">
-                            Remove
-                        </button>
-                    </div>
-                </div>
-            }
+        <div class="table-container">
+            <table class="table table-members">
+                <thead>
+                    <tr>
+                        <th>Client</th>
+                        <th>Practitioner</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                        <th>Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var assignment in Model.Assignments)
+                    {
+                        <tr>
+                            <td>@(!string.IsNullOrWhiteSpace(assignment.ClientName) ? assignment.ClientName : assignment.ClientId.ToString())</td>
+                            <td>@(!string.IsNullOrWhiteSpace(assignment.PractitionerName) ? assignment.PractitionerName : assignment.PractitionerId.ToString())</td>
+                            <td>
+                                <span class="badge badge-@(assignment.Status == "active" ? "success" : "warning")">@assignment.Status</span>
+                            </td>
+                            <td>@assignment.Notes</td>
+                            <td>@assignment.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <form method="post" action="/admin/assignments/@assignment.Id/update" class="inline-form">
+                                        @Html.AntiForgeryToken()
+                                        <select name="status" class="inline-input">
+                                            <option value="active" selected="@(string.Equals(assignment.Status, "active", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">active</option>
+                                            <option value="paused" selected="@(string.Equals(assignment.Status, "paused", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">paused</option>
+                                            <option value="completed" selected="@(string.Equals(assignment.Status, "completed", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">completed</option>
+                                            <option value="cancelled" selected="@(string.Equals(assignment.Status, "cancelled", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">cancelled</option>
+                                        </select>
+                                        <input type="text" name="notes" value="@assignment.Notes" class="inline-input" placeholder="Notes" />
+                                        <button type="submit" class="btn btn-xs btn-outline">Save</button>
+                                    </form>
+
+                                    <form method="post" action="/admin/assignments/@assignment.Id/reassign" class="inline-form">
+                                        @Html.AntiForgeryToken()
+                                        <select name="newPractitionerId" class="inline-input">
+                                            @foreach (var practitioner in Model.PractitionerOptions)
+                                            {
+                                                <option value="@practitioner.UserId" selected="@(practitioner.UserId == assignment.PractitionerId ? "selected" : null)">
+                                                    @practitioner.DisplayName
+                                                </option>
+                                            }
+                                        </select>
+                                        <button type="submit" class="btn btn-xs btn-outline">Reassign</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     }
     else
@@ -66,36 +93,29 @@
         margin-bottom: 2rem;
     }
 
-    .cards-grid-assignments {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1.5rem;
-    }
-
-    .card-assignment {
+    .table-container {
         background: var(--color-bg-secondary);
         border: 1px solid var(--color-border);
         border-radius: 8px;
-        padding: 1.5rem;
-        transition: all 0.2s ease;
+        overflow: auto;
     }
 
-    .card-assignment:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        border-color: var(--color-primary);
+    .table {
+        width: 100%;
+        border-collapse: collapse;
     }
 
-    .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 1rem;
+    .table th,
+    .table td {
+        border-bottom: 1px solid var(--color-border);
+        padding: 0.75rem;
+        vertical-align: top;
     }
 
-    .card-header h3 {
-        margin: 0;
-        font-size: 1rem;
-        font-weight: 600;
+    .table th {
+        background: var(--color-bg);
+        font-size: 0.85rem;
+        text-align: left;
     }
 
     .badge {
@@ -115,17 +135,26 @@
         color: #eab308;
     }
 
-    .assignment-detail {
-        margin: 0.75rem 0;
-        font-size: 0.875rem;
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        min-width: 280px;
     }
 
-    .card-actions {
+    .inline-form {
         display: flex;
         gap: 0.5rem;
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid var(--color-border);
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .inline-input {
+        min-width: 90px;
+        padding: 0.3rem 0.45rem;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        font-size: 0.75rem;
     }
 
     .btn {
