@@ -14,6 +14,7 @@ from app.middleware.security import (
     RedisRateLimiterBackend,
     SecurityHeadersMiddleware,
 )
+from app.utils.build_info import APP_VERSION
 import logging
 
 from app.services.claude_service import is_llm_configured
@@ -74,7 +75,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="VITALOOP API",
-    version="2.1.2",
+    version=APP_VERSION,
     description="Biohacking-as-a-Service backend",
     lifespan=lifespan,
 )

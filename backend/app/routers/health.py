@@ -3,6 +3,7 @@ import time
 from fastapi import APIRouter
 from app.config import settings
 from app.services import supabase_service as svc
+from app.utils.build_info import get_build_info
 import logging
 
 logger = logging.getLogger("vitaloop.health")
@@ -21,6 +22,7 @@ async def health_check():
         "status": "ok",
         "service": "vitaloop-api",
         "timestamp": time.time(),
+        "build": get_build_info(),
     }
 
 
@@ -37,6 +39,7 @@ async def detailed_health_check():
     checks = {
         "service": "vitaloop-api",
         "status": "ok",
+        "build": get_build_info(),
         "services": {},
     }
 

@@ -11,6 +11,7 @@ REMOTE_HOST="${REMOTE_HOST:-}"
 REMOTE_DIR="${REMOTE_DIR:-/var/www/VITALOOP}"
 SSH_OPTS="${SSH_OPTS:--o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3}"
 CURL_OPTS="${CURL_OPTS:--sS --max-time 10}"
+RSYNC_OPTS="${RSYNC_OPTS:--az --delete}"
 
 log_info() {
     echo "ℹ️  $1"
@@ -47,6 +48,19 @@ if [[ -z "$REMOTE_HOST" ]]; then
     exit 1
 fi
 
+REMOTE_CURRENT_HEAD=$(ssh $SSH_OPTS "$REMOTE_HOST" "cd $REMOTE_DIR && git rev-parse HEAD" 2>/dev/null || true)
+DEPLOY_CHANGED_FILES="$(git diff --name-only "$REMOTE_CURRENT_HEAD" HEAD 2>/dev/null || git diff --name-only origin/main...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || true)"
+HAS_FRONTEND_CHANGES=0
+HAS_BACKEND_CHANGES=0
+
+if echo "$DEPLOY_CHANGED_FILES" | grep -qE '^frontend/'; then
+    HAS_FRONTEND_CHANGES=1
+fi
+
+if echo "$DEPLOY_CHANGED_FILES" | grep -qE '^backend/'; then
+    HAS_BACKEND_CHANGES=1
+fi
+
 # PHASE 1: Local pre-deploy checks
 log_section "Phase 1: Pre-Deployment Checks"
 
@@ -69,6 +83,7 @@ log_success "Pre-deployment checks passed"
 log_section "Phase 2: Push to GitHub"
 
 CURRENT_COMMIT=$(git rev-parse --short HEAD)
+CURRENT_COMMIT_FULL=$(git rev-parse HEAD)
 log_info "Pushing commit $CURRENT_COMMIT to origin/main"
 
 git push origin main || {
@@ -114,21 +129,24 @@ log_info "Pulling latest code to server..."
 ssh $SSH_OPTS "$REMOTE_HOST" "
     set -euo pipefail
     cd $REMOTE_DIR
-
-    # Backend dependency sync
-    echo 'Installing backend dependencies...'
-    cd backend
-    ./.venv/bin/pip install -r requirements.txt || {
-        echo 'ERROR: Backend dependency install failed'
-        exit 1
-    }
-    cd ..
     
     # Fast-forward only (no force merges)
     git pull --ff-only origin main || {
         echo 'ERROR: Could not fast-forward. Manual intervention required.'
         exit 1
     }
+
+    if git diff --name-only ORIG_HEAD HEAD 2>/dev/null | grep -qE '^backend/'; then
+        echo 'Installing backend dependencies...'
+        cd backend
+        ./.venv/bin/pip install -r requirements.txt || {
+            echo 'ERROR: Backend dependency install failed'
+            exit 1
+        }
+        cd ..
+    else
+        echo 'Skipping backend dependency install (no backend changes)'
+    fi
     
     echo 'Git pull successful'
 " || {
@@ -140,53 +158,39 @@ log_success "Code pulled to server"
 # PHASE 5: Build & restart services
 log_section "Phase 5: Build & Restart Services"
 
+if [[ "$HAS_FRONTEND_CHANGES" == "1" ]]; then
+    log_info "Building frontend locally..."
+    (
+        cd frontend
+        npm ci --prefer-offline || npm ci
+        NODE_OPTIONS='--max-old-space-size=2048' npm run build:prod
+        printf '%s' "$CURRENT_COMMIT_FULL" > dist/.build_commit
+    ) || {
+        log_error "Local frontend build failed"
+        exit 1
+    }
+
+    log_info "Syncing frontend dist to server..."
+    rsync $RSYNC_OPTS frontend/dist/ "$REMOTE_HOST:$REMOTE_DIR/frontend/dist/" || {
+        log_error "Failed to sync frontend dist to server"
+        exit 1
+    }
+    log_success "Frontend artifact synced to server"
+else
+    log_info "Skipping local frontend build (no frontend changes detected)"
+fi
+
 ssh $SSH_OPTS "$REMOTE_HOST" "
     set -euo pipefail
     cd $REMOTE_DIR
     
     CHANGED_FILES=\"\$(git diff --name-only ORIG_HEAD HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || true)\"
-    CURRENT_HEAD=\"\$(git rev-parse HEAD)\"
-    FRONTEND_BUILD_STAMP=frontend/dist/.build_commit
-    NEED_FRONTEND_BUILD=0
-
-    if echo \"\$CHANGED_FILES\" | grep -qE '^frontend/'; then
-        NEED_FRONTEND_BUILD=1
-    fi
-
-    if [[ ! -f frontend/dist/index.html ]]; then
-        NEED_FRONTEND_BUILD=1
-    fi
-
-    if [[ -f \"\$FRONTEND_BUILD_STAMP\" ]]; then
-        LAST_BUILT_HEAD=\"\$(cat \"\$FRONTEND_BUILD_STAMP\" 2>/dev/null || true)\"
-        if [[ \"\$LAST_BUILT_HEAD\" != \"\$CURRENT_HEAD\" ]]; then
-            NEED_FRONTEND_BUILD=1
-        fi
-    else
-        NEED_FRONTEND_BUILD=1
-    fi
-
-    # Frontend build (when any frontend file changed, or when build artifacts are missing)
-    if [[ \"\$NEED_FRONTEND_BUILD\" == \"1\" ]]; then
-        echo 'Building frontend...'
-        cd frontend
-        npm ci --prefer-offline || npm ci
-        # Use build:prod to avoid npm postbuild hooks (react-snap) on headless servers.
-        NODE_OPTIONS='--max-old-space-size=2048' npm run build:prod || {
-            echo 'ERROR: Frontend build failed'
-            exit 1
-        }
-        echo \"\$CURRENT_HEAD\" > dist/.build_commit
-        cd ..
-    else
-        echo 'Skipping frontend build (no frontend changes)'
-    fi
     
     # CRM build (only when CRM files changed)
     if echo \"\$CHANGED_FILES\" | grep -qE '^crm-mvc/'; then
         echo 'Building CRM...'
         cd crm-mvc
-        dotnet publish -c Release || {
+        dotnet publish Vitaloop.Crm.Web.csproj -c Release -o "$REMOTE_DIR/crm-mvc/publish" || {
             echo 'ERROR: CRM build failed'
             exit 1
         }
@@ -196,13 +200,24 @@ ssh $SSH_OPTS "$REMOTE_HOST" "
     fi
     
     # Restart services
-    echo 'Restarting services...'
-    systemctl restart vitaloop-backend vitaloop-crm-mvc || {
-        echo 'ERROR: Service restart failed'
-        exit 1
-    }
-    
-    echo 'Services restarted successfully'
+    SERVICES_TO_RESTART=''
+    if echo "\$CHANGED_FILES" | grep -qE '^backend/'; then
+        SERVICES_TO_RESTART="\$SERVICES_TO_RESTART vitaloop-backend"
+    fi
+    if echo "\$CHANGED_FILES" | grep -qE '^crm-mvc/'; then
+        SERVICES_TO_RESTART="\$SERVICES_TO_RESTART vitaloop-crm-mvc"
+    fi
+
+    if [[ -n "\${SERVICES_TO_RESTART// /}" ]]; then
+        echo "Restarting services:\$SERVICES_TO_RESTART"
+        systemctl restart \$SERVICES_TO_RESTART || {
+            echo 'ERROR: Service restart failed'
+            exit 1
+        }
+        echo 'Services restarted successfully'
+    else
+        echo 'No service restart required'
+    fi
 " || {
     log_error "Failed to build or restart services"
     exit 1
@@ -230,6 +245,17 @@ if ! curl $CURL_OPTS -f "https://api.vitaloop.today/health" > /dev/null 2>&1; th
     VALIDATION_PASSED=false
 else
     log_success "API health check passed"
+fi
+
+if [[ "$HAS_BACKEND_CHANGES" == "1" ]]; then
+    log_info "Checking live backend runtime version..."
+    LIVE_BACKEND_COMMIT=$(curl $CURL_OPTS -f "https://api.vitaloop.today/health" 2>/dev/null | python3 -c 'import json,sys; print((json.load(sys.stdin).get("build") or {}).get("commit", ""))' || true)
+    if [[ "$LIVE_BACKEND_COMMIT" != "$CURRENT_COMMIT_FULL" ]]; then
+        log_error "Backend runtime version mismatch (live=$LIVE_BACKEND_COMMIT expected=$CURRENT_COMMIT_FULL)"
+        VALIDATION_PASSED=false
+    else
+        log_success "Backend runtime version matches deployed commit"
+    fi
 fi
 
 # Check /health/ready
@@ -268,6 +294,17 @@ if ! curl $CURL_OPTS -f "https://vitaloop.today" > /dev/null 2>&1; then
     VALIDATION_PASSED=false
 else
     log_success "Frontend health check passed"
+fi
+
+if [[ "$HAS_FRONTEND_CHANGES" == "1" ]]; then
+    log_info "Checking live frontend artifact version..."
+    LIVE_BUILD_COMMIT=$(curl $CURL_OPTS -f "https://vitaloop.today/build-info.json" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit", ""))' || true)
+    if [[ "$LIVE_BUILD_COMMIT" != "$CURRENT_COMMIT_FULL" ]]; then
+        log_error "Frontend artifact version mismatch (live=$LIVE_BUILD_COMMIT expected=$CURRENT_COMMIT_FULL)"
+        VALIDATION_PASSED=false
+    else
+        log_success "Frontend artifact version matches deployed commit"
+    fi
 fi
 
 # Check CRM
