@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
 import { fadeUp, fadeUpBlur, stagger, staggerChild, EASE } from '../lib/motion.js'
+import { gaEvent } from '../lib/analytics.js'
 
 /* ─── Data ──────────────────────────────────────────────── */
 
@@ -323,14 +324,20 @@ export default function ForNutritionists() {
               className="mt-8 flex flex-wrap gap-3"
             >
               <button
-                onClick={() => navigate('/login?signup=true')}
+                onClick={() => {
+                  gaEvent('nutritionist_cta_click', { location: 'hero', label: 'start_free' })
+                  navigate('/login?signup=true')
+                }}
                 className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
               >
                 Начать бесплатно
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button
-                onClick={() => navigate('/example-report')}
+                onClick={() => {
+                  gaEvent('nutritionist_example_click', { location: 'hero' })
+                  navigate('/example-report')
+                }}
                 className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/60 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
               >
                 Пример анализа
@@ -619,6 +626,130 @@ export default function ForNutritionists() {
         </div>
       </section>
 
+      {/* ── Pricing ── */}
+      <section className="mx-auto max-w-[1240px] px-4 py-20 sm:px-6">
+        <div className="mb-12 text-center">
+          <SectionLabel color="#10b981">Цены</SectionLabel>
+          <motion.h2
+            variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}
+            className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl"
+          >
+            Один план — всё необходимое
+          </motion.h2>
+          <motion.p
+            variants={fadeUp} custom={0.06} initial="hidden" whileInView="visible" viewport={{ once: true }}
+            className="mt-3 text-slate-400"
+          >
+            Начните бесплатно, обновитесь когда нужно.
+          </motion.p>
+        </div>
+        <div className="mx-auto flex flex-col items-center gap-6 lg:flex-row lg:items-stretch lg:justify-center">
+
+          {/* Free card */}
+          <motion.div
+            variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}
+            className="w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-900/60 p-8 backdrop-blur-sm"
+          >
+            <div className="mb-1 text-xs font-bold uppercase tracking-widest text-slate-500">Стартер</div>
+            <div className="mb-1 text-4xl font-bold text-white">$0</div>
+            <div className="mb-5 text-sm text-slate-500">навсегда бесплатно</div>
+            <ul className="mb-8 space-y-3">
+              {[
+                '1–2 анализа в месяц',
+                'Базовые флаги и сводка',
+                '1 пациент',
+                'Черновики протоколов',
+              ].map((f) => (
+                <li key={f} className="flex items-center gap-2.5 text-sm text-slate-300">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-slate-600" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={() => {
+                gaEvent('nutritionist_pricing_click', { plan: 'free' })
+                navigate('/login?signup=true')
+              }}
+              className="w-full rounded-2xl border border-slate-700 bg-slate-800/60 py-3 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+            >
+              Начать бесплатно
+            </button>
+          </motion.div>
+
+          {/* Practitioner Pro card — highlighted */}
+          <motion.div
+            variants={fadeUp} custom={0.08} initial="hidden" whileInView="visible" viewport={{ once: true }}
+            className="relative w-full max-w-sm rounded-3xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/60 to-slate-900/80 p-8 shadow-[0_0_40px_rgba(16,185,129,0.12)] backdrop-blur-sm"
+          >
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+              <span className="rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-950">
+                Рекомендуется
+              </span>
+            </div>
+            <div className="mb-1 text-xs font-bold uppercase tracking-widest text-emerald-400">Practitioner Pro</div>
+            <div className="mb-1 flex items-end gap-1">
+              <span className="text-4xl font-bold text-white">$29</span>
+              <span className="mb-1 text-sm text-slate-400">/мес</span>
+            </div>
+            <div className="mb-5 text-sm text-slate-500">или $299/год — экономия 17%</div>
+            <ul className="mb-8 space-y-3">
+              {[
+                'Неограниченные анализы',
+                'Полные протоколы по биомаркерам',
+                'Несколько пациентов',
+                'CRM-инструменты и задания',
+                'Динамика биомаркеров',
+                'Еженедельные check-in пациентов',
+                'Приоритетные обновления',
+              ].map((f) => (
+                <li key={f} className="flex items-center gap-2.5 text-sm text-slate-200">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={() => {
+                gaEvent('nutritionist_pricing_click', { plan: 'practitioner_pro' })
+                navigate('/login?signup=true')
+              }}
+              className="w-full rounded-2xl bg-emerald-500 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
+            >
+              Попробовать Practitioner Pro
+            </button>
+          </motion.div>
+
+        </div>
+      </section>
+
+      {/* ── Contact ── */}
+      <section className="border-y border-slate-800/60 bg-slate-900/20 py-16">
+        <motion.div
+          variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}
+          className="mx-auto max-w-[680px] px-4 text-center sm:px-6"
+        >
+          <SectionLabel color="#0ea5e9">Свяжитесь с нами</SectionLabel>
+          <h2 className="mt-4 text-2xl font-bold tracking-tight text-white md:text-3xl">
+            Есть вопросы или хотите обсудить корпоративный план?
+          </h2>
+          <p className="mt-3 text-slate-400">
+            Напишите нам напрямую — мы отвечаем в течение рабочего дня и готовы обсудить индивидуальные условия для клиник и нутрициологических практик.
+          </p>
+          <a
+            href="mailto:info@softdab.tech"
+            onClick={() => gaEvent('nutritionist_contact_click', { location: 'contact_section' })}
+            className="mt-6 inline-flex items-center gap-2 rounded-2xl border border-sky-500/30 bg-sky-500/10 px-6 py-3 text-sm font-semibold text-sky-300 transition hover:bg-sky-500/20 hover:text-white"
+          >
+            <MessageSquare className="h-4 w-4" />
+            info@softdab.tech
+          </a>
+          <p className="mt-4 text-xs text-slate-600">
+            Также отвечаем на вопросы о функционале, интеграциях и корпоративном ценообразовании.
+          </p>
+        </motion.div>
+      </section>
+
       {/* ── CTA ── */}
       <section className="border-t border-slate-800/60 bg-gradient-to-b from-slate-900/40 to-[#09101d] py-24">
         <div className="mx-auto max-w-[720px] px-4 text-center sm:px-6">
@@ -641,14 +772,20 @@ export default function ForNutritionists() {
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <button
-                onClick={() => navigate('/login?signup=true')}
+                onClick={() => {
+                  gaEvent('nutritionist_cta_click', { location: 'bottom_cta', label: 'signup' })
+                  navigate('/login?signup=true')
+                }}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-7 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 sm:w-auto"
               >
                 Зарегистрироваться бесплатно
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button
-                onClick={() => navigate('/how-it-works')}
+                onClick={() => {
+                  gaEvent('nutritionist_how_it_works_click', { location: 'bottom_cta' })
+                  navigate('/how-it-works')
+                }}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/60 px-7 py-3.5 text-sm font-semibold text-slate-200 transition hover:border-slate-500 sm:w-auto"
               >
                 Как работает платформа

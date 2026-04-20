@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { label: 'Pricing', href: '#pricing' },
   { label: 'Stories', href: '#testimonials' },
   { label: 'FAQ', href: '#faq' },
+  { label: 'For Nutritionists', href: '/for-nutritionists', page: true },
 ]
 
 function LogoIcon() {
@@ -74,8 +75,9 @@ export default function Navbar() {
     return () => obs.disconnect()
   }, [])
 
-  const scrollTo = (href) => {
+  const scrollTo = (href, page = false) => {
     setMobileOpen(false)
+    if (page) { navigate(href); return }
     const el = document.getElementById(href.slice(1))
     el?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -114,12 +116,12 @@ export default function Navbar() {
 
         {/* Desktop nav */}
         <div className="hidden md:flex" style={{ gap: 28, alignItems: 'center' }}>
-          {NAV_LINKS.map(({ label, href }) => {
-            const isActive = activeSection === href.slice(1)
+          {NAV_LINKS.map(({ label, href, page }) => {
+            const isActive = !page && activeSection === href.slice(1)
             return (
               <button
                 key={label}
-                onClick={() => scrollTo(href)}
+                onClick={() => scrollTo(href, page)}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   fontSize: 14,
@@ -280,10 +282,10 @@ export default function Navbar() {
               ×
             </button>
 
-            {NAV_LINKS.map(({ label, href }, i) => (
+            {NAV_LINKS.map(({ label, href, page }, i) => (
               <motion.button
                 key={label}
-                onClick={(e) => { e.stopPropagation(); scrollTo(href) }}
+                onClick={(e) => { e.stopPropagation(); scrollTo(href, page) }}
                 initial={reduced ? {} : { opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.07, duration: 0.32, ease: EASE }}
