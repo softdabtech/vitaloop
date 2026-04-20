@@ -28,18 +28,18 @@ import { gaEvent } from '../lib/analytics.js'
 const PAIN_POINTS = [
   {
     icon: ClipboardList,
-    title: 'Протоколы разбросаны по файлам',
-    body: 'Google Docs, PDF, мессенджеры — данные пациентов теряются. Нет единой системы контроля выполнения рекомендаций.',
+    title: 'Protocols are scattered across files',
+    body: 'Google Docs, PDFs, and chat threads make patient data hard to track. There is no single system for execution and follow-through.',
   },
   {
     icon: FlaskConical,
-    title: 'Анализы приходят в разных форматах',
-    body: 'Каждая лаборатория — свой бланк, свои единицы. Ручная расшифровка занимает час, когда нужна минута.',
+    title: 'Lab reports come in mixed formats',
+    body: 'Every lab uses different layouts and units. Manual interpretation takes an hour when it should take a minute.',
   },
   {
     icon: HeartPulse,
-    title: 'Пациент пропадает после консультации',
-    body: 'Нет инструмента для постоянного контакта, мониторинга прогресса и адаптации программы между сессиями.',
+    title: 'Patients disappear after consultations',
+    body: 'Without a structured follow-up loop, it is difficult to keep engagement, monitor progress, and adjust plans between sessions.',
   },
 ]
 
@@ -47,36 +47,36 @@ const WORKFLOW_STEPS = [
   {
     icon: Users,
     step: '01',
-    title: 'Добавьте пациентов',
-    body: 'Пригласите клиентов по email. Каждый получает личный кабинет для загрузки анализов и отслеживания прогресса.',
+    title: 'Invite patients',
+    body: 'Add clients by email. Each patient gets a personal workspace to upload labs and track progress.',
     accent: '#10b981',
   },
   {
     icon: Upload,
     step: '02',
-    title: 'Анализы расшифруются за минуту',
-    body: 'Пациент загружает PDF-бланк. VITALOOP извлекает 85+ биомаркеров, нормализует единицы и выявляет отклонения.',
+    title: 'Lab reports are interpreted in minutes',
+    body: 'Patients upload a PDF. VITALOOP extracts 85+ biomarkers, normalizes units, and highlights abnormalities.',
     accent: '#0ea5e9',
   },
   {
     icon: BrainCircuit,
     step: '03',
-    title: 'AI строит черновик протокола',
-    body: 'На основе биомаркеров, симптомов и анамнеза система предлагает нутрициологический протокол — вы дорабатываете финальную версию.',
+    title: 'AI drafts your protocol',
+    body: 'Based on biomarkers, symptoms, and history, the system proposes a nutrition protocol that you finalize as the practitioner.',
     accent: '#8b5cf6',
   },
   {
     icon: Calendar,
     step: '04',
-    title: 'Еженедельный check-in держит пациента в программе',
-    body: 'Автоматические опросы фиксируют самочувствие и adherence. Вы видите динамику без лишних звонков.',
+    title: 'Weekly check-ins keep patients engaged',
+    body: 'Automated check-ins capture symptoms and adherence. You monitor outcomes without unnecessary calls.',
     accent: '#f59e0b',
   },
   {
     icon: TrendingUp,
     step: '05',
-    title: 'Лонгитюдная аналитика на каждом цикле',
-    body: 'Новые анализы сравниваются с предыдущими. Вы видите, что улучшилось, что нужно скорректировать, и когда пора пересдать.',
+    title: 'Longitudinal analytics each cycle',
+    body: 'New labs are compared against previous cycles, so you can see what improved, what needs adjustments, and when to retest.',
     accent: '#10b981',
   },
 ]
@@ -84,68 +84,68 @@ const WORKFLOW_STEPS = [
 const FEATURES = [
   {
     icon: LayoutDashboard,
-    title: 'Единый дашборд практикующего специалиста',
-    body: 'Все пациенты, все протоколы, все анализы — в одном окне. Красные флаги видны сразу.',
+    title: 'Unified practitioner dashboard',
+    body: 'All patients, all protocols, and all labs in one interface. High-risk signals are visible immediately.',
   },
   {
     icon: ClipboardList,
-    title: 'Персонализированные программы',
-    body: 'Создавайте программы реабилитации, нутрициологической поддержки или лонgevity-курсы с конкретными заданиями и дедлайнами.',
+    title: 'Personalized care programs',
+    body: 'Create rehabilitation, nutrition support, or longevity programs with specific tasks and timelines.',
   },
   {
     icon: BarChart2,
-    title: 'Динамика биомаркеров во времени',
-    body: 'Графики изменения ключевых показателей помогают объяснить прогресс пациенту и обосновать коррекцию протокола.',
+    title: 'Biomarker trends over time',
+    body: 'Trend charts make patient progress clear and support protocol adjustments with real data.',
   },
   {
     icon: MessageSquare,
-    title: 'Встроенные задания и проверки',
-    body: 'Назначайте конкретные действия: анализ, БАД, изменение рациона. Пациент отмечает выполнение — вы отслеживаете adherence.',
+    title: 'Built-in tasks and follow-ups',
+    body: 'Assign actions like retests, supplement plans, and nutrition changes. Patients mark completion, you track adherence.',
   },
   {
     icon: ShieldCheck,
-    title: 'Конфиденциальность данных',
-    body: 'Медицинские данные не продаются и не передаются третьим сторонам. VITALOOP — privacy-first платформа.',
+    title: 'Privacy-first data protection',
+    body: 'Medical data is never sold or shared with third parties. VITALOOP is built with strict privacy principles.',
   },
   {
     icon: Sparkles,
-    title: 'AI как второй взгляд, не замена',
-    body: 'Система выдаёт черновики и сигналы, решение принимаете вы. Ваша экспертиза остаётся в центре.',
+    title: 'AI as a second opinion, not a replacement',
+    body: 'The platform provides drafts and signals. Final decisions remain in your hands as the expert.',
   },
 ]
 
 const USE_CASES = [
   {
-    title: 'Реабилитационные программы',
-    body: 'Пациенты после болезни, операции или выгорания. Отслеживайте восстановление по биомаркерам и корректируйте питание поэтапно.',
+    title: 'Rehabilitation programs',
+    body: 'Support patients after illness, surgery, or burnout. Track recovery markers and adjust nutrition step by step.',
     tag: 'Rehabilitation',
     tagColor: '#10b981',
   },
   {
-    title: 'Лонgevity и превентивная нутрициология',
-    body: 'Клиенты без острых проблем, но с запросом на здоровое долголетие. Ежеквартальные циклы анализов + адаптивный протокол.',
+    title: 'Longevity and preventive nutrition',
+    body: 'For clients focused on healthy aging. Quarterly lab cycles with adaptive protocols and long-term optimization.',
     tag: 'Longevity',
     tagColor: '#8b5cf6',
   },
   {
-    title: 'Спортивное питание и восстановление',
-    body: 'Контроль ферритина, B12, D3, гормонального фона у активных клиентов. Протокол обновляется под тренировочный цикл.',
+    title: 'Sports nutrition and recovery',
+    body: 'Track ferritin, B12, D3, and hormone balance for active clients. Adapt protocols to training cycles.',
     tag: 'Sports',
     tagColor: '#0ea5e9',
   },
   {
-    title: 'Пищевая непереносимость и ЖКТ',
-    body: 'Динамика воспалительных маркеров, нутриентного статуса и симптоматики за несколько циклов питания.',
+    title: 'Food sensitivity and gut health',
+    body: 'Track inflammatory markers, nutrient status, and symptom dynamics across multiple nutrition cycles.',
     tag: 'Gut health',
     tagColor: '#f59e0b',
   },
 ]
 
 const METRICS = [
-  { value: '85+', label: 'Биомаркеров нормализуется с одного бланка' },
-  { value: '<60с', label: 'От загрузки до готового черновика протокола' },
-  { value: '100%', label: 'История анализов пациента в одном месте' },
-  { value: 'N:N', label: 'Один специалист — несколько пациентов одновременно' },
+  { value: '85+', label: 'Biomarkers extracted from a single report' },
+  { value: '<60s', label: 'From upload to protocol draft' },
+  { value: '100%', label: 'Patient history in one place' },
+  { value: '1:N', label: 'One practitioner, many active patients' },
 ]
 
 /* ─── Sub-components ────────────────────────────────────── */
@@ -269,8 +269,8 @@ export default function ForNutritionists() {
   return (
     <div className="min-h-screen bg-[#09101d] text-white">
       <Seo
-        title="Для нутрициологов | VITALOOP"
-        description="VITALOOP — платформа для нутрициологов: ведите пациентов, расшифровывайте анализы за минуту, создавайте персонализированные протоколы питания и реабилитации."
+          title="For Nutritionists | VITALOOP"
+          description="VITALOOP for nutritionists: bring and manage patients, interpret lab reports in minutes, and run personalized nutrition and recovery programs."
         path="/for-nutritionists"
       />
 
@@ -283,7 +283,7 @@ export default function ForNutritionists() {
           className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400/50 hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
-          На главную
+            Back to home
         </button>
       </div>
 
@@ -292,7 +292,7 @@ export default function ForNutritionists() {
         <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
             <motion.div variants={fadeUp} custom={0} initial="hidden" animate="visible">
-              <SectionLabel>Для нутрициологов</SectionLabel>
+                <SectionLabel>For Nutritionists</SectionLabel>
             </motion.div>
             <motion.h1
               variants={fadeUpBlur}
@@ -301,9 +301,9 @@ export default function ForNutritionists() {
               animate="visible"
               className="mt-5 text-5xl font-bold leading-[1.08] tracking-[-0.03em] text-white md:text-6xl"
             >
-              Ведите пациентов&nbsp;—<br />
+                Manage patients&nbsp;—<br />
               <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-                не&nbsp;таблицы
+                  not spreadsheets
               </span>
             </motion.h1>
             <motion.p
@@ -313,8 +313,8 @@ export default function ForNutritionists() {
               animate="visible"
               className="mt-5 max-w-xl text-lg leading-8 text-slate-300"
             >
-              VITALOOP превращает анализы крови в персонализированные протоколы питания и реабилитации.
-              Подключайте клиентов, отслеживайте прогресс, корректируйте программы — всё в одном инструменте.
+                VITALOOP turns blood test data into personalized nutrition and recovery protocols.
+                Bring patients, monitor progress, and adjust programs from one practitioner-focused workspace.
             </motion.p>
             <motion.div
               variants={fadeUp}
@@ -330,7 +330,7 @@ export default function ForNutritionists() {
                 }}
                 className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
               >
-                Начать бесплатно
+                  Start for free
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button
@@ -340,7 +340,7 @@ export default function ForNutritionists() {
                 }}
                 className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/60 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
               >
-                Пример анализа
+                  View sample report
               </button>
             </motion.div>
             <motion.div
@@ -350,7 +350,7 @@ export default function ForNutritionists() {
               animate="visible"
               className="mt-6 flex flex-wrap gap-4"
             >
-              {['Бесплатный старт', 'Без интеграций с ЭМК', 'Работает с любой лабораторией'].map((t) => (
+                {['Free starter plan', 'No EMR integration required', 'Works with any lab PDF'].map((t) => (
                 <span key={t} className="inline-flex items-center gap-1.5 text-xs text-slate-400">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                   {t}
@@ -368,16 +368,16 @@ export default function ForNutritionists() {
             className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 backdrop-blur-sm"
           >
             <div className="mb-4 flex items-center justify-between">
-              <span className="text-sm font-semibold text-white">Пациент: Анна К., 34 г.</span>
-              <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">Активный протокол</span>
+                <span className="text-sm font-semibold text-white">Patient: Anna K., 34</span>
+                <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">Active protocol</span>
             </div>
             <div className="space-y-3">
               {[
-                { marker: 'Ферритин', val: '11 нг/мл', flag: 'Низкий', color: '#ef4444' },
-                { marker: 'Витамин D (25-OH)', val: '18 нмоль/л', flag: 'Дефицит', color: '#f59e0b' },
-                { marker: 'B12', val: '245 пмоль/л', flag: 'Граница', color: '#f59e0b' },
-                { marker: 'ТТГ', val: '2.1 мМЕ/л', flag: 'Норма', color: '#10b981' },
-                { marker: 'hsCRP', val: '0.8 мг/л', flag: 'Норма', color: '#10b981' },
+                  { marker: 'Ferritin', val: '11 ng/mL', flag: 'Low', color: '#ef4444' },
+                  { marker: 'Vitamin D (25-OH)', val: '18 nmol/L', flag: 'Deficient', color: '#f59e0b' },
+                  { marker: 'B12', val: '245 pmol/L', flag: 'Borderline', color: '#f59e0b' },
+                  { marker: 'TSH', val: '2.1 mIU/L', flag: 'Normal', color: '#10b981' },
+                  { marker: 'hsCRP', val: '0.8 mg/L', flag: 'Normal', color: '#10b981' },
               ].map(({ marker, val, flag, color }) => (
                 <div key={marker} className="flex items-center justify-between rounded-xl bg-slate-800/50 px-4 py-2.5">
                   <span className="text-sm text-slate-300">{marker}</span>
@@ -391,10 +391,10 @@ export default function ForNutritionists() {
             <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/8 p-4">
               <div className="mb-1 flex items-center gap-2 text-xs font-semibold text-emerald-400">
                 <BrainCircuit className="h-3.5 w-3.5" />
-                AI-черновик протокола
+                  AI protocol draft
               </div>
               <p className="text-xs leading-relaxed text-slate-300">
-                Приоритет: восполнение Fe + D3. Рекомендован бисглицинат железа 25 мг/сут с витамином C. D3 5000 МЕ/сут. Повтор ферритина через 8 недель.
+                  Priority: restore iron and vitamin D. Suggested: iron bisglycinate 25 mg/day with vitamin C, vitamin D3 5000 IU/day. Retest ferritin in 8 weeks.
               </p>
             </div>
           </motion.div>
@@ -419,7 +419,7 @@ export default function ForNutritionists() {
       {/* ── Боли ── */}
       <section className="mx-auto max-w-[1240px] px-4 py-20 sm:px-6">
         <div className="mb-12 text-center">
-          <SectionLabel color="#ef4444">Типичные проблемы</SectionLabel>
+            <SectionLabel color="#ef4444">Common pain points</SectionLabel>
           <motion.h2
             variants={fadeUp}
             custom={0}
@@ -428,7 +428,7 @@ export default function ForNutritionists() {
             viewport={{ once: true }}
             className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl"
           >
-            Почему ведение клиентов сейчас — это больно
+              Why client management is still painful
           </motion.h2>
         </div>
         <motion.div
@@ -448,7 +448,7 @@ export default function ForNutritionists() {
       <section className="border-y border-slate-800/60 bg-slate-900/20 py-20">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6">
           <div className="mb-14 max-w-xl">
-            <SectionLabel>Рабочий процесс</SectionLabel>
+              <SectionLabel>Workflow</SectionLabel>
             <motion.h2
               variants={fadeUp}
               custom={0}
@@ -457,7 +457,7 @@ export default function ForNutritionists() {
               viewport={{ once: true }}
               className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl"
             >
-              От первого визита до динамики — 5 шагов
+                From first intake to measurable outcomes in 5 steps
             </motion.h2>
             <motion.p
               variants={fadeUp}
@@ -467,7 +467,7 @@ export default function ForNutritionists() {
               viewport={{ once: true }}
               className="mt-3 text-slate-400"
             >
-              Весь цикл работы с пациентом в одном инструменте без интеграций с ЭМК и сложной настройки.
+                Run the full patient cycle in one platform without EMR integrations or setup overhead.
             </motion.p>
           </div>
           <div className="max-w-2xl">
@@ -481,7 +481,7 @@ export default function ForNutritionists() {
       {/* ── Возможности ── */}
       <section className="mx-auto max-w-[1240px] px-4 py-20 sm:px-6">
         <div className="mb-12 text-center">
-          <SectionLabel>Инструменты</SectionLabel>
+            <SectionLabel>Capabilities</SectionLabel>
           <motion.h2
             variants={fadeUp}
             custom={0}
@@ -490,7 +490,7 @@ export default function ForNutritionists() {
             viewport={{ once: true }}
             className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl"
           >
-            Всё необходимое для работы нутрициолога
+              Everything a nutritionist needs to run better care
           </motion.h2>
         </div>
         <motion.div
@@ -510,7 +510,7 @@ export default function ForNutritionists() {
       <section className="border-y border-slate-800/60 bg-slate-900/20 py-20">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6">
           <div className="mb-12 text-center">
-            <SectionLabel color="#8b5cf6">Направления</SectionLabel>
+              <SectionLabel color="#8b5cf6">Use cases</SectionLabel>
             <motion.h2
               variants={fadeUp}
               custom={0}
@@ -519,7 +519,7 @@ export default function ForNutritionists() {
               viewport={{ once: true }}
               className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl"
             >
-              Подходит для любого направления нутрициологии
+                Built for multiple nutrition practice models
             </motion.h2>
           </div>
           <motion.div
@@ -546,21 +546,21 @@ export default function ForNutritionists() {
             whileInView="visible"
             viewport={{ once: true }}
           >
-            <SectionLabel color="#0ea5e9">Ценность для пациента</SectionLabel>
+              <SectionLabel color="#0ea5e9">Patient value</SectionLabel>
             <h2 className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl">
-              Пациент видит результат, а не только рекомендации
+                Patients see outcomes, not just recommendations
             </h2>
             <p className="mt-4 text-slate-400">
-              Личный кабинет пациента показывает динамику биомаркеров, текущий протокол и прогресс по заданиям.
-              Это создаёт вовлечённость и снижает отток между сессиями.
+                The patient workspace shows biomarker trends, current protocol steps, and task completion.
+                This improves engagement and reduces drop-off between sessions.
             </p>
             <ul className="mt-6 space-y-3">
               {[
-                'История всех анализов в одном месте',
-                'Понятная интерпретация без медицинского образования',
-                'Еженедельные напоминания о выполнении протокола',
-                'Прогресс-тренды мотивируют придерживаться программы',
-                'Мобильная версия — всё доступно со смартфона',
+                  'Full lab history in one place',
+                  'Clear interpretation for non-clinical users',
+                  'Weekly reminders for protocol adherence',
+                  'Progress trends improve motivation',
+                  'Mobile-friendly access from any device',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-3 text-sm text-slate-300">
                   <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
@@ -580,14 +580,14 @@ export default function ForNutritionists() {
             className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 backdrop-blur-sm"
           >
             <div className="mb-5 flex items-center justify-between">
-              <span className="text-sm font-semibold text-white">Прогресс Анны</span>
-              <span className="text-xs text-slate-500">8 нед. на протоколе</span>
+                <span className="text-sm font-semibold text-white">Anna's progress</span>
+                <span className="text-xs text-slate-500">8 weeks on protocol</span>
             </div>
             <div className="mb-4 space-y-3">
               {[
-                { marker: 'Ферритин', before: '11', after: '28', unit: 'нг/мл', up: true },
-                { marker: 'Витамин D', before: '18', after: '47', unit: 'нмоль/л', up: true },
-                { marker: 'B12', before: '245', after: '390', unit: 'пмоль/л', up: true },
+                  { marker: 'Ferritin', before: '11', after: '28', unit: 'ng/mL', up: true },
+                  { marker: 'Vitamin D', before: '18', after: '47', unit: 'nmol/L', up: true },
+                  { marker: 'B12', before: '245', after: '390', unit: 'pmol/L', up: true },
               ].map(({ marker, before, after, unit, up }) => (
                 <div key={marker} className="rounded-xl bg-slate-800/50 px-4 py-3">
                   <div className="flex items-center justify-between">
@@ -610,11 +610,11 @@ export default function ForNutritionists() {
               ))}
             </div>
             <div className="rounded-xl border border-slate-700 p-4">
-              <div className="mb-2 text-xs font-semibold text-slate-400">Задания на неделю</div>
+                <div className="mb-2 text-xs font-semibold text-slate-400">Weekly tasks</div>
               {[
-                { done: true,  text: 'Принять железо с витамином C' },
-                { done: true,  text: 'D3 + K2 утром с едой' },
-                { done: false, text: 'Сдать общий анализ крови (запланировано)' },
+                  { done: true,  text: 'Take iron with vitamin C' },
+                  { done: true,  text: 'Take D3 + K2 in the morning with food' },
+                  { done: false, text: 'Complete CBC retest (scheduled)' },
               ].map(({ done, text }) => (
                 <div key={text} className="flex items-center gap-2 py-1.5 text-sm">
                   <CheckCircle2 className={`h-4 w-4 shrink-0 ${done ? 'text-emerald-400' : 'text-slate-600'}`} />
@@ -629,18 +629,18 @@ export default function ForNutritionists() {
       {/* ── Pricing ── */}
       <section className="mx-auto max-w-[1240px] px-4 py-20 sm:px-6">
         <div className="mb-12 text-center">
-          <SectionLabel color="#10b981">Цены</SectionLabel>
+            <SectionLabel color="#10b981">Pricing</SectionLabel>
           <motion.h2
             variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}
             className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl"
           >
-            Один план — всё необходимое
+              Simple plans for real clinical work
           </motion.h2>
           <motion.p
             variants={fadeUp} custom={0.06} initial="hidden" whileInView="visible" viewport={{ once: true }}
             className="mt-3 text-slate-400"
           >
-            Начните бесплатно, обновитесь когда нужно.
+              Start free and upgrade when your practice grows.
           </motion.p>
         </div>
         <div className="mx-auto flex flex-col items-center gap-6 lg:flex-row lg:items-stretch lg:justify-center">
@@ -650,15 +650,15 @@ export default function ForNutritionists() {
             variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}
             className="w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-900/60 p-8 backdrop-blur-sm"
           >
-            <div className="mb-1 text-xs font-bold uppercase tracking-widest text-slate-500">Стартер</div>
+              <div className="mb-1 text-xs font-bold uppercase tracking-widest text-slate-500">Starter</div>
             <div className="mb-1 text-4xl font-bold text-white">$0</div>
-            <div className="mb-5 text-sm text-slate-500">навсегда бесплатно</div>
+              <div className="mb-5 text-sm text-slate-500">free forever</div>
             <ul className="mb-8 space-y-3">
               {[
-                '1–2 анализа в месяц',
-                'Базовые флаги и сводка',
-                '1 пациент',
-                'Черновики протоколов',
+                  '1-2 analyses per month',
+                  'Basic flags and summary',
+                  '1 patient seat',
+                  'Protocol drafts',
               ].map((f) => (
                 <li key={f} className="flex items-center gap-2.5 text-sm text-slate-300">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-slate-600" />
@@ -673,7 +673,7 @@ export default function ForNutritionists() {
               }}
               className="w-full rounded-2xl border border-slate-700 bg-slate-800/60 py-3 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
             >
-              Начать бесплатно
+                Start free
             </button>
           </motion.div>
 
@@ -684,24 +684,24 @@ export default function ForNutritionists() {
           >
             <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
               <span className="rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-950">
-                Рекомендуется
+                  Recommended
               </span>
             </div>
             <div className="mb-1 text-xs font-bold uppercase tracking-widest text-emerald-400">Practitioner Pro</div>
             <div className="mb-1 flex items-end gap-1">
               <span className="text-4xl font-bold text-white">$29</span>
-              <span className="mb-1 text-sm text-slate-400">/мес</span>
+                <span className="mb-1 text-sm text-slate-400">/month</span>
             </div>
-            <div className="mb-5 text-sm text-slate-500">или $299/год — экономия 17%</div>
+              <div className="mb-5 text-sm text-slate-500">or $299/year — save 17%</div>
             <ul className="mb-8 space-y-3">
               {[
-                'Неограниченные анализы',
-                'Полные протоколы по биомаркерам',
-                'Несколько пациентов',
-                'CRM-инструменты и задания',
-                'Динамика биомаркеров',
-                'Еженедельные check-in пациентов',
-                'Приоритетные обновления',
+                  'Unlimited analyses',
+                  'Full biomarker-driven protocols',
+                  'Multiple active patients',
+                  'CRM workflows and task tracking',
+                  'Longitudinal biomarker trends',
+                  'Weekly patient check-ins',
+                  'Priority product updates',
               ].map((f) => (
                 <li key={f} className="flex items-center gap-2.5 text-sm text-slate-200">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
@@ -716,7 +716,7 @@ export default function ForNutritionists() {
               }}
               className="w-full rounded-2xl bg-emerald-500 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
             >
-              Попробовать Practitioner Pro
+                Try Practitioner Pro
             </button>
           </motion.div>
 
@@ -729,12 +729,12 @@ export default function ForNutritionists() {
           variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}
           className="mx-auto max-w-[680px] px-4 text-center sm:px-6"
         >
-          <SectionLabel color="#0ea5e9">Свяжитесь с нами</SectionLabel>
+            <SectionLabel color="#0ea5e9">Contact us</SectionLabel>
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-white md:text-3xl">
-            Есть вопросы или хотите обсудить корпоративный план?
+              Questions or enterprise requirements?
           </h2>
           <p className="mt-3 text-slate-400">
-            Напишите нам напрямую — мы отвечаем в течение рабочего дня и готовы обсудить индивидуальные условия для клиник и нутрициологических практик.
+              Email us directly. We usually respond within one business day and can discuss custom conditions for clinics and nutrition practices.
           </p>
           <a
             href="mailto:info@softdab.tech"
@@ -745,7 +745,7 @@ export default function ForNutritionists() {
             info@softdab.tech
           </a>
           <p className="mt-4 text-xs text-slate-600">
-            Также отвечаем на вопросы о функционале, интеграциях и корпоративном ценообразовании.
+              We can also help with integrations, onboarding, and enterprise pricing.
           </p>
         </motion.div>
       </section>
@@ -760,15 +760,15 @@ export default function ForNutritionists() {
             whileInView="visible"
             viewport={{ once: true }}
           >
-            <SectionLabel>Начните сегодня</SectionLabel>
+              <SectionLabel>Get started today</SectionLabel>
             <h2 className="mt-5 text-4xl font-bold tracking-[-0.03em] text-white md:text-5xl">
-              Приведите первого пациента<br />
+                Bring your first patient<br />
               <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-                прямо сейчас
+                  today
               </span>
             </h2>
             <p className="mt-5 text-lg leading-8 text-slate-400">
-              Бесплатный аккаунт. Загрузите анализы одного пациента и убедитесь, что VITALOOP экономит вам час на каждой консультации.
+                Start with a free account. Upload one patient report and see how VITALOOP saves time on every consultation.
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <button
@@ -778,7 +778,7 @@ export default function ForNutritionists() {
                 }}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-7 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 sm:w-auto"
               >
-                Зарегистрироваться бесплатно
+                  Sign up for free
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button
@@ -788,11 +788,11 @@ export default function ForNutritionists() {
                 }}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/60 px-7 py-3.5 text-sm font-semibold text-slate-200 transition hover:border-slate-500 sm:w-auto"
               >
-                Как работает платформа
+                  How the platform works
               </button>
             </div>
             <p className="mt-5 text-xs text-slate-600">
-              Не требует интеграций с ЭМК · Работает с PDF из любой лаборатории · Данные не продаются
+                No EMR integration required · Works with any lab PDF · Data is never sold
             </p>
           </motion.div>
         </div>
