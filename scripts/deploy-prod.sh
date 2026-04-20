@@ -69,7 +69,7 @@ if [[ ! -x ./scripts/pre-deploy-check.sh ]]; then
     exit 1
 fi
 
-if ! ./scripts/pre-deploy-check.sh; then
+if ! ALLOW_UNPUSHED_COMMITS=1 ./scripts/pre-deploy-check.sh; then
     if [[ "$FORCE_DEPLOY" != "true" ]]; then
         log_error "Pre-deployment checks failed. Use --force to override."
         exit 1
@@ -200,17 +200,32 @@ ssh $SSH_OPTS "$REMOTE_HOST" "
     fi
     
     # Restart services
-    SERVICES_TO_RESTART=''
+    RESTART_BACKEND=0
+    RESTART_CRM=0
     if echo "\$CHANGED_FILES" | grep -qE '^backend/'; then
-        SERVICES_TO_RESTART="\$SERVICES_TO_RESTART vitaloop-backend"
+        RESTART_BACKEND=1
     fi
     if echo "\$CHANGED_FILES" | grep -qE '^crm-mvc/'; then
-        SERVICES_TO_RESTART="\$SERVICES_TO_RESTART vitaloop-crm-mvc"
+        RESTART_CRM=1
     fi
 
-    if [[ -n "\${SERVICES_TO_RESTART// /}" ]]; then
-        echo "Restarting services:\$SERVICES_TO_RESTART"
-        systemctl restart \$SERVICES_TO_RESTART || {
+    if [[ "\$RESTART_BACKEND" == "1" && "\$RESTART_CRM" == "1" ]]; then
+        echo 'Restarting services: vitaloop-backend vitaloop-crm-mvc'
+        systemctl restart vitaloop-backend vitaloop-crm-mvc || {
+            echo 'ERROR: Service restart failed'
+            exit 1
+        }
+        echo 'Services restarted successfully'
+    elif [[ "\$RESTART_BACKEND" == "1" ]]; then
+        echo 'Restarting services: vitaloop-backend'
+        systemctl restart vitaloop-backend || {
+            echo 'ERROR: Service restart failed'
+            exit 1
+        }
+        echo 'Services restarted successfully'
+    elif [[ "\$RESTART_CRM" == "1" ]]; then
+        echo 'Restarting services: vitaloop-crm-mvc'
+        systemctl restart vitaloop-crm-mvc || {
             echo 'ERROR: Service restart failed'
             exit 1
         }

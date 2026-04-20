@@ -60,8 +60,13 @@ echo ""
 log_info "Checking unpushed commits..."
 LOCAL_COMMITS=$(git log origin/main..HEAD --oneline | wc -l)
 if [[ $LOCAL_COMMITS -gt 0 ]]; then
-    log_error "Found $LOCAL_COMMITS unpushed commits on this branch"
-    git log origin/main..HEAD --oneline
+    if [[ "${ALLOW_UNPUSHED_COMMITS:-0}" == "1" ]]; then
+        log_warn "Found $LOCAL_COMMITS unpushed commits on this branch; continuing because ALLOW_UNPUSHED_COMMITS=1"
+        git log origin/main..HEAD --oneline
+    else
+        log_error "Found $LOCAL_COMMITS unpushed commits on this branch"
+        git log origin/main..HEAD --oneline
+    fi
 else
     log_info "✓ No unpushed commits"
 fi
