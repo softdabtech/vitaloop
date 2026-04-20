@@ -1,53 +1,44 @@
 # VITALOOP
 
-Production environment:
+Production URLs:
 
 - Frontend: https://vitaloop.today
-- API (FastAPI): https://api.vitaloop.today
-- CRM (ASP.NET MVC): https://crm.vitaloop.today
+- API: https://api.vitaloop.today
+- CRM: https://crm.vitaloop.today
 
-VITALOOP is a health platform for blood report interpretation and longitudinal tracking:
-
-1. Upload lab report
-2. Extract text/OCR
-3. Analyze biomarkers
-4. Generate recommendations/protocol
-5. Track progress and check-ins
-6. Work with CRM roles and organization context
+VITALOOP is a health platform for lab report interpretation, personalized protocol generation, longitudinal biomarker tracking, weekly check-ins, and practitioner/admin operations.
 
 ## Architecture
 
-The project consists of 3 main runtime components:
+The production system has three main runtime components:
 
-1. `frontend/` (React + Vite)
-     - Public site, login flow, dashboard UI.
-     - Sends token handoff to CRM `/auth/post-login`.
+1. `frontend/`
+   - React 18 + Vite 5 app
+   - Public marketing site and user-facing flows
+   - Supabase client auth
+   - CRM token handoff through `POST /auth/post-login`
 
-2. `backend/` (FastAPI)
-     - Business API, analysis endpoints, `/auth/me` user context.
-     - Supabase integration (DB + Auth token validation via JWKS ES256).
+2. `backend/`
+   - FastAPI service for analysis, protocol, progress, timeline, check-ins, questionnaires, admin data, and health endpoints
+   - Supabase-backed auth and data access
+   - Security headers and path-based rate limiting
 
-3. `crm-mvc/` (ASP.NET 8 MVC)
-     - Internal CRM and admin/ops interfaces.
-     - Validates Supabase JWT, resolves user context via backend `/auth/me`.
+3. `crm-mvc/`
+   - ASP.NET 8 MVC CRM/admin/ops application
+   - Validates Supabase JWTs via JWKS
+   - Resolves normalized user context through backend `/auth/me`
+   - Exposes public `GET /version` for deploy verification
 
-Data and infra artifacts:
+Infrastructure and ops assets:
 
-- `supabase_migrations.sql`
-- `docker-compose.yml`
-- `nginx.vitaloop.conf`
 - `scripts/`
 - `docs/`
+- `ops/`
+- `nginx.vitaloop.conf`
+- `docker-compose.yml`
+- `supabase_migrations.sql`
 
-## Tech Stack
-
-- Frontend: React, Vite
-- Backend: FastAPI, Python
-- CRM: ASP.NET 8 MVC
-- Database/Auth: Supabase (Postgres + Auth)
-- AI: LLM-based analysis pipeline
-
-## Repository Structure
+## Repository Layout
 
 ```text
 .
@@ -55,32 +46,55 @@ Data and infra artifacts:
 ├── crm-mvc/
 ├── frontend/
 ├── docs/
+├── ops/
 ├── scripts/
+├── nginx.vitaloop.conf
 ├── supabase_migrations.sql
 ├── docker-compose.yml
 └── README.md
 ```
 
+## Stack
+
+- Frontend: React 18, Vite 5, Tailwind, Framer Motion, Supabase JS
+- Backend: FastAPI, Python 3.12, Pydantic settings
+- CRM: ASP.NET 8 MVC
+- Database/Auth: Supabase Postgres + Supabase Auth
+- Operations: nginx, systemd, shell deployment tooling
+
 ## Local Development
 
-### 1) Clone
+### Prerequisites
 
-```bash
-git clone https://github.com/softdabtech/vitaloop.git
-cd vitaloop
-```
+- Node 20
+- Python 3.12
+- .NET 8 SDK
 
-### 2) Configure environment
+### Environment
 
-Create env files for each component from local templates/examples used in your branch/team process.
+Create local env/config files using your team-managed values.
 
-Minimum required values include:
+Typical minimum configuration:
 
-- Backend: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (or legacy `SUPABASE_SERVICE_KEY`), JWT/Auth settings, `ALLOWED_ORIGINS`, security/rate-limit settings (`SECURITY_ENABLE_HEADERS`, `RATE_LIMIT_BACKEND`, `RATE_LIMIT_TRUST_FORWARDED_FOR`, `RATE_LIMIT_FORWARDED_FOR_HEADER`, `RATE_LIMIT_REDIS_URL`, `RATE_LIMIT_REDIS_PREFIX`, `AUTH_RATE_LIMIT_PER_MINUTE`, `ANALYZE_RATE_LIMIT_PER_MINUTE`, `PROTOCOL_RATE_LIMIT_PER_MINUTE`), and retention controls (`LAB_UPLOAD_RAW_RETENTION_DAYS`, `LAB_UPLOAD_RETENTION_BATCH_SIZE`, `RETENTION_ALERT_EMAIL`)
-- Frontend: API/CRM base URLs and Supabase public config
-- CRM: `Auth` and `CrmData` sections (Issuer, Audience, JWK/JWKS path, Backend URL)
+- Frontend
+  - `VITE_API_BASE_URL`
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_ANON_KEY`
+- Backend
+  - `SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - auth/JWKS settings
+  - `ALLOWED_ORIGINS`
+  - rate-limit settings
+  - security header settings
+  - retention settings
+  - optional LLM, email, Stripe, and Sentry keys
+- CRM
+  - `Auth` settings
+  - `CrmData` settings
+  - backend base URL
 
-### 3) Run backend
+### Run Backend
 
 ```bash
 cd backend
@@ -90,7 +104,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8004
 ```
 
-### 4) Run frontend
+### Run Frontend
 
 ```bash
 cd frontend
@@ -98,209 +112,188 @@ npm install
 npm run dev
 ```
 
-### 5) Run CRM
+### Run CRM
 
 ```bash
 cd crm-mvc
 dotnet restore
-dotnet run
+dotnet run --project Vitaloop.Crm.Web.csproj
 ```
 
-## Auth Flow (Current)
+## Auth Flow
 
-1. User signs in on frontend via Supabase.
-2. Frontend resolves destination and performs POST handoff to CRM `/auth/post-login`.
-3. CRM stores `vo_access_token` cookie.
-4. CRM validates token (ES256 via Supabase JWKS).
-5. CRM requests backend `/auth/me` for user context.
-6. Role-based redirect to `/ops`, `/admin`, or other CRM destination.
+1. User signs in on the frontend through Supabase.
+2. Frontend decides whether the user stays in the end-user app or is handed off to CRM.
+3. For CRM access, frontend submits the access token to `POST /auth/post-login`.
+4. CRM stores `vo_access_token` in a cookie.
+5. CRM validates the ES256 token using Supabase JWKS.
+6. CRM calls backend `/auth/me` to resolve user and role context.
+7. User is redirected to the correct CRM destination such as `/ops` or `/admin`.
 
-## Production Deployment
+Runtime note:
 
-All deployments are performed from `main` and must keep server code in sync with GitHub.
+- Production API paths are root paths such as `/auth/me`, `/progress`, `/insights`, and `/questionnaires` on `api.vitaloop.today`.
+- Do not assume a `/api/*` prefix exists in production.
 
-### 🚀 Automated Deployment (Recommended)
+## Health and Version Endpoints
 
-We provide comprehensive deployment automation with safety checks, health verification, and rollback capability.
+API:
 
-Before running deployment scripts, set the target host in your shell (do not commit real production host/IP into repository files):
+- `GET https://api.vitaloop.today/health`
+- `GET https://api.vitaloop.today/health/ready`
+- `GET https://api.vitaloop.today/health/detailed`
+
+Frontend:
+
+- `GET https://vitaloop.today/build-info.json`
+
+CRM:
+
+- `GET https://crm.vitaloop.today/version`
+
+`build-info.json` is intentionally excluded from service-worker precache and served with `no-cache` headers so deploy verification always reads the current frontend artifact.
+
+## Deployment
+
+Deploy from `main` and run deployment commands from the repository root.
+
+### Standard Production Deploy
 
 ```bash
 export REMOTE_HOST="deploy@your-prod-host"
 export REMOTE_DIR="/var/www/VITALOOP"
-```
 
-**Step 1: Push changes to GitHub**
-```bash
 git add .
 git commit -m "feat/fix: ..."
 git push origin main
-```
 
-**Step 2: Deploy to production**
-```bash
-# Verify all safety checks pass, then deploy with automatic backup
 ./scripts/deploy-prod.sh
-
-# Or with custom options:
-./scripts/deploy-prod.sh --force      # Force deploy ignoring warnings
-./scripts/deploy-prod.sh --no-backup  # Skip creating backup branch
 ```
 
-The deployment script performs a 6-phase rollout:
-1. **Pre-deployment checks**: Git status, env vars, disk space, connectivity
-2. **GitHub sync**: Confirms code is pushed to origin/main
-3. **Server backup**: Creates backup branch with current state
-4. **Code deploy**: Fast-forward git pull, rebuilds frontend/CRM, restarts services
-5. **Service restart**: Restarts backend and CRM with health monitoring
-6. **Validation**: Verifies all endpoints are responding (health, ready, frontend, CRM)
-
-Optional post-deploy limiter smoke can be enabled:
+Useful variants:
 
 ```bash
+./scripts/deploy-prod.sh --force
+./scripts/deploy-prod.sh --no-backup
 RUN_RATE_LIMIT_SMOKE=1 ./scripts/deploy-prod.sh
 ```
 
-Security and retention operations:
+What `scripts/deploy-prod.sh` does now:
 
-- API header smoke check:
-     - `./scripts/smoke_api_security_headers.sh`
-- API rate limiter smoke check (burst and verify `429`):
-     - `./scripts/smoke_rate_limiter.sh`
-     - optional tuning: `RATE_LIMIT_TARGET_PATH=/protocol/__rate_limit_smoke__ RATE_LIMIT_BURST_REQUESTS=40 RATE_LIMIT_MIN_429=1 ./scripts/smoke_rate_limiter.sh`
-- Install nightly retention timer (systemd):
-     - `export REMOTE_HOST="deploy@your-prod-host"`
-     - `export REMOTE_DIR="/var/www/VITALOOP"`
-     - `./scripts/install_retention_timer.sh`
-- Run retention redaction manually on backend host:
-     - `cd /var/www/VITALOOP/backend && ./.venv/bin/python scripts/run_lab_retention_redaction.py --days 180 --batch-size 500 --apply`
+1. Runs local pre-deploy checks.
+2. Pushes `main` to GitHub.
+3. Creates a backup branch on the server.
+4. Fast-forwards the server checkout to `origin/main`.
+5. Builds the frontend locally with `npm run build:prod` and syncs `frontend/dist/` to the server.
+6. Builds CRM on the server only when `crm-mvc/` changed.
+7. Restarts only the services that need restarting.
+8. Syncs `nginx.vitaloop.conf` to both `sites-available/vitaloop.today` and `sites-enabled/vitaloop.today` when nginx changed.
+9. Validates API health, readiness, security headers, frontend build commit, CRM health, and CRM `/version`.
 
-### 📋 Manual Deployment (Legacy)
+### Pre-Deploy Check Only
 
-If automation is not available, follow the manual steps:
-
-1. **Push changes**
 ```bash
-git add .
-git commit -m "feat/fix: ..."
-git push origin main
+./scripts/pre-deploy-check.sh
 ```
 
-2. **Sync server repository**
-```bash
-ssh "$REMOTE_HOST"
-cd "$REMOTE_DIR"
-git pull --ff-only origin main
-```
-
-3. **Deploy backend**
-```bash
-ssh "$REMOTE_HOST" 'systemctl restart vitaloop-backend && systemctl is-active vitaloop-backend'
-```
-
-4. **Deploy CRM**
-```bash
-ssh "$REMOTE_HOST" "
-     systemctl stop vitaloop-crm-mvc &&
-     cd '$REMOTE_DIR/crm-mvc' &&
-     /usr/bin/dotnet publish Vitaloop.Crm.Web.csproj -c Release -o '$REMOTE_DIR/crm-mvc/publish' &&
-     systemctl start vitaloop-crm-mvc &&
-     systemctl is-active vitaloop-crm-mvc
-"
-```
-
-5. **Deploy frontend**
-```bash
-ssh "$REMOTE_HOST" "
-     cd '$REMOTE_DIR/frontend'
-     npm ci && npm run build
-"
-```
-
-### 🔄 Staging → Production Workflow
-
-For testing before production:
+### Staging to Production
 
 ```bash
-# 1. Prepare on staging branch
 git checkout staging
 git pull origin staging
-# Make changes...
 git push origin staging
 
-# 2. Promote staging to main (runs tests, builds, creates merge)
 ./scripts/promote-staging-to-prod.sh staging
-
-# 3. Deploy to production
 ./scripts/deploy-prod.sh
 ```
 
-### 🆘 Emergency Rollback
+### Rollback
 
-View recent commits without making changes:
+Preview rollback targets:
+
 ```bash
+export REMOTE_HOST="deploy@your-prod-host"
 ./scripts/rollback.sh
 ```
 
-Rollback to a specific commit (requires confirmation):
+Rollback to a specific commit:
+
 ```bash
+export REMOTE_HOST="deploy@your-prod-host"
 ./scripts/rollback.sh abc1234 --confirm
 ```
 
-The rollback script:
-- Creates backup branch of current state
-- Resets code to target commit
-- Rebuilds frontend and CRM
-- Restarts services
-- Verifies health endpoints
+Rollback rebuilds frontend and CRM, restarts services, and validates API/frontend availability after the server checkout changes.
 
-### 🏥 Health & Monitoring
+## Operational Checks
 
-**Health Endpoints**
-- **Liveness** (`/health`): Always returns 200 if service is running
-- **Readiness** (`/health/ready`): Returns 200 only if all critical dependencies are ready
-- **Detailed** (`/health/detailed`): Full service status for observability
+After deploy, verify:
 
-Test health locally:
-```bash
-curl https://api.vitaloop.today/health
-curl https://api.vitaloop.today/health/ready | jq
-curl https://api.vitaloop.today/health/detailed | jq
-```
+1. `curl https://api.vitaloop.today/health`
+2. `curl https://api.vitaloop.today/health/ready`
+3. `curl https://vitaloop.today/build-info.json`
+4. `curl https://crm.vitaloop.today/version`
+5. `./scripts/smoke_api_security_headers.sh`
+6. Optional: `./scripts/smoke_rate_limiter.sh`
 
 Collect SLO metrics:
+
 ```bash
 ./scripts/collect-slo-metrics.sh
-cat ./monitoring/slo-metrics.json | jq
 ```
 
-### 📖 Full Documentation
+Frontend QA helpers:
 
-For comprehensive deployment documentation, troubleshooting, and operations runbook, see [DEPLOYMENT_RUNBOOK.md](./DEPLOYMENT_RUNBOOK.md).
+```bash
+cd frontend
+npm run qa
+```
 
-## Operations Checklist
+## Security and Retention Utilities
 
-After deploy:
+API security header smoke:
 
-1. ✅ `curl https://api.vitaloop.today/health` → 200 with `"status": "ok"`
-2. ✅ `curl https://api.vitaloop.today/health/ready` → 200 with `"ready": true`
-3. ✅ `curl https://vitaloop.today` → 200 (frontend loads)
-4. ✅ `systemctl is-active vitaloop-backend` → `active`
-5. ✅ `systemctl is-active vitaloop-crm-mvc` → `active`
-6. ✅ `/auth/me` responds correctly with valid bearer token
-7. ✅ CRM `/auth/post-login` sets `vo_access_token`
-8. ✅ User reaches intended CRM route without auth loop
+```bash
+./scripts/smoke_api_security_headers.sh
+```
 
-## Build Optimization
+Rate limiter smoke:
 
-- Frontend uses **Vite with manual code splitting** for optimal performance
-- Chunks split by vendor (React, charts, UI) and feature (Dashboard, analytics)
-- Target: individual chunks < 200KB gzipped
-- Monitor warnings: `npm run build 2>&1 | grep -i warning`
+```bash
+./scripts/smoke_rate_limiter.sh
+```
+
+Install retention timer:
+
+```bash
+export REMOTE_HOST="deploy@your-prod-host"
+export REMOTE_DIR="/var/www/VITALOOP"
+./scripts/install_retention_timer.sh
+```
+
+Run retention redaction manually on the backend host:
+
+```bash
+cd /var/www/VITALOOP/backend
+./.venv/bin/python scripts/run_lab_retention_redaction.py --days 180 --batch-size 500 --apply
+```
+
+## Documentation
+
+Key docs in this repository:
+
+- `DEPLOYMENT_RUNBOOK.md`
+- `DIAGNOSTICS.md`
+- `OPERATIONAL_MANUAL.md`
+- `DEBUG_AUTH_FLOW.md`
+- `EMAIL_FIX_GUIDE.md`
+- `docs/architecture-target-2026-execution.md`
+- `docs/aspnet-migration-step-1-audit-blueprint.md`
+- `docs/aspnet-migration-step-2-foundation.md`
 
 ## Notes
 
-- CRM must not be forced to HS256 via `Auth__JwtSecret` override when using Supabase ES256 tokens.
-- Supabase role source of truth for CRM access is the user context returned by backend `/auth/me`.
-- Keep production config and code paths aligned across frontend, backend, and CRM to avoid login loops.
-- All deployment scripts include safety checks and error handling. Review output carefully.
+- CRM token validation should remain Supabase ES256/JWKS-based. Do not force HS256 secret-based production validation.
+- CRM/admin access depends on backend `/auth/me` user context, not only raw frontend auth state.
+- Frontend pricing copy should stay aligned with `frontend/src/lib/pricing.js`.
+- For frontend deploy validation, check `build-info.json`, not only the HTML shell.
