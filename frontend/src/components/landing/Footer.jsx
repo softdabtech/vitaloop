@@ -10,6 +10,7 @@ const COL_PRODUCT = [
 ]
 const COL_COMPANY = [
   { label: 'About product',     href: '#hero' },
+  { label: 'For nutritionists', href: '/for-nutritionists' },
   { label: 'Privacy policy',    href: '/privacy' },
   { label: 'Terms of service',  href: '/terms' },
   { label: 'Contact',           href: 'mailto:hello@vitaloop.com' },
