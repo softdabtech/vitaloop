@@ -235,6 +235,33 @@ def _get_client() -> httpx.AsyncClient:
     return _client
 
 
+def _chat_completions_path() -> str:
+    """Return provider-specific chat completions path relative to base_url.
+
+    We intentionally return a relative path (no leading slash) so a base URL
+    with a path segment (for example `/v1`) keeps its prefix.
+    """
+    base_url = settings.active_llm_base_url.rstrip("/").lower()
+    if "agents.do-ai.run" in base_url:
+        return "api/v1/chat/completions"
+    return "chat/completions"
+
+
+def _is_do_agent_endpoint() -> bool:
+    return "agents.do-ai.run" in settings.active_llm_base_url.rstrip("/").lower()
+
+
+def _chat_payload(messages: List[Dict[str, Any]], temperature: float) -> Dict[str, Any]:
+    payload: Dict[str, Any] = {
+        "temperature": temperature,
+        "messages": messages,
+    }
+    # DigitalOcean Agent endpoint selects its configured model internally.
+    if not _is_do_agent_endpoint():
+        payload["model"] = settings.active_llm_model
+    return payload
+
+
 def _strip_code_block(raw: str) -> str:
     """Remove ```json ... ``` wrapper if Claude adds one."""
     raw = raw.strip()
@@ -259,15 +286,14 @@ async def _chat_completion(prompt: str, *, task_name: str) -> str:
         key_suffix,
     )
     response = await client.post(
-        "/chat/completions",
-        json={
-            "model": model,
-            "temperature": 0,
-            "messages": [
+        _chat_completions_path(),
+        json=_chat_payload(
+            messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ],
-        },
+            temperature=0,
+        ),
     )
     response.raise_for_status()
     payload = response.json()
@@ -428,15 +454,14 @@ async def generate_questionnaire_followup(
     try:
         raw = await asyncio.wait_for(
             client.post(
-                "/chat/completions",
-                json={
-                    "model": settings.active_llm_model,
-                    "temperature": 0.3,
-                    "messages": [
+                _chat_completions_path(),
+                json=_chat_payload(
+                    messages=[
                         {"role": "system", "content": _QUESTIONNAIRE_FOLLOWUP_SYSTEM},
                         {"role": "user", "content": prompt},
                     ],
-                },
+                    temperature=0.3,
+                ),
             ),
             timeout=8.0,
         )
@@ -474,15 +499,14 @@ async def generate_questionnaire_summary(
     try:
         raw = await asyncio.wait_for(
             client.post(
-                "/chat/completions",
-                json={
-                    "model": settings.active_llm_model,
-                    "temperature": 0.4,
-                    "messages": [
+                _chat_completions_path(),
+                json=_chat_payload(
+                    messages=[
                         {"role": "system", "content": _QUESTIONNAIRE_FOLLOWUP_SYSTEM},
                         {"role": "user", "content": prompt},
                     ],
-                },
+                    temperature=0.4,
+                ),
             ),
             timeout=18.0,
         )
