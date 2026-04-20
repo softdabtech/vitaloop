@@ -52,6 +52,8 @@ REMOTE_CURRENT_HEAD=$(ssh $SSH_OPTS "$REMOTE_HOST" "cd $REMOTE_DIR && git rev-pa
 DEPLOY_CHANGED_FILES="$(git diff --name-only "$REMOTE_CURRENT_HEAD" HEAD 2>/dev/null || git diff --name-only origin/main...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || true)"
 HAS_FRONTEND_CHANGES=0
 HAS_BACKEND_CHANGES=0
+HAS_NGINX_CHANGES=0
+HAS_CRM_CHANGES=0
 
 if echo "$DEPLOY_CHANGED_FILES" | grep -qE '^frontend/'; then
     HAS_FRONTEND_CHANGES=1
@@ -59,6 +61,14 @@ fi
 
 if echo "$DEPLOY_CHANGED_FILES" | grep -qE '^backend/'; then
     HAS_BACKEND_CHANGES=1
+fi
+
+if echo "$DEPLOY_CHANGED_FILES" | grep -qE '^nginx\.vitaloop\.conf$'; then
+    HAS_NGINX_CHANGES=1
+fi
+
+if echo "$DEPLOY_CHANGED_FILES" | grep -qE '^crm-mvc/'; then
+    HAS_CRM_CHANGES=1
 fi
 
 # PHASE 1: Local pre-deploy checks
@@ -239,6 +249,26 @@ ssh $SSH_OPTS "$REMOTE_HOST" "
 }
 log_success "Build completed and services restarted"
 
+# Sync nginx config when nginx.vitaloop.conf changed in this release
+if [[ "$HAS_NGINX_CHANGES" == "1" ]]; then
+    log_section "Phase 5b: Sync nginx Config"
+    log_info "Copying nginx.vitaloop.conf to server sites-available and sites-enabled..."
+    scp $SSH_OPTS nginx.vitaloop.conf "$REMOTE_HOST:/etc/nginx/sites-available/vitaloop.today" || {
+        log_error "Failed to copy nginx config to sites-available"
+        exit 1
+    }
+    ssh $SSH_OPTS "$REMOTE_HOST" "
+        cp /etc/nginx/sites-available/vitaloop.today /etc/nginx/sites-enabled/vitaloop.today
+        nginx -t || { echo 'ERROR: nginx config test failed'; exit 1; }
+        systemctl reload nginx
+        echo 'nginx reloaded'
+    " || {
+        log_error "Failed to apply nginx config on server"
+        exit 1
+    }
+    log_success "nginx config synced and reloaded"
+fi
+
 # PHASE 6: Validation
 log_section "Phase 6: Post-Deployment Validation"
 
@@ -332,6 +362,13 @@ elif [[ "$STATUS" == "200" ]]; then
 else
     log_error "CRM health check failed (HTTP $STATUS)"
     VALIDATION_PASSED=false
+fi
+
+# CRM version endpoint
+if [[ "$HAS_CRM_CHANGES" == "1" ]] || curl $CURL_OPTS -sf "https://crm.vitaloop.today/version" > /dev/null 2>&1; then
+    log_info "Checking CRM version endpoint..."
+    CRM_VERSION=$(curl $CURL_OPTS -sf "https://crm.vitaloop.today/version" 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("version","?"))' || echo "?")
+    log_success "CRM version: $CRM_VERSION"
 fi
 
 # Final status
