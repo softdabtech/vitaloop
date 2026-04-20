@@ -10,12 +10,12 @@ WARNINGS=0
 
 log_error() {
     echo "❌ ERROR: $1" >&2
-    ((ERRORS++))
+    ERRORS=$((ERRORS + 1))
 }
 
 log_warn() {
     echo "⚠️  WARNING: $1" >&2
-    ((WARNINGS++))
+    WARNINGS=$((WARNINGS + 1))
 }
 
 log_info() {
