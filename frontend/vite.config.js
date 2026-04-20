@@ -1,10 +1,46 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { execSync } from 'node:child_process'
+import fs from 'node:fs'
+import path from 'node:path'
+
+function safeGit(command, fallback = 'unknown') {
+  try {
+    return execSync(command, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || fallback
+  } catch {
+    return fallback
+  }
+}
+
+function buildInfoPlugin() {
+  return {
+    name: 'vitaloop-build-info',
+    generateBundle() {
+      const packageJson = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf8'))
+      const buildInfo = {
+        app: packageJson.name,
+        version: packageJson.version,
+        commit: safeGit('git rev-parse HEAD'),
+        shortCommit: safeGit('git rev-parse --short=12 HEAD'),
+        branch: safeGit('git rev-parse --abbrev-ref HEAD'),
+        builtAt: new Date().toISOString(),
+        mode: process.env.MODE || process.env.NODE_ENV || 'production',
+      }
+
+      this.emitFile({
+        type: 'asset',
+        fileName: 'build-info.json',
+        source: JSON.stringify(buildInfo, null, 2),
+      })
+    },
+  }
+}
 
 export default defineConfig({
   plugins: [
     react(),
+    buildInfoPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
