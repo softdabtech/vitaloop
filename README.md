@@ -8,6 +8,29 @@ Production URLs:
 
 VITALOOP is a health platform for lab report interpretation, personalized protocol generation, longitudinal biomarker tracking, weekly check-ins, and practitioner/admin operations.
 
+## Product Intention
+
+VITALOOP is not meant to be a generic health SaaS shell.
+
+- Core value is the loop: lab interpretation, personalized protocoling, longitudinal tracking, questionnaire inputs, and adaptive follow-up.
+- CRM is not a separate product line; it is the operational layer that supports access control, practitioner workflows, admin tooling, and organization context around the same core product.
+- Questionnaire, persona, and adaptation flows are part of the main product thesis, not optional add-ons.
+- Product decisions should preserve a closed loop from data intake to action to re-check, rather than optimizing only for acquisition or presentation.
+
+## Current Priorities
+
+- Auth stability across frontend, backend, and CRM
+- Canonical role resolution and predictable access control
+- CRM route access without auth loops or stale cookies
+- Onboarding completion and end-user routing correctness
+- Questionnaire and adaptive follow-up flows tied back to protocol and tracking
+
+Not current focus:
+
+- Investor-style surface polish without backend proof
+- Broad marketing expansion that outruns product truth
+- Splitting CRM into a standalone product concept
+
 ## Architecture
 
 The production system has three main runtime components:
@@ -37,6 +60,16 @@ Infrastructure and ops assets:
 - `nginx.vitaloop.conf`
 - `docker-compose.yml`
 - `supabase_migrations.sql`
+
+## Module Map
+
+| Module | Primary owner surface | Current status | Dependency risk | Recent focus |
+| --- | --- | --- | --- | --- |
+| `frontend/` | Product UI and auth-routing layer | Active | Medium: depends on backend route compatibility and Supabase session state | Landing updates, auth flow hardening, build-info deploy validation |
+| `backend/` | Canonical business logic and access-context layer | Active | High: role resolution, auth context, protocol/check-in/questionnaire continuity | `/auth/me` role normalization, compatibility routes, health build metadata |
+| `crm-mvc/` | Admin, ops, practitioner workflow layer | Active | High: depends on backend `/auth/me` and token handoff correctness | `POST /auth/post-login`, logout cleanup, `/version`, safer CRM access flow |
+| `scripts/` | Delivery and operational safety layer | Active | Medium: deploy correctness directly affects runtime trust | local frontend build + artifact sync, nginx sync, pre-deploy hardening |
+| `nginx.vitaloop.conf` | Edge routing and cache-control layer | Active | High: wrong config can break routing or stale asset verification | `vitaloop.today` alignment, `build-info.json` no-cache behavior |
 
 ## Repository Layout
 
@@ -119,6 +152,45 @@ cd crm-mvc
 dotnet restore
 dotnet run --project Vitaloop.Crm.Web.csproj
 ```
+
+## Roles and Access Source of Truth
+
+Canonical role resolution lives in the backend.
+
+- Canonical role constants are defined in `backend/app/constants.py` as `CRM_ROLES`.
+- Canonical normalization logic lives in `backend/app/utils/roles.py`.
+- Effective user context is resolved by backend `/auth/me`.
+- CRM should trust backend-resolved context for access decisions and route outcomes.
+- Frontend may only use auth/session state for UX routing hints, not as the final authority for privileged access.
+
+Current role vocabulary includes:
+
+- `end_user`
+- `super_admin`
+- `admin`
+- `org_admin`
+- `org_owner`
+- `client_admin`
+- `manager`
+- `practitioner`
+
+Responsibility split:
+
+- Frontend:
+  - starts sign-in flows
+  - handles end-user UX routing
+  - initiates CRM token handoff
+  - must not be treated as the source of truth for admin or CRM authorization
+- Backend:
+  - normalizes role values from account data and token metadata
+  - resolves final user context and onboarding state
+  - decides the canonical effective role exposed to other layers
+- CRM:
+  - validates Supabase token authenticity
+  - consumes backend user context
+  - enforces CRM/admin route access using backend-resolved context, not frontend assumptions
+
+Do not let privileged access rules drift into frontend-only checks. If a role or access rule matters for data access, CRM access, or admin visibility, the decision belongs in backend context resolution and server-side enforcement.
 
 ## Auth Flow
 
