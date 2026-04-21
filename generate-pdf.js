@@ -3,16 +3,18 @@ const path = require('path');
 
 (async () => {
   try {
+    const inputArg = process.argv[2] || 'docs/INVESTOR_PITCH_DECK.html';
+    const outputArg = process.argv[3] || 'docs/VITALOOP_INVESTOR_PITCH_DECK.pdf';
     const browser = await puppeteer.launch({ headless: 'new' });
     const page = await browser.newPage();
-    
-    const htmlPath = 'file://' + path.resolve('docs/INVESTOR_PITCH_DECK.html');
+
+    const htmlPath = 'file://' + path.resolve(inputArg);
     console.log('Loading:', htmlPath);
-    
+
     await page.goto(htmlPath, { waitUntil: 'networkidle0', timeout: 30000 });
-    
-    const pdfPath = path.resolve('docs/VITALOOP_INVESTOR_PITCH_DECK.pdf');
-    
+
+    const pdfPath = path.resolve(outputArg);
+
     await page.pdf({
       path: pdfPath,
       width: '1280px',
