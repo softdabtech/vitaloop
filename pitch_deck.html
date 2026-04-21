@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VITALOOP — Investor Pitch (Landscape, Updated)</title>
+  <style>
+    @page { size: A4 landscape; margin: 10mm; }
+    html,body { margin:0; padding:0; background:#efebe5; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    body { font-family: Inter, system-ui, -apple-system, "Helvetica Neue", Arial; color:#111; }
+    .slide {
+      width: 297mm;
+      height: 210mm;
+      box-sizing:border-box;
+      padding: 10.5mm;
+      display:flex;
+      flex-direction:column;
+      page-break-after:always;
+      background: linear-gradient(180deg,#efebe5,#efe9df 80%);
+    }
+    .header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+      margin-bottom:12px;
+      border-bottom:1px solid rgba(0,0,0,0.06);
+      padding-bottom:8px;
+    }
+    .logo { font-weight:900; font-size:15pt; }
+    .tag { font-size:9pt; letter-spacing:0.09em; text-transform:uppercase; color:#6b6b66; font-weight:700; }
+    h1 { margin:6px 0 8px 0; font-size:33pt; line-height:0.98; letter-spacing:-0.02em; }
+    h2 { margin:0 0 8px 0; font-size:20pt; line-height:1.04; max-width:none; }
+    h3 { margin:0 0 5px 0; font-size:12.5pt; }
+    p.lead { margin:0 0 8px 0; color:#555; font-size:11.6pt; max-width:none; }
+    .two-col { display:grid; grid-template-columns: 1.02fr 0.98fr; gap:14px; margin-top:10px; align-items:start; }
+    .two-col > div { display:flex; flex-direction:column; gap:10px; }
+    .three-col { display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-top:10px; }
+    .card {
+      background: rgba(255,255,255,0.28);
+      border:1px solid rgba(0,0,0,0.08);
+      padding:12px;
+      border-radius:12px;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.02) inset;
+    }
+    .big-num { font-size:30pt; font-weight:900; line-height:1; color:#111; }
+    .muted { color:#61605b; font-size:11pt; }
+    ul { margin:6px 0 8px 18px; }
+    li { margin:4px 0; font-size:11pt; color:#222; line-height:1.28; }
+    .callout {
+      border-left:4px solid #111;
+      background: rgba(255,255,255,0.20);
+      padding:9px 11px;
+      border-radius:6px;
+      margin-top:10px;
+      max-width: none;
+    }
+    .footer {
+      margin-top:10px;
+      border-top:1px solid rgba(0,0,0,0.06);
+      padding-top:8px;
+      display:flex;
+      justify-content:space-between;
+      color:#6b6b66;
+      font-size:9pt;
+      gap:16px;
+    }
+    .small { font-size:9.5pt; color:#666; }
+    .metric { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.04); }
+    .metric:last-child { border-bottom:none; }
+    .metric .k { font-weight:800; }
+    .metric .v { color:#111; font-weight:700; }
+    .pill { display:inline-block; padding:6px 10px; border-radius:999px; background:rgba(0,0,0,0.06); font-weight:700; font-size:9.5pt; }
+    .center { text-align:center; }
+    .tight { line-height:1.18; }
+    .comparison-table { width:100%; border-collapse:collapse; margin-top:8px; table-layout:fixed; }
+    .comparison-table th, .comparison-table td { border:1px solid rgba(0,0,0,0.06); padding:7px 9px; text-align:left; font-size:10pt; vertical-align:top; line-height:1.24; }
+    .comparison-table th { background: rgba(255,255,255,0.18); font-weight:800; }
+    .market-list { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+    .market-box { background: rgba(255,255,255,0.18); padding:9px; border-radius:10px; border:1px solid rgba(0,0,0,0.06); }
+    .fundraise-dark {
+      background: rgba(17,17,17,0.94);
+      color: #fff;
+    }
+    .fundraise-dark .round-title,
+    .fundraise-dark .round-amount,
+    .fundraise-dark ul,
+    .fundraise-dark li,
+    .fundraise-dark strong {
+      color: #fff !important;
+    }
+    .section-intro { max-width: none; }
+    @media screen {
+      body {
+        padding: 10px 0;
+      }
+      .slide {
+        width: min(297mm, calc(100vw - 24px));
+        height: auto;
+        min-height: 0;
+        margin: 0 auto 12px;
+      }
+    }
+    @media print {
+      .slide {
+        width: 297mm;
+        height: 210mm;
+        margin: 0;
+        page-break-after: always;
+        -webkit-print-color-adjust:exact;
+        print-color-adjust:exact;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SLIDE 1: TITLE & CURRENT STAGE -->
+  <section class="slide">
+    <div class="header">
+      <div>
+        <div class="logo">VITALOOP</div>
+        <div class="muted small">AI Biohacking · Lab → Protocol · Longitudinal Health</div>
+      </div>
+      <div class="tag">Pre-seed · Late build / Early validation</div>
+    </div>
+
+    <h1>Live product. Strong technical foundation. Early commercial validation.</h1>
+    <p class="lead tight">
+      VITALOOP turns lab PDFs and images into prioritized biomarker insights and adaptive protocols. The product is already live across the user app, API, and practitioner CRM. The next phase is market validation, not core construction.
+    </p>
+
+    <div class="callout">
+      <strong>Investor snapshot:</strong> Live product, technical risk meaningfully reduced, and the next milestone is proving repeatable conversion, retention, and practitioner adoption.
+    </div>
+
+    <div style="margin-top:12px;" class="three-col">
+      <div class="card center">
+        <div class="big-num">85–90%</div>
+        <div class="muted">Core architecture readiness</div>
+      </div>
+      <div class="card center">
+        <div class="big-num">3</div>
+        <div class="muted">Live surfaces (App / API / CRM)</div>
+      </div>
+      <div class="card center">
+        <div class="big-num">&lt;60s</div>
+        <div class="muted">Upload → Protocol (typical)</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>April 2026 · Working production product</div>
+      <div>Contact: bombela@softdab.tech</div>
+    </div>
+  </section>
+
+  <!-- SLIDE 2: WHAT IS ALREADY REAL -->
+  <section class="slide">
+    <div class="header">
+      <div class="logo">VITALOOP</div>
+      <div class="tag">What is already real</div>
+    </div>
+
+    <h2>Production pieces & operational hardening</h2>
+    <div class="two-col">
+      <div>
+        <h3>Product surfaces</h3>
+        <ul>
+          <li>Public user app — upload, dashboard, weekly check-ins, adaptive protocol.</li>
+          <li>API — structured biomarker extraction, normalization, trend endpoints.</li>
+          <li>Practitioner CRM — client summaries, assignment workflows, practitioner views.</li>
+        </ul>
+
+        <h3 style="margin-top:12px;">Core product loop</h3>
+        <ul>
+          <li>Lab interpretation → protocol generation → longitudinal tracking → weekly check-ins → clinician escalation when needed.</li>
+          <li>Core loop validated in production with real user flows.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h3>Infrastructure & ops</h3>
+        <ul>
+          <li>Deploy hardening: build metadata in health endpoints, frontend artifact verification, nginx sync hardening.</li>
+          <li>Auth hardening: role normalization, CRM token handoff, logout cleanup, onboarding routing.</li>
+          <li>LLM path: self-hosted OpenAI-compatible runtime with dedicated monitoring.</li>
+        </ul>
+
+        <h3 style="margin-top:12px;">Product safety & observability</h3>
+        <ul>
+          <li>LLM health monitoring, version health endpoints, and runtime metrics.</li>
+          <li>Privacy-first access controls and identity boundaries between surfaces.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Repo & shipping alignment:</strong> production deploys, monitoring, and release hardening are already reflected in the codebase and recent ship history.
+    </div>
+
+    <div class="footer">
+      <div>Build risk reduced — now validating market signals</div>
+      <div>Next: data-driven validation of growth & retention</div>
+    </div>
+  </section>
+
+  <!-- SLIDE 3: STRENGTHS & MOAT -->
+  <section class="slide">
+    <div class="header">
+      <div class="logo">VITALOOP</div>
+      <div class="tag">Strengths & Moat</div>
+    </div>
+
+    <h2>Where VITALOOP has durable advantage</h2>
+
+    <div class="three-col">
+      <div class="card">
+        <h3>Technical discipline</h3>
+        <p class="muted small">Hardened deployment, artifact commit verification, runtime observability — production-grade engineering reduces operational risk.</p>
+      </div>
+
+      <div class="card">
+        <h3>Product wedge</h3>
+        <p class="muted small">Focused on lab → prioritized action → longitudinal memory → weekly adherence, not generic wellness features.</p>
+      </div>
+
+      <div class="card">
+        <h3>Practitioner surface</h3>
+        <p class="muted small">CRM enables clinics and practitioners to manage clients with history, assignments, and escalation flows — a B2B path to scale.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;" class="two-col">
+      <div class="card">
+        <div class="muted">Operational signals</div>
+        <div style="margin-top:8px;">
+          <div class="metric"><div class="k">LLM runtime</div><div class="v">Self-hosted + monitoring</div></div>
+          <div class="metric"><div class="k">Auth</div><div class="v">Role normalization & CRM tokens</div></div>
+          <div class="metric"><div class="k">Deploy</div><div class="v">Artifact verification & version health</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="muted">Product readiness</div>
+        <div style="margin-top:8px;">
+          <div class="metric"><div class="k">Core loop</div><div class="v">Implemented</div></div>
+          <div class="metric"><div class="k">Lab formats</div><div class="v">Quest, LabCorp, +50</div></div>
+          <div class="metric"><div class="k">Time to protocol</div><div class="v">&lt;60s</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>Execution-focused team with production discipline</div>
+      <div>Now converting that into repeatable commercial signals</div>
+    </div>
+  </section>
+
+  <!-- SLIDE 4: COMPETITION & POSITIONING -->
+  <section class="slide">
+    <div class="header">
+      <div class="logo">VITALOOP</div>
+      <div class="tag">Competition & Positioning</div>
+    </div>
+
+    <h2>Competitive landscape — where we sit</h2>
+    <p class="muted small section-intro">A concise view of adjacent categories and where VITALOOP is structurally stronger.</p>
+
+    <table class="comparison-table" aria-hidden="false">
+      <thead>
+        <tr>
+          <th>Competitor</th>
+          <th>Core offering</th>
+          <th>Where they excel</th>
+          <th>Where VITALOOP differentiates</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>LabCorp / MyChart</td>
+          <td>Lab delivery & records</td>
+          <td>Trusted lab data access and reporting</td>
+          <td>We add structured extraction, prioritization and execution layer on top of raw lab data.</td>
+        </tr>
+        <tr>
+          <td>Everlywell</td>
+          <td>At-home tests + results</td>
+          <td>Consumer testing & easy access to test kits</td>
+          <td>We focus on longitudinal interpretation and adaptive protocols rather than one-off test delivery.</td>
+        </tr>
+        <tr>
+          <td>Levels</td>
+          <td>Metabolic monitoring (CGM)</td>
+          <td>Real-time metabolic signals and lifestyle insights</td>
+          <td>We cover broad lab panels (85+ biomarkers) and long-term trend analysis, not only CGM data.</td>
+        </tr>
+        <tr>
+          <td>InsideTracker / Function Health</td>
+          <td>Lab interpretation + recommendations</td>
+          <td>Actionable recommendations from lab data</td>
+          <td>We combine extraction + longitudinal memory + weekly adherence loop + practitioner CRM in one platform.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:14px;" class="callout">
+      <strong>Positioning summary:</strong> others provide pieces; VITALOOP combines extraction, prioritization, adaptive protocol, and practitioner workflows in one system.
+    </div>
+
+    <div class="footer">
+      <div>Competitive moat: memory + execution + practitioner surface</div>
+      <div>Go-to-market: consumer-first referrals → practitioner expansion</div>
+    </div>
+  </section>
+
+  <!-- SLIDE 5: MARKET RESEARCH & GTM -->
+  <section class="slide">
+    <div class="header">
+      <div class="logo">VITALOOP</div>
+      <div class="tag">Market Research & GTM</div>
+    </div>
+
+    <h2>Market opportunity & go-to-market</h2>
+
+    <div class="two-col">
+      <div>
+        <h3>Market context (qualitative)</h3>
+        <ul>
+          <li>Consumers increasingly want actionable guidance, not raw PDFs.</li>
+          <li>Practitioners need faster review workflows with risk and adherence context.</li>
+          <li>AI document understanding makes this wedge timely and technically feasible.</li>
+        </ul>
+
+        <h3 style="margin-top:10px;">Target segments</h3>
+        <ul>
+          <li>High-intent biohackers and health optimization consumers (self-paying Pro users).</li>
+          <li>Functional medicine practitioners and clinics (Enterprise / CRM adoption).</li>
+          <li>Integrations with lab providers and marketplaces for broader reach.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h3>GTM channels & experiments</h3>
+        <div class="market-list">
+          <div class="market-box">
+            <strong>Referral & communities</strong>
+            <p class="small">Biohacking, longevity, and niche health communities for low-CAC adoption.</p>
+          </div>
+          <div class="market-box">
+            <strong>Practitioner partnerships</strong>
+            <p class="small">Pilot CRM upsell to practitioners who can bring cohorts of paying clients.</p>
+          </div>
+          <div class="market-box">
+            <strong>Content & education</strong>
+            <p class="small">SEO around ferritin, hormones, and repeat testing to drive organic acquisition.</p>
+          </div>
+          <div class="market-box">
+            <strong>Lab integrations</strong>
+            <p class="small">Partnerships with labs (Quest, LabCorp) to shorten path from test to user upload.</p>
+          </div>
+        </div>
+
+        <h3 style="margin-top:12px;">Key metrics to prove</h3>
+        <ul>
+          <li>Acquisition loop conversion: referral → upload → active user.</li>
+          <li>Retention funnel: D1, D7, D30 and repeat uploads per user.</li>
+          <li>Monetization: Pro conversion rate and ARPU; practitioner seat conversion.</li>
+          <li>Unit economics: CAC payback in months and LTV per cohort.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:12px;">
+      <strong>Suggested validation dashboard:</strong> one source of truth for MAU, uploads, repeat uploads, protocol completion, practitioner seats, and cohort revenue.
+    </div>
+
+    <div class="footer">
+      <div>Strategy: prove one reliable acquisition loop, then expand the highest-ROI channel</div>
+      <div>Measurement: investor-ready dashboard is a priority for the next 30–60 days</div>
+    </div>
+  </section>
+
+  <!-- SLIDE 6: RISKS, INVESTOR INTEREST & ASK -->
+  <section class="slide">
+    <div class="header">
+      <div class="logo">VITALOOP</div>
+      <div class="tag">Risks · Investor Interest · Ask</div>
+    </div>
+
+    <h2>Risks to surface, investor signals, and funding ask</h2>
+
+    <div class="two-col">
+      <div>
+        <h3>Principal risks (transparent)</h3>
+        <ul>
+          <li>Market risk: product-market fit at scale not yet demonstrated.</li>
+          <li>Commercial risk: revenue quality, ARPU, and practitioner pull not mature.</li>
+          <li>Retention risk: long-term cohorts need to be proven (repeat uploads, adherence).</li>
+          <li>Regulatory & trust: clinical safety processes and escalation pathways require formalization.</li>
+        </ul>
+
+        <h3 style="margin-top:10px;">How we mitigate</h3>
+        <ul>
+          <li>Run focused experiments to prove a single acquisition + retention loop in 60–90 days.</li>
+          <li>Prioritize practitioner pilots that deliver measurable bookings and seat purchases.</li>
+          <li>Build clinical escalation and audit logs to support safety and trustworthiness.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h3>Investor interest & signals</h3>
+        <ul>
+          <li>Early inbound from angels and health-focused investors around production readiness.</li>
+          <li>Practitioner referral interest during pilots is an early enterprise signal.</li>
+          <li>Technical credibility is a repeated theme in feedback.</li>
+        </ul>
+
+        <h3 style="margin-top:10px;">Fund raise & use</h3>
+        <div class="card fundraise-dark">
+          <div style="text-align:center;">
+            <div class="round-title" style="font-size:12pt; font-weight:900;">Pre-seed Round</div>
+            <div class="round-amount" style="font-size:36pt; font-weight:900; margin:10px 0;">$1M</div>
+          </div>
+          <div style="margin-top:12px; color:rgba(255,255,255,0.9); font-size:10.5pt;">
+            <ul style="margin-top:8px;">
+              <li>45% Product & Safety (extraction, protocol quality, clinical workflows)</li>
+              <li>35% GTM & validation loops (acquisition, practitioner pilots)</li>
+              <li>20% Ops & compliance (observability, infra, legal)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:12px;">
+      <strong>Ask to investors:</strong> help validate acquisition and practitioner pull through intros, pilot feedback, and scrutiny on cohort metrics.
+    </div>
+
+    <div class="footer">
+      <div>Bottom line: product credibility is established — the round funds market validation, not construction.</div>
+      <div>Contact: bombela@softdab.tech · VITALOOP · 2026</div>
+    </div>
+  </section>
+
+</body>
+</html>
