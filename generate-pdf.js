@@ -15,11 +15,12 @@ const path = require('path');
     
     await page.pdf({
       path: pdfPath,
-      format: 'A4',
-      landscape: true,
+      width: '1280px',
+      height: '720px',
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
       scale: 1,
-      printBackground: true
+      printBackground: true,
+      preferCSSPageSize: true
     });
     
     await browser.close();
