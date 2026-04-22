@@ -63,8 +63,8 @@ export default function HowItWorks() {
   return (
     <div className="min-h-screen bg-[#09101d] text-white">
       <Seo
-        title="Health Intelligence Hub | VITALOOP"
-        description="Explore how VITALOOP turns lab uploads into biomarker insight, personalized protocols, and a repeatable biohacking feedback loop."
+        title="How AI Blood Test Analysis Works | VITALOOP"
+        description="See how VITALOOP turns blood test uploads into prioritized biomarker insights and step-by-step weekly protocols. Start free and test your first report."
         path="/how-it-works"
       />
       <div className="pointer-events-none fixed inset-0 -z-10">

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
+import Seo from '../components/Seo.jsx'
 
 export default function Terms() {
   const navigate = useNavigate()
@@ -13,6 +14,11 @@ export default function Terms() {
       maxWidth: 720,
       margin: '0 auto',
     }}>
+      <Seo
+        title="Terms of Service | VITALOOP"
+        description="Review VITALOOP terms of service, subscription conditions, medical disclaimer, acceptable use, and liability limitations."
+        path="/terms"
+      />
       <button
         onClick={() => navigate('/')}
         style={{

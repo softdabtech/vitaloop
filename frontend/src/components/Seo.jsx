@@ -1,6 +1,8 @@
 import { Helmet } from 'react-helmet-async'
 
 const BASE_URL = 'https://vitaloop.today'
+const DEFAULT_TITLE = 'Interpret Blood Test Results with AI | VITALOOP'
+const DEFAULT_DESCRIPTION = 'Upload your blood test PDF, get AI biomarker analysis in under 60 seconds, and follow a personalized weekly protocol. Start free with no credit card.'
 
 /**
  * Per-page SEO head manager.
@@ -17,20 +19,21 @@ export default function Seo({
   image = `${BASE_URL}/og-cover.jpg`,
   schemas = [],
 }) {
-  const fullTitle = title || 'AI Lab Analysis & Biohacking Platform | VITALOOP'
+  const fullTitle = title || DEFAULT_TITLE
+  const safeDescription = description || DEFAULT_DESCRIPTION
   const canonical = `${BASE_URL}${path}`
 
   return (
     <Helmet>
       <title>{fullTitle}</title>
-      <meta name="description" content={description} />
+      <meta name="description" content={safeDescription} />
       <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
       <link rel="canonical" href={canonical} />
 
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content="VITALOOP" />
       <meta property="og:title" content={fullTitle} />
-      <meta property="og:description" content={description} />
+      <meta property="og:description" content={safeDescription} />
       <meta property="og:url" content={canonical} />
       <meta property="og:image" content={image} />
       <meta property="og:image:width" content="1200" />
@@ -39,7 +42,7 @@ export default function Seo({
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:site" content="@vitaloop" />
       <meta name="twitter:title" content={fullTitle} />
-      <meta name="twitter:description" content={description} />
+      <meta name="twitter:description" content={safeDescription} />
       <meta name="twitter:image" content={image} />
 
       {schemas.map((schema, i) => (

@@ -86,7 +86,7 @@ export default function ForInvestors() {
     <div className="min-h-screen bg-[#09101d] text-white">
       <Seo
         title="For Investors | VITALOOP"
-        description="Investor overview of VITALOOP: founding team, traction signals, enterprise narrative, and competitive positioning."
+        description="Investor overview of VITALOOP: AI blood test platform traction, product moat, enterprise practitioner workflows, and growth narrative."
         path="/for-investors"
       />
 
