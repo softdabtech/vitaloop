@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import Seo from '../components/Seo.jsx'
 
 export default function Privacy() {
   const navigate = useNavigate()
@@ -12,6 +13,11 @@ export default function Privacy() {
       maxWidth: 720,
       margin: '0 auto',
     }}>
+      <Seo
+        title="Privacy Policy | VITALOOP"
+        description="Read how VITALOOP stores, processes, and protects your blood test data, including AI processing, security controls, and deletion rights."
+        path="/privacy"
+      />
       <button
         onClick={() => navigate('/')}
         style={{

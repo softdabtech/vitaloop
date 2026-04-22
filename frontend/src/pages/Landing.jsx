@@ -743,8 +743,8 @@ export default function Landing() {
   return (
     <div className={rootClasses}>
       <Seo
-        title="AI Lab Analysis & Biohacking Platform | VITALOOP"
-        description="Upload blood tests, get AI-powered biomarker analysis, personalized health protocols, and longitudinal tracking. Start free — no credit card required."
+        title="Interpret Blood Test Results with AI | VITALOOP"
+        description="Analyze blood test results with AI in under 60 seconds. Upload your lab PDF, see prioritized biomarkers, and start a personalized weekly protocol for free."
         path="/"
         schemas={[SCHEMA_HOWTO, SCHEMA_FAQ]}
       />

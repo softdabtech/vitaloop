@@ -269,8 +269,8 @@ export default function ForNutritionists() {
   return (
     <div className="min-h-screen bg-[#09101d] text-white">
       <Seo
-          title="For Nutritionists | VITALOOP"
-          description="VITALOOP for nutritionists: bring and manage patients, interpret lab reports in minutes, and run personalized nutrition and recovery programs."
+        title="AI Lab Analysis for Nutritionists | VITALOOP"
+        description="Manage clients, interpret blood test labs in minutes, and run personalized nutrition protocols in one practitioner workspace. Start free with VITALOOP."
         path="/for-nutritionists"
       />
 

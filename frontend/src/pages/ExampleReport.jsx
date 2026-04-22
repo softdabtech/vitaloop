@@ -34,8 +34,8 @@ export default function ExampleReport() {
       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
     }}>
       <Seo
-        title="Example Biomarker Report"
-        description="Preview a realistic VITALOOP biomarker report with interactive zones, supplement protocols, and AI-generated insights."
+        title="Blood Test Analysis Example Report | VITALOOP"
+        description="Preview a real AI blood test interpretation with biomarker flags, protocol actions, and trend tracking. Then upload your own labs and start free."
         path="/example-report"
       />
       {/* Header */}
