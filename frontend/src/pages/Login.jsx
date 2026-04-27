@@ -154,6 +154,7 @@ export default function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [email, setEmail] = useState('')
+    const [showResetInfo, setShowResetInfo] = useState(false)
   const [password, setPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(searchParams.get('signup') === 'true')
   const [isForgot, setIsForgot] = useState(false)
@@ -178,6 +179,10 @@ export default function Login() {
       }
 
   useEffect(() => {
+        // Show info if user comes from reset password link
+        if (searchParams.get('reset') === 'true') {
+          setShowResetInfo(true)
+        }
     let active = true
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -415,6 +420,19 @@ export default function Login() {
           </p>
         </div>
 
+        {showResetInfo && (
+          <div style={{
+            background: 'rgba(16,185,129,0.10)',
+            border: '1px solid #10b981',
+            color: '#166534',
+            borderRadius: 12,
+            padding: '12px 14px',
+            fontSize: 14,
+            marginBottom: 16,
+          }}>
+            Пароль успешно сброшен. Войдите с новым паролем.
+          </div>
+        )}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Google reCAPTCHA (only for sign up) */}
           {isSignUp && (
