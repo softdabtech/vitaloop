@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertCircle, Building2, ShieldCheck, Sparkles, UserCircle2 } from 'lucide-react'
+import HintBanner from '../components/tour/HintBanner.jsx'
+import { useTourHints } from '../hooks/useTourHints.js'
 import { useOCR } from '../hooks/useOCR.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import UploadZone from '../components/UploadZone.jsx'
@@ -16,10 +18,17 @@ import '../styles/dashboard2026.css'
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
 const SUPPORTED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
 
+const UPLOAD_HINTS = [
+  '📄 Upload a PDF or a clear photo of your lab report. Your file is read entirely in your browser — only the extracted text is sent to our servers, not the original file.',
+  '💊 Add current symptoms before uploading. The AI uses them to prioritize which biomarkers are most relevant to your situation.',
+  '✅ After upload you\'ll see a color-coded biomarker breakdown and a personalized supplement protocol — all generated automatically.',
+]
+
 export default function Upload() {
   const navigate = useNavigate()
   const { processFile, progress, isProcessing } = useOCR()
   const { isPremium, uploadCount, uploadLimit, uploadsRemaining, loading: subLoading, refresh: refreshSub } = useSubscription()
+  const { show: showHints, dismiss: dismissHints } = useTourHints('upload')
   const [symptoms, setSymptoms] = useState([])
   const [labName, setLabName] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
@@ -141,6 +150,10 @@ export default function Upload() {
           subtitle="Your file is processed locally first. Only extracted text is sent for analysis."
           helper="Upload report -> add optional symptoms -> open biomarkers and generated protocol."
         />
+
+        {showHints && (
+          <HintBanner hints={UPLOAD_HINTS} onDone={dismissHints} />
+        )}
 
         {profileIncomplete && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5 text-sm">

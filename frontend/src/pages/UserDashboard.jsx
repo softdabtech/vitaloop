@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
+import HintBanner from '../components/tour/HintBanner.jsx'
+import { useTourHints } from '../hooks/useTourHints.js'
 import {
   Activity,
   ArrowRight,
@@ -179,10 +181,17 @@ function HealthRing({ value }) {
   )
 }
 
+const DASHBOARD_HINTS = [
+  '👋 Welcome to your health cabinet! Start by uploading your first lab report — the dashboard fills in automatically after analysis.',
+  '📋 The checklist below tracks your setup progress. Each step you complete improves the accuracy of your AI-generated protocol and insights.',
+  '⚡ After your first upload you\'ll see biomarker scores, supplement assignments, and a health score — all updated automatically with each new test.',
+]
+
 export default function UserDashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const reduced = useReducedMotion()
+  const { show: showHints, dismiss: dismissHints } = useTourHints('dashboard')
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -272,6 +281,10 @@ export default function UserDashboard() {
           </div>
         ) : null}
       />
+
+      {showHints && !loading && (
+        <HintBanner hints={DASHBOARD_HINTS} onDone={dismissHints} />
+      )}
 
       {error && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
