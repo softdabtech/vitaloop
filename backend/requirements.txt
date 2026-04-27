@@ -34,3 +34,6 @@ pytest-asyncio==0.23.7
 
 # Background tasks
 apscheduler==3.10.4
+
+# Sentry
+sentry-sdk==1.44.1
