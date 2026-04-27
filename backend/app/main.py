@@ -41,7 +41,7 @@ if settings.sentry_dsn and sentry_sdk is not None:
     )
 elif settings.sentry_dsn and sentry_sdk is None:
     logger.warning("sentry_dsn_set_but_sdk_missing")
-from app.routers import health
+from app.routers import health, llm_consult
 from app.routers.identity import auth, profile, onboarding
 from app.routers.analysis import analyze, insights, red_flags, timeline, dashboard
 from app.routers.protocol import protocol, progress, symptoms, checkins, questionnaire, assignments, compatibility
@@ -156,7 +156,4 @@ app.include_router(auth.router, prefix="/users", tags=["users"])
 app.include_router(questionnaire.router, prefix="/questionnaires", tags=["questionnaire"])
 app.include_router(dashboard.router)
 app.include_router(compatibility.router)
-
-@app.on_event("startup")
-def start_schedulers():
-    checkin_reminder.start()
+app.include_router(llm_consult.router, prefix="/llm", tags=["llm"])
