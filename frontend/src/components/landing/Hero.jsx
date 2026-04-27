@@ -449,11 +449,6 @@ export default function Hero() {
   const navigate = useNavigate()
   const reduced = useReducedMotion()
   const [previewOpen, setPreviewOpen] = useState(false)
-
-  // Stagger container: chip → h1 → p1 → p2 → ctas → proof
-  const containerVariants = reduced ? {} : stagger(0.1, 0)
-  const childVariants = reduced ? {} : staggerChild
-
   return (
     <section
       id="hero"
@@ -467,165 +462,52 @@ export default function Hero() {
         position: 'relative', overflow: 'hidden',
       }}
     >
-      {/* Radial glow — fades in once */}
-      {!reduced && (
-        <div
-          aria-hidden="true"
-          className="hero-radial-glow"
+      {/* Новый SVG-баннер */}
+      <img
+        src="/mockups/hero-2026.svg"
+        alt="VITALOOP premium dashboard hero banner"
+        style={{
+          width: '100%',
+          maxWidth: 1200,
+          height: 'auto',
+          borderRadius: 32,
+          boxShadow: '0 8px 48px rgba(16,24,32,0.18)',
+          margin: '0 auto',
+          display: 'block',
+        }}
+        draggable={false}
+      />
+
+      {/* CTA row под картинкой */}
+      <div style={{ marginTop: 32, textAlign: 'center' }}>
+        <button
+          onClick={() => navigate('/login?signup=true')}
+          aria-label="Start free — no card needed"
+          className="btn-primary hero-cta-primary"
           style={{
-            position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
-            background: 'radial-gradient(ellipse 70% 55% at 50% 40%, #10b981, transparent)',
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'var(--teal-800)', color: 'white',
+            border: 'none', borderRadius: 980,
+            padding: '16px 36px', fontSize: 17, fontWeight: 600,
+            cursor: 'pointer', marginRight: 16,
           }}
-        />
-      )}
-
-      {/* Animated particle background */}
-      <ParticleCanvas />
-
-      {/* Decorative side icons — left */}
-      <div aria-hidden="true" className="hero-deco" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 200, zIndex: 0, pointerEvents: 'none' }}>
-        {[
-          { Icon: Activity,     top: '14%', left: '18%', rotate: -15, size: 28 },
-          { Icon: FlaskConical, top: '32%', left: '6%',  rotate: 10,  size: 22 },
-          { Icon: Heart,        top: '52%', left: '22%', rotate: -8,  size: 24 },
-          { Icon: BarChart2,    top: '70%', left: '10%', rotate: 12,  size: 26 },
-          { Icon: Droplets,     top: '84%', left: '28%', rotate: -6,  size: 20 },
-        ].map(({ Icon, top, left, rotate, size }, i) => (
-          <div key={i} style={{ position: 'absolute', top, left, transform: `rotate(${rotate}deg)`, opacity: 0.055 }}>
-            <Icon size={size} color="var(--teal-500)" strokeWidth={1.2} />
-          </div>
-        ))}
+        >
+          Start Free — No card required <ArrowRight size={16} aria-hidden="true" />
+        </button>
+        <button
+          onClick={() => setPreviewOpen(true)}
+          className="hero-cta-secondary"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'transparent',
+            border: '1.5px solid var(--gray-300)',
+            borderRadius: 980, padding: '16px 28px', fontSize: 17,
+            color: 'var(--gray-700)', cursor: 'pointer',
+          }}
+        >
+          See how it works <ArrowRight size={16} aria-hidden="true" />
+        </button>
       </div>
-
-      {/* Decorative side icons — right */}
-      <div aria-hidden="true" className="hero-deco" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 200, zIndex: 0, pointerEvents: 'none' }}>
-        {[
-          { Icon: ScanLine,      top: '12%', right: '14%', rotate: 8,   size: 26 },
-          { Icon: Zap,           top: '30%', right: '24%', rotate: -12, size: 22 },
-          { Icon: ClipboardList, top: '50%', right: '8%',  rotate: 6,   size: 28 },
-          { Icon: Activity,      top: '66%', right: '20%', rotate: -10, size: 24 },
-          { Icon: FlaskConical,  top: '82%', right: '30%', rotate: 14,  size: 20 },
-        ].map(({ Icon, top, right, rotate, size }, i) => (
-          <div key={i} style={{ position: 'absolute', top, right, transform: `rotate(${rotate}deg)`, opacity: 0.055 }}>
-            <Icon size={size} color="var(--teal-500)" strokeWidth={1.2} />
-          </div>
-        ))}
-      </div>
-
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        style={{ position: 'relative', zIndex: 1, maxWidth: 760, width: '100%', textAlign: 'center' }}
-      >
-
-        {/* Eyebrow chip */}
-        <motion.div variants={childVariants} style={{ marginBottom: 32 }}>
-          <span style={{
-            display: 'inline-block',
-            background: 'var(--teal-50)', border: '0.5px solid var(--teal-300)',
-            borderRadius: 980, padding: '6px 18px',
-            fontSize: 12, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--teal-600)',
-          }}>
-            AI-Powered Biohacking as a Service
-          </span>
-        </motion.div>
-
-        {/* Headline */}
-        <motion.h1
-          variants={reduced ? {} : {
-            hidden: { opacity: 0, y: 32, filter: 'blur(6px)' },
-            visible: { opacity: 1, y: 0, filter: 'blur(0px)',
-              transition: { duration: 0.48, ease: EASE } },
-          }}
-          style={{
-            fontSize: 'clamp(42px, 7vw, 84px)',
-            fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.05,
-            color: 'var(--gray-900)',
-            marginBottom: 24,
-          }}
-        >
-          Know your body.<br />
-          <span style={{ color: 'var(--teal-500)' }}>Upgrade your life.</span>
-        </motion.h1>
-
-        {/* Subheadline */}
-        <motion.p variants={childVariants} style={{
-          fontSize: 'clamp(16px, 2.5vw, 19px)', color: 'var(--gray-500)',
-          maxWidth: 580, margin: '0 auto 12px',
-          lineHeight: 1.6,
-        }}>
-          Upload any lab result and receive an AI-powered analysis of 50+ biomarkers, red flags, and a personalized protocol in seconds.
-        </motion.p>
-        <motion.p variants={childVariants} style={{
-          fontSize: 'clamp(14px, 2vw, 17px)', color: 'var(--gray-400)',
-          maxWidth: 560, margin: '0 auto 40px',
-          lineHeight: 1.6,
-        }}>
-          Timeline tracking, weekly check-ins, and practitioner CRM — everything in one place.
-        </motion.p>
-
-        {/* CTA row */}
-        <motion.div
-          variants={childVariants}
-          className="hero-cta-row"
-          style={{
-            display: 'flex', gap: 16, justifyContent: 'center',
-            flexWrap: 'wrap', marginBottom: 40,
-          }}
-        >
-          <motion.button
-            onClick={() => navigate('/login?signup=true')}
-            aria-label="Start free — no card needed"
-            className="btn-primary hero-cta-primary"
-            {...buttonHoverProps}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: 'var(--teal-800)', color: 'white',
-              border: 'none', borderRadius: 980,
-              padding: '16px 36px', fontSize: 17, fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Start Free — No card required <ArrowRight size={16} aria-hidden="true" />
-          </motion.button>
-          <motion.button
-            onClick={() => setPreviewOpen(true)}
-            className="hero-cta-secondary"
-            {...buttonHoverProps}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: 'transparent',
-              border: '1.5px solid var(--gray-300)',
-              borderRadius: 980, padding: '16px 28px', fontSize: 17,
-              color: 'var(--gray-700)', cursor: 'pointer',
-            }}
-          >
-            See how it works <ArrowRight size={16} aria-hidden="true" />
-          </motion.button>
-        </motion.div>
-
-        {/* Social proof */}
-        <motion.div
-          variants={childVariants}
-          className="hero-proof-row"
-          style={{
-            display: 'flex', gap: 20, justifyContent: 'center',
-            alignItems: 'center', flexWrap: 'wrap',
-          }}
-        >
-          <span style={{ fontSize: 13, color: 'var(--gray-500)' }}>
-            <span style={{ color: 'var(--teal-500)' }}>★★★★★</span> 4.9 early-user rating
-          </span>
-          <span aria-hidden="true" className="hero-proof-divider" style={{ width: '0.5px', height: 16, background: 'var(--gray-100)', display: 'inline-block' }} />
-          <span style={{ fontSize: 13, color: 'var(--gray-500)' }}>Works with any laboratory worldwide</span>
-          <span aria-hidden="true" className="hero-proof-divider" style={{ width: '0.5px', height: 16, background: 'var(--gray-100)', display: 'inline-block' }} />
-          <span style={{ fontSize: 13, color: 'var(--gray-500)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Shield size={12} aria-hidden="true" /> Secure. Private. Privacy-first by design.
-          </span>
-        </motion.div>
-
-      </motion.div>
 
       <CabinetPreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} reduced={reduced} />
     </section>

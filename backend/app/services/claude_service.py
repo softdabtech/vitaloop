@@ -29,18 +29,21 @@ _SYSTEM_PROMPT = (
     "Do not include markdown, commentary, or code fences."
 )
 
+_STATUS_SUFFIX = r"(?:\s+(?:Normal|Low|High|Optimal|Deficient|Elevated|Borderline|Critical|LOW|HIGH|LOW NORMAL|HIGH NORMAL|[LHN]))?"
 _LINE_PATTERNS = [
     re.compile(
         r"(?P<name>[A-Za-z][A-Za-z0-9()/%+\- ,._]{2,}?)\s+"
         r"(?P<value>-?\d+(?:[.,]\d+)?)\s*"
         r"(?P<unit>[A-Za-z%/µμ\-]+(?:/[A-Za-z]+)?)?\s*"
-        r"(?:(?P<low>-?\d+(?:[.,]\d+)?)\s*[-–]\s*(?P<high>-?\d+(?:[.,]\d+)?))?\s*$"
+        r"(?:(?P<low>-?\d+(?:[.,]\d+)?)\s*[-–]\s*(?P<high>-?\d+(?:[.,]\d+)?))?"
+        + _STATUS_SUFFIX + r"\s*$"
     ),
     re.compile(
         r"(?P<name>[A-Za-z][A-Za-z0-9()/%+\- ,._]{2,}?)\s*[:=]\s*"
         r"(?P<value>-?\d+(?:[.,]\d+)?)\s*"
         r"(?P<unit>[A-Za-z%/µμ\-]+(?:/[A-Za-z]+)?)?\s*"
-        r"(?:\(?(?P<low>-?\d+(?:[.,]\d+)?)\s*[-–]\s*(?P<high>-?\d+(?:[.,]\d+)?)\)?)?\s*$"
+        r"(?:\(?(?P<low>-?\d+(?:[.,]\d+)?)\s*[-–]\s*(?P<high>-?\d+(?:[.,]\d+)?)\)?)?"
+        + _STATUS_SUFFIX + r"\s*$"
     ),
 ]
 
@@ -353,12 +356,23 @@ async def extract_biomarkers(text: str, symptoms: List[str]) -> List[Dict[str, A
         if not parsed:
             logger.warning("abacus_extract_fallback reason=empty_payload")
             return _fallback_extract_biomarkers(text)
+
+        # Hybrid: supplement LLM results with regex extraction for any biomarkers the LLM missed.
+        regex_results = _fallback_extract_biomarkers(text)
+        if regex_results:
+            llm_names = {b["name"].lower() for b in parsed}
+            extras = [b for b in regex_results if b["name"].lower() not in llm_names]
+            if extras:
+                logger.info("abacus_extract_hybrid llm=%s regex_added=%s", len(parsed), len(extras))
+                parsed = parsed + extras
+
         logger.info(
-            "abacus_extract_ok text_len=%s symptom_count=%s prompt_version=%s duration_ms=%s",
+            "abacus_extract_ok text_len=%s symptom_count=%s prompt_version=%s duration_ms=%s total=%s",
             len(text),
             len(symptoms),
             EXTRACT_PROMPT_VERSION,
             int((time.perf_counter() - started) * 1000),
+            len(parsed),
         )
         return parsed
     except Exception as ex:

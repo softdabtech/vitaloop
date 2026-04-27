@@ -781,14 +781,14 @@ export default function Landing() {
               type="button"
               onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
               aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              className={`hidden sm:inline-flex h-9 w-14 items-center rounded-full border px-1 transition ${
+              className={`hidden sm:inline-flex h-7 w-10 items-center rounded-full border px-1 transition ${
                 isDark ? 'border-slate-600 bg-slate-800' : 'border-slate-300 bg-slate-100'
               }`}
               title={isDark ? 'Light mode' : 'Dark mode'}
             >
               <span
-                className={`h-7 w-7 rounded-full shadow-sm transition-transform duration-200 ${
-                  isDark ? 'translate-x-0 bg-slate-950' : 'translate-x-4 bg-white'
+                className={`h-5 w-5 rounded-full shadow-sm transition-transform duration-200 ${
+                  isDark ? 'translate-x-0 bg-slate-950' : 'translate-x-2 bg-white'
                 }`}
               />
             </button>
