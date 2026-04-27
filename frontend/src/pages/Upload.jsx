@@ -134,7 +134,15 @@ export default function Upload() {
       toast.success('Analysis complete!')
       navigate(`/results/${data.upload_id}`)
     } catch (err) {
-      const message = err.response?.data?.detail || 'Analysis failed. Please try again.'
+      let message = err.response?.data?.detail || 'Analysis failed. Please try again.'
+      // Улучшенная обработка ошибок
+      if (err.response?.status === 422) {
+        message = 'Lab report format not recognized. Please upload a standard lab PDF or clear photo.'
+      } else if (err.response?.status === 413) {
+        message = 'File too large for processing. Please upload a file under 20MB.'
+      } else if (err.response?.status === 429) {
+        message = 'Too many uploads. Please wait and try again later.'
+      }
       setErrorMessage(message)
       toast.error(message)
     } finally {
