@@ -194,6 +194,12 @@ export default function Upload() {
             </button>
           </div>
         )}
+        {/* Мотивация к покупке подписки */}
+        {!subLoading && !isPremium && uploadsRemaining > 0 && (
+          <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            <b>Преимущества подписки:</b> Безлимитные загрузки анализов, расширенные отчёты, приоритетная поддержка и персональные рекомендации от экспертов.
+          </div>
+        )}
 
         <div className="mb-6 grid gap-3 lg:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
