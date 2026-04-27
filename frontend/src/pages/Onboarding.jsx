@@ -27,7 +27,7 @@ const s = {
   input: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box' },
   select: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box' },
   btnPrimary: { width: '100%', padding: '14px', background: '#10b981', borderRadius: 12, color: '#ffffff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', marginTop: 24 },
-  btnSec: { background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 14, marginTop: 12 },
+  btnSec: { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: 14, marginTop: 12, textDecoration: 'underline', padding: 0 },
   row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
   goalChip: (active) => ({
     padding: '10px 14px', borderRadius: 10, border: `1px solid ${active ? '#10b981' : 'rgba(15,23,42,0.1)'}`,
@@ -127,11 +127,16 @@ export default function Onboarding() {
   const addComplaint = () => setComplaints(prev => [...prev, { complaint: '', duration_description: '', tried_interventions: '' }])
 
   const saveAll = async () => {
+    // Validate required fields
+    if (!profile.height_cm || !profile.weight_kg) {
+      toast.error('Please fill in all required fields (height and weight) for accurate analysis.')
+      return
+    }
     setSaving(true)
     try {
       const profilePayload = {
-        height_cm: profile.height_cm ? Number(profile.height_cm) : undefined,
-        weight_kg: profile.weight_kg ? Number(profile.weight_kg) : undefined,
+        height_cm: Number(profile.height_cm),
+        weight_kg: Number(profile.weight_kg),
         goals: profile.goals,
         current_supplements: profile.current_supplements ? profile.current_supplements.split(',').map(s => s.trim()).filter(Boolean) : [],
         current_medications: profile.current_medications ? profile.current_medications.split(',').map(s => s.trim()).filter(Boolean) : [],
@@ -238,13 +243,15 @@ export default function Onboarding() {
             </div>
             <div style={s.row}>
               <label>
-                <span style={s.label}>Height (cm)</span>
-                <input style={s.input} type="number" placeholder="175" value={profile.height_cm} onChange={e => setProfile(p => ({ ...p, height_cm: e.target.value }))} />
-              </label>
+                <span style={{...s.label, color: '#ef4444'}}>* Height (cm) (required)</span>
+                <input style={s.input} type="number" placeholder="175" value={profile.height_cm} onChange={e => setProfile(p => ({ ...p, height_cm: e.target.value }))} required />
+                {!profile.height_cm && <div style={{color:'#ef4444',fontSize:12,marginTop:4}}>Please enter your height for accurate analysis.</div>}
+      </label>
               <label>
-                <span style={s.label}>Weight (kg)</span>
-                <input style={s.input} type="number" placeholder="72" value={profile.weight_kg} onChange={e => setProfile(p => ({ ...p, weight_kg: e.target.value }))} />
-              </label>
+                <span style={{...s.label, color: '#ef4444'}}>* Weight (kg) (required)</span>
+                <input style={s.input} type="number" placeholder="72" value={profile.weight_kg} onChange={e => setProfile(p => ({ ...p, weight_kg: e.target.value }))} required />
+                {!profile.weight_kg && <div style={{color:'#ef4444',fontSize:12,marginTop:4}}>Please enter your weight for accurate analysis.</div>}
+      </label>
             </div>
             <div style={{ marginTop: 16 }}>
               <span style={s.label}>Current supplements (comma-separated)</span>
