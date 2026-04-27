@@ -4,6 +4,8 @@ import { FlaskConical, Calendar, ChevronRight, Upload, Activity } from 'lucide-r
 import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import HintBanner from '../components/tour/HintBanner.jsx'
+import { useTourHints } from '../hooks/useTourHints.js'
 import '../styles/dashboard2026.css'
 
 function normalizeStatus(status) {
@@ -24,6 +26,7 @@ function normalizeProgressPayload(payload) {
 export default function LabResultsList() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { show: showHints, dismiss: dismissHints } = useTourHints('lab-results')
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -92,6 +95,17 @@ export default function LabResultsList() {
             </button>
           )}
         />
+
+        {showHints && !loading && (
+          <HintBanner
+            hints={[
+              '🗂 This is your lab history — every upload you make is stored here with a biomarker quality snapshot.',
+              '📊 Each row shows how many markers are optimal, borderline, or critical. Click "Results" for the full breakdown.',
+              '💊 Click "Protocol" on any row to jump directly to the supplement plan for that specific upload.',
+            ]}
+            onDone={dismissHints}
+          />
+        )}
 
         {error && (
           <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">

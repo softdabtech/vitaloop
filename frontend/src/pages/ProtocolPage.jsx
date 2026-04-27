@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useSubscription } from '../hooks/useSubscription.js'
+import HintBanner from '../components/tour/HintBanner.jsx'
+import { useTourHints } from '../hooks/useTourHints.js'
 import UserDashboardSidebar from '../components/dashboard/UserDashboardSidebar.jsx'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import {
@@ -474,6 +476,7 @@ export default function ProtocolPage() {
   const navigate = useNavigate()
   const { user, signOut } = useAuth()
   const { isActive, loading: subLoading } = useSubscription()
+  const { show: showHints, dismiss: dismissHints } = useTourHints('protocol')
   const [biomarkers, setBiomarkers] = useState([])
   const [protocol, setProtocol] = useState([])
   const [loading, setLoading] = useState(true)
@@ -573,6 +576,17 @@ export default function ProtocolPage() {
         {/* Scrollable content */}
         <div className="flex-1 overflow-auto">
           <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 pb-16">
+
+            {showHints && (
+              <HintBanner
+                hints={[
+                  '💊 Each supplement is ranked by health impact — highest priority first. Focus on the first 1–3 items before adding more.',
+                  '⏰ Timing matters: "morning empty stomach" means 30 min before food. "With food" means any meal. Follow the schedule for best absorption.',
+                  '📥 Pro subscribers can export this protocol as a PDF to share with their doctor or nutritionist.',
+                ]}
+                onDone={dismissHints}
+              />
+            )}
 
             {/* Hero header */}
             <div className="rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 p-6 sm:p-8 text-white shadow-lg overflow-hidden relative">

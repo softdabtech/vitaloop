@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase.js'
 import ProtocolCard from '../components/ProtocolCard.jsx'
 import Paywall from '../components/Paywall.jsx'
 import { useSubscription } from '../hooks/useSubscription.js'
+import HintBanner from '../components/tour/HintBanner.jsx'
+import { useTourHints } from '../hooks/useTourHints.js'
 
 const STATUS_META = {
   DEFICIENT: { rank: 0, border: 'border-rose-300', stripe: 'bg-rose-500', badge: 'bg-rose-50 text-rose-700', text: 'text-rose-700' },
@@ -30,10 +32,17 @@ function computeRangePercent(biomarker) {
   return Math.max(0, Math.min(100, ((value - low) / (high - low)) * 100))
 }
 
+const RESULTS_HINTS = [
+  '🟢 Biomarkers are color-coded by priority: red = needs attention, yellow = borderline, green = optimal. The most critical ones appear first.',
+  '🎯 The "Top priority" card shows which single biomarker will have the biggest impact on your health if addressed — start there.',
+  '💊 Scroll down to see your personalized supplement protocol based on these results. Pro subscribers see the full ranked plan.',
+]
+
 export default function Results() {
   const { uploadId } = useParams()
   const navigate = useNavigate()
   const { isActive } = useSubscription()
+  const { show: showHints, dismiss: dismissHints } = useTourHints('results')
   const [biomarkers, setBiomarkers] = useState([])
   const [protocol, setProtocol] = useState([])
   const [loading, setLoading] = useState(true)
@@ -63,6 +72,10 @@ export default function Results() {
     <div className="vtl-page min-h-screen p-6">
       <div className="max-w-3xl mx-auto">
         <h2 className="text-2xl font-bold text-slate-900 mb-6">Your Lab Results</h2>
+
+        {showHints && (
+          <HintBanner hints={RESULTS_HINTS} onDone={dismissHints} />
+        )}
 
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="vtl-light-card p-3 text-center">

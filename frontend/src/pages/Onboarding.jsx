@@ -233,6 +233,9 @@ export default function Onboarding() {
           <motion.div key="basics" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div style={s.title}><User size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />Your basics</div>
             <div style={s.sub}>Help us personalize your health guidance.</div>
+            <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
+              💡 Height and weight help calculate healthy ranges for your biomarkers. List supplements and medications so the AI can flag interactions and avoid duplicating what you already take.
+            </div>
             <div style={s.row}>
               <label>
                 <span style={s.label}>Height (cm)</span>
@@ -259,6 +262,9 @@ export default function Onboarding() {
           <motion.div key="goals" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div style={s.title}>Your health goals</div>
             <div style={s.sub}>Select everything that applies. We'll personalize your guidance around these.</div>
+            <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
+              💡 Pick all goals that feel relevant — you can select more than one. Your goals influence which biomarkers get flagged first and what supplements are included in your protocol.
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {GOAL_OPTIONS.map(g => (
                 <button key={g.id} style={s.goalChip(profile.goals.includes(g.id))} onClick={() => toggleGoal(g.id)}>
@@ -274,6 +280,9 @@ export default function Onboarding() {
           <motion.div key="location" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div style={s.title}><MapPin size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />Your location</div>
             <div style={s.sub}>Used for future physician referral support and local care assistance.</div>
+            <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
+              💡 Location is optional. It helps us suggest nearby labs and practitioners when you're ready for in-person consultations. It is not shared with third parties.
+            </div>
             <div style={s.row}>
               <label>
                 <span style={s.label}>City</span>
@@ -300,6 +309,9 @@ export default function Onboarding() {
           <motion.div key="complaints" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div style={s.title}><AlertTriangle size={22} style={{ display: 'inline', marginRight: 10, color: '#f5a623' }} />Recurring complaints</div>
             <div style={s.sub}>What has been bothering you? We'll factor this into your analysis.</div>
+            <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(245,166,35,0.07)', border: '1px solid rgba(245,166,35,0.25)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
+              💡 Even vague symptoms like "fatigue" or "brain fog" are valuable — the AI connects them to your biomarker patterns. You can add multiple complaints. Skip this step if you have no current symptoms.
+            </div>
             {complaints.map((c, i) => (
               <div key={i} style={{ marginBottom: 20, padding: 16, background: '#f8fafc', borderRadius: 12, border: '1px solid rgba(15,23,42,0.07)' }}>
                 <span style={s.label}>Complaint {i + 1}</span>
