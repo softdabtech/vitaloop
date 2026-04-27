@@ -124,8 +124,8 @@ export default function LabResultsList() {
                   <p className="mt-1 text-sm font-semibold text-slate-900">{sortedItems[0]?.lab_name || 'Upload history'}</p>
                 </div>
                 <div className="vtl-light-card p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Cabinet standard</p>
-                  <p className="mt-1 text-sm text-slate-500">This screen should feel like a premium archive, not only a raw list of files.</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Latest test</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{sortedItems[0]?.test_date || sortedItems[0]?.created_at?.slice(0, 10) || '—'}</p>
                 </div>
               </div>
 
@@ -203,8 +203,8 @@ export default function LabResultsList() {
                   <p className="mt-1 text-sm text-slate-700">Discuss critical markers with your practitioner promptly.</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">What good history looks like</p>
-                  <p className="mt-1 text-sm text-slate-700">Clear summaries, recent uploads, and direct protocol access should make this page feel expensive before any detail screen opens.</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Next step</p>
+                  <p className="mt-1 text-sm text-slate-700">Repeat your test in 8–12 weeks to track changes and refine your protocol over time.</p>
                 </div>
               </div>
             </aside>

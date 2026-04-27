@@ -264,7 +264,7 @@ export default function UserDashboard() {
       <CabinetPageHeader
         title={`Welcome back, ${greeting}`}
         subtitle={profile?.onboarding?.requires_onboarding ? profile?.onboarding?.current_stage_label || 'Continue onboarding' : 'Your dashboard is assembled from current uploads, assignments, and check-ins.'}
-        helper={isFirstRun ? 'Start with one upload. The dashboard expands as soon as your first lab is processed.' : 'Every block below should either show your live data or explain exactly what will unlock after the next action.'}
+        helper={isFirstRun ? 'Start with one upload. The dashboard expands as soon as your first lab is processed.' : 'Your biomarker trends, supplement protocol, and assignments are all kept in sync here.'}
         action={!loading && !isFirstRun ? (
           <div className="flex flex-wrap gap-2">
             <button onClick={() => navigate('/upload')} className="vtl-button-primary px-4 text-sm">Upload labs</button>
