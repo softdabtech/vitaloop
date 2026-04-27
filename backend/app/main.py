@@ -16,6 +16,7 @@ from app.middleware.security import (
 )
 from app.utils.build_info import APP_VERSION
 import logging
+from app.utils import checkin_reminder
 
 from app.services.claude_service import is_llm_configured
 
@@ -155,3 +156,7 @@ app.include_router(auth.router, prefix="/users", tags=["users"])
 app.include_router(questionnaire.router, prefix="/questionnaires", tags=["questionnaire"])
 app.include_router(dashboard.router)
 app.include_router(compatibility.router)
+
+@app.on_event("startup")
+def start_schedulers():
+    checkin_reminder.start()
