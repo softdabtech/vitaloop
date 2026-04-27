@@ -1,0 +1,39 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "crm-mvc", "crm-mvc", "{7ACB648A-0A06-AB0A-83A4-91DB259D4421}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vitaloop.Crm.Web", "crm-mvc\Vitaloop.Crm.Web.csproj", "{8FDB5147-967C-360C-0ACA-70B29FB0CFBF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{A4344804-DC56-9996-6989-8E2D0B65410B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vitaloop.Crm.Web.Tests", "crm-mvc\tests\Vitaloop.Crm.Web.Tests\Vitaloop.Crm.Web.Tests.csproj", "{AD3A56A8-7894-7C9E-8E3F-BE21F327A5F9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8FDB5147-967C-360C-0ACA-70B29FB0CFBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8FDB5147-967C-360C-0ACA-70B29FB0CFBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8FDB5147-967C-360C-0ACA-70B29FB0CFBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8FDB5147-967C-360C-0ACA-70B29FB0CFBF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AD3A56A8-7894-7C9E-8E3F-BE21F327A5F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD3A56A8-7894-7C9E-8E3F-BE21F327A5F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD3A56A8-7894-7C9E-8E3F-BE21F327A5F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD3A56A8-7894-7C9E-8E3F-BE21F327A5F9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{8FDB5147-967C-360C-0ACA-70B29FB0CFBF} = {7ACB648A-0A06-AB0A-83A4-91DB259D4421}
+		{A4344804-DC56-9996-6989-8E2D0B65410B} = {7ACB648A-0A06-AB0A-83A4-91DB259D4421}
+		{AD3A56A8-7894-7C9E-8E3F-BE21F327A5F9} = {A4344804-DC56-9996-6989-8E2D0B65410B}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6F8F9F20-3504-47C4-BD75-CBF6645C02F2}
+	EndGlobalSection
+EndGlobal

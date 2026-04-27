@@ -100,11 +100,12 @@ export default function Upload() {
         symptoms,
       })
 
-      // Generate protocol
+      // Generate protocol — non-blocking: free users get 402 (paywall triggers globally),
+      // but we still navigate to results so the biomarker view is always accessible.
       await api.post('/protocol', {
         upload_id: data.upload_id,
         symptoms,
-      })
+      }).catch(() => null)
 
       // Save symptoms record
       if (symptoms.length > 0) {
@@ -124,12 +125,6 @@ export default function Upload() {
       toast.success('Analysis complete!')
       navigate(`/results/${data.upload_id}`)
     } catch (err) {
-      const status = err.response?.status
-      if (status === 402) {
-        // PaywallModal is triggered globally via client.ts — just refresh sub state
-        refreshSub()
-        return
-      }
       const message = err.response?.data?.detail || 'Analysis failed. Please try again.'
       setErrorMessage(message)
       toast.error(message)
