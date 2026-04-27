@@ -63,6 +63,7 @@ export default function Onboarding() {
       trackFunnelEvent('funnel_onboarding_skipped', 'User skipped onboarding and entered dashboard', {
         stage: steps[step] || 'unknown',
       }, { oncePerSession: true })
+      toast('Вы пропустили заполнение профиля. Его можно завершить позже в настройках.', { icon: 'ℹ️', style: { background: '#fef9c3', color: '#92400e', fontSize: 15 } })
     } catch {
       // Fail-open: user explicitly chose to continue without onboarding.
     }
