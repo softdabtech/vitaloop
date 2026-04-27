@@ -250,8 +250,8 @@ export function CabinetPreviewModal({ open, onClose, reduced }) {
 
                     <div className="flex flex-col sm:flex-row" style={{ borderRadius: 18, padding: '16px 18px', background: 'linear-gradient(135deg, rgba(29,158,117,0.12), rgba(255,255,255,0.86))', border: '1px solid rgba(29,158,117,0.18)', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-900)' }}>This is what “See how it works” should feel like</div>
-                        <div style={{ fontSize: 13, color: 'var(--gray-500)', marginTop: 4 }}>A product demo, not a redirect away from the main page.</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-900)' }}>Your cabinet — live in seconds after your first upload</div>
+                        <div style={{ fontSize: 13, color: 'var(--gray-500)', marginTop: 4 }}>Every biomarker extracted, ranked, and explained — no manual entry needed.</div>
                       </div>
                       <button
                         onClick={onClose}

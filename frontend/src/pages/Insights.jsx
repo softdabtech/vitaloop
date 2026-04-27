@@ -74,7 +74,7 @@ export default function Insights() {
       <CabinetPageHeader
         title="Insights"
         subtitle="Interpretation layer for uploads, adherence, timeline, and follow-up signals."
-        helper="If live insights are not available yet, this page should still preview what the user will unlock next."
+        helper="Upload a lab result and complete a weekly check-in to unlock personalized AI insights and trend analysis."
         action={(
           <button onClick={generateInsights} disabled={loadingInsights} className="vtl-button-primary inline-flex items-center gap-2 px-4 text-sm disabled:opacity-60">
             <RefreshCw className="h-4 w-4" style={{ animation: loadingInsights ? 'spin 1s linear infinite' : 'none' }} />
@@ -196,7 +196,7 @@ export default function Insights() {
 
               {timeline.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
-                  No activity yet. After uploads, questionnaire completion, insights, and check-ins, this area becomes a chronological product memory instead of an empty feed.
+                  No activity yet. Your timeline will fill in automatically as you upload labs, complete check-ins, and generate insights.
                 </div>
               )}
 
@@ -222,11 +222,11 @@ export default function Insights() {
         </div>
 
         <aside className="vtl-light-card rounded-3xl p-6 xl:sticky xl:top-24 xl:h-fit">
-          <div className="mb-4 text-lg font-semibold text-slate-900">Why this page matters</div>
+          <div className="mb-4 text-lg font-semibold text-slate-900">How insights work</div>
           <div className="space-y-3 text-sm text-slate-500">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">This page should explain the meaning of the data, not just repeat numbers from results.</div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">If there is no data yet, the product must still preview the value the user will see later.</div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">Timeline and insights together turn the cabinet into a coherent premium product surface.</div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">AI analyzes your uploaded biomarkers and symptoms to identify trends — not just flag out-of-range values.</div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">Insights update automatically after each new upload or weekly check-in, or you can refresh them manually.</div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">Each insight ends with a concrete next step: upload, recheck, adjust your protocol, or consult a practitioner.</div>
           </div>
         </aside>
       </div>
