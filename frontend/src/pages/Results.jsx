@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase.js'
+import api from '../lib/api.js'
 import ProtocolCard from '../components/ProtocolCard.jsx'
 import Paywall from '../components/Paywall.jsx'
 import { useSubscription } from '../hooks/useSubscription.js'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 
 const STATUS_META = {
   DEFICIENT: { rank: 0, border: 'border-rose-300', stripe: 'bg-rose-500', badge: 'bg-rose-50 text-rose-700', text: 'text-rose-700' },
@@ -49,13 +51,16 @@ export default function Results() {
 
   useEffect(() => {
     async function load() {
-      const [bmRes, prRes] = await Promise.all([
-        supabase.from('biomarkers').select('*').eq('upload_id', uploadId),
-        supabase.from('protocols').select('*').eq('upload_id', uploadId).single(),
-      ])
-      setBiomarkers(bmRes.data ?? [])
-      setProtocol(prRes.data?.recommendations ?? [])
-      setLoading(false)
+      try {
+        const { data } = await api.get(`/results/${uploadId}`)
+        setBiomarkers(data.biomarkers ?? [])
+        setProtocol(data.protocol ?? [])
+      } catch (e) {
+        setBiomarkers([])
+        setProtocol([])
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [uploadId])
@@ -67,6 +72,30 @@ export default function Results() {
   const optimal = biomarkers.filter((b) => b.status === 'OPTIMAL').length
   const borderline = biomarkers.filter((b) => b.status === 'BORDERLINE').length
   const topPriority = rankedBiomarkers.find((b) => String(b.status || '').toUpperCase() !== 'OPTIMAL') || rankedBiomarkers[0] || null
+
+  function exportResultsAsPDF() {
+    const node = document.querySelector('.vtl-page')
+    if (!node) return
+    html2canvas(node, { scale: 2 }).then(canvas => {
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF({ orientation: 'p', unit: 'px', format: 'a4' })
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight)
+      pdf.save('lab-results.pdf')
+    })
+  }
+
+  function exportResultsAsPNG() {
+    const node = document.querySelector('.vtl-page')
+    if (!node) return
+    html2canvas(node, { scale: 2 }).then(canvas => {
+      const link = document.createElement('a')
+      link.download = 'lab-results.png'
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+    })
+  }
 
   return (
     <div className="vtl-page min-h-screen p-6">
@@ -142,6 +171,21 @@ export default function Results() {
               </div>
             )
           })}
+        </div>
+
+        <div className="flex gap-3 mb-6">
+          <button
+            onClick={exportResultsAsPDF}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-900 text-white rounded-xl font-semibold text-sm transition-colors shadow-sm"
+          >
+            Export as PDF
+          </button>
+          <button
+            onClick={exportResultsAsPNG}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-900 text-white rounded-xl font-semibold text-sm transition-colors shadow-sm"
+          >
+            Export as PNG
+          </button>
         </div>
 
         <div className="flex items-center justify-between mb-4">
