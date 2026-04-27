@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import ReCAPTCHA from 'react-google-recaptcha'
+import { RECAPTCHA_SITE_KEY } from '../config/recaptcha.js'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
 import { supabase } from '../lib/supabase.js'
@@ -147,6 +149,7 @@ function AbstractPanel({ side, variant = 'signin' }) {
 }
 
 export default function Login() {
+  const recaptchaRef = useRef(null)
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword, signOut } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -158,6 +161,7 @@ export default function Login() {
   const [resendLoading, setResendLoading] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [honeypot, setHoneypot] = useState('')  // bot trap
+  const [recaptchaToken, setRecaptchaToken] = useState('')
   const [authAlert, setAuthAlert] = useState(null)
   const [rateLimitedUntil, setRateLimitedUntil] = useState(0)
 
@@ -253,6 +257,12 @@ export default function Login() {
     // Honeypot check - bots fill hidden fields
     if (honeypot) return
 
+    // reCAPTCHA check (only for sign up)
+    if (isSignUp && !recaptchaToken) {
+      toast.error('Подтвердите, что вы не робот (reCAPTCHA)')
+      return
+    }
+
     const now = Date.now()
     if (rateLimitedUntil > now) {
       toast.error('Too many attempts. Please wait 1 minute and try again.')
@@ -276,6 +286,8 @@ export default function Login() {
     }
 
     setLoading(true)
+
+    // Optionally: send recaptchaToken to backend for verification here
 
     if (isForgot) {
       const { error } = await resetPassword(normalizedEmail)
@@ -404,6 +416,19 @@ export default function Login() {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Google reCAPTCHA (only for sign up) */}
+          {isSignUp && (
+            <div style={{ marginBottom: 12 }}>
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey={RECAPTCHA_SITE_KEY}
+                theme="dark"
+                size="normal"
+                onChange={token => setRecaptchaToken(token)}
+                onExpired={() => setRecaptchaToken('')}
+              />
+            </div>
+          )}
 
           {authAlert && (
             <div style={{
