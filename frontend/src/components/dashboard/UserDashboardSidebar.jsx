@@ -90,16 +90,15 @@ export default function UserDashboardSidebar({
           )}
         </div>
 
-        {!mobile && (
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            <ChevronLeft className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          style={{ visibility: collapsed ? 'visible' : (!mobile ? 'visible' : 'hidden') }}
+        >
+          <ChevronLeft className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
+        </button>
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
@@ -107,7 +106,8 @@ export default function UserDashboardSidebar({
           const ItemIcon = item.icon
           const badgeValue = item.badgeKey ? Number(user?.[item.badgeKey] || 0) : item.badge
           const active = isItemActive(location.pathname, item.path)
-          const isLocked = item.premium && !hasPremium && !subscriptionLoading
+          // Показываем premium-метки только после окончания загрузки
+          const isLocked = item.premium && !subscriptionLoading && !hasPremium
 
           const navElement = (
             <div className={`group relative flex h-11 items-center gap-3 rounded-xl px-3 transition ${
@@ -120,7 +120,7 @@ export default function UserDashboardSidebar({
               {!collapsed && (
                 <>
                   <span className="flex-1 text-sm font-medium">{item.label}</span>
-                  {isLocked ? (
+                  {isLocked && !subscriptionLoading ? (
                     <div className="flex items-center gap-1.5">
                       <Crown className="w-3.5 h-3.5 text-amber-500" />
                       <Lock className="w-3.5 h-3.5 text-amber-600" />
