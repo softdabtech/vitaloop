@@ -314,7 +314,19 @@ export default function UserDashboard() {
             />
             <StatCard title="Active assignments" value={stats.active_assignments ?? 0} unit="live" icon={ClipboardList} color="blue" />
             <StatCard title="Insights ready" value={stats.insights_count ?? 0} unit="cards" icon={Brain} color="purple" />
-            <StatCard title="Subscription" value={String(stats.subscription || 'free').replace('_', ' ')} unit="plan" icon={Crown} color="orange" />
+            <StatCard
+              title="Current Plan"
+              value={
+                stats.subscription === 'free' ? 'Free' :
+                stats.subscription === 'personal_pro' ? 'Personal Pro' :
+                stats.subscription === 'enterprise' ? 'Enterprise' :
+                (String(stats.subscription || 'free').replace('_', ' '))
+              }
+              unit="plan"
+              icon={Crown}
+              color="orange"
+              onClick={() => window.location.href = '/subscription'}
+            />
           </div>
 
           <motion.div {...fadeUp(0.04)} className="grid items-start gap-4 xl:grid-cols-[1.1fr_0.95fr_320px]">

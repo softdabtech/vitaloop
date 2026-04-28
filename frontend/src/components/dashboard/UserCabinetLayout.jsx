@@ -105,6 +105,15 @@ export default function UserCabinetLayout({ children }) {
                   <span className="sm:hidden">Upgrade</span>
                 </button>
               )}
+              <a
+                href="https://vitaloop.today"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="vtl-button-secondary inline-flex shrink-0 items-center gap-2 px-3 text-sm hover:bg-slate-100"
+              >
+                <span className="hidden sm:inline">Website</span>
+                <span className="sm:hidden">↗</span>
+              </a>
               <button
                 onClick={handleLogout}
                 className="vtl-button-secondary inline-flex shrink-0 items-center gap-2 px-3 text-sm"
