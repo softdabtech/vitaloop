@@ -861,55 +861,16 @@ export default function Landing() {
           <motion.div
             {...fadeUp(reduced, 0.12)}
             whileHover={reduced ? undefined : { y: -4 }}
-            className={`rounded-3xl p-4 sm:p-5 ${sectionCard}`}
+            className={`overflow-hidden rounded-3xl p-4 sm:p-5 ${sectionCard}`}
             style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.18), 0 8px 10px -6px rgb(0 0 0 / 0.16), inset 0 1px 0 rgba(16,185,129,0.12)' }}
           >
-            <div className={`rounded-2xl border p-4 ${'border-slate-200 bg-slate-50'}`}>
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <div className={`text-sm font-semibold ${'text-slate-800'}`}>Your VITALOOP dashboard</div>
-                  <div className={`text-xs ${'text-slate-500'}`}>What you see after your first upload</div>
-                </div>
-                <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">Preview</span>
-              </div>
-
-              <div className="mb-3 grid grid-cols-3 gap-2">
-                {[
-                  { label: 'Health score', value: '78/100', icon: TrendingUp },
-                  { label: 'Open priorities', value: '3', icon: Shield },
-                  { label: 'Last sync', value: '2h ago', icon: Clock3 },
-                ].map((metric) => {
-                  const Icon = metric.icon
-                  return (
-                    <div key={metric.label} className={`rounded-xl border p-2.5 ${'border-slate-200 bg-white'}`}>
-                      <div className="mb-1 inline-flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/15 text-emerald-300">
-                        <Icon className="h-3.5 w-3.5" />
-                      </div>
-                      <div className={`text-[11px] ${'text-slate-500'}`}>{metric.label}</div>
-                      <div className={`text-sm font-semibold ${'text-slate-900'}`}>{metric.value}</div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className={`rounded-xl border p-3 ${'border-slate-200 bg-white'}`}>
-                  <div className="text-xs uppercase tracking-wide text-slate-400">Top priority</div>
-                  <div className={`mt-1 text-sm font-semibold ${'text-slate-900'}`}>Ferritin recovery protocol</div>
-                  <div className="mt-2 h-1.5 rounded-full bg-slate-700/40">
-                    <div className="h-1.5 w-[72%] rounded-full bg-emerald-500" />
-                  </div>
-                  <p className={`mt-2 text-[11px] ${'text-slate-500'}`}>3 actions due this week</p>
-                </div>
-                <div className={`rounded-xl border p-3 ${'border-slate-200 bg-white'}`}>
-                  <div className="text-xs uppercase tracking-wide text-slate-400">Weekly adherence</div>
-                  <div className={`mt-1 text-sm font-semibold ${'text-slate-900'}`}>4 / 5 habit targets complete</div>
-                  <div className="mt-2 h-1.5 rounded-full bg-slate-700/40">
-                    <div className="h-1.5 w-[80%] rounded-full bg-emerald-500" />
-                  </div>
-                  <p className={`mt-2 text-[11px] ${'text-slate-500'}`}>Trend: +9% vs last cycle</p>
-                </div>
-              </div>
+            <div className="rounded-2xl border border-slate-200">
+              <img
+                src="/hero-dashboard.jpg"
+                alt="VITALOOP AI Healthcare Dashboard with biomarker analysis"
+                className="w-full h-auto object-cover"
+                loading="lazy"
+              />
             </div>
           </motion.div>
         </section>
