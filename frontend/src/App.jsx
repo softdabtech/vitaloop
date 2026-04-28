@@ -3,6 +3,12 @@ import { Suspense, lazy } from 'react'
 import Landing from './pages/Landing.jsx'
 import Login from './pages/Login.jsx'
 import NotFound from './pages/NotFound.jsx'
+import Product from './pages/Product.jsx'
+import Features from './pages/Features.jsx'
+import Pricing from './pages/Pricing.jsx'
+import Stories from './pages/Stories.jsx'
+import Investors from './pages/Investors.jsx'
+import FAQ from './pages/FAQ.jsx'
 import { useAuth } from './hooks/useAuth.js'
 import { useSubscription } from './hooks/useSubscription.js'
 import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
@@ -176,6 +182,12 @@ export default function App() {
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/product" element={<Product />} />
+          <Route path="/features" element={<Features />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/stories" element={<Stories />} />
+          <Route path="/investors" element={<Investors />} />
+          <Route path="/faq" element={<FAQ />} />
           <Route path="/example-report" element={<ExampleReport />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/for-investors" element={<ForInvestors />} />
