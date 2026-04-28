@@ -190,6 +190,7 @@ export default function UserDashboard() {
   const navigate = useNavigate()
   const reduced = useReducedMotion()
   const { show: showHints, dismiss: dismissHints } = useTourHints('dashboard')
+  const { uploadCount, uploadLimit } = useSubscription()
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
