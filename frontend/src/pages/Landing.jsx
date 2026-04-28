@@ -604,7 +604,7 @@ function MockupCard({ title, alt, index, reduced, isDark, device = 'desktop' }) 
       {...fadeUp(reduced, Math.min(index * 0.05, 0.25))}
       whileHover={reduced ? undefined : { y: -6, scale: 1.015, boxShadow: '0 32px 56px -8px rgba(15,23,42,0.5), 0 0 0 1px rgba(16,185,129,0.18), inset 0 1px 0 rgba(16,185,129,0.14)' }}
       className={`group relative overflow-hidden rounded-3xl border p-4 backdrop-blur transition duration-300 ${
-        isDark ? 'border-slate-800/80 bg-slate-950/70' : 'border-slate-200 bg-white/90'
+        'border-slate-200 bg-white/90'
       }`}
       style={{
         boxShadow: '0 20px 40px -8px rgba(15,23,42,0.45), 0 8px 16px -6px rgba(15,23,42,0.3), inset 0 1px 0 rgba(16,185,129,0.08)',
@@ -616,7 +616,7 @@ function MockupCard({ title, alt, index, reduced, isDark, device = 'desktop' }) 
       <div className="pointer-events-none absolute inset-0 opacity-40" style={{ background: 'radial-gradient(circle at 10% 90%, rgba(14,165,233,0.1) 0%, transparent 50%)' }} />
 
       {/* Device chrome */}
-      <div className={`relative mb-3 rounded-2xl border ${isDark ? 'border-slate-700/80 bg-slate-900/90' : 'border-slate-200 bg-white/95'}`} style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(14,165,233,0.06), rgba(168,85,247,0.08))' }}>
+      <div className={`relative mb-3 rounded-2xl border ${'border-slate-200 bg-white/95'}`} style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(14,165,233,0.06), rgba(168,85,247,0.08))' }}>
         {!mobile ? (
           <div className="rounded-xl border border-slate-700/60 bg-[linear-gradient(150deg,#0c1628,#0e1e38_48%,#0d2236_72%,#0c1d2c)] p-2.5">
             {/* Browser chrome bar */}
@@ -647,10 +647,10 @@ function MockupCard({ title, alt, index, reduced, isDark, device = 'desktop' }) 
       {/* Card footer */}
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{title}</div>
-          <p className={`mt-0.5 text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{alt}</p>
+          <div className={`text-sm font-semibold ${'text-slate-900'}`}>{title}</div>
+          <p className={`mt-0.5 text-xs leading-relaxed ${'text-slate-600'}`}>{alt}</p>
         </div>
-        <div className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${isDark ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+        <div className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
           {mobile ? 'Mobile' : 'Preview'}
         </div>
       </div>
@@ -662,7 +662,6 @@ export default function Landing() {
   const navigate = useNavigate()
   const reduced = useReducedMotion()
   const [pricingMode, setPricingMode] = useState('monthly')
-  const [theme, setTheme] = useState('dark')
   const [demoOpen, setDemoOpen] = useState(false)
   const [loopActive, setLoopActive] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -680,18 +679,10 @@ export default function Landing() {
 
   const pricingCards = PRICING[pricingMode]
 
-  const isDark = theme === 'dark'
-  const rootClasses = isDark
-    ? 'bg-[#0A0F1C] text-slate-100'
-    : 'bg-slate-50 text-slate-900'
-
-  const sectionCard = isDark
-    ? 'border border-slate-800/80 bg-slate-900/55 backdrop-blur'
-    : 'border border-slate-200 bg-white/85 backdrop-blur'
-
+  const rootClasses = 'bg-white text-slate-900'
+  const sectionCard = 'border border-slate-200 bg-white/85 backdrop-blur'
   const ctaBase = 'inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50'
-
-  const navTextClass = isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+  const navTextClass = 'text-slate-600 hover:text-slate-900'
 
   const staggerParent = useMemo(() => ({
     hidden: {},
@@ -712,7 +703,7 @@ export default function Landing() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_90%_2%,rgba(59,130,246,0.12),transparent_38%)]" />
       </div>
 
-      <header className={`sticky top-0 z-40 border-b ${isDark ? 'border-slate-800/70 bg-[#0A0F1C]/84' : 'border-slate-200 bg-white/85'} backdrop-blur`}>
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/85 backdrop-blur">
         <div className="mx-auto flex h-[72px] w-full max-w-[1240px] items-center justify-between px-4 sm:px-6">
           <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2">
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/90 text-white">
@@ -734,28 +725,11 @@ export default function Landing() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Theme toggle tumbler */}
-            <button
-              type="button"
-              onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              className={`hidden sm:inline-flex h-7 w-10 items-center rounded-full border px-1 transition ${
-                isDark ? 'border-slate-600 bg-slate-800' : 'border-slate-300 bg-slate-100'
-              }`}
-              title={isDark ? 'Light mode' : 'Dark mode'}
-            >
-              <span
-                className={`h-5 w-5 rounded-full shadow-sm transition-transform duration-200 ${
-                  isDark ? 'translate-x-0 bg-slate-950' : 'translate-x-2 bg-white'
-                }`}
-              />
-            </button>
-
             {/* Log in link — only for non-authenticated visitors */}
             {!user && (
               <button
                 onClick={() => navigate('/login')}
-                className={`hidden sm:inline-flex h-11 items-center justify-center rounded-2xl border px-4 text-sm font-semibold transition ${isDark ? 'border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-500 hover:text-white' : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900'}`}
+                className="hidden sm:inline-flex h-11 items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
               >
                 Log in
               </button>
@@ -764,7 +738,7 @@ export default function Landing() {
             {/* Cabinet / Sign Up button */}
             <button
               onClick={() => navigate(user ? '/dashboard' : '/login?signup=true')}
-              className={`${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60 hover:text-emerald-300' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'} font-semibold`}
+              className={`${ctaBase} border border-slate-300 bg-white text-slate-900 hover:border-emerald-300`}
             >
               {user ? 'Cabinet' : 'Sign Up'}
             </button>
@@ -774,7 +748,7 @@ export default function Landing() {
               type="button"
               onClick={() => setMobileMenuOpen((v) => !v)}
               aria-label="Open navigation menu"
-              className={`inline-flex items-center justify-center rounded-lg p-2 md:hidden ${isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100'} transition`}
+              className="inline-flex items-center justify-center rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 md:hidden"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -790,38 +764,19 @@ export default function Landing() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.18 }}
-              className={`border-t md:hidden ${isDark ? 'border-slate-800 bg-[#0A0F1C]' : 'border-slate-200 bg-white'}`}
+              className={`border-t md:hidden ${'border-slate-200 bg-white'}`}
             >
               <div className="mx-auto flex max-w-[1240px] flex-col gap-1 px-4 py-4">
                 {NAV_LINKS.map((item) => (
                   <button
                     key={item.id}
                       onClick={() => navAction(item)}
-                    className={`rounded-xl px-4 py-3 text-left text-sm font-medium transition ${isDark ? 'text-slate-300 hover:bg-slate-800/80 hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'}`}
+                    className="rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
                   >
                     {item.label}
                   </button>
                 ))}
-                <div className={`my-2 h-px ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`} />
-                {/* Theme toggle in mobile menu */}
-                <div className="flex items-center justify-between rounded-xl px-4 py-3">
-                  <span className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                    {isDark ? 'Dark mode' : 'Light mode'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-                    aria-label="Toggle theme"
-                    className={`inline-flex h-10 w-14 items-center rounded-full border px-1 transition ${isDark ? 'border-slate-600 bg-slate-800' : 'border-slate-300 bg-slate-100'}`}
-                  >
-                    <span
-                      className={`h-8 w-8 rounded-full shadow-sm transition-transform duration-200 ${
-                        isDark ? 'translate-x-0 bg-slate-950' : 'translate-x-4 bg-white'
-                      }`}
-                    />
-                  </button>
-                </div>
-                <div className={`my-1 h-px ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`} />
+                <div className="my-2 h-px bg-slate-100" />
                 {user ? (
                   <button
                     onClick={() => { closeMobileMenu(); navigate('/dashboard') }}
@@ -839,7 +794,7 @@ export default function Landing() {
                     </button>
                     <button
                       onClick={() => { closeMobileMenu(); navigate('/login') }}
-                      className={`w-full rounded-xl border px-4 py-3 text-center text-sm font-semibold transition ${isDark ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                      className={`w-full rounded-xl border px-4 py-3 text-center text-sm font-semibold transition ${'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
                     >
                       Log in
                     </button>
@@ -854,34 +809,34 @@ export default function Landing() {
       <main>
         <section id="hero" className="mx-auto grid w-full max-w-[1240px] gap-10 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:pt-20">
           <motion.div {...fadeUp(reduced)}>
-            <p className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'border-emerald-300/25 bg-emerald-400/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+            <p className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
               Premium AI Biohacking Platform
             </p>
-            <h1 className={`mt-5 text-[32px] font-bold leading-[1.1] tracking-[-0.025em] md:text-[42px] ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <h1 className={`mt-5 text-[32px] font-bold leading-[1.1] tracking-[-0.025em] md:text-[42px] ${'text-slate-900'}`}>
               Turn Blood Test Results Into an AI-Powered Health System
             </h1>
-            <p className={`mt-5 max-w-xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            <p className={`mt-5 max-w-xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
               VITALOOP uses AI to analyze your blood test results, extract biomarker insights across 85+ markers, and build a personalized protocol — then adapts it weekly based on your check-ins and new lab uploads.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <button
                 onClick={() => navigate('/login?signup=true')}
-                className={`${ctaBase} ${isDark ? 'bg-emerald-500 text-slate-950 shadow-[0_0_0_0_rgba(16,185,129,0.35)] hover:bg-emerald-400 hover:shadow-[0_0_0_6px_rgba(16,185,129,0.16)]' : 'bg-slate-900 text-white hover:bg-slate-700'}`}
+                className={`${ctaBase} ${'bg-slate-900 text-white hover:bg-slate-700'}`}
               >
                 Start Free Account - No card required
                 <ArrowRight className="ml-2 h-4 w-4" />
               </button>
               <button
                 onClick={() => setDemoOpen(true)}
-                className={`${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900/80 text-slate-100 hover:border-emerald-400/50' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'} `}
+                className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'} `}
               >
                 <CirclePlay className="mr-2 h-4 w-4" />
                 Watch 45s Demo
               </button>
                 <button
                   onClick={() => navigate('/for-nutritionists')}
-                  className={`${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900/80 text-emerald-300 hover:border-emerald-400/60 hover:text-emerald-200' : 'border border-emerald-300 bg-emerald-50 text-emerald-800 hover:border-emerald-400'}`}
+                  className={`${ctaBase} ${'border border-emerald-300 bg-emerald-50 text-emerald-800 hover:border-emerald-400'}`}
                 >
                   For Nutritionists
                 </button>
@@ -899,7 +854,7 @@ export default function Landing() {
                         : 'border-slate-200 bg-white/80 text-slate-700 hover:border-emerald-300'
                     }`}
                   >
-                    <Icon className={`h-3.5 w-3.5 shrink-0 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                    <Icon className={`h-3.5 w-3.5 shrink-0 ${'text-emerald-600'}`} />
                     <span className="text-[12px] font-semibold">{item.title}</span>
                   </div>
                 )
@@ -913,11 +868,11 @@ export default function Landing() {
             className={`rounded-3xl p-4 sm:p-5 ${sectionCard}`}
             style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.18), 0 8px 10px -6px rgb(0 0 0 / 0.16), inset 0 1px 0 rgba(16,185,129,0.12)' }}
           >
-            <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-700 bg-slate-950/88' : 'border-slate-200 bg-slate-50'}`}>
+            <div className={`rounded-2xl border p-4 ${'border-slate-200 bg-slate-50'}`}>
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <div className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>Your VITALOOP dashboard</div>
-                  <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>What you see after your first upload</div>
+                  <div className={`text-sm font-semibold ${'text-slate-800'}`}>Your VITALOOP dashboard</div>
+                  <div className={`text-xs ${'text-slate-500'}`}>What you see after your first upload</div>
                 </div>
                 <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">Preview</span>
               </div>
@@ -930,33 +885,33 @@ export default function Landing() {
                 ].map((metric) => {
                   const Icon = metric.icon
                   return (
-                    <div key={metric.label} className={`rounded-xl border p-2.5 ${isDark ? 'border-slate-700 bg-slate-900/80' : 'border-slate-200 bg-white'}`}>
+                    <div key={metric.label} className={`rounded-xl border p-2.5 ${'border-slate-200 bg-white'}`}>
                       <div className="mb-1 inline-flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/15 text-emerald-300">
                         <Icon className="h-3.5 w-3.5" />
                       </div>
-                      <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{metric.label}</div>
-                      <div className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{metric.value}</div>
+                      <div className={`text-[11px] ${'text-slate-500'}`}>{metric.label}</div>
+                      <div className={`text-sm font-semibold ${'text-slate-900'}`}>{metric.value}</div>
                     </div>
                   )
                 })}
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className={`rounded-xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/80' : 'border-slate-200 bg-white'}`}>
+                <div className={`rounded-xl border p-3 ${'border-slate-200 bg-white'}`}>
                   <div className="text-xs uppercase tracking-wide text-slate-400">Top priority</div>
-                  <div className={`mt-1 text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Ferritin recovery protocol</div>
+                  <div className={`mt-1 text-sm font-semibold ${'text-slate-900'}`}>Ferritin recovery protocol</div>
                   <div className="mt-2 h-1.5 rounded-full bg-slate-700/40">
                     <div className="h-1.5 w-[72%] rounded-full bg-emerald-500" />
                   </div>
-                  <p className={`mt-2 text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>3 actions due this week</p>
+                  <p className={`mt-2 text-[11px] ${'text-slate-500'}`}>3 actions due this week</p>
                 </div>
-                <div className={`rounded-xl border p-3 ${isDark ? 'border-slate-700 bg-slate-900/80' : 'border-slate-200 bg-white'}`}>
+                <div className={`rounded-xl border p-3 ${'border-slate-200 bg-white'}`}>
                   <div className="text-xs uppercase tracking-wide text-slate-400">Weekly adherence</div>
-                  <div className={`mt-1 text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>4 / 5 habit targets complete</div>
+                  <div className={`mt-1 text-sm font-semibold ${'text-slate-900'}`}>4 / 5 habit targets complete</div>
                   <div className="mt-2 h-1.5 rounded-full bg-slate-700/40">
                     <div className="h-1.5 w-[80%] rounded-full bg-emerald-500" />
                   </div>
-                  <p className={`mt-2 text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Trend: +9% vs last cycle</p>
+                  <p className={`mt-2 text-[11px] ${'text-slate-500'}`}>Trend: +9% vs last cycle</p>
                 </div>
               </div>
             </div>
@@ -969,8 +924,8 @@ export default function Landing() {
           <motion.div {...fadeUp(reduced)} className={`grid grid-cols-2 gap-3 rounded-3xl border p-5 sm:grid-cols-4 ${sectionCard}`}>
             {STATS.map((stat) => (
               <div key={stat.label} className="text-center">
-                <div className={`text-2xl font-bold tracking-tight ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>{stat.value}</div>
-                <div className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{stat.label}</div>
+                <div className={`text-2xl font-bold tracking-tight ${'text-emerald-700'}`}>{stat.value}</div>
+                <div className={`mt-1 text-xs ${'text-slate-500'}`}>{stat.label}</div>
               </div>
             ))}
           </motion.div>
@@ -979,9 +934,9 @@ export default function Landing() {
         <section id="problem" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className={`rounded-[32px] p-6 md:p-8 ${sectionCard}`}>
             <div className="mx-auto max-w-4xl text-center">
-              <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Why standard reports fail</p>
+              <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>Why standard reports fail</p>
               <h2 className="mt-3 text-[28px] font-semibold tracking-tight md:text-[34px]">Why Most People Get Zero Value From Their Blood Tests</h2>
-              <p className={`mx-auto mt-4 max-w-3xl text-[17px] leading-[1.75] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+              <p className={`mx-auto mt-4 max-w-3xl text-[17px] leading-[1.75] ${'text-slate-600'}`}>
                 A traditional lab PDF gives you reference ranges, not decisions. It rarely explains what matters first, which markers connect to each other, or what to do in the next seven days. That leaves most people with expensive data and no operating system.
               </p>
             </div>
@@ -1005,27 +960,27 @@ export default function Landing() {
                   <motion.article
                     key={item.title}
                     {...fadeUp(reduced, idx * 0.05)}
-                    className={`rounded-3xl border p-5 text-left ${isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'}`}
+                    className={`rounded-3xl border p-5 text-left ${'border-slate-200 bg-white/90'}`}
                   >
-                    <div className={`mb-3 inline-flex h-9 w-9 items-center justify-center rounded-2xl ${isDark ? 'bg-rose-500/12 text-rose-300' : 'bg-rose-50 text-rose-700'}`}>
+                    <div className={`mb-3 inline-flex h-9 w-9 items-center justify-center rounded-2xl ${'bg-rose-50 text-rose-700'}`}>
                       0{idx + 1}
                     </div>
                     <h3 className="text-lg font-semibold">{item.title}</h3>
-                    <p className={`mt-2 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{item.body}</p>
+                    <p className={`mt-2 text-sm leading-relaxed ${'text-slate-600'}`}>{item.body}</p>
                   </motion.article>
                 ))}
               </div>
 
               <motion.div
                 {...fadeUp(reduced, 0.16)}
-                className={`self-start rounded-3xl border p-5 ${isDark ? 'border-emerald-400/20 bg-[linear-gradient(180deg,rgba(5,15,28,0.98),rgba(9,23,35,0.82))]' : 'border-emerald-200 bg-[linear-gradient(180deg,#ffffff,#edfdf5)]'}`}
+                className={`self-start rounded-3xl border p-5 ${'border-emerald-200 bg-[linear-gradient(180deg,#ffffff,#edfdf5)]'}`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className={`text-xs uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>What VITALOOP changes</p>
+                    <p className={`text-xs uppercase tracking-[0.16em] ${'text-emerald-700'}`}>What VITALOOP changes</p>
                     <h3 className="mt-2 text-xl font-semibold">From numbers to a living health system</h3>
                   </div>
-                  <Shield className={`h-8 w-8 ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`} />
+                  <Shield className={`h-8 w-8 ${'text-emerald-700'}`} />
                 </div>
                 <div className="mt-5 space-y-3">
                   {[
@@ -1033,13 +988,13 @@ export default function Landing() {
                     'Tracks whether changes are improving, flat, or regressing',
                     'Turns interpretation into an action protocol you can actually follow',
                   ].map((line) => (
-                    <div key={line} className={`flex items-start gap-3 rounded-2xl border px-4 py-3 ${isDark ? 'border-slate-800 bg-slate-900/65' : 'border-slate-200 bg-white/90'}`}>
+                    <div key={line} className={`flex items-start gap-3 rounded-2xl border px-4 py-3 ${'border-slate-200 bg-white/90'}`}>
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                      <span className={`text-sm leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{line}</span>
+                      <span className={`text-sm leading-relaxed ${'text-slate-700'}`}>{line}</span>
                     </div>
                   ))}
                 </div>
-                <div className={`mt-5 rounded-2xl border px-4 py-4 ${isDark ? 'border-slate-800 bg-slate-950/70 text-slate-300' : 'border-slate-200 bg-white text-slate-600'}`}>
+                <div className={`mt-5 rounded-2xl border px-4 py-4 ${'border-slate-200 bg-white text-slate-600'}`}>
                   <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Outcome</div>
                   <p className="mt-2 text-sm leading-relaxed">
                     Instead of asking “What do all these numbers mean?”, users get a ranked explanation, a protocol, and a repeatable loop for the next cycle.
@@ -1053,7 +1008,7 @@ export default function Landing() {
         <section id="how-it-works" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7">
             <h2 className="text-[28px] font-semibold tracking-tight">How AI Analyzes Your Lab Results — 5 Steps From Upload to Action</h2>
-            <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
               Free plan covers upload + biomarker analysis. Personal Pro adds full protocol generation and weekly adaptation.
             </p>
           </motion.div>
@@ -1066,15 +1021,15 @@ export default function Landing() {
                   key={step.title}
                   variants={fadeUp(reduced, idx * 0.04)}
                   whileHover={reduced ? undefined : { scale: 1.02, boxShadow: '0 0 0 4px rgba(16,185,129,0.12)' }}
-                  className={`rounded-3xl border p-6 transition ${isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-white'}`}
+                  className={`rounded-3xl border p-6 transition ${'border-slate-200 bg-white'}`}
                   style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08), inset 0 1px 0 rgba(16,185,129,0.08)' }}
                 >
                   <span className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-300">
                     <Icon className="h-5 w-5" />
                   </span>
-                  <div className={`text-sm font-semibold uppercase tracking-[0.15em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Step {idx + 1}</div>
+                  <div className={`text-sm font-semibold uppercase tracking-[0.15em] ${'text-emerald-700'}`}>Step {idx + 1}</div>
                   <h3 className="mt-2 text-lg font-semibold">{step.title}</h3>
-                  <p className={`mt-2 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{step.body}</p>
+                  <p className={`mt-2 text-sm leading-relaxed ${'text-slate-600'}`}>{step.body}</p>
                 </motion.article>
               )
             })}
@@ -1084,7 +1039,7 @@ export default function Landing() {
         <section className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7">
             <h2 className="text-[28px] font-semibold tracking-tight">Longitudinal Biomarker Tracking Across Every Health Dimension</h2>
-            <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
               Four premium layers work together to turn one upload into a compounding health intelligence system rather than a one-time report review.
             </p>
           </motion.div>
@@ -1097,20 +1052,20 @@ export default function Landing() {
                   key={feature.title}
                   {...fadeUp(reduced, index * 0.05)}
                   whileHover={reduced ? undefined : { y: -5, scale: 1.01 }}
-                  className={`flex min-h-[320px] flex-col rounded-[30px] border p-6 ${isDark ? 'border-slate-800 bg-[linear-gradient(180deg,rgba(8,15,30,0.92),rgba(12,24,38,0.72))]' : 'border-slate-200 bg-white'}`}
+                  className={`flex min-h-[320px] flex-col rounded-[30px] border p-6 ${'border-slate-200 bg-white'}`}
                   style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.1), inset 0 1px 0 rgba(16,185,129,0.08)' }}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${isDark ? 'bg-emerald-500/14 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
+                    <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${'bg-emerald-50 text-emerald-700'}`}>
                       <Icon className="h-5 w-5" />
                     </span>
-                    <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${isDark ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                    <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
                       Premium
                     </span>
                   </div>
                   <h3 className="mt-6 text-xl font-semibold leading-snug">{feature.title}</h3>
-                  <p className={`mt-3 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{feature.body}</p>
-                  <div className={`mt-auto rounded-2xl border px-4 py-4 text-sm leading-relaxed ${isDark ? 'border-slate-800 bg-slate-950/60 text-slate-200' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
+                  <p className={`mt-3 text-sm leading-relaxed ${'text-slate-600'}`}>{feature.body}</p>
+                  <div className={`mt-auto rounded-2xl border px-4 py-4 text-sm leading-relaxed ${'border-slate-200 bg-slate-50 text-slate-700'}`}>
                     {feature.detail}
                   </div>
                 </motion.article>
@@ -1133,12 +1088,12 @@ export default function Landing() {
                   key={benefit.title}
                   {...fadeUp(reduced, idx * 0.06)}
                   whileHover={reduced ? undefined : { y: -4, scale: 1.01, boxShadow: '0 0 0 4px rgba(16,185,129,0.12)' }}
-                  className={`rounded-3xl border p-6 min-h-[208px] ${isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
+                  className={`rounded-3xl border p-6 min-h-[208px] ${'border-slate-200 bg-white'}`}
                   style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08), inset 0 1px 0 rgba(16,185,129,0.08)' }}
                 >
                   <Icon className="h-6 w-6 text-emerald-400" />
                   <h3 className="mt-4 text-lg font-semibold">{benefit.title}</h3>
-                  <p className={`mt-2 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{benefit.body}</p>
+                  <p className={`mt-2 text-sm leading-relaxed ${'text-slate-600'}`}>{benefit.body}</p>
                 </motion.article>
               )
             })}
@@ -1149,11 +1104,11 @@ export default function Landing() {
           <motion.div {...fadeUp(reduced)} className="mb-7 flex flex-wrap items-end justify-between gap-4">
             <div>
               <h2 className="text-[28px] font-semibold tracking-tight">Pricing</h2>
-              <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+              <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
                 Entry-level access for your first report, a real premium layer for longitudinal self-optimization, and an operations plan for practitioners who need client visibility and workflow control.
               </p>
             </div>
-            <div className={`relative inline-flex rounded-2xl border p-1 ${isDark ? 'border-slate-700 bg-slate-900/80' : 'border-slate-300 bg-white'}`}>
+            <div className={`relative inline-flex rounded-2xl border p-1 ${'border-slate-300 bg-white'}`}>
               <motion.span
                 layout
                 transition={{ type: 'spring', stiffness: 360, damping: 28 }}
@@ -1164,7 +1119,7 @@ export default function Landing() {
                 <button
                   key={mode}
                   onClick={() => setPricingMode(mode)}
-                  className={`relative z-10 rounded-xl px-5 py-2 text-sm font-semibold capitalize transition ${pricingMode === mode ? 'text-slate-950' : isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}
+                  className={`relative z-10 rounded-xl px-5 py-2 text-sm font-semibold capitalize transition ${pricingMode === mode ? 'text-slate-950' : 'text-slate-600 hover:text-slate-900'}`}
                 >
                   {mode}
                 </button>
@@ -1178,11 +1133,11 @@ export default function Landing() {
                 key={plan.name}
                 {...fadeUp(reduced)}
                 whileHover={reduced ? undefined : { y: -4, scale: 1.01 }}
-                className={`flex h-full flex-col rounded-3xl border p-7 md:p-8 ${plan.featured ? 'border-emerald-400 bg-gradient-to-b from-[#f3fff9] to-[#ecfff6] text-slate-900' : isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
+                className={`flex h-full flex-col rounded-3xl border p-7 md:p-8 ${plan.featured ? 'border-emerald-400 bg-gradient-to-b from-[#f3fff9] to-[#ecfff6] text-slate-900' : 'border-slate-200 bg-white'}`}
                 style={{ boxShadow: plan.featured ? '0 0 0 4px rgba(16,185,129,0.16), 0 24px 32px -8px rgb(0 0 0 / 0.16), 0 12px 16px -10px rgb(0 0 0 / 0.14)' : '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08)' }}
               >
                 <div className="mb-4 flex min-h-[36px] items-center justify-between gap-3">
-                  <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${plan.featured ? 'text-emerald-600' : isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                  <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${plan.featured ? 'text-emerald-600' : 'text-emerald-700'}`}>
                     {PLAN_DETAILS[plan.name]?.eyebrow}
                   </p>
                   {plan.featured && (
@@ -1194,21 +1149,21 @@ export default function Landing() {
                 <h3 className="text-xl font-semibold">{plan.name}</h3>
                 <div className="mt-4 flex items-end gap-1">
                   <span className="text-4xl font-bold tracking-tight">{plan.price}</span>
-                  <span className={`pb-1 text-sm ${plan.featured ? 'text-slate-500' : isDark ? 'text-slate-400' : 'text-slate-500'}`}>{plan.period}</span>
+                  <span className={`pb-1 text-sm ${plan.featured ? 'text-slate-500' : 'text-slate-500'}`}>{plan.period}</span>
                 </div>
                 <div className="mt-5 flex flex-1 flex-col gap-5">
-                  <p className={`text-base leading-relaxed ${plan.featured ? 'text-slate-600' : isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                  <p className={`text-base leading-relaxed ${plan.featured ? 'text-slate-600' : 'text-slate-600'}`}>
                     {PLAN_DETAILS[plan.name]?.description}
                   </p>
                   <ul className="space-y-2.5">
                     {plan.points.map((point) => (
                       <li key={point} className="flex items-start gap-2.5 text-sm">
                         <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
-                        <span className={plan.featured ? 'text-slate-600' : isDark ? 'text-slate-300' : 'text-slate-600'}>{point}</span>
+                        <span className={plan.featured ? 'text-slate-600' : 'text-slate-600'}>{point}</span>
                       </li>
                     ))}
                   </ul>
-                  <div className={`mt-auto rounded-2xl border px-4 py-4 text-base leading-relaxed ${plan.featured ? 'border-slate-300 bg-slate-600 text-slate-100' : isDark ? 'border-slate-800 bg-slate-950/60 text-slate-200' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
+                  <div className={`mt-auto rounded-2xl border px-4 py-4 text-base leading-relaxed ${plan.featured ? 'border-slate-300 bg-slate-600 text-slate-100' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
                     {PLAN_DETAILS[plan.name]?.idealFor}
                   </div>
                 </div>
@@ -1218,15 +1173,15 @@ export default function Landing() {
                     return
                   }
                   navigate('/login?signup=true')
-                }} className={`mt-6 w-full ${ctaBase} ${plan.featured ? 'border border-emerald-400 bg-emerald-200 text-emerald-900 hover:bg-emerald-300' : isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+                }} className={`mt-6 w-full ${ctaBase} ${plan.featured ? 'border border-emerald-400 bg-emerald-200 text-emerald-900 hover:bg-emerald-300' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                   {plan.cta}
                 </button>
                 {plan.name === 'Enterprise' && (
                   <div className="mt-3 space-y-2">
-                    <p className={`text-center text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Custom seats, onboarding, and workflow setup are scoped with your team.</p>
+                    <p className={`text-center text-xs ${'text-slate-500'}`}>Custom seats, onboarding, and workflow setup are scoped with your team.</p>
                     <button
                       onClick={() => navigate('/for-investors')}
-                      className={`mx-auto block text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-700 hover:text-emerald-600'}`}
+                      className={`mx-auto block text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700 hover:text-emerald-600'}`}
                     >
                       View enterprise workflow details
                     </button>
@@ -1240,45 +1195,45 @@ export default function Landing() {
         <section id="traction" className="mx-auto w-full max-w-[1240px] px-4 py-8 sm:px-6 md:py-10">
           <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}>
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Traction</p>
+              <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>Traction</p>
               <button
                 onClick={() => navigate('/for-investors')}
-                className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-700 hover:text-emerald-600'}`}
+                className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700 hover:text-emerald-600'}`}
               >
                 Open full investor page
               </button>
             </div>
 
-            <div className={`mt-4 rounded-3xl border p-5 md:p-6 ${isDark ? 'border-slate-800 bg-slate-950/65' : 'border-slate-200 bg-white'}`}>
-              <p className={`text-sm leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+            <div className={`mt-4 rounded-3xl border p-5 md:p-6 ${'border-slate-200 bg-white'}`}>
+              <p className={`text-sm leading-relaxed ${'text-slate-700'}`}>
                 Built by Alex Bombela - founder at SoftDAB Tech, building AI infrastructure products and leading VITALOOP execution.
                 {' '}
                 <a
                   href="https://www.linkedin.com/in/aleksey-bombela/"
                   target="_blank"
                   rel="noreferrer"
-                  className={`${isDark ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-700 hover:text-emerald-600'} font-semibold`}
+                  className={`${'text-emerald-700 hover:text-emerald-600'} font-semibold`}
                 >
                   LinkedIn
                 </a>
               </p>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className={`rounded-2xl border px-4 py-3 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Early access</div>
+                <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
+                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Early access</div>
                   <div className="mt-1 text-sm font-semibold">10 users</div>
                 </div>
-                <div className={`rounded-2xl border px-4 py-3 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Lab integrations</div>
+                <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
+                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Lab integrations</div>
                   <div className="mt-1 text-sm font-semibold">Quest, LabCorp, +50 formats</div>
                 </div>
-                <div className={`rounded-2xl border px-4 py-3 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Launch and stack</div>
+                <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
+                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Launch and stack</div>
                   <div className="mt-1 text-sm font-semibold">Launch: May 2026 · FastAPI + Claude AI + Supabase</div>
                 </div>
-                <div className={`rounded-2xl border px-4 py-3 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Contact</div>
-                  <a href="mailto:bombela@softdab.tech" className={`mt-1 inline-flex text-sm font-semibold ${isDark ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-700 hover:text-emerald-600'}`}>
+                <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
+                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Contact</div>
+                  <a href="mailto:bombela@softdab.tech" className={`mt-1 inline-flex text-sm font-semibold ${'text-emerald-700 hover:text-emerald-600'}`}>
                     bombela@softdab.tech
                   </a>
                 </div>
@@ -1293,10 +1248,10 @@ export default function Landing() {
           </motion.div>
           <div className="grid gap-4 md:grid-cols-3">
             {TESTIMONIALS.map((item, idx) => (
-              <motion.article key={item.author} {...fadeUp(reduced, idx * 0.06)} className={`rounded-3xl border p-6 ${isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}>
-                <p className={`text-[17px] leading-[1.7] ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>"{item.quote}"</p>
+              <motion.article key={item.author} {...fadeUp(reduced, idx * 0.06)} className={`rounded-3xl border p-6 ${'border-slate-200 bg-white'}`}>
+                <p className={`text-[17px] leading-[1.7] ${'text-slate-700'}`}>"{item.quote}"</p>
                 {item.result && (
-                  <div className={`mt-3 rounded-xl border px-3 py-2 text-xs font-semibold ${isDark ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                  <div className={`mt-3 rounded-xl border px-3 py-2 text-xs font-semibold ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
                     {item.result}
                   </div>
                 )}
@@ -1306,7 +1261,7 @@ export default function Landing() {
                   </span>
                   <div>
                     <div className="text-sm font-semibold">{item.author}</div>
-                    <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item.role}</div>
+                    <div className={`text-xs ${'text-slate-500'}`}>{item.role}</div>
                   </div>
                 </div>
               </motion.article>
@@ -1318,7 +1273,7 @@ export default function Landing() {
         <section id="faq" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7">
             <h2 className="text-[28px] font-semibold tracking-tight">FAQ: AI Lab Analysis & Biohacking Platform</h2>
-            <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
               Common questions about AI-powered blood test interpretation, biomarker tracking, and personalized health protocols.
             </p>
           </motion.div>
@@ -1327,13 +1282,13 @@ export default function Landing() {
               <motion.details
                 key={item.question}
                 {...fadeUp(reduced, idx * 0.04)}
-                className={`group rounded-2xl border px-5 py-4 ${isDark ? 'border-slate-800 bg-slate-900/55' : 'border-slate-200 bg-white'}`}
+                className={`group rounded-2xl border px-5 py-4 ${'border-slate-200 bg-white'}`}
               >
-                <summary className={`flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
+                <summary className={`flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold ${'text-slate-800'}`}>
                   <span>{item.question}</span>
                   <span className="shrink-0 text-emerald-400 transition-transform group-open:rotate-45">+</span>
                 </summary>
-                <p className={`mt-3 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{item.answer}</p>
+                <p className={`mt-3 text-sm leading-relaxed ${'text-slate-600'}`}>{item.answer}</p>
               </motion.details>
             ))}
           </div>
@@ -1344,22 +1299,22 @@ export default function Landing() {
           <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}>
             <div className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
               <div>
-                <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Health Intelligence Hub</p>
+                <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>Health Intelligence Hub</p>
                 <h2 className="mt-2 text-[22px] font-semibold tracking-tight">Guides on Biomarker Interpretation & Biohacking</h2>
-                <p className={`mt-2 max-w-xl text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                <p className={`mt-2 max-w-xl text-sm leading-relaxed ${'text-slate-600'}`}>
                   Deep dives on reading blood test results, optimizing ferritin, testosterone, cortisol, and building a sustainable biohacking protocol. The guides page now acts like an extension of the product, not a disconnected document dump.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-3">
                   <button
                     onClick={() => navigate('/how-it-works')}
-                    className={`${ctaBase} shrink-0 ${isDark ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400' : 'bg-slate-900 text-white hover:bg-slate-700'}`}
+                    className={`${ctaBase} shrink-0 ${'bg-slate-900 text-white hover:bg-slate-700'}`}
                   >
                     Explore guides
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </button>
                   <button
                     onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
-                    className={`${ctaBase} shrink-0 ${isDark ? 'border border-slate-700 bg-slate-900/80 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}
+                    className={`${ctaBase} shrink-0 ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}
                   >
                     Compare plans
                   </button>
@@ -1373,13 +1328,13 @@ export default function Landing() {
                     <motion.article
                       key={guide.title}
                       {...fadeUp(reduced, idx * 0.05)}
-                      className={`rounded-3xl border p-6 ${isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white/90'}`}
+                      className={`rounded-3xl border p-6 ${'border-slate-200 bg-white/90'}`}
                     >
-                      <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${isDark ? 'bg-emerald-500/14 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
+                      <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${'bg-emerald-50 text-emerald-700'}`}>
                         <Icon className="h-4 w-4" />
                       </span>
                       <h3 className="mt-4 text-base font-semibold">{guide.title}</h3>
-                      <p className={`mt-2 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{guide.body}</p>
+                      <p className={`mt-2 text-sm leading-relaxed ${'text-slate-600'}`}>{guide.body}</p>
                     </motion.article>
                   )
                 })}
@@ -1396,7 +1351,7 @@ export default function Landing() {
             className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}
           >
             <h2 className="text-[28px] font-semibold tracking-tight">The Biohacking Feedback Loop: How Longitudinal Lab Tracking Works</h2>
-            <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
               Biohacking is not a one-time blood test — it is a continuous feedback cycle. VITALOOP makes that loop automatic: data → AI insight → action protocol → weekly check-in → next lab upload. Each cycle makes the next one smarter.
             </p>
             <div className="mt-6 grid grid-cols-2 gap-4 xl:grid-cols-[repeat(5,minmax(0,1fr))]">
@@ -1409,22 +1364,22 @@ export default function Landing() {
                         aria-hidden="true"
                         animate={loopActive && !reduced ? { opacity: [0.25, 1, 0.4], scaleX: [0.92, 1, 0.96] } : { opacity: 0.28, scaleX: 1 }}
                         transition={{ duration: 0.8, delay: idx * 0.14, ease: 'easeInOut' }}
-                        className={`absolute left-[calc(50%+36px)] top-9 hidden h-px w-[calc(100%-12px)] origin-left xl:block ${isDark ? 'bg-gradient-to-r from-emerald-400/80 to-slate-700/20' : 'bg-gradient-to-r from-emerald-500/80 to-slate-300/20'}`}
+                        className={`absolute left-[calc(50%+36px)] top-9 hidden h-px w-[calc(100%-12px)] origin-left xl:block ${'bg-gradient-to-r from-emerald-500/80 to-slate-300/20'}`}
                       />
                     )}
                     <motion.article
                       animate={loopActive && !reduced ? { y: [0, -8, 0], scale: [1, 1.02, 1] } : { y: 0, scale: 1 }}
                       transition={{ duration: 0.75, delay: idx * 0.14, ease: 'easeInOut' }}
-                      className={`relative h-full rounded-[28px] border px-4 py-5 ${isDark ? 'border-slate-700 bg-slate-900/60' : 'border-slate-200 bg-white'}`}
+                      className={`relative h-full rounded-[28px] border px-4 py-5 ${'border-slate-200 bg-white'}`}
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${isDark ? 'bg-emerald-500/14 text-emerald-300' : 'bg-emerald-50 text-emerald-700'}`}>
+                        <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${'bg-emerald-50 text-emerald-700'}`}>
                           <Icon className="h-5 w-5" />
                         </span>
-                        <span className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>0{idx + 1}</span>
+                        <span className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>0{idx + 1}</span>
                       </div>
                       <h3 className="mt-4 text-base font-semibold">{item.title}</h3>
-                      <p className={`mt-2 text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{item.body}</p>
+                      <p className={`mt-2 text-sm leading-relaxed ${'text-slate-600'}`}>{item.body}</p>
                     </motion.article>
                   </div>
                 )
@@ -1436,14 +1391,14 @@ export default function Landing() {
         <section className="mx-auto w-full max-w-[1240px] px-4 pb-24 pt-10 sm:px-6 md:pb-28 md:pt-16">
           <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 text-center md:p-10 ${sectionCard}`}>
             <h2 className="text-[28px] font-semibold tracking-tight">Start Interpreting Your Blood Tests With AI Today</h2>
-            <p className={`mx-auto mt-3 max-w-2xl text-[17px] leading-[1.7] ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            <p className={`mx-auto mt-3 max-w-2xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
               Replace guesswork with AI-powered biomarker analysis and personalized protocols. Free to start, no credit card required.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <button onClick={() => navigate('/login?signup=true')} className={`${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+              <button onClick={() => navigate('/login?signup=true')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                 Create free account
               </button>
-              <button onClick={() => navigate('/how-it-works')} className={`${ctaBase} ${isDark ? 'border border-slate-700 bg-slate-900/80 text-slate-100 hover:border-emerald-400/60' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+              <button onClick={() => navigate('/how-it-works')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                 Explore product
               </button>
             </div>
@@ -1453,7 +1408,7 @@ export default function Landing() {
 
       <CabinetPreviewModal open={demoOpen} onClose={() => setDemoOpen(false)} reduced={reduced} />
 
-      <footer className={`border-t ${isDark ? 'border-slate-800 bg-[#070b15]' : 'border-slate-200 bg-white'} py-10`}>
+      <footer className={`border-t ${'border-slate-200 bg-white'} py-10`}>
         <div className="mx-auto grid w-full max-w-[1240px] gap-8 px-4 text-sm sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
           <div>
             <div className="flex items-center gap-2">
@@ -1462,24 +1417,24 @@ export default function Landing() {
               </span>
               <span className="text-base font-semibold tracking-tight">VITALOOP</span>
             </div>
-            <p className={`mt-4 max-w-md leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`mt-4 max-w-md leading-relaxed ${'text-slate-500'}`}>
               AI lab analysis, personalized protocols, and longitudinal biomarker tracking for people who want a repeatable health system instead of one-off interpretations.
             </p>
-            <p className={`mt-4 text-xs uppercase tracking-[0.16em] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Not medical advice. Always work with a qualified clinician for diagnosis and treatment decisions.</p>
+            <p className={`mt-4 text-xs uppercase tracking-[0.16em] ${'text-slate-400'}`}>Not medical advice. Always work with a qualified clinician for diagnosis and treatment decisions.</p>
             <div className="mt-6 flex flex-col items-start gap-2">
               <a
                 href="mailto:info@softdab.tech"
-                className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}
+                className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}
               >
                 info@softdab.tech
               </a>
-              <p className={`text-left ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+              <p className={`text-left ${'text-slate-400'}`}>
                 © 2026 VITALOOP. Made by{' '}
                 <a
                   href="https://softdab.tech"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`${isDark ? 'text-emerald-300 hover:text-emerald-200' : 'text-emerald-700 hover:text-emerald-600'} underline-offset-2 hover:underline`}
+                  className={`${'text-emerald-700 hover:text-emerald-600'} underline-offset-2 hover:underline`}
                 >
                   SoftDAB
                 </a>
@@ -1488,21 +1443,21 @@ export default function Landing() {
           </div>
 
           <div>
-            <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Product</div>
+            <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>Product</div>
             <div className="mt-4 flex flex-col gap-3">
-              <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>How it works</button>
-              <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Pricing</button>
-              <button onClick={() => navigate('/how-it-works')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Health Intelligence Hub</button>
+              <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>How it works</button>
+              <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>Pricing</button>
+              <button onClick={() => navigate('/how-it-works')} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>Health Intelligence Hub</button>
             </div>
           </div>
 
           <div>
-            <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Company</div>
+            <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>Company</div>
             <div className="mt-4 flex flex-col items-start gap-3 text-left">
-              <button onClick={() => navigate('/for-nutritionists')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>For Nutritionists</button>
-              <button onClick={() => navigate('/terms')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Terms</button>
-              <button onClick={() => navigate('/privacy')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Privacy</button>
-              <button onClick={() => navigate('/for-investors')} className={`text-left underline-offset-2 hover:underline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>For Investors</button>
+              <button onClick={() => navigate('/for-nutritionists')} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>For Nutritionists</button>
+              <button onClick={() => navigate('/terms')} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>Terms</button>
+              <button onClick={() => navigate('/privacy')} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>Privacy</button>
+              <button onClick={() => navigate('/for-investors')} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>For Investors</button>
             </div>
           </div>
         </div>
