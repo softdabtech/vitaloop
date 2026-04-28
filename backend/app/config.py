@@ -36,8 +36,8 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_price_id: str = ""  # Legacy fallback (same as stripe_price_id_personal)
-    stripe_price_id_personal: str = ""  # Personal Pro $9.99/mo
-    stripe_price_id_practitioner: str = ""  # Practitioner Pro $29/mo
+    stripe_price_id_personal: str = ""  # Personal Premium $9.99/mo
+    stripe_price_id_practitioner: str = ""  # Practitioner Premium $29/mo
     stripe_success_url: str = "http://localhost:5173/dashboard?sub=success"
     stripe_cancel_url: str = "http://localhost:5173/dashboard?sub=cancelled"
     stripe_portal_return_url: str = "http://localhost:5173/dashboard"

@@ -85,7 +85,7 @@ FREE Tier (текущее состояние)
 - Базовые алерты
 - Просмотр своих результатов
 
-PRO Tier ($9.99/месяц)
+Premium Tier ($9.99/месяц)
 - Unlimited загрузки
 - AI health tips (Claude)
 - Trend analytics
@@ -489,7 +489,7 @@ Send:
 
 ```
 Conservative Scenario:
-- 5,000 PRO users × $9.99 × 12 months = $600k
+- 5,000 Premium users × $9.99 × 12 months = $600k
 - 200 Practitioner users × $29.99 × 12 = $72k
 - 20 Clinic licenses × $500 × 12 = $120k
 - Supplement affiliate (2% of PRO) = $12k
@@ -498,7 +498,7 @@ Conservative Scenario:
 TOTAL: ~$854k/year recurring
 
 Optimistic Scenario (with viral growth):
-- 20,000 PRO users = $2.4M
+- 20,000 Premium users = $2.4M
 - 1,000 Practitioner users = $360k
 - 100 Clinic licenses = $600k
 - Supplement affiliate = $50k
