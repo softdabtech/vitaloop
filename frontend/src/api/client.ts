@@ -32,6 +32,13 @@ api.interceptors.response.use(
     const detail = error.response?.data?.detail
     const validationErrors = error.response?.data?.errors || []
     const requestUrl = String(error?.config?.url || '')
+    const method = String(error?.config?.method || '').toUpperCase()
+
+    // Log errors for debugging
+    if (status >= 500) {
+      console.error(`[API ${status}] ${method} ${requestUrl}`, { code, detail })
+    }
+
     const isPassiveCabinetRequest = [
       '/dashboard/summary',
       '/stripe/subscription',

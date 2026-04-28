@@ -6,8 +6,6 @@ import Paywall from '../components/Paywall.jsx'
 import { useSubscription } from '../hooks/useSubscription.js'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 
 const STATUS_META = {
   DEFICIENT: { rank: 0, border: 'border-rose-300', stripe: 'bg-rose-500', badge: 'bg-rose-50 text-rose-700', text: 'text-rose-700' },
@@ -73,28 +71,40 @@ export default function Results() {
   const borderline = biomarkers.filter((b) => b.status === 'BORDERLINE').length
   const topPriority = rankedBiomarkers.find((b) => String(b.status || '').toUpperCase() !== 'OPTIMAL') || rankedBiomarkers[0] || null
 
-  function exportResultsAsPDF() {
+  async function exportResultsAsPDF() {
     const node = document.querySelector('.vtl-page')
     if (!node) return
-    html2canvas(node, { scale: 2 }).then(canvas => {
+
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const jsPDF = (await import('jspdf')).jsPDF
+
+      const canvas = await html2canvas(node, { scale: 2 })
       const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: 'p', unit: 'px', format: 'a4' })
       const pageWidth = pdf.internal.pageSize.getWidth()
       const pageHeight = pdf.internal.pageSize.getHeight()
       pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight)
       pdf.save('lab-results.pdf')
-    })
+    } catch (err) {
+      console.error('Failed to export PDF', err)
+    }
   }
 
-  function exportResultsAsPNG() {
+  async function exportResultsAsPNG() {
     const node = document.querySelector('.vtl-page')
     if (!node) return
-    html2canvas(node, { scale: 2 }).then(canvas => {
+
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const canvas = await html2canvas(node, { scale: 2 })
       const link = document.createElement('a')
       link.download = 'lab-results.png'
       link.href = canvas.toDataURL('image/png')
       link.click()
-    })
+    } catch (err) {
+      console.error('Failed to export PNG', err)
+    }
   }
 
   return (

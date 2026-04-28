@@ -165,41 +165,59 @@ export default function Settings() {
     event.preventDefault()
     setSaving(true)
 
-    const [accountSave, medicalSave, metadataSave] = await Promise.all([
-      supabase.from('users').update({
-        full_name: account.full_name.trim() || null,
-        age: account.age ? Number(account.age) : null,
-        sex: account.sex || null,
-        timezone: account.timezone,
-        updated_at: new Date().toISOString(),
-      }).eq('id', user.id),
-      api.patch('/profile', {
-        height_cm: medical.height_cm ? Number(medical.height_cm) : null,
-        weight_kg: medical.weight_kg ? Number(medical.weight_kg) : null,
-        goals: medical.goals,
-      }).catch((error) => ({ error })),
-      supabase.auth.updateUser({
-        data: {
-          ...meta,
-          avatar_url: null,
-          telegram: extras.telegram || null,
-          instagram: extras.instagram || null,
-          linkedin: extras.linkedin || null,
-          weekly_digest: extras.weekly_digest,
-          checkin_reminders: extras.checkin_reminders,
-          product_updates: extras.product_updates,
-        },
-      }),
-    ])
+    // Store previous state for rollback
+    const prevAccount = account
+    const prevMedical = medical
+    const prevExtras = extras
 
-    setSaving(false)
-    const failed = accountSave.error || medicalSave.error || metadataSave.error
-    if (failed) {
-      toast.error('Save failed — please try again.')
-      return
+    try {
+      const [accountSave, medicalSave, metadataSave] = await Promise.all([
+        supabase.from('users').update({
+          full_name: account.full_name.trim() || null,
+          age: account.age ? Number(account.age) : null,
+          sex: account.sex || null,
+          timezone: account.timezone,
+          updated_at: new Date().toISOString(),
+        }).eq('id', user.id),
+        api.patch('/profile', {
+          height_cm: medical.height_cm ? Number(medical.height_cm) : null,
+          weight_kg: medical.weight_kg ? Number(medical.weight_kg) : null,
+          goals: medical.goals,
+        }).catch((error) => ({ error })),
+        supabase.auth.updateUser({
+          data: {
+            ...meta,
+            avatar_url: null,
+            telegram: extras.telegram || null,
+            instagram: extras.instagram || null,
+            linkedin: extras.linkedin || null,
+            weekly_digest: extras.weekly_digest,
+            checkin_reminders: extras.checkin_reminders,
+            product_updates: extras.product_updates,
+          },
+        }),
+      ])
+
+      const failed = accountSave.error || medicalSave.error || metadataSave.error
+      if (failed) {
+        // Rollback on error
+        setAccount(prevAccount)
+        setMedical(prevMedical)
+        setExtras(prevExtras)
+        toast.error('Save failed — please try again.')
+        return
+      }
+
+      toast.success('Profile updated')
+    } catch (err) {
+      // Rollback on exception
+      setAccount(prevAccount)
+      setMedical(prevMedical)
+      setExtras(prevExtras)
+      toast.error('Failed to save profile. Please check your connection.')
+    } finally {
+      setSaving(false)
     }
-
-    toast.success('Profile updated')
   }
 
   return (
