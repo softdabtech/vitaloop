@@ -181,14 +181,14 @@ export default function WeeklyCheckIn() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-8">
+    <main className="min-h-screen bg-slate-50 py-8" style={{ paddingLeft: window.innerWidth < 500 ? '16px' : '24px', paddingRight: window.innerWidth < 500 ? '16px' : '24px' }}>
       <div className="mx-auto max-w-3xl space-y-6">
         <CabinetPageHeader
           title="Weekly Check-in"
           subtitle="A quick 4-step reflection to keep your protocol adaptive and accurate."
         />
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm" style={{ padding: window.innerWidth < 500 ? '20px 16px' : '24px' }}>
           {!done ? (
             <>
               <div className="mb-6">
