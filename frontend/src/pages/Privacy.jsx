@@ -9,7 +9,7 @@ export default function Privacy() {
       background: 'var(--white, #ffffff)',
       color: 'var(--gray-900, #1d1d1f)',
       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
-      padding: '80px 24px',
+      padding: window.innerWidth < 500 ? '40px 16px' : '80px 24px',
       maxWidth: 720,
       margin: '0 auto',
     }}>
