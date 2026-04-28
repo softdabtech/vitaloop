@@ -304,6 +304,24 @@ export default function UserDashboard() {
         <>
           <MetricBar stats={stats} uploadCount={uploadCount} uploadLimit={uploadLimit} />
 
+          {uploadLimit === 1 && (
+            <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-5 sm:p-6">
+              <div className="flex items-start gap-4">
+                <div className="rounded-xl bg-amber-100 p-2.5 flex-shrink-0">
+                  <Sparkles className="h-5 w-5 text-amber-700" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-amber-900 mb-1">Unlock your full potential with Personal Pro</h3>
+                  <p className="text-sm text-amber-800 mb-4">Get unlimited uploads, personalized AI protocols, weekly check-ins, and detailed biomarker tracking — all powered by advanced health intelligence.</p>
+                  <button onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED', source: 'dashboard-upgrade' } }))} className="inline-flex items-center gap-2 rounded-xl bg-amber-600 text-white px-4 py-2 text-sm font-semibold hover:bg-amber-700 transition">
+                    Upgrade to Pro
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <motion.div {...fadeUp(0.04)} className="grid gap-6 lg:grid-cols-[2fr_1fr]">
             {/* Left: Chart + Next Task */}
             <div className="space-y-6">
