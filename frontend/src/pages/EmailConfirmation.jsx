@@ -149,7 +149,7 @@ export default function EmailConfirmation() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Premium Display", sans-serif',
         backgroundColor: '#f5f5f5',
       }}
     >

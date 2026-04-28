@@ -37,7 +37,7 @@ function computeRangePercent(biomarker) {
 const RESULTS_HINTS = [
   '🟢 Biomarkers are color-coded by priority: red = needs attention, yellow = borderline, green = optimal. The most critical ones appear first.',
   '🎯 The "Top priority" card shows which single biomarker will have the biggest impact on your health if addressed — start there.',
-  '💊 Scroll down to see your personalized supplement protocol based on these results. Pro subscribers see the full ranked plan.',
+  '💊 Scroll down to see your personalized supplement protocol based on these results. Premium subscribers see the full ranked plan.',
 ]
 
 export default function Results() {

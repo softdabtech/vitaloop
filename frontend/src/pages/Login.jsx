@@ -352,7 +352,7 @@ export default function Login() {
   return (
     <div style={{
       minHeight: '100svh', display: 'flex',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Premium Display", sans-serif',
       background: authTheme.appBg,
     }}>
       {/* Left abstract panel - hidden on mobile */}

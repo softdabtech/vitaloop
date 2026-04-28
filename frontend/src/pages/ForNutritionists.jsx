@@ -677,7 +677,7 @@ export default function ForNutritionists() {
             </button>
           </motion.div>
 
-          {/* Practitioner Pro card — highlighted */}
+          {/* Practitioner Premium card — highlighted */}
           <motion.div
             variants={fadeUp} custom={0.08} initial="hidden" whileInView="visible" viewport={{ once: true }}
             className="relative w-full max-w-sm rounded-3xl border border-emerald-200 bg-emerald-50 p-8 shadow-[0_0_40px_rgba(16,185,129,0.08)] backdrop-blur-sm"
@@ -687,7 +687,7 @@ export default function ForNutritionists() {
                   Recommended
               </span>
             </div>
-            <div className="mb-1 text-xs font-bold uppercase tracking-widest text-emerald-600">Practitioner Pro</div>
+            <div className="mb-1 text-xs font-bold uppercase tracking-widest text-emerald-600">Practitioner Premium</div>
             <div className="mb-1 flex items-end gap-1">
               <span className="text-4xl font-bold text-slate-900">$29</span>
                 <span className="mb-1 text-sm text-slate-600">/month</span>
@@ -716,7 +716,7 @@ export default function ForNutritionists() {
               }}
               className="w-full rounded-2xl bg-emerald-500 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
             >
-                Try Practitioner Pro
+                Try Practitioner Premium
             </button>
           </motion.div>
 

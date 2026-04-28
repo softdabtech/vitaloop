@@ -51,8 +51,8 @@ const FAQ_ITEMS = [
     category: 'Features & Plans',
     questions: [
       {
-        q: 'What\'s the difference between Free and Pro?',
-        a: 'Free plan: 3 uploads/year, basic analysis. Pro plan: unlimited uploads, longitudinal tracking, AI health coaching, weekly check-ins, doctor sharing, and trend analytics.',
+        q: 'What\'s the difference between Free and Premium?',
+        a: 'Free plan: 3 uploads/year, basic analysis. Premium plan: unlimited uploads, longitudinal tracking, AI health coaching, weekly check-ins, doctor sharing, and trend analytics.',
       },
       {
         q: 'Can I cancel my subscription anytime?',

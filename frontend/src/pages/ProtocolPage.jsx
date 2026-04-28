@@ -570,7 +570,7 @@ export default function ProtocolPage() {
                 hints={[
                   '💊 Each supplement is ranked by health impact — highest priority first. Focus on the first 1–3 items before adding more.',
                   '⏰ Timing matters: "morning empty stomach" means 30 min before food. "With food" means any meal. Follow the schedule for best absorption.',
-                  '📥 Pro subscribers can export this protocol as a PDF to share with their doctor or nutritionist.',
+                  '📥 Premium subscribers can export this protocol as a PDF to share with their doctor or nutritionist.',
                 ]}
                 onDone={dismissHints}
               />

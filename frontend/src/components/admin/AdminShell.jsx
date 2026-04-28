@@ -45,7 +45,7 @@ export default function AdminShell({ title, subtitle, children, variant = 'clien
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Premium Display", sans-serif' }}>
       {/* Top bar */}
       <div style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(12px)', borderBottom: '0.5px solid rgba(15,23,42,0.12)', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', gap: 16 }}>
         {/* Back button */}

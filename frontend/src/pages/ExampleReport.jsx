@@ -31,7 +31,7 @@ export default function ExampleReport() {
       minHeight: '100vh',
       background: 'var(--gray-950, #0a0a0a)',
       color: 'white',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Premium Display", sans-serif',
     }}>
       <Seo
         title="Blood Test Analysis Example Report | VITALOOP"

@@ -311,10 +311,10 @@ export default function UserDashboard() {
                   <Sparkles className="h-5 w-5 text-amber-700" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-amber-900 mb-1">Unlock your full potential with Personal Pro</h3>
+                  <h3 className="font-semibold text-amber-900 mb-1">Unlock your full potential with Personal Premium</h3>
                   <p className="text-sm text-amber-800 mb-4">Get unlimited uploads, personalized AI protocols, weekly check-ins, and detailed biomarker tracking — all powered by advanced health intelligence.</p>
                   <button onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED', source: 'dashboard-upgrade' } }))} className="inline-flex items-center gap-2 rounded-xl bg-amber-600 text-white px-4 py-2 text-sm font-semibold hover:bg-amber-700 transition">
-                    Upgrade to Pro
+                    Upgrade to Premium
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>
