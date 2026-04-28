@@ -61,21 +61,21 @@ export default function HowItWorks() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#09101d] text-white">
+    <div className="min-h-screen bg-white text-slate-900">
       <Seo
         title="How AI Blood Test Analysis Works | VITALOOP"
         description="See how VITALOOP turns blood test uploads into prioritized biomarker insights and step-by-step weekly protocols. Start free and test your first report."
         path="/how-it-works"
       />
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(16,185,129,0.18),transparent_34%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_88%_6%,rgba(14,165,233,0.12),transparent_30%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(16,185,129,0.08),transparent_34%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_88%_6%,rgba(14,165,233,0.06),transparent_30%)]" />
       </div>
 
       <div className="mx-auto max-w-[1240px] px-4 py-6 sm:px-6">
         <button
           onClick={() => navigate('/')}
-          className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400/50 hover:text-white"
+          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-slate-100"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to site
@@ -84,63 +84,63 @@ export default function HowItWorks() {
 
       <section className="mx-auto grid max-w-[1240px] gap-8 px-4 pb-14 pt-8 sm:px-6 lg:grid-cols-[1.02fr_0.98fr] lg:pt-12">
         <div>
-          <motion.p initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="inline-flex rounded-full border border-emerald-300/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">
+          <motion.p initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600">
             Health Intelligence Hub
           </motion.p>
-          <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 text-5xl font-bold tracking-[-0.03em] text-white md:text-6xl">
+          <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 text-5xl font-bold tracking-[-0.03em] text-slate-900 md:text-6xl">
             Explore how the system actually works
           </motion.h1>
-          <motion.p initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-5 max-w-2xl text-lg leading-8 text-slate-300">
+          <motion.p initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
             This page is the bridge between marketing and product reality: how uploads become insight, how insight becomes action, and how repeated lab cycles create a smarter protocol over time.
           </motion.p>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <button onClick={() => navigate('/login?signup=true')} className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400">
+            <button onClick={() => navigate('/login?signup=true')} className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600">
               Start free
               <ArrowRight className="ml-2 h-4 w-4" />
             </button>
-            <button onClick={() => navigate('/example-report')} className="inline-flex items-center rounded-2xl border border-slate-700 bg-slate-950/75 px-5 py-3 text-sm font-semibold text-slate-100 transition hover:border-emerald-400/50">
+            <button onClick={() => navigate('/example-report')} className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-slate-50">
               See example report
             </button>
           </div>
         </div>
 
-        <motion.div initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="rounded-[32px] border border-slate-800 bg-[linear-gradient(180deg,rgba(7,15,27,0.96),rgba(9,21,36,0.86))] p-5 shadow-[0_24px_60px_rgba(2,6,23,0.35)]">
+        <motion.div initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="rounded-[32px] border border-slate-200 bg-white p-5 shadow-[0_24px_60px_rgba(0,0,0,0.05)]">
           <div className="grid gap-3 sm:grid-cols-3">
             {outcomes.map((item) => {
               const Icon = item.icon
               return (
-                <div key={item.label} className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-500/12 text-emerald-300">
+                <div key={item.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
                     <Icon className="h-4 w-4" />
                   </span>
-                  <div className="mt-3 text-2xl font-bold tracking-tight text-white">{item.value}</div>
-                  <div className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-400">{item.label}</div>
+                  <div className="mt-3 text-2xl font-bold tracking-tight text-slate-900">{item.value}</div>
+                  <div className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-600">{item.label}</div>
                 </div>
               )
             })}
           </div>
 
-          <div className="mt-4 rounded-3xl border border-slate-800 bg-slate-950/70 p-5">
+          <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-sm font-semibold text-white">Command center preview</div>
-                <div className="text-xs text-slate-400">What the system is designed to surface first</div>
+                <div className="text-sm font-semibold text-slate-900">Command center preview</div>
+                <div className="text-xs text-slate-600">What the system is designed to surface first</div>
               </div>
-              <LayoutDashboard className="h-5 w-5 text-emerald-300" />
+              <LayoutDashboard className="h-5 w-5 text-emerald-600" />
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Priority issue</div>
-                <div className="mt-2 text-lg font-semibold text-white">Ferritin recovery stack</div>
-                <div className="mt-3 h-2 rounded-full bg-slate-800">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-600">Priority issue</div>
+                <div className="mt-2 text-lg font-semibold text-slate-900">Ferritin recovery stack</div>
+                <div className="mt-3 h-2 rounded-full bg-slate-200">
                   <div className="h-2 w-[74%] rounded-full bg-emerald-500" />
                 </div>
               </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
-                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Current loop</div>
-                <div className="mt-2 text-lg font-semibold text-white">Upload → Insight → Action → Retest</div>
-                <div className="mt-3 text-sm leading-relaxed text-slate-300">Each cycle compounds rather than resetting your context.</div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-slate-600">Current loop</div>
+                <div className="mt-2 text-lg font-semibold text-slate-900">Upload → Insight → Action → Retest</div>
+                <div className="mt-3 text-sm leading-relaxed text-slate-600">Each cycle compounds rather than resetting your context.</div>
               </div>
             </div>
           </div>
@@ -160,25 +160,25 @@ export default function HowItWorks() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-10% 0px -10% 0px' }}
                 transition={{ delay: idx * 0.2 }}
-                className={`grid items-center gap-8 rounded-[32px] border border-slate-800 bg-slate-950/55 p-6 md:grid-cols-2 md:p-8 ${!isEven ? 'md:[&>*:first-child]:order-2' : ''}`}
+                className={`grid items-center gap-8 rounded-[32px] border border-slate-200 bg-slate-50 p-6 md:grid-cols-2 md:p-8 ${!isEven ? 'md:[&>*:first-child]:order-2' : ''}`}
               >
                 <div>
                   <div className="mb-4 flex items-end gap-4">
-                    <span className="text-6xl font-bold text-emerald-300/35">
+                    <span className="text-6xl font-bold text-emerald-200">
                       {step.code}
                     </span>
-                    <Icon className="mb-2 h-12 w-12 text-emerald-300" />
+                    <Icon className="mb-2 h-12 w-12 text-emerald-600" />
                   </div>
-                  <h2 className="mb-4 text-3xl font-bold text-white">{step.title}</h2>
-                  <p className="mb-6 text-lg leading-8 text-slate-300">{step.description}</p>
-                  <div className="inline-flex rounded-full border border-emerald-300/20 bg-emerald-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">
+                  <h2 className="mb-4 text-3xl font-bold text-slate-900">{step.title}</h2>
+                  <p className="mb-6 text-lg leading-8 text-slate-600">{step.description}</p>
+                  <div className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600">
                     Built for real retest cycles
                   </div>
                 </div>
 
-                <div className={`flex h-64 items-center justify-center rounded-[28px] border border-slate-800 bg-gradient-to-br ${step.color}`}>
-                  <div className="grid h-[78%] w-[78%] place-items-center rounded-[24px] border border-white/10 bg-slate-950/75 backdrop-blur">
-                    <Icon className="h-24 w-24 text-white/70" />
+                <div className={`flex h-64 items-center justify-center rounded-[28px] border border-slate-200 bg-gradient-to-br ${step.color}`}>
+                  <div className="grid h-[78%] w-[78%] place-items-center rounded-[24px] border border-emerald-200 bg-white backdrop-blur">
+                    <Icon className="h-24 w-24 text-emerald-600/70" />
                   </div>
                 </div>
               </motion.div>
@@ -188,13 +188,13 @@ export default function HowItWorks() {
       </section>
 
       <section className="mx-auto max-w-[1240px] px-4 py-14 sm:px-6">
-        <div className="rounded-[32px] border border-slate-800 bg-slate-950/55 p-6 md:p-8">
+        <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-6 md:p-8">
           <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">Featured guides</p>
-              <h2 className="mt-3 text-3xl font-bold text-white">What you can study inside the hub</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600">Featured guides</p>
+              <h2 className="mt-3 text-3xl font-bold text-slate-900">What you can study inside the hub</h2>
             </div>
-            <button onClick={() => navigate('/')} className="inline-flex items-center rounded-2xl border border-slate-700 bg-slate-950/75 px-5 py-3 text-sm font-semibold text-slate-100 transition hover:border-emerald-400/50">
+            <button onClick={() => navigate('/')} className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-slate-50">
               Return to landing
             </button>
           </div>
@@ -209,13 +209,13 @@ export default function HowItWorks() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '-10% 0px -10% 0px' }}
                   transition={{ delay: idx * 0.08 }}
-                  className="rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,rgba(8,15,30,0.92),rgba(13,25,40,0.76))] p-6"
+                  className="rounded-[28px] border border-slate-200 bg-white p-6"
                 >
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/12 text-emerald-300">
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
                     <Icon className="h-5 w-5" />
                   </span>
-                  <h3 className="mt-4 text-xl font-semibold text-white">{item.title}</h3>
-                  <p className="mt-3 text-sm leading-7 text-slate-300">{item.body}</p>
+                  <h3 className="mt-4 text-xl font-semibold text-slate-900">{item.title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-slate-600">{item.body}</p>
                 </motion.article>
               )
             })}
@@ -224,16 +224,16 @@ export default function HowItWorks() {
       </section>
 
       <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-10% 0px -10% 0px' }} className="mx-auto max-w-[1240px] px-4 py-16 text-center sm:px-6">
-        <div className="rounded-[34px] border border-slate-800 bg-[linear-gradient(180deg,rgba(8,15,29,0.96),rgba(11,24,39,0.82))] px-6 py-12">
-          <h2 className="text-4xl font-bold text-white">Ready to map your health?</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-slate-300">
+        <div className="rounded-[34px] border border-slate-200 bg-slate-50 px-6 py-12">
+          <h2 className="text-4xl font-bold text-slate-900">Ready to map your health?</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-slate-600">
             Start with one upload, then let the system build a repeatable loop around insight, protocol, and retesting.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <button onClick={() => navigate('/example-report')} className="inline-flex items-center rounded-2xl border border-slate-700 bg-slate-950/75 px-5 py-3 text-sm font-semibold text-slate-100 transition hover:border-emerald-400/50">
+            <button onClick={() => navigate('/example-report')} className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-slate-50">
               See example report
             </button>
-            <button onClick={() => navigate('/login?signup=true')} className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400">
+            <button onClick={() => navigate('/login?signup=true')} className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600">
               Get started free
             </button>
           </div>

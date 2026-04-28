@@ -175,10 +175,10 @@ function MetricCard({ value, label }) {
   return (
     <motion.div
       variants={staggerChild}
-      className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-center backdrop-blur-sm"
+      className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center backdrop-blur-sm"
     >
-      <div className="text-4xl font-bold tracking-tight text-emerald-400">{value}</div>
-      <div className="mt-2 text-sm leading-snug text-slate-400">{label}</div>
+      <div className="text-4xl font-bold tracking-tight text-emerald-600">{value}</div>
+      <div className="mt-2 text-sm leading-snug text-slate-600">{label}</div>
     </motion.div>
   )
 }
@@ -187,13 +187,13 @@ function PainCard({ icon: Icon, title, body }) {
   return (
     <motion.div
       variants={staggerChild}
-      className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm transition hover:border-slate-700"
+      className="rounded-2xl border border-slate-200 bg-slate-50 p-6 backdrop-blur-sm transition hover:border-slate-300"
     >
-      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10">
-        <Icon className="h-5 w-5 text-red-400" />
+      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
+        <Icon className="h-5 w-5 text-red-600" />
       </div>
-      <h3 className="mb-2 text-base font-semibold text-white">{title}</h3>
-      <p className="text-sm leading-relaxed text-slate-400">{body}</p>
+      <h3 className="mb-2 text-base font-semibold text-slate-900">{title}</h3>
+      <p className="text-sm leading-relaxed text-slate-600">{body}</p>
     </motion.div>
   )
 }
@@ -216,13 +216,13 @@ function WorkflowStep({ icon: Icon, step, title, body, accent, index }) {
           <Icon className="h-5 w-5" style={{ color: accent }} />
         </div>
         {index < WORKFLOW_STEPS.length - 1 && (
-          <div className="mt-2 w-px flex-1 bg-gradient-to-b from-slate-700 to-transparent" />
+          <div className="mt-2 w-px flex-1 bg-gradient-to-b from-slate-300 to-transparent" />
         )}
       </div>
       <div className="pb-10">
         <div className="mb-1 text-xs font-bold tracking-widest" style={{ color: accent }}>{step}</div>
-        <h3 className="mb-1.5 text-lg font-semibold text-white">{title}</h3>
-        <p className="text-sm leading-relaxed text-slate-400">{body}</p>
+        <h3 className="mb-1.5 text-lg font-semibold text-slate-900">{title}</h3>
+        <p className="text-sm leading-relaxed text-slate-600">{body}</p>
       </div>
     </motion.div>
   )
@@ -232,13 +232,13 @@ function FeatureCard({ icon: Icon, title, body }) {
   return (
     <motion.div
       variants={staggerChild}
-      className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-sm transition hover:border-emerald-500/30"
+      className="rounded-2xl border border-slate-200 bg-slate-50 p-6 backdrop-blur-sm transition hover:border-emerald-300"
     >
-      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
-        <Icon className="h-5 w-5 text-emerald-400" />
+      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
+        <Icon className="h-5 w-5 text-emerald-600" />
       </div>
-      <h3 className="mb-2 text-base font-semibold text-white">{title}</h3>
-      <p className="text-sm leading-relaxed text-slate-400">{body}</p>
+      <h3 className="mb-2 text-base font-semibold text-slate-900">{title}</h3>
+      <p className="text-sm leading-relaxed text-slate-600">{body}</p>
     </motion.div>
   )
 }
@@ -247,7 +247,7 @@ function UseCaseCard({ title, body, tag, tagColor }) {
   return (
     <motion.div
       variants={staggerChild}
-      className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm transition hover:border-slate-700"
+      className="rounded-2xl border border-slate-200 bg-slate-50 p-6 backdrop-blur-sm transition hover:border-slate-300"
     >
       <span
         className="mb-3 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider"
@@ -255,8 +255,8 @@ function UseCaseCard({ title, body, tag, tagColor }) {
       >
         {tag}
       </span>
-      <h3 className="mb-2 text-base font-semibold text-white">{title}</h3>
-      <p className="text-sm leading-relaxed text-slate-400">{body}</p>
+      <h3 className="mb-2 text-base font-semibold text-slate-900">{title}</h3>
+      <p className="text-sm leading-relaxed text-slate-600">{body}</p>
     </motion.div>
   )
 }
@@ -267,7 +267,7 @@ export default function ForNutritionists() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-[#09101d] text-white">
+    <div className="min-h-screen bg-white text-slate-900">
       <Seo
         title="AI Lab Analysis for Nutritionists | VITALOOP"
         description="Manage clients, interpret blood test labs in minutes, and run personalized nutrition protocols in one practitioner workspace. Start free with VITALOOP."
@@ -280,7 +280,7 @@ export default function ForNutritionists() {
       <div className="mx-auto max-w-[1240px] px-4 py-6 sm:px-6">
         <button
           onClick={() => navigate('/')}
-          className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-emerald-400/50 hover:text-white"
+          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-slate-100"
         >
           <ArrowLeft className="h-4 w-4" />
             Back to home
@@ -299,10 +299,10 @@ export default function ForNutritionists() {
               custom={0.06}
               initial="hidden"
               animate="visible"
-              className="mt-5 text-5xl font-bold leading-[1.08] tracking-[-0.03em] text-white md:text-6xl"
+              className="mt-5 text-5xl font-bold leading-[1.08] tracking-[-0.03em] text-slate-900 md:text-6xl"
             >
                 Manage patients&nbsp;—<br />
-              <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                   not spreadsheets
               </span>
             </motion.h1>
@@ -311,7 +311,7 @@ export default function ForNutritionists() {
               custom={0.12}
               initial="hidden"
               animate="visible"
-              className="mt-5 max-w-xl text-lg leading-8 text-slate-300"
+              className="mt-5 max-w-xl text-lg leading-8 text-slate-600"
             >
                 VITALOOP turns blood test data into personalized nutrition and recovery protocols.
                 Bring patients, monitor progress, and adjust programs from one practitioner-focused workspace.
@@ -328,7 +328,7 @@ export default function ForNutritionists() {
                   gaEvent('nutritionist_cta_click', { location: 'hero', label: 'start_free' })
                   navigate('/login?signup=true')
                 }}
-                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
+                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
               >
                   Start for free
                 <ArrowRight className="h-4 w-4" />
@@ -338,7 +338,7 @@ export default function ForNutritionists() {
                   gaEvent('nutritionist_example_click', { location: 'hero' })
                   navigate('/example-report')
                 }}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/60 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-slate-50"
               >
                   View sample report
               </button>
@@ -365,11 +365,11 @@ export default function ForNutritionists() {
             custom={0.1}
             initial="hidden"
             animate="visible"
-            className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 backdrop-blur-sm"
+            className="rounded-3xl border border-slate-200 bg-white p-6 backdrop-blur-sm"
           >
             <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm font-semibold text-white">Patient: Anna K., 34</span>
-                <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">Active protocol</span>
+                <span className="text-sm font-semibold text-slate-900">Patient: Anna K., 34</span>
+                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-600">Active protocol</span>
             </div>
             <div className="space-y-3">
               {[
@@ -379,21 +379,21 @@ export default function ForNutritionists() {
                   { marker: 'TSH', val: '2.1 mIU/L', flag: 'Normal', color: '#10b981' },
                   { marker: 'hsCRP', val: '0.8 mg/L', flag: 'Normal', color: '#10b981' },
               ].map(({ marker, val, flag, color }) => (
-                <div key={marker} className="flex items-center justify-between rounded-xl bg-slate-800/50 px-4 py-2.5">
-                  <span className="text-sm text-slate-300">{marker}</span>
+                <div key={marker} className="flex items-center justify-between rounded-xl bg-slate-100 px-4 py-2.5">
+                  <span className="text-sm text-slate-700">{marker}</span>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-white">{val}</span>
+                    <span className="text-sm font-medium text-slate-900">{val}</span>
                     <span className="min-w-[70px] rounded-full px-2 py-0.5 text-center text-[11px] font-semibold" style={{ background: `${color}1a`, color }}>{flag}</span>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/8 p-4">
-              <div className="mb-1 flex items-center gap-2 text-xs font-semibold text-emerald-400">
+            <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <div className="mb-1 flex items-center gap-2 text-xs font-semibold text-emerald-600">
                 <BrainCircuit className="h-3.5 w-3.5" />
                   AI protocol draft
               </div>
-              <p className="text-xs leading-relaxed text-slate-300">
+              <p className="text-xs leading-relaxed text-slate-600">
                   Priority: restore iron and vitamin D. Suggested: iron bisglycinate 25 mg/day with vitamin C, vitamin D3 5000 IU/day. Retest ferritin in 8 weeks.
               </p>
             </div>
@@ -401,8 +401,8 @@ export default function ForNutritionists() {
         </div>
       </section>
 
-      {/* ── Метрики ── */}
-      <section className="border-y border-slate-800/60 bg-slate-900/30 py-12">
+      {/* ── Metrics ── */}
+      <section className="border-y border-slate-200 bg-slate-50 py-12">
         <motion.div
           variants={stagger}
           initial="hidden"
@@ -416,7 +416,7 @@ export default function ForNutritionists() {
         </motion.div>
       </section>
 
-      {/* ── Боли ── */}
+      {/* ── Pain points ── */}
       <section className="mx-auto max-w-[1240px] px-4 py-20 sm:px-6">
         <div className="mb-12 text-center">
             <SectionLabel color="#ef4444">Common pain points</SectionLabel>
@@ -426,7 +426,7 @@ export default function ForNutritionists() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl"
+            className="mt-4 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl"
           >
               Why client management is still painful
           </motion.h2>
@@ -444,8 +444,8 @@ export default function ForNutritionists() {
         </motion.div>
       </section>
 
-      {/* ── Как это работает ── */}
-      <section className="border-y border-slate-800/60 bg-slate-900/20 py-20">
+      {/* ── How it works ── */}
+      <section className="border-y border-slate-200 bg-slate-50 py-20">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6">
           <div className="mb-14 max-w-xl">
               <SectionLabel>Workflow</SectionLabel>
@@ -455,7 +455,7 @@ export default function ForNutritionists() {
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
-              className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl"
+              className="mt-4 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl"
             >
                 From first intake to measurable outcomes in 5 steps
             </motion.h2>
@@ -465,7 +465,7 @@ export default function ForNutritionists() {
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
-              className="mt-3 text-slate-400"
+              className="mt-3 text-slate-600"
             >
                 Run the full patient cycle in one platform without EMR integrations or setup overhead.
             </motion.p>
@@ -478,7 +478,7 @@ export default function ForNutritionists() {
         </div>
       </section>
 
-      {/* ── Возможности ── */}
+      {/* ── Capabilities ── */}
       <section className="mx-auto max-w-[1240px] px-4 py-20 sm:px-6">
         <div className="mb-12 text-center">
             <SectionLabel>Capabilities</SectionLabel>
@@ -488,7 +488,7 @@ export default function ForNutritionists() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl"
+            className="mt-4 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl"
           >
               Everything a nutritionist needs to run better care
           </motion.h2>
@@ -506,8 +506,8 @@ export default function ForNutritionists() {
         </motion.div>
       </section>
 
-      {/* ── Сценарии применения ── */}
-      <section className="border-y border-slate-800/60 bg-slate-900/20 py-20">
+      {/* ── Use cases ── */}
+      <section className="border-y border-slate-200 bg-slate-50 py-20">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6">
           <div className="mb-12 text-center">
               <SectionLabel color="#8b5cf6">Use cases</SectionLabel>
@@ -517,7 +517,7 @@ export default function ForNutritionists() {
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
-              className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl"
+              className="mt-4 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl"
             >
                 Built for multiple nutrition practice models
             </motion.h2>
@@ -536,7 +536,7 @@ export default function ForNutritionists() {
         </div>
       </section>
 
-      {/* ── Для пациента ── */}
+      {/* ── Patient value ── */}
       <section className="mx-auto max-w-[1240px] px-4 py-20 sm:px-6">
         <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
           <motion.div
@@ -547,10 +547,10 @@ export default function ForNutritionists() {
             viewport={{ once: true }}
           >
               <SectionLabel color="#0ea5e9">Patient value</SectionLabel>
-            <h2 className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl">
+            <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
                 Patients see outcomes, not just recommendations
             </h2>
-            <p className="mt-4 text-slate-400">
+            <p className="mt-4 text-slate-600">
                 The patient workspace shows biomarker trends, current protocol steps, and task completion.
                 This improves engagement and reduces drop-off between sessions.
             </p>
@@ -562,8 +562,8 @@ export default function ForNutritionists() {
                   'Progress trends improve motivation',
                   'Mobile-friendly access from any device',
               ].map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm text-slate-300">
-                  <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                <li key={item} className="flex items-start gap-3 text-sm text-slate-600">
+                  <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                   {item}
                 </li>
               ))}
@@ -577,10 +577,10 @@ export default function ForNutritionists() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 backdrop-blur-sm"
+            className="rounded-3xl border border-slate-200 bg-white p-6 backdrop-blur-sm"
           >
             <div className="mb-5 flex items-center justify-between">
-                <span className="text-sm font-semibold text-white">Anna's progress</span>
+                <span className="text-sm font-semibold text-slate-900">Anna's progress</span>
                 <span className="text-xs text-slate-500">8 weeks on protocol</span>
             </div>
             <div className="mb-4 space-y-3">
@@ -589,15 +589,15 @@ export default function ForNutritionists() {
                   { marker: 'Vitamin D', before: '18', after: '47', unit: 'nmol/L', up: true },
                   { marker: 'B12', before: '245', after: '390', unit: 'pmol/L', up: true },
               ].map(({ marker, before, after, unit, up }) => (
-                <div key={marker} className="rounded-xl bg-slate-800/50 px-4 py-3">
+                <div key={marker} className="rounded-xl bg-slate-100 px-4 py-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-300">{marker}</span>
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400">
+                    <span className="text-sm text-slate-700">{marker}</span>
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
                       <TrendingUp className="h-3 w-3" />
                       {before} → {after} {unit}
                     </span>
                   </div>
-                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-700">
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-300">
                     <motion.div
                       className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400"
                       initial={{ width: '20%' }}
@@ -609,16 +609,16 @@ export default function ForNutritionists() {
                 </div>
               ))}
             </div>
-            <div className="rounded-xl border border-slate-700 p-4">
-                <div className="mb-2 text-xs font-semibold text-slate-400">Weekly tasks</div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="mb-2 text-xs font-semibold text-slate-600">Weekly tasks</div>
               {[
                   { done: true,  text: 'Take iron with vitamin C' },
                   { done: true,  text: 'Take D3 + K2 in the morning with food' },
                   { done: false, text: 'Complete CBC retest (scheduled)' },
               ].map(({ done, text }) => (
                 <div key={text} className="flex items-center gap-2 py-1.5 text-sm">
-                  <CheckCircle2 className={`h-4 w-4 shrink-0 ${done ? 'text-emerald-400' : 'text-slate-600'}`} />
-                  <span className={done ? 'text-slate-300' : 'text-slate-500'}>{text}</span>
+                  <CheckCircle2 className={`h-4 w-4 shrink-0 ${done ? 'text-emerald-600' : 'text-slate-400'}`} />
+                  <span className={done ? 'text-slate-700' : 'text-slate-600'}>{text}</span>
                 </div>
               ))}
             </div>
@@ -632,13 +632,13 @@ export default function ForNutritionists() {
             <SectionLabel color="#10b981">Pricing</SectionLabel>
           <motion.h2
             variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}
-            className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl"
+            className="mt-4 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl"
           >
               Simple plans for real clinical work
           </motion.h2>
           <motion.p
             variants={fadeUp} custom={0.06} initial="hidden" whileInView="visible" viewport={{ once: true }}
-            className="mt-3 text-slate-400"
+            className="mt-3 text-slate-600"
           >
               Start free and upgrade when your practice grows.
           </motion.p>
@@ -648,11 +648,11 @@ export default function ForNutritionists() {
           {/* Free card */}
           <motion.div
             variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}
-            className="w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-900/60 p-8 backdrop-blur-sm"
+            className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-8 backdrop-blur-sm"
           >
-              <div className="mb-1 text-xs font-bold uppercase tracking-widest text-slate-500">Starter</div>
-            <div className="mb-1 text-4xl font-bold text-white">$0</div>
-              <div className="mb-5 text-sm text-slate-500">free forever</div>
+              <div className="mb-1 text-xs font-bold uppercase tracking-widest text-slate-600">Starter</div>
+            <div className="mb-1 text-4xl font-bold text-slate-900">$0</div>
+              <div className="mb-5 text-sm text-slate-600">free forever</div>
             <ul className="mb-8 space-y-3">
               {[
                   '1-2 analyses per month',
@@ -660,8 +660,8 @@ export default function ForNutritionists() {
                   '1 patient seat',
                   'Protocol drafts',
               ].map((f) => (
-                <li key={f} className="flex items-center gap-2.5 text-sm text-slate-300">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-slate-600" />
+                <li key={f} className="flex items-center gap-2.5 text-sm text-slate-700">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-slate-400" />
                   {f}
                 </li>
               ))}
@@ -671,7 +671,7 @@ export default function ForNutritionists() {
                 gaEvent('nutritionist_pricing_click', { plan: 'free' })
                 navigate('/login?signup=true')
               }}
-              className="w-full rounded-2xl border border-slate-700 bg-slate-800/60 py-3 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-white"
             >
                 Start free
             </button>
@@ -680,19 +680,19 @@ export default function ForNutritionists() {
           {/* Practitioner Pro card — highlighted */}
           <motion.div
             variants={fadeUp} custom={0.08} initial="hidden" whileInView="visible" viewport={{ once: true }}
-            className="relative w-full max-w-sm rounded-3xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/60 to-slate-900/80 p-8 shadow-[0_0_40px_rgba(16,185,129,0.12)] backdrop-blur-sm"
+            className="relative w-full max-w-sm rounded-3xl border border-emerald-200 bg-emerald-50 p-8 shadow-[0_0_40px_rgba(16,185,129,0.08)] backdrop-blur-sm"
           >
             <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-              <span className="rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-950">
+              <span className="rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
                   Recommended
               </span>
             </div>
-            <div className="mb-1 text-xs font-bold uppercase tracking-widest text-emerald-400">Practitioner Pro</div>
+            <div className="mb-1 text-xs font-bold uppercase tracking-widest text-emerald-600">Practitioner Pro</div>
             <div className="mb-1 flex items-end gap-1">
-              <span className="text-4xl font-bold text-white">$29</span>
-                <span className="mb-1 text-sm text-slate-400">/month</span>
+              <span className="text-4xl font-bold text-slate-900">$29</span>
+                <span className="mb-1 text-sm text-slate-600">/month</span>
             </div>
-              <div className="mb-5 text-sm text-slate-500">or $299/year — save 17%</div>
+              <div className="mb-5 text-sm text-slate-600">or $299/year — save 17%</div>
             <ul className="mb-8 space-y-3">
               {[
                   'Unlimited analyses',
@@ -703,8 +703,8 @@ export default function ForNutritionists() {
                   'Weekly patient check-ins',
                   'Priority product updates',
               ].map((f) => (
-                <li key={f} className="flex items-center gap-2.5 text-sm text-slate-200">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                <li key={f} className="flex items-center gap-2.5 text-sm text-slate-700">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
                   {f}
                 </li>
               ))}
@@ -714,7 +714,7 @@ export default function ForNutritionists() {
                 gaEvent('nutritionist_pricing_click', { plan: 'practitioner_pro' })
                 navigate('/login?signup=true')
               }}
-              className="w-full rounded-2xl bg-emerald-500 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
+              className="w-full rounded-2xl bg-emerald-500 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
             >
                 Try Practitioner Pro
             </button>
@@ -724,22 +724,22 @@ export default function ForNutritionists() {
       </section>
 
       {/* ── Contact ── */}
-      <section className="border-y border-slate-800/60 bg-slate-900/20 py-16">
+      <section className="border-y border-slate-200 bg-slate-50 py-16">
         <motion.div
           variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}
           className="mx-auto max-w-[680px] px-4 text-center sm:px-6"
         >
             <SectionLabel color="#0ea5e9">Contact us</SectionLabel>
-          <h2 className="mt-4 text-2xl font-bold tracking-tight text-white md:text-3xl">
+          <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
               Questions or enterprise requirements?
           </h2>
-          <p className="mt-3 text-slate-400">
+          <p className="mt-3 text-slate-600">
               Email us directly. We usually respond within one business day and can discuss custom conditions for clinics and nutrition practices.
           </p>
           <a
             href="mailto:info@softdab.tech"
             onClick={() => gaEvent('nutritionist_contact_click', { location: 'contact_section' })}
-            className="mt-6 inline-flex items-center gap-2 rounded-2xl border border-sky-500/30 bg-sky-500/10 px-6 py-3 text-sm font-semibold text-sky-300 transition hover:bg-sky-500/20 hover:text-white"
+            className="mt-6 inline-flex items-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-6 py-3 text-sm font-semibold text-sky-600 transition hover:bg-sky-100 hover:text-sky-700"
           >
             <MessageSquare className="h-4 w-4" />
             info@softdab.tech
@@ -751,7 +751,7 @@ export default function ForNutritionists() {
       </section>
 
       {/* ── CTA ── */}
-      <section className="border-t border-slate-800/60 bg-gradient-to-b from-slate-900/40 to-[#09101d] py-24">
+      <section className="border-t border-slate-200 bg-gradient-to-b from-slate-50 to-white py-24">
         <div className="mx-auto max-w-[720px] px-4 text-center sm:px-6">
           <motion.div
             variants={fadeUp}
@@ -761,13 +761,13 @@ export default function ForNutritionists() {
             viewport={{ once: true }}
           >
               <SectionLabel>Get started today</SectionLabel>
-            <h2 className="mt-5 text-4xl font-bold tracking-[-0.03em] text-white md:text-5xl">
+            <h2 className="mt-5 text-4xl font-bold tracking-[-0.03em] text-slate-900 md:text-5xl">
                 Bring your first patient<br />
-              <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                   today
               </span>
             </h2>
-            <p className="mt-5 text-lg leading-8 text-slate-400">
+            <p className="mt-5 text-lg leading-8 text-slate-600">
                 Start with a free account. Upload one patient report and see how VITALOOP saves time on every consultation.
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -776,7 +776,7 @@ export default function ForNutritionists() {
                   gaEvent('nutritionist_cta_click', { location: 'bottom_cta', label: 'signup' })
                   navigate('/login?signup=true')
                 }}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-7 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-emerald-600 sm:w-auto"
               >
                   Sign up for free
                 <ArrowRight className="h-4 w-4" />
@@ -786,7 +786,7 @@ export default function ForNutritionists() {
                   gaEvent('nutritionist_how_it_works_click', { location: 'bottom_cta' })
                   navigate('/how-it-works')
                 }}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/60 px-7 py-3.5 text-sm font-semibold text-slate-200 transition hover:border-slate-500 sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-7 py-3.5 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 sm:w-auto"
               >
                   How the platform works
               </button>
