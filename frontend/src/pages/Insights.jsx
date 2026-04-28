@@ -41,17 +41,21 @@ export default function Insights() {
   const [healthScore, setHealthScore] = useState(null)
   const [loadingInsights, setLoadingInsights] = useState(false)
   const [tab, setTab] = useState('insights')
+  const [error, setError] = useState(null)
 
   useEffect(() => {
+    setError(null)
     Promise.allSettled([
       api.get('/timeline'),
       api.get('/insights'),
       api.get('/insights/health-score'),
     ]).then(([timelineResult, insightsResult, healthResult]) => {
       if (timelineResult.status === 'fulfilled') setTimeline(timelineResult.value.data || [])
+      else setError('Failed to load timeline')
+
       if (insightsResult.status === 'fulfilled') setInsights(insightsResult.value.data || [])
       if (healthResult.status === 'fulfilled') setHealthScore(healthResult.value.data || null)
-    })
+    }).catch(err => setError('Error loading insights'))
   }, [])
 
   async function generateInsights() {
@@ -82,6 +86,12 @@ export default function Insights() {
           </button>
         )}
       />
+
+      {error && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          {error} — Please refresh or try again later.
+        </div>
+      )}
 
       {healthScore && (
         <motion.div

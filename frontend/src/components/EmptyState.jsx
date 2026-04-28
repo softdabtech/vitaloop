@@ -1,15 +1,41 @@
-export default function EmptyState({ icon = '🧬', title, subtitle, action, onAction }) {
+import { Upload } from 'lucide-react'
+
+export default function EmptyState({ icon: Icon = Upload, title, description, action, actionText = 'Get started' }) {
   return (
-    <div className="flex flex-col items-center justify-center text-center py-20 px-6">
-      <div className="text-6xl mb-4 opacity-60">{icon}</div>
-      <h3 className="text-lg font-semibold text-gray-200 mb-2">{title}</h3>
-      <p className="text-gray-500 text-sm max-w-xs mb-6">{subtitle}</p>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '60px 20px',
+      textAlign: 'center',
+      minHeight: '400px',
+    }}>
+      {Icon && <Icon size={64} style={{ color: '#cbd5e1', marginBottom: '24px' }} />}
+      <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>
+        {title}
+      </h3>
+      {description && (
+        <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '24px', maxWidth: '400px' }}>
+          {description}
+        </p>
+      )}
       {action && (
         <button
-          onClick={onAction}
-          className="bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-2.5 rounded-xl transition text-sm"
+          onClick={action}
+          style={{
+            background: '#10b981',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '10px',
+            padding: '12px 24px',
+            fontSize: '14px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            minHeight: '44px',
+          }}
         >
-          {action}
+          {actionText}
         </button>
       )}
     </div>
