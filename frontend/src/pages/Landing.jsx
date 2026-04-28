@@ -6,7 +6,6 @@ import {
   ArrowRight,
   BrainCircuit,
   CheckCircle2,
-  CirclePlay,
   Clock3,
   FileText,
   FlaskConical,
@@ -24,7 +23,6 @@ import {
   X,
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
-import { CabinetPreviewModal } from '../components/landing/Hero.jsx'
 
 const NAV_LINKS = [
   { id: 'how-it-works', label: 'Product' },
@@ -662,7 +660,6 @@ export default function Landing() {
   const navigate = useNavigate()
   const reduced = useReducedMotion()
   const [pricingMode, setPricingMode] = useState('monthly')
-  const [demoOpen, setDemoOpen] = useState(false)
   const [loopActive, setLoopActive] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user } = useAuth()
@@ -828,18 +825,11 @@ export default function Landing() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </button>
               <button
-                onClick={() => setDemoOpen(true)}
-                className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'} `}
+                onClick={() => navigate('/for-nutritionists')}
+                className={`${ctaBase} ${'border border-emerald-300 bg-emerald-50 text-emerald-800 hover:border-emerald-400'}`}
               >
-                <CirclePlay className="mr-2 h-4 w-4" />
-                Watch 45s Demo
+                For Nutritionists
               </button>
-                <button
-                  onClick={() => navigate('/for-nutritionists')}
-                  className={`${ctaBase} ${'border border-emerald-300 bg-emerald-50 text-emerald-800 hover:border-emerald-400'}`}
-                >
-                  For Nutritionists
-                </button>
             </div>
 
             <div className="mt-8 flex flex-wrap items-center gap-2.5">
@@ -1362,8 +1352,6 @@ export default function Landing() {
           </motion.div>
         </section>
       </main>
-
-      <CabinetPreviewModal open={demoOpen} onClose={() => setDemoOpen(false)} reduced={reduced} />
 
       <footer className={`border-t ${'border-slate-200 bg-white'} py-10`}>
         <div className="mx-auto grid w-full max-w-[1240px] gap-8 px-4 text-sm sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
