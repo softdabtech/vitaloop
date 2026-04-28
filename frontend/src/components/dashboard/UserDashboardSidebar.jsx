@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   Clock,
   CreditCard,
+  Crown,
   FileText,
   Flame,
   Home,
@@ -119,13 +120,17 @@ export default function UserDashboardSidebar({
               {!collapsed && (
                 <>
                   <span className="flex-1 text-sm font-medium">{item.label}</span>
-                  {isLocked && (
-                    <Lock className="w-4 h-4 text-amber-600" />
-                  )}
-                  {badgeValue > 0 && !isLocked && (
-                    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 ring-1 ring-emerald-500/25">
-                      {badgeValue}
-                    </span>
+                  {isLocked ? (
+                    <div className="flex items-center gap-1.5">
+                      <Crown className="w-3.5 h-3.5 text-amber-500" />
+                      <Lock className="w-3.5 h-3.5 text-amber-600" />
+                    </div>
+                  ) : (
+                    badgeValue > 0 && (
+                      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 ring-1 ring-emerald-500/25">
+                        {badgeValue}
+                      </span>
+                    )
                   )}
                 </>
               )}
