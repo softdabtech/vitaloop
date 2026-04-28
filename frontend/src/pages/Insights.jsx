@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Activity, Clock, RefreshCw, Sparkles, TrendingUp, TriangleAlert } from 'lucide-react'
+import { Activity, Clock, RefreshCw, Sparkles, TrendingUp, TriangleAlert, Lightbulb, AlertCircle } from 'lucide-react'
 import api from '../lib/api.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import toast from 'react-hot-toast'
+import BiomarkerAlertsDisplay from '../components/BiomarkerAlertsDisplay.jsx'
+import HealthTipsDisplay from '../components/HealthTipsDisplay.jsx'
 
 const EVENT_LABELS = {
   lab_uploaded: 'Upload',
@@ -39,6 +41,7 @@ export default function Insights() {
   const [timeline, setTimeline] = useState([])
   const [insights, setInsights] = useState([])
   const [healthScore, setHealthScore] = useState(null)
+  const [biomarkers, setBiomarkers] = useState([])
   const [loadingInsights, setLoadingInsights] = useState(false)
   const [tab, setTab] = useState('insights')
   const [error, setError] = useState(null)
@@ -49,12 +52,14 @@ export default function Insights() {
       api.get('/timeline'),
       api.get('/insights'),
       api.get('/insights/health-score'),
-    ]).then(([timelineResult, insightsResult, healthResult]) => {
+      api.get('/results/latest'),
+    ]).then(([timelineResult, insightsResult, healthResult, resultsResult]) => {
       if (timelineResult.status === 'fulfilled') setTimeline(timelineResult.value.data || [])
       else setError('Failed to load timeline')
 
       if (insightsResult.status === 'fulfilled') setInsights(insightsResult.value.data || [])
       if (healthResult.status === 'fulfilled') setHealthScore(healthResult.value.data || null)
+      if (resultsResult.status === 'fulfilled') setBiomarkers(resultsResult.value.data?.biomarkers || [])
     }).catch(err => setError('Error loading insights'))
   }, [])
 
@@ -125,15 +130,17 @@ export default function Insights() {
         </motion.div>
       )}
 
-      <div className="flex gap-2 border-b border-slate-200">
+      <div className="flex gap-2 border-b border-slate-200 overflow-x-auto">
         {[
           { id: 'insights', label: 'Insights', icon: Sparkles },
+          { id: 'alerts', label: 'Alerts', icon: AlertCircle },
+          { id: 'tips', label: 'Health Tips', icon: Lightbulb },
           { id: 'timeline', label: 'Timeline', icon: Clock },
         ].map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition ${tab === id ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            className={`inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition whitespace-nowrap ${tab === id ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
           >
             <Icon className="h-4 w-4" />
             {label}
@@ -197,6 +204,46 @@ export default function Insights() {
                   )
                 })}
               </div>
+            </section>
+          )}
+
+          {tab === 'alerts' && (
+            <section className="vtl-light-card rounded-3xl p-6">
+              <div className="mb-5 text-lg font-semibold text-slate-900">Biomarker Alerts</div>
+
+              {biomarkers.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+                  No biomarker data yet. Upload your lab results to see alerts and recommendations.
+                </div>
+              ) : (
+                <BiomarkerAlertsDisplay
+                  biomarkers={biomarkers}
+                  previousBiomarkers={[]}
+                  userPreferences={{}}
+                />
+              )}
+            </section>
+          )}
+
+          {tab === 'tips' && (
+            <section className="vtl-light-card rounded-3xl p-6">
+              <div className="mb-5 text-lg font-semibold text-slate-900">Personalized Health Tips</div>
+
+              {biomarkers.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+                  No biomarker data yet. Upload your lab results to unlock AI-powered health recommendations.
+                </div>
+              ) : (
+                <HealthTipsDisplay
+                  biomarkers={biomarkers}
+                  userContext={{
+                    age: 30,
+                    lifestyle: 'active',
+                    goals: ['improve energy', 'optimize recovery'],
+                    protocol_adherence: 'high'
+                  }}
+                />
+              )}
             </section>
           )}
 

@@ -6,6 +6,8 @@ import Paywall from '../components/Paywall.jsx'
 import { useSubscription } from '../hooks/useSubscription.js'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
+import BiomarkerAlertsDisplay from '../components/BiomarkerAlertsDisplay.jsx'
+import HealthTipsDisplay from '../components/HealthTipsDisplay.jsx'
 
 const STATUS_META = {
   DEFICIENT: { rank: 0, border: 'border-rose-300', stripe: 'bg-rose-500', badge: 'bg-rose-50 text-rose-700', text: 'text-rose-700' },
@@ -132,9 +134,12 @@ export default function Results() {
         </div>
 
         {deficient.length > 0 && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 mb-6">
-            <p className="text-rose-700 font-semibold mb-2">Deficiencies / Elevations Detected</p>
-            <p className="text-slate-600 text-sm">{deficient.map((b) => b.name).join(', ')}</p>
+          <div className="mb-6">
+            <BiomarkerAlertsDisplay
+              biomarkers={rankedBiomarkers}
+              previousBiomarkers={[]}
+              userPreferences={{}}
+            />
           </div>
         )}
 
@@ -196,6 +201,18 @@ export default function Results() {
           >
             Export as PNG
           </button>
+        </div>
+
+        <div className="mb-10">
+          <HealthTipsDisplay
+            biomarkers={rankedBiomarkers}
+            userContext={{
+              age: 30,
+              lifestyle: 'active',
+              goals: ['improve energy', 'optimize recovery'],
+              protocol_adherence: 'high'
+            }}
+          />
         </div>
 
         <div className="flex items-center justify-between mb-4">
