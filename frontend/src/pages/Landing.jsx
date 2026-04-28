@@ -596,7 +596,7 @@ function MockupMobileContent() {
   )
 }
 
-function MockupCard({ title, alt, index, reduced, isDark, device = 'desktop' }) {
+function MockupCard({ title, alt, index, reduced, device = 'desktop' }) {
   const mobile = device === 'mobile'
 
   return (
@@ -848,13 +848,9 @@ export default function Landing() {
                 return (
                   <div
                     key={item.title}
-                    className={`flex items-center gap-2 rounded-full border px-3 py-1.5 backdrop-blur-sm transition-colors ${
-                      isDark
-                        ? 'border-slate-700/70 bg-slate-900/70 text-slate-300 hover:border-emerald-400/40 hover:bg-slate-900'
-                        : 'border-slate-200 bg-white/80 text-slate-700 hover:border-emerald-300'
-                    }`}
+                    className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-slate-700 transition-colors backdrop-blur-sm hover:border-emerald-300"
                   >
-                    <Icon className={`h-3.5 w-3.5 shrink-0 ${'text-emerald-600'}`} />
+                    <Icon className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                     <span className="text-[12px] font-semibold">{item.title}</span>
                   </div>
                 )
