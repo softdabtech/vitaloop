@@ -304,7 +304,14 @@ export default function UserDashboard() {
       ) : (
         <>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard title="Lab uploads" value={stats.total_uploads ?? 0} unit="total" icon={FlaskConical} color="emerald" />
+            <StatCard
+              title="Lab uploads"
+              value={stats.total_uploads ?? 0}
+              unit="total"
+              icon={FlaskConical}
+              color="emerald"
+              onClick={() => navigate('/lab-results')}
+            />
             <StatCard title="Active assignments" value={stats.active_assignments ?? 0} unit="live" icon={ClipboardList} color="blue" />
             <StatCard title="Insights ready" value={stats.insights_count ?? 0} unit="cards" icon={Brain} color="purple" />
             <StatCard title="Subscription" value={String(stats.subscription || 'free').replace('_', ' ')} unit="plan" icon={Crown} color="orange" />

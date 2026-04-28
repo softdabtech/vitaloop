@@ -1,7 +1,7 @@
 import React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
-export default function StatCard({ title, value, unit, icon: Icon, color, change }) {
+export default function StatCard({ title, value, unit, icon: Icon, color, change, onClick }) {
   const colorConfig = {
     emerald: {
       icon: 'bg-emerald-500 text-white shadow-emerald-500/25',
@@ -28,7 +28,12 @@ export default function StatCard({ title, value, unit, icon: Icon, color, change
   const c = colorConfig[color] ?? colorConfig.emerald;
 
   return (
-    <div className={`vtl-light-card vtl-light-card-hover self-start min-h-[160px] p-5 border-t-2 ${c.border} overflow-hidden relative`}>
+    <div
+      onClick={onClick}
+      role={onClick ? 'button' : 'article'}
+      tabIndex={onClick ? 0 : -1}
+      className={`vtl-light-card vtl-light-card-hover self-start min-h-[160px] p-5 border-t-2 ${c.border} overflow-hidden relative ${onClick ? 'cursor-pointer' : ''}`}
+    >
       <div className="flex items-start justify-between mb-3">
         <div className={`rounded-xl p-2.5 shadow-lg ${c.icon}`}>
           <Icon className="w-5 h-5" />
