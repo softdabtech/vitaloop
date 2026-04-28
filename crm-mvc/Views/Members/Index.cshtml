@@ -23,12 +23,52 @@
   @await Html.PartialAsync("Ui/_StatCard", new StatCardViewModel { Label = "Admins", Value = Model.Members.Count(m => m.OrgRole is "client_admin" or "org_owner").ToString(), Trend = "Management access", Tone = "default" })
 </section>
 
-@await Html.PartialAsync("Ui/_DataTableShell", new DataTableShellViewModel {
-  Title = "Member Directory",
-  Columns = new[] { "User", "Roles", "Status", "Subscription" },
-  EmptyMessage = "No members found for this organization.",
-  Rows = Model.Members.Select(m => (IReadOnlyList<string>)new[] { m.DisplayName, m.RoleLabel, m.StatusBadge, m.SubscriptionStatus }).ToList()
-})
+
+<div class="vo-card" style="overflow-x:auto; margin-bottom:var(--vo-space-5);">
+  <h3 style="font-size:1.25rem; font-weight:600; margin-bottom:1rem;">Member Directory</h3>
+  <table class="vtl-table" style="width:100%; border-collapse:separate; border-spacing:0; min-width:800px;">
+    <thead style="background:#f8fafc; position:sticky; top:0; z-index:1;">
+      <tr>
+        <th style="padding:12px 8px; text-align:left; font-size:13px; color:#64748b; font-weight:700; border-bottom:2px solid #e2e8f0;">Name</th>
+        <th style="padding:12px 8px; text-align:left; font-size:13px; color:#64748b; font-weight:700; border-bottom:2px solid #e2e8f0;">Email</th>
+        <th style="padding:12px 8px; text-align:left; font-size:13px; color:#64748b; font-weight:700; border-bottom:2px solid #e2e8f0;">Age/Sex</th>
+        <th style="padding:12px 8px; text-align:left; font-size:13px; color:#64748b; font-weight:700; border-bottom:2px solid #e2e8f0;">Role</th>
+        <th style="padding:12px 8px; text-align:left; font-size:13px; color:#64748b; font-weight:700; border-bottom:2px solid #e2e8f0;">Status</th>
+        <th style="padding:12px 8px; text-align:left; font-size:13px; color:#64748b; font-weight:700; border-bottom:2px solid #e2e8f0;">Subscription</th>
+      </tr>
+    </thead>
+    <tbody>
+      @if (!Model.Members.Any()) {
+        <tr><td colspan="6" style="padding:24px; text-align:center; color:#94a3b8;">No members found for this organization.</td></tr>
+      } else {
+        var zebra = false;
+        foreach (var m in Model.Members) {
+          zebra = !zebra;
+      <tr style="background:@(zebra ? "#f9fafb" : "#fff"); border-bottom:1px solid #e2e8f0;">
+        <td style="padding:10px 8px; font-weight:500; color:#0f172a;">@m.DisplayName</td>
+        <td style="padding:10px 8px; color:#334155;">@m.Email</td>
+        <td style="padding:10px 8px; color:#64748b;">@(m.Age?.ToString() ?? "-")/@(string.IsNullOrWhiteSpace(m.Sex) ? "-" : m.Sex)</td>
+        <td style="padding:10px 8px;">
+          <span style="display:inline-block; min-width:80px; border-radius:8px; padding:2px 10px; font-size:13px; font-weight:600; background:@(m.OrgRole=="practitioner"?"#e0f2fe":m.OrgRole=="client_admin"?"#fef9c3":"#f1f5f9"); color:@(m.OrgRole=="practitioner"?"#0369a1":m.OrgRole=="client_admin"?"#92400e":"#334155");">
+            @m.OrgRole
+          </span>
+        </td>
+        <td style="padding:10px 8px;">
+          <span style="display:inline-block; min-width:60px; border-radius:8px; padding:2px 10px; font-size:13px; font-weight:600; background:@(m.StatusBadge=="active"?"#dcfce7":m.StatusBadge=="pending"?"#fef9c3":"#f1f5f9"); color:@(m.StatusBadge=="active"?"#15803d":m.StatusBadge=="pending"?"#92400e":"#334155");">
+            @m.StatusBadge
+          </span>
+        </td>
+        <td style="padding:10px 8px;">
+          <span style="display:inline-block; min-width:60px; border-radius:8px; padding:2px 10px; font-size:13px; font-weight:600; background:@(m.SubscriptionStatus=="free"?"#e0e7ef":m.SubscriptionStatus=="premium"?"#f0fdf4":"#f1f5f9"); color:@(m.SubscriptionStatus=="premium"?"#15803d":"#334155");">
+            @m.SubscriptionStatus
+          </span>
+        </td>
+      </tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>
 
 <section class="vo-grid two-up">
   <div class="vo-card">
