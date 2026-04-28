@@ -8,7 +8,7 @@ export default function MetricBar({ stats, uploadCount, uploadLimit }) {
   }
 
   const getPlanName = (plan) => {
-    if (plan === 'personal_pro') return 'Personal Pro'
+    if (plan === 'personal_pro') return 'Personal Premium'
     if (plan === 'enterprise') return 'Enterprise'
     return 'Free'
   }

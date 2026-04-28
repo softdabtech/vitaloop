@@ -40,7 +40,7 @@ const PREVIEW_CARDS = [
   },
   {
     title: 'Practitioner CRM',
-    description: 'Pro workflows for practitioners: client portfolios, adherence, and assignment orchestration.',
+    description: 'Premium workflows for practitioners: client portfolios, adherence, and assignment orchestration.',
     icon: Users,
     tone: 'slate',
   },

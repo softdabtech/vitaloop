@@ -26,7 +26,7 @@ export const LANDING_PRICING_PLANS = [
 	},
 	{
 		id: PRICING_PLAN_IDS.PERSONAL,
-		name: 'Personal Pro',
+		name: 'Personal Premium',
 		monthly: '$9.99',
 		yearly: '$99',
 		period: '/mo',
@@ -35,7 +35,7 @@ export const LANDING_PRICING_PLANS = [
 		badge: 'MOST POPULAR',
 		dark: false,
 		featured: true,
-		cta: 'Get Personal Pro',
+		cta: 'Get Personal Premium',
 		features: [
 			{ text: 'Unlimited analyses', ok: true },
 			{ text: 'Full biomarker protocols', ok: true },
@@ -46,7 +46,7 @@ export const LANDING_PRICING_PLANS = [
 	},
 	{
 		id: PRICING_PLAN_IDS.PRACTITIONER,
-		name: 'Practitioner Pro',
+		name: 'Practitioner Premium',
 		monthly: '$29',
 		yearly: '$299',
 		period: '/mo',
@@ -55,9 +55,9 @@ export const LANDING_PRICING_PLANS = [
 		badge: 'FOR PROFESSIONALS',
 		dark: false,
 		premium: true,
-		cta: 'Get Practitioner Pro',
+		cta: 'Get Practitioner Premium',
 		features: [
-			{ text: 'Everything in Personal Pro', ok: true },
+			{ text: 'Everything in Personal Premium', ok: true },
 			{ text: 'Built-in practitioner CRM', ok: true },
 			{ text: 'White-label reports', ok: true },
 			{ text: 'Up to 10 patients', ok: true },

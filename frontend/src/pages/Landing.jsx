@@ -38,8 +38,8 @@ const STEPS = [
   { icon: Upload, title: 'Upload labs', body: 'Drop any blood test PDF or lab image — we handle OCR and unit normalization automatically.' },
   { icon: BrainCircuit, title: 'AI extraction', body: 'AI extracts 85+ biomarkers, normalizes units, and maps each value against clinical reference ranges.' },
   { icon: FlaskConical, title: 'Signal mapping', body: 'Cross-biomarker correlations, deficiencies, elevations, and longitudinal anomalies are ranked by significance.' },
-  { icon: Sparkles, title: 'Protocol engine', body: 'Free plan shows core analysis. Personal Pro unlocks the full personalized protocol: supplements, nutrition, and weekly targets tied to your markers.' },
-  { icon: HeartPulse, title: 'Adaptive loop', body: 'Weekly check-ins and ongoing adaptation are available in Personal Pro and Enterprise.' },
+  { icon: Sparkles, title: 'Protocol engine', body: 'Free plan shows core analysis. Personal Premium unlocks the full personalized protocol: supplements, nutrition, and weekly targets tied to your markers.' },
+  { icon: HeartPulse, title: 'Adaptive loop', body: 'Weekly check-ins and ongoing adaptation are available in Personal Premium and Enterprise.' },
 ]
 
 const BENEFITS = [
@@ -108,7 +108,7 @@ const PLAN_DETAILS = {
     description: 'For first-time users who want to upload one report, see the dashboard structure, and understand how VITALOOP turns raw biomarker values into usable context.',
     idealFor: 'Best for: trying your first blood test interpretation without commitment.',
   },
-  'Personal Pro': {
+  'Personal Premium': {
     eyebrow: 'Most chosen plan',
     description: 'For users actively running a health protocol who need unlimited uploads, longitudinal tracking, weekly adaptation, and fast feedback between lab cycles.',
     idealFor: 'Best for: people serious about biohacking, recovery, hormone optimization, or deficiency correction.',
@@ -218,8 +218,8 @@ const HERO_TRUST_SIGNALS = [
   const STATS = [
     { value: '85+', label: 'Biomarker types tracked' },
     { value: '<60s', label: 'From upload to protocol' },
-    { value: '$9.99', label: 'Personal Pro per month' },
-    { value: '3 plans', label: 'Free, Pro, Enterprise' },
+    { value: '$9.99', label: 'Personal Premium per month' },
+    { value: '3 plans', label: 'Free, Premium, Enterprise' },
   ]
 
   const FAQ_ITEMS = [
@@ -257,7 +257,7 @@ const HERO_TRUST_SIGNALS = [
     },
     {
       question: 'How much does VITALOOP cost?',
-      answer: 'VITALOOP offers a free plan with 1 active upload and a core dashboard. Personal Pro is $9.99/month (or $95/year) and includes unlimited uploads, personalized AI protocols, and weekly check-ins. Enterprise plans start at $99/month for practitioner teams.',
+      answer: 'VITALOOP offers a free plan with 1 active upload and a core dashboard. Personal Premium is $9.99/month (or $95/year) and includes unlimited uploads, personalized AI protocols, and weekly check-ins. Enterprise plans start at $99/month for practitioner teams.',
     },
   ]
 
@@ -298,7 +298,7 @@ const PRICING = {
       featured: false,
     },
     {
-      name: 'Personal Pro',
+      name: 'Personal Premium',
       price: '$9.99',
       period: '/month',
       points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
@@ -324,7 +324,7 @@ const PRICING = {
       featured: false,
     },
     {
-      name: 'Personal Pro',
+      name: 'Personal Premium',
       price: '$95',
       period: '/year',
       points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
@@ -956,7 +956,7 @@ export default function Landing() {
           <motion.div {...fadeUp(reduced)} className="mb-7">
             <h2 className="text-[28px] font-semibold tracking-tight">How AI Analyzes Your Lab Results — 5 Steps From Upload to Action</h2>
             <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
-              Free plan covers upload + biomarker analysis. Personal Pro adds full protocol generation and weekly adaptation.
+              Free plan covers upload + biomarker analysis. Personal Premium adds full protocol generation and weekly adaptation.
             </p>
           </motion.div>
 

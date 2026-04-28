@@ -6,7 +6,7 @@ import Seo from '../components/Seo.jsx'
 const TRACTION_METRICS = [
   { value: '85+', label: 'Biomarkers normalized per upload' },
   { value: '<60s', label: 'Upload to first protocol draft' },
-  { value: '3', label: 'Monetization layers (Free, Pro, Enterprise)' },
+  { value: '3', label: 'Monetization layers (Free, Premium, Enterprise)' },
   { value: 'Weekly', label: 'Retention loop via check-ins' },
 ]
 

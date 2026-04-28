@@ -39,7 +39,7 @@ export default function PricingSection() {
             Freemium pricing built for users and practitioners
           </motion.h2>
           <motion.p variants={reduced ? {} : staggerChild} className="mx-auto max-w-2xl text-base leading-7 text-zinc-600 md:text-lg">
-            Start free, upgrade to Pro, and scale with multi-tenancy CRM when your team is ready.
+            Start free, upgrade to Premium, and scale with multi-tenancy CRM when your team is ready.
           </motion.p>
           <motion.div variants={reduced ? {} : staggerChild} className="mt-5">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-700">
@@ -172,9 +172,9 @@ export default function PricingSection() {
                       return
                     }
                     if (id === PRICING_PLAN_IDS.PRACTITIONER) {
-                      const subject = encodeURIComponent('Practitioner Pro Application')
+                      const subject = encodeURIComponent('Practitioner Premium Application')
                       const body = encodeURIComponent(
-                        'Hi VITALOOP team,\n\nI am interested in the Practitioner Pro plan.\n\n' +
+                        'Hi VITALOOP team,\n\nI am interested in the Practitioner Premium plan.\n\n' +
                         'Name:\nSpecialty:\nNumber of patients:\n\nPlease contact me.'
                       )
                       window.location.href = `mailto:info@softdab.tech?subject=${subject}&body=${body}`

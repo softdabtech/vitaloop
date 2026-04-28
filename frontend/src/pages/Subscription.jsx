@@ -20,7 +20,7 @@ const PLANS = {
     color: 'slate',
   },
   personal_pro: {
-    name: 'Personal Pro',
+    name: 'Personal Premium',
     price: '$9.99',
     period: '/month',
     features: [
@@ -318,7 +318,7 @@ export default function Subscription() {
                 <li>Core dashboard access</li>
                 <li>Community support</li>
               </ul>
-              <p className="pt-2 text-blue-900 font-medium">Upgrade to Personal Pro to unlock unlimited uploads and AI-powered protocols.</p>
+              <p className="pt-2 text-blue-900 font-medium">Upgrade to Personal Premium to unlock unlimited uploads and AI-powered protocols.</p>
             </div>
           </div>
         )}
