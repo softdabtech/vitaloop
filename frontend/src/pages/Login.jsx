@@ -374,10 +374,14 @@ export default function Login() {
       <div style={{
         width: '100%', maxWidth: 440,
         display: 'flex', flexDirection: 'column',
-        justifyContent: 'center', padding: '48px 40px',
+        justifyContent: 'center',
+        padding: window.innerWidth < 600 ? '32px 16px' : '48px 40px',
         background: authTheme.centerBg, position: 'relative', zIndex: 1,
         borderLeft: `0.5px solid ${authTheme.borderColor}`,
         borderRight: `0.5px solid ${authTheme.borderColor}`,
+        '@media (max-width: 600px)': {
+          padding: '32px 16px',
+        }
       }}>
 
         {/* Back to site */}

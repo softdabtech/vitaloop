@@ -44,7 +44,7 @@ const s = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    padding: '24px 16px',
+    padding: window.innerWidth < 500 ? '24px 16px' : '24px 16px',
   },
   card: {
     width: '100%',
@@ -52,7 +52,7 @@ const s = {
     background: '#ffffff',
     border: '1px solid rgba(15,23,42,0.08)',
     borderRadius: 24,
-    padding: '34px 30px',
+    padding: window.innerWidth < 500 ? '24px 16px' : '34px 30px',
     boxShadow: '0 1px 3px rgba(15,23,42,0.06)',
   },
 }

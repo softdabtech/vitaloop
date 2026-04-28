@@ -20,19 +20,20 @@ const GOAL_OPTIONS = [
 
 const s = {
   wrap: { minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '24px 16px' },
-  card: { width: '100%', maxWidth: 560, background: '#ffffff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 24, padding: '40px 36px', boxShadow: '0 1px 3px rgba(15,23,42,0.06)' },
+  card: { width: '100%', maxWidth: 560, background: '#ffffff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 24, padding: window.innerWidth < 500 ? '24px 16px' : '40px 36px', boxShadow: '0 1px 3px rgba(15,23,42,0.06)' },
   title: { fontSize: 26, fontWeight: 700, color: '#0f172a', marginBottom: 6 },
   sub: { fontSize: 15, color: '#64748b', marginBottom: 32 },
   label: { display: 'block', fontSize: 13, color: '#475569', marginBottom: 8, fontWeight: 500, letterSpacing: '0.03em' },
-  input: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box' },
-  select: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box' },
-  btnPrimary: { width: '100%', padding: '14px', background: '#10b981', borderRadius: 12, color: '#ffffff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', marginTop: 24 },
+  input: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box', minHeight: '44px' },
+  select: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box', minHeight: '44px' },
+  btnPrimary: { width: '100%', padding: '14px', background: '#10b981', borderRadius: 12, color: '#ffffff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', marginTop: 24, minHeight: '44px' },
   btnSec: { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: 14, marginTop: 12, textDecoration: 'underline', padding: 0 },
-  row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
+  row: { display: 'grid', gridTemplateColumns: window.innerWidth < 600 ? '1fr' : '1fr 1fr', gap: 16 },
   goalChip: (active) => ({
     padding: '10px 14px', borderRadius: 10, border: `1px solid ${active ? '#10b981' : 'rgba(15,23,42,0.1)'}`,
     background: active ? 'rgba(16,185,129,0.08)' : '#f8fafc',
     color: active ? '#059669' : '#475569', cursor: 'pointer', fontSize: 14, fontWeight: 500, transition: 'all 0.15s',
+    minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center',
   }),
   progress: { display: 'flex', gap: 6, marginBottom: 32 },
   dot: (active, done) => ({
