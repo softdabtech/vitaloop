@@ -108,11 +108,12 @@ export default function Subscription() {
   const [loading, setLoading] = useState(true)
   const [upgrading, setUpgrading] = useState(false)
 
-  const currentPlan = subscription?.plan_tier?.toLowerCase().replace(/\s+/g, '_') || 'free'
-  const planStatus = subscription?.status || 'inactive'
-  const daysRemaining = subscription?.days_remaining ?? null
+  const currentPlan = subscription?.plan_name ? subscription.plan_name.toLowerCase().replace(/\s+/g, '_') : 'free'
+  const planStatus = subscription?.sub_status || 'free'
+  const daysRemaining = subscription?.current_period_end ? Math.ceil((subscription.current_period_end - Date.now() / 1000) / 86400) : null
   const uploadCount = subscription?.upload_count || 0
   const uploadLimit = subscription?.upload_limit || 1
+  const isPremium = subscription?.is_premium ?? false
 
   useEffect(() => {
     loadSubscription()
@@ -199,12 +200,19 @@ export default function Subscription() {
                       ? 'bg-emerald-100 text-emerald-700'
                       : planStatus === 'paused'
                       ? 'bg-amber-100 text-amber-700'
+                      : planStatus === 'free'
+                      ? 'bg-blue-100 text-blue-700'
                       : 'bg-slate-100 text-slate-700'
                   }`}>
                     {planStatus === 'active' && <CheckCircle2 className="w-4 h-4" />}
-                    {planStatus === 'active' ? 'Active' : planStatus === 'paused' ? 'Paused' : 'Inactive'}
+                    {planStatus === 'active' ? 'Active' : planStatus === 'paused' ? 'Paused' : planStatus === 'free' ? 'Free Plan' : 'Inactive'}
                   </div>
-                  {planStatus !== 'active' && (
+                  {planStatus === 'free' && (
+                    <div className="flex items-center gap-1.5 text-blue-700 text-sm">
+                      <span className="text-xs font-medium">Standard free tier</span>
+                    </div>
+                  )}
+                  {planStatus !== 'active' && planStatus !== 'free' && (
                     <div className="flex items-center gap-1.5 text-amber-700 text-sm">
                       <AlertCircle className="w-4 h-4" />
                       Your plan is {planStatus}
@@ -212,7 +220,7 @@ export default function Subscription() {
                   )}
                 </div>
               </div>
-              {planStatus === 'active' && (
+              {isPremium && (
                 <button
                   onClick={openBillingPortal}
                   className="rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition"
@@ -228,63 +236,89 @@ export default function Subscription() {
                 <div className="text-2xl font-bold text-slate-900">{PLANS[currentPlan]?.name || 'Free'}</div>
               </div>
 
-              {currentPlan !== 'free' && daysRemaining !== null && (
+              {daysRemaining !== null && (
                 <div className="rounded-xl bg-emerald-50 p-4 border border-emerald-200">
                   <div className="flex items-center gap-1 mb-2">
                     <Calendar className="w-3 h-3 text-emerald-600" />
-                    <span className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Days Remaining</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Renewal Date</span>
                   </div>
-                  <div className="text-2xl font-bold text-emerald-700">{daysRemaining}</div>
+                  <div className="text-2xl font-bold text-emerald-700">{daysRemaining}d</div>
                 </div>
               )}
 
-              {currentPlan !== 'free' && (
-                <div className="rounded-xl bg-blue-50 p-4 border border-blue-200">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-blue-600 mb-2">Uploads</div>
-                  <div className="text-2xl font-bold text-blue-900">{uploadCount}/{uploadLimit}</div>
-                </div>
-              )}
+              <div className="rounded-xl bg-blue-50 p-4 border border-blue-200">
+                <div className="text-xs font-semibold uppercase tracking-wide text-blue-600 mb-2">Uploads</div>
+                <div className="text-2xl font-bold text-blue-900">{uploadCount}/{uploadLimit || '∞'}</div>
+              </div>
 
               <div className="rounded-xl bg-purple-50 p-4 border border-purple-200">
-                <div className="text-xs font-semibold uppercase tracking-wide text-purple-600 mb-2">Status</div>
-                <div className="text-sm font-bold text-purple-900 capitalize">{planStatus}</div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-purple-600 mb-2">Billing Status</div>
+                <div className={`text-sm font-bold capitalize ${
+                  planStatus === 'active' ? 'text-purple-900' :
+                  planStatus === 'free' ? 'text-blue-900' :
+                  'text-amber-900'
+                }`}>{planStatus === 'free' ? 'Free' : planStatus}</div>
               </div>
             </div>
           </div>
         )}
 
         {/* Usage Statistics */}
-        {currentPlan !== 'free' && subscription && (
+        {subscription && (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-            <h3 className="text-lg font-bold text-slate-900 mb-6">Usage Statistics</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-6">Usage & Limits</h3>
 
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-semibold text-slate-700">Lab Uploads</span>
-                  <span className="text-sm font-semibold text-slate-500">{uploadCount} of {uploadLimit}</span>
+                  {uploadLimit ? (
+                    <span className="text-sm font-semibold text-slate-500">{uploadCount} of {uploadLimit}</span>
+                  ) : (
+                    <span className="text-sm font-semibold text-emerald-600">Unlimited</span>
+                  )}
                 </div>
-                <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-emerald-500 h-full transition-all"
-                    style={{ width: `${Math.min((uploadCount / uploadLimit) * 100, 100)}%` }}
-                  />
-                </div>
+                {uploadLimit && (
+                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-emerald-500 h-full transition-all"
+                      style={{ width: `${Math.min((uploadCount / uploadLimit) * 100, 100)}%` }}
+                    />
+                  </div>
+                )}
+                <p className="text-xs text-slate-500 mt-2">
+                  {currentPlan === 'free' ? 'Free plan: 1 upload every 30 days' : 'Upload lab reports for analysis'}
+                </p>
               </div>
 
-              {subscription?.features && (
-                <div className="pt-4 border-t border-slate-200">
-                  <h4 className="text-sm font-semibold text-slate-900 mb-3">Included Features</h4>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {subscription.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center gap-2 text-sm text-slate-700">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <div className="pt-4 border-t border-slate-200">
+                <h4 className="text-sm font-semibold text-slate-900 mb-3">Included Features</h4>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(subscription?.features || PLANS[currentPlan]?.features || []).map((feature, idx) => (
+                    <li key={idx} className="flex items-center gap-2 text-sm text-slate-700">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Free Plan Info */}
+        {currentPlan === 'free' && (
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6 sm:p-8">
+            <h3 className="font-semibold text-blue-900 mb-3">💡 About Your Free Plan</h3>
+            <div className="space-y-2 text-sm text-blue-800">
+              <p>You're currently using the Free plan which includes:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>1 lab report upload every 30 days</li>
+                <li>Basic biomarker analysis</li>
+                <li>Core dashboard access</li>
+                <li>Community support</li>
+              </ul>
+              <p className="pt-2 text-blue-900 font-medium">Upgrade to Personal Pro to unlock unlimited uploads and AI-powered protocols.</p>
             </div>
           </div>
         )}
@@ -306,27 +340,42 @@ export default function Subscription() {
           </div>
         </div>
 
-        {/* Payment History Info */}
-        {planStatus === 'active' && (
+        {/* Payment & Billing Info */}
+        {isPremium && (
           <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6 sm:p-8">
             <div className="flex items-start gap-3">
               <CreditCard className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-semibold text-blue-900 mb-1">Manage Payment Method</h4>
+                <h4 className="font-semibold text-blue-900 mb-1">Manage Payment Method & Billing</h4>
                 <p className="text-sm text-blue-800 mb-4">
-                  Update your billing address, payment method, and view invoices in your billing portal.
+                  Update your billing address, payment method, view invoices, and manage your subscription renewal.
                 </p>
                 <button
                   onClick={openBillingPortal}
                   className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900 transition"
                 >
-                  Go to Billing Portal
+                  Open Billing Portal
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           </div>
         )}
+
+        {/* Need Help */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Questions About Your Plan?</h3>
+          <p className="text-slate-600 mb-4">
+            If you have any questions about your subscription, pricing, or need help choosing the right plan for your needs, please contact our support team.
+          </p>
+          <a
+            href="mailto:support@vitaloop.today"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 hover:text-emerald-900 transition"
+          >
+            Contact Support
+            <ArrowRight className="w-4 h-4" />
+          </a>
+        </div>
       </div>
     </>
   )
