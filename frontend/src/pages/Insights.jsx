@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Activity, Clock, RefreshCw, Sparkles, TrendingUp, TriangleAlert, Lightbulb, AlertCircle } from 'lucide-react'
+import { Activity, Clock, RefreshCw, Sparkles, TrendingUp, TriangleAlert, Lightbulb, AlertCircle, BarChart3 } from 'lucide-react'
 import api from '../lib/api.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import toast from 'react-hot-toast'
 import BiomarkerAlertsDisplay from '../components/BiomarkerAlertsDisplay.jsx'
 import HealthTipsDisplay from '../components/HealthTipsDisplay.jsx'
+import TrendAnalyticsDashboard from '../components/TrendAnalyticsDashboard.jsx'
 
 const EVENT_LABELS = {
   lab_uploaded: 'Upload',
@@ -135,6 +136,7 @@ export default function Insights() {
           { id: 'insights', label: 'Insights', icon: Sparkles },
           { id: 'alerts', label: 'Alerts', icon: AlertCircle },
           { id: 'tips', label: 'Health Tips', icon: Lightbulb },
+          { id: 'trends', label: 'Trends', icon: BarChart3 },
           { id: 'timeline', label: 'Timeline', icon: Clock },
         ].map(({ id, label, icon: Icon }) => (
           <button
@@ -242,6 +244,29 @@ export default function Insights() {
                     goals: ['improve energy', 'optimize recovery'],
                     protocol_adherence: 'high'
                   }}
+                />
+              )}
+            </section>
+          )}
+
+          {tab === 'trends' && (
+            <section className="vtl-light-card rounded-3xl p-6">
+              <div className="mb-5 text-lg font-semibold text-slate-900">Trend Analysis</div>
+
+              {biomarkers.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+                  No biomarker data yet. Upload multiple lab results to see trend analysis and predictions.
+                </div>
+              ) : (
+                <TrendAnalyticsDashboard
+                  biomarkerHistory={biomarkers.map(b => ({
+                    id: b.id,
+                    name: b.name,
+                    values: [b.value],
+                    dates: [new Date().toISOString()],
+                    ref_low: b.ref_low,
+                    ref_high: b.ref_high,
+                  }))}
                 />
               )}
             </section>
