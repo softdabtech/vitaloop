@@ -6,22 +6,20 @@ import { useTourHints } from '../hooks/useTourHints.js'
 import {
   Activity,
   ArrowRight,
-  Brain,
   CheckCircle2,
-  ClipboardList,
-  Crown,
+  Clock,
   FlaskConical,
   Sparkles,
 } from 'lucide-react'
 import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
+import { useSubscription } from '../hooks/useSubscription.js'
 import StatCard from '../components/dashboard/StatCard.jsx'
 import HealthChart from '../components/dashboard/HealthChart.jsx'
 import AssignmentCard from '../components/dashboard/AssignmentCard.jsx'
-import QuickActionsPanel from '../components/dashboard/QuickActionsPanel.jsx'
-import ProgressTimeline from '../components/dashboard/ProgressTimeline.jsx'
 import RecommendationsPanel from '../components/dashboard/RecommendationsPanel.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import MetricBar from '../components/dashboard/MetricBar.jsx'
 import { enrichAssignments } from '../lib/assignmentScoring.js'
 import '../styles/userDashboard.css'
 import '../styles/dashboard2026.css'
@@ -303,196 +301,100 @@ export default function UserDashboard() {
         />
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              title="Lab uploads"
-              value={stats.total_uploads ?? 0}
-              unit="total"
-              icon={FlaskConical}
-              color="emerald"
-              onClick={() => navigate('/lab-results')}
-            />
-            <StatCard title="Active assignments" value={stats.active_assignments ?? 0} unit="live" icon={ClipboardList} color="blue" />
-            <StatCard title="Insights ready" value={stats.insights_count ?? 0} unit="cards" icon={Brain} color="purple" />
-            <StatCard
-              title="Current Plan"
-              value={
-                stats.subscription === 'free' ? 'Free' :
-                stats.subscription === 'personal_pro' ? 'Personal Pro' :
-                stats.subscription === 'enterprise' ? 'Enterprise' :
-                (String(stats.subscription || 'free').replace('_', ' '))
-              }
-              unit="plan"
-              icon={Crown}
-              color="orange"
-              onClick={() => window.location.href = '/subscription'}
-            />
-          </div>
+          <MetricBar stats={stats} uploadCount={uploadCount} uploadLimit={uploadLimit} />
 
-          <motion.div {...fadeUp(0.04)} className="grid items-start gap-4 xl:grid-cols-[1.1fr_0.95fr_320px]">
-        <DashboardCard title="Current account state" eyebrow="Live summary">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Next best action</div>
-              <div className="mt-2 text-base font-semibold text-slate-900">{nextBestAction?.title || 'No urgent action'}</div>
-              <p className="mt-1 text-sm text-slate-500">{nextBestAction?.description || 'Your dashboard will surface the next meaningful task here.'}</p>
-              {nextBestAction?.path && (
-                <button onClick={() => navigate(nextBestAction.path)} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">
-                  {nextBestAction.cta_label || 'Open'}
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Most recent upload</div>
-              {latestUpload ? (
-                <>
-                  <div className="mt-2 text-base font-semibold text-slate-900">{latestUpload.lab_name || 'Latest lab upload'}</div>
-                  <p className="mt-1 text-sm text-slate-500">{latestUpload.test_date || latestUpload.created_at?.slice(0, 10) || 'Date unavailable'}</p>
-                  <button onClick={() => navigate('/lab-results')} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">
-                    Review upload history
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </>
+          <motion.div {...fadeUp(0.04)} className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+            {/* Left: Chart + Next Task */}
+            <div className="space-y-6">
+              {progress.length > 0 ? (
+                <DashboardCard title="Biomarker Trends" eyebrow="Health data">
+                  <HealthChart progress={progress} />
+                </DashboardCard>
               ) : (
-                <p className="mt-2 text-sm text-slate-500">No upload yet. The moment you add the first report, this block becomes your freshest biomarker snapshot.</p>
+                <DashboardCard title="Ready for data" eyebrow="Biomarker tracking">
+                  <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center">
+                    <FlaskConical className="mx-auto h-8 w-8 text-slate-400 mb-3" />
+                    <p className="text-sm text-slate-600">Upload your first lab to visualize trends and track your biomarkers over time.</p>
+                    <button onClick={() => navigate('/upload')} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                      Upload your first lab
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </DashboardCard>
+              )}
+
+              {todayFocus.length > 0 && (
+                <DashboardCard title="Next Task" eyebrow="Priority">
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <div className="font-semibold text-emerald-900">{todayFocus[0].title}</div>
+                        <p className="text-sm text-emerald-700 mt-1">{todayFocus[0].description}</p>
+                        <button onClick={() => navigate(todayFocus[0]?.id ? `/assignments/${todayFocus[0].id}` : '/assignments')} className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                          Start task
+                          <ArrowRight className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </DashboardCard>
               )}
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Latest check-in</div>
-              {latestCheckin ? (
-                <>
-                  <div className="mt-2 text-base font-semibold text-slate-900">Week of {latestCheckin.week_start}</div>
-                  <p className="mt-1 text-sm text-slate-500">Energy {latestCheckin.energy_score ?? '--'}/10, sleep {latestCheckin.sleep_quality ?? '--'}/10, mood {latestCheckin.mood_score ?? '--'}/10.</p>
-                </>
+            {/* Right: Insight + Activity */}
+            <div className="space-y-6">
+              {insights.length > 0 ? (
+                <DashboardCard title="Today's Insight" eyebrow="Recommendation">
+                  <div className="rounded-2xl border border-purple-200 bg-purple-50 p-4">
+                    <Sparkles className="h-5 w-5 text-purple-600 mb-2" />
+                    <p className="text-sm font-medium text-purple-900">{insights[0].title}</p>
+                    <p className="text-sm text-purple-700 mt-2">{insights[0].description}</p>
+                  </div>
+                </DashboardCard>
               ) : (
-                <p className="mt-2 text-sm text-slate-500">No weekly check-in recorded yet. Logging one gives the system a current symptom and adherence pulse.</p>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Current protocol state</div>
-              <div className="mt-2 text-base font-semibold text-slate-900">{stats.active_program || 'Not started'}</div>
-              <p className="mt-1 text-sm text-slate-500">{assignments.length > 0 ? `${assignments.length} assignment(s) currently connected to your plan.` : 'Assignments will appear here after onboarding, uploads, or weekly updates.'}</p>
-            </div>
-          </div>
-        </DashboardCard>
-
-        <DashboardCard title="Health score" eyebrow="Current status">
-          <HealthRing value={stats.health_score} />
-          <div className="grid gap-3 pt-2 sm:grid-cols-2">
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Score movement</div>
-              <div className="mt-1 text-2xl font-bold text-slate-900">{stats.health_score_change > 0 ? '+' : ''}{stats.health_score_change ?? 0}</div>
-              <p className="mt-1 text-sm text-slate-600">Difference from the previous calculation.</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Completed tasks</div>
-              <div className="mt-1 text-2xl font-bold text-slate-900">{stats.completed_tasks ?? 0}</div>
-              <p className="mt-1 text-sm text-slate-600">Finished protocol actions tracked by the system.</p>
-            </div>
-          </div>
-        </DashboardCard>
-
-            <QuickActionsPanel />
-          </motion.div>
-
-          <motion.div {...fadeUp(0.08)} className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <DashboardCard
-          title="Today focus"
-          eyebrow="Priority queue"
-          action={<button onClick={() => navigate('/assignments')} className="text-sm font-semibold text-emerald-700">Open all</button>}
-        >
-          {todayFocus.length > 0 ? (
-            <div className="space-y-3">
-              {todayFocus.map((assignment) => (
-                <AssignmentCard
-                  key={assignment.id || assignment.title}
-                  assignment={assignment}
-                  onClick={() => navigate(assignment?.id ? `/assignments/${assignment.id}` : '/assignments')}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyBlock
-              title="No urgent tasks right now"
-              body="After your next upload or weekly check-in, this block will promote the most important next step instead of leaving you guessing."
-              cta="Run weekly check-in"
-              onClick={() => navigate('/check-ins')}
-            />
-          )}
-        </DashboardCard>
-
-        <DashboardCard title="What changed recently" eyebrow="Recent signal">
-          {latestUpload ? (
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <div className="flex items-start gap-3">
-                  <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-600"><Activity className="h-5 w-5" /></div>
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900">Latest upload ready</div>
-                    <p className="mt-1 text-sm text-slate-500">{latestUpload.lab_name || 'Recent upload'} was processed and is ready for biomarker review and protocol generation.</p>
+                <DashboardCard title="Insights" eyebrow="Coming soon">
+                  <div className="text-center py-6">
+                    <p className="text-sm text-slate-500">Insights appear after your first upload and check-in.</p>
                   </div>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <div className="flex items-start gap-3">
-                  <div className="rounded-2xl bg-purple-50 p-3 text-purple-600"><Sparkles className="h-5 w-5" /></div>
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900">Insights waiting</div>
-                    <p className="mt-1 text-sm text-slate-500">{insights.length > 0 ? `${insights.length} active insight card(s) are already available.` : 'No insight cards yet. This area will become richer after more uploads or check-ins.'}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <EmptyBlock
-              title="The dashboard is ready for live lab data"
-              body="Once your first report is uploaded, this block will show the newest result, protocol availability, and the latest interpretation context."
-              cta="Upload first lab"
-              onClick={() => navigate('/upload')}
-            />
-          )}
-        </DashboardCard>
-          </motion.div>
-
-          <motion.div {...fadeUp(0.12)} className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <DashboardCard title="Progress trend" eyebrow="Biomarker history">
-          {progress.length > 0 ? <HealthChart progress={progress} /> : (
-            <EmptyBlock
-              title="Trend charts appear after uploads"
-              body="When you upload at least one lab report, this section becomes your biomarker progress surface instead of a blank chart."
-              cta="Add your first upload"
-              onClick={() => navigate('/upload')}
-            />
-          )}
-        </DashboardCard>
-
-        <DashboardCard title="Recommendations" eyebrow="Live intelligence">
-          {insights.length > 0 ? <RecommendationsPanel insights={insights} /> : (
-            <EmptyBlock
-              title="No active recommendations yet"
-              body="This area will explain detected trends, red flags, and retest suggestions once enough data arrives."
-              cta="Open insights"
-              onClick={() => navigate('/insights')}
-            />
-          )}
-        </DashboardCard>
-          </motion.div>
-
-          <motion.div {...fadeUp(0.14)}>
-            <DashboardCard title="Health activity timeline" eyebrow="Historical context">
-              {progress.length > 0 ? <ProgressTimeline progress={progress} /> : (
-                <EmptyBlock
-                  title="Your timeline starts with the first upload"
-                  body="After the first lab, timeline events will record uploads, generated protocols, insights, and follow-up actions in one place."
-                  cta="Go to upload"
-                  onClick={() => navigate('/upload')}
-                />
+                </DashboardCard>
               )}
-            </DashboardCard>
+
+              <DashboardCard title="Recent Activity" eyebrow="What's new">
+                <div className="space-y-3 text-sm">
+                  {latestUpload && (
+                    <div className="flex gap-3 items-start">
+                      <div className="rounded-xl bg-emerald-100 p-2"><Activity className="h-4 w-4 text-emerald-600" /></div>
+                      <div>
+                        <div className="font-medium text-slate-900">Lab uploaded</div>
+                        <div className="text-xs text-slate-500">{latestUpload.lab_name || 'Your lab'}</div>
+                      </div>
+                    </div>
+                  )}
+                  {latestCheckin && (
+                    <div className="flex gap-3 items-start">
+                      <div className="rounded-xl bg-blue-100 p-2"><Clock className="h-4 w-4 text-blue-600" /></div>
+                      <div>
+                        <div className="font-medium text-slate-900">Check-in completed</div>
+                        <div className="text-xs text-slate-500">Week of {latestCheckin.week_start}</div>
+                      </div>
+                    </div>
+                  )}
+                  {insights.length > 0 && (
+                    <div className="flex gap-3 items-start">
+                      <div className="rounded-xl bg-purple-100 p-2"><Sparkles className="h-4 w-4 text-purple-600" /></div>
+                      <div>
+                        <div className="font-medium text-slate-900">{insights.length} insight(s)</div>
+                        <div className="text-xs text-slate-500">New recommendations</div>
+                      </div>
+                    </div>
+                  )}
+                  {!latestUpload && !latestCheckin && !insights.length && (
+                    <p className="text-slate-500 py-4 text-center">No activity yet. Start by uploading your first lab report!</p>
+                  )}
+                </div>
+              </DashboardCard>
+            </div>
           </motion.div>
         </>
       )}

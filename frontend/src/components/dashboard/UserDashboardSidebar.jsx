@@ -8,6 +8,7 @@ import {
   FileText,
   Flame,
   Home,
+  Lock,
   LogOut,
   Settings,
   Target,
@@ -105,41 +106,57 @@ export default function UserDashboardSidebar({
           const ItemIcon = item.icon
           const badgeValue = item.badgeKey ? Number(user?.[item.badgeKey] || 0) : item.badge
           const active = isItemActive(location.pathname, item.path)
+          const isLocked = item.premium && !hasPremium && !subscriptionLoading
 
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={() => {
-                handleLockedFeature(item)
-                if (mobile) {
-                  onCloseMobile?.()
-                }
-              }}
-              className={`group relative flex h-11 items-center gap-3 rounded-xl px-3 transition ${
-                active
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-              }`}
-            >
-              {active && <span className="absolute inset-y-2 left-0 w-1 rounded-r bg-emerald-500" />}
+          const navElement = (
+            <div className={`group relative flex h-11 items-center gap-3 rounded-xl px-3 transition ${
+              isLocked ? 'opacity-50 cursor-not-allowed' : active
+                ? 'bg-emerald-50 text-emerald-700'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+            }`}>
+              {active && !isLocked && <span className="absolute inset-y-2 left-0 w-1 rounded-r bg-emerald-500" />}
               <ItemIcon className="h-5 w-5 shrink-0" />
               {!collapsed && (
                 <>
                   <span className="flex-1 text-sm font-medium">{item.label}</span>
-                  {item.premium && !hasPremium && !subscriptionLoading && (
-                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                      Pro
-                    </span>
+                  {isLocked && (
+                    <Lock className="w-4 h-4 text-amber-600" />
                   )}
-                  {badgeValue > 0 && (
+                  {badgeValue > 0 && !isLocked && (
                     <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 ring-1 ring-emerald-500/25">
                       {badgeValue}
                     </span>
                   )}
                 </>
               )}
-            </NavLink>
+            </div>
+          )
+
+          return (
+            <div key={item.path}>
+              {isLocked ? (
+                <button
+                  onClick={() => {
+                    handleLockedFeature(item)
+                  }}
+                  className="w-full text-left"
+                >
+                  {navElement}
+                </button>
+              ) : (
+                <NavLink
+                  to={item.path}
+                  onClick={() => {
+                    if (mobile) {
+                      onCloseMobile?.()
+                    }
+                  }}
+                  className="w-full"
+                >
+                  {navElement}
+                </NavLink>
+              )}
+            </div>
           )
         })}
       </nav>
