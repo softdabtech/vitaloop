@@ -197,7 +197,6 @@ const MOCKUPS = [
   { title: 'Timeline', alt: 'Longitudinal trend chart showing ferritin, CRP, and vitamin D across 5 test cycles.', device: 'desktop' },
   { title: 'Practitioner CRM', alt: 'Practitioner CRM with 3 client panels, adherence bars, and assignment overview.', device: 'desktop' },
   { title: 'Weekly Check-in', alt: 'Mobile weekly check-in with energy, sleep, and symptom sliders plus streak badge.', device: 'mobile' },
-  { title: 'Health Avatar', alt: 'Personalized health avatar showing body system scores and recovery heatmap.', device: 'desktop' },
 ]
 
 const HERO_TRUST_SIGNALS = [
@@ -554,47 +553,6 @@ function MockupScreenContent({ title }) {
               </div>
             </div>
             <span className="text-[8px] text-slate-500 truncate max-w-[52px]">{client.tag}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-
-  if (title === 'Health Avatar') return (
-    <div className="grid grid-cols-[0.75fr_1.25fr] gap-2" style={{ height: 168 }}>
-      {/* Avatar silhouette */}
-      <div className="flex flex-col items-center justify-center rounded-xl border border-slate-700/70 bg-slate-900/85 p-2 gap-1.5">
-        <svg viewBox="0 0 60 100" className="w-10" aria-hidden="true">
-          {/* Head */}
-          <circle cx="30" cy="14" r="10" fill="none" stroke="#34d399" strokeWidth="2" opacity="0.8" />
-          {/* Body */}
-          <path d="M18 30 Q18 26 30 26 Q42 26 42 30 L44 60 Q44 64 30 64 Q16 64 16 60 Z" fill="none" stroke="#34d399" strokeWidth="1.5" opacity="0.7" />
-          {/* Highlight zones */}
-          <circle cx="30" cy="38" r="5" fill="rgba(52,211,153,0.25)" />
-          <circle cx="22" cy="50" r="4" fill="rgba(251,191,36,0.25)" />
-          <circle cx="38" cy="50" r="4" fill="rgba(52,211,153,0.25)" />
-          {/* Legs */}
-          <line x1="22" y1="64" x2="19" y2="88" stroke="#34d399" strokeWidth="1.5" opacity="0.6" />
-          <line x1="38" y1="64" x2="41" y2="88" stroke="#34d399" strokeWidth="1.5" opacity="0.6" />
-        </svg>
-        <span className="text-[8px] text-emerald-400 font-semibold">Body map</span>
-      </div>
-      {/* System scores */}
-      <div className="flex flex-col gap-1.5 rounded-xl border border-slate-700/70 bg-slate-900/85 p-2.5">
-        <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">System scores</div>
-        {[
-          { sys: 'Metabolic', pct: 82, col: '#34d399' },
-          { sys: 'Hormonal', pct: 58, col: '#fbbf24' },
-          { sys: 'Immune', pct: 71, col: '#60a5fa' },
-          { sys: 'Energy', pct: 45, col: '#f87171' },
-          { sys: 'Thyroid', pct: 76, col: '#34d399' },
-        ].map((s) => (
-          <div key={s.sys} className="flex items-center gap-1.5">
-            <span className="w-14 shrink-0 text-[9px] text-slate-400">{s.sys}</span>
-            <div className="flex-1 rounded-full bg-slate-800" style={{ height: 5 }}>
-              <div className="rounded-full" style={{ width: `${s.pct}%`, height: 5, background: s.col + 'bb' }} />
-            </div>
-            <span className="w-6 shrink-0 text-right text-[9px] font-semibold" style={{ color: s.col }}>{s.pct}</span>
           </div>
         ))}
       </div>
