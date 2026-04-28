@@ -864,11 +864,11 @@ export default function Landing() {
             className={`overflow-hidden rounded-3xl p-4 sm:p-5 ${sectionCard}`}
             style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.18), 0 8px 10px -6px rgb(0 0 0 / 0.16), inset 0 1px 0 rgba(16,185,129,0.12)' }}
           >
-            <div className="rounded-2xl border border-slate-200">
+            <div className="aspect-square overflow-hidden rounded-2xl border border-slate-200">
               <img
-                src="/hero-dashboard.jpg"
-                alt="VITALOOP AI Healthcare Dashboard with biomarker analysis"
-                className="w-full h-auto object-cover"
+                src="/hero-square.jpg"
+                alt="AI-powered healthcare and medical analysis platform"
+                className="h-full w-full object-cover"
                 loading="lazy"
               />
             </div>
