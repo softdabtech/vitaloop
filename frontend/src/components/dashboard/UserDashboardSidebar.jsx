@@ -4,6 +4,7 @@ import {
   BarChart3,
   ChevronLeft,
   Clock,
+  CreditCard,
   FileText,
   Flame,
   Home,
@@ -25,6 +26,7 @@ const MENU_ITEMS = [
   { icon: BarChart3,  label: 'Health Insights', path: '/insights',  badge: null, premium: true },
   { icon: Clock,      label: 'Weekly Check-in', path: '/check-ins', badge: null, premium: true },
   { icon: Flame,      label: 'Health Profile',  path: '/health-profile', badge: null },
+  { icon: CreditCard, label: 'Subscription',    path: '/subscription', badge: null },
 ]
 
 function isItemActive(currentPath, itemPath) {
@@ -37,7 +39,7 @@ function isItemActive(currentPath, itemPath) {
   if (itemPath === '/check-ins') {
     return currentPath === '/check-ins' || currentPath === '/checkin'
   }
-  if (itemPath === '/settings' || itemPath === '/health-profile') {
+  if (itemPath === '/settings' || itemPath === '/health-profile' || itemPath === '/subscription') {
     return currentPath === itemPath
   }
   if (itemPath === '/dashboard') {
