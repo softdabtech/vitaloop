@@ -139,111 +139,114 @@ export default function HealthProfile() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
-          {/* Biometrics Section */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-            <h3 className="mb-6 text-lg font-bold text-slate-900">Personal Information</h3>
+          {/* Main grid: Personal Info + Health Goals side by side */}
+          <div className="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+            {/* Biometrics Section - Left Column */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+              <h3 className="mb-6 text-lg font-bold text-slate-900">Personal Information</h3>
 
-            <div className="space-y-5">
-              <Field label="Age">
-                <input
-                  type="number"
-                  value={profile.age}
-                  onChange={(e) => setProfile({ ...profile, age: e.target.value })}
-                  placeholder="Enter your age"
-                  style={fieldStyle}
-                  min="0"
-                  max="150"
-                />
-              </Field>
-
-              <Field label="Sex">
-                <select
-                  value={profile.sex}
-                  onChange={(e) => setProfile({ ...profile, sex: e.target.value })}
-                  style={fieldStyle}
-                >
-                  <option value="">Select sex</option>
-                  <option value="M">Male</option>
-                  <option value="F">Female</option>
-                  <option value="O">Other</option>
-                </select>
-              </Field>
-
-              <Field label="Height (cm)">
-                <input
-                  type="number"
-                  value={profile.height_cm}
-                  onChange={(e) => setProfile({ ...profile, height_cm: e.target.value })}
-                  placeholder="e.g., 180"
-                  style={fieldStyle}
-                  min="0"
-                  max="300"
-                  step="0.1"
-                />
-              </Field>
-
-              <Field label="Weight (kg)">
-                <input
-                  type="number"
-                  value={profile.weight_kg}
-                  onChange={(e) => setProfile({ ...profile, weight_kg: e.target.value })}
-                  placeholder="e.g., 80"
-                  style={fieldStyle}
-                  min="0"
-                  max="500"
-                  step="0.1"
-                />
-              </Field>
-
-              <Field label="Timezone">
-                <select
-                  value={profile.timezone}
-                  onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
-                  style={fieldStyle}
-                >
-                  {TIMEZONES.map((tz) => (
-                    <option key={tz} value={tz}>{tz}</option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-          </div>
-
-          {/* Health Goals */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-            <h3 className="mb-6 text-lg font-bold text-slate-900">Health Goals</h3>
-            <p style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>
-              Select goals to personalize your protocol recommendations.
-            </p>
-
-            <div className="space-y-3">
-              {GOAL_OPTIONS.map((goal) => (
-                <label key={goal} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '12px 14px',
-                  background: profile.goals.includes(goal) ? '#f0fdf4' : '#f8fafc',
-                  border: `1px solid ${profile.goals.includes(goal) ? '#dcfce7' : 'rgba(15,23,42,0.12)'}`,
-                  borderRadius: 14,
-                  cursor: 'pointer',
-                  transition: 'all 200ms',
-                }}>
+              <div className="space-y-5">
+                <Field label="Age">
                   <input
-                    type="checkbox"
-                    checked={profile.goals.includes(goal)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setProfile({ ...profile, goals: [...profile.goals, goal] })
-                      } else {
-                        setProfile({ ...profile, goals: profile.goals.filter((g) => g !== goal) })
-                      }
-                    }}
-                    style={{ cursor: 'pointer', width: 18, height: 18 }}
+                    type="number"
+                    value={profile.age}
+                    onChange={(e) => setProfile({ ...profile, age: e.target.value })}
+                    placeholder="Enter your age"
+                    style={fieldStyle}
+                    min="0"
+                    max="150"
                   />
-                  <span style={{ color: '#0f172a', fontSize: 14, fontWeight: 500 }}>{goal}</span>
-                </label>
-              ))}
+                </Field>
+
+                <Field label="Sex">
+                  <select
+                    value={profile.sex}
+                    onChange={(e) => setProfile({ ...profile, sex: e.target.value })}
+                    style={fieldStyle}
+                  >
+                    <option value="">Select sex</option>
+                    <option value="M">Male</option>
+                    <option value="F">Female</option>
+                    <option value="O">Other</option>
+                  </select>
+                </Field>
+
+                <Field label="Height (cm)">
+                  <input
+                    type="number"
+                    value={profile.height_cm}
+                    onChange={(e) => setProfile({ ...profile, height_cm: e.target.value })}
+                    placeholder="e.g., 180"
+                    style={fieldStyle}
+                    min="0"
+                    max="300"
+                    step="0.1"
+                  />
+                </Field>
+
+                <Field label="Weight (kg)">
+                  <input
+                    type="number"
+                    value={profile.weight_kg}
+                    onChange={(e) => setProfile({ ...profile, weight_kg: e.target.value })}
+                    placeholder="e.g., 80"
+                    style={fieldStyle}
+                    min="0"
+                    max="500"
+                    step="0.1"
+                  />
+                </Field>
+
+                <Field label="Timezone">
+                  <select
+                    value={profile.timezone}
+                    onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
+                    style={fieldStyle}
+                  >
+                    {TIMEZONES.map((tz) => (
+                      <option key={tz} value={tz}>{tz}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            </div>
+
+            {/* Health Goals - Right Column */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+              <h3 className="mb-6 text-lg font-bold text-slate-900">Health Goals</h3>
+              <p style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>
+                Select goals to personalize your protocol recommendations.
+              </p>
+
+              <div className="space-y-3">
+                {GOAL_OPTIONS.map((goal) => (
+                  <label key={goal} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '12px 14px',
+                    background: profile.goals.includes(goal) ? '#f0fdf4' : '#f8fafc',
+                    border: `1px solid ${profile.goals.includes(goal) ? '#dcfce7' : 'rgba(15,23,42,0.12)'}`,
+                    borderRadius: 14,
+                    cursor: 'pointer',
+                    transition: 'all 200ms',
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={profile.goals.includes(goal)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setProfile({ ...profile, goals: [...profile.goals, goal] })
+                        } else {
+                          setProfile({ ...profile, goals: profile.goals.filter((g) => g !== goal) })
+                        }
+                      }}
+                      style={{ cursor: 'pointer', width: 18, height: 18 }}
+                    />
+                    <span style={{ color: '#0f172a', fontSize: 14, fontWeight: 500 }}>{goal}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
 

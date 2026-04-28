@@ -5,7 +5,6 @@ import { useAuth } from '../hooks/useAuth.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
-import UserDashboardSidebar from '../components/dashboard/UserDashboardSidebar.jsx'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import {
   ArrowLeft, Pill, Droplets, Moon, Zap, Check,
@@ -480,7 +479,6 @@ export default function ProtocolPage() {
   const [biomarkers, setBiomarkers] = useState([])
   const [protocol, setProtocol] = useState([])
   const [loading, setLoading] = useState(true)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
@@ -538,18 +536,8 @@ export default function ProtocolPage() {
   }
 
   return (
-    <div className="vtl-page flex min-h-screen bg-slate-50">
-      {/* Sidebar */}
-      <div className="hidden lg:block">
-        <UserDashboardSidebar
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
-          user={user}
-          onLogout={handleLogout}
-        />
-      </div>
-
-      <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="vtl-page w-full">
+      <div className="w-full">
         {/* Top bar */}
         <div className="sticky top-0 z-10 flex h-[76px] items-center justify-between gap-4 border-b border-slate-200 bg-white/90 backdrop-blur-sm px-4 sm:px-6 shadow-sm">
           <div className="flex items-center gap-3">

@@ -25,7 +25,6 @@ const MENU_ITEMS = [
   { icon: BarChart3,  label: 'Health Insights', path: '/insights',  badge: null, premium: true },
   { icon: Clock,      label: 'Weekly Check-in', path: '/check-ins', badge: null, premium: true },
   { icon: Flame,      label: 'Health Profile',  path: '/health-profile', badge: null },
-  { icon: Settings,   label: 'Account',       path: '/settings',    badge: null },
 ]
 
 function isItemActive(currentPath, itemPath) {
