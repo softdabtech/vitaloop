@@ -1,0 +1,328 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Target, User, Activity, TrendingUp } from 'lucide-react'
+import toast from 'react-hot-toast'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { useAuth } from '../hooks/useAuth.js'
+import api from '../lib/api.js'
+import '../styles/dashboard2026.css'
+
+const TIMEZONES = [
+  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+  'America/Anchorage', 'America/Honolulu', 'Europe/London', 'Europe/Paris',
+  'Europe/Berlin', 'Europe/Helsinki', 'Europe/Moscow', 'Asia/Dubai',
+  'Asia/Kolkata', 'Asia/Bangkok', 'Asia/Tokyo', 'Asia/Shanghai',
+  'Australia/Sydney', 'Pacific/Auckland',
+]
+
+const GOAL_OPTIONS = [
+  'More energy',
+  'Better sleep',
+  'Hormone balance',
+  'Improve digestion',
+  'Cardiometabolic health',
+  'Reduce inflammation',
+  'Sports performance',
+  'Healthy aging',
+]
+
+const fieldStyle = {
+  width: '100%',
+  minHeight: 44,
+  padding: '10px 14px',
+  background: '#f8fafc',
+  border: '1px solid rgba(15,23,42,0.12)',
+  borderRadius: 14,
+  color: '#0f172a',
+  fontSize: 15,
+  outline: 'none',
+  transition: 'border-color 200ms, box-shadow 200ms',
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label style={{ fontSize: 13, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6, lineHeight: 1.3 }}>
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+function MetricTile({ label, value, tone = 'default' }) {
+  const themes = {
+    default: { bg: '#f8fafc', border: 'rgba(15,23,42,0.08)', title: '#64748b', value: '#0f172a' },
+    success: { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.18)', title: '#047857', value: '#065f46' },
+  }
+  const theme = themes[tone] || themes.default
+
+  return (
+    <div style={{ borderRadius: 18, padding: '16px 18px', background: theme.bg, border: `1px solid ${theme.border}` }}>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: theme.title, marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: theme.value }}>{value}</div>
+    </div>
+  )
+}
+
+export default function HealthProfile() {
+  const { user } = useAuth()
+  const [profile, setProfile] = useState({
+    age: '',
+    sex: '',
+    height_cm: '',
+    weight_kg: '',
+    goals: [],
+    timezone: 'America/New_York',
+  })
+  const [saving, setSaving] = useState(false)
+
+  const meta = user?.user_metadata || {}
+
+  const profileCompletion = useMemo(() => {
+    const checks = [
+      Boolean(profile.age),
+      Boolean(profile.sex),
+      Boolean(profile.timezone),
+      Boolean(profile.height_cm),
+      Boolean(profile.weight_kg),
+      Array.isArray(profile.goals) && profile.goals.length > 0,
+    ]
+    return Math.round((checks.filter(Boolean).length / checks.length) * 100)
+  }, [profile])
+
+  // Calculate BMI
+  const bmi = useMemo(() => {
+    if (!profile.height_cm || !profile.weight_kg) return null
+    const heightM = profile.height_cm / 100
+    return (profile.weight_kg / (heightM * heightM)).toFixed(1)
+  }, [profile.height_cm, profile.weight_kg])
+
+  useEffect(() => {
+    // Load from user metadata
+    setProfile({
+      age: meta.age || '',
+      sex: meta.sex || '',
+      height_cm: meta.height_cm || '',
+      weight_kg: meta.weight_kg || '',
+      goals: meta.goals || [],
+      timezone: meta.timezone || 'America/New_York',
+    })
+  }, [user])
+
+  async function saveProfile() {
+    setSaving(true)
+    try {
+      await api.patch('/profile', {
+        age: profile.age ? parseInt(profile.age) : null,
+        sex: profile.sex,
+        height_cm: profile.height_cm ? parseFloat(profile.height_cm) : null,
+        weight_kg: profile.weight_kg ? parseFloat(profile.weight_kg) : null,
+        goals: profile.goals,
+        timezone: profile.timezone,
+      })
+      toast.success('Health profile updated!')
+    } catch (error) {
+      toast.error('Failed to save profile')
+      console.error(error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <CabinetPageHeader
+        title="Health Profile"
+        subtitle="Your personal health information and biometric data"
+        helper="Keep this information up to date so recommendations are tailored to you."
+      />
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-6">
+          {/* Biometrics Section */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+            <h3 className="mb-6 text-lg font-bold text-slate-900">Personal Information</h3>
+
+            <div className="space-y-5">
+              <Field label="Age">
+                <input
+                  type="number"
+                  value={profile.age}
+                  onChange={(e) => setProfile({ ...profile, age: e.target.value })}
+                  placeholder="Enter your age"
+                  style={fieldStyle}
+                  min="0"
+                  max="150"
+                />
+              </Field>
+
+              <Field label="Sex">
+                <select
+                  value={profile.sex}
+                  onChange={(e) => setProfile({ ...profile, sex: e.target.value })}
+                  style={fieldStyle}
+                >
+                  <option value="">Select sex</option>
+                  <option value="M">Male</option>
+                  <option value="F">Female</option>
+                  <option value="O">Other</option>
+                </select>
+              </Field>
+
+              <Field label="Height (cm)">
+                <input
+                  type="number"
+                  value={profile.height_cm}
+                  onChange={(e) => setProfile({ ...profile, height_cm: e.target.value })}
+                  placeholder="e.g., 180"
+                  style={fieldStyle}
+                  min="0"
+                  max="300"
+                  step="0.1"
+                />
+              </Field>
+
+              <Field label="Weight (kg)">
+                <input
+                  type="number"
+                  value={profile.weight_kg}
+                  onChange={(e) => setProfile({ ...profile, weight_kg: e.target.value })}
+                  placeholder="e.g., 80"
+                  style={fieldStyle}
+                  min="0"
+                  max="500"
+                  step="0.1"
+                />
+              </Field>
+
+              <Field label="Timezone">
+                <select
+                  value={profile.timezone}
+                  onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
+                  style={fieldStyle}
+                >
+                  {TIMEZONES.map((tz) => (
+                    <option key={tz} value={tz}>{tz}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+          </div>
+
+          {/* Health Goals */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+            <h3 className="mb-6 text-lg font-bold text-slate-900">Health Goals</h3>
+            <p style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>
+              Select goals to personalize your protocol recommendations.
+            </p>
+
+            <div className="space-y-3">
+              {GOAL_OPTIONS.map((goal) => (
+                <label key={goal} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '12px 14px',
+                  background: profile.goals.includes(goal) ? '#f0fdf4' : '#f8fafc',
+                  border: `1px solid ${profile.goals.includes(goal) ? '#dcfce7' : 'rgba(15,23,42,0.12)'}`,
+                  borderRadius: 14,
+                  cursor: 'pointer',
+                  transition: 'all 200ms',
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={profile.goals.includes(goal)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setProfile({ ...profile, goals: [...profile.goals, goal] })
+                      } else {
+                        setProfile({ ...profile, goals: profile.goals.filter((g) => g !== goal) })
+                      }
+                    }}
+                    style={{ cursor: 'pointer', width: 18, height: 18 }}
+                  />
+                  <span style={{ color: '#0f172a', fontSize: 14, fontWeight: 500 }}>{goal}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <button
+            onClick={saveProfile}
+            disabled={saving}
+            className="rounded-2xl bg-emerald-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save Health Profile'}
+          </button>
+        </div>
+
+        {/* Right Sidebar */}
+        <div className="space-y-4">
+          {/* Completion */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Profile Completion</div>
+            <div style={{
+              width: '100%',
+              height: 6,
+              background: '#e2e8f0',
+              borderRadius: 99,
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                height: '100%',
+                width: `${profileCompletion}%`,
+                background: '#10b981',
+                transition: 'width 300ms',
+              }} />
+            </div>
+            <div className="mt-2 text-center text-xl font-bold text-slate-900">{profileCompletion}%</div>
+          </div>
+
+          {/* Biometrics Display */}
+          {bmi && (
+            <MetricTile
+              label="BMI"
+              value={bmi}
+              tone={bmi < 25 ? 'success' : 'default'}
+            />
+          )}
+
+          {profile.age && (
+            <MetricTile
+              label="Age"
+              value={profile.age}
+            />
+          )}
+
+          {profile.weight_kg && (
+            <MetricTile
+              label="Weight"
+              value={`${profile.weight_kg} kg`}
+            />
+          )}
+
+          {profile.height_cm && (
+            <MetricTile
+              label="Height"
+              value={`${profile.height_cm} cm`}
+            />
+          )}
+
+          {/* Info Box */}
+          <div style={{
+            borderRadius: 18,
+            padding: 16,
+            background: '#f0fdf4',
+            border: '1px solid rgba(16,185,129,0.18)',
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#047857', marginBottom: 6 }}>💡 TIP</div>
+            <div style={{ fontSize: 13, color: '#065f46', lineHeight: 1.5 }}>
+              Your profile data is used to personalize supplement recommendations, nutrition guidance, and protocol timing. Keep it updated!
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
