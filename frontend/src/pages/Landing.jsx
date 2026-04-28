@@ -822,62 +822,158 @@ export default function Landing() {
       </header>
 
       <main>
-        <section id="hero" className="mx-auto grid w-full max-w-[1240px] gap-10 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:pt-20">
-          <motion.div {...fadeUp(reduced)}>
-            <p className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
-              Premium AI Biohacking Platform
-            </p>
-            <h1 className={`mt-5 text-[32px] font-bold leading-[1.1] tracking-[-0.025em] md:text-[42px] ${'text-slate-900'}`}>
-              Turn Blood Test Results Into an AI-Powered Health System
-            </h1>
-            <p className={`mt-5 max-w-xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
-              VITALOOP uses AI to analyze your blood test results, extract biomarker insights across 85+ markers, and build a personalized protocol — then adapts it weekly based on your check-ins and new lab uploads.
-            </p>
+        <section id="hero" className="relative mx-auto grid w-full max-w-[1240px] gap-10 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:pt-20">
+          {/* Animated background orbs */}
+          <motion.div
+            className="pointer-events-none absolute left-[10%] top-[15%] h-64 w-64 rounded-full bg-emerald-400/20 blur-3xl"
+            animate={reduced ? {} : { scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="pointer-events-none absolute right-[15%] top-[25%] h-72 w-72 rounded-full bg-sky-400/15 blur-3xl"
+            animate={reduced ? {} : { scale: [1.2, 1, 1.2], opacity: [0.2, 0.4, 0.2] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          />
 
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => navigate('/login?signup=true')}
-                className={`${ctaBase} ${'bg-slate-900 text-white hover:bg-slate-700'}`}
+          <motion.div {...fadeUp(reduced)} className="relative z-10">
+            <motion.p
+              initial={reduced ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] shadow-lg shadow-emerald-500/20 ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Premium AI Biohacking Platform
+            </motion.p>
+            <motion.h1
+              className={`mt-5 text-[32px] font-bold leading-[1.1] tracking-[-0.025em] md:text-[48px] lg:text-[52px] ${'text-slate-900'}`}
+              initial={reduced ? false : { opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.4 }}
+            >
+              Turn{' '}
+              <motion.span
+                className="relative inline-block"
+                whileHover={reduced ? {} : { scale: 1.02, transition: { duration: 0.2 } }}
               >
-                Start Free Account - No card required
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </button>
-              <button
+                <span className="relative z-10 bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
+                  Blood Tests
+                </span>
+                <motion.span
+                  className="absolute inset-0 rounded-lg bg-emerald-500/20 blur-xl"
+                  animate={reduced ? {} : { opacity: [0.3, 0.6, 0.3] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+              </motion.span>
+              {' '}Into an{' '}
+              <motion.span
+                className="relative inline-block"
+                whileHover={reduced ? {} : { scale: 1.02, transition: { duration: 0.2 } }}
+              >
+                <span className="relative z-10 bg-gradient-to-r from-sky-600 to-sky-500 bg-clip-text text-transparent">
+                  AI-Powered
+                </span>
+                <motion.span
+                  className="absolute inset-0 rounded-lg bg-sky-500/20 blur-xl"
+                  animate={reduced ? {} : { opacity: [0.3, 0.6, 0.3] }}
+                  transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                />
+              </motion.span>
+              {' '}Health System
+            </motion.h1>
+            <motion.p
+              className={`mt-5 max-w-xl text-[17px] leading-[1.7] md:text-[18px] ${'text-slate-600'}`}
+              initial={reduced ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+            >
+              VITALOOP uses AI to analyze your blood test results, extract biomarker insights across{' '}
+              <span className="font-semibold text-emerald-700">85+ markers</span>, and build a personalized protocol — then adapts it weekly based on your check-ins and new lab uploads.
+            </motion.p>
+
+            <motion.div
+              className="mt-8 flex flex-wrap items-center gap-3"
+              initial={reduced ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.8 }}
+            >
+              <motion.button
+                onClick={() => navigate('/login?signup=true')}
+                className={`${ctaBase} relative overflow-hidden ${'bg-slate-900 text-white'}`}
+                whileHover={reduced ? {} : { scale: 1.02, boxShadow: '0 12px 24px rgba(0,0,0,0.25)' }}
+                whileTap={reduced ? {} : { scale: 0.98 }}
+              >
+                <motion.span
+                  className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-sky-500/20"
+                  initial={{ x: '-100%' }}
+                  whileHover={{ x: '100%' }}
+                  transition={{ duration: 0.6 }}
+                />
+                <span className="relative z-10 flex items-center">
+                  Start Free Account - No card required
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </span>
+              </motion.button>
+              <motion.button
                 onClick={() => navigate('/for-nutritionists')}
-                className={`${ctaBase} ${'border border-emerald-300 bg-emerald-50 text-emerald-800 hover:border-emerald-400'}`}
+                className={`${ctaBase} ${'border border-emerald-300 bg-emerald-50 text-emerald-800 hover:border-emerald-400 hover:bg-emerald-100'}`}
+                whileHover={reduced ? {} : { scale: 1.02 }}
+                whileTap={reduced ? {} : { scale: 0.98 }}
               >
                 For Nutritionists
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-2.5">
-              {HERO_TRUST_SIGNALS.map((item) => {
+            <motion.div
+              className="mt-8 flex flex-wrap items-center gap-2.5"
+              initial={reduced ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 1 }}
+            >
+              {HERO_TRUST_SIGNALS.map((item, idx) => {
                 const Icon = item.icon
                 return (
-                  <div
+                  <motion.div
                     key={item.title}
-                    className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-slate-700 transition-colors backdrop-blur-sm hover:border-emerald-300"
+                    className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-slate-700 backdrop-blur-sm"
+                    initial={reduced ? false : { opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, delay: 1 + idx * 0.1 }}
+                    whileHover={reduced ? {} : { scale: 1.05, borderColor: 'rgb(110, 231, 183)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)' }}
                   >
                     <Icon className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                     <span className="text-[12px] font-semibold">{item.title}</span>
-                  </div>
+                  </motion.div>
                 )
               })}
-            </div>
+            </motion.div>
           </motion.div>
 
           <motion.div
             {...fadeUp(reduced, 0.12)}
-            whileHover={reduced ? undefined : { y: -4 }}
-            className={`overflow-hidden rounded-3xl p-4 sm:p-5 ${sectionCard}`}
+            whileHover={reduced ? undefined : { y: -8, scale: 1.02 }}
+            className={`group relative overflow-hidden rounded-3xl p-4 sm:p-5 ${sectionCard}`}
             style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.18), 0 8px 10px -6px rgb(0 0 0 / 0.16), inset 0 1px 0 rgba(16,185,129,0.12)' }}
           >
-            <div className="aspect-square overflow-hidden rounded-2xl border border-slate-200">
-              <img
+            {/* Gradient overlay on hover */}
+            <motion.div
+              className="pointer-events-none absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-sky-500/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+              initial={{ opacity: 0 }}
+              whileHover={{ opacity: 1 }}
+            />
+            <div className="relative aspect-square overflow-hidden rounded-2xl border border-slate-200">
+              <motion.img
                 src="/hero-square.jpg"
                 alt="AI-powered healthcare and medical analysis platform"
                 className="h-full w-full object-cover"
                 loading="lazy"
+                whileHover={reduced ? {} : { scale: 1.05 }}
+                transition={{ duration: 0.4 }}
+              />
+              {/* Animated border glow */}
+              <motion.div
+                className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                style={{ boxShadow: 'inset 0 0 20px rgba(16, 185, 129, 0.3)' }}
               />
             </div>
           </motion.div>
@@ -887,11 +983,27 @@ export default function Landing() {
         {/* === Stats bar === */}
         <section aria-label="Platform statistics" className="mx-auto w-full max-w-[1240px] px-4 pb-4 sm:px-6">
           <motion.div {...fadeUp(reduced)} className={`grid grid-cols-2 gap-3 rounded-3xl border p-5 sm:grid-cols-4 ${sectionCard}`}>
-            {STATS.map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className={`text-2xl font-bold tracking-tight ${'text-emerald-700'}`}>{stat.value}</div>
+            {STATS.map((stat, idx) => (
+              <motion.div
+                key={stat.label}
+                className="text-center"
+                initial={reduced ? false : { opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: idx * 0.1 }}
+                whileHover={reduced ? {} : { scale: 1.05, y: -4 }}
+              >
+                <motion.div
+                  className={`text-2xl font-bold tracking-tight ${'text-emerald-700'}`}
+                  initial={reduced ? false : { opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: idx * 0.1 + 0.2 }}
+                >
+                  {stat.value}
+                </motion.div>
                 <div className={`mt-1 text-xs ${'text-slate-500'}`}>{stat.label}</div>
-              </div>
+              </motion.div>
             ))}
           </motion.div>
         </section>
@@ -972,7 +1084,28 @@ export default function Landing() {
 
         <section id="how-it-works" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7">
-            <h2 className="text-[28px] font-semibold tracking-tight">How AI Analyzes Your Lab Results — 5 Steps From Upload to Action</h2>
+            <motion.h2
+              className="text-[28px] font-semibold tracking-tight md:text-[34px]"
+              initial={reduced ? false : { opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              How AI Analyzes Your Lab Results —{' '}
+              <span className="relative inline-block">
+                <span className="bg-gradient-to-r from-emerald-600 to-sky-600 bg-clip-text text-transparent">
+                  5 Steps
+                </span>
+                <motion.span
+                  className="absolute -bottom-1 left-0 h-1 bg-gradient-to-r from-emerald-400 to-sky-400"
+                  initial={{ width: 0 }}
+                  whileInView={{ width: '100%' }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.8, delay: 0.3 }}
+                />
+              </span>
+              {' '}From Upload to Action
+            </motion.h2>
             <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
               Free plan covers upload + biomarker analysis. Personal Premium adds full protocol generation and weekly adaptation.
             </p>
@@ -985,16 +1118,24 @@ export default function Landing() {
                 <motion.article
                   key={step.title}
                   variants={fadeUp(reduced, idx * 0.04)}
-                  whileHover={reduced ? undefined : { scale: 1.02, boxShadow: '0 0 0 4px rgba(16,185,129,0.12)' }}
-                  className={`rounded-3xl border p-6 transition ${'border-slate-200 bg-white'}`}
+                  whileHover={reduced ? undefined : { scale: 1.05, y: -8, boxShadow: '0 0 0 4px rgba(16,185,129,0.2), 0 24px 32px -8px rgba(0,0,0,0.15)' }}
+                  className={`group relative overflow-hidden rounded-3xl border p-6 transition ${'border-slate-200 bg-white'}`}
                   style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08), inset 0 1px 0 rgba(16,185,129,0.08)' }}
                 >
-                  <span className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-300">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <div className={`text-sm font-semibold uppercase tracking-[0.15em] ${'text-emerald-700'}`}>Step {idx + 1}</div>
-                  <h3 className="mt-2 text-lg font-semibold">{step.title}</h3>
-                  <p className={`mt-2 text-sm leading-relaxed ${'text-slate-600'}`}>{step.body}</p>
+                  {/* Animated gradient background on hover */}
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-sky-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                  />
+                  <motion.span
+                    className="relative mb-5 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/20"
+                    whileHover={reduced ? {} : { rotate: 360, scale: 1.1 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <Icon className="h-5 w-5 text-emerald-600" />
+                  </motion.span>
+                  <div className={`relative text-sm font-semibold uppercase tracking-[0.15em] ${'text-emerald-700'}`}>Step {idx + 1}</div>
+                  <h3 className="relative mt-2 text-lg font-semibold">{step.title}</h3>
+                  <p className={`relative mt-2 text-sm leading-relaxed ${'text-slate-600'}`}>{step.body}</p>
                 </motion.article>
               )
             })}
@@ -1003,7 +1144,18 @@ export default function Landing() {
 
         <section className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7">
-            <h2 className="text-[28px] font-semibold tracking-tight">Longitudinal Biomarker Tracking Across Every Health Dimension</h2>
+            <motion.h2
+              className="text-[28px] font-semibold tracking-tight md:text-[34px]"
+              initial={reduced ? false : { opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              Longitudinal Biomarker Tracking Across{' '}
+              <span className="bg-gradient-to-r from-emerald-600 to-sky-600 bg-clip-text text-transparent">
+                Every Health Dimension
+              </span>
+            </motion.h2>
             <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
               Four premium layers work together to turn one upload into a compounding health intelligence system rather than a one-time report review.
             </p>
@@ -1016,21 +1168,32 @@ export default function Landing() {
                 <motion.article
                   key={feature.title}
                   {...fadeUp(reduced, index * 0.05)}
-                  whileHover={reduced ? undefined : { y: -5, scale: 1.01 }}
-                  className={`flex min-h-[320px] flex-col rounded-[30px] border p-6 ${'border-slate-200 bg-white'}`}
+                  whileHover={reduced ? undefined : { y: -8, scale: 1.02, boxShadow: '0 0 0 4px rgba(16,185,129,0.2), 0 28px 40px -10px rgba(0,0,0,0.2)' }}
+                  className={`group relative flex min-h-[320px] flex-col overflow-hidden rounded-[30px] border p-6 ${'border-slate-200 bg-white'}`}
                   style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.1), inset 0 1px 0 rgba(16,185,129,0.08)' }}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${'bg-emerald-50 text-emerald-700'}`}>
+                  {/* Animated gradient background */}
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-sky-500/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                  />
+                  <div className="relative flex items-center justify-between gap-3">
+                    <motion.span
+                      className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${'bg-emerald-50 text-emerald-700'}`}
+                      whileHover={reduced ? {} : { rotate: 360, scale: 1.15 }}
+                      transition={{ duration: 0.6 }}
+                    >
                       <Icon className="h-5 w-5" />
-                    </span>
-                    <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                    </motion.span>
+                    <motion.span
+                      className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}
+                      whileHover={reduced ? {} : { scale: 1.05 }}
+                    >
                       Premium
-                    </span>
+                    </motion.span>
                   </div>
-                  <h3 className="mt-6 text-xl font-semibold leading-snug">{feature.title}</h3>
-                  <p className={`mt-3 text-sm leading-relaxed ${'text-slate-600'}`}>{feature.body}</p>
-                  <div className={`mt-auto rounded-2xl border px-4 py-4 text-sm leading-relaxed ${'border-slate-200 bg-slate-50 text-slate-700'}`}>
+                  <h3 className="relative mt-6 text-xl font-semibold leading-snug">{feature.title}</h3>
+                  <p className={`relative mt-3 text-sm leading-relaxed ${'text-slate-600'}`}>{feature.body}</p>
+                  <div className={`relative mt-auto rounded-2xl border px-4 py-4 text-sm leading-relaxed ${'border-slate-200 bg-slate-50 text-slate-700'}`}>
                     {feature.detail}
                   </div>
                 </motion.article>
@@ -1043,7 +1206,25 @@ export default function Landing() {
 
         <section id="why-vitaloop" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7">
-            <h2 className="text-[28px] font-semibold tracking-tight">Why VITALOOP</h2>
+            <motion.h2
+              className="text-[28px] font-semibold tracking-tight md:text-[34px]"
+              initial={reduced ? false : { opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              Why{' '}
+              <span className="relative">
+                <span className="bg-gradient-to-r from-emerald-600 via-sky-600 to-violet-600 bg-clip-text text-transparent">
+                  VITALOOP
+                </span>
+                <motion.span
+                  className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-500/20 via-sky-500/20 to-violet-500/20 blur-lg"
+                  animate={reduced ? {} : { opacity: [0.3, 0.6, 0.3] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+              </span>
+            </motion.h2>
           </motion.div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {BENEFITS.map((benefit, idx) => {
@@ -1052,13 +1233,23 @@ export default function Landing() {
                 <motion.article
                   key={benefit.title}
                   {...fadeUp(reduced, idx * 0.06)}
-                  whileHover={reduced ? undefined : { y: -4, scale: 1.01, boxShadow: '0 0 0 4px rgba(16,185,129,0.12)' }}
-                  className={`rounded-3xl border p-6 min-h-[208px] ${'border-slate-200 bg-white'}`}
+                  whileHover={reduced ? undefined : { y: -8, scale: 1.03, boxShadow: '0 0 0 4px rgba(16,185,129,0.15), 0 24px 40px -8px rgba(0,0,0,0.2)' }}
+                  className={`group relative min-h-[208px] overflow-hidden rounded-3xl border p-6 ${'border-slate-200 bg-white'}`}
                   style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08), inset 0 1px 0 rgba(16,185,129,0.08)' }}
                 >
-                  <Icon className="h-6 w-6 text-emerald-400" />
-                  <h3 className="mt-4 text-lg font-semibold">{benefit.title}</h3>
-                  <p className={`mt-2 text-sm leading-relaxed ${'text-slate-600'}`}>{benefit.body}</p>
+                  {/* Animated gradient on hover */}
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-br from-emerald-500/8 via-sky-500/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                  />
+                  <motion.div
+                    className="relative"
+                    whileHover={reduced ? {} : { rotate: [0, -10, 10, 0], scale: 1.1 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <Icon className="h-6 w-6 text-emerald-500" />
+                  </motion.div>
+                  <h3 className="relative mt-4 text-lg font-semibold">{benefit.title}</h3>
+                  <p className={`relative mt-2 text-sm leading-relaxed ${'text-slate-600'}`}>{benefit.body}</p>
                 </motion.article>
               )
             })}
@@ -1209,21 +1400,47 @@ export default function Landing() {
 
         <section id="testimonials" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7">
-            <h2 className="text-[28px] font-semibold tracking-tight">Real Users. Real Biomarker Progress.</h2>
+            <motion.h2
+              className="text-[28px] font-semibold tracking-tight md:text-[34px]"
+              initial={reduced ? false : { opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              Real Users.{' '}
+              <span className="bg-gradient-to-r from-emerald-600 to-sky-600 bg-clip-text text-transparent">
+                Real Biomarker Progress.
+              </span>
+            </motion.h2>
           </motion.div>
           <div className="grid gap-4 md:grid-cols-3">
             {TESTIMONIALS.map((item, idx) => (
-              <motion.article key={item.author} {...fadeUp(reduced, idx * 0.06)} className={`rounded-3xl border p-6 ${'border-slate-200 bg-white'}`}>
-                <p className={`text-[17px] leading-[1.7] ${'text-slate-700'}`}>"{item.quote}"</p>
+              <motion.article
+                key={item.author}
+                {...fadeUp(reduced, idx * 0.06)}
+                whileHover={reduced ? {} : { y: -6, scale: 1.02, boxShadow: '0 0 0 3px rgba(16,185,129,0.15), 0 24px 36px -8px rgba(0,0,0,0.18)' }}
+                className={`group relative overflow-hidden rounded-3xl border p-6 ${'border-slate-200 bg-white'}`}
+              >
+                {/* Gradient overlay on hover */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-sky-500/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                />
+                <p className={`relative text-[17px] leading-[1.7] ${'text-slate-700'}`}>"{item.quote}"</p>
                 {item.result && (
-                  <div className={`mt-3 rounded-xl border px-3 py-2 text-xs font-semibold ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                  <motion.div
+                    className={`relative mt-3 rounded-xl border px-3 py-2 text-xs font-semibold ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}
+                    whileHover={reduced ? {} : { scale: 1.02, borderColor: 'rgb(16, 185, 129)' }}
+                  >
                     {item.result}
-                  </div>
+                  </motion.div>
                 )}
-                <div className="mt-5 flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-semibold text-emerald-300">
+                <div className="relative mt-5 flex items-center gap-3">
+                  <motion.span
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-semibold text-emerald-700"
+                    whileHover={reduced ? {} : { scale: 1.1, rotate: 5 }}
+                  >
                     {item.author[0]}
-                  </span>
+                  </motion.span>
                   <div>
                     <div className="text-sm font-semibold">{item.author}</div>
                     <div className={`text-xs ${'text-slate-500'}`}>{item.role}</div>
