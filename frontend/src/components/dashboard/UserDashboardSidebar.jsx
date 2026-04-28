@@ -24,7 +24,8 @@ const MENU_ITEMS = [
   { icon: TrendingUp, label: 'Progress',      path: '/progress',    badge: null, premium: true },
   { icon: BarChart3,  label: 'Health Insights', path: '/insights',  badge: null, premium: true },
   { icon: Clock,      label: 'Weekly Check-in', path: '/check-ins', badge: null, premium: true },
-  { icon: Flame,      label: 'Health Profile',  path: '/settings', badge: null },
+  { icon: Flame,      label: 'Health Profile',  path: '/health-profile', badge: null },
+  { icon: Settings,   label: 'Account',       path: '/settings',    badge: null },
 ]
 
 function isItemActive(currentPath, itemPath) {
@@ -37,8 +38,8 @@ function isItemActive(currentPath, itemPath) {
   if (itemPath === '/check-ins') {
     return currentPath === '/check-ins' || currentPath === '/checkin'
   }
-  if (itemPath === '/settings') {
-    return currentPath === '/settings'
+  if (itemPath === '/settings' || itemPath === '/health-profile') {
+    return currentPath === itemPath
   }
   if (itemPath === '/dashboard') {
     return currentPath === '/dashboard'

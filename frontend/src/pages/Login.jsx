@@ -1,6 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
-// import ReCAPTCHA from 'react-google-recaptcha'
-// import { RECAPTCHA_SITE_KEY } from '../config/recaptcha.js'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
 import { supabase } from '../lib/supabase.js'
@@ -149,7 +147,6 @@ function AbstractPanel({ side, variant = 'signin' }) {
 }
 
 export default function Login() {
-  // const recaptchaRef = useRef(null)
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword, signOut } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -162,7 +159,6 @@ export default function Login() {
   const [resendLoading, setResendLoading] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [honeypot, setHoneypot] = useState('')  // bot trap
-  // const [recaptchaToken, setRecaptchaToken] = useState('')
   const [authAlert, setAuthAlert] = useState(null)
   const [rateLimitedUntil, setRateLimitedUntil] = useState(0)
 
@@ -287,8 +283,6 @@ export default function Login() {
     }
 
     setLoading(true)
-
-    // Optionally: send recaptchaToken to backend for verification here (удалено)
 
     if (isForgot) {
       const { error } = await resetPassword(normalizedEmail)
