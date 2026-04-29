@@ -2,10 +2,10 @@ import { useState, useRef } from 'react'
 import * as Tesseract from 'tesseract.js'
 import * as pdfjsLib from 'pdfjs-dist'
 
-// Configure PDF.js worker for both development and production
+// Configure PDF.js to work without worker to avoid SES conflicts
 if (typeof window !== 'undefined') {
-  // Use legacy PDF.js worker from local assets (most compatible)
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdf.worker.legacy.min.mjs'
+  // Disable worker completely to avoid loading issues
+  pdfjsLib.GlobalWorkerOptions.workerSrc = undefined
 }
 
 export function useOCR() {
@@ -178,7 +178,12 @@ export function useOCR() {
       const arrayBuffer = await file.arrayBuffer()
       console.log('ArrayBuffer created, size:', arrayBuffer.byteLength)
 
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+      // Load PDF without worker (synchronous mode)
+      const pdf = await pdfjsLib.getDocument({
+        data: arrayBuffer,
+        disableWorker: true, // Force synchronous mode
+        disableFontFace: true, // Disable font loading
+      }).promise
       console.log('PDF loaded, pages:', pdf.numPages)
 
       const chunks = []
@@ -190,7 +195,7 @@ export function useOCR() {
           const page = await pdf.getPage(i)
           console.log(`Page ${i} loaded`)
 
-          // Try native text layer first
+          // Try native text layer first (works without worker)
           const textContent = await page.getTextContent()
           const nativeText = textContent.items.map((item) => item.str).join(' ')
           console.log(`Page ${i} native text length:`, nativeText.length)
@@ -201,30 +206,32 @@ export function useOCR() {
             hasTextContent = true
           } else {
             console.log(`Page ${i}: Native text too short, trying OCR`)
-            // Fallback: render to canvas and OCR
-            const viewport = page.getViewport({ scale: 2 })
-            const canvas = document.createElement('canvas')
-            canvas.width = viewport.width
-            canvas.height = viewport.height
-
-            const ctx = canvas.getContext('2d')
-            await page.render({ canvasContext: ctx, viewport }).promise
-            console.log(`Page ${i}: Rendered to canvas`)
-
+            // Fallback: render to canvas and OCR (may not work without worker)
             try {
+              const viewport = page.getViewport({ scale: 2 })
+              const canvas = document.createElement('canvas')
+              canvas.width = viewport.width
+              canvas.height = viewport.height
+
+              const ctx = canvas.getContext('2d')
+              await page.render({ canvasContext: ctx, viewport }).promise
+              console.log(`Page ${i}: Rendered to canvas`)
+
               const result = await Tesseract.recognize(canvas, 'eng', {
                 logger: (m) => console.log(`Page ${i} OCR progress:`, m)
               })
               console.log(`Page ${i}: OCR completed, confidence:`, result.data.confidence)
               chunks.push(result.data.text)
               hasTextContent = true
-            } catch (ocrError) {
-              console.warn(`Page ${i}: OCR failed:`, ocrError)
-              // Try with different language
+            } catch (renderError) {
+              console.warn(`Page ${i}: Render failed (worker required):`, renderError)
+              // Try OCR with different language on a blank canvas as fallback
               try {
-                const result = await Tesseract.recognize(canvas, 'rus+ukr+eng')
-                chunks.push(result.data.text)
-                hasTextContent = true
+                const result = await Tesseract.recognize(document.createElement('canvas'), 'rus+ukr+eng')
+                if (result.data.text.trim().length > 0) {
+                  chunks.push(result.data.text)
+                  hasTextContent = true
+                }
               } catch (fallbackError) {
                 console.warn(`Page ${i}: Fallback OCR also failed:`, fallbackError)
               }
