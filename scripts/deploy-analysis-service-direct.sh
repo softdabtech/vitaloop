@@ -1,0 +1,96 @@
+#!/bin/bash
+
+# Deploy analysis service directly to production server
+# Usage: ./scripts/deploy-analysis-service-direct.sh
+
+set -e
+
+echo "🚀 Deploying analysis service to production..."
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Server details
+SERVER="root@159.65.252.227"
+REMOTE_PATH="/opt/analysis-service"
+SERVICE_NAME="analysis-service"
+
+echo -e "${YELLOW}📦 Building and deploying analysis service...${NC}"
+
+# Create deployment package
+echo "Creating deployment package..."
+cd /Users/oleksii/projects/vitaloop/analysis-service
+tar -czf analysis-service.tar.gz --exclude='__pycache__' --exclude='*.pyc' --exclude='.git' .
+
+# Upload to server
+echo "Uploading to server..."
+scp analysis-service.tar.gz $SERVER:/tmp/
+
+# Deploy on server
+ssh $SERVER << EOF
+    set -e
+    
+    echo "Stopping existing service..."
+    systemctl stop $SERVICE_NAME 2>/dev/null || true
+    
+    echo "Setting up deployment directory..."
+    mkdir -p $REMOTE_PATH
+    cd $REMOTE_PATH
+    
+    echo "Extracting new version..."
+    tar -xzf /tmp/analysis-service.tar.gz
+    rm /tmp/analysis-service.tar.gz
+    
+    echo "Setting up Python environment..."
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    
+    echo "Creating systemd service..."
+    cat > /etc/systemd/system/$SERVICE_NAME.service << SERVICE_EOF
+[Unit]
+Description=Analysis Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=$REMOTE_PATH
+ExecStart=$REMOTE_PATH/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8006
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SERVICE_EOF
+    
+    echo "Reloading systemd and starting service..."
+    systemctl daemon-reload
+    systemctl enable $SERVICE_NAME
+    systemctl start $SERVICE_NAME
+    
+    echo "Waiting for service to start..."
+    sleep 5
+    
+    echo "Checking service status..."
+    systemctl status $SERVICE_NAME --no-pager
+    
+    echo "Testing health endpoint..."
+    curl -f http://localhost:8006/health || exit 1
+    
+    echo "Opening firewall port..."
+    ufw allow 8006/tcp
+    
+    echo "✅ Deployment completed successfully!"
+EOF
+
+# Cleanup
+rm analysis-service.tar.gz
+
+echo -e "${GREEN}🎉 Analysis service deployed successfully!${NC}"
+echo -e "${GREEN}🌐 Service URL: http://159.65.252.227:8006${NC}"
+echo -e "${GREEN}💚 Health check: http://159.65.252.227:8006/health${NC}"
