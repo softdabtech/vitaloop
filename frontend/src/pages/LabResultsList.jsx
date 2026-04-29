@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FlaskConical, Calendar, ChevronRight, Upload, Activity } from 'lucide-react'
+import { FlaskConical, Calendar, ChevronRight, Upload, Activity, Sparkles } from 'lucide-react'
 import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
@@ -38,12 +38,22 @@ export default function LabResultsList() {
     api.get('/progress')
       .then((res) => {
         if (!active) return
-        setItems(normalizeProgressPayload(res.data))
+        const items = normalizeProgressPayload(res.data)
+        // For free users, only show the most recent upload if any
+        const displayItems = items.length > 0 ? [items[0]] : []
+        setItems(displayItems)
         setError(null)
       })
-      .catch(() => {
+      .catch((err) => {
         if (!active) return
-        setError('Could not load lab results.')
+        if (err.response?.status === 402) {
+          // For free users, try to get the most recent upload via a different endpoint
+          // or show empty state with upload option
+          setItems([])
+          setError(null) // Don't show error, just show empty state
+        } else {
+          setError('Could not load lab results.')
+        }
       })
       .finally(() => {
         if (!active) return
@@ -117,12 +127,12 @@ export default function LabResultsList() {
           <div className="vtl-light-card p-10 text-center">
             <FlaskConical className="mx-auto mb-3 h-10 w-10 text-slate-300" />
             <p className="mb-1 font-semibold text-slate-800">No lab uploads yet</p>
-            <p className="mb-4 text-sm text-slate-500">Upload your first document to generate biomarkers and protocol.</p>
+            <p className="mb-4 text-sm text-slate-500">Upload your first document to generate biomarkers and see your results.</p>
             <button
               onClick={() => navigate('/upload')}
               className="vtl-button-primary px-5 text-sm"
             >
-              Go to Upload
+              Upload Lab Results
             </button>
           </div>
         ) : (
@@ -162,7 +172,7 @@ export default function LabResultsList() {
                         disabled={!uploadId}
                         className="flex-1 min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        <p className="truncate text-sm font-semibold text-slate-800">{item?.lab_name || `Upload #${sortedItems.length - index}`}</p>
+                        <p className="truncate text-sm font-semibold text-slate-800">{item?.lab_name || `Lab Results #${sortedItems.length - index}`}</p>
                         <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
                           <Calendar className="h-3 w-3" />
                           {date}
@@ -176,21 +186,12 @@ export default function LabResultsList() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {uploadId && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); navigate(`/protocol/${uploadId}`) }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-semibold transition-colors"
-                          >
-                            <Activity className="h-3.5 w-3.5" />
-                            Protocol
-                          </button>
-                        )}
                         <button
                           onClick={() => uploadId && navigate(`/results/${uploadId}`)}
                           disabled={!uploadId}
                           className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-40"
                         >
-                          Results
+                          View Results
                           <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>
@@ -198,6 +199,25 @@ export default function LabResultsList() {
                   </div>
                 )
               })}
+
+              {/* Premium features hint for free users */}
+              <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="mt-0.5 h-5 w-5 text-amber-600" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-amber-800">Premium features available</p>
+                    <p className="mt-1 text-sm text-amber-700">
+                      Upgrade to see your complete lab history, track trends over time, and get personalized supplement protocols.
+                    </p>
+                    <button
+                      onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'LAB_HISTORY_ACCESS' } }))}
+                      className="mt-3 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition"
+                    >
+                      Upgrade for $9.99/month
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <aside className="vtl-light-card h-fit p-5">

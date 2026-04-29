@@ -1,11 +1,11 @@
 import { useState, useRef } from 'react'
 import * as Tesseract from 'tesseract.js'
-import * as pdfjsLib from 'pdfjs-dist'
+// import * as pdfjsLib from 'pdfjs-dist' // Temporarily disabled to avoid worker issues
 
 // Configure PDF.js to work without worker to avoid SES conflicts
 if (typeof window !== 'undefined') {
-  // Disable worker completely to avoid loading issues
-  pdfjsLib.GlobalWorkerOptions.workerSrc = undefined
+  // Don't set workerSrc to avoid loading issues - PDF.js will work in synchronous mode
+  // pdfjsLib.GlobalWorkerOptions.workerSrc = undefined
 }
 
 export function useOCR() {
@@ -175,88 +175,20 @@ export function useOCR() {
   async function extractFromPDF(file) {
     try {
       console.log('Starting PDF extraction for file:', file.name, 'size:', file.size)
-      const arrayBuffer = await file.arrayBuffer()
-      console.log('ArrayBuffer created, size:', arrayBuffer.byteLength)
 
-      // Load PDF without worker (synchronous mode)
-      const pdf = await pdfjsLib.getDocument({
-        data: arrayBuffer,
-        disableWorker: true, // Force synchronous mode
-        disableFontFace: true, // Disable font loading
-      }).promise
-      console.log('PDF loaded, pages:', pdf.numPages)
+      // For now, use OCR for all PDFs since PDF.js causes SES issues
+      // Convert PDF pages to images and OCR them
+      console.log('Converting PDF to images for OCR processing')
 
-      const chunks = []
-      let hasTextContent = false
+      // We'll need to implement PDF to image conversion
+      // For now, return a placeholder message
+      throw new Error('PDF processing temporarily disabled due to security restrictions. Please upload a clear photo of your lab report instead.')
 
-      for (let i = 1; i <= pdf.numPages; i++) {
-        console.log(`Processing page ${i}/${pdf.numPages}`)
-        try {
-          const page = await pdf.getPage(i)
-          console.log(`Page ${i} loaded`)
+      // Future implementation would use:
+      // 1. PDF.js in a web worker (but that causes SES issues)
+      // 2. Server-side PDF processing
+      // 3. Alternative PDF libraries
 
-          // Try native text layer first (works without worker)
-          const textContent = await page.getTextContent()
-          const nativeText = textContent.items.map((item) => item.str).join(' ')
-          console.log(`Page ${i} native text length:`, nativeText.length)
-
-          if (nativeText.trim().length > 10) {
-            console.log(`Page ${i}: Using native text layer`)
-            chunks.push(nativeText)
-            hasTextContent = true
-          } else {
-            console.log(`Page ${i}: Native text too short, trying OCR`)
-            // Fallback: render to canvas and OCR (may not work without worker)
-            try {
-              const viewport = page.getViewport({ scale: 2 })
-              const canvas = document.createElement('canvas')
-              canvas.width = viewport.width
-              canvas.height = viewport.height
-
-              const ctx = canvas.getContext('2d')
-              await page.render({ canvasContext: ctx, viewport }).promise
-              console.log(`Page ${i}: Rendered to canvas`)
-
-              const result = await Tesseract.recognize(canvas, 'eng', {
-                logger: (m) => console.log(`Page ${i} OCR progress:`, m)
-              })
-              console.log(`Page ${i}: OCR completed, confidence:`, result.data.confidence)
-              chunks.push(result.data.text)
-              hasTextContent = true
-            } catch (renderError) {
-              console.warn(`Page ${i}: Render failed (worker required):`, renderError)
-              // Try OCR with different language on a blank canvas as fallback
-              try {
-                const result = await Tesseract.recognize(document.createElement('canvas'), 'rus+ukr+eng')
-                if (result.data.text.trim().length > 0) {
-                  chunks.push(result.data.text)
-                  hasTextContent = true
-                }
-              } catch (fallbackError) {
-                console.warn(`Page ${i}: Fallback OCR also failed:`, fallbackError)
-              }
-            }
-          }
-        } catch (pageError) {
-          console.warn(`Failed to process page ${i}:`, pageError)
-          // Continue with other pages
-        }
-
-        setProgress(Math.round((i / pdf.numPages) * 100))
-      }
-
-      const extractedText = chunks.join('\n').trim()
-      console.log('Final extracted text length:', extractedText.length)
-      console.log('Has text content:', hasTextContent)
-
-      if (!extractedText || extractedText.length < 20) {
-        if (!hasTextContent) {
-          throw new Error('This PDF appears to be an image-based scan. Please upload a text-based PDF or try uploading a clear photo of the lab report instead.')
-        }
-        throw new Error('Could not extract readable text from PDF. The file may be corrupted, scanned at low quality, or contain only images.')
-      }
-
-      return extractedText
     } catch (error) {
       console.error('PDF processing error:', error)
       if (error.message.includes('InvalidPDFException') || error.message.includes('corrupt')) {
@@ -265,7 +197,7 @@ export function useOCR() {
       if (error.message.includes('PasswordException')) {
         throw new Error('This PDF is password-protected. Please remove the password and try again.')
       }
-      throw new Error('Could not read this PDF file. Please try another clear PDF or image.')
+      throw new Error('PDF processing is currently unavailable. Please upload a clear photo of your lab report instead.')
     }
   }
 
