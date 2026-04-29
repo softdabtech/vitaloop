@@ -146,7 +146,7 @@ ssh $SSH_OPTS "$REMOTE_HOST" "
         exit 1
     }
 
-    if git diff --name-only ORIG_HEAD HEAD 2>/dev/null | grep -qE '^backend/'; then
+    if [[ \"$HAS_BACKEND_CHANGES\" == \"1\" ]]; then
         echo 'Installing backend dependencies...'
         cd backend
         ./.venv/bin/pip install -r requirements.txt || {
@@ -193,11 +193,9 @@ fi
 ssh $SSH_OPTS "$REMOTE_HOST" "
     set -euo pipefail
     cd $REMOTE_DIR
-    
-    CHANGED_FILES=\"\$(git diff --name-only ORIG_HEAD HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || true)\"
-    
+
     # CRM build (only when CRM files changed)
-    if echo \"\$CHANGED_FILES\" | grep -qE '^crm-mvc/'; then
+    if [[ \"$HAS_CRM_CHANGES\" == \"1\" ]]; then
         echo 'Building CRM...'
         cd crm-mvc
         dotnet publish Vitaloop.Crm.Web.csproj -c Release -o "$REMOTE_DIR/crm-mvc/publish" || {
@@ -212,10 +210,10 @@ ssh $SSH_OPTS "$REMOTE_HOST" "
     # Restart services
     RESTART_BACKEND=0
     RESTART_CRM=0
-    if echo "\$CHANGED_FILES" | grep -qE '^backend/'; then
+    if [[ \"$HAS_BACKEND_CHANGES\" == \"1\" ]]; then
         RESTART_BACKEND=1
     fi
-    if echo "\$CHANGED_FILES" | grep -qE '^crm-mvc/'; then
+    if [[ \"$HAS_CRM_CHANGES\" == \"1\" ]]; then
         RESTART_CRM=1
     fi
 
