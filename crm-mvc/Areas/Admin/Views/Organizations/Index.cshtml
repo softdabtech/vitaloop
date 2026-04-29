@@ -18,141 +18,83 @@
         }
     </div>
 
-    @if (Model?.Organizations.Count > 0)
-    {
-        <div class="cards-grid">
-            @foreach (var org in Model.Organizations)
+    @{
+        var rows = (Model?.Organizations ?? Array.Empty<OrganizationViewModel>())
+            .Select(org => new EditableTableRowViewModel
             {
-                <div class="card card-org">
-                    <div class="card-header">
-                        <h3 class="card-title">@org.DisplayName</h3>
-                        <span class="badge badge-@(org.Status == "active" ? "success" : "warning")">
-                            @org.Status
-                        </span>
-                    </div>
-                    <div class="card-body">
-                        <div class="org-meta">
-                            <strong>@org.RoleLabel</strong>
-                        </div>
-                        <div class="org-slug">
-                            <code>@org.Slug</code>
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <a href="@Url.Action("Details", new { orgId = org.Id })" class="btn btn-sm btn-secondary">
-                            View Details
-                        </a>
-                        <a href="/admin/orgs/@org.Id/switch?returnUrl=%2Fadmin%2Forganizations" class="btn btn-sm btn-outline">
-                            Switch
-                        </a>
-                        <a href="/admin/members" class="btn btn-sm btn-outline">
-                            Team
-                        </a>
-                        <a href="/admin/orgs/@org.Id/switch?returnUrl=%2Forganizations%2Fsettings%3Forg_id%3D@org.Id" class="btn btn-sm btn-outline">
-                            Settings
-                        </a>
-                        <form method="post" action="/admin/organizations/@org.Id/status" style="display:inline;">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="status" value="@(org.Status == "active" ? "inactive" : "active")" />
-                            <button type="submit" class="btn btn-sm btn-outline">
-                                @(org.Status == "active" ? "Suspend" : "Activate")
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            }
-        </div>
+                RowKey = org.Id.ToString("N"),
+                Cells = new List<EditableTableCellViewModel>
+                {
+                    new() { Kind = EditableTableCellKind.Text, Text = org.Name },
+                    new() { Kind = EditableTableCellKind.Code, Text = org.Slug },
+                    new() { Kind = EditableTableCellKind.Text, Text = org.OwnerName },
+                    new()
+                    {
+                        Kind = EditableTableCellKind.Select,
+                        Name = "status",
+                        CssClass = "inline-input",
+                        Options = new List<EditableTableOptionViewModel>
+                        {
+                            new() { Value = "active", Label = "active", Selected = string.Equals(org.Status, "active", StringComparison.OrdinalIgnoreCase) },
+                            new() { Value = "inactive", Label = "inactive", Selected = string.Equals(org.Status, "inactive", StringComparison.OrdinalIgnoreCase) },
+                            new() { Value = "suspended", Label = "suspended", Selected = string.Equals(org.Status, "suspended", StringComparison.OrdinalIgnoreCase) },
+                        }
+                    },
+                },
+                PrimaryAction = new EditableTableActionViewModel
+                {
+                    ActionUrl = $"/admin/organizations/{org.Id}/status",
+                    SubmitLabel = "Save Status",
+                },
+                SecondaryActions = new List<EditableTableActionViewModel>
+                {
+                    new()
+                    {
+                        ActionUrl = $"/admin/organizations/{org.Id}",
+                        Method = "get",
+                        SubmitLabel = "Details",
+                        SubmitButtonClass = "btn btn-xs btn-secondary",
+                    },
+                    new()
+                    {
+                        ActionUrl = $"/admin/orgs/{org.Id}/switch?returnUrl=%2Fadmin%2Forganizations",
+                        Method = "get",
+                        SubmitLabel = "Switch",
+                    },
+                    new()
+                    {
+                        ActionUrl = "/admin/members",
+                        Method = "get",
+                        SubmitLabel = "Team",
+                    },
+                    new()
+                    {
+                        ActionUrl = $"/admin/orgs/{org.Id}/switch?returnUrl=%2Forganizations%2Fsettings%3Forg_id%3D{org.Id}",
+                        Method = "get",
+                        SubmitLabel = "Settings",
+                    },
+                }
+            })
+            .ToList();
     }
-    else
+
+    @await Html.PartialAsync("~/Views/Shared/Ui/_EditableTable.cshtml", new EditableTableViewModel
     {
-        <div class="empty-state">
-            <p class="empty-icon">📭</p>
-            <h2>No Organizations</h2>
-            <p>You don't have access to any organizations yet.</p>
-            @if (Model?.IsSuperAdmin == true)
-            {
-                <a href="@Model.CreateOrgUrl" class="btn btn-primary btn-lg">Create Your First Organization</a>
-            }
+        Title = "Organizations",
+        Columns = new[] { "Name", "Slug", "Owner", "Status" },
+        EmptyMessage = "You don't have access to any organizations yet.",
+        Rows = rows,
+    })
+
+    @if ((Model?.Organizations.Count ?? 0) == 0 && Model?.IsSuperAdmin == true)
+    {
+        <div class="empty-state" style="padding-top: 0;">
+            <a href="@Model.CreateOrgUrl" class="btn btn-primary btn-lg">Create Your First Organization</a>
         </div>
     }
 </div>
 
 <style>
-    .cards-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1.5rem;
-        margin-top: 2rem;
-    }
-
-    .card-org {
-        border: 1px solid var(--color-border);
-        border-radius: 8px;
-        padding: 1.5rem;
-        background: var(--color-bg-secondary);
-        transition: all 0.2s ease;
-    }
-
-    .card-org:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        border-color: var(--color-primary);
-    }
-
-    .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 1rem;
-    }
-
-    .card-title {
-        margin: 0;
-        font-size: 1.125rem;
-        font-weight: 600;
-    }
-
-    .badge {
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-
-    .badge-success {
-        background: rgba(34, 197, 94, 0.1);
-        color: #22c55e;
-    }
-
-    .badge-warning {
-        background: rgba(234, 179, 8, 0.1);
-        color: #eab308;
-    }
-
-    .org-meta {
-        font-size: 0.875rem;
-        color: var(--color-text-secondary);
-        margin-bottom: 0.5rem;
-    }
-
-    .org-slug {
-        margin: 1rem 0;
-    }
-
-    .org-slug code {
-        background: var(--color-bg);
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.85rem;
-    }
-
-    .card-footer {
-        display: flex;
-        gap: 0.5rem;
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid var(--color-border);
-    }
-
     .btn {
         padding: 0.5rem 1rem;
         border-radius: 4px;

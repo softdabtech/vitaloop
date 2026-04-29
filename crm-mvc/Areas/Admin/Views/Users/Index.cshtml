@@ -28,89 +28,94 @@
 
     @if (Model?.Members.Any() == true)
     {
-        <div class="table-container">
-            <table class="table table-members">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Age/Sex</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Subscription</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var member in Model.Members)
+        var rows = Model.Members.Select(member => new EditableTableRowViewModel
+        {
+            RowKey = member.UserId.ToString("N"),
+            Cells = new List<EditableTableCellViewModel>
+            {
+                new() { Kind = EditableTableCellKind.Text, Text = string.IsNullOrWhiteSpace(member.FullName) ? member.Email : member.FullName },
+                new() { Kind = EditableTableCellKind.Code, Text = member.Email },
+                new() { Kind = EditableTableCellKind.Text, Text = (member.Age?.ToString() ?? "-") + " / " + (!string.IsNullOrWhiteSpace(member.Sex) ? member.Sex : "-") },
+                new() { Kind = EditableTableCellKind.Badge, Text = member.OrgRole, BadgeTone = string.Equals(member.OrgRole, "practitioner", StringComparison.OrdinalIgnoreCase) ? "primary" : "secondary" },
+                new() { Kind = EditableTableCellKind.Badge, Text = member.MembershipStatus, BadgeTone = string.Equals(member.MembershipStatus, "active", StringComparison.OrdinalIgnoreCase) ? "success" : "warning" },
+                new()
+                {
+                    Kind = EditableTableCellKind.Select,
+                    Name = "subscriptionStatus",
+                    CssClass = "inline-input",
+                    Options = new List<EditableTableOptionViewModel>
                     {
-                        <tr>
-                            <td>
-                                <strong>@member.FullName</strong>
-                            </td>
-                            <td>
-                                <code>@member.Email</code>
-                            </td>
-                            <td>
-                                @((member.Age?.ToString() ?? "-") + " / " + (!string.IsNullOrWhiteSpace(member.Sex) ? member.Sex : "-"))
-                            </td>
-                            <td>
-                                <span class="badge badge-@(member.OrgRole == "practitioner" ? "primary" : "secondary")">
-                                    @member.OrgRole
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge badge-@(member.MembershipStatus == "active" ? "success" : "warning")">
-                                    @member.MembershipStatus
-                                </span>
-                            </td>
-                            <td>
-                                <small>@member.SubscriptionStatus</small>
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    <form method="post" action="/admin/members/@member.UserId/profile" class="inline-form">
-                                        @Html.AntiForgeryToken()
-                                        <input type="text" name="fullName" class="inline-input" value="@member.FullName" placeholder="Full name" />
-                                        <input type="number" name="age" class="inline-input inline-input-small" value="@member.Age" min="1" max="120" placeholder="Age" />
-                                        <select name="sex" class="inline-input inline-input-small">
-                                            <option value="" selected="@(string.IsNullOrWhiteSpace(member.Sex) ? "selected" : null)">-</option>
-                                            <option value="m" selected="@(string.Equals(member.Sex, "m", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">m</option>
-                                            <option value="f" selected="@(string.Equals(member.Sex, "f", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">f</option>
-                                        </select>
-                                        <select name="subscriptionStatus" class="inline-input">
-                                            <option value="free" selected="@(string.Equals(member.SubscriptionStatus, "free", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">free</option>
-                                            <option value="active" selected="@(string.Equals(member.SubscriptionStatus, "active", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">active</option>
-                                            <option value="past_due" selected="@(string.Equals(member.SubscriptionStatus, "past_due", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">past_due</option>
-                                            <option value="cancelled" selected="@(string.Equals(member.SubscriptionStatus, "cancelled", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">cancelled</option>
-                                        </select>
-                                        <button type="submit" class="btn btn-xs btn-outline">Save</button>
-                                    </form>
-
-                                    <form method="post" action="/admin/members/@member.UserId/role" class="inline-form">
-                                        @Html.AntiForgeryToken()
-                                        <select name="newRole" class="inline-input">
-                                            <option value="org_owner" selected="@(string.Equals(member.OrgRole, "org_owner", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">org_owner</option>
-                                            <option value="client_admin" selected="@(string.Equals(member.OrgRole, "client_admin", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">client_admin</option>
-                                            <option value="manager" selected="@(string.Equals(member.OrgRole, "manager", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">manager</option>
-                                            <option value="practitioner" selected="@(string.Equals(member.OrgRole, "practitioner", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">practitioner</option>
-                                            <option value="support" selected="@(string.Equals(member.OrgRole, "support", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">support</option>
-                                            <option value="member" selected="@(string.Equals(member.OrgRole, "member", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">member</option>
-                                        </select>
-                                        <button type="submit" class="btn btn-xs btn-outline">Change Role</button>
-                                    </form>
-
-                                    <form method="post" action="/admin/members/@member.UserId/remove" class="inline-form" onsubmit="return confirm('Remove this member from organization?');">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-xs btn-danger">Remove</button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
+                        new() { Value = "free", Label = "free", Selected = string.Equals(member.SubscriptionStatus, "free", StringComparison.OrdinalIgnoreCase) },
+                        new() { Value = "active", Label = "active", Selected = string.Equals(member.SubscriptionStatus, "active", StringComparison.OrdinalIgnoreCase) },
+                        new() { Value = "past_due", Label = "past_due", Selected = string.Equals(member.SubscriptionStatus, "past_due", StringComparison.OrdinalIgnoreCase) },
+                        new() { Value = "cancelled", Label = "cancelled", Selected = string.Equals(member.SubscriptionStatus, "cancelled", StringComparison.OrdinalIgnoreCase) },
                     }
-                </tbody>
-            </table>
-        </div>
+                },
+            },
+            PrimaryAction = new EditableTableActionViewModel
+            {
+                ActionUrl = $"/admin/members/{member.UserId}/profile",
+                SubmitLabel = "Save Profile",
+                Fields = new List<EditableTableFieldViewModel>
+                {
+                    new() { Kind = EditableTableFieldKind.Text, Name = "fullName", Value = member.FullName, Placeholder = "Full name", CssClass = "inline-input" },
+                    new() { Kind = EditableTableFieldKind.Number, Name = "age", Value = member.Age?.ToString() ?? string.Empty, Placeholder = "Age", CssClass = "inline-input inline-input-small" },
+                    new()
+                    {
+                        Kind = EditableTableFieldKind.Select,
+                        Name = "sex",
+                        CssClass = "inline-input inline-input-small",
+                        Options = new List<EditableTableOptionViewModel>
+                        {
+                            new() { Value = string.Empty, Label = "-", Selected = string.IsNullOrWhiteSpace(member.Sex) },
+                            new() { Value = "m", Label = "m", Selected = string.Equals(member.Sex, "m", StringComparison.OrdinalIgnoreCase) },
+                            new() { Value = "f", Label = "f", Selected = string.Equals(member.Sex, "f", StringComparison.OrdinalIgnoreCase) },
+                        }
+                    },
+                }
+            },
+            SecondaryActions = new List<EditableTableActionViewModel>
+            {
+                new()
+                {
+                    ActionUrl = $"/admin/members/{member.UserId}/role",
+                    SubmitLabel = "Change Role",
+                    Fields = new List<EditableTableFieldViewModel>
+                    {
+                        new()
+                        {
+                            Kind = EditableTableFieldKind.Select,
+                            Name = "newRole",
+                            CssClass = "inline-input",
+                            Options = new List<EditableTableOptionViewModel>
+                            {
+                                new() { Value = "org_owner", Label = "org_owner", Selected = string.Equals(member.OrgRole, "org_owner", StringComparison.OrdinalIgnoreCase) },
+                                new() { Value = "client_admin", Label = "client_admin", Selected = string.Equals(member.OrgRole, "client_admin", StringComparison.OrdinalIgnoreCase) },
+                                new() { Value = "manager", Label = "manager", Selected = string.Equals(member.OrgRole, "manager", StringComparison.OrdinalIgnoreCase) },
+                                new() { Value = "practitioner", Label = "practitioner", Selected = string.Equals(member.OrgRole, "practitioner", StringComparison.OrdinalIgnoreCase) },
+                                new() { Value = "support", Label = "support", Selected = string.Equals(member.OrgRole, "support", StringComparison.OrdinalIgnoreCase) },
+                                new() { Value = "member", Label = "member", Selected = string.Equals(member.OrgRole, "member", StringComparison.OrdinalIgnoreCase) },
+                            }
+                        },
+                    }
+                },
+                new()
+                {
+                    ActionUrl = $"/admin/members/{member.UserId}/remove",
+                    SubmitLabel = "Remove",
+                    SubmitButtonClass = "btn btn-xs btn-danger",
+                    ConfirmMessage = "Remove this member from organization?"
+                },
+            }
+        }).ToList();
+
+        @await Html.PartialAsync("~/Views/Shared/Ui/_EditableTable.cshtml", new EditableTableViewModel
+        {
+            Title = "Team Members",
+            Columns = new[] { "Name", "Email", "Age/Sex", "Role", "Status", "Subscription" },
+            EmptyMessage = "No team members found.",
+            Rows = rows,
+        })
     }
     else
     {

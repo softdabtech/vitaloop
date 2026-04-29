@@ -15,11 +15,16 @@ public class DashboardController : Controller
 {
     private readonly IUserContextAccessor _userContextAccessor;
     private readonly MembershipService _membershipService;
+    private readonly ILogger<DashboardController> _logger;
 
-    public DashboardController(IUserContextAccessor userContextAccessor, MembershipService membershipService)
+    public DashboardController(
+        IUserContextAccessor userContextAccessor,
+        MembershipService membershipService,
+        ILogger<DashboardController> logger)
     {
         _userContextAccessor = userContextAccessor;
         _membershipService = membershipService;
+        _logger = logger;
     }
 
     [HttpGet("")]
@@ -100,7 +105,7 @@ public class DashboardController : Controller
                 GlobalRole = u.GlobalRole,
                 OrgRole = "-",
                 MembershipStatus = u.Status,
-                SubscriptionStatus = "-"
+                SubscriptionStatus = u.Status
             }).ToList(),
             RecentAuditLogs = logs.Select(l => new OpsAuditLogViewModel
             {
@@ -115,5 +120,28 @@ public class DashboardController : Controller
         };
 
         return View(model);
+    }
+
+    [HttpPost("users/{userId}/subscription")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateSubscription(Guid userId, [FromForm] string subscriptionStatus, CancellationToken ct)
+    {
+        try
+        {
+            var userCtx = await _userContextAccessor.GetOrThrow(ct);
+            await _membershipService.UpdateGlobalUserSubscription(userCtx, userId, subscriptionStatus, ct);
+            TempData["SuccessMessage"] = "User tariff plan updated.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            TempData["ErrorMessage"] = "Insufficient permissions.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update subscription status for user {UserId}", userId);
+            TempData["ErrorMessage"] = "Failed to update user tariff plan.";
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 }

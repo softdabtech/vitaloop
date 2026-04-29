@@ -78,50 +78,43 @@
                 </a>
             </div>
 
-            @if (Model?.Members.Any() == true)
-            {
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Organization Role</th>
-                                <th>Global Role</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var member in Model.Members)
+            @{
+                var memberRows = (Model?.Members ?? Array.Empty<MemberViewModel>())
+                    .Select(member => new EditableTableRowViewModel
+                    {
+                        RowKey = member.UserId.ToString("N"),
+                        Cells = new List<EditableTableCellViewModel>
+                        {
+                            new() { Kind = EditableTableCellKind.Text, Text = string.IsNullOrWhiteSpace(member.FullName) ? member.Email : member.FullName },
+                            new() { Kind = EditableTableCellKind.Code, Text = member.Email },
+                            new() { Kind = EditableTableCellKind.Badge, Text = member.OrgRole, BadgeTone = "primary" },
+                            new() { Kind = EditableTableCellKind.Badge, Text = member.GlobalRole, BadgeTone = "secondary" },
+                            new() { Kind = EditableTableCellKind.Badge, Text = member.MembershipStatus, BadgeTone = string.Equals(member.MembershipStatus, "active", StringComparison.OrdinalIgnoreCase) ? "success" : "warning" },
+                        },
+                        SecondaryActions = new List<EditableTableActionViewModel>
+                        {
+                            new()
                             {
-                                <tr>
-                                    <td>@member.FullName</td>
-                                    <td><code>@member.Email</code></td>
-                                    <td>
-                                        <span class="badge badge-info">@member.OrgRole</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-secondary">@member.GlobalRole</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-@(member.MembershipStatus == "active" ? "success" : "warning")">
-                                            @member.MembershipStatus
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <a class="btn btn-xs btn-outline" href="/admin/members">Manage</a>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                                ActionUrl = "/admin/members",
+                                Method = "get",
+                                SubmitLabel = "Manage",
+                            },
+                        }
+                    })
+                    .ToList();
             }
-            else
+
+            @await Html.PartialAsync("~/Views/Shared/Ui/_EditableTable.cshtml", new EditableTableViewModel
             {
-                <div class="empty-state">
-                    <p>No members in this organization yet.</p>
+                Title = $"Team Members ({Model?.Members.Count ?? 0})",
+                Columns = new[] { "Name", "Email", "Organization Role", "Global Role", "Status" },
+                EmptyMessage = "No members in this organization yet.",
+                Rows = memberRows,
+            })
+
+            @if ((Model?.Members.Count ?? 0) == 0)
+            {
+                <div class="empty-state" style="padding-top:0;">
                     <a href="/admin/members/invite" class="btn btn-primary">
                         Invite First Member
                     </a>
@@ -159,11 +152,6 @@
     .badge-warning {
         background: rgba(234, 179, 8, 0.1);
         color: #eab308;
-    }
-
-    .badge-info {
-        background: rgba(59, 130, 246, 0.1);
-        color: #3b82f6;
     }
 
     .badge-secondary {
@@ -220,33 +208,6 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 1rem;
-    }
-
-    .table-responsive {
-        overflow-x: auto;
-    }
-
-    .table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .table th {
-        background: var(--color-bg);
-        padding: 0.75rem;
-        text-align: left;
-        font-weight: 600;
-        font-size: 0.875rem;
-        border-bottom: 1px solid var(--color-border);
-    }
-
-    .table td {
-        padding: 0.75rem;
-        border-bottom:1px solid var(--color-border);
-    }
-
-    .table tbody tr:hover {
-        background: var(--color-bg-hover);
     }
 
     .action-buttons {
