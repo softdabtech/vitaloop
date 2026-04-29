@@ -4,8 +4,8 @@ import * as pdfjsLib from 'pdfjs-dist'
 
 // Configure PDF.js worker for both development and production
 if (typeof window !== 'undefined') {
-  // Use local PDF.js worker from public assets (guaranteed to work)
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdf.worker.min.mjs'
+  // Use legacy PDF.js worker from local assets (most compatible)
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/pdf.worker.legacy.min.mjs'
 }
 
 export function useOCR() {
