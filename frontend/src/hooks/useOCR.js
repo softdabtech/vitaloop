@@ -2,10 +2,11 @@ import { useState, useRef } from 'react'
 import * as Tesseract from 'tesseract.js'
 import * as pdfjsLib from 'pdfjs-dist'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).toString()
+// Configure PDF.js worker for both development and production
+if (typeof window !== 'undefined') {
+  // Use CDN version of PDF.js worker for better compatibility
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.269/pdf.worker.min.mjs'
+}
 
 export function useOCR() {
   const [progress, setProgress] = useState(0)
