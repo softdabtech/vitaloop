@@ -12,7 +12,11 @@ import logging
 
 from app.dependencies import require_freemium_analyze
 from app.services.claude_service import extract_biomarkers, EXTRACT_PROMPT_VERSION, is_llm_configured
-from app.services.supabase_service import save_lab_upload, save_biomarkers, save_timeline_event, write_audit_log
+from app.services.supabase_service import (
+    assert_upload_belongs_to_user,
+    get_biomarkers_by_upload,
+    get_protocol_by_upload,
+)
 from app.constants import (
     ANALYZE_EXTRACT_TIMEOUT_SECONDS,
     ANALYZE_IDEMPOTENCY_TTL_SECONDS,
@@ -289,3 +293,34 @@ async def analyze_lab(
         if normalized_key:
             await _drop_idempotency(user_id=user_id, idempotency_key=normalized_key)
         raise
+
+
+@router.get("/{upload_id}")
+async def get_results(
+    upload_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Get biomarkers and protocol for a specific upload."""
+    user_id = current_user.get("sub")
+
+    # Verify the upload belongs to the user
+    await assert_upload_belongs_to_user(upload_id, user_id)
+
+    # Get biomarkers
+    biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
+
+    # Get protocol (if exists)
+    protocol = await get_protocol_by_upload(user_id, upload_id)
+
+    await write_audit_log(
+        user_id=user_id,
+        action="read",
+        entity_type="results",
+        entity_id=str(upload_id),
+        new_value={"biomarker_count": len(biomarkers), "has_protocol": protocol is not None},
+    )
+
+    return {
+        "biomarkers": biomarkers,
+        "protocol": protocol.get("recommendations", []) if protocol else [],
+    }

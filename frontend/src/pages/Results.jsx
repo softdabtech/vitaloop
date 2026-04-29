@@ -8,6 +8,7 @@ import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
 import BiomarkerAlertsDisplay from '../components/BiomarkerAlertsDisplay.jsx'
 import HealthTipsDisplay from '../components/HealthTipsDisplay.jsx'
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Info, Activity } from 'lucide-react'
 
 const STATUS_META = {
   DEFICIENT: { rank: 0, border: 'border-rose-300', stripe: 'bg-rose-500', badge: 'bg-rose-50 text-rose-700', text: 'text-rose-700' },
@@ -35,9 +36,10 @@ function computeRangePercent(biomarker) {
 }
 
 const RESULTS_HINTS = [
-  '🟢 Biomarkers are color-coded by priority: red = needs attention, yellow = borderline, green = optimal. The most critical ones appear first.',
-  '🎯 The "Top priority" card shows which single biomarker will have the biggest impact on your health if addressed — start there.',
-  '💊 Scroll down to see your personalized supplement protocol based on these results. Premium subscribers see the full ranked plan.',
+  '� Your results are color-coded: Green = optimal, Yellow = borderline, Red = needs attention. Focus on red markers first.',
+  '🎯 The position indicator shows where your value falls within the reference range. 50% means you\'re right in the middle!',
+  '💡 Clinical interpretation provides context for what your results mean for your health.',
+  '🔬 Regular testing helps track trends and measure the impact of your health interventions.',
 ]
 
 export default function Results() {
@@ -111,37 +113,92 @@ export default function Results() {
 
   return (
     <div className="vtl-page min-h-screen p-6">
-      <div className="max-w-3xl mx-auto">
-        <h2 className="text-2xl font-bold text-slate-900 mb-6">Your Lab Results</h2>
+      <div className="max-w-4xl mx-auto">
+        {/* Back button */}
+        <div className="mb-6">
+          <button
+            onClick={() => navigate('/lab-results')}
+            className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-800 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Lab Results
+          </button>
+        </div>
+
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Lab Results Analysis</h1>
+          <p className="text-slate-600">Detailed breakdown of your biomarkers with personalized insights</p>
+        </div>
 
         {showHints && (
           <HintBanner hints={RESULTS_HINTS} onDone={dismissHints} />
         )}
 
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="vtl-light-card p-3 text-center">
-            <div className="text-xl font-bold text-emerald-600">{optimal}</div>
-            <div className="text-[11px] text-slate-500 uppercase">Optimal</div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="vtl-light-card p-6 text-center">
+            <div className="flex items-center justify-center mb-2">
+              <CheckCircle className="h-6 w-6 text-emerald-600 mr-2" />
+              <div className="text-2xl font-bold text-emerald-600">{optimal}</div>
+            </div>
+            <div className="text-sm font-medium text-slate-900 mb-1">Optimal</div>
+            <div className="text-xs text-slate-500">Within healthy range</div>
           </div>
-          <div className="vtl-light-card p-3 text-center">
-            <div className="text-xl font-bold text-amber-600">{borderline}</div>
-            <div className="text-[11px] text-slate-500 uppercase">Borderline</div>
+          <div className="vtl-light-card p-6 text-center">
+            <div className="flex items-center justify-center mb-2">
+              <Info className="h-6 w-6 text-amber-600 mr-2" />
+              <div className="text-2xl font-bold text-amber-600">{borderline}</div>
+            </div>
+            <div className="text-sm font-medium text-slate-900 mb-1">Borderline</div>
+            <div className="text-xs text-slate-500">Monitor closely</div>
           </div>
-          <div className="vtl-light-card p-3 text-center">
-            <div className="text-xl font-bold text-rose-600">{deficient.length}</div>
-            <div className="text-[11px] text-slate-500 uppercase">Needs Attention</div>
+          <div className="vtl-light-card p-6 text-center">
+            <div className="flex items-center justify-center mb-2">
+              <AlertTriangle className="h-6 w-6 text-rose-600 mr-2" />
+              <div className="text-2xl font-bold text-rose-600">{deficient.length}</div>
+            </div>
+            <div className="text-sm font-medium text-slate-900 mb-1">Needs Attention</div>
+            <div className="text-xs text-slate-500">Requires action</div>
           </div>
         </div>
 
-        {deficient.length > 0 && (
-          <div className="mb-6">
-            <BiomarkerAlertsDisplay
-              biomarkers={rankedBiomarkers}
-              previousBiomarkers={[]}
-              userPreferences={{}}
-            />
+        <div className="mb-8">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Health Insights</h3>
+          <div className="grid gap-4">
+            {deficient.length > 0 && (
+              <div className="bg-rose-50 border border-rose-200 rounded-xl p-6">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-6 w-6 text-rose-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-rose-900 mb-2">Priority Biomarkers Requiring Attention</h4>
+                    <p className="text-rose-700 mb-3">
+                      These markers are outside the optimal range and may indicate areas needing immediate focus.
+                      Consider discussing these results with your healthcare provider.
+                    </p>
+                    <BiomarkerAlertsDisplay
+                      biomarkers={rankedBiomarkers}
+                      previousBiomarkers={[]}
+                      userPreferences={{}}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {optimal > 0 && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-emerald-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-emerald-900 mb-2">Well-Managed Biomarkers</h4>
+                    <p className="text-emerald-700">
+                      Great job maintaining these markers within optimal ranges! Continue your current health practices.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {topPriority && (
           <div className="mb-6 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5">
@@ -161,31 +218,101 @@ export default function Results() {
           </div>
         )}
 
-        <div className="grid sm:grid-cols-2 gap-3 mb-10">
-          {rankedBiomarkers.map((b) => {
-            const status = String(b.status || '').toUpperCase()
-            const meta = STATUS_META[status] || STATUS_META.BORDERLINE
-            const rangeLabel = b.ref_low != null && b.ref_high != null ? `${b.ref_low}-${b.ref_high} ${b.unit || ''}`.trim() : 'No reference range'
-            const bar = computeRangePercent(b)
-            return (
-              <div key={b.id} className={`relative overflow-hidden rounded-xl border bg-white p-4 ${meta.border}`}>
-                <span className={`absolute inset-y-0 left-0 w-1.5 ${meta.stripe}`} aria-hidden="true" />
-                <div className="pl-3">
-                  <div className="mb-2 flex items-start justify-between gap-3">
-                    <span className="text-sm font-semibold text-slate-900">{b.name}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${meta.badge}`}>{status}</span>
+        <div className="mb-8">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Biomarker Analysis</h3>
+          <div className="grid gap-4">
+            {rankedBiomarkers.map((b) => {
+              const status = String(b.status || '').toUpperCase()
+              const meta = STATUS_META[status] || STATUS_META.BORDERLINE
+              const rangeLabel = b.ref_low != null && b.ref_high != null ? `${b.ref_low}-${b.ref_high} ${b.unit || ''}`.trim() : 'No reference range'
+              const bar = computeRangePercent(b)
+              const value = Number(b.value)
+              const low = Number(b.ref_low)
+              const high = Number(b.ref_high)
+
+              // Determine trend icon and interpretation
+              let trendIcon = <Minus className="h-4 w-4 text-slate-400" />
+              let trendText = "Within range"
+              let trendColor = "text-slate-600"
+
+              if (value < low) {
+                trendIcon = <TrendingDown className="h-4 w-4 text-blue-600" />
+                trendText = "Below normal range"
+                trendColor = "text-blue-600"
+              } else if (value > high) {
+                trendIcon = <TrendingUp className="h-4 w-4 text-rose-600" />
+                trendText = "Above normal range"
+                trendColor = "text-rose-600"
+              }
+
+              return (
+                <div key={b.id} className={`relative overflow-hidden rounded-xl border bg-white p-6 ${meta.border} shadow-sm`}>
+                  <span className={`absolute inset-y-0 left-0 w-1.5 ${meta.stripe}`} aria-hidden="true" />
+
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h4 className="text-lg font-semibold text-slate-900 mb-1">{b.name}</h4>
+                      <div className="flex items-center gap-2 mb-2">
+                        {trendIcon}
+                        <span className={`text-sm font-medium ${trendColor}`}>{trendText}</span>
+                      </div>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-sm font-semibold ${meta.badge}`}>{status}</span>
                   </div>
-                  <div className="text-2xl font-bold text-slate-900">
-                    {b.value} <span className="text-sm font-medium text-slate-500">{b.unit}</span>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-slate-900 mb-1">
+                        {b.value}
+                        <span className="text-lg font-medium text-slate-500 ml-1">{b.unit}</span>
+                      </div>
+                      <div className="text-sm text-slate-600">Your Value</div>
+                    </div>
+
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-slate-700 mb-1">{rangeLabel}</div>
+                      <div className="text-sm text-slate-600">Reference Range</div>
+                    </div>
+
+                    <div className="text-center">
+                      <div className="flex items-center justify-center mb-1">
+                        <Activity className="h-5 w-5 text-slate-600 mr-2" />
+                        <span className="text-3xl font-bold text-slate-700">
+                          {bar.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="text-sm text-slate-600">Range Position</div>
+                    </div>
                   </div>
-                  <div className="mt-1 text-xs text-slate-500">Normal: {rangeLabel}</div>
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                    <div className={`h-full rounded-full ${meta.stripe}`} style={{ width: `${bar}%` }} />
+
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm text-slate-600 mb-2">
+                      <span>{b.ref_low || 'Min'}</span>
+                      <span>{b.ref_high || 'Max'}</span>
+                    </div>
+                    <div className="h-3 overflow-hidden rounded-full bg-slate-100 relative">
+                      <div className={`h-full rounded-full ${meta.stripe}`} style={{ width: `${Math.min(bar, 100)}%` }} />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-1 h-1 bg-slate-900 rounded-full" style={{ left: `${Math.min(bar, 100)}%`, transform: 'translateX(-50%)' }} />
+                      </div>
+                    </div>
                   </div>
+
+                  {b.interpretation && (
+                    <div className="bg-slate-50 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <Info className="h-5 w-5 text-slate-500 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h5 className="font-medium text-slate-900 mb-1">Clinical Interpretation</h5>
+                          <p className="text-sm text-slate-700">{b.interpretation}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
 
         <div className="flex gap-3 mb-6">
@@ -203,7 +330,8 @@ export default function Results() {
           </button>
         </div>
 
-        <div className="mb-10">
+        <div className="mb-8">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Health Optimization Tips</h3>
           <HealthTipsDisplay
             biomarkers={rankedBiomarkers}
             userContext={{
@@ -215,23 +343,37 @@ export default function Results() {
           />
         </div>
 
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-slate-900">Your Supplement Protocol</h3>
-          <button
-            onClick={() => navigate(`/protocol/${uploadId}`)}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-semibold text-sm transition-colors shadow-sm"
-          >
-            View Full Protocol →
-          </button>
-        </div>
-
-        {isActive ? (
-          <div className="space-y-3">
-            {protocol.map((rec, i) => <ProtocolCard key={i} recommendation={rec} />)}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">Personalized Supplement Protocol</h3>
+              <p className="text-slate-600 mt-1">AI-generated recommendations based on your biomarker results</p>
+            </div>
+            <button
+              onClick={() => navigate(`/protocol/${uploadId}`)}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-semibold text-sm transition-colors shadow-sm"
+            >
+              View Full Protocol →
+            </button>
           </div>
-        ) : (
-          <Paywall />
-        )}
+
+          {isActive ? (
+            <div className="space-y-4">
+              {protocol.map((rec, i) => <ProtocolCard key={i} recommendation={rec} />)}
+            </div>
+          ) : (
+            <div className="bg-gradient-to-br from-emerald-50 to-blue-50 border border-emerald-200 rounded-xl p-8 text-center">
+              <div className="max-w-md mx-auto">
+                <Activity className="h-12 w-12 text-emerald-600 mx-auto mb-4" />
+                <h4 className="text-lg font-semibold text-slate-900 mb-2">Unlock Your Personalized Protocol</h4>
+                <p className="text-slate-600 mb-6">
+                  Get AI-powered supplement recommendations tailored to your specific biomarker results and health goals.
+                </p>
+                <Paywall />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
