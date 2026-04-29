@@ -1,4 +1,4 @@
-import { Heart, CreditCard, Upload, Clock } from 'lucide-react'
+import { Heart, CreditCard, Upload, Clock, Target, TrendingUp, Award } from 'lucide-react'
 
 export default function MetricBar({ stats, uploadCount, uploadLimit }) {
   const getPlanColor = (plan) => {
@@ -24,8 +24,11 @@ export default function MetricBar({ stats, uploadCount, uploadLimit }) {
 
   const checkInStatus = getCheckInStatus(stats.latest_checkin)
 
+  const streakDays = stats.streak_days || 0
+  const goalsAchieved = stats.goals_achieved || 0
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
       {/* Health Score */}
       <div className="flex items-center gap-2 rounded-2xl bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 p-4">
         <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/15">
@@ -72,6 +75,30 @@ export default function MetricBar({ stats, uploadCount, uploadLimit }) {
         <div className="min-w-0">
           <div className="text-xs font-semibold uppercase tracking-wide opacity-70">Status</div>
           <div className="text-sm font-bold truncate">{checkInStatus.label}</div>
+        </div>
+      </div>
+
+      {/* Streak */}
+      <div className="flex items-center gap-2 rounded-2xl bg-gradient-to-br from-orange-50 to-white border border-orange-200 p-4">
+        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-500/15">
+          <TrendingUp className="w-5 h-5 text-orange-600" />
+        </div>
+        <div className="min-w-0">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Streak</div>
+          <div className="text-2xl font-bold text-orange-700">{streakDays}</div>
+          <div className="text-xs text-slate-500">days</div>
+        </div>
+      </div>
+
+      {/* Goals Achieved */}
+      <div className="flex items-center gap-2 rounded-2xl bg-gradient-to-br from-purple-50 to-white border border-purple-200 p-4">
+        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-purple-500/15">
+          <Target className="w-5 h-5 text-purple-600" />
+        </div>
+        <div className="min-w-0">
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Goals</div>
+          <div className="text-2xl font-bold text-purple-700">{goalsAchieved}</div>
+          <div className="text-xs text-slate-500">achieved</div>
         </div>
       </div>
     </div>

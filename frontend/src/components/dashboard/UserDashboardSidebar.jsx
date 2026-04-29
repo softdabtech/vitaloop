@@ -77,11 +77,6 @@ export default function UserDashboardSidebar({
 
   return (
     <aside className={`${sidebarWidth} flex h-screen flex-col border-r border-slate-200 bg-white transition-[width] duration-300`}>
-      {/* DEBUG: subscription state */}
-      <div style={{background:'#fffbe6',color:'#b45309',fontSize:12,padding:4,margin:4,borderRadius:6}}>
-        <div>subscriptionLoading: {String(subscriptionLoading)}</div>
-        <div>hasPremium: {String(hasPremium)}</div>
-      </div>
       <div className="flex h-[72px] items-center justify-between border-b border-slate-100 px-4">
         <div className={`flex items-center gap-3 ${collapsed ? 'justify-center w-full' : ''}`}>
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-500/25">

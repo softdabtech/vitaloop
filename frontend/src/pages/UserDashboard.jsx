@@ -304,6 +304,48 @@ export default function UserDashboard() {
         <>
           <MetricBar stats={stats} uploadCount={uploadCount} uploadLimit={uploadLimit} />
 
+          {/* Achievement Banner */}
+          {stats.completed_tasks > 0 && stats.completed_tasks % 5 === 0 && (
+            <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-5">
+              <div className="flex items-center gap-4">
+                <div className="rounded-xl bg-emerald-500 p-3">
+                  <CheckCircle2 className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-emerald-900">🎉 Achievement Unlocked!</h3>
+                  <p className="text-sm text-emerald-700">You've completed {stats.completed_tasks} health assignments. Keep up the amazing work!</p>
+                </div>
+                <button onClick={() => navigate('/assignments')} className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">
+                  View all →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Share Progress */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-slate-900">Share Your Progress</h3>
+                <p className="text-sm text-slate-600 mt-1">Inspire others on their health journey</p>
+              </div>
+              <button
+                onClick={() => {
+                  const shareText = `Just improved my health score to ${stats.health_score || 0} on Vitaloop! 🚀 #HealthJourney #Vitaloop`;
+                  if (navigator.share) {
+                    navigator.share({ text: shareText });
+                  } else {
+                    navigator.clipboard.writeText(shareText);
+                    // Show toast notification
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg transition"
+              >
+                Share Progress
+              </button>
+            </div>
+          </div>
+
           {uploadLimit === 1 && (
             <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-5 sm:p-6">
               <div className="flex items-start gap-4">
@@ -328,6 +370,14 @@ export default function UserDashboard() {
               {progress.length > 0 ? (
                 <DashboardCard title="Biomarker Trends" eyebrow="Health data">
                   <HealthChart progress={progress} />
+                  <div className="mt-4 flex gap-2">
+                    <button onClick={() => navigate('/progress')} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+                      View detailed trends →
+                    </button>
+                    <button onClick={() => navigate('/results')} className="text-sm text-slate-500 hover:text-slate-600">
+                      All lab results →
+                    </button>
+                  </div>
                 </DashboardCard>
               ) : (
                 <DashboardCard title="Ready for data" eyebrow="Biomarker tracking">
@@ -350,34 +400,106 @@ export default function UserDashboard() {
                       <div className="flex-1">
                         <div className="font-semibold text-emerald-900">{todayFocus[0].title}</div>
                         <p className="text-sm text-emerald-700 mt-1">{todayFocus[0].description}</p>
-                        <button onClick={() => navigate(todayFocus[0]?.id ? `/assignments/${todayFocus[0].id}` : '/assignments')} className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">
-                          Start task
-                          <ArrowRight className="h-4 w-4" />
-                        </button>
+                        <div className="flex gap-2 mt-3">
+                          <button onClick={() => navigate(todayFocus[0]?.id ? `/assignments/${todayFocus[0].id}` : '/assignments')} className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                            Start task
+                            <ArrowRight className="h-4 w-4" />
+                          </button>
+                          {todayFocus[0]?.priority?.score > 80 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-rose-100 text-rose-700 rounded-full">
+                              <Sparkles className="h-3 w-3" />
+                              High priority
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </DashboardCard>
               )}
+
+              {/* Health Goals Section */}
+              <DashboardCard title="Health Goals" eyebrow="Progress tracking">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-700">Optimize Vitamin D levels</span>
+                    <span className="text-sm text-emerald-600 font-semibold">75% complete</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: '75%' }}></div>
+                  </div>
+                  <p className="text-xs text-slate-500">Target: 50-80 ng/mL, Current: 62 ng/mL</p>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-700">Improve sleep quality</span>
+                    <span className="text-sm text-blue-600 font-semibold">In progress</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: '45%' }}></div>
+                  </div>
+                  <p className="text-xs text-slate-500">Weekly check-ins completed: 3/7</p>
+
+                  <button onClick={() => navigate('/settings')} className="w-full mt-4 text-center py-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-50 transition">
+                    Set new health goal →
+                  </button>
+                </div>
+              </DashboardCard>
             </div>
 
             {/* Right: Insight + Activity */}
             <div className="space-y-6">
               {insights.length > 0 ? (
-                <DashboardCard title="Today's Insight" eyebrow="Recommendation">
+                <DashboardCard title="Today's Insight" eyebrow="AI Recommendation">
                   <div className="rounded-2xl border border-purple-200 bg-purple-50 p-4">
                     <Sparkles className="h-5 w-5 text-purple-600 mb-2" />
                     <p className="text-sm font-medium text-purple-900">{insights[0].title}</p>
                     <p className="text-sm text-purple-700 mt-2">{insights[0].description}</p>
+                    <div className="flex gap-2 mt-3">
+                      <button onClick={() => navigate('/insights')} className="text-sm font-semibold text-purple-700 hover:text-purple-800">
+                        View details →
+                      </button>
+                      <button onClick={() => navigate('/protocol')} className="text-sm text-purple-600 hover:text-purple-700">
+                        Update protocol →
+                      </button>
+                    </div>
                   </div>
                 </DashboardCard>
               ) : (
-                <DashboardCard title="Insights" eyebrow="Coming soon">
+                <DashboardCard title="AI Insights" eyebrow="Coming soon">
                   <div className="text-center py-6">
-                    <p className="text-sm text-slate-500">Insights appear after your first upload and check-in.</p>
+                    <Sparkles className="h-8 w-8 text-purple-400 mx-auto mb-3" />
+                    <p className="text-sm text-slate-600 mb-1">Personalized AI insights</p>
+                    <p className="text-xs text-slate-500">Upload more labs to unlock AI-powered recommendations</p>
                   </div>
                 </DashboardCard>
               )}
+
+              {/* Weekly Progress Summary */}
+              <DashboardCard title="This Week" eyebrow="Progress summary">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Assignments completed</span>
+                    <span className="text-sm font-semibold text-emerald-600">{stats.completed_tasks || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Labs uploaded</span>
+                    <span className="text-sm font-semibold text-blue-600">{stats.total_uploads || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Check-ins done</span>
+                    <span className="text-sm font-semibold text-purple-600">{latestCheckin ? 1 : 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Health score change</span>
+                    <span className={`text-sm font-semibold ${stats.health_score_change >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {stats.health_score_change > 0 ? '+' : ''}{stats.health_score_change || 0}
+                    </span>
+                  </div>
+                </div>
+                <button onClick={() => navigate('/progress')} className="w-full mt-4 text-center py-2 text-sm font-medium text-slate-600 hover:text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50 transition">
+                  View full progress →
+                </button>
+              </DashboardCard>
 
               <DashboardCard title="Recent Activity" eyebrow="What's new">
                 <div className="space-y-3 text-sm">
@@ -408,7 +530,16 @@ export default function UserDashboard() {
                       </div>
                     </div>
                   )}
-                  {!latestUpload && !latestCheckin && !insights.length && (
+                  {assignments.filter(a => a.status === 'completed').length > 0 && (
+                    <div className="flex gap-3 items-start">
+                      <div className="rounded-xl bg-emerald-100 p-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" /></div>
+                      <div>
+                        <div className="font-medium text-slate-900">Assignment completed</div>
+                        <div className="text-xs text-slate-500">Keep up the great work!</div>
+                      </div>
+                    </div>
+                  )}
+                  {!latestUpload && !latestCheckin && !insights.length && assignments.filter(a => a.status === 'completed').length === 0 && (
                     <p className="text-slate-500 py-4 text-center">No activity yet. Start by uploading your first lab report!</p>
                   )}
                 </div>

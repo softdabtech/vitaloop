@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
@@ -309,6 +309,63 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
         health_latest = {"score": None, "calculated_at": None}
         health_delta = 0
 
+    # Calculate streak days (consecutive days with activity)
+    streak_days = 0
+    try:
+        sb = svc._get_supabase()
+        # Get recent activity (uploads, checkins, assignments completed)
+        recent_activity_resp = await svc._run(
+            lambda: sb.table("lab_uploads")
+            .select("created_at")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(30)
+            .execute()
+        )
+        activity_dates = set()
+        for upload in recent_activity_resp.data or []:
+            if upload.get("created_at"):
+                activity_dates.add(upload["created_at"].split("T")[0])
+
+        # Check weekly checkins
+        checkin_resp = await svc._run(
+            lambda: sb.table("weekly_checkins")
+            .select("created_at")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(10)
+            .execute()
+        )
+        for checkin in checkin_resp.data or []:
+            if checkin.get("created_at"):
+                activity_dates.add(checkin["created_at"].split("T")[0])
+
+        # Calculate streak
+        today = datetime.now(timezone.utc).date()
+        for i in range(30):  # Check last 30 days
+            check_date = (today - timedelta(days=i)).isoformat()
+            if check_date in activity_dates:
+                streak_days += 1
+            else:
+                break
+    except Exception:
+        streak_days = 0
+
+    # Calculate goals achieved
+    goals_achieved = 0
+    try:
+        sb = svc._get_supabase()
+        goals_resp = await svc._run(
+            lambda: sb.table("user_goals")
+            .select("id, status")
+            .eq("user_id", user_id)
+            .eq("status", "achieved")
+            .execute()
+        )
+        goals_achieved = len(goals_resp.data or [])
+    except Exception:
+        goals_achieved = 0
+
     active_assignments = [
         item
         for item in assignments
@@ -381,6 +438,8 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
             "insights_count": len(insights),
             "questionnaire_score": questionnaire_latest.get("completion_score") if isinstance(questionnaire_latest, dict) else None,
             "subscription": account.get("sub_status") or "free",
+            "streak_days": streak_days,
+            "goals_achieved": goals_achieved,
         },
         "next_best_action": next_best_action,
         "start_here": start_here,
