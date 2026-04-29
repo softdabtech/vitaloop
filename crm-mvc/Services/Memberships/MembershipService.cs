@@ -77,6 +77,22 @@ public sealed class MembershipService
         return await _gateway.GetGlobalUsers(ct);
     }
 
+    public async Task UpdateGlobalUserSubscription(UserContext userCtx, Guid userId, string subscriptionStatus, CancellationToken ct = default)
+    {
+        if (!_accessPolicyService.HasGlobalRole(userCtx, "super_admin"))
+        {
+            throw new UnauthorizedAccessException("Global user update access denied.");
+        }
+
+        var normalized = (subscriptionStatus ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new ArgumentException("Subscription status is required.", nameof(subscriptionStatus));
+        }
+
+        await _gateway.UpdateGlobalUserSubscription(userId, normalized, ct);
+    }
+
     public async Task<PlatformOverview?> GetPlatformOverview(UserContext userCtx, CancellationToken ct = default)
     {
         if (!_accessPolicyService.HasGlobalRole(userCtx, "super_admin"))

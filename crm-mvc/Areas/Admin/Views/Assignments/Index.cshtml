@@ -17,62 +17,68 @@
 
     @if (Model?.Assignments.Any() == true)
     {
-        <div class="table-container">
-            <table class="table table-members">
-                <thead>
-                    <tr>
-                        <th>Client</th>
-                        <th>Practitioner</th>
-                        <th>Status</th>
-                        <th>Notes</th>
-                        <th>Updated</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var assignment in Model.Assignments)
+        var rows = Model.Assignments.Select(assignment => new EditableTableRowViewModel
+        {
+            RowKey = assignment.Id.ToString("N"),
+            Cells = new List<EditableTableCellViewModel>
+            {
+                new() { Kind = EditableTableCellKind.Text, Text = !string.IsNullOrWhiteSpace(assignment.ClientName) ? assignment.ClientName : assignment.ClientId.ToString() },
+                new() { Kind = EditableTableCellKind.Text, Text = !string.IsNullOrWhiteSpace(assignment.PractitionerName) ? assignment.PractitionerName : assignment.PractitionerId.ToString() },
+                new()
+                {
+                    Kind = EditableTableCellKind.Select,
+                    Name = "status",
+                    CssClass = "inline-input",
+                    Options = new List<EditableTableOptionViewModel>
                     {
-                        <tr>
-                            <td>@(!string.IsNullOrWhiteSpace(assignment.ClientName) ? assignment.ClientName : assignment.ClientId.ToString())</td>
-                            <td>@(!string.IsNullOrWhiteSpace(assignment.PractitionerName) ? assignment.PractitionerName : assignment.PractitionerId.ToString())</td>
-                            <td>
-                                <span class="badge badge-@(assignment.Status == "active" ? "success" : "warning")">@assignment.Status</span>
-                            </td>
-                            <td>@assignment.Notes</td>
-                            <td>@assignment.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</td>
-                            <td>
-                                <div class="action-buttons">
-                                    <form method="post" action="/admin/assignments/@assignment.Id/update" class="inline-form">
-                                        @Html.AntiForgeryToken()
-                                        <select name="status" class="inline-input">
-                                            <option value="active" selected="@(string.Equals(assignment.Status, "active", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">active</option>
-                                            <option value="paused" selected="@(string.Equals(assignment.Status, "paused", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">paused</option>
-                                            <option value="completed" selected="@(string.Equals(assignment.Status, "completed", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">completed</option>
-                                            <option value="cancelled" selected="@(string.Equals(assignment.Status, "cancelled", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">cancelled</option>
-                                        </select>
-                                        <input type="text" name="notes" value="@assignment.Notes" class="inline-input" placeholder="Notes" />
-                                        <button type="submit" class="btn btn-xs btn-outline">Save</button>
-                                    </form>
-
-                                    <form method="post" action="/admin/assignments/@assignment.Id/reassign" class="inline-form">
-                                        @Html.AntiForgeryToken()
-                                        <select name="newPractitionerId" class="inline-input">
-                                            @foreach (var practitioner in Model.PractitionerOptions)
-                                            {
-                                                <option value="@practitioner.UserId" selected="@(practitioner.UserId == assignment.PractitionerId ? "selected" : null)">
-                                                    @practitioner.DisplayName
-                                                </option>
-                                            }
-                                        </select>
-                                        <button type="submit" class="btn btn-xs btn-outline">Reassign</button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
+                        new() { Value = "active", Label = "active", Selected = string.Equals(assignment.Status, "active", StringComparison.OrdinalIgnoreCase) },
+                        new() { Value = "paused", Label = "paused", Selected = string.Equals(assignment.Status, "paused", StringComparison.OrdinalIgnoreCase) },
+                        new() { Value = "completed", Label = "completed", Selected = string.Equals(assignment.Status, "completed", StringComparison.OrdinalIgnoreCase) },
+                        new() { Value = "cancelled", Label = "cancelled", Selected = string.Equals(assignment.Status, "cancelled", StringComparison.OrdinalIgnoreCase) },
                     }
-                </tbody>
-            </table>
-        </div>
+                },
+                new() { Kind = EditableTableCellKind.InputText, Name = "notes", Value = assignment.Notes, Placeholder = "Notes", CssClass = "inline-input" },
+                new() { Kind = EditableTableCellKind.Text, Text = assignment.UpdatedAt.ToString("yyyy-MM-dd HH:mm") },
+            },
+            PrimaryAction = new EditableTableActionViewModel
+            {
+                ActionUrl = $"/admin/assignments/{assignment.Id}/update",
+                SubmitLabel = "Save"
+            },
+            SecondaryActions = new List<EditableTableActionViewModel>
+            {
+                new()
+                {
+                    ActionUrl = $"/admin/assignments/{assignment.Id}/reassign",
+                    SubmitLabel = "Reassign",
+                    Fields = new List<EditableTableFieldViewModel>
+                    {
+                        new()
+                        {
+                            Kind = EditableTableFieldKind.Select,
+                            Name = "newPractitionerId",
+                            CssClass = "inline-input",
+                            Options = Model.PractitionerOptions
+                                .Select(practitioner => new EditableTableOptionViewModel
+                                {
+                                    Value = practitioner.UserId.ToString(),
+                                    Label = practitioner.DisplayName,
+                                    Selected = practitioner.UserId == assignment.PractitionerId,
+                                })
+                                .ToList(),
+                        },
+                    },
+                },
+            }
+        }).ToList();
+
+        @await Html.PartialAsync("~/Views/Shared/Ui/_EditableTable.cshtml", new EditableTableViewModel
+        {
+            Title = "Assignments",
+            Columns = new[] { "Client", "Practitioner", "Status", "Notes", "Updated" },
+            EmptyMessage = "No assignments found.",
+            Rows = rows,
+        })
     }
     else
     {

@@ -1,6 +1,7 @@
 import asyncio
 
 from fastapi import APIRouter, Depends, HTTPException, Body
+from pydantic import BaseModel, Field
 from app.config import settings
 from app.dependencies import get_current_user
 from app.services import supabase_service as svc
@@ -8,6 +9,10 @@ from app.services.claude_service import is_llm_configured
 from app.services.email_service import send_ops_alert_email
 
 router = APIRouter()
+
+
+class AdminUserSubscriptionUpdateRequest(BaseModel):
+    sub_status: str = Field(min_length=1, max_length=64)
 
 
 def _is_set(value: str) -> bool:
@@ -154,6 +159,20 @@ async def admin_users(_: dict = Depends(_require_super_admin)):
 @router.get("/users/{user_id}")
 async def admin_user_detail(user_id: str, _: dict = Depends(_require_super_admin)):
     return await svc.get_admin_user_detail(user_id)
+
+
+@router.patch("/users/{user_id}/subscription")
+async def admin_update_user_subscription(
+    user_id: str,
+    body: AdminUserSubscriptionUpdateRequest,
+    _: dict = Depends(_require_super_admin),
+):
+    sub_status = str(body.sub_status or "").strip().lower()
+    if not sub_status:
+        raise HTTPException(status_code=400, detail="sub_status is required")
+
+    await svc.update_user_subscription(user_id=user_id, sub_status=sub_status)
+    return {"ok": True, "user_id": user_id, "sub_status": sub_status}
 
 
 @router.get("/platform-overview")
