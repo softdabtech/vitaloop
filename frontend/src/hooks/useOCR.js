@@ -4,8 +4,17 @@ import * as pdfjsLib from 'pdfjs-dist'
 
 // Configure PDF.js worker for both development and production
 if (typeof window !== 'undefined') {
-  // Use CDN version of PDF.js worker for better compatibility
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.269/pdf.worker.min.mjs'
+  // Use local PDF.js worker with proper path resolution
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+      'pdfjs-dist/build/pdf.worker.min.mjs',
+      import.meta.url
+    ).toString()
+  } catch (error) {
+    // Fallback to CDN if local import fails
+    console.warn('Failed to load local PDF worker, using CDN fallback:', error)
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.worker.min.mjs'
+  }
 }
 
 export function useOCR() {
