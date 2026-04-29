@@ -18,6 +18,44 @@ const GOAL_OPTIONS = [
   { id: 'longevity', label: 'Longevity & prevention' },
 ]
 
+const COUNTRIES = [
+  'United States', 'Canada', 'United Kingdom', 'Germany', 'France', 'Italy', 'Spain',
+  'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Sweden', 'Norway', 'Denmark',
+  'Finland', 'Poland', 'Czech Republic', 'Hungary', 'Slovakia', 'Slovenia', 'Croatia',
+  'Russia', 'Ukraine', 'Belarus', 'Kazakhstan', 'Uzbekistan', 'Azerbaijan', 'Georgia',
+  'Armenia', 'Moldova', 'Lithuania', 'Latvia', 'Estonia', 'Australia', 'New Zealand',
+  'Japan', 'South Korea', 'China', 'India', 'Brazil', 'Mexico', 'Argentina', 'Chile',
+  'Colombia', 'Peru', 'Venezuela', 'Ecuador', 'Uruguay', 'Paraguay', 'Bolivia'
+]
+
+const CITIES_BY_COUNTRY = {
+  'United States': ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Jacksonville', 'Fort Worth', 'Columbus', 'Charlotte', 'San Francisco', 'Indianapolis', 'Seattle', 'Denver', 'Boston', 'El Paso', 'Nashville', 'Detroit', 'Oklahoma City', 'Portland', 'Las Vegas', 'Memphis', 'Louisville', 'Baltimore', 'Milwaukee', 'Albuquerque', 'Tucson', 'Fresno', 'Sacramento', 'Mesa', 'Kansas City', 'Atlanta', 'Long Beach', 'Colorado Springs', 'Raleigh', 'Miami', 'Virginia Beach', 'Omaha', 'Oakland', 'Minneapolis', 'Tulsa', 'Arlington', 'Tampa', 'New Orleans', 'Wichita'],
+  'Canada': ['Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Edmonton', 'Ottawa', 'Winnipeg', 'Quebec City', 'Hamilton', 'Kitchener', 'London', 'Victoria', 'Halifax', 'Oshawa', 'Windsor', 'Saskatoon', 'Regina', 'St. John\'s', 'Kelowna', 'Barrie'],
+  'United Kingdom': ['London', 'Birmingham', 'Manchester', 'Liverpool', 'Leeds', 'Sheffield', 'Bristol', 'Newcastle', 'Sunderland', 'Brighton', 'Cardiff', 'Edinburgh', 'Glasgow', 'Belfast', 'Leicester', 'Coventry', 'Bradford', 'Nottingham', 'Plymouth', 'Stoke-on-Trent'],
+  'Ukraine': ['Kyiv', 'Kharkiv', 'Odesa', 'Dnipro', 'Donetsk', 'Zaporizhzhia', 'Lviv', 'Kryvyi Rih', 'Mykolaiv', 'Mariupol', 'Luhansk', 'Vinnytsia', 'Kherson', 'Poltava', 'Chernihiv', 'Cherkasy', 'Sumy', 'Zhytomyr', 'Khmelnytskyi', 'Rivne', 'Ivano-Frankivsk', 'Ternopil', 'Lutsk', 'Uzhhorod'],
+  'Russia': ['Moscow', 'Saint Petersburg', 'Novosibirsk', 'Yekaterinburg', 'Nizhny Novgorod', 'Kazan', 'Chelyabinsk', 'Omsk', 'Samara', 'Rostov-on-Don', 'Ufa', 'Krasnoyarsk', 'Voronezh', 'Perm', 'Volgograd', 'Krasnodar', 'Saratov', 'Tyumen', 'Tolyatti', 'Izhevsk'],
+  'Germany': ['Berlin', 'Hamburg', 'Munich', 'Cologne', 'Frankfurt', 'Stuttgart', 'Düsseldorf', 'Dortmund', 'Essen', 'Leipzig', 'Bremen', 'Dresden', 'Hanover', 'Nuremberg', 'Duisburg', 'Bochum', 'Wuppertal', 'Bielefeld', 'Bonn', 'Münster'],
+  'France': ['Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier', 'Bordeaux', 'Lille', 'Rennes', 'Reims', 'Le Havre', 'Saint-Étienne', 'Toulon', 'Grenoble', 'Dijon', 'Angers', 'Nîmes', 'Villeurbanne'],
+  'Italy': ['Rome', 'Milan', 'Naples', 'Turin', 'Palermo', 'Genoa', 'Bologna', 'Florence', 'Bari', 'Catania', 'Venice', 'Verona', 'Messina', 'Padua', 'Trieste', 'Brescia', 'Parma', 'Prato', 'Modena', 'Reggio Calabria'],
+  'Spain': ['Madrid', 'Barcelona', 'Valencia', 'Seville', 'Zaragoza', 'Málaga', 'Murcia', 'Palma', 'Las Palmas de Gran Canaria', 'Bilbao', 'Alicante', 'Córdoba', 'Valladolid', 'Vigo', 'Gijón', 'L\'Hospitalet de Llobregat', 'La Coruña', 'Granada', 'Elche', 'Oviedo'],
+  'Netherlands': ['Amsterdam', 'Rotterdam', 'The Hague', 'Utrecht', 'Eindhoven', 'Tilburg', 'Groningen', 'Almere', 'Breda', 'Nijmegen', 'Enschede', 'Haarlem', 'Arnhem', 'Zaanstad', 'Amersfoort', 'Apeldoorn', 'Den Haag', 'Haarlemmermeer', 'Zoetermeer', 'Leiden'],
+  'Australia': ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Canberra', 'Newcastle', 'Central Coast', 'Wollongong', 'Hobart', 'Geelong', 'Townsville', 'Cairns', 'Darwin', 'Toowoomba', 'Ballarat', 'Bendigo', 'Albury', 'Launceston'],
+  'Japan': ['Tokyo', 'Yokohama', 'Osaka', 'Nagoya', 'Sapporo', 'Fukuoka', 'Kobe', 'Kawasaki', 'Saitama', 'Hiroshima', 'Sendai', 'Kitakyushu', 'Chiba', 'Sakai', 'Niigata', 'Hamamatsu', 'Okayama', 'Kumamoto', 'Sagamihara', 'Shizuoka'],
+  'China': ['Shanghai', 'Beijing', 'Guangzhou', 'Shenzhen', 'Tianjin', 'Wuhan', 'Dongguan', 'Chengdu', 'Nanjing', 'Hangzhou', 'Foshan', 'Shenyang', 'Harbin', 'Qingdao', 'Dalian', 'Jinan', 'Zhengzhou', 'Changsha', 'Xiamen', 'Wuxi'],
+  'India': ['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Ahmedabad', 'Chennai', 'Kolkata', 'Surat', 'Pune', 'Jaipur', 'Lucknow', 'Kanpur', 'Nagpur', 'Indore', 'Thane', 'Bhopal', 'Visakhapatnam', 'Pimpri-Chinchwad', 'Patna', 'Vadodara'],
+  'Brazil': ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador', 'Fortaleza', 'Belo Horizonte', 'Manaus', 'Curitiba', 'Recife', 'Porto Alegre', 'Belém', 'Goiânia', 'Guarulhos', 'Campinas', 'São Luís', 'São Gonçalo', 'Maceió', 'Duque de Caxias', 'Natal', 'Campo Grande'],
+  'Mexico': ['Mexico City', 'Guadalajara', 'Monterrey', 'Puebla', 'Tijuana', 'León', 'Juárez', 'Torreón', 'Querétaro', 'Mérida', 'Mexicali', 'Aguascalientes', 'Hermosillo', 'Saltillo', 'Chihuahua', 'Culiacán', 'Morelia', 'Durango', 'Veracruz', 'Reynosa']
+}
+
+const COMMON_SYMPTOMS = [
+  'Fatigue', 'Headache', 'Insomnia', 'Joint pain', 'Muscle pain', 'Digestive issues',
+  'Brain fog', 'Anxiety', 'Depression', 'Hair loss', 'Skin issues', 'Weight gain',
+  'Weight loss', 'Low energy', 'Mood swings', 'Memory problems', 'Concentration issues',
+  'Sleep problems', 'Digestive discomfort', 'Allergies', 'Frequent illness', 'Chronic pain',
+  'Hormonal imbalance', 'Thyroid issues', 'Blood sugar issues', 'Cholesterol concerns',
+  'Blood pressure issues', 'Heart palpitations', 'Shortness of breath', 'Dizziness'
+]
+
 const s = {
   wrap: { minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '24px 16px' },
   card: { width: '100%', maxWidth: 560, background: '#ffffff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 24, padding: window.innerWidth < 500 ? '24px 16px' : '40px 36px', boxShadow: '0 1px 3px rgba(15,23,42,0.06)' },
@@ -26,6 +64,11 @@ const s = {
   label: { display: 'block', fontSize: 13, color: '#475569', marginBottom: 8, fontWeight: 500, letterSpacing: '0.03em' },
   input: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box', minHeight: '44px' },
   select: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box', minHeight: '44px' },
+  dropdown: { position: 'absolute', top: '100%', left: 0, right: 0, background: '#ffffff', border: '1px solid rgba(15,23,42,0.12)', borderTop: 'none', borderRadius: '0 0 10px 10px', maxHeight: '200px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 4px 6px rgba(15,23,42,0.1)' },
+  dropdownItem: { padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid rgba(15,23,42,0.05)', color: '#0f172a', fontSize: 14 },
+  dropdownItemHover: { background: 'rgba(16,185,129,0.05)' },
+  error: { color: '#ef4444', fontSize: 12, marginTop: 4 },
+  inputContainer: { position: 'relative' },
   btnPrimary: { width: '100%', padding: '14px', background: '#10b981', borderRadius: 12, color: '#ffffff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', marginTop: 24, minHeight: '44px' },
   btnSec: { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: 14, marginTop: 12, textDecoration: 'underline', padding: 0 },
   row: { display: 'grid', gridTemplateColumns: window.innerWidth < 600 ? '1fr' : '1fr 1fr', gap: 16 },
@@ -57,6 +100,34 @@ export default function Onboarding() {
   const [profile, setProfile] = useState({ height_cm: '', weight_kg: '', goals: [], current_supplements: '', current_medications: '', prior_diagnoses: '' })
   const [location, setLocation] = useState({ city: '', state: '', country: '', district: '' })
   const [complaints, setComplaints] = useState([{ complaint: '', duration_description: '', tried_interventions: '' }])
+
+  // Validation states
+  const [validationErrors, setValidationErrors] = useState({})
+  const [showSuggestions, setShowSuggestions] = useState({ country: false, city: false, complaint: false })
+
+  // Validate numeric inputs
+  const validateNumericField = (field, value, min, max, fieldName) => {
+    const num = parseFloat(value)
+    if (value && (isNaN(num) || num < min || num > max)) {
+      setValidationErrors(prev => ({ ...prev, [field]: `${fieldName} must be between ${min} and ${max}` }))
+      return false
+    } else {
+      setValidationErrors(prev => ({ ...prev, [field]: null }))
+      return true
+    }
+  }
+
+  const handleHeightChange = (e) => {
+    const value = e.target.value
+    setProfile(p => ({ ...p, height_cm: value }))
+    validateNumericField('height_cm', value, 50, 250, 'Height')
+  }
+
+  const handleWeightChange = (e) => {
+    const value = e.target.value
+    setProfile(p => ({ ...p, weight_kg: value }))
+    validateNumericField('weight_kg', value, 20, 300, 'Weight')
+  }
 
   const handleSkipOnboarding = async () => {
     try {
@@ -114,11 +185,17 @@ export default function Onboarding() {
         current_supplements: (p.current_supplements || []).join(', '),
         current_medications: (p.current_medications || []).join(', '),
         prior_diagnoses: p.prior_diagnoses || '',
+        onboarding_complete: p.onboarding_complete || false,
       }))
       const loc = r.data?.location || {}
       setLocation({ city: loc.city || '', state: loc.state || '', country: loc.country || '', district: loc.district || '' })
+
+      // If onboarding is already complete, redirect to dashboard
+      if (p.onboarding_complete) {
+        navigate('/dashboard', { replace: true })
+      }
     }).catch(() => {})
-  }, [])
+  }, [navigate])
 
   const toggleGoal = (id) => setProfile(prev => ({
     ...prev,
@@ -130,8 +207,11 @@ export default function Onboarding() {
 
   const saveAll = async () => {
     // Validate required fields
-    if (!profile.height_cm || !profile.weight_kg) {
-      toast.error('Please fill in all required fields (height and weight) for accurate analysis.')
+    const heightValid = validateNumericField('height_cm', profile.height_cm, 50, 250, 'Height')
+    const weightValid = validateNumericField('weight_kg', profile.weight_kg, 20, 300, 'Weight')
+
+    if (!profile.height_cm || !profile.weight_kg || !heightValid || !weightValid) {
+      toast.error('Please fill in valid height and weight for accurate analysis.')
       return
     }
     setSaving(true)
@@ -244,16 +324,38 @@ export default function Onboarding() {
               💡 Height and weight help calculate healthy ranges for your biomarkers. List supplements and medications so the AI can flag interactions and avoid duplicating what you already take.
             </div>
             <div style={s.row}>
-              <label>
-                <span style={{...s.label, color: '#ef4444'}}>* Height (cm) (required)</span>
-                <input style={s.input} type="number" placeholder="175" value={profile.height_cm} onChange={e => setProfile(p => ({ ...p, height_cm: e.target.value }))} required />
-                {!profile.height_cm && <div style={{color:'#ef4444',fontSize:12,marginTop:4}}>Please enter your height for accurate analysis.</div>}
-      </label>
-              <label>
-                <span style={{...s.label, color: '#ef4444'}}>* Weight (kg) (required)</span>
-                <input style={s.input} type="number" placeholder="72" value={profile.weight_kg} onChange={e => setProfile(p => ({ ...p, weight_kg: e.target.value }))} required />
-                {!profile.weight_kg && <div style={{color:'#ef4444',fontSize:12,marginTop:4}}>Please enter your weight for accurate analysis.</div>}
-      </label>
+              <div style={s.inputContainer}>
+                <label>
+                  <span style={{...s.label, color: '#ef4444'}}>* Height (cm) (required)</span>
+                  <input
+                    style={{...s.input, borderColor: validationErrors.height_cm ? '#ef4444' : 'rgba(15,23,42,0.12)'}}
+                    type="number"
+                    placeholder="175"
+                    value={profile.height_cm}
+                    onChange={handleHeightChange}
+                    min="50"
+                    max="250"
+                    required
+                  />
+                  {validationErrors.height_cm && <div style={s.error}>{validationErrors.height_cm}</div>}
+                </label>
+              </div>
+              <div style={s.inputContainer}>
+                <label>
+                  <span style={{...s.label, color: '#ef4444'}}>* Weight (kg) (required)</span>
+                  <input
+                    style={{...s.input, borderColor: validationErrors.weight_kg ? '#ef4444' : 'rgba(15,23,42,0.12)'}}
+                    type="number"
+                    placeholder="72"
+                    value={profile.weight_kg}
+                    onChange={handleWeightChange}
+                    min="20"
+                    max="300"
+                    required
+                  />
+                  {validationErrors.weight_kg && <div style={s.error}>{validationErrors.weight_kg}</div>}
+                </label>
+              </div>
             </div>
             <div style={{ marginTop: 16 }}>
               <span style={s.label}>Current supplements (comma-separated)</span>
@@ -292,23 +394,72 @@ export default function Onboarding() {
             <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
               💡 Location is optional. It helps us suggest nearby labs and practitioners when you're ready for in-person consultations. It is not shared with third parties.
             </div>
-            <div style={s.row}>
-              <label>
-                <span style={s.label}>City</span>
-                <input style={s.input} placeholder="Kyiv" value={location.city} onChange={e => setLocation(l => ({ ...l, city: e.target.value }))} />
-              </label>
-              <label>
-                <span style={s.label}>State / Region</span>
-                <input style={s.input} placeholder="Kyiv Oblast" value={location.state} onChange={e => setLocation(l => ({ ...l, state: e.target.value }))} />
-              </label>
+            <div style={s.inputContainer}>
+              <span style={s.label}>Country</span>
+              <input
+                style={s.input}
+                placeholder="Start typing to search countries..."
+                value={location.country}
+                onChange={(e) => {
+                  setLocation(l => ({ ...l, country: e.target.value, city: '' }))
+                  setShowSuggestions(prev => ({ ...prev, country: true }))
+                }}
+                onFocus={() => setShowSuggestions(prev => ({ ...prev, country: true }))}
+                onBlur={() => setTimeout(() => setShowSuggestions(prev => ({ ...prev, country: false })), 200)}
+              />
+              {showSuggestions.country && location.country && (
+                <div style={s.dropdown}>
+                  {COUNTRIES.filter(c => c.toLowerCase().includes(location.country.toLowerCase())).slice(0, 10).map(country => (
+                    <div
+                      key={country}
+                      style={s.dropdownItem}
+                      onMouseDown={() => setLocation(l => ({ ...l, country, city: '' }))}
+                      onMouseEnter={(e) => e.target.style.background = s.dropdownItemHover.background}
+                      onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                    >
+                      {country}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ marginTop: 16, ...s.inputContainer }}>
+              <span style={s.label}>City</span>
+              <input
+                style={s.input}
+                placeholder={location.country ? `Start typing ${location.country} cities...` : "Select country first"}
+                value={location.city}
+                onChange={(e) => {
+                  setLocation(l => ({ ...l, city: e.target.value }))
+                  setShowSuggestions(prev => ({ ...prev, city: true }))
+                }}
+                onFocus={() => setShowSuggestions(prev => ({ ...prev, city: true }))}
+                onBlur={() => setTimeout(() => setShowSuggestions(prev => ({ ...prev, city: false })), 200)}
+                disabled={!location.country}
+              />
+              {showSuggestions.city && location.city && location.country && CITIES_BY_COUNTRY[location.country] && (
+                <div style={s.dropdown}>
+                  {CITIES_BY_COUNTRY[location.country].filter(c => c.toLowerCase().includes(location.city.toLowerCase())).slice(0, 10).map(city => (
+                    <div
+                      key={city}
+                      style={s.dropdownItem}
+                      onMouseDown={() => setLocation(l => ({ ...l, city }))}
+                      onMouseEnter={(e) => e.target.style.background = s.dropdownItemHover.background}
+                      onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                    >
+                      {city}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div style={{ marginTop: 16 }}>
-              <span style={s.label}>Country</span>
-              <input style={s.input} placeholder="Ukraine" value={location.country} onChange={e => setLocation(l => ({ ...l, country: e.target.value }))} />
+              <span style={s.label}>State / Region (optional)</span>
+              <input style={s.input} placeholder="e.g. California, Ontario" value={location.state} onChange={e => setLocation(l => ({ ...l, state: e.target.value }))} />
             </div>
             <div style={{ marginTop: 16 }}>
               <span style={s.label}>District / Area (optional)</span>
-              <input style={s.input} placeholder="Pechersk" value={location.district} onChange={e => setLocation(l => ({ ...l, district: e.target.value }))} />
+              <input style={s.input} placeholder="e.g. Downtown, Central" value={location.district} onChange={e => setLocation(l => ({ ...l, district: e.target.value }))} />
             </div>
           </motion.div>
         )}
@@ -323,12 +474,39 @@ export default function Onboarding() {
             </div>
             {complaints.map((c, i) => (
               <div key={i} style={{ marginBottom: 20, padding: 16, background: '#f8fafc', borderRadius: 12, border: '1px solid rgba(15,23,42,0.07)' }}>
-                <span style={s.label}>Complaint {i + 1}</span>
-                <input style={{ ...s.input, marginBottom: 10 }} placeholder="e.g. Persistent fatigue" value={c.complaint} onChange={e => updateComplaint(i, 'complaint', e.target.value)} />
+                <div style={s.inputContainer}>
+                  <span style={s.label}>Complaint {i + 1}</span>
+                  <input
+                    style={{ ...s.input, marginBottom: 10 }}
+                    placeholder="Start typing symptoms..."
+                    value={c.complaint}
+                    onChange={(e) => {
+                      updateComplaint(i, 'complaint', e.target.value)
+                      setShowSuggestions(prev => ({ ...prev, complaint: true }))
+                    }}
+                    onFocus={() => setShowSuggestions(prev => ({ ...prev, complaint: true }))}
+                    onBlur={() => setTimeout(() => setShowSuggestions(prev => ({ ...prev, complaint: false })), 200)}
+                  />
+                  {showSuggestions.complaint && c.complaint && (
+                    <div style={s.dropdown}>
+                      {COMMON_SYMPTOMS.filter(s => s.toLowerCase().includes(c.complaint.toLowerCase())).slice(0, 8).map(symptom => (
+                        <div
+                          key={symptom}
+                          style={s.dropdownItem}
+                          onMouseDown={() => updateComplaint(i, 'complaint', symptom)}
+                          onMouseEnter={(e) => e.target.style.background = s.dropdownItemHover.background}
+                          onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                        >
+                          {symptom}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <span style={s.label}>How long has this been present?</span>
-                <input style={{ ...s.input, marginBottom: 10 }} placeholder="e.g. 3 months" value={c.duration_description} onChange={e => updateComplaint(i, 'duration_description', e.target.value)} />
+                <input style={{ ...s.input, marginBottom: 10 }} placeholder="e.g. 3 months, 1 year" value={c.duration_description} onChange={e => updateComplaint(i, 'duration_description', e.target.value)} />
                 <span style={s.label}>What have you tried so far?</span>
-                <input style={s.input} placeholder="e.g. Magnesium, better sleep schedule" value={c.tried_interventions} onChange={e => updateComplaint(i, 'tried_interventions', e.target.value)} />
+                <input style={s.input} placeholder="e.g. Magnesium, better sleep schedule, diet changes" value={c.tried_interventions} onChange={e => updateComplaint(i, 'tried_interventions', e.target.value)} />
               </div>
             ))}
             <button style={{ ...s.btnSec, marginTop: 4 }} onClick={addComplaint}>+ Add another complaint</button>

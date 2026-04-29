@@ -88,8 +88,10 @@ export default function Upload() {
       text = result.text
       confidence = result.confidence
     } catch (err) {
-      setErrorMessage('Could not read this file. Please try another clear PDF or image.')
-      toast.error('Could not read this file. Please try another clear PDF or image.')
+      console.error('File processing error:', err)
+      const errorMessage = err.message || 'Could not read this file. Please try another clear PDF or image.'
+      setErrorMessage(errorMessage)
+      toast.error(errorMessage)
       return
     }
 
@@ -179,12 +181,10 @@ export default function Upload() {
           </div>
         )}
 
-        {!subLoading && !isPremium && (
-          <div className={`mb-6 flex items-center justify-between rounded-xl px-4 py-3 text-sm ${uploadsRemaining === 0 ? 'border border-rose-200 bg-rose-50 text-rose-700' : 'border border-amber-200 bg-amber-50 text-amber-700'}`}>
+        {!subLoading && !isPremium && uploadsRemaining === 0 && (
+          <div className="mb-6 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             <span>
-              {uploadsRemaining === 0
-                ? `Free upload limit reached (${uploadCount}/${uploadLimit}).`
-                : `Free plan: ${uploadsRemaining} upload${uploadsRemaining !== 1 ? 's' : ''} remaining.`}
+              Free upload limit reached ({uploadCount}/{uploadLimit}).
             </span>
             <button
               onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'UPLOAD_LIMIT_REACHED' } }))}
@@ -194,10 +194,10 @@ export default function Upload() {
             </button>
           </div>
         )}
-        {/* Мотивация к покупке подписки */}
+
         {!subLoading && !isPremium && uploadsRemaining > 0 && (
-          <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            <b>Преимущества подписки:</b> Безлимитные загрузки анализов, расширенные отчёты, приоритетная поддержка и персональные рекомендации от экспертов.
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            Free plan: {uploadsRemaining} upload{uploadsRemaining !== 1 ? 's' : ''} remaining.
           </div>
         )}
 

@@ -12,3 +12,9 @@ frontend/node_modules/
 crm-mvc/bin/
 crm-mvc/obj/
 crm-mvc/publish/
+# Test files
+test_*.js
+test_*.json
+test_*.txt
+test_*.html
+create_test_pdf.js
