@@ -5,6 +5,9 @@
 
 set -e
 
+OCR_CANARY_PERCENT="${OCR_CANARY_PERCENT:-10}"
+INSTALL_PADDLE="${INSTALL_PADDLE:-false}"
+
 echo "🚀 Deploying analysis service to production..."
 
 # Colors for output
@@ -42,9 +45,9 @@ scp "$ARCHIVE_PATH" $SERVER:/tmp/analysis-service.tar.gz
 ssh $SERVER << EOF
     set -e
 
-    echo "Installing OCR system dependencies (tesseract + poppler)..."
+    echo "Installing OCR system dependencies (tesseract + poppler + runtime libs)..."
     apt-get update -y
-    apt-get install -y tesseract-ocr poppler-utils
+    apt-get install -y tesseract-ocr poppler-utils libgl1 libglib2.0-0
     
     echo "Stopping existing service..."
     systemctl stop $SERVICE_NAME 2>/dev/null || true
@@ -62,7 +65,7 @@ ssh $SERVER << EOF
     source venv/bin/activate
     pip install --upgrade pip
     pip install --no-cache-dir -r requirements.txt
-    if [ "${INSTALL_PADDLE:-false}" = "true" ]; then
+    if [ "$INSTALL_PADDLE" = "true" ]; then
         echo "Installing optional Paddle OCR dependencies..."
         pip install --no-cache-dir -r requirements-paddle.txt || echo "⚠️ Paddle optional deps failed; continuing with fallback engines"
     fi
@@ -80,7 +83,7 @@ WorkingDirectory=$REMOTE_PATH
 Environment=OCR_PROVIDER=auto
 Environment=OCR_FALLBACK_CHAIN=tesseract
 Environment=OCR_ENABLE_MOCK_FALLBACK=false
-Environment=OCR_CANARY_PERCENT=10
+Environment=OCR_CANARY_PERCENT=$OCR_CANARY_PERCENT
 Environment=OCR_MAX_PDF_PAGES=2
 Environment=OCR_PDF_DPI=180
 Environment=OCR_PDF_THREAD_COUNT=1
