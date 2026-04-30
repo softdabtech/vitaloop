@@ -153,11 +153,27 @@ export function useOCR() {
             console.warn('OCR config 3 failed:', e)
           }
 
-          if (bestResult.text.trim().length < 20) {
+          const localText = (bestResult.text || '').trim()
+          const hasEnoughSignal = (localText.match(/\d+/g) || []).length >= 8
+
+          // If local OCR looks weak, use analysis-service OCR fallback for better table extraction.
+          if (localText.length < 120 || !hasEnoughSignal) {
+            try {
+              const serviceText = await extractFromAnalysisService(file)
+              if (serviceText.trim().length >= 40) {
+                resolve(serviceText)
+                return
+              }
+            } catch (serviceError) {
+              console.warn('Image OCR analysis-service fallback failed:', serviceError)
+            }
+          }
+
+          if (localText.length < 20) {
             throw new Error('Could not extract readable text from the image. Please ensure the photo is clear, well-lit, and the text is legible.')
           }
 
-          resolve(bestResult.text)
+          resolve(localText)
         } catch (error) {
           reject(new Error('Failed to process image. Please try a different photo or PDF format.'))
         }
@@ -175,46 +191,7 @@ export function useOCR() {
   async function extractFromPDF(file) {
     try {
       console.log('Starting PDF extraction for file:', file.name, 'size:', file.size)
-
-      // Send PDF to analysis service for processing
-      console.log('Sending PDF to analysis service for OCR processing')
-
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const response = await fetch('/api/v1/analyze', {
-        method: 'POST',
-        body: formData
-      })
-
-      if (!response.ok) {
-        throw new Error(`Analysis service error: ${response.status} ${response.statusText}`)
-      }
-
-      const result = await response.json()
-
-      const rawExtractedText = typeof result?.extracted_text === 'string' ? result.extracted_text.trim() : ''
-      if (rawExtractedText.length >= 40) {
-        console.log('PDF processed successfully using extracted_text, length:', rawExtractedText.length)
-        return rawExtractedText
-      }
-
-      if (!Array.isArray(result?.biomarkers) || result.biomarkers.length === 0) {
-        throw new Error('Could not extract readable text from this PDF. Please upload a clearer PDF scan or a high-quality photo of the full report page.')
-      }
-
-      // Fallback path: reconstruct minimum structured text from detected biomarkers.
-      let extractedText = 'Lab Analysis Results\n\n'
-      result.biomarkers.forEach(biomarker => {
-        extractedText += `${biomarker.name}: ${biomarker.value} ${biomarker.unit}\n`
-      })
-
-      if (extractedText.trim().length < 40) {
-        throw new Error('Extracted PDF text is too short for reliable analysis. Please upload a clearer document.')
-      }
-
-      console.log('PDF processed successfully, extracted text length:', extractedText.length)
-      return extractedText
+      return await extractFromAnalysisService(file)
 
     } catch (error) {
       console.error('PDF processing error:', error)
@@ -229,6 +206,43 @@ export function useOCR() {
       }
       throw new Error('PDF processing failed. Please try uploading a clearer PDF or a sharp photo of your lab report instead.')
     }
+  }
+
+  async function extractFromAnalysisService(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch('/api/v1/analyze', {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!response.ok) {
+      throw new Error(`Analysis service error: ${response.status} ${response.statusText}`)
+    }
+
+    const result = await response.json()
+    const rawExtractedText = typeof result?.extracted_text === 'string' ? result.extracted_text.trim() : ''
+
+    if (rawExtractedText.length >= 40) {
+      console.log('Analysis-service OCR extracted_text length:', rawExtractedText.length)
+      return rawExtractedText
+    }
+
+    if (!Array.isArray(result?.biomarkers) || result.biomarkers.length === 0) {
+      throw new Error('Could not extract readable text from this document. Please upload a clearer full-page report image or PDF.')
+    }
+
+    let extractedText = 'Lab Analysis Results\n\n'
+    result.biomarkers.forEach((biomarker) => {
+      extractedText += `${biomarker.name}: ${biomarker.value} ${biomarker.unit}\n`
+    })
+
+    if (extractedText.trim().length < 40) {
+      throw new Error('Extracted document text is too short for reliable analysis. Please upload a clearer document.')
+    }
+
+    return extractedText
   }
 
   return { processFile, progress, extractedText, ocrConfidence, isProcessing }
