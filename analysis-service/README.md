@@ -25,6 +25,40 @@ Current default rollout is safe mode:
 - `OCR_FALLBACK_CHAIN=`
 - `OCR_ENABLE_MOCK_FALLBACK=false`
 
+Production memory-safe defaults:
+
+- `OCR_PROVIDER=auto`
+- `OCR_FALLBACK_CHAIN=tesseract`
+- `OCR_MAX_PDF_PAGES=2`
+- `OCR_PDF_DPI=180`
+- `OCR_PDF_THREAD_COUNT=1`
+
+### Optional Paddle Provider (Phase 2)
+
+Install optional dependencies when host capacity allows it:
+
+```bash
+pip install -r requirements-paddle.txt
+```
+
+Then set provider env for canary:
+
+```bash
+export OCR_PROVIDER=paddle
+export OCR_FALLBACK_CHAIN=tesseract
+```
+
+### OCR Benchmark Harness
+
+Run benchmark on fixture files via public API:
+
+```bash
+python scripts/benchmark_ocr.py \
+	--base-url https://vitaloop.today \
+	--fixtures ../scripts/smoke-fixtures/*.{png,pdf} \
+	--json ./benchmark-report.json
+```
+
 ## Supported Biomarkers
 
 ### Metabolism

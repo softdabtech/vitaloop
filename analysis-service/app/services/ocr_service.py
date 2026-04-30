@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+import re
 from abc import ABC, abstractmethod
 from typing import List
 
@@ -109,11 +110,19 @@ class OCRService:
     """OCR service with provider selection + fallback chain."""
 
     def __init__(self):
-        provider = os.getenv("OCR_PROVIDER", "tesseract").strip().lower()
+        provider = os.getenv("OCR_PROVIDER", "auto").strip().lower()
         fallback_chain_raw = os.getenv("OCR_FALLBACK_CHAIN", "").strip().lower()
         self.enable_mock_fallback = os.getenv("OCR_ENABLE_MOCK_FALLBACK", "false").strip().lower() == "true"
+        self.min_signal_score = float(os.getenv("OCR_MIN_SIGNAL_SCORE", "3.2"))
+        self.max_pdf_pages = int(os.getenv("OCR_MAX_PDF_PAGES", "2"))
+        self.pdf_dpi = int(os.getenv("OCR_PDF_DPI", "180"))
+        self.pdf_thread_count = int(os.getenv("OCR_PDF_THREAD_COUNT", "1"))
 
-        requested_order: List[str] = [provider]
+        if provider == "auto":
+            requested_order: List[str] = ["paddle", "surya", "tesseract"]
+        else:
+            requested_order = [provider]
+
         if fallback_chain_raw:
             requested_order.extend([name.strip() for name in fallback_chain_raw.split(",") if name.strip()])
         if "tesseract" not in requested_order:
@@ -197,8 +206,16 @@ class OCRService:
             return ""
 
     def _run_engine_chain(self, image_bgr: np.ndarray) -> str:
+        # Cap very large inputs to reduce memory pressure while preserving readability.
+        h, w = image_bgr.shape[:2]
+        max_side = 2200
+        if max(h, w) > max_side:
+            scale = max_side / float(max(h, w))
+            image_bgr = cv2.resize(image_bgr, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+
         best_text = ""
         best_engine = "none"
+        best_score = -1.0
 
         for engine in self.engines:
             try:
@@ -207,17 +224,50 @@ class OCRService:
                 logger.warning("OCR engine failed name=%s error=%s", engine.name, exc)
                 continue
 
-            if len(text) > len(best_text):
+            score = self._text_signal_score(text)
+            logger.info("OCR engine result name=%s chars=%s signal=%.2f", engine.name, len(text), score)
+
+            if score > best_score:
                 best_text = text
                 best_engine = engine.name
+                best_score = score
 
-            # Good-enough short-circuit for long table-like output.
-            if len(text) >= 220:
-                logger.info("OCR engine success name=%s chars=%s", engine.name, len(text))
+            # Stop early if text has strong lab-like signal.
+            if score >= self.min_signal_score and len(text) >= 120:
+                logger.info("OCR engine success name=%s chars=%s signal=%.2f", engine.name, len(text), score)
                 return text
 
-        logger.info("OCR best result engine=%s chars=%s", best_engine, len(best_text))
+        logger.info("OCR best result engine=%s chars=%s signal=%.2f", best_engine, len(best_text), best_score)
         return best_text
+
+    def _text_signal_score(self, text: str) -> float:
+        """Estimate whether OCR output looks like a lab report payload."""
+        if not text:
+            return 0.0
+
+        t = text.lower()
+        score = 0.0
+
+        # Baseline volume signal.
+        score += min(len(text) / 120.0, 1.4)
+
+        # Numeric density matters for lab sheets.
+        numeric_hits = len(re.findall(r"\d+(?:[.,]\d+)?", text))
+        score += min(numeric_hits / 10.0, 1.2)
+
+        # Biomarker keywords and units.
+        keywords = [
+            "hemoglobin", "hematocrit", "rbc", "wbc", "platelet", "glucose", "cholesterol",
+            "triglycer", "creatinine", "tsh", "esr", "ferritin", "витамин", "гемоглобин", "лейкоцит",
+        ]
+        units = ["mg/dl", "g/dl", "mmol", "iu/l", "u/l", "%", "10^", "x10"]
+        score += min(sum(1 for k in keywords if k in t) * 0.22, 1.4)
+        score += min(sum(1 for u in units if u in t) * 0.2, 1.0)
+
+        # Reference range shape.
+        range_hits = len(re.findall(r"\d+(?:[.,]\d+)?\s*[-–]\s*\d+(?:[.,]\d+)?", text))
+        score += min(range_hits * 0.2, 1.0)
+        return score
 
     def _extract_text_from_pdf(self, pdf_bytes: bytes) -> str:
         """Extract text from PDF by converting pages to images and OCRing each page."""
@@ -225,7 +275,15 @@ class OCRService:
             logger.info("Converting PDF to images for OCR processing")
 
             # Convert PDF pages to images
-            images = convert_from_bytes(pdf_bytes, dpi=300, fmt='jpeg')
+            last_page = self.max_pdf_pages if self.max_pdf_pages > 0 else None
+            images = convert_from_bytes(
+                pdf_bytes,
+                dpi=self.pdf_dpi,
+                fmt="jpeg",
+                thread_count=max(1, self.pdf_thread_count),
+                first_page=1,
+                last_page=last_page,
+            )
 
             extracted_texts = []
 
