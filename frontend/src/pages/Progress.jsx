@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom'
 import '../styles/dashboard2026.css'
 
 function getBiomarkerValue(upload, name) {
+  if (!upload || !Array.isArray(upload.biomarkers)) return null
   const marker = upload.biomarkers.find((b) => b.name.toLowerCase().includes(name.toLowerCase()))
   return marker?.value
 }
@@ -32,7 +33,8 @@ export default function Progress() {
     if (!user) return
     api.get('/progress')
       .then((res) => {
-        setData(res.data)
+        setData(Array.isArray(res.data) ? res.data : [])
+        setError(null)
         setLoading(false)
       })
       .catch((err) => {
@@ -41,6 +43,9 @@ export default function Progress() {
         
         if (status === 401) {
           navigate('/login')
+        } else if (status === 404) {
+          setData([])
+          setError(null)
         } else if (status === 402) {
           setError('premium')
         } else {
@@ -105,8 +110,9 @@ export default function Progress() {
     )
   }
 
-  const first = data[0]
-  const last = data[data.length - 1]
+  const uploadsWithBiomarkers = data.filter((upload) => Array.isArray(upload?.biomarkers) && upload.biomarkers.length > 0)
+  const first = uploadsWithBiomarkers[0]
+  const last = uploadsWithBiomarkers[uploadsWithBiomarkers.length - 1]
 
   const tracked = [
     { key: 'Vitamin D', label: 'Vitamin D' },
@@ -171,7 +177,7 @@ export default function Progress() {
             )}
 
             <LockedFeatureOverlay locked={!isPro}>
-              <ProgressChart data={data} />
+              <ProgressChart data={uploadsWithBiomarkers} />
             </LockedFeatureOverlay>
 
             <div className="vtl-light-card mt-6 p-5">
@@ -182,7 +188,7 @@ export default function Progress() {
                     <div className="mt-1 h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />
                     <div>
                       <p className="text-sm text-slate-800">Upload #{index + 1}</p>
-                      <p className="text-xs text-slate-400">{upload.test_date || upload.created_at?.slice(0, 10)} · {upload.lab_name || 'Unknown lab'}</p>
+                      <p className="text-xs text-slate-400">{upload.test_date || upload.created_at?.slice(0, 10) || 'Unknown date'} · {upload.lab_name || 'Unknown lab'}</p>
                     </div>
                   </div>
                 ))}

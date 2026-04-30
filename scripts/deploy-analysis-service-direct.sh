@@ -5,7 +5,8 @@
 
 set -e
 
-OCR_CANARY_PERCENT="${OCR_CANARY_PERCENT:-10}"
+OCR_PROVIDER="${OCR_PROVIDER:-tesseract}"
+OCR_CANARY_PERCENT="${OCR_CANARY_PERCENT:-0}"
 INSTALL_PADDLE="${INSTALL_PADDLE:-false}"
 
 echo "🚀 Deploying analysis service to production..."
@@ -80,7 +81,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=$REMOTE_PATH
-Environment=OCR_PROVIDER=auto
+Environment=OCR_PROVIDER=$OCR_PROVIDER
 Environment=OCR_FALLBACK_CHAIN=tesseract
 Environment=OCR_ENABLE_MOCK_FALLBACK=false
 Environment=OCR_CANARY_PERCENT=$OCR_CANARY_PERCENT

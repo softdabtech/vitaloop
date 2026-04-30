@@ -13,8 +13,13 @@ export default function HealthChart({ progress }) {
   const healthMetrics = useMemo(() => {
     if (!progress || progress.length === 0) return null;
 
-    const latest = progress[progress.length - 1];
-    const previous = progress.length > 1 ? progress[progress.length - 2] : null;
+    const uploadsWithBiomarkers = progress.filter(
+      (upload) => Array.isArray(upload?.biomarkers) && upload.biomarkers.length > 0
+    );
+    if (uploadsWithBiomarkers.length === 0) return null;
+
+    const latest = uploadsWithBiomarkers[uploadsWithBiomarkers.length - 1];
+    const previous = uploadsWithBiomarkers.length > 1 ? uploadsWithBiomarkers[uploadsWithBiomarkers.length - 2] : null;
 
     const latestStats = {
       total: latest.biomarkers?.length || 0,
@@ -53,8 +58,9 @@ export default function HealthChart({ progress }) {
       previous: previousStats,
       trend,
       trendDirection,
-      testDate: latest.test_date,
-      totalLabs: progress.length,
+      testDate: latest.test_date || latest.created_at?.split('T')[0] || null,
+      totalLabs: uploadsWithBiomarkers.length,
+      timeline: uploadsWithBiomarkers.slice(-5).reverse(),
     };
   }, [progress]);
 
@@ -114,7 +120,9 @@ export default function HealthChart({ progress }) {
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold">
-              {Math.round((healthMetrics.latest.optimal / healthMetrics.latest.total) * 100)}%
+              {healthMetrics.latest.total > 0
+                ? Math.round((healthMetrics.latest.optimal / healthMetrics.latest.total) * 100)
+                : 0}%
             </div>
             <div className="text-xs opacity-70">Optimal biomarkers</div>
           </div>
@@ -158,7 +166,7 @@ export default function HealthChart({ progress }) {
           Lab Results Timeline
         </h4>
         <div className="space-y-2">
-          {progress.slice(-5).reverse().map((lab, index) => {
+          {healthMetrics.timeline.map((lab, index) => {
             const optimalCount = lab.biomarkers?.filter(b => normalizeStatus(b.status) === 'optimal').length || 0;
             const totalCount = lab.biomarkers?.length || 0;
             const percentage = totalCount > 0 ? Math.round((optimalCount / totalCount) * 100) : 0;
@@ -168,7 +176,9 @@ export default function HealthChart({ progress }) {
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
                   <span className="text-sm text-slate-700">
-                    {lab.test_date ? new Date(lab.test_date).toLocaleDateString() : 'Unknown date'}
+                    {lab.test_date || lab.created_at
+                      ? new Date(lab.test_date || lab.created_at).toLocaleDateString()
+                      : 'Unknown date'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
