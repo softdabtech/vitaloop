@@ -227,8 +227,18 @@ async def save_biomarkers(upload_id: str, user_id: str, biomarkers: List[Dict]) 
     return resp.data
 
 
+async def update_lab_upload_status(upload_id: str, status: str) -> None:
+    supabase = _get_supabase()
+    await _run(
+        lambda: supabase.table("lab_uploads")
+        .update({"status": status})
+        .eq("id", upload_id)
+        .execute()
+    )
+
+
 async def assert_upload_belongs_to_user(upload_id: str, user_id: str) -> Dict:
-    logger.error(f"assert_upload_belongs_to_user called: upload_id={upload_id}, user_id={user_id}")
+    _logger.debug("assert_upload_belongs_to_user called")
     supabase = _get_supabase()
     resp = await _run(
         lambda: supabase.table("lab_uploads")
@@ -238,15 +248,15 @@ async def assert_upload_belongs_to_user(upload_id: str, user_id: str) -> Dict:
         .limit(1)
         .execute()
     )
-    logger.error(f"assert_upload_belongs_to_user result: data={resp.data}")
+    _logger.debug("assert_upload_belongs_to_user completed")
     if not resp.data:
-        logger.error(f"Upload not found: upload_id={upload_id}, user_id={user_id}")
+        _logger.warning("Upload not found for current user")
         raise HTTPException(status_code=404, detail={"detail": "Upload not found", "code": "UPLOAD_NOT_FOUND"})
     return resp.data[0]
 
 
 async def get_biomarkers_by_upload(upload_id: str, user_id: str) -> List[Dict]:
-    logger.error(f"get_biomarkers_by_upload called: upload_id={upload_id}, user_id={user_id}")
+    _logger.debug("get_biomarkers_by_upload called")
     supabase = _get_supabase()
     resp = await _run(
         lambda: supabase.table("biomarkers")
@@ -255,12 +265,12 @@ async def get_biomarkers_by_upload(upload_id: str, user_id: str) -> List[Dict]:
         .eq("user_id", user_id)
         .execute()
     )
-    logger.error(f"get_biomarkers_by_upload result: data_count={len(resp.data) if resp.data else 0}")
+    _logger.debug("get_biomarkers_by_upload completed")
     return resp.data
 
 
 async def get_protocol_by_upload(user_id: str, upload_id: str) -> Optional[Dict]:
-    logger.error(f"get_protocol_by_upload called: user_id={user_id}, upload_id={upload_id}")
+    _logger.debug("get_protocol_by_upload called")
     supabase = _get_supabase()
     resp = await _run(
         lambda: supabase.table("protocols")
@@ -270,7 +280,7 @@ async def get_protocol_by_upload(user_id: str, upload_id: str) -> Optional[Dict]
         .limit(1)
         .execute()
     )
-    logger.error(f"get_protocol_by_upload result: data={resp.data}")
+    _logger.debug("get_protocol_by_upload completed")
     return resp.data[0] if resp.data else None
 
 
@@ -597,15 +607,41 @@ async def get_user_progress(user_id: str) -> List[Dict]:
         .execute()
     )
 
-    result = []
-    for upload in uploads.data:
-        biomarkers = await _run(
-            lambda u=upload: supabase.table("biomarkers")
-            .select("name, value, unit, status, ref_low, ref_high")
-            .eq("upload_id", u["id"])
-            .execute()
+    rows = uploads.data or []
+    if not rows:
+        await _audit_medical_read(
+            user_id=user_id,
+            entity_type="lab_progress",
+            details={"upload_count": 0},
         )
-        result.append({**upload, "biomarkers": biomarkers.data})
+        return []
+
+    upload_ids = [row["id"] for row in rows]
+    biomarker_rows_resp = await _run(
+        lambda: supabase.table("biomarkers")
+        .select("upload_id, name, value, unit, status, ref_low, ref_high")
+        .in_("upload_id", upload_ids)
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+    grouped: Dict[str, List[Dict[str, Any]]] = {}
+    for biomarker in biomarker_rows_resp.data or []:
+        upload_id = biomarker.get("upload_id")
+        if not upload_id:
+            continue
+        grouped.setdefault(upload_id, []).append(
+            {
+                "name": biomarker.get("name"),
+                "value": biomarker.get("value"),
+                "unit": biomarker.get("unit"),
+                "status": biomarker.get("status"),
+                "ref_low": biomarker.get("ref_low"),
+                "ref_high": biomarker.get("ref_high"),
+            }
+        )
+
+    result = [{**upload, "biomarkers": grouped.get(upload["id"], [])} for upload in rows]
     await _audit_medical_read(
         user_id=user_id,
         entity_type="lab_progress",

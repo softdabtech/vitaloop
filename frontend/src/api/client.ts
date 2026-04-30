@@ -12,14 +12,38 @@ const api = axios.create({
   timeout: 30_000, // 30 s — prevents requests from hanging indefinitely
 })
 
-api.interceptors.request.use(async (config) => {
-  if (!hasSupabaseConfig) {
-    return config
+function readAccessTokenFromSupabaseStorage() {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const key = Object.keys(window.localStorage).find((item) => item.startsWith('sb-') && item.endsWith('-auth-token'))
+    if (!key) return null
+
+    const raw = window.localStorage.getItem(key)
+    if (!raw) return null
+
+    const parsed = JSON.parse(raw)
+    return parsed?.access_token || parsed?.currentSession?.access_token || null
+  } catch {
+    return null
+  }
+}
+
+async function resolveAccessToken() {
+  if (hasSupabaseConfig) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) {
+      return session.access_token
+    }
   }
 
-  const { data: { session } } = await supabase.auth.getSession()
-  if (session?.access_token) {
-    config.headers.Authorization = `Bearer ${session.access_token}`
+  return readAccessTokenFromSupabaseStorage()
+}
+
+api.interceptors.request.use(async (config) => {
+  const token = await resolveAccessToken()
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
@@ -78,6 +102,18 @@ api.interceptors.response.use(
 
     if (status === 401) {
       const authBoundary = requestUrl.includes('/auth/me')
+
+      // Retry once for non-auth-boundary requests. This covers session-hydration races
+      // right after login when the first request may miss the Authorization header.
+      if (!authBoundary && !error.config?._retry) {
+        error.config._retry = true
+        const token = await resolveAccessToken()
+        if (token) {
+          error.config.headers = error.config.headers || {}
+          error.config.headers.Authorization = `Bearer ${token}`
+          return api.request(error.config)
+        }
+      }
 
       // Only force global sign-out on auth boundary calls.
       // For other endpoints we propagate the error so screens can degrade gracefully.

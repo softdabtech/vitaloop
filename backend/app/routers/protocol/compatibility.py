@@ -2,7 +2,12 @@ from fastapi import APIRouter, Depends
 
 from app.dependencies import get_current_user, require_active_subscription
 from app.services.assignment_service import AssignmentService
-from app.services.supabase_service import get_user_progress
+from app.services.supabase_service import (
+    assert_upload_belongs_to_user,
+    get_biomarkers_by_upload,
+    get_protocol_by_upload,
+    get_user_progress,
+)
 
 router = APIRouter(tags=["protocol-compatibility"])
 _assignment_service = AssignmentService()
@@ -27,3 +32,19 @@ async def list_assignments(current_user: dict = Depends(get_current_user)):
         global_role=global_role,
     )
     return {"items": rows, "total": len(rows)}
+
+
+@router.get("/results/{upload_id}")
+async def get_results_by_upload(upload_id: str, current_user: dict = Depends(get_current_user)):
+    """Compatibility endpoint for clients expecting /results/{upload_id}."""
+    user_id = current_user.get("sub")
+
+    await assert_upload_belongs_to_user(upload_id, user_id)
+    biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
+    protocol_row = await get_protocol_by_upload(user_id, upload_id)
+
+    return {
+        "upload_id": upload_id,
+        "biomarkers": biomarkers or [],
+        "protocol": (protocol_row or {}).get("recommendations") or [],
+    }

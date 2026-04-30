@@ -12,6 +12,7 @@ class TextAnalysisRequest(BaseModel):
     text: str
 
 class AnalysisResponse(BaseModel):
+    extracted_text: str | None = None
     biomarkers: List[Dict[str, Any]]
     recommendations: List[str]
 
@@ -49,6 +50,7 @@ async def analyze_file(file: UploadFile = File(...)):
         recommendations = medical_analyzer.generate_recommendations(biomarkers)
 
         return {
+            "extracted_text": extracted_text,
             "biomarkers": biomarkers,
             "recommendations": recommendations
         }

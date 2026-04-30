@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase.js'
+import api from '../lib/api.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { gaCheckInSubmit } from '../lib/analytics.js'
@@ -75,13 +75,13 @@ export default function WeeklyCheckIn() {
         .join(' | '),
     }
 
-    const { error } = await supabase.from('weekly_checkins').insert(payload)
-    setSubmitting(false)
-
-    if (!error) {
+    try {
+      await api.post('/checkins', payload)
       gaCheckInSubmit()
       setDone(true)
       setTimeout(() => navigate('/dashboard'), 900)
+    } finally {
+      setSubmitting(false)
     }
   }
 

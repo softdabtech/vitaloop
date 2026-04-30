@@ -49,6 +49,9 @@ export default function Results() {
   const { show: showHints, dismiss: dismissHints } = useTourHints('results')
   const [biomarkers, setBiomarkers] = useState([])
   const [protocol, setProtocol] = useState([])
+  const [medicalAnalysis, setMedicalAnalysis] = useState(null)
+  const [medicalAnalysisLoading, setMedicalAnalysisLoading] = useState(false)
+  const [medicalAnalysisError, setMedicalAnalysisError] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -66,6 +69,63 @@ export default function Results() {
     }
     load()
   }, [uploadId])
+
+  useEffect(() => {
+    if (!biomarkers.length) {
+      setMedicalAnalysis(null)
+      setMedicalAnalysisError('')
+      return
+    }
+
+    let active = true
+
+    async function runMedicalMicroserviceAnalysis() {
+      setMedicalAnalysisLoading(true)
+      setMedicalAnalysisError('')
+
+      try {
+        const lines = biomarkers.map((b) => {
+          const low = b?.ref_low != null ? String(b.ref_low) : ''
+          const high = b?.ref_high != null ? String(b.ref_high) : ''
+          const rangePart = low && high ? ` (${low}-${high})` : ''
+          const unitPart = b?.unit ? ` ${b.unit}` : ''
+          return `${b?.name || 'Unknown'}: ${b?.value ?? '--'}${unitPart}${rangePart}`
+        })
+
+        const formData = new FormData()
+        formData.append('text', lines.join('\n'))
+
+        const response = await fetch('/api/v1/analyze/text', {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (!response.ok) {
+          throw new Error(`Medical analysis failed: ${response.status}`)
+        }
+
+        const payload = await response.json()
+        if (active) {
+          setMedicalAnalysis(payload)
+        }
+      } catch (err) {
+        if (active) {
+          setMedicalAnalysis(null)
+          setMedicalAnalysisError('Medical microservice analysis is temporarily unavailable.')
+        }
+      } finally {
+        if (active) {
+          setMedicalAnalysisLoading(false)
+        }
+      }
+    }
+
+    runMedicalMicroserviceAnalysis()
+
+    return () => {
+      active = false
+    }
+  }, [biomarkers])
 
   if (loading) return <div className="flex items-center justify-center h-screen text-slate-500">Loading…</div>
 
@@ -159,6 +219,89 @@ export default function Results() {
             <div className="text-sm font-medium text-slate-900 mb-1">Needs Attention</div>
             <div className="text-xs text-slate-500">Requires action</div>
           </div>
+        </div>
+
+        <div className="mb-8">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Results Table</h3>
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-slate-700">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold">Biomarker</th>
+                  <th className="px-4 py-3 text-left font-semibold">Value</th>
+                  <th className="px-4 py-3 text-left font-semibold">Unit</th>
+                  <th className="px-4 py-3 text-left font-semibold">Reference Range</th>
+                  <th className="px-4 py-3 text-left font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rankedBiomarkers.map((b, idx) => (
+                  <tr key={b.id || `${b.name}-${idx}`} className="border-t border-slate-100">
+                    <td className="px-4 py-3 text-slate-900">{b.name || '—'}</td>
+                    <td className="px-4 py-3 text-slate-700">{b.value ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-700">{b.unit || '—'}</td>
+                    <td className="px-4 py-3 text-slate-700">{b.ref_low != null && b.ref_high != null ? `${b.ref_low} - ${b.ref_high}` : '—'}</td>
+                    <td className="px-4 py-3 text-slate-700">{String(b.status || 'UNKNOWN').toUpperCase()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Medical Microservice Analysis</h3>
+          {medicalAnalysisLoading && (
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+              Running medical analysis...
+            </div>
+          )}
+
+          {!medicalAnalysisLoading && medicalAnalysisError && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              {medicalAnalysisError}
+            </div>
+          )}
+
+          {!medicalAnalysisLoading && medicalAnalysis && (
+            <div className="space-y-4">
+              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-slate-50 text-slate-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold">Biomarker</th>
+                      <th className="px-4 py-3 text-left font-semibold">Value</th>
+                      <th className="px-4 py-3 text-left font-semibold">Unit</th>
+                      <th className="px-4 py-3 text-left font-semibold">Category</th>
+                      <th className="px-4 py-3 text-left font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(medicalAnalysis.biomarkers || []).map((item, idx) => (
+                      <tr key={`${item.key || item.name || 'm'}-${idx}`} className="border-t border-slate-100">
+                        <td className="px-4 py-3 text-slate-900">{item.name || '—'}</td>
+                        <td className="px-4 py-3 text-slate-700">{item.value ?? '—'}</td>
+                        <td className="px-4 py-3 text-slate-700">{item.unit || '—'}</td>
+                        <td className="px-4 py-3 text-slate-700">{item.category || '—'}</td>
+                        <td className="px-4 py-3 text-slate-700">{item.status || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {!!(medicalAnalysis.recommendations || []).length && (
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <h4 className="mb-2 text-sm font-semibold text-slate-900">Recommendations</h4>
+                  <ul className="list-disc pl-5 text-sm text-slate-700">
+                    {(medicalAnalysis.recommendations || []).map((r, idx) => (
+                      <li key={`rec-${idx}`}>{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="mb-8">
