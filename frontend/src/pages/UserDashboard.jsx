@@ -303,7 +303,14 @@ export default function UserDashboard() {
         />
       ) : (
         <>
-          <MetricBar stats={stats} uploadCount={uploadCount} uploadLimit={uploadLimit} />
+          <MetricBar
+            stats={stats}
+            uploadCount={uploadCount}
+            uploadLimit={uploadLimit}
+            subStatus={subStatus}
+            isPremium={isPremium}
+            latestCheckin={latestCheckin}
+          />
 
           {/* Achievement Banner */}
           {stats.completed_tasks > 0 && stats.completed_tasks % 5 === 0 && (

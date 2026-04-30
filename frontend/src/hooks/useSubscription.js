@@ -23,12 +23,30 @@ export function useSubscription() {
 
     const fetchSubscription = async (attempt = 0) => {
       try {
-        const { data } = await api.get('/stripe/subscription')
-        setSubStatus(data.sub_status ?? 'free')
-        setIsPremium(data.is_premium ?? false)
-        setUploadCount(data.upload_count ?? 0)
-        setUploadLimit(data.upload_limit ?? 1)
-        setUploadsRemaining(data.uploads_remaining ?? 0)
+        const [{ data: stripeData }, authMeResp] = await Promise.all([
+          api.get('/stripe/subscription'),
+          api.get('/auth/me').catch(() => null),
+        ])
+
+        const authMe = authMeResp?.data || null
+        const authStatus = String(authMe?.subscription_status || (authMe?.has_active_subscription ? 'active' : 'free')).toLowerCase()
+        const authPremium = Boolean(
+          authMe?.has_active_subscription
+          || authMe?.subscription_active
+          || authStatus === 'active'
+          || authMe?.global_role !== 'end_user'
+        )
+
+        const stripeStatus = String(stripeData?.sub_status ?? 'free').toLowerCase()
+        const stripePremium = Boolean(stripeData?.is_premium)
+        const isPremiumResolved = authPremium || stripePremium
+        const subStatusResolved = isPremiumResolved ? 'active' : stripeStatus
+
+        setSubStatus(subStatusResolved)
+        setIsPremium(isPremiumResolved)
+        setUploadCount(stripeData?.upload_count ?? 0)
+        setUploadLimit(isPremiumResolved ? null : (stripeData?.upload_limit ?? 1))
+        setUploadsRemaining(isPremiumResolved ? null : (stripeData?.uploads_remaining ?? 0))
         return
       } catch {
         try {

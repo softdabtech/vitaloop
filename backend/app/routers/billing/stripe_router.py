@@ -302,8 +302,10 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
         account = await get_user_account(user_id)
         upload_count = await get_user_upload_count(user_id)
         active_sub = await get_user_active_subscription(user_id)
-        sub_status = str(account.get("sub_status") or "free").lower()
-        global_role = str(account.get("global_role") or "end_user").lower()
+        account_sub_status = str(account.get("sub_status") or "free").lower()
+        claim_sub_status = "active" if bool(current_user.get("subscription_active")) else str(current_user.get("subscription_status") or "free").lower()
+        sub_status = "active" if claim_sub_status == "active" else account_sub_status
+        global_role = str(account.get("global_role") or current_user.get("global_role") or "end_user").lower()
         plan_name = (active_sub or {}).get("plan_name") or account.get("plan_tier") or None
     except Exception as ex:
         logger.warning("stripe_subscription_status_fallback user_id=%s error=%s", user_id, repr(ex))
