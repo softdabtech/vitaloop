@@ -32,7 +32,9 @@ export async function generateHealthTips(biomarkers: any[], userContext: any): P
 
     return data.tips || []
   } catch (error) {
-    console.error('Failed to generate health tips:', error)
+    if (error?.response?.status !== 404) {
+      console.error('Failed to generate health tips:', error)
+    }
     return getFallbackTips(biomarkers)
   }
 }

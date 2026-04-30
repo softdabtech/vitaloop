@@ -297,6 +297,7 @@ async def _handle_payment_failed(data: dict):
 async def get_subscription_status(current_user: dict = Depends(get_current_user)):
     """Return current subscription status + plan + freemium upload usage for the authenticated user."""
     user_id: str = current_user["sub"]
+    active_sub = None
     try:
         account = await get_user_account(user_id)
         upload_count = await get_user_upload_count(user_id)

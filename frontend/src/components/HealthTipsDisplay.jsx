@@ -7,6 +7,18 @@ export default function HealthTipsDisplay({ biomarkers, userContext }) {
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [expandedTip, setExpandedTip] = useState(null)
+  const biomarkersKey = JSON.stringify((biomarkers || []).map((b) => ({
+    name: b?.name,
+    value: b?.value,
+    status: b?.status,
+    category: b?.category,
+  })))
+  const userContextKey = JSON.stringify({
+    age: userContext?.age,
+    lifestyle: userContext?.lifestyle,
+    goals: userContext?.goals,
+    compliance: userContext?.protocol_adherence,
+  })
 
   useEffect(() => {
     async function loadTips() {
@@ -24,7 +36,7 @@ export default function HealthTipsDisplay({ biomarkers, userContext }) {
     if (biomarkers?.length > 0) {
       loadTips()
     }
-  }, [biomarkers, userContext])
+  }, [biomarkersKey, userContextKey])
 
   const categories = ['all', 'nutrition', 'exercise', 'sleep', 'stress', 'supplement']
   const filteredTips = selectedCategory === 'all'
