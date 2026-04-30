@@ -23,15 +23,28 @@ echo -e "${YELLOW}📦 Building and deploying analysis service...${NC}"
 # Create deployment package
 echo "Creating deployment package..."
 cd /Users/oleksii/projects/vitaloop/analysis-service
-tar -czf analysis-service.tar.gz --exclude='__pycache__' --exclude='*.pyc' --exclude='.git' .
+ARCHIVE_PATH="/tmp/analysis-service-$(date +%s).tar.gz"
+tar -czf "$ARCHIVE_PATH" \
+    --exclude='venv' \
+    --exclude='.venv' \
+    --exclude='__pycache__' \
+    --exclude='*.pyc' \
+    --exclude='.git' \
+    --exclude='analysis-service.tar.gz' \
+    --exclude='.pytest_cache' \
+    .
 
 # Upload to server
 echo "Uploading to server..."
-scp analysis-service.tar.gz $SERVER:/tmp/
+scp "$ARCHIVE_PATH" $SERVER:/tmp/analysis-service.tar.gz
 
 # Deploy on server
 ssh $SERVER << EOF
     set -e
+
+    echo "Installing OCR system dependencies (tesseract + poppler)..."
+    apt-get update -y
+    apt-get install -y tesseract-ocr poppler-utils
     
     echo "Stopping existing service..."
     systemctl stop $SERVICE_NAME 2>/dev/null || true
@@ -48,7 +61,7 @@ ssh $SERVER << EOF
     python3 -m venv venv
     source venv/bin/activate
     pip install --upgrade pip
-    pip install -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt
     
     echo "Creating systemd service..."
     cat > /etc/systemd/system/$SERVICE_NAME.service << SERVICE_EOF
@@ -75,6 +88,9 @@ SERVICE_EOF
     
     echo "Waiting for service to start..."
     sleep 5
+
+    echo "Verifying Tesseract install..."
+    tesseract --version | head -n 1
     
     echo "Checking service status..."
     systemctl status $SERVICE_NAME --no-pager
@@ -89,7 +105,7 @@ SERVICE_EOF
 EOF
 
 # Cleanup
-rm analysis-service.tar.gz
+rm -f "$ARCHIVE_PATH"
 
 echo -e "${GREEN}🎉 Analysis service deployed successfully!${NC}"
 echo -e "${GREEN}🌐 Service URL: http://159.65.252.227:8006${NC}"

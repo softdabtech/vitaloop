@@ -5,7 +5,8 @@ from ..config import settings
 
 class AnalysisServiceClient:
     def __init__(self):
-        self.base_url = settings.analysis_service_url.rstrip('/')
+        # Get URL with fallback for development
+        self.base_url = getattr(settings, 'analysis_service_url', 'http://159.65.252.227:8006').rstrip('/')
         self.client = httpx.AsyncClient(timeout=30.0)
 
     async def analyze_text(self, text: str) -> Dict[str, Any]:
@@ -13,7 +14,7 @@ class AnalysisServiceClient:
         try:
             response = await self.client.post(
                 f"{self.base_url}/api/v1/analyze/text",
-                json={"text": text}
+                data={"text": text}  # Use form data instead of JSON
             )
             response.raise_for_status()
             return response.json()

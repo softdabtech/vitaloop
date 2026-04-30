@@ -16,6 +16,10 @@ from app.services.supabase_service import (
     assert_upload_belongs_to_user,
     get_biomarkers_by_upload,
     get_protocol_by_upload,
+    save_biomarkers,
+    save_lab_upload,
+    save_timeline_event,
+    write_audit_log,
 )
 from app.constants import (
     ANALYZE_EXTRACT_TIMEOUT_SECONDS,

@@ -78,6 +78,12 @@ echo "[5/5] Smoke checks"
 if ssh "${SERVER}" "
   set -euo pipefail
   systemctl is-active vitaloop-backend
+  for i in {1..20}; do
+    if curl -fsS http://127.0.0.1:8004/health >/dev/null; then
+      break
+    fi
+    sleep 1
+  done
   curl -fsS http://127.0.0.1:8004/health >/dev/null
   echo 'backend deploy ok'
 "; then
@@ -106,6 +112,12 @@ else
     .venv/bin/pip install -q -r requirements.txt
     systemctl restart vitaloop-backend
     systemctl is-active vitaloop-backend
+    for i in {1..20}; do
+      if curl -fsS http://127.0.0.1:8004/health >/dev/null; then
+        break
+      fi
+      sleep 1
+    done
     curl -fsS http://127.0.0.1:8004/health >/dev/null
     echo 'rollback completed and backend is healthy'
   "

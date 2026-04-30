@@ -228,6 +228,7 @@ async def save_biomarkers(upload_id: str, user_id: str, biomarkers: List[Dict]) 
 
 
 async def assert_upload_belongs_to_user(upload_id: str, user_id: str) -> Dict:
+    logger.error(f"assert_upload_belongs_to_user called: upload_id={upload_id}, user_id={user_id}")
     supabase = _get_supabase()
     resp = await _run(
         lambda: supabase.table("lab_uploads")
@@ -237,12 +238,15 @@ async def assert_upload_belongs_to_user(upload_id: str, user_id: str) -> Dict:
         .limit(1)
         .execute()
     )
+    logger.error(f"assert_upload_belongs_to_user result: data={resp.data}")
     if not resp.data:
+        logger.error(f"Upload not found: upload_id={upload_id}, user_id={user_id}")
         raise HTTPException(status_code=404, detail={"detail": "Upload not found", "code": "UPLOAD_NOT_FOUND"})
     return resp.data[0]
 
 
 async def get_biomarkers_by_upload(upload_id: str, user_id: str) -> List[Dict]:
+    logger.error(f"get_biomarkers_by_upload called: upload_id={upload_id}, user_id={user_id}")
     supabase = _get_supabase()
     resp = await _run(
         lambda: supabase.table("biomarkers")
@@ -251,10 +255,12 @@ async def get_biomarkers_by_upload(upload_id: str, user_id: str) -> List[Dict]:
         .eq("user_id", user_id)
         .execute()
     )
+    logger.error(f"get_biomarkers_by_upload result: data_count={len(resp.data) if resp.data else 0}")
     return resp.data
 
 
 async def get_protocol_by_upload(user_id: str, upload_id: str) -> Optional[Dict]:
+    logger.error(f"get_protocol_by_upload called: user_id={user_id}, upload_id={upload_id}")
     supabase = _get_supabase()
     resp = await _run(
         lambda: supabase.table("protocols")
@@ -264,6 +270,7 @@ async def get_protocol_by_upload(user_id: str, upload_id: str) -> Optional[Dict]
         .limit(1)
         .execute()
     )
+    logger.error(f"get_protocol_by_upload result: data={resp.data}")
     return resp.data[0] if resp.data else None
 
 

@@ -15,9 +15,9 @@ os.environ.setdefault(
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
-from app.dependencies import get_current_user
-from app.routers import analyze as analyze_router
-from app.routers import protocol as protocol_router
+from app.dependencies import get_current_user, require_freemium_analyze, require_active_subscription
+from app.routers.analysis import analyze as analyze_router
+from app.routers.protocol import protocol as protocol_router
 
 
 async def run() -> None:
@@ -123,7 +123,10 @@ async def run() -> None:
     protocol_router.assert_upload_belongs_to_user = fake_assert_upload_belongs_to_user
     protocol_router.is_llm_configured = lambda: True
 
-    app.dependency_overrides[get_current_user] = lambda: {"sub": fake_user_id, "email": "smoke@vitaloop.test"}
+    fake_user = {"sub": fake_user_id, "email": "smoke@vitaloop.test"}
+    app.dependency_overrides[get_current_user] = lambda: fake_user
+    app.dependency_overrides[require_freemium_analyze] = lambda: fake_user
+    app.dependency_overrides[require_active_subscription] = lambda: fake_user
 
     try:
         transport = ASGITransport(app=app)
