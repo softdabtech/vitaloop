@@ -89,4 +89,5 @@ Deliverables:
 
 - Phase 1 implemented.
 - Phase 2 started: quality-aware engine routing and benchmark harness implemented.
-- Next step: Paddle runtime installation + canary enablement on production host.
+- Paddle canary routing implemented in service runtime (via `OCR_CANARY_PERCENT`).
+- Next step: install Paddle runtime on production host and run comparative benchmark.

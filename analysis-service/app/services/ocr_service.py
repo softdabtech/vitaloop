@@ -1,4 +1,5 @@
 import io
+import hashlib
 import logging
 import os
 import re
@@ -117,6 +118,7 @@ class OCRService:
         self.max_pdf_pages = int(os.getenv("OCR_MAX_PDF_PAGES", "2"))
         self.pdf_dpi = int(os.getenv("OCR_PDF_DPI", "180"))
         self.pdf_thread_count = int(os.getenv("OCR_PDF_THREAD_COUNT", "1"))
+        self.ocr_canary_percent = max(0, min(100, int(os.getenv("OCR_CANARY_PERCENT", "0"))))
 
         if provider == "auto":
             requested_order: List[str] = ["paddle", "surya", "tesseract"]
@@ -144,6 +146,30 @@ class OCRService:
             self.enable_mock_fallback,
         )
 
+    def _engine_order_for_request(self, request_key: str) -> List[BaseOCREngine]:
+        if not self.engines:
+            return []
+
+        names = [engine.name for engine in self.engines]
+        has_paddle = "paddle" in names
+        if not has_paddle:
+            return self.engines
+
+        if self.ocr_canary_percent <= 0:
+            # Keep Paddle as deep fallback when canary is disabled.
+            return sorted(self.engines, key=lambda e: 1 if e.name == "tesseract" else 2 if e.name == "surya" else 3)
+
+        digest = hashlib.sha1(request_key.encode("utf-8", errors="ignore")).hexdigest()
+        bucket = int(digest[:8], 16) % 100
+        in_canary = bucket < self.ocr_canary_percent
+
+        if in_canary:
+            # Canary requests try Paddle first.
+            return sorted(self.engines, key=lambda e: 0 if e.name == "paddle" else 1 if e.name == "surya" else 2)
+
+        # Non-canary requests keep stable baseline order.
+        return sorted(self.engines, key=lambda e: 0 if e.name == "tesseract" else 1 if e.name == "surya" else 2)
+
     def _build_engine(self, engine_name: str) -> BaseOCREngine | None:
         try:
             if engine_name == "tesseract":
@@ -167,13 +193,13 @@ class OCRService:
             filename_lower = filename.lower()
 
             if filename_lower.endswith(SUPPORTED_IMAGE_EXTENSIONS):
-                return self._extract_text_from_image(content)
+                return self._extract_text_from_image(content, filename)
             elif filename_lower.endswith('.pdf'):
-                return self._extract_text_from_pdf(content)
+                return self._extract_text_from_pdf(content, filename)
             else:
                 # For unknown formats, try to treat as image
                 logger.warning(f"Unknown file format {filename}, attempting image OCR")
-                return self._extract_text_from_image(content)
+                return self._extract_text_from_image(content, filename)
 
         except Exception as e:
             logger.error(f"OCR extraction failed for {filename}: {str(e)}")
@@ -181,7 +207,7 @@ class OCRService:
                 return self._get_mock_lab_data()
             return ""
 
-    def _extract_text_from_image(self, image_bytes: bytes) -> str:
+    def _extract_text_from_image(self, image_bytes: bytes, request_key: str) -> str:
         """Extract text from image via configured OCR engine chain."""
         try:
             # Convert bytes to PIL Image
@@ -190,7 +216,8 @@ class OCRService:
             # Convert PIL to OpenCV format
             opencv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
-            combined_text = self._run_engine_chain(opencv_image)
+            engine_order = self._engine_order_for_request(request_key)
+            combined_text = self._run_engine_chain(opencv_image, engine_order)
             logger.info("OCR extracted %s characters from image", len(combined_text))
 
             if combined_text.strip():
@@ -205,7 +232,7 @@ class OCRService:
                 return self._get_mock_lab_data()
             return ""
 
-    def _run_engine_chain(self, image_bgr: np.ndarray) -> str:
+    def _run_engine_chain(self, image_bgr: np.ndarray, engine_order: List[BaseOCREngine]) -> str:
         # Cap very large inputs to reduce memory pressure while preserving readability.
         h, w = image_bgr.shape[:2]
         max_side = 2200
@@ -217,7 +244,7 @@ class OCRService:
         best_engine = "none"
         best_score = -1.0
 
-        for engine in self.engines:
+        for engine in engine_order:
             try:
                 text = engine.extract_from_image(image_bgr).strip()
             except Exception as exc:
@@ -269,7 +296,7 @@ class OCRService:
         score += min(range_hits * 0.2, 1.0)
         return score
 
-    def _extract_text_from_pdf(self, pdf_bytes: bytes) -> str:
+    def _extract_text_from_pdf(self, pdf_bytes: bytes, request_key: str) -> str:
         """Extract text from PDF by converting pages to images and OCRing each page."""
         try:
             logger.info("Converting PDF to images for OCR processing")
@@ -287,11 +314,13 @@ class OCRService:
 
             extracted_texts = []
 
+            engine_order = self._engine_order_for_request(request_key)
+
             for i, image in enumerate(images):
                 logger.info(f"Processing PDF page {i + 1}/{len(images)}")
 
                 opencv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-                page_text = self._run_engine_chain(opencv_image)
+                page_text = self._run_engine_chain(opencv_image, engine_order)
                 if page_text.strip():
                     extracted_texts.append(page_text.strip())
 
