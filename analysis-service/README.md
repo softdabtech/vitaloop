@@ -5,10 +5,25 @@ Medical lab analysis microservice for VITALOOP platform.
 ## Features
 
 - **OCR Processing**: Extract text from lab reports (PDF/images)
+- **Provider Chain**: Configurable OCR provider and fallback sequence
 - **Biomarker Analysis**: Analyze 20+ medical biomarkers
 - **Reference Ranges**: Comprehensive reference ranges for all markers
 - **Recommendations**: AI-powered health recommendations
 - **REST API**: FastAPI-based RESTful API
+
+## OCR Configuration
+
+The service supports provider-based OCR routing.
+
+- `OCR_PROVIDER` - primary OCR engine (`tesseract`, `paddle`, `surya`)
+- `OCR_FALLBACK_CHAIN` - comma-separated fallback engines
+- `OCR_ENABLE_MOCK_FALLBACK` - `true` only for local demo/testing
+
+Current default rollout is safe mode:
+
+- `OCR_PROVIDER=tesseract`
+- `OCR_FALLBACK_CHAIN=`
+- `OCR_ENABLE_MOCK_FALLBACK=false`
 
 ## Supported Biomarkers
 

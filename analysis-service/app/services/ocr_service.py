@@ -1,22 +1,153 @@
-import logging
 import io
-from typing import Optional
-from PIL import Image
-import pytesseract
-# import easyocr  # Temporarily disabled due to disk space
+import logging
+import os
+from abc import ABC, abstractmethod
+from typing import List
+
 import cv2
 import numpy as np
+import pytesseract
+from PIL import Image
 from pdf2image import convert_from_bytes
 
 logger = logging.getLogger(__name__)
 
+SUPPORTED_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".webp")
+
+
+class BaseOCREngine(ABC):
+    name: str
+
+    @abstractmethod
+    def extract_from_image(self, image_bgr: np.ndarray) -> str:
+        pass
+
+
+class TesseractOCREngine(BaseOCREngine):
+    name = "tesseract"
+
+    def __init__(self) -> None:
+        # Prioritize languages relevant to current user base; fallback to English-only.
+        self._language_candidates = ["eng+spa+rus+ukr", "eng+spa", "eng"]
+        self._config_candidates = [
+            "--oem 3 --psm 6",
+            "--oem 3 --psm 4",
+            "--oem 3 --psm 11",
+        ]
+
+    def extract_from_image(self, image_bgr: np.ndarray) -> str:
+        variants = self._build_variants(image_bgr)
+        best_text = ""
+
+        for variant in variants:
+            for lang in self._language_candidates:
+                for config in self._config_candidates:
+                    try:
+                        text = pytesseract.image_to_string(variant, lang=lang, config=config).strip()
+                    except Exception:
+                        continue
+                    if len(text) > len(best_text):
+                        best_text = text
+
+        return best_text
+
+    def _build_variants(self, image_bgr: np.ndarray) -> List[np.ndarray]:
+        gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(gray)
+        _, otsu = cv2.threshold(clahe, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        adaptive = cv2.adaptiveThreshold(
+            clahe,
+            255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY,
+            35,
+            11,
+        )
+
+        # Slight denoise while preserving edges for tabular documents.
+        bilateral = cv2.bilateralFilter(gray, d=5, sigmaColor=35, sigmaSpace=35)
+        _, bilateral_otsu = cv2.threshold(bilateral, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        return [gray, clahe, otsu, adaptive, bilateral_otsu]
+
+
+class PaddleOCREngine(BaseOCREngine):
+    name = "paddle"
+
+    def __init__(self) -> None:
+        try:
+            from paddleocr import PaddleOCR  # type: ignore
+
+            self._ocr = PaddleOCR(use_angle_cls=True, lang="en")
+        except Exception as exc:
+            raise RuntimeError("PaddleOCR is not installed or failed to initialize") from exc
+
+    def extract_from_image(self, image_bgr: np.ndarray) -> str:
+        result = self._ocr.ocr(image_bgr, cls=True)
+        lines: List[str] = []
+        for block in result or []:
+            for item in block or []:
+                try:
+                    text = str(item[1][0]).strip()
+                except Exception:
+                    text = ""
+                if text:
+                    lines.append(text)
+        return "\n".join(lines).strip()
+
+
+class SuryaOCREngine(BaseOCREngine):
+    name = "surya"
+
+    def __init__(self) -> None:
+        raise RuntimeError("Surya OCR adapter placeholder: package wiring not enabled in this phase")
+
+    def extract_from_image(self, image_bgr: np.ndarray) -> str:
+        raise RuntimeError("Surya OCR adapter placeholder")
+
+
 class OCRService:
-    """Service for extracting text from images and PDFs using real OCR"""
+    """OCR service with provider selection + fallback chain."""
 
     def __init__(self):
-        # Initialize EasyOCR reader (temporarily disabled)
-        # self.easyocr_reader = easyocr.Reader(['en'])
-        logger.info("OCR Service initialized with Tesseract (EasyOCR disabled)")
+        provider = os.getenv("OCR_PROVIDER", "tesseract").strip().lower()
+        fallback_chain_raw = os.getenv("OCR_FALLBACK_CHAIN", "").strip().lower()
+        self.enable_mock_fallback = os.getenv("OCR_ENABLE_MOCK_FALLBACK", "false").strip().lower() == "true"
+
+        requested_order: List[str] = [provider]
+        if fallback_chain_raw:
+            requested_order.extend([name.strip() for name in fallback_chain_raw.split(",") if name.strip()])
+        if "tesseract" not in requested_order:
+            requested_order.append("tesseract")
+
+        self.engines: List[BaseOCREngine] = []
+        for engine_name in requested_order:
+            engine = self._build_engine(engine_name)
+            if engine is not None and engine.name not in [e.name for e in self.engines]:
+                self.engines.append(engine)
+
+        if not self.engines:
+            self.engines = [TesseractOCREngine()]
+
+        logger.info(
+            "OCR Service initialized provider=%s fallback_chain=%s mock_fallback=%s",
+            provider,
+            [engine.name for engine in self.engines],
+            self.enable_mock_fallback,
+        )
+
+    def _build_engine(self, engine_name: str) -> BaseOCREngine | None:
+        try:
+            if engine_name == "tesseract":
+                return TesseractOCREngine()
+            if engine_name == "paddle":
+                return PaddleOCREngine()
+            if engine_name == "surya":
+                return SuryaOCREngine()
+        except Exception as exc:
+            logger.warning("OCR engine %s unavailable: %s", engine_name, exc)
+            return None
+        logger.warning("Unknown OCR engine requested: %s", engine_name)
+        return None
 
     async def extract_text(self, content: bytes, filename: str) -> str:
         """
@@ -26,7 +157,7 @@ class OCRService:
         try:
             filename_lower = filename.lower()
 
-            if filename_lower.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff')):
+            if filename_lower.endswith(SUPPORTED_IMAGE_EXTENSIONS):
                 return self._extract_text_from_image(content)
             elif filename_lower.endswith('.pdf'):
                 return self._extract_text_from_pdf(content)
@@ -37,45 +168,59 @@ class OCRService:
 
         except Exception as e:
             logger.error(f"OCR extraction failed for {filename}: {str(e)}")
-            # Fallback to mock data if OCR fails
-            return self._get_mock_lab_data()
+            if self.enable_mock_fallback:
+                return self._get_mock_lab_data()
+            return ""
 
     def _extract_text_from_image(self, image_bytes: bytes) -> str:
-        """Extract text from image using Tesseract OCR"""
+        """Extract text from image via configured OCR engine chain."""
         try:
             # Convert bytes to PIL Image
-            image = Image.open(io.BytesIO(image_bytes))
+            image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
             # Convert PIL to OpenCV format
             opencv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
-            # Tesseract OCR
-            tesseract_text = ""
-            try:
-                # Preprocessing for better OCR
-                gray = cv2.cvtColor(opencv_image, cv2.COLOR_BGR2GRAY)
-                # Apply threshold to get better contrast
-                _, threshold = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                tesseract_text = pytesseract.image_to_string(threshold, config='--psm 6')
-            except Exception as e:
-                logger.warning(f"Tesseract OCR failed: {e}")
+            combined_text = self._run_engine_chain(opencv_image)
+            logger.info("OCR extracted %s characters from image", len(combined_text))
 
-            # EasyOCR disabled temporarily
-            # easyocr_result = self.easyocr_reader.readtext(opencv_image)
-            # easyocr_text = " ".join([text for _, text, confidence in easyocr_result if confidence > 0.5])
-
-            # Use Tesseract result
-            combined_text = tesseract_text.strip()
-
-            logger.info(f"OCR extracted {len(combined_text)} characters from image")
-            return combined_text.strip() or self._get_mock_lab_data()
+            if combined_text.strip():
+                return combined_text.strip()
+            if self.enable_mock_fallback:
+                return self._get_mock_lab_data()
+            return ""
 
         except Exception as e:
             logger.error(f"Image OCR failed: {str(e)}")
-            return self._get_mock_lab_data()
+            if self.enable_mock_fallback:
+                return self._get_mock_lab_data()
+            return ""
+
+    def _run_engine_chain(self, image_bgr: np.ndarray) -> str:
+        best_text = ""
+        best_engine = "none"
+
+        for engine in self.engines:
+            try:
+                text = engine.extract_from_image(image_bgr).strip()
+            except Exception as exc:
+                logger.warning("OCR engine failed name=%s error=%s", engine.name, exc)
+                continue
+
+            if len(text) > len(best_text):
+                best_text = text
+                best_engine = engine.name
+
+            # Good-enough short-circuit for long table-like output.
+            if len(text) >= 220:
+                logger.info("OCR engine success name=%s chars=%s", engine.name, len(text))
+                return text
+
+        logger.info("OCR best result engine=%s chars=%s", best_engine, len(best_text))
+        return best_text
 
     def _extract_text_from_pdf(self, pdf_bytes: bytes) -> str:
-        """Extract text from PDF by converting to images and OCRing each page"""
+        """Extract text from PDF by converting pages to images and OCRing each page."""
         try:
             logger.info("Converting PDF to images for OCR processing")
 
@@ -87,28 +232,26 @@ class OCRService:
             for i, image in enumerate(images):
                 logger.info(f"Processing PDF page {i + 1}/{len(images)}")
 
-                # Convert PIL image to OpenCV format
                 opencv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-
-                # Apply OCR to each page
-                try:
-                    gray = cv2.cvtColor(opencv_image, cv2.COLOR_BGR2GRAY)
-                    _, threshold = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                    page_text = pytesseract.image_to_string(threshold, config='--psm 6')
-                    if page_text.strip():
-                        extracted_texts.append(page_text.strip())
-                except Exception as e:
-                    logger.warning(f"OCR failed for PDF page {i + 1}: {e}")
+                page_text = self._run_engine_chain(opencv_image)
+                if page_text.strip():
+                    extracted_texts.append(page_text.strip())
 
             # Combine all pages
             combined_text = "\n\n".join(extracted_texts)
 
-            logger.info(f"PDF OCR extracted {len(combined_text)} characters from {len(images)} pages")
-            return combined_text.strip() or self._get_mock_lab_data()
+            logger.info("PDF OCR extracted %s characters from %s pages", len(combined_text), len(images))
+            if combined_text.strip():
+                return combined_text.strip()
+            if self.enable_mock_fallback:
+                return self._get_mock_lab_data()
+            return ""
 
         except Exception as e:
             logger.error(f"PDF extraction failed: {str(e)}")
-            return self._get_mock_lab_data()
+            if self.enable_mock_fallback:
+                return self._get_mock_lab_data()
+            return ""
 
     def _get_mock_lab_data(self) -> str:
         """Return mock lab data for testing/fallback"""
