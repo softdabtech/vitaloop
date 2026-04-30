@@ -73,6 +73,13 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=$REMOTE_PATH
+Environment=OCR_PROVIDER=auto
+Environment=OCR_FALLBACK_CHAIN=tesseract
+Environment=OCR_ENABLE_MOCK_FALLBACK=false
+Environment=OCR_MAX_PDF_PAGES=2
+Environment=OCR_PDF_DPI=180
+Environment=OCR_PDF_THREAD_COUNT=1
+Environment=OMP_THREAD_LIMIT=1
 ExecStart=$REMOTE_PATH/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8006
 Restart=always
 RestartSec=5

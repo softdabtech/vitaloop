@@ -1,0 +1,8 @@
+# Optional OCR provider dependencies (phase 2 rollout)
+# Keep out of core requirements to avoid forcing heavy installs in constrained environments.
+
+paddleocr==2.7.3
+# Choose a Paddle runtime variant suitable for your host/accelerator.
+# For CPU-only Linux, pin one compatible version during rollout testing.
+# Example (verify compatibility first):
+# paddlepaddle==2.6.1
