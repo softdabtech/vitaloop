@@ -20,15 +20,17 @@ export function useSubscription() {
     }
 
     setLoading(true)
-    api.get('/stripe/subscription')
-      .then(({ data }) => {
+
+    const fetchSubscription = async (attempt = 0) => {
+      try {
+        const { data } = await api.get('/stripe/subscription')
         setSubStatus(data.sub_status ?? 'free')
         setIsPremium(data.is_premium ?? false)
         setUploadCount(data.upload_count ?? 0)
         setUploadLimit(data.upload_limit ?? 1)
         setUploadsRemaining(data.uploads_remaining ?? 0)
-      })
-      .catch(async () => {
+        return
+      } catch {
         try {
           const { data } = await api.get('/auth/me')
           const status = String(data?.subscription_status || (data?.has_active_subscription ? 'active' : 'free')).toLowerCase()
@@ -38,15 +40,27 @@ export function useSubscription() {
           setIsPremium(premium)
 
           // Conservative defaults when stripe endpoint is unavailable.
+          // Do not force free-plan limits for premium users.
           setUploadCount(0)
-          setUploadLimit(1)
+          setUploadLimit(premium ? null : 1)
           setUploadsRemaining(premium ? null : 1)
+          return
         } catch {
+          if (attempt < 1) {
+            await new Promise((resolve) => setTimeout(resolve, 900))
+            return fetchSubscription(attempt + 1)
+          }
+
           setSubStatus('free')
           setIsPremium(false)
+          setUploadCount(0)
+          setUploadLimit(1)
+          setUploadsRemaining(1)
         }
-      })
-      .finally(() => setLoading(false))
+      }
+    }
+
+    fetchSubscription().finally(() => setLoading(false))
   }, [user])
 
   useEffect(() => { refresh() }, [refresh])

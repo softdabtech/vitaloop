@@ -190,7 +190,7 @@ export default function UserDashboard() {
   const navigate = useNavigate()
   const reduced = useReducedMotion()
   const { show: showHints, dismiss: dismissHints } = useTourHints('dashboard')
-  const { uploadCount, uploadLimit } = useSubscription()
+  const { isPremium, subStatus, uploadCount, uploadLimit, loading: subscriptionLoading } = useSubscription()
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -347,7 +347,7 @@ export default function UserDashboard() {
             </div>
           </div>
 
-          {uploadLimit === 1 && (
+          {!subscriptionLoading && subStatus !== 'active' && !isPremium && uploadLimit === 1 && (
             <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-5 sm:p-6">
               <div className="flex items-start gap-4">
                 <div className="rounded-xl bg-amber-100 p-2.5 flex-shrink-0">

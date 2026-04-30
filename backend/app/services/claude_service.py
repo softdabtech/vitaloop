@@ -30,18 +30,23 @@ _SYSTEM_PROMPT = (
 )
 
 _STATUS_SUFFIX = r"(?:\s+(?:Normal|Low|High|Optimal|Deficient|Elevated|Borderline|Critical|LOW|HIGH|LOW NORMAL|HIGH NORMAL|[LHN]))?"
+_LETTER = r"A-Za-zА-Яа-яЁёЇїІіЄєҐґ"
+_NAME_START = rf"[{_LETTER}]"
+_NAME_BODY = rf"[{_LETTER}0-9()/%+\- ,._']"
+_UNIT_BODY = rf"[{_LETTER}%/µμ\-]"
+_UNIT_PATTERN = rf"{_UNIT_BODY}+(?:/{_UNIT_BODY}+)?"
 _LINE_PATTERNS = [
     re.compile(
-        r"(?P<name>[A-Za-z][A-Za-z0-9()/%+\- ,._]{2,}?)\s+"
+        rf"(?P<name>{_NAME_START}{_NAME_BODY}{{2,}}?)\s+"
         r"(?P<value>-?\d+(?:[.,]\d+)?)\s*"
-        r"(?P<unit>[A-Za-z%/µμ\-]+(?:/[A-Za-z]+)?)?\s*"
+        rf"(?P<unit>{_UNIT_PATTERN})?\s*"
         r"(?:(?P<low>-?\d+(?:[.,]\d+)?)\s*[-–]\s*(?P<high>-?\d+(?:[.,]\d+)?))?"
         + _STATUS_SUFFIX + r"\s*$"
     ),
     re.compile(
-        r"(?P<name>[A-Za-z][A-Za-z0-9()/%+\- ,._]{2,}?)\s*[:=]\s*"
+        rf"(?P<name>{_NAME_START}{_NAME_BODY}{{2,}}?)\s*[:=]\s*"
         r"(?P<value>-?\d+(?:[.,]\d+)?)\s*"
-        r"(?P<unit>[A-Za-z%/µμ\-]+(?:/[A-Za-z]+)?)?\s*"
+        rf"(?P<unit>{_UNIT_PATTERN})?\s*"
         r"(?:\(?(?P<low>-?\d+(?:[.,]\d+)?)\s*[-–]\s*(?P<high>-?\d+(?:[.,]\d+)?)\)?)?"
         + _STATUS_SUFFIX + r"\s*$"
     ),
