@@ -274,6 +274,96 @@ async def send_welcome_email(
     )
 
 
+async def send_premium_analysis_ready_email(
+    *,
+    to_email: str,
+    user_name: Optional[str],
+    dashboard_url: str,
+    eta_minutes: int = 10,
+    top_recommendations: Optional[list[str]] = None,
+) -> bool:
+    """Send branded VITALOOP email when deferred premium analysis is ready."""
+
+    safe_name = _safe(user_name) or "there"
+    safe_url = _safe(dashboard_url)
+    safe_eta = max(1, int(eta_minutes))
+
+    recommendations = [r for r in (top_recommendations or []) if str(r).strip()][:3]
+    rec_html = ""
+    if recommendations:
+        items = "".join(
+            f'<li style="margin:0 0 8px;color:#334155;font-size:14px;line-height:1.5;">{_safe(item)}</li>'
+            for item in recommendations
+        )
+        rec_html = f"""
+                <div style="margin:18px 0 0;padding:14px 16px;border:1px solid #d1fae5;background:#f0fdf4;border-radius:12px;">
+                  <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#047857;margin:0 0 8px;">Top recommendations</div>
+                  <ul style="margin:0;padding-left:18px;">{items}</ul>
+                </div>
+"""
+
+    html = f"""
+<!doctype html>
+<html lang="en">
+  <body style="margin:0;padding:0;background:#f4f7f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #dbe7ef;">
+            <tr>
+              <td style="background:linear-gradient(135deg,#0b4033,#1d9e75);padding:26px 24px;color:#ffffff;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td style="vertical-align:middle;">
+                      <img src="https://vitaloop.today/icons/icon-192.png" alt="VITALOOP" width="34" height="34" style="display:block;border-radius:8px;border:1px solid rgba(255,255,255,0.35);background:#ffffff;padding:2px;" />
+                    </td>
+                    <td style="padding-left:10px;vertical-align:middle;">
+                      <div style="font-size:11px;letter-spacing:.12em;font-weight:700;text-transform:uppercase;opacity:.9;">VITALOOP Premium</div>
+                      <div style="margin-top:2px;font-size:16px;font-weight:700;">Your analysis is ready</div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:26px 24px;">
+                <p style="margin:0 0 12px;font-size:15px;line-height:1.7;color:#334155;">
+                  Hi <strong style="color:#0f172a;">{safe_name}</strong>, your detailed VITALOOP premium analysis is complete.
+                </p>
+                <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#475569;">
+                  We processed your uploaded lab report and prepared a personalized recommendation set in your cabinet.
+                </p>
+                <div style="padding:12px 14px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:13px;line-height:1.5;">
+                  Processing window used: approximately {safe_eta} minutes for higher-quality recommendations.
+                </div>
+                {rec_html}
+                <table role="presentation" cellspacing="0" cellpadding="0" style="margin:22px 0 10px;">
+                  <tr>
+                    <td>
+                      <a href="{safe_url}" style="display:inline-block;padding:13px 24px;border-radius:999px;background:#1d9e75;color:#ffffff;font-weight:700;font-size:14px;text-decoration:none;">Open My Premium Insights</a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:0;font-size:12px;line-height:1.6;color:#64748b;">
+                  You are receiving this because premium analysis notifications are enabled for your account.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+""".strip()
+
+    return await _deliver_html_email(
+        to_email=to_email,
+        subject="Your VITALOOP Premium Analysis Is Ready",
+        html=html,
+    )
+
+
 async def send_ops_alert_email(
     *,
     to_email: str,

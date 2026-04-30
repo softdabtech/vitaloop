@@ -217,13 +217,13 @@ async def _finalize_health_tips_job(job_id: str) -> None:
         account = await svc.get_user_account(user_id)
         to_email = str(account.get("email") or "").strip()
         if to_email:
-            await email_service.send_ops_alert_email(
+            top_titles = [str(t.get("title") or "").strip() for t in tips if isinstance(t, dict)]
+            await email_service.send_premium_analysis_ready_email(
                 to_email=to_email,
-                organization_name="VITALOOP Premium",
-                alert_title="Your lab analysis is ready",
-                alert_message="Your detailed premium summary is prepared. Open your dashboard to review recommendations.",
-                alert_level="info",
-                action_url=f"{settings.frontend_base_url}/lab-results",
+                user_name=account.get("full_name"),
+                dashboard_url=f"{settings.frontend_base_url}/lab-results",
+                eta_minutes=HEALTH_TIPS_DEFER_MINUTES,
+                top_recommendations=top_titles,
             )
     except Exception as ex:
         logger.warning("health_tips_email_failed user_id=%s error=%s", user_id, repr(ex))
