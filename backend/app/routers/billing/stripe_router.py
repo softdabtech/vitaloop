@@ -297,12 +297,21 @@ async def _handle_payment_failed(data: dict):
 async def get_subscription_status(current_user: dict = Depends(get_current_user)):
     """Return current subscription status + plan + freemium upload usage for the authenticated user."""
     user_id: str = current_user["sub"]
-    account = await get_user_account(user_id)
-    upload_count = await get_user_upload_count(user_id)
-    active_sub = await get_user_active_subscription(user_id)
-    sub_status = str(account.get("sub_status") or "free").lower()
-    global_role = str(account.get("global_role") or "end_user").lower()
-    plan_name = (active_sub or {}).get("plan_name") or account.get("plan_tier") or None
+    try:
+        account = await get_user_account(user_id)
+        upload_count = await get_user_upload_count(user_id)
+        active_sub = await get_user_active_subscription(user_id)
+        sub_status = str(account.get("sub_status") or "free").lower()
+        global_role = str(account.get("global_role") or "end_user").lower()
+        plan_name = (active_sub or {}).get("plan_name") or account.get("plan_tier") or None
+    except Exception as ex:
+        logger.warning("stripe_subscription_status_fallback user_id=%s error=%s", user_id, repr(ex))
+        # Degrade gracefully on transient data-layer failures.
+        sub_status = "active" if bool(current_user.get("subscription_active")) else str(current_user.get("subscription_status") or "free").lower()
+        global_role = str(current_user.get("global_role") or "end_user").lower()
+        plan_name = None
+        upload_count = 0
+
     limit = settings.freemium_upload_limit
     is_free = sub_status != "active" and global_role == "end_user"
 

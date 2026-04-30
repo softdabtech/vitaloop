@@ -193,12 +193,25 @@ export function useOCR() {
 
       const result = await response.json()
 
-      // Extract text from biomarkers (since the service returns analyzed data)
-      // For now, we'll reconstruct the text from biomarkers
-      let extractedText = `Lab Analysis Results\n\n`
+      const rawExtractedText = typeof result?.extracted_text === 'string' ? result.extracted_text.trim() : ''
+      if (rawExtractedText.length >= 40) {
+        console.log('PDF processed successfully using extracted_text, length:', rawExtractedText.length)
+        return rawExtractedText
+      }
+
+      if (!Array.isArray(result?.biomarkers) || result.biomarkers.length === 0) {
+        throw new Error('Could not extract readable text from this PDF. Please upload a clearer PDF scan or a high-quality photo of the full report page.')
+      }
+
+      // Fallback path: reconstruct minimum structured text from detected biomarkers.
+      let extractedText = 'Lab Analysis Results\n\n'
       result.biomarkers.forEach(biomarker => {
         extractedText += `${biomarker.name}: ${biomarker.value} ${biomarker.unit}\n`
       })
+
+      if (extractedText.trim().length < 40) {
+        throw new Error('Extracted PDF text is too short for reliable analysis. Please upload a clearer document.')
+      }
 
       console.log('PDF processed successfully, extracted text length:', extractedText.length)
       return extractedText
@@ -211,7 +224,10 @@ export function useOCR() {
       if (error.message.includes('PasswordException')) {
         throw new Error('This PDF is password-protected. Please remove the password and try again.')
       }
-      throw new Error('PDF processing failed. Please try uploading a clear photo of your lab report instead.')
+      if (typeof error?.message === 'string' && error.message.trim()) {
+        throw new Error(error.message)
+      }
+      throw new Error('PDF processing failed. Please try uploading a clearer PDF or a sharp photo of your lab report instead.')
     }
   }
 

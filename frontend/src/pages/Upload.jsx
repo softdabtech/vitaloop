@@ -136,10 +136,19 @@ export default function Upload() {
       toast.success('Analysis complete!')
       navigate(`/results/${data.upload_id}`)
     } catch (err) {
-      let message = err.response?.data?.detail || 'Analysis failed. Please try again.'
-      // Улучшенная обработка ошибок
+      const errorData = err.response?.data || {}
+      const errorCode = errorData?.code
+      const errorDetail = typeof errorData?.detail === 'string' ? errorData.detail : null
+      let message = errorDetail || 'Analysis failed. Please try again.'
+
       if (err.response?.status === 422) {
-        message = 'Lab report format not recognized. Please upload a standard lab PDF or clear photo.'
+        if (errorCode === 'LAB_TEXT_TOO_SHORT') {
+          message = 'Not enough readable text found in the report. Please upload a clearer PDF or photo with full biomarker table visible.'
+        } else if (errorCode === 'BIOMARKERS_NOT_EXTRACTED') {
+          message = 'Could not detect biomarkers in this report format. Try a clearer full-page PDF or a sharp photo with names, values, and ranges visible.'
+        } else {
+          message = 'Lab report format not recognized. Please upload a standard lab PDF or clear photo.'
+        }
       } else if (err.response?.status === 413) {
         message = 'File too large for processing. Please upload a file under 20MB.'
       } else if (err.response?.status === 429) {

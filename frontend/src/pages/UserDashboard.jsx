@@ -257,6 +257,7 @@ export default function UserDashboard() {
   const completedJourneyCount = journeySteps.filter((step) => step.done).length
 
   const greeting = useMemo(() => profile?.first_name || user?.email?.split('@')?.[0] || 'there', [profile?.first_name, user?.email])
+  const latestUploadId = latestUpload?.upload_id || latestUpload?.id || null
 
   const fadeUp = (delay = 0) => reduced
     ? {}
@@ -458,7 +459,10 @@ export default function UserDashboard() {
                       <button onClick={() => navigate('/insights')} className="text-sm font-semibold text-purple-700 hover:text-purple-800">
                         View details →
                       </button>
-                      <button onClick={() => navigate('/protocol')} className="text-sm text-purple-600 hover:text-purple-700">
+                      <button
+                        onClick={() => navigate(latestUploadId ? `/protocol/${latestUploadId}` : '/lab-results')}
+                        className="text-sm text-purple-600 hover:text-purple-700"
+                      >
                         Update protocol →
                       </button>
                     </div>

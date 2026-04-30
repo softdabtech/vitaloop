@@ -38,6 +38,20 @@ function formatDate(iso) {
   return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
 }
 
+function pickLatestBiomarkers(progressRows = []) {
+  if (!Array.isArray(progressRows) || progressRows.length === 0) return []
+
+  const withDate = progressRows
+    .filter((row) => Array.isArray(row?.biomarkers) && row.biomarkers.length > 0)
+    .sort((a, b) => {
+      const aTime = new Date(a?.created_at || a?.test_date || 0).getTime()
+      const bTime = new Date(b?.created_at || b?.test_date || 0).getTime()
+      return bTime - aTime
+    })
+
+  return withDate[0]?.biomarkers || []
+}
+
 export default function Insights() {
   const [timeline, setTimeline] = useState([])
   const [insights, setInsights] = useState([])
@@ -53,14 +67,14 @@ export default function Insights() {
       api.get('/timeline'),
       api.get('/insights'),
       api.get('/insights/health-score'),
-      api.get('/results/latest'),
-    ]).then(([timelineResult, insightsResult, healthResult, resultsResult]) => {
+      api.get('/progress'),
+    ]).then(([timelineResult, insightsResult, healthResult, progressResult]) => {
       if (timelineResult.status === 'fulfilled') setTimeline(timelineResult.value.data || [])
       else setError('Failed to load timeline')
 
       if (insightsResult.status === 'fulfilled') setInsights(insightsResult.value.data || [])
       if (healthResult.status === 'fulfilled') setHealthScore(healthResult.value.data || null)
-      if (resultsResult.status === 'fulfilled') setBiomarkers(resultsResult.value.data?.biomarkers || [])
+      if (progressResult.status === 'fulfilled') setBiomarkers(pickLatestBiomarkers(progressResult.value.data || []))
     }).catch(err => setError('Error loading insights'))
   }, [])
 

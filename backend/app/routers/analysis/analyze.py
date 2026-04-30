@@ -19,6 +19,7 @@ from app.services.supabase_service import (
     save_biomarkers,
     save_lab_upload,
     save_timeline_event,
+    update_lab_upload_status,
     write_audit_log,
 )
 from app.constants import (
@@ -191,6 +192,7 @@ async def analyze_lab(
         if cached is not None:
             return cached
 
+    upload_id: Optional[str] = None
     try:
         # Save raw OCR text (never the PDF)
         try:
@@ -294,6 +296,11 @@ async def analyze_lab(
             await _complete_idempotency(user_id=user_id, idempotency_key=normalized_key, response=result)
         return result
     except Exception:
+        if upload_id:
+            try:
+                await update_lab_upload_status(upload_id, "failed")
+            except Exception:
+                logger.warning("analyze_mark_failed_status_failed upload_id=%s user_id=%s", upload_id, user_id)
         if normalized_key:
             await _drop_idempotency(user_id=user_id, idempotency_key=normalized_key)
         raise

@@ -28,9 +28,23 @@ export function useSubscription() {
         setUploadLimit(data.upload_limit ?? 1)
         setUploadsRemaining(data.uploads_remaining ?? 0)
       })
-      .catch(() => {
-        setSubStatus('free')
-        setIsPremium(false)
+      .catch(async () => {
+        try {
+          const { data } = await api.get('/auth/me')
+          const status = String(data?.subscription_status || (data?.has_active_subscription ? 'active' : 'free')).toLowerCase()
+          const premium = Boolean(data?.has_active_subscription || data?.subscription_active || status === 'active' || data?.global_role !== 'end_user')
+
+          setSubStatus(status)
+          setIsPremium(premium)
+
+          // Conservative defaults when stripe endpoint is unavailable.
+          setUploadCount(0)
+          setUploadLimit(1)
+          setUploadsRemaining(premium ? null : 1)
+        } catch {
+          setSubStatus('free')
+          setIsPremium(false)
+        }
       })
       .finally(() => setLoading(false))
   }, [user])
