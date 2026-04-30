@@ -1,10 +1,12 @@
 import { AlertCircle, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { generateHealthTips, filterTipsByCategory, sortTipsByDifficulty } from '../lib/ai-health-tips'
+import { generateHealthTips, getHealthTipsJob, filterTipsByCategory, sortTipsByDifficulty } from '../lib/ai-health-tips'
 
 export default function HealthTipsDisplay({ biomarkers, userContext }) {
   const [tips, setTips] = useState([])
   const [loading, setLoading] = useState(true)
+  const [pendingMessage, setPendingMessage] = useState('')
+  const [pendingJobId, setPendingJobId] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [expandedTip, setExpandedTip] = useState(null)
   const biomarkersKey = JSON.stringify((biomarkers || []).map((b) => ({
@@ -21,22 +23,73 @@ export default function HealthTipsDisplay({ biomarkers, userContext }) {
   })
 
   useEffect(() => {
+    let cancelled = false
+
     async function loadTips() {
       setLoading(true)
       try {
-        const generatedTips = await generateHealthTips(biomarkers, userContext)
-        setTips(sortTipsByDifficulty(generatedTips))
+        const result = await generateHealthTips(biomarkers, userContext)
+        if (cancelled) return
+
+        if (result.status === 'pending') {
+          setTips([])
+          setPendingJobId(result.jobId || null)
+          setPendingMessage(result.message || 'Premium analysis is processing. Please check back in about 10 minutes.')
+          return
+        }
+
+        setPendingJobId(null)
+        setPendingMessage('')
+        setTips(sortTipsByDifficulty(result.tips || []))
       } catch (error) {
         console.error('Failed to load health tips:', error)
       } finally {
-        setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
     }
 
     if (biomarkers?.length > 0) {
       loadTips()
     }
+
+    return () => {
+      cancelled = true
+    }
   }, [biomarkersKey, userContextKey])
+
+  useEffect(() => {
+    if (!pendingJobId) return
+
+    let attempts = 0
+    let timer = null
+    let cancelled = false
+
+    const poll = async () => {
+      attempts += 1
+      const result = await getHealthTipsJob(pendingJobId)
+      if (cancelled) return
+
+      if (result.status === 'ready') {
+        setTips(sortTipsByDifficulty(result.tips || []))
+        setPendingJobId(null)
+        setPendingMessage('')
+        return
+      }
+
+      setPendingMessage(result.message || pendingMessage)
+      if (attempts < 30) {
+        timer = setTimeout(poll, 20000)
+      }
+    }
+
+    timer = setTimeout(poll, 20000)
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
+  }, [pendingJobId])
 
   const categories = ['all', 'nutrition', 'exercise', 'sleep', 'stress', 'supplement']
   const filteredTips = selectedCategory === 'all'
@@ -70,6 +123,19 @@ export default function HealthTipsDisplay({ biomarkers, userContext }) {
         <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
           AI-generated recommendations based on your biomarkers
         </p>
+        {pendingJobId && (
+          <div style={{
+            marginTop: '12px',
+            padding: '12px',
+            borderRadius: '10px',
+            border: '1px solid #bfdbfe',
+            background: '#eff6ff',
+            color: '#1e3a8a',
+            fontSize: '13px'
+          }}>
+            {pendingMessage || 'Premium analysis is processing. We will notify you when it is ready.'}
+          </div>
+        )}
       </div>
 
       {/* Category Filter */}

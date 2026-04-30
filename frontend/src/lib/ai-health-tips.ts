@@ -13,7 +13,14 @@ export interface HealthTip {
   icon?: string
 }
 
-export async function generateHealthTips(biomarkers: any[], userContext: any): Promise<HealthTip[]> {
+export interface HealthTipsResult {
+  tips: HealthTip[]
+  status: 'ready' | 'pending' | 'failed'
+  jobId?: string
+  message?: string
+}
+
+export async function generateHealthTips(biomarkers: any[], userContext: any): Promise<HealthTipsResult> {
   try {
     const { data } = await api.post('/llm/health-tips', {
       biomarkers: biomarkers.map(b => ({
@@ -30,12 +37,57 @@ export async function generateHealthTips(biomarkers: any[], userContext: any): P
       },
     })
 
-    return data.tips || []
+    if (data?.status === 'pending') {
+      return {
+        tips: [],
+        status: 'pending',
+        jobId: data?.job_id,
+        message: data?.message,
+      }
+    }
+
+    return {
+      tips: data?.tips || [],
+      status: 'ready',
+      message: data?.message,
+    }
   } catch (error) {
     if (error?.response?.status !== 404) {
       console.error('Failed to generate health tips:', error)
     }
-    return getFallbackTips(biomarkers)
+    return {
+      tips: getFallbackTips(biomarkers),
+      status: 'failed',
+      message: 'Using fallback recommendations while premium analysis is unavailable.',
+    }
+  }
+}
+
+export async function getHealthTipsJob(jobId: string): Promise<HealthTipsResult> {
+  try {
+    const { data } = await api.get(`/llm/health-tips/${jobId}`)
+    if (data?.status === 'pending' || data?.status === 'processing') {
+      return {
+        tips: [],
+        status: 'pending',
+        jobId: data?.job_id || jobId,
+        message: data?.message,
+      }
+    }
+
+    return {
+      tips: data?.tips || [],
+      status: 'ready',
+      jobId: data?.job_id || jobId,
+      message: data?.message,
+    }
+  } catch (error) {
+    return {
+      tips: [],
+      status: 'failed',
+      jobId,
+      message: 'Could not refresh premium analysis status.',
+    }
   }
 }
 
