@@ -18,6 +18,7 @@ The service supports provider-based OCR routing.
 - `OCR_PROVIDER` - primary OCR engine (`tesseract`, `paddle`, `surya`)
 - `OCR_FALLBACK_CHAIN` - comma-separated fallback engines
 - `OCR_ENABLE_MOCK_FALLBACK` - `true` only for local demo/testing
+- `OCR_CANARY_PERCENT` - percentage of requests routed through Paddle-first order when available
 
 Current default rollout is safe mode:
 

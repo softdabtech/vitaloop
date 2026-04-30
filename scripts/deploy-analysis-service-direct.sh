@@ -62,6 +62,10 @@ ssh $SERVER << EOF
     source venv/bin/activate
     pip install --upgrade pip
     pip install --no-cache-dir -r requirements.txt
+    if [ "${INSTALL_PADDLE:-false}" = "true" ]; then
+        echo "Installing optional Paddle OCR dependencies..."
+        pip install --no-cache-dir -r requirements-paddle.txt || echo "⚠️ Paddle optional deps failed; continuing with fallback engines"
+    fi
     
     echo "Creating systemd service..."
     cat > /etc/systemd/system/$SERVICE_NAME.service << SERVICE_EOF
@@ -76,6 +80,7 @@ WorkingDirectory=$REMOTE_PATH
 Environment=OCR_PROVIDER=auto
 Environment=OCR_FALLBACK_CHAIN=tesseract
 Environment=OCR_ENABLE_MOCK_FALLBACK=false
+Environment=OCR_CANARY_PERCENT=10
 Environment=OCR_MAX_PDF_PAGES=2
 Environment=OCR_PDF_DPI=180
 Environment=OCR_PDF_THREAD_COUNT=1
