@@ -9,6 +9,20 @@ from uuid import UUID
 from datetime import datetime
 
 
+def _require_live_supabase() -> None:
+    from app.config import settings
+
+    url = str(getattr(settings, "supabase_url", "") or "").strip().lower()
+    key = str(getattr(settings, "active_supabase_service_key", "") or "").strip().lower()
+    # These tests require real credentials and network access.
+    if not url or "your-supabase-url" in url:
+        pytest.skip("Live Supabase URL is not configured")
+    if not key or "your-service-role-key" in key:
+        pytest.skip("Live Supabase service role key is not configured")
+    if "." not in key:
+        pytest.skip("Supabase service role key is not a JWT-like token")
+
+
 @pytest.mark.asyncio
 async def test_crm_client_visibility():
     """
@@ -20,6 +34,7 @@ async def test_crm_client_visibility():
     3. Verifies GET /crm/clients returns the user
     4. Verifies email + display_name enrichment works
     """
+    _require_live_supabase()
     try:
         from app.services import supabase_service as svc
         from app.dependencies_crm import get_user_context, UserContext
@@ -119,6 +134,7 @@ async def test_crm_client_list_orphaned_users():
     Test that identifies orphaned users (auth but no client).
     This test is for monitoring/diagnostic purposes.
     """
+    _require_live_supabase()
     try:
         from app.services import supabase_service as svc
         
@@ -178,6 +194,7 @@ async def test_crm_trigger_active():
     """
     Test that the trigger for auto-creating client records is active.
     """
+    _require_live_supabase()
     try:
         from app.services import supabase_service as svc
         

@@ -176,18 +176,32 @@ export function useOCR() {
     try {
       console.log('Starting PDF extraction for file:', file.name, 'size:', file.size)
 
-      // For now, use OCR for all PDFs since PDF.js causes SES issues
-      // Convert PDF pages to images and OCR them
-      console.log('Converting PDF to images for OCR processing')
+      // Send PDF to analysis service for processing
+      console.log('Sending PDF to analysis service for OCR processing')
 
-      // We'll need to implement PDF to image conversion
-      // For now, return a placeholder message
-      throw new Error('PDF processing temporarily disabled due to security restrictions. Please upload a clear photo of your lab report instead.')
+      const formData = new FormData()
+      formData.append('file', file)
 
-      // Future implementation would use:
-      // 1. PDF.js in a web worker (but that causes SES issues)
-      // 2. Server-side PDF processing
-      // 3. Alternative PDF libraries
+      const response = await fetch('/api/v1/analyze', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        throw new Error(`Analysis service error: ${response.status} ${response.statusText}`)
+      }
+
+      const result = await response.json()
+
+      // Extract text from biomarkers (since the service returns analyzed data)
+      // For now, we'll reconstruct the text from biomarkers
+      let extractedText = `Lab Analysis Results\n\n`
+      result.biomarkers.forEach(biomarker => {
+        extractedText += `${biomarker.name}: ${biomarker.value} ${biomarker.unit}\n`
+      })
+
+      console.log('PDF processed successfully, extracted text length:', extractedText.length)
+      return extractedText
 
     } catch (error) {
       console.error('PDF processing error:', error)
@@ -197,7 +211,7 @@ export function useOCR() {
       if (error.message.includes('PasswordException')) {
         throw new Error('This PDF is password-protected. Please remove the password and try again.')
       }
-      throw new Error('PDF processing is currently unavailable. Please upload a clear photo of your lab report instead.')
+      throw new Error('PDF processing failed. Please try uploading a clear photo of your lab report instead.')
     }
   }
 

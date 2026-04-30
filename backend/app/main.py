@@ -131,7 +131,7 @@ app.add_middleware(
 )
 
 app.include_router(health.router, tags=["health"])
-app.include_router(analyze.router, prefix="/results", tags=["analyze"])
+app.include_router(analyze.router, prefix="/analyze", tags=["analyze"])
 app.include_router(protocol.router, prefix="/protocol", tags=["protocol"])
 app.include_router(progress.router, prefix="/progress", tags=["progress"])
 app.include_router(symptoms.router, prefix="/symptoms", tags=["symptoms"])

@@ -258,6 +258,9 @@ Useful variants:
 
 ```bash
 ./scripts/deploy-prod.sh --force
+
+# One-command post-deploy smoke (health + PDF + image + non-empty biomarkers)
+./scripts/post_deploy_smoke.sh
 ./scripts/deploy-prod.sh --no-backup
 RUN_RATE_LIMIT_SMOKE=1 ./scripts/deploy-prod.sh
 ```

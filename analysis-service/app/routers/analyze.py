@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from typing import List, Dict, Any
 from app.services.ocr_service import OCRService
@@ -16,11 +16,11 @@ class AnalysisResponse(BaseModel):
     recommendations: List[str]
 
 @router.post("/analyze/text", response_model=AnalysisResponse)
-async def analyze_text(request: TextAnalysisRequest):
+async def analyze_text(text: str = Form(...)):
     """Analyze lab results from text input"""
     try:
         # Extract biomarkers from text
-        biomarkers = await medical_analyzer.analyze_biomarkers(request.text)
+        biomarkers = await medical_analyzer.analyze_biomarkers(text)
 
         # Generate recommendations
         recommendations = medical_analyzer.generate_recommendations(biomarkers)
