@@ -108,8 +108,8 @@ export function TestimonialsCarousel() {
           </AnimatePresence>
 
           {/* Navigation */}
-          <div className="flex items-center justify-between mt-12">
-            <div className="flex gap-2">
+          <div className="flex items-center justify-between mt-12 gap-4">
+            <div className="flex gap-2 flex-1">
               {TESTIMONIALS.map((_, i) => (
                 <motion.button
                   key={i}
@@ -118,7 +118,7 @@ export function TestimonialsCarousel() {
                     setAutoPlay(false)
                   }}
                   className={`h-2 rounded-full transition-all ${
-                    i === active ? 'w-8 bg-teal-400' : 'w-2 bg-slate-600 hover:bg-slate-500'
+                    i === active ? 'w-8 bg-emerald-500' : 'w-2 bg-slate-300 hover:bg-slate-400'
                   }`}
                   whileHover={{ scale: 1.2 }}
                 />
@@ -189,7 +189,7 @@ function BeforeAfterChart({ testimonial }) {
           initial={{ scale: 0, rotate: -90 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="text-2xl text-teal-400"
+          className="text-2xl text-emerald-500"
         >
           →
         </motion.div>
