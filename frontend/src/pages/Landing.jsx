@@ -25,6 +25,10 @@ import {
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
 import { AnimatedHero } from '../components/landing/AnimatedHero.jsx'
+import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx'
+import { TestimonialsCarousel } from '../components/landing/TestimonialsCarousel.jsx'
+import { InteractivePricing } from '../components/landing/InteractivePricing.jsx'
+import { AnimatedFAQ } from '../components/landing/AnimatedFAQ.jsx'
 
 const NAV_LINKS = [
   { id: 'how-it-works', label: 'Product' },
@@ -1121,6 +1125,8 @@ export default function Landing() {
 
         </section>
 
+        <HowItWorksTimeline />
+
         <section id="why-vitaloop" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7">
             <motion.h2
@@ -1189,97 +1195,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <section id="pricing" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
-          <motion.div {...fadeUp(reduced)} className="mb-7 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h2 className="text-[28px] font-semibold tracking-tight">Pricing</h2>
-              <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
-                Entry-level access for your first report, a real premium layer for longitudinal self-optimization, and an operations plan for practitioners who need client visibility and workflow control.
-              </p>
-            </div>
-            <div className={`relative inline-flex rounded-2xl border p-1 ${'border-slate-300 bg-white'}`}>
-              <motion.span
-                layout
-                transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-                className="absolute inset-y-1 w-[calc(50%-4px)] rounded-xl bg-emerald-500"
-                style={{ left: pricingMode === 'monthly' ? 4 : 'calc(50% + 0px)' }}
-              />
-              {['monthly', 'yearly'].map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setPricingMode(mode)}
-                  className={`relative z-10 rounded-xl px-5 py-2 text-sm font-semibold capitalize transition ${pricingMode === mode ? 'text-slate-950' : 'text-slate-600 hover:text-slate-900'}`}
-                >
-                  {mode}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-
-          <div className="grid gap-5 lg:grid-cols-3">
-            {pricingCards.map((plan) => (
-              <motion.article
-                key={plan.name}
-                {...fadeUp(reduced)}
-                whileHover={reduced ? undefined : { y: -4, scale: 1.01 }}
-                className={`flex h-full flex-col rounded-3xl border p-7 md:p-8 ${plan.featured ? 'border-emerald-400 bg-gradient-to-b from-[#f3fff9] to-[#ecfff6] text-slate-900' : 'border-slate-200 bg-white'}`}
-                style={{ boxShadow: plan.featured ? '0 0 0 4px rgba(16,185,129,0.16), 0 24px 32px -8px rgb(0 0 0 / 0.16), 0 12px 16px -10px rgb(0 0 0 / 0.14)' : '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08)' }}
-              >
-                <div className="mb-4 flex min-h-[36px] items-center justify-between gap-3">
-                  <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${plan.featured ? 'text-emerald-600' : 'text-emerald-700'}`}>
-                    {PLAN_DETAILS[plan.name]?.eyebrow}
-                  </p>
-                  {plan.featured && (
-                    <span className="shrink-0 rounded-full border border-emerald-400 bg-emerald-300 px-4 py-1.5 text-xs font-extrabold uppercase tracking-[0.14em] text-slate-900 shadow-[0_10px_24px_rgba(16,185,129,0.35)]">
-                      Most popular
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-xl font-semibold">{plan.name}</h3>
-                <div className="mt-4 flex items-end gap-1">
-                  <span className="text-4xl font-bold tracking-tight">{plan.price}</span>
-                  <span className={`pb-1 text-sm ${plan.featured ? 'text-slate-500' : 'text-slate-500'}`}>{plan.period}</span>
-                </div>
-                <div className="mt-5 flex flex-1 flex-col gap-5">
-                  <p className={`text-base leading-relaxed ${plan.featured ? 'text-slate-600' : 'text-slate-600'}`}>
-                    {PLAN_DETAILS[plan.name]?.description}
-                  </p>
-                  <ul className="space-y-2.5">
-                    {plan.points.map((point) => (
-                      <li key={point} className="flex items-start gap-2.5 text-sm">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
-                        <span className={plan.featured ? 'text-slate-600' : 'text-slate-600'}>{point}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className={`mt-auto rounded-2xl border px-4 py-4 text-base leading-relaxed ${plan.featured ? 'border-slate-300 bg-slate-600 text-slate-100' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
-                    {PLAN_DETAILS[plan.name]?.idealFor}
-                  </div>
-                </div>
-                <button onClick={() => {
-                  if (plan.name === 'Enterprise') {
-                    window.location.href = 'mailto:info@softdab.tech?subject=Vitaloop%20Enterprise'
-                    return
-                  }
-                  navigate('/login?signup=true')
-                }} className={`mt-6 w-full ${ctaBase} ${plan.featured ? 'border border-emerald-400 bg-emerald-200 text-emerald-900 hover:bg-emerald-300' : 'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
-                  {plan.cta}
-                </button>
-                {plan.name === 'Enterprise' && (
-                  <div className="mt-3 space-y-2">
-                    <p className={`text-center text-xs ${'text-slate-500'}`}>Custom seats, onboarding, and workflow setup are scoped with your team.</p>
-                    <button
-                      onClick={() => navigate('/for-investors')}
-                      className={`mx-auto block text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700 hover:text-emerald-600'}`}
-                    >
-                      View enterprise workflow details
-                    </button>
-                  </div>
-                )}
-              </motion.article>
-            ))}
-          </div>
-        </section>
+        <InteractivePricing />
 
         <section id="traction" className="mx-auto w-full max-w-[1240px] px-4 py-8 sm:px-6 md:py-10">
           <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}>
@@ -1331,83 +1247,9 @@ export default function Landing() {
           </motion.div>
         </section>
 
-        <section id="testimonials" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
-          <motion.div {...fadeUp(reduced)} className="mb-7">
-            <motion.h2
-              className="text-[28px] font-semibold tracking-tight md:text-[34px]"
-              initial={reduced ? false : { opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              Real Users.{' '}
-              <span className="bg-gradient-to-r from-emerald-600 to-sky-600 bg-clip-text text-transparent">
-                Real Biomarker Progress.
-              </span>
-            </motion.h2>
-          </motion.div>
-          <div className="grid gap-4 md:grid-cols-3">
-            {TESTIMONIALS.map((item, idx) => (
-              <motion.article
-                key={item.author}
-                {...fadeUp(reduced, idx * 0.06)}
-                whileHover={reduced ? {} : { y: -6, scale: 1.02, boxShadow: '0 0 0 3px rgba(16,185,129,0.15), 0 24px 36px -8px rgba(0,0,0,0.18)' }}
-                className={`group relative overflow-hidden rounded-3xl border p-6 ${'border-slate-200 bg-white'}`}
-              >
-                {/* Gradient overlay on hover */}
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-sky-500/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                />
-                <p className={`relative text-[17px] leading-[1.7] ${'text-slate-700'}`}>"{item.quote}"</p>
-                {item.result && (
-                  <motion.div
-                    className={`relative mt-3 rounded-xl border px-3 py-2 text-xs font-semibold ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}
-                    whileHover={reduced ? {} : { scale: 1.02, borderColor: 'rgb(16, 185, 129)' }}
-                  >
-                    {item.result}
-                  </motion.div>
-                )}
-                <div className="relative mt-5 flex items-center gap-3">
-                  <motion.span
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-semibold text-emerald-700"
-                    whileHover={reduced ? {} : { scale: 1.1, rotate: 5 }}
-                  >
-                    {item.author[0]}
-                  </motion.span>
-                  <div>
-                    <div className="text-sm font-semibold">{item.author}</div>
-                    <div className={`text-xs ${'text-slate-500'}`}>{item.role}</div>
-                  </div>
-                </div>
-              </motion.article>
-            ))}
-          </div>
-        </section>
+        <TestimonialsCarousel />
 
-        {/* === FAQ Section === */}
-        <section id="faq" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
-          <motion.div {...fadeUp(reduced)} className="mb-7">
-            <h2 className="text-[28px] font-semibold tracking-tight">FAQ: AI Lab Analysis & Biohacking Platform</h2>
-            <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
-              Common questions about AI-powered blood test interpretation, biomarker tracking, and personalized health protocols.
-            </p>
-          </motion.div>
-          <div className="grid gap-3 md:gap-4">
-            {FAQ_ITEMS.map((item, idx) => (
-              <motion.details
-                key={item.question}
-                {...fadeUp(reduced, idx * 0.04)}
-                className={`group rounded-2xl border px-5 py-4 ${'border-slate-200 bg-white'}`}
-              >
-                <summary className={`flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold ${'text-slate-800'}`}>
-                  <span>{item.question}</span>
-                  <span className="shrink-0 text-emerald-400 transition-transform group-open:rotate-45">+</span>
-                </summary>
-                <p className={`mt-3 text-sm leading-relaxed ${'text-slate-600'}`}>{item.answer}</p>
-              </motion.details>
-            ))}
-          </div>
-        </section>
+        <AnimatedFAQ />
 
         {/* === Blog teaser === */}
         <section aria-label="Health intelligence resources" className="mx-auto w-full max-w-[1240px] px-4 py-8 sm:px-6">
