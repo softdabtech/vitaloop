@@ -824,34 +824,33 @@ export default function Landing() {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              Traditional Labs{' '}
+              Lab Report{' '}
               <span className="relative">
-                <span className="bg-gradient-to-r from-rose-600 to-orange-600 bg-clip-text text-transparent">vs</span>
-              </span>{' '}
-              VITALOOP
+                <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">→ VITALOOP</span>
+              </span>
             </motion.h2>
             <p className={`mx-auto mt-4 max-w-2xl text-lg ${'text-slate-600'}`}>
-              From confusion to clarity
+              From raw numbers to clarity
             </p>
           </motion.div>
 
           <div className="grid gap-8 lg:grid-cols-2">
-            {/* Traditional Problems */}
+            {/* Lab Report Journey */}
             <div className="space-y-4">
-              <motion.div 
+              <motion.div
                 {...fadeUp(reduced, 0.1)}
                 className="text-center"
               >
-                <span className="inline-flex rounded-full bg-rose-100 px-4 py-2 text-sm font-bold uppercase tracking-wider text-rose-700">
-                  ❌ Traditional Labs
+                <span className="inline-flex rounded-full bg-slate-100 px-4 py-2 text-sm font-bold uppercase tracking-wider text-slate-700">
+                  📄 Typical Lab Report
                 </span>
               </motion.div>
 
-              
+
               {[
-                { icon: X, title: 'No Priority', stat: '0', label: 'Which marker to fix first?' },
-                { icon: X, title: 'No History', stat: '0', label: 'No trend tracking' },
-                { icon: X, title: 'No Action', stat: '0', label: 'Just reference ranges' },
+                { icon: FileText, title: 'Reference Ranges', stat: '±', label: 'Values isolated from context' },
+                { icon: FileText, title: 'No Timeline', stat: '−', label: 'Single snapshot in time' },
+                { icon: FileText, title: 'No Guidance', stat: '?', label: 'What do I do now?' },
               ].map((item, idx) => {
                 const Icon = item.icon
                 return (
@@ -859,23 +858,23 @@ export default function Landing() {
                     key={item.title}
                     {...fadeUp(reduced, idx * 0.08 + 0.2)}
                     whileHover={reduced ? undefined : { scale: 1.03, x: -8 }}
-                    className={`group relative overflow-hidden rounded-3xl border bg-white p-8 ${'border-rose-200'}`}
+                    className={`group relative overflow-hidden rounded-3xl border bg-slate-50 p-8 ${'border-slate-200'}`}
                   >
                     <motion.div
-                      className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-orange-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                      className="absolute inset-0 bg-gradient-to-br from-slate-400/5 to-slate-300/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     />
-                    
+
                     <div className="relative flex items-center gap-6">
                       <motion.div
-                        className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-rose-50"
+                        className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-slate-200"
                         whileHover={reduced ? {} : { rotate: [0, -10, 10, 0] }}
                         transition={{ duration: 0.5 }}
                       >
-                        <Icon className="h-10 w-10 text-rose-500" />
+                        <Icon className="h-10 w-10 text-slate-600" />
                       </motion.div>
-                      
+
                       <div className="flex-1">
-                        <div className="text-3xl font-bold text-rose-600">{item.stat}</div>
+                        <div className="text-3xl font-bold text-slate-600">{item.stat}</div>
                         <h3 className="mt-1 text-xl font-bold">{item.title}</h3>
                         <p className="mt-1 text-sm text-slate-600">{item.label}</p>
                       </div>
@@ -885,21 +884,21 @@ export default function Landing() {
               })}
             </div>
 
-            {/* VITALOOP Solutions */}
+            {/* VITALOOP Intelligence */}
             <div className="space-y-4">
-              <motion.div 
+              <motion.div
                 {...fadeUp(reduced, 0.1)}
                 className="text-center"
               >
                 <span className="inline-flex rounded-full bg-emerald-100 px-4 py-2 text-sm font-bold uppercase tracking-wider text-emerald-700">
-                  ✅ VITALOOP
+                  ✨ VITALOOP Analysis
                 </span>
               </motion.div>
-              
+
               {[
-                { icon: TrendingUp, title: 'AI Ranking', stat: '100%', label: 'Shows what matters most' },
-                { icon: Clock3, title: 'Full History', stat: '∞', label: 'Tracks every trend' },
-                { icon: Sparkles, title: 'Action Plan', stat: '24/7', label: 'Weekly protocols' },
+                { icon: TrendingUp, title: 'Prioritized Insights', stat: '→', label: 'AI ranks what matters most' },
+                { icon: Clock3, title: 'Trend Context', stat: '📈', label: 'See patterns across time' },
+                { icon: Sparkles, title: 'Actionable Protocol', stat: '✓', label: 'Ranked steps to take' },
               ].map((item, idx) => {
                 const Icon = item.icon
                 return (
