@@ -75,7 +75,7 @@ export function TestimonialsCarousel() {
         </motion.div>
 
         {/* Carousel */}
-        <div className="relative">
+        <div className="relative pb-20">
           <AnimatePresence mode="wait">
             <motion.div
               key={active}
@@ -83,7 +83,7 @@ export function TestimonialsCarousel() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -100 }}
               transition={{ duration: 0.5 }}
-              className="grid md:grid-cols-2 gap-12 items-center"
+              className="grid md:grid-cols-2 gap-8 lg:gap-12 items-start lg:items-center"
             >
               {/* Before/After Chart */}
               <BeforeAfterChart testimonial={testimonial} />
@@ -108,7 +108,7 @@ export function TestimonialsCarousel() {
           </AnimatePresence>
 
           {/* Navigation */}
-          <div className="flex items-center justify-between mt-12 gap-4">
+          <div className="absolute -bottom-16 left-0 right-0 flex items-center justify-between gap-4 px-4 sm:px-0">
             <div className="flex gap-2 flex-1">
               {TESTIMONIALS.map((_, i) => (
                 <motion.button
@@ -160,13 +160,13 @@ function BeforeAfterChart({ testimonial }) {
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.6 }}
-      className="relative h-80 bg-white border border-slate-200 rounded-2xl p-8 flex flex-col justify-between"
+      className="relative bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 flex flex-col justify-between min-h-96"
     >
-      <div className="text-center mb-8">
-        <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">{label}</h3>
+      <div className="text-center mb-6 sm:mb-8">
+        <h3 className="text-xs sm:text-sm font-semibold text-slate-600 uppercase tracking-wide">{label}</h3>
       </div>
 
-      <div className="flex items-end justify-around gap-4 flex-1 mb-8">
+      <div className="flex items-end justify-around gap-3 sm:gap-4 flex-1 mb-8">
         {/* Before bar */}
         <motion.div
           initial={{ height: 0 }}
