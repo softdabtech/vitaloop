@@ -1,12 +1,11 @@
-import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth.js'
-import api from '../lib/api.js'
 import ProgressChart from '../components/ProgressChart.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import LockedFeatureOverlay from '../components/LockedFeatureOverlay.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useSubscription } from '../hooks/useSubscription.js'
 import { useNavigate } from 'react-router-dom'
+import { useProgress } from '../hooks/useQueries.js'
 import '../styles/dashboard2026.css'
 
 function getBiomarkerValue(upload, name) {
@@ -25,37 +24,11 @@ export default function Progress() {
   const navigate = useNavigate()
   const { subStatus } = useSubscription()
   const isPro = subStatus === 'active'
-  const [data, setData] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { data: progressData, isLoading, isError } = useProgress()
 
-  useEffect(() => {
-    if (!user) return
-    api.get('/progress')
-      .then((res) => {
-        setData(Array.isArray(res.data) ? res.data : [])
-        setError(null)
-        setLoading(false)
-      })
-      .catch((err) => {
-        console.error('Progress fetch error:', err)
-        const status = err.response?.status
-        
-        if (status === 401) {
-          navigate('/login')
-        } else if (status === 404) {
-          setData([])
-          setError(null)
-        } else if (status === 402) {
-          setError('premium')
-        } else {
-          setError('failed')
-        }
-        setLoading(false)
-      })
-  }, [user, navigate])
+  const data = Array.isArray(progressData) ? progressData : []
 
-  if (loading) return (
+  if (isLoading) return (
     <div className="mx-auto w-full max-w-6xl">
         <div className="mb-6 h-8 w-48 animate-pulse rounded-xl bg-slate-200" />
         <div className="mb-6 grid gap-3 sm:grid-cols-3">
@@ -66,31 +39,8 @@ export default function Progress() {
     </div>
   )
 
-  // Premium error
-  if (error === 'premium') {
-    return (
-      <div className="mx-auto w-full max-w-4xl">
-          <CabinetPageHeader
-            title="Progress Tracker"
-            subtitle="Track concrete biomarker movement between uploads and monitor protocol effect over time."
-          />
-          <div className="vtl-light-card p-8 text-center">
-            <h3 className="mb-2 text-xl font-semibold text-slate-800">Advanced Tracking</h3>
-            <p className="mb-6 text-slate-500">Detailed progress tracking is available with Vitaloop Premium.</p>
-          <button 
-            onClick={() => { window.location.href = '/#pricing' }} 
-              className="vtl-button-primary px-8"
-          >
-            Upgrade to Premium
-          </button>
-            <p className="mt-4 text-sm text-slate-400">You can still upload new tests as a free user.</p>
-          </div>
-      </div>
-    )
-  }
-
   // Error state
-  if (error === 'failed') {
+  if (isError) {
     return (
       <div className="mx-auto w-full max-w-4xl">
           <CabinetPageHeader
@@ -99,8 +49,8 @@ export default function Progress() {
           />
           <div className="rounded-xl border border-rose-200 bg-rose-50 p-8 text-center">
             <p className="mb-4 text-rose-700">Unable to load progress data. Please try again.</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
               className="vtl-button-primary px-6"
           >
             Retry

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import HintBanner from '../components/tour/HintBanner.jsx'
@@ -11,9 +11,9 @@ import {
   FlaskConical,
   Sparkles,
 } from 'lucide-react'
-import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useSubscription } from '../hooks/useSubscription.js'
+import { useDashboardSummary } from '../hooks/useQueries.js'
 import StatCard from '../components/dashboard/StatCard.jsx'
 import HealthChart from '../components/dashboard/HealthChart.jsx'
 import AssignmentCard from '../components/dashboard/AssignmentCard.jsx'
@@ -191,46 +191,23 @@ export default function UserDashboard() {
   const reduced = useReducedMotion()
   const { show: showHints, dismiss: dismissHints } = useTourHints('dashboard')
   const { isPremium, subStatus, uploadCount, uploadLimit, loading: subscriptionLoading } = useSubscription()
-  const [summary, setSummary] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { data: dashboardData, isLoading } = useDashboardSummary()
 
-  useEffect(() => {
-    if (!user) return
-
-    let active = true
-    setLoading(true)
-
-    api.get('/dashboard/summary')
-      .then((response) => {
-        if (!active) return
-        const payload = response?.data || {}
-        const rankedAssignments = enrichAssignments(payload?.blocks?.assignments || [])
-          .sort((a, b) => (b?.priority?.score || 0) - (a?.priority?.score || 0))
-
-        setSummary({
-          ...payload,
-          blocks: {
-            ...payload.blocks,
-            assignments: rankedAssignments,
-            today_focus: rankedAssignments.filter((item) => String(item?.status || '').toLowerCase() !== 'completed').slice(0, 3),
-          },
-        })
-        setError(null)
-      })
-      .catch(() => {
-        if (!active) return
-        setError('Could not load current dashboard data.')
-      })
-      .finally(() => {
-        if (!active) return
-        setLoading(false)
-      })
-
-    return () => {
-      active = false
+  // Enrich assignments from dashboard data
+  const summary = useMemo(() => {
+    if (!dashboardData) return null
+    const payload = dashboardData
+    const rankedAssignments = enrichAssignments(payload?.blocks?.assignments || [])
+      .sort((a, b) => (b?.priority?.score || 0) - (a?.priority?.score || 0))
+    return {
+      ...payload,
+      blocks: {
+        ...payload.blocks,
+        assignments: rankedAssignments,
+        today_focus: rankedAssignments.filter((item) => String(item?.status || '').toLowerCase() !== 'completed').slice(0, 3),
+      },
     }
-  }, [user])
+  }, [dashboardData])
 
   const profile = summary?.profile || {}
   const stats = summary?.stats || {}
@@ -245,7 +222,7 @@ export default function UserDashboard() {
   const hasUploads = Number(stats.total_uploads || 0) > 0
   const onboardingComplete = Boolean(user?.onboarding_complete || profile?.onboarding_complete)
   const hasProtocol = Boolean(stats.active_program && String(stats.active_program).toLowerCase() !== 'not started')
-  const isFirstRun = !loading && !hasUploads
+  const isFirstRun = !isLoading && !hasUploads
   const showStartHere = Boolean(startHere?.enabled && isFirstRun)
   const journeySteps = [
     { id: 'account', label: 'Account created', done: true },
@@ -285,15 +262,11 @@ export default function UserDashboard() {
         ) : null}
       />
 
-      {showHints && !loading && (
+      {showHints && !isLoading && (
         <HintBanner hints={DASHBOARD_HINTS} onDone={dismissHints} />
       )}
 
-      {error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
-      )}
-
-      {loading ? (
+      {isLoading ? (
         <DashboardLoadingState />
       ) : isFirstRun ? (
         <FirstRunDashboard
