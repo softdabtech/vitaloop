@@ -273,9 +273,12 @@ export default function UserDashboard() {
       <CabinetPageHeader
         title={`Welcome back, ${greeting}`}
         subtitle={profile?.onboarding?.requires_onboarding ? profile?.onboarding?.current_stage_label || 'Continue onboarding' : 'Your dashboard is assembled from current uploads, assignments, and check-ins.'}
-        helper={isFirstRun ? 'Start with one upload. The dashboard expands as soon as your first lab is processed.' : 'Your biomarker trends, supplement protocol, and assignments are all kept in sync here.'}
+        helper={isFirstRun ? 'Start with one upload. The dashboard expands as soon as your first lab is processed.' : `Your biomarker trends, supplement protocol, and assignments are all kept in sync here. ${isPremium ? '🌟 Premium Member' : '📋 Free Plan'}`}
         action={!loading && !isFirstRun ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${isPremium ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>
+              {isPremium ? '✨ Premium' : 'Free Plan'}
+            </div>
             <button onClick={() => navigate('/upload')} className="vtl-button-primary px-4 text-sm">Upload labs</button>
             {hasUploads && <button onClick={() => navigate('/lab-results')} className="vtl-button-secondary px-4 text-sm">Open results</button>}
           </div>
@@ -492,10 +495,12 @@ export default function UserDashboard() {
                     <span className="text-sm text-slate-600">Assignments completed</span>
                     <span className="text-sm font-semibold text-emerald-600">{stats.completed_tasks || 0}</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">Labs uploaded</span>
-                    <span className="text-sm font-semibold text-blue-600">{stats.total_uploads || 0}</span>
-                  </div>
+                  <button
+                    onClick={() => navigate('/lab-results')}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-blue-50 transition cursor-pointer group">
+                    <span className="text-sm text-slate-600 group-hover:text-slate-800">Labs uploaded</span>
+                    <span className="text-sm font-semibold text-blue-600 group-hover:text-blue-700">{stats.total_uploads || 0} →</span>
+                  </button>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-600">Check-ins done</span>
                     <span className="text-sm font-semibold text-purple-600">{latestCheckin ? 1 : 0}</span>

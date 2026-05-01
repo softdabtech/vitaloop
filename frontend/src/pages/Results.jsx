@@ -17,6 +17,27 @@ const STATUS_META = {
   OPTIMAL: { rank: 3, border: 'border-emerald-300', stripe: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700', text: 'text-emerald-700' },
 }
 
+const BIOMARKER_NAME_TRANSLATIONS = [
+  [/^Ретикулоцити\s*\(%\)$/i, 'Reticulocytes (%)'],
+  [/^Ретикулоцити\s*\(Г\/л\)$/i, 'Reticulocytes (G/L)'],
+  [/^Ретикулоцити$/i, 'Reticulocytes'],
+  [/^Незрілі ретикулоцити$/i, 'Immature Reticulocytes'],
+  [/^Зрілі ретикулоцити\s*\(%\)$/i, 'Mature Reticulocytes (%)'],
+  [/^Зрілі ретикулоцити\s*\(Т\/л\)$/i, 'Mature Reticulocytes (T/L)'],
+  [/^Зрілі ретикулоцити$/i, 'Mature Reticulocytes'],
+  [/^Середній об['’]єм ретикулоцита$/i, 'Mean Reticulocyte Volume'],
+  [/^Середній об['’]єм сферичних клітин$/i, 'Mean Spherized Cell Volume'],
+  [/^Ширина розподілення ретикулоцитів по об['’]єму$/i, 'Reticulocyte Volume Distribution Width'],
+]
+
+function toEnglishBiomarkerName(name) {
+  const raw = String(name || '').trim()
+  for (const [pattern, translated] of BIOMARKER_NAME_TRANSLATIONS) {
+    if (pattern.test(raw)) return translated
+  }
+  return raw
+}
+
 function scoreStatus(status) {
   return (STATUS_META[String(status || '').toUpperCase()] || { rank: 4 }).rank
 }
@@ -33,6 +54,41 @@ function computeRangePercent(biomarker) {
   const value = Number(biomarker?.value)
   if (!Number.isFinite(low) || !Number.isFinite(high) || !Number.isFinite(value) || high <= low) return 0
   return Math.max(0, Math.min(100, ((value - low) / (high - low)) * 100))
+}
+
+function normalizeBiomarkerStatus(biomarker) {
+  const raw = String(biomarker?.status || '').trim().toUpperCase()
+  const mapped = {
+    OPTIMAL: 'OPTIMAL',
+    NORMAL: 'OPTIMAL',
+    N: 'OPTIMAL',
+    BORDERLINE: 'BORDERLINE',
+    'LOW NORMAL': 'BORDERLINE',
+    'HIGH NORMAL': 'BORDERLINE',
+    LOW: 'DEFICIENT',
+    L: 'DEFICIENT',
+    DEFICIENT: 'DEFICIENT',
+    HIGH: 'ELEVATED',
+    H: 'ELEVATED',
+    ELEVATED: 'ELEVATED',
+    CRITICAL: 'ELEVATED',
+  }
+  if (mapped[raw]) return mapped[raw]
+
+  const low = Number(biomarker?.ref_low)
+  const high = Number(biomarker?.ref_high)
+  const value = Number(biomarker?.value)
+  if (Number.isFinite(low) && Number.isFinite(high) && Number.isFinite(value) && high > low) {
+    if (value < low) return 'DEFICIENT'
+    if (value > high) return 'ELEVATED'
+    const band = high - low
+    const lowerWarn = low + band * 0.15
+    const upperWarn = high - band * 0.15
+    if (value <= lowerWarn || value >= upperWarn) return 'BORDERLINE'
+    return 'OPTIMAL'
+  }
+
+  return 'BORDERLINE'
 }
 
 const RESULTS_HINTS = [
@@ -70,6 +126,15 @@ export default function Results() {
     load()
   }, [uploadId])
 
+  const normalizedBiomarkers = biomarkers.map((b) => {
+    const normalizedStatus = normalizeBiomarkerStatus(b)
+    return {
+      ...b,
+      name_en: toEnglishBiomarkerName(b?.name),
+      status_normalized: normalizedStatus,
+    }
+  })
+
   useEffect(() => {
     if (!biomarkers.length) {
       setMedicalAnalysis(null)
@@ -84,12 +149,12 @@ export default function Results() {
       setMedicalAnalysisError('')
 
       try {
-        const lines = biomarkers.map((b) => {
+        const lines = normalizedBiomarkers.map((b) => {
           const low = b?.ref_low != null ? String(b.ref_low) : ''
           const high = b?.ref_high != null ? String(b.ref_high) : ''
           const rangePart = low && high ? ` (${low}-${high})` : ''
           const unitPart = b?.unit ? ` ${b.unit}` : ''
-          return `${b?.name || 'Unknown'}: ${b?.value ?? '--'}${unitPart}${rangePart}`
+          return `${b?.name_en || 'Unknown'}: ${b?.value ?? '--'}${unitPart}${rangePart}`
         })
 
         const formData = new FormData()
@@ -125,15 +190,19 @@ export default function Results() {
     return () => {
       active = false
     }
-  }, [biomarkers])
+  }, [biomarkers, normalizedBiomarkers])
 
   if (loading) return <div className="flex items-center justify-center h-screen text-slate-500">Loading…</div>
 
-  const rankedBiomarkers = [...biomarkers].sort((a, b) => scoreStatus(a.status) - scoreStatus(b.status))
-  const deficient = biomarkers.filter((b) => b.status === 'DEFICIENT' || b.status === 'ELEVATED')
-  const optimal = biomarkers.filter((b) => b.status === 'OPTIMAL').length
-  const borderline = biomarkers.filter((b) => b.status === 'BORDERLINE').length
-  const topPriority = rankedBiomarkers.find((b) => String(b.status || '').toUpperCase() !== 'OPTIMAL') || rankedBiomarkers[0] || null
+  const rankedBiomarkers = [...normalizedBiomarkers].sort((a, b) => scoreStatus(a.status_normalized) - scoreStatus(b.status_normalized))
+  const deficient = normalizedBiomarkers.filter((b) => {
+    const status = b.status_normalized
+    return status === 'DEFICIENT' || status === 'ELEVATED'
+  })
+  const optimal = normalizedBiomarkers.filter((b) => b.status_normalized === 'OPTIMAL').length
+  const borderline = normalizedBiomarkers.filter((b) => b.status_normalized === 'BORDERLINE').length
+  const topPriority = rankedBiomarkers.find((b) => b.status_normalized !== 'OPTIMAL') || rankedBiomarkers[0] || null
+  const hasActionable = deficient.length + borderline > 0
 
   async function exportResultsAsPDF() {
     const node = document.querySelector('.vtl-page')
@@ -237,11 +306,11 @@ export default function Results() {
               <tbody>
                 {rankedBiomarkers.map((b, idx) => (
                   <tr key={b.id || `${b.name}-${idx}`} className="border-t border-slate-100">
-                    <td className="px-4 py-3 text-slate-900">{b.name || '—'}</td>
+                    <td className="px-4 py-3 text-slate-900">{b.name_en || '—'}</td>
                     <td className="px-4 py-3 text-slate-700">{b.value ?? '—'}</td>
                     <td className="px-4 py-3 text-slate-700">{b.unit || '—'}</td>
                     <td className="px-4 py-3 text-slate-700">{b.ref_low != null && b.ref_high != null ? `${b.ref_low} - ${b.ref_high}` : '—'}</td>
-                    <td className="px-4 py-3 text-slate-700">{String(b.status || 'UNKNOWN').toUpperCase()}</td>
+                    <td className="px-4 py-3 text-slate-700">{b.status_normalized}</td>
                   </tr>
                 ))}
               </tbody>
@@ -265,35 +334,44 @@ export default function Results() {
 
           {!medicalAnalysisLoading && medicalAnalysis && (
             <div className="space-y-4">
-              <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50 text-slate-700">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold">Biomarker</th>
-                      <th className="px-4 py-3 text-left font-semibold">Value</th>
-                      <th className="px-4 py-3 text-left font-semibold">Unit</th>
-                      <th className="px-4 py-3 text-left font-semibold">Category</th>
-                      <th className="px-4 py-3 text-left font-semibold">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(medicalAnalysis.biomarkers || []).map((item, idx) => (
-                      <tr key={`${item.key || item.name || 'm'}-${idx}`} className="border-t border-slate-100">
-                        <td className="px-4 py-3 text-slate-900">{item.name || '—'}</td>
-                        <td className="px-4 py-3 text-slate-700">{item.value ?? '—'}</td>
-                        <td className="px-4 py-3 text-slate-700">{item.unit || '—'}</td>
-                        <td className="px-4 py-3 text-slate-700">{item.category || '—'}</td>
-                        <td className="px-4 py-3 text-slate-700">{item.status || '—'}</td>
+              {!!(medicalAnalysis.biomarkers || []).length ? (
+                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50 text-slate-700">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold">Biomarker</th>
+                        <th className="px-4 py-3 text-left font-semibold">Value</th>
+                        <th className="px-4 py-3 text-left font-semibold">Unit</th>
+                        <th className="px-4 py-3 text-left font-semibold">Category</th>
+                        <th className="px-4 py-3 text-left font-semibold">Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {(medicalAnalysis.biomarkers || []).map((item, idx) => (
+                        <tr key={`${item.key || item.name || 'm'}-${idx}`} className="border-t border-slate-100">
+                          <td className="px-4 py-3 text-slate-900">{item.name || '—'}</td>
+                          <td className="px-4 py-3 text-slate-700">{item.value ?? '—'}</td>
+                          <td className="px-4 py-3 text-slate-700">{item.unit || '—'}</td>
+                          <td className="px-4 py-3 text-slate-700">{item.category || '—'}</td>
+                          <td className="px-4 py-3 text-slate-700">{item.status || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                  No additional microservice interpretation is available for this panel yet.
+                </div>
+              )}
 
               {!!(medicalAnalysis.recommendations || []).length && (
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                  <h4 className="mb-2 text-sm font-semibold text-slate-900">Recommendations</h4>
-                  <ul className="list-disc pl-5 text-sm text-slate-700">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+                  <h4 className="mb-1 text-base font-semibold text-slate-900">Microservice Recommendations</h4>
+                  <p className="mb-3 text-sm text-slate-600">
+                    These suggestions come from the separate medical microservice and are supplemental to the biomarker interpretation below.
+                  </p>
+                  <ul className="list-disc pl-5 text-base text-slate-800">
                     {(medicalAnalysis.recommendations || []).map((r, idx) => (
                       <li key={`rec-${idx}`}>{r}</li>
                     ))}
@@ -307,39 +385,57 @@ export default function Results() {
         <div className="mb-8">
           <h3 className="text-xl font-bold text-slate-900 mb-4">Health Insights</h3>
           <div className="grid gap-4">
-            {deficient.length > 0 && (
+            {hasActionable ? (
               <div className="bg-rose-50 border border-rose-200 rounded-xl p-6">
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="h-6 w-6 text-rose-600 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-rose-900 mb-2">Priority Biomarkers Requiring Attention</h4>
+                    <h4 className="font-semibold text-rose-900 mb-2">What Needs Action Now</h4>
                     <p className="text-rose-700 mb-3">
-                      These markers are outside the optimal range and may indicate areas needing immediate focus.
-                      Consider discussing these results with your healthcare provider.
+                      Prioritize these biomarkers first, then re-test to confirm movement toward range.
                     </p>
-                    <BiomarkerAlertsDisplay
-                      biomarkers={rankedBiomarkers}
-                      previousBiomarkers={[]}
-                      userPreferences={{}}
-                    />
+                    <ul className="space-y-2 text-sm text-rose-900">
+                      {rankedBiomarkers
+                        .filter((b) => b.status_normalized !== 'OPTIMAL')
+                        .slice(0, 5)
+                        .map((b, idx) => (
+                          <li key={`${b.id || b.name_en}-${idx}`} className="rounded-lg bg-white/70 px-3 py-2 border border-rose-100">
+                            <span className="font-semibold">{b.name_en}</span>
+                            <span className="mx-2">•</span>
+                            <span>{b.value} {b.unit}</span>
+                            <span className="mx-2">•</span>
+                            <span className="uppercase">{b.status_normalized}</span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-6 w-6 text-emerald-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-emerald-900 mb-2">Current Panel Looks Stable</h4>
+                    <p className="text-emerald-700">
+                      Most biomarkers are in range. Keep your current routine and monitor trends over time.
+                    </p>
                   </div>
                 </div>
               </div>
             )}
 
-            {optimal > 0 && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-6 w-6 text-emerald-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-emerald-900 mb-2">Well-Managed Biomarkers</h4>
-                    <p className="text-emerald-700">
-                      Great job maintaining these markers within optimal ranges! Continue your current health practices.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="bg-white border border-slate-200 rounded-xl p-6">
+              <h4 className="font-semibold text-slate-900 mb-2">How to use this section</h4>
+              <p className="text-sm text-slate-600 mb-3">
+                Health Insights is a triage layer. It does not replace diagnosis and should be interpreted with your clinician.
+              </p>
+              <BiomarkerAlertsDisplay
+                biomarkers={rankedBiomarkers}
+                previousBiomarkers={[]}
+                userPreferences={{}}
+              />
+            </div>
           </div>
         </div>
 
@@ -347,7 +443,7 @@ export default function Results() {
           <div className="mb-6 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5">
             <div className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">Top priority</div>
             <h3 className="mt-1 text-xl font-bold text-slate-900">
-              Your #1 priority: {topPriority.name} ({formatMetric(topPriority)})
+              Your #1 priority: {topPriority.name_en} ({formatMetric(topPriority)})
             </h3>
             <p className="mt-2 text-sm text-slate-600">
               This marker should be addressed first to improve near-term outcomes and guide your next protocol cycle.
@@ -365,7 +461,7 @@ export default function Results() {
           <h3 className="text-xl font-bold text-slate-900 mb-4">Biomarker Analysis</h3>
           <div className="grid gap-4">
             {rankedBiomarkers.map((b) => {
-              const status = String(b.status || '').toUpperCase()
+              const status = b.status_normalized
               const meta = STATUS_META[status] || STATUS_META.BORDERLINE
               const rangeLabel = b.ref_low != null && b.ref_high != null ? `${b.ref_low}-${b.ref_high} ${b.unit || ''}`.trim() : 'No reference range'
               const bar = computeRangePercent(b)
@@ -389,12 +485,12 @@ export default function Results() {
               }
 
               return (
-                <div key={b.id} className={`relative overflow-hidden rounded-xl border bg-white p-6 ${meta.border} shadow-sm`}>
+                <div key={b.id || `${b.name_en}-${b.value}`} className={`relative overflow-hidden rounded-xl border bg-white p-6 ${meta.border} shadow-sm`}>
                   <span className={`absolute inset-y-0 left-0 w-1.5 ${meta.stripe}`} aria-hidden="true" />
 
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-slate-900 mb-1">{b.name}</h4>
+                      <h4 className="text-lg font-semibold text-slate-900 mb-1">{b.name_en}</h4>
                       <div className="flex items-center gap-2 mb-2">
                         {trendIcon}
                         <span className={`text-sm font-medium ${trendColor}`}>{trendText}</span>
@@ -476,7 +572,7 @@ export default function Results() {
         <div className="mb-8">
           <h3 className="text-xl font-bold text-slate-900 mb-4">Health Optimization Tips</h3>
           <HealthTipsDisplay
-            biomarkers={rankedBiomarkers}
+            biomarkers={rankedBiomarkers.map((b) => ({ ...b, name: b.name_en, status: b.status_normalized }))}
             userContext={{
               age: 30,
               lifestyle: 'active',
@@ -501,9 +597,24 @@ export default function Results() {
           </div>
 
           {isActive ? (
-            <div className="space-y-4">
-              {protocol.map((rec, i) => <ProtocolCard key={i} recommendation={rec} />)}
-            </div>
+            protocol.length > 0 ? (
+              <div className="space-y-4">
+                {protocol.map((rec, i) => <ProtocolCard key={i} recommendation={rec} />)}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-white p-5">
+                <h4 className="text-base font-semibold text-slate-900 mb-1">Protocol is not generated yet</h4>
+                <p className="text-sm text-slate-600 mb-4">
+                  This section shows personalized supplement actions after protocol generation. It is empty for this upload right now.
+                </p>
+                <button
+                  onClick={() => navigate(`/protocol/${uploadId}`)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500"
+                >
+                  Generate / Open Protocol
+                </button>
+              </div>
+            )
           ) : (
             <div className="bg-gradient-to-br from-emerald-50 to-blue-50 border border-emerald-200 rounded-xl p-8 text-center">
               <div className="max-w-md mx-auto">

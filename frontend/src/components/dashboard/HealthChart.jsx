@@ -176,9 +176,15 @@ export default function HealthChart({ progress }) {
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
                   <span className="text-sm text-slate-700">
-                    {lab.test_date || lab.created_at
-                      ? new Date(lab.test_date || lab.created_at).toLocaleDateString()
-                      : 'Unknown date'}
+                    {(() => {
+                      const dateStr = lab.test_date || lab.created_at;
+                      if (!dateStr) return 'Recently uploaded';
+                      try {
+                        return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                      } catch {
+                        return 'Recently uploaded';
+                      }
+                    })()}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

@@ -45,8 +45,8 @@ export function useSubscription() {
         setSubStatus(subStatusResolved)
         setIsPremium(isPremiumResolved)
         setUploadCount(stripeData?.upload_count ?? 0)
-        setUploadLimit(isPremiumResolved ? null : (stripeData?.upload_limit ?? 1))
-        setUploadsRemaining(isPremiumResolved ? null : (stripeData?.uploads_remaining ?? 0))
+        setUploadLimit(isPremiumResolved ? Infinity : (stripeData?.upload_limit ?? 1))
+        setUploadsRemaining(isPremiumResolved ? Infinity : (stripeData?.uploads_remaining ?? 0))
         return
       } catch {
         try {
@@ -60,8 +60,8 @@ export function useSubscription() {
           // Conservative defaults when stripe endpoint is unavailable.
           // Do not force free-plan limits for premium users.
           setUploadCount(0)
-          setUploadLimit(premium ? null : 1)
-          setUploadsRemaining(premium ? null : 1)
+          setUploadLimit(premium ? Infinity : 1)
+          setUploadsRemaining(premium ? Infinity : 1)
           return
         } catch {
           if (attempt < 1) {
