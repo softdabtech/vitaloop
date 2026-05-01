@@ -316,6 +316,31 @@ export default function Results() {
           </div>
         </div>
 
+        {topPriority && (
+          <div className="mb-8 rounded-2xl border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-md">
+            <div className="flex items-center gap-3 mb-2">
+              <AlertTriangle className="h-6 w-6 text-emerald-600" />
+              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">🎯 Start Here</div>
+            </div>
+            <h3 className="text-2xl font-bold text-slate-900 mb-2">
+              Your Top Priority: {topPriority.name_en}
+            </h3>
+            <div className="mb-4 flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-emerald-600">{formatMetric(topPriority)}</span>
+              <span className="text-sm text-slate-600">(Reference: {topPriority.ref_low}-{topPriority.ref_high} {topPriority.unit})</span>
+            </div>
+            <p className="mb-4 text-base text-slate-700">
+              This is your most impactful marker to address right now. Improving this will have the biggest effect on your health outcomes.
+            </p>
+            <button
+              onClick={() => navigate(`/protocol/${uploadId}`)}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-emerald-500 shadow-sm"
+            >
+              Get Supplement Plan for This →
+            </button>
+          </div>
+        )}
+
         <div className="mb-8">
           <h3 className="text-xl font-bold text-slate-900 mb-4">Medical Microservice Analysis</h3>
           {medicalAnalysisLoading && (
@@ -436,24 +461,6 @@ export default function Results() {
             </div>
           </div>
         </div>
-
-        {topPriority && (
-          <div className="mb-6 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5">
-            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">Top priority</div>
-            <h3 className="mt-1 text-xl font-bold text-slate-900">
-              Your #1 priority: {topPriority.name_en} ({formatMetric(topPriority)})
-            </h3>
-            <p className="mt-2 text-sm text-slate-600">
-              This marker should be addressed first to improve near-term outcomes and guide your next protocol cycle.
-            </p>
-            <button
-              onClick={() => navigate(`/protocol/${uploadId}`)}
-              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500"
-            >
-              See supplement for this
-            </button>
-          </div>
-        )}
 
         <div className="mb-8">
           <h3 className="text-xl font-bold text-slate-900 mb-4">Biomarker Analysis</h3>
