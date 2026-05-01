@@ -1,7 +1,7 @@
 # VITALOOP Architecture Refactoring - Implementation Status
 
 **Started**: May 1, 2026
-**Status**: 60% Complete - Ready for frontend migration
+**Status**: 70% Complete - Core frontend migration underway
 
 ---
 
@@ -73,19 +73,22 @@
 
 ### Phase 2: Frontend Migration (3-4 days)
 
-#### High Priority (Core Pages)
-- [ ] **Results.jsx** - Remove `normalizeBiomarkerStatus()`, use backend data
-  - [ ] Update biomarker fetching to use `useBiomarkerNormalize()`
-  - [ ] Remove STATUS_META constant
-  - [ ] Update biomarker rendering to use `b.color`, `b.badge` from backend
-  - [ ] Remove scoring logic, use `b.severity_rank` directly
+#### High Priority (Core Pages) - ✅ MOSTLY COMPLETE
+- [x] **Results.jsx** - ✅ DONE
+  - [x] Updated biomarker fetching to use `useBiomarkerNormalize()`
+  - [x] Removed STATUS_META constant
+  - [x] Updated biomarker rendering to use `b.color`, `b.badge`, `b.severity_rank` from backend
+  - [x] Removed normalizeBiomarkerStatus(), computeRangePercent(), infer_status_from_range(), scoreStatus()
+  - [x] Kept toEnglishBiomarkerName() for Ukrainian→English translation
   
-- [ ] **UserDashboard.jsx** - Switch to `useDashboardSummary()`
-  - [ ] Replace useState + useEffect with query hook
-  - [ ] Verify data structure matches
+- [x] **UserDashboard.jsx** - ✅ DONE
+  - [x] Replaced useState + useEffect with `useDashboardSummary()`
+  - [x] Simplified state via useMemo for assignment enrichment
+  - [x] Removed error state display
   
-- [ ] **Progress.jsx** - Switch to `useProgress()`
-  - [ ] Replace useState + useEffect with query hook
+- [x] **Progress.jsx** - ✅ DONE
+  - [x] Replaced useState + useEffect with `useProgress()`
+  - [x] Simplified error handling
 
 #### Medium Priority (Feature Gates)
 - [ ] **Replace PremiumRoute with FeatureGate**
@@ -180,11 +183,13 @@ Dashboard.jsx ───┘    ↓
 - ✅ Create biomarker normalization endpoint
 - ✅ Register routers in main.py
 
-### Phase 2: Frontend Setup (⏳ IN PROGRESS)
+### Phase 2: Frontend Setup (✅ CORE PAGES COMPLETE)
 - ✅ React Query + hooks installed
 - ✅ FeatureGate component created
-- ⏳ Results.jsx migration (NEXT)
-- ⏳ Other pages migration
+- ✅ Results.jsx migration (HIGH IMPACT)
+- ✅ UserDashboard.jsx migration (CORE PAGE)
+- ✅ Progress.jsx migration (TRACKING PAGE)
+- ⏳ Insights.jsx migration (remaining)
 
 ### Phase 3: Feature Flags (⏳ TODO)
 - ⏳ Replace all PremiumRoute instances
@@ -247,5 +252,32 @@ If you need to:
 
 ---
 
-**Last Updated**: May 1, 2026
-**Next Review**: After Results.jsx migration
+## 📋 Progress Summary
+
+**Phase 1 Backend** ✅ 100% Complete
+- Entitlements endpoint: /user/entitlements
+- Biomarker normalization: /biomarker/normalize/{lab_id}
+- React Query hooks (7 hooks): all configured with correct cache durations
+- FeatureGate component + useFeature hook
+
+**Phase 2a Frontend (Core Pages)** ✅ ~75% Complete
+- Results.jsx: ✅ MIGRATED - now uses useBiomarkerNormalize() hook
+- UserDashboard.jsx: ✅ MIGRATED - now uses useDashboardSummary() hook
+- Progress.jsx: ✅ MIGRATED - now uses useProgress() hook
+- Insights.jsx: ⏳ TODO - needs timeline + health-score endpoints
+
+**Phase 2b Feature Gates** ⏳ NOT STARTED
+- PremiumRoute → FeatureGate replacement (~8-10 files to update)
+- LockedFeatureOverlay → useFeature() integration
+- Paywall component → unified feature access control
+
+**Expected Impact** (once fully deployed)
+- API calls: -70% (from 50 to ~12 per session)
+- Page navigation: 4x faster (1.2s → 0.3s)
+- Duplicate code: -80% (5+ places → 1)
+- Time to add ML model: ∞ → 1 endpoint
+
+---
+
+**Last Updated**: May 1, 2026 (Updated with Phase 2a completions)
+**Next Review**: After feature gate replacement
