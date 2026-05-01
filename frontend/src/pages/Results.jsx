@@ -4,18 +4,12 @@ import api from '../lib/api.js'
 import ProtocolCard from '../components/ProtocolCard.jsx'
 import Paywall from '../components/Paywall.jsx'
 import { useSubscription } from '../hooks/useSubscription.js'
+import { useBiomarkerNormalize } from '../hooks/useQueries.js'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
 import BiomarkerAlertsDisplay from '../components/BiomarkerAlertsDisplay.jsx'
 import HealthTipsDisplay from '../components/HealthTipsDisplay.jsx'
 import { ArrowLeft, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Info, Activity } from 'lucide-react'
-
-const STATUS_META = {
-  DEFICIENT: { rank: 0, border: 'border-rose-300', stripe: 'bg-rose-500', badge: 'bg-rose-50 text-rose-700', text: 'text-rose-700' },
-  ELEVATED: { rank: 1, border: 'border-orange-300', stripe: 'bg-orange-500', badge: 'bg-orange-50 text-orange-700', text: 'text-orange-700' },
-  BORDERLINE: { rank: 2, border: 'border-amber-300', stripe: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700', text: 'text-amber-700' },
-  OPTIMAL: { rank: 3, border: 'border-emerald-300', stripe: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700', text: 'text-emerald-700' },
-}
 
 const BIOMARKER_NAME_TRANSLATIONS = [
   [/^Ретикулоцити\s*\(%\)$/i, 'Reticulocytes (%)'],
@@ -25,10 +19,17 @@ const BIOMARKER_NAME_TRANSLATIONS = [
   [/^Зрілі ретикулоцити\s*\(%\)$/i, 'Mature Reticulocytes (%)'],
   [/^Зрілі ретикулоцити\s*\(Т\/л\)$/i, 'Mature Reticulocytes (T/L)'],
   [/^Зрілі ретикулоцити$/i, 'Mature Reticulocytes'],
-  [/^Середній об['’]єм ретикулоцита$/i, 'Mean Reticulocyte Volume'],
-  [/^Середній об['’]єм сферичних клітин$/i, 'Mean Spherized Cell Volume'],
-  [/^Ширина розподілення ретикулоцитів по об['’]єму$/i, 'Reticulocyte Volume Distribution Width'],
+  [/^Середній об['']єм ретикулоцита$/i, 'Mean Reticulocyte Volume'],
+  [/^Середній об['']єм сферичних клітин$/i, 'Mean Spherized Cell Volume'],
+  [/^Ширина розподілення ретикулоцитів по об['']єму$/i, 'Reticulocyte Volume Distribution Width'],
 ]
+
+const COLOR_TO_STRIPE = {
+  rose: "bg-rose-500",
+  orange: "bg-orange-500",
+  amber: "bg-amber-500",
+  emerald: "bg-emerald-500",
+}
 
 function toEnglishBiomarkerName(name) {
   const raw = String(name || '').trim()
@@ -38,57 +39,10 @@ function toEnglishBiomarkerName(name) {
   return raw
 }
 
-function scoreStatus(status) {
-  return (STATUS_META[String(status || '').toUpperCase()] || { rank: 4 }).rank
-}
-
 function formatMetric(biomarker) {
   const value = biomarker?.value ?? '--'
   const unit = biomarker?.unit ? ` ${biomarker.unit}` : ''
   return `${value}${unit}`
-}
-
-function computeRangePercent(biomarker) {
-  const low = Number(biomarker?.ref_low)
-  const high = Number(biomarker?.ref_high)
-  const value = Number(biomarker?.value)
-  if (!Number.isFinite(low) || !Number.isFinite(high) || !Number.isFinite(value) || high <= low) return 0
-  return Math.max(0, Math.min(100, ((value - low) / (high - low)) * 100))
-}
-
-function normalizeBiomarkerStatus(biomarker) {
-  const raw = String(biomarker?.status || '').trim().toUpperCase()
-  const mapped = {
-    OPTIMAL: 'OPTIMAL',
-    NORMAL: 'OPTIMAL',
-    N: 'OPTIMAL',
-    BORDERLINE: 'BORDERLINE',
-    'LOW NORMAL': 'BORDERLINE',
-    'HIGH NORMAL': 'BORDERLINE',
-    LOW: 'DEFICIENT',
-    L: 'DEFICIENT',
-    DEFICIENT: 'DEFICIENT',
-    HIGH: 'ELEVATED',
-    H: 'ELEVATED',
-    ELEVATED: 'ELEVATED',
-    CRITICAL: 'ELEVATED',
-  }
-  if (mapped[raw]) return mapped[raw]
-
-  const low = Number(biomarker?.ref_low)
-  const high = Number(biomarker?.ref_high)
-  const value = Number(biomarker?.value)
-  if (Number.isFinite(low) && Number.isFinite(high) && Number.isFinite(value) && high > low) {
-    if (value < low) return 'DEFICIENT'
-    if (value > high) return 'ELEVATED'
-    const band = high - low
-    const lowerWarn = low + band * 0.15
-    const upperWarn = high - band * 0.15
-    if (value <= lowerWarn || value >= upperWarn) return 'BORDERLINE'
-    return 'OPTIMAL'
-  }
-
-  return 'BORDERLINE'
 }
 
 const RESULTS_HINTS = [
@@ -103,37 +57,28 @@ export default function Results() {
   const navigate = useNavigate()
   const { isActive } = useSubscription()
   const { show: showHints, dismiss: dismissHints } = useTourHints('results')
-  const [biomarkers, setBiomarkers] = useState([])
+  const { data: biomarkerData, isLoading } = useBiomarkerNormalize(uploadId)
   const [protocol, setProtocol] = useState([])
   const [medicalAnalysis, setMedicalAnalysis] = useState(null)
   const [medicalAnalysisLoading, setMedicalAnalysisLoading] = useState(false)
   const [medicalAnalysisError, setMedicalAnalysisError] = useState('')
-  const [loading, setLoading] = useState(true)
+
+  const biomarkers = (biomarkerData?.biomarkers || []).map((b) => ({
+    ...b,
+    name_en: toEnglishBiomarkerName(b?.name),
+  }))
 
   useEffect(() => {
     async function load() {
       try {
         const { data } = await api.get(`/results/${uploadId}`)
-        setBiomarkers(data.biomarkers ?? [])
         setProtocol(data.protocol ?? [])
       } catch (e) {
-        setBiomarkers([])
         setProtocol([])
-      } finally {
-        setLoading(false)
       }
     }
     load()
   }, [uploadId])
-
-  const normalizedBiomarkers = biomarkers.map((b) => {
-    const normalizedStatus = normalizeBiomarkerStatus(b)
-    return {
-      ...b,
-      name_en: toEnglishBiomarkerName(b?.name),
-      status_normalized: normalizedStatus,
-    }
-  })
 
   useEffect(() => {
     if (!biomarkers.length) {
@@ -149,7 +94,7 @@ export default function Results() {
       setMedicalAnalysisError('')
 
       try {
-        const lines = normalizedBiomarkers.map((b) => {
+        const lines = biomarkers.map((b) => {
           const low = b?.ref_low != null ? String(b.ref_low) : ''
           const high = b?.ref_high != null ? String(b.ref_high) : ''
           const rangePart = low && high ? ` (${low}-${high})` : ''
@@ -190,18 +135,18 @@ export default function Results() {
     return () => {
       active = false
     }
-  }, [biomarkers, normalizedBiomarkers])
+  }, [biomarkers])
 
-  if (loading) return <div className="flex items-center justify-center h-screen text-slate-500">Loading…</div>
+  if (isLoading) return <div className="flex items-center justify-center h-screen text-slate-500">Loading…</div>
 
-  const rankedBiomarkers = [...normalizedBiomarkers].sort((a, b) => scoreStatus(a.status_normalized) - scoreStatus(b.status_normalized))
-  const deficient = normalizedBiomarkers.filter((b) => {
-    const status = b.status_normalized
+  const rankedBiomarkers = [...biomarkers].sort((a, b) => a.severity_rank - b.severity_rank)
+  const deficient = biomarkers.filter((b) => {
+    const status = b.status
     return status === 'DEFICIENT' || status === 'ELEVATED'
   })
-  const optimal = normalizedBiomarkers.filter((b) => b.status_normalized === 'OPTIMAL').length
-  const borderline = normalizedBiomarkers.filter((b) => b.status_normalized === 'BORDERLINE').length
-  const topPriority = rankedBiomarkers.find((b) => b.status_normalized !== 'OPTIMAL') || rankedBiomarkers[0] || null
+  const optimal = biomarkers.filter((b) => b.status === 'OPTIMAL').length
+  const borderline = biomarkers.filter((b) => b.status === 'BORDERLINE').length
+  const topPriority = rankedBiomarkers.find((b) => b.status !== 'OPTIMAL') || rankedBiomarkers[0] || null
   const hasActionable = deficient.length + borderline > 0
 
   async function exportResultsAsPDF() {
@@ -310,7 +255,7 @@ export default function Results() {
                     <td className="px-4 py-3 text-slate-700">{b.value ?? '—'}</td>
                     <td className="px-4 py-3 text-slate-700">{b.unit || '—'}</td>
                     <td className="px-4 py-3 text-slate-700">{b.ref_low != null && b.ref_high != null ? `${b.ref_low} - ${b.ref_high}` : '—'}</td>
-                    <td className="px-4 py-3 text-slate-700">{b.status_normalized}</td>
+                    <td className="px-4 py-3 text-slate-700">{b.status}</td>
                   </tr>
                 ))}
               </tbody>
@@ -396,7 +341,7 @@ export default function Results() {
                     </p>
                     <ul className="space-y-2 text-sm text-rose-900">
                       {rankedBiomarkers
-                        .filter((b) => b.status_normalized !== 'OPTIMAL')
+                        .filter((b) => b.status !== 'OPTIMAL')
                         .slice(0, 5)
                         .map((b, idx) => (
                           <li key={`${b.id || b.name_en}-${idx}`} className="rounded-lg bg-white/70 px-3 py-2 border border-rose-100">
@@ -404,7 +349,7 @@ export default function Results() {
                             <span className="mx-2">•</span>
                             <span>{b.value} {b.unit}</span>
                             <span className="mx-2">•</span>
-                            <span className="uppercase">{b.status_normalized}</span>
+                            <span className="uppercase">{b.status}</span>
                           </li>
                         ))}
                     </ul>
@@ -461,13 +406,12 @@ export default function Results() {
           <h3 className="text-xl font-bold text-slate-900 mb-4">Biomarker Analysis</h3>
           <div className="grid gap-4">
             {rankedBiomarkers.map((b) => {
-              const status = b.status_normalized
-              const meta = STATUS_META[status] || STATUS_META.BORDERLINE
               const rangeLabel = b.ref_low != null && b.ref_high != null ? `${b.ref_low}-${b.ref_high} ${b.unit || ''}`.trim() : 'No reference range'
-              const bar = computeRangePercent(b)
+              const bar = b.range_percent || 0
               const value = Number(b.value)
               const low = Number(b.ref_low)
               const high = Number(b.ref_high)
+              const stripeClass = COLOR_TO_STRIPE[b.color] || 'bg-amber-500'
 
               // Determine trend icon and interpretation
               let trendIcon = <Minus className="h-4 w-4 text-slate-400" />
@@ -485,8 +429,8 @@ export default function Results() {
               }
 
               return (
-                <div key={b.id || `${b.name_en}-${b.value}`} className={`relative overflow-hidden rounded-xl border bg-white p-6 ${meta.border} shadow-sm`}>
-                  <span className={`absolute inset-y-0 left-0 w-1.5 ${meta.stripe}`} aria-hidden="true" />
+                <div key={b.id || `${b.name_en}-${b.value}`} className={`relative overflow-hidden rounded-xl border bg-white p-6 ${b.border} shadow-sm`}>
+                  <span className={`absolute inset-y-0 left-0 w-1.5 ${stripeClass}`} aria-hidden="true" />
 
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
@@ -496,7 +440,7 @@ export default function Results() {
                         <span className={`text-sm font-medium ${trendColor}`}>{trendText}</span>
                       </div>
                     </div>
-                    <span className={`rounded-full px-3 py-1 text-sm font-semibold ${meta.badge}`}>{status}</span>
+                    <span className={`rounded-full px-3 py-1 text-sm font-semibold ${b.badge}`}>{b.status}</span>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -530,7 +474,7 @@ export default function Results() {
                       <span>{b.ref_high || 'Max'}</span>
                     </div>
                     <div className="h-3 overflow-hidden rounded-full bg-slate-100 relative">
-                      <div className={`h-full rounded-full ${meta.stripe}`} style={{ width: `${Math.min(bar, 100)}%` }} />
+                      <div className={`h-full rounded-full ${stripeClass}`} style={{ width: `${Math.min(bar, 100)}%` }} />
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="w-1 h-1 bg-slate-900 rounded-full" style={{ left: `${Math.min(bar, 100)}%`, transform: 'translateX(-50%)' }} />
                       </div>
@@ -572,7 +516,7 @@ export default function Results() {
         <div className="mb-8">
           <h3 className="text-xl font-bold text-slate-900 mb-4">Health Optimization Tips</h3>
           <HealthTipsDisplay
-            biomarkers={rankedBiomarkers.map((b) => ({ ...b, name: b.name_en, status: b.status_normalized }))}
+            biomarkers={rankedBiomarkers.map((b) => ({ ...b, name: b.name_en }))}
             userContext={{
               age: 30,
               lifestyle: 'active',

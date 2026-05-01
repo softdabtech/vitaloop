@@ -1,5 +1,5 @@
 import { useQuery, useQueries } from '@tanstack/react-query'
-import { api } from '../api/api'
+import api from '../lib/api.js'
 
 // Cache durations
 const CACHE_DURATION = {
@@ -66,7 +66,8 @@ export const useLabResults = (labId) => {
   })
 }
 
-// Normalized biomarker data
+// Normalized biomarker data from single source of truth (backend)
+// Backend handles all status calculations - no logic duplication
 export const useBiomarkerNormalize = (labId, enabled = true) => {
   return useQuery({
     queryKey: ['biomarker', 'normalize', labId],
@@ -74,7 +75,7 @@ export const useBiomarkerNormalize = (labId, enabled = true) => {
     staleTime: CACHE_DURATION.results,
     gcTime: 30 * 60 * 1000,
     enabled: enabled && !!labId,
-    retry: 1,
+    retry: 2,  // Retry more for important biomarker data
   })
 }
 
