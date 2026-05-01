@@ -35,19 +35,32 @@ _NAME_START = rf"[{_LETTER}]"
 _NAME_BODY = rf"[{_LETTER}0-9()/%+\- ,._']"
 _UNIT_BODY = rf"[{_LETTER}%/µμ\-]"
 _UNIT_PATTERN = rf"{_UNIT_BODY}+(?:/{_UNIT_BODY}+)?"
+_STAR_OPT = r"(?:\s*[\*＊])?"
 _LINE_PATTERNS = [
     re.compile(
         rf"(?P<name>{_NAME_START}{_NAME_BODY}{{2,}}?)\s+"
-        r"(?P<value>-?\d+(?:[.,]\d+)?)\s*"
+        r"(?P<value>-?\d+(?:[.,]\d+)?)"
+        + _STAR_OPT
+        + r"\s*"
         rf"(?P<unit>{_UNIT_PATTERN})?\s*"
-        r"(?:(?P<low>-?\d+(?:[.,]\d+)?)\s*[-–]\s*(?P<high>-?\d+(?:[.,]\d+)?))?"
+        r"(?:(?P<low>-?\d+(?:[.,]\d+)?)"
+        + _STAR_OPT
+        + r"\s*[-–]\s*(?P<high>-?\d+(?:[.,]\d+)?)"
+        + _STAR_OPT
+        + r")?"
         + _STATUS_SUFFIX + r"\s*$"
     ),
     re.compile(
         rf"(?P<name>{_NAME_START}{_NAME_BODY}{{2,}}?)\s*[:=]\s*"
-        r"(?P<value>-?\d+(?:[.,]\d+)?)\s*"
+        r"(?P<value>-?\d+(?:[.,]\d+)?)"
+        + _STAR_OPT
+        + r"\s*"
         rf"(?P<unit>{_UNIT_PATTERN})?\s*"
-        r"(?:\(?(?P<low>-?\d+(?:[.,]\d+)?)\s*[-–]\s*(?P<high>-?\d+(?:[.,]\d+)?)\)?)?"
+        r"(?:\(?(?P<low>-?\d+(?:[.,]\d+)?)"
+        + _STAR_OPT
+        + r"\s*[-–]\s*(?P<high>-?\d+(?:[.,]\d+)?)"
+        + _STAR_OPT
+        + r"\)?)?"
         + _STATUS_SUFFIX + r"\s*$"
     ),
 ]
@@ -109,7 +122,7 @@ def is_llm_configured() -> bool:
 def _to_float(value: str | None) -> float | None:
     if value is None:
         return None
-    raw = str(value).strip().replace(",", ".")
+    raw = re.sub(r"[^0-9.,+\-]", "", str(value)).strip().replace(",", ".")
     if not raw:
         return None
     try:
@@ -145,12 +158,81 @@ def _status_for_value(value: float, low: float | None, high: float | None) -> st
     return "OPTIMAL"
 
 
+def _normalize_status(status: str | None, value: float | None, low: float | None, high: float | None) -> str:
+    raw = str(status or "").strip().upper()
+    mapped = {
+        "OPTIMAL": "OPTIMAL",
+        "NORMAL": "OPTIMAL",
+        "N": "OPTIMAL",
+        "BORDERLINE": "BORDERLINE",
+        "LOW NORMAL": "BORDERLINE",
+        "HIGH NORMAL": "BORDERLINE",
+        "LOW": "DEFICIENT",
+        "L": "DEFICIENT",
+        "DEFICIENT": "DEFICIENT",
+        "HIGH": "ELEVATED",
+        "H": "ELEVATED",
+        "ELEVATED": "ELEVATED",
+        "CRITICAL": "ELEVATED",
+    }
+    canonical = mapped.get(raw)
+    if canonical:
+        return canonical
+    if value is not None:
+        return _status_for_value(value, low, high)
+    return "OPTIMAL"
+
+
+def _coalesce_multiline_rows(text: str) -> List[str]:
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    merged: List[str] = []
+    i = 0
+    while i < len(lines):
+        current = lines[i]
+        nxt = lines[i + 1] if i + 1 < len(lines) else ""
+
+        current_has_number = bool(re.search(r"\d", current))
+        next_has_number = bool(re.search(r"\d", nxt))
+
+        # Some reports split biomarker names into two lines before the numeric payload.
+        if (not current_has_number) and next_has_number:
+            merged.append(f"{current} {nxt}".strip())
+            i += 2
+            continue
+
+        merged.append(current)
+        i += 1
+
+    return merged
+
+
+def _normalize_biomarker_item(item: Dict[str, Any]) -> Dict[str, Any] | None:
+    name = _normalize_name(str(item.get("name") or ""))
+    value = _to_float(str(item.get("value")) if item.get("value") is not None else None)
+    low = _to_float(str(item.get("ref_low")) if item.get("ref_low") is not None else None)
+    high = _to_float(str(item.get("ref_high")) if item.get("ref_high") is not None else None)
+    unit = str(item.get("unit") or "").strip() or "unit"
+
+    if not name or value is None:
+        return None
+
+    return {
+        **item,
+        "name": name,
+        "value": value,
+        "unit": unit,
+        "ref_low": low,
+        "ref_high": high,
+        "status": _normalize_status(item.get("status"), value, low, high),
+        "category": item.get("category") or _infer_category(name),
+    }
+
+
 def _fallback_extract_biomarkers(text: str) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     seen: set[tuple[str, float]] = set()
 
-    for raw_line in text.splitlines():
-        line = raw_line.strip()
+    for line in _coalesce_multiline_rows(text):
         if len(line) < 6:
             continue
         for pattern in _LINE_PATTERNS:
@@ -181,7 +263,7 @@ def _fallback_extract_biomarkers(text: str) -> List[Dict[str, Any]]:
                     "unit": unit,
                     "ref_low": low,
                     "ref_high": high,
-                    "status": _status_for_value(value, low, high),
+                    "status": _normalize_status(None, value, low, high),
                     "category": _infer_category(name),
                 }
             )
@@ -358,6 +440,7 @@ async def extract_biomarkers(text: str, symptoms: List[str]) -> List[Dict[str, A
     try:
         raw = _strip_code_block(await _chat_completion(prompt, task_name="extract_biomarkers"))
         parsed = _validate_biomarker_payload(json.loads(raw))
+        parsed = [normalized for normalized in (_normalize_biomarker_item(item) for item in parsed) if normalized]
         if not parsed:
             logger.warning("abacus_extract_fallback reason=empty_payload")
             return _fallback_extract_biomarkers(text)

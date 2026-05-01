@@ -320,6 +320,16 @@ async def get_health_tips_status(job_id: str, current_user: dict = Depends(get_c
     user_id = current_user.get("sub")
     async with _health_tips_lock:
         job = _health_tips_jobs.get(job_id)
-        if not job or job.get("user_id") != user_id:
-            raise HTTPException(status_code=404, detail="Health tips job not found")
-        return _job_view(job)
+        if job and job.get("user_id") == user_id:
+            return _job_view(job)
+
+    # Multi-worker safety: job cache is in-memory per worker, so a poll request can
+    # hit a sibling worker and miss the job. Return pending instead of 404 to keep
+    # UX stable and avoid noisy client-side errors.
+    return {
+        "status": "pending",
+        "tips": [],
+        "job_id": job_id,
+        "eta_minutes": HEALTH_TIPS_DEFER_MINUTES,
+        "message": "Premium analysis is still processing. We will notify you when it is ready.",
+    }

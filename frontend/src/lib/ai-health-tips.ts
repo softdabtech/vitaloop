@@ -82,6 +82,14 @@ export async function getHealthTipsJob(jobId: string): Promise<HealthTipsResult>
       message: data?.message,
     }
   } catch (error) {
+    if (error?.response?.status === 404) {
+      return {
+        tips: [],
+        status: 'pending',
+        jobId,
+        message: 'Premium analysis is still processing. Please wait a few minutes.',
+      }
+    }
     return {
       tips: [],
       status: 'failed',

@@ -29,6 +29,7 @@ const MENU_ITEMS = [
   { icon: Clock,      label: 'Weekly Check-in', path: '/check-ins', badge: null, premium: true },
   { icon: Flame,      label: 'Health Profile',  path: '/health-profile', badge: null },
   { icon: CreditCard, label: 'Subscription',    path: '/subscription', badge: null },
+  { icon: Settings,   label: 'Account',        path: '/settings',    badge: null },
 ]
 
 function isItemActive(currentPath, itemPath) {
@@ -177,15 +178,6 @@ export default function UserDashboardSidebar({
             <div className="mt-1 text-xs text-slate-500">{PREMIUM_PRICE_LABEL}</div>
           </button>
         )}
-
-        <NavLink
-          to="/settings"
-          onClick={mobile ? onCloseMobile : undefined}
-          className="group flex h-11 items-center gap-3 rounded-xl px-3 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
-        >
-          <Settings className="h-5 w-5 shrink-0" />
-          {!collapsed && <span className="text-sm font-medium">Account</span>}
-        </NavLink>
 
         <button
           onClick={onLogout}
