@@ -47,6 +47,8 @@ export default function Upload() {
   }, [])
 
   const isBusy = isProcessing || analyzing
+  const [retryCount, setRetryCount] = useState(0)
+  const [selectedFile, setSelectedFile] = useState(null)
 
   function validateFile(file) {
     if (!file) {
@@ -78,8 +80,10 @@ export default function Upload() {
 
     setErrorMessage('')
     setSelectedFileName(file.name)
+    setSelectedFile(file)
+    setRetryCount(0)
 
-    toast('Extracting text from your lab report…', { icon: '🔍' })
+    toast(`Extracting text from ${file.name}… (${(file.size / 1024).toFixed(0)}KB)`, { icon: '🔍' })
     let text = ''
     let confidence = null
 
@@ -159,6 +163,13 @@ export default function Upload() {
     } finally {
       setAnalyzing(false)
     }
+  }
+
+  async function handleRetry() {
+    if (!selectedFile || retryCount >= 3) return
+    setRetryCount(prev => prev + 1)
+    setErrorMessage('')
+    await handleFile(selectedFile)
   }
 
   return (
@@ -277,7 +288,28 @@ export default function Upload() {
 
           {analyzing && (
             <div className="mb-4 animate-pulse rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              AI is analyzing your results. This usually takes under a minute.
+              Extracting biomarkers... This usually takes under a minute.
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-rose-900">{errorMessage}</p>
+                  <p className="mt-1 text-xs text-rose-700">Try uploading a clearer PDF or sharp photo of your full lab report.</p>
+                  {retryCount < 3 && selectedFile && (
+                    <button
+                      onClick={handleRetry}
+                      disabled={isBusy}
+                      className="mt-3 inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-60 transition"
+                    >
+                      ↻ Retry ({retryCount}/3)
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
