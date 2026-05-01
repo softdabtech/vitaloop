@@ -214,13 +214,6 @@ const HERO_TRUST_SIGNALS = [
   },
 ]
 
-  const STATS = [
-    { value: '85+', label: 'Biomarker types tracked' },
-    { value: '<60s', label: 'From upload to protocol' },
-    { value: '$9.99', label: 'Personal Premium per month' },
-    { value: '3 plans', label: 'Free, Premium, Enterprise' },
-  ]
-
   const FAQ_ITEMS = [
     {
       question: 'What is AI lab analysis and how does VITALOOP use it?',
@@ -821,35 +814,6 @@ export default function Landing() {
 
       <main>
         <AnimatedHero />
-
-
-        {/* === Stats bar === */}
-        <section aria-label="Platform statistics" className="mx-auto w-full max-w-[1240px] px-4 pb-4 sm:px-6">
-          <motion.div {...fadeUp(reduced)} className={`grid grid-cols-2 gap-3 rounded-3xl border p-5 sm:grid-cols-4 ${sectionCard}`}>
-            {STATS.map((stat, idx) => (
-              <motion.div
-                key={stat.label}
-                className="text-center"
-                initial={reduced ? false : { opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: idx * 0.1 }}
-                whileHover={reduced ? {} : { scale: 1.05, y: -4 }}
-              >
-                <motion.div
-                  className={`text-2xl font-bold tracking-tight ${'text-emerald-700'}`}
-                  initial={reduced ? false : { opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: idx * 0.1 + 0.2 }}
-                >
-                  {stat.value}
-                </motion.div>
-                <div className={`mt-1 text-xs ${'text-slate-500'}`}>{stat.label}</div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </section>
 
         <section id="problem" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-10 text-center">
