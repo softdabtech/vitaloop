@@ -28,16 +28,16 @@ export function HowItWorksTimeline() {
           viewport={{ once: true }}
           className="text-center mb-20"
         >
-          <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4">How it works</h2>
-          <p className="text-lg text-slate-400">From PDF to personalized protocol in 4 steps</p>
+          <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-4">How it works</h2>
+          <p className="text-lg text-slate-600">From PDF to personalized protocol in 4 steps</p>
         </motion.div>
 
         {/* Timeline */}
         <div className="relative">
           {/* Vertical line */}
-          <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-teal-500 via-teal-400 to-teal-500/20 transform -translate-x-1/2">
+          <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-500 via-emerald-300 to-emerald-500/10 transform -translate-x-1/2">
             <motion.div
-              className="absolute inset-0 bg-gradient-to-b from-teal-400 via-teal-300 to-transparent"
+              className="absolute inset-0 bg-gradient-to-b from-emerald-400 via-emerald-300 to-transparent"
               style={{ scaleY, transformOrigin: 'top' }}
             />
           </div>
@@ -69,11 +69,11 @@ function TimelineStep({ step, index }) {
       <div className={`w-1/2 ${isLeft ? 'text-right' : 'text-left'}`}>
         <motion.div
           whileHover={{ scale: 1.02, y: -4 }}
-          className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl p-6 hover:border-teal-500/50 transition-colors"
+          className="bg-white border border-slate-200 rounded-2xl p-6 hover:border-emerald-300 transition-colors hover:shadow-md"
         >
-          <div className="text-sm font-semibold text-teal-400 mb-2">Step {index + 1}</div>
-          <h3 className="text-2xl font-bold text-white mb-2">{step.title}</h3>
-          <p className="text-slate-400">{step.body}</p>
+          <div className="text-sm font-semibold text-emerald-700 mb-2">Step {index + 1}</div>
+          <h3 className="text-2xl font-bold text-slate-900 mb-2">{step.title}</h3>
+          <p className="text-slate-600">{step.body}</p>
         </motion.div>
       </div>
 
@@ -84,7 +84,7 @@ function TimelineStep({ step, index }) {
           whileInView={{ scale: 1 }}
           transition={{ duration: 0.4, type: 'spring', stiffness: 200 }}
           viewport={{ once: true }}
-          className="w-16 h-16 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-3xl border-4 border-slate-900 shadow-lg shadow-teal-500/50"
+          className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center text-3xl border-4 border-white shadow-lg shadow-emerald-500/30"
         >
           {step.icon}
         </motion.div>

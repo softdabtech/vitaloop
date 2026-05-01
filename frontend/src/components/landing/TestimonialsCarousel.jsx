@@ -60,7 +60,7 @@ export function TestimonialsCarousel() {
   const testimonial = TESTIMONIALS[active]
 
   return (
-    <section id="testimonials" className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-900 to-slate-950">
+    <section id="testimonials" className="relative py-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <motion.div
@@ -70,8 +70,8 @@ export function TestimonialsCarousel() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4">Real results</h2>
-          <p className="text-lg text-slate-400">From users who transformed their health with VITALOOP</p>
+          <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-4">Real results</h2>
+          <p className="text-lg text-slate-600">From users who transformed their health with VITALOOP</p>
         </motion.div>
 
         {/* Carousel */}
@@ -93,15 +93,15 @@ export function TestimonialsCarousel() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-8 backdrop-blur"
+                className="bg-white border border-slate-200 rounded-2xl p-8"
               >
-                <div className="text-5xl text-teal-400 mb-4">"</div>
-                <p className="text-xl text-white mb-6 leading-relaxed">{testimonial.quote}</p>
+                <div className="text-5xl text-emerald-400 mb-4">"</div>
+                <p className="text-xl text-slate-900 mb-6 leading-relaxed">{testimonial.quote}</p>
 
-                <div className="border-t border-slate-700 pt-6">
-                  <div className="font-semibold text-white">{testimonial.author}</div>
-                  <div className="text-sm text-slate-400">{testimonial.role}</div>
-                  <div className="text-sm text-teal-400 mt-2">{testimonial.result}</div>
+                <div className="border-t border-slate-200 pt-6">
+                  <div className="font-semibold text-slate-900">{testimonial.author}</div>
+                  <div className="text-sm text-slate-600">{testimonial.role}</div>
+                  <div className="text-sm text-emerald-700 mt-2">{testimonial.result}</div>
                 </div>
               </motion.div>
             </motion.div>
@@ -130,7 +130,7 @@ export function TestimonialsCarousel() {
                 onClick={prev}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
-                className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-teal-400 transition-colors"
+                className="p-2 rounded-lg bg-white border border-slate-200 hover:border-emerald-300 text-emerald-700 transition-colors"
               >
                 <ChevronLeft className="w-5 h-5" />
               </motion.button>
@@ -138,7 +138,7 @@ export function TestimonialsCarousel() {
                 onClick={next}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
-                className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-teal-400 transition-colors"
+                className="p-2 rounded-lg bg-white border border-slate-200 hover:border-emerald-300 text-emerald-700 transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
               </motion.button>
@@ -160,10 +160,10 @@ function BeforeAfterChart({ testimonial }) {
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.6 }}
-      className="relative h-80 bg-gradient-to-br from-slate-800/30 to-slate-900/30 border border-slate-700 rounded-2xl p-8 flex flex-col justify-between"
+      className="relative h-80 bg-white border border-slate-200 rounded-2xl p-8 flex flex-col justify-between"
     >
       <div className="text-center mb-8">
-        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">{label}</h3>
+        <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">{label}</h3>
       </div>
 
       <div className="flex items-end justify-around gap-4 flex-1 mb-8">
@@ -174,14 +174,14 @@ function BeforeAfterChart({ testimonial }) {
           transition={{ duration: 0.8, ease: 'easeOut' }}
           className="flex flex-col items-center flex-1"
         >
-          <div className="text-3xl font-bold text-slate-400 mb-2">{before}</div>
+          <div className="text-3xl font-bold text-slate-700 mb-2">{before}</div>
           <motion.div
             initial={{ height: 0 }}
             animate={{ height: `${(before / Math.max(before, after)) * 200}px` }}
             transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }}
-            className="w-full bg-gradient-to-t from-slate-500 to-slate-600 rounded-lg opacity-50"
+            className="w-full bg-gradient-to-t from-slate-300 to-slate-400 rounded-lg opacity-60"
           />
-          <div className="text-sm text-slate-500 mt-3">Before</div>
+          <div className="text-sm text-slate-600 mt-3">Before</div>
         </motion.div>
 
         {/* Arrow */}
@@ -219,8 +219,8 @@ function BeforeAfterChart({ testimonial }) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.4 }}
-        className={`text-center py-2 px-4 rounded-lg ${
-          isPositive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+        className={`text-center py-2 px-4 rounded-lg font-semibold ${
+          isPositive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
         }`}
       >
         {isPositive ? '↑' : '↓'} {Math.abs(improvement)}% improvement
