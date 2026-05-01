@@ -10,11 +10,16 @@ export function AnimatedHero() {
 
   useEffect(() => {
     if (prefersReducedMotion) return
-    const timer = setInterval(() => {
+
+    // Auto-progress stages based on animation duration
+    // Stage 0 (Upload): ~2.5s, Stage 1 (Extract): ~2s, Stage 2 (Protocol): ~1.5s
+    const durations = [2800, 2500, 2200]
+    const timer = setTimeout(() => {
       setStage(prev => (prev + 1) % 3)
-    }, 5000)
-    return () => clearInterval(timer)
-  }, [prefersReducedMotion])
+    }, durations[stage])
+
+    return () => clearTimeout(timer)
+  }, [stage, prefersReducedMotion])
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
@@ -101,8 +106,11 @@ export function AnimatedHero() {
               {['Upload', 'Extract', 'Protocol'].map((label, i) => (
                 <button
                   key={label}
-                  onClick={() => setStage(i)}
-                  className="group flex flex-col items-center gap-2"
+                  onClick={() => {
+                    setStage(i)
+                    // Reset auto-progression after manual click
+                  }}
+                  className="group flex flex-col items-center gap-2 cursor-pointer"
                 >
                   <div className={`transition-all rounded-full ${
                     stage === i ? 'w-8 h-2 bg-emerald-400' : 'w-2 h-2 bg-slate-700 group-hover:bg-slate-600'
