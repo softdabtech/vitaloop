@@ -101,19 +101,7 @@ function EndUserFlowRoute({ children, allowBeforeOnboarding = false, redirectIfO
   return children
 }
 
-function PremiumRoute({ children }) {
-  const { isActive, loading } = useSubscription()
-
-  useEffect(() => {
-    if (!loading && !isActive) {
-      window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))
-    }
-  }, [loading, isActive])
-
-  if (loading) return <div className="flex items-center justify-center h-screen">Loading…</div>
-  if (!isActive) return <Navigate to="/dashboard" replace />
-  return children
-}
+// PremiumRoute removed — use <FeatureGate> component instead for fine-grained access control
 
 function RouteFallback() {
   return <div className="flex items-center justify-center h-screen">Loading…</div>
