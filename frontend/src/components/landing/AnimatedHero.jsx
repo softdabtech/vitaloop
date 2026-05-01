@@ -17,11 +17,11 @@ export function AnimatedHero() {
   }, [prefersReducedMotion])
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+    <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
       <ParticleField />
 
-      <div className="max-w-7xl mx-auto px-8 w-full">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-24 lg:py-32">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start lg:items-center">
           {/* Left: Headline + CTA */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -30,19 +30,19 @@ export function AnimatedHero() {
           >
             {/* Badge */}
             <motion.div
-              className="inline-flex items-center gap-2 px-4 py-2 bg-teal-500/10 border border-teal-500/30 rounded-full mb-6"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full mb-6"
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
             >
-              <div className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-              <span className="text-sm font-semibold text-teal-400 tracking-wider">AI LAB INTELLIGENCE</span>
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-sm font-semibold text-emerald-400 tracking-wider">AI LAB INTELLIGENCE</span>
             </motion.div>
 
             {/* Headline */}
-            <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-[1.1]">
+            <h1 className="text-4xl lg:text-5xl font-bold mb-6 leading-[1.1]">
               <span className="block text-white">Blood test →</span>
-              <span className="block bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-400 bg-clip-text text-transparent">
                 Living protocol
               </span>
             </h1>
@@ -53,12 +53,12 @@ export function AnimatedHero() {
             </p>
 
             {/* CTA buttons */}
-            <div className="flex flex-wrap gap-4 mb-12">
+            <div className="flex flex-col sm:flex-row gap-4 mb-16">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate('/upload')}
-                className="group px-8 py-4 bg-teal-500 hover:bg-teal-400 text-white rounded-full font-semibold shadow-lg shadow-teal-500/20 transition-all flex items-center gap-2"
+                className="group px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-white rounded-full font-semibold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
               >
                 Try with your lab
                 <motion.span
@@ -72,17 +72,19 @@ export function AnimatedHero() {
 
               <motion.button
                 whileHover={{ scale: 1.05 }}
-                className="px-8 py-4 border-2 border-slate-700 hover:border-teal-500 rounded-full font-semibold transition-all"
+                whileTap={{ scale: 0.95 }}
+                className="px-8 py-3 border-2 border-slate-600 hover:border-emerald-400 text-slate-100 hover:text-white rounded-full font-semibold transition-all whitespace-nowrap"
               >
                 Watch 60s demo
               </motion.button>
             </div>
 
-            {/* Stats */}
-            <div className="flex gap-8">
-              <StatTicker value={85} suffix="+" label="Biomarkers" delay={0.5} />
-              <StatTicker value={60} suffix="s" label="To protocol" delay={0.7} />
-              <StatTicker value={4.8} suffix="/5" label="User rating" delay={0.9} />
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-8 border-t border-slate-700">
+              <StatBox value="85+" label="Biomarker types tracked" delay={0.5} />
+              <StatBox value="<60s" label="From upload to protocol" delay={0.6} />
+              <StatBox value="$9.99" label="Personal Premium per month" delay={0.7} />
+              <StatBox value="3 plans" label="Free, Premium, Enterprise" delay={0.8} />
             </div>
           </motion.div>
 
@@ -103,10 +105,10 @@ export function AnimatedHero() {
                   className="group flex flex-col items-center gap-2"
                 >
                   <div className={`transition-all rounded-full ${
-                    stage === i ? 'w-8 h-2 bg-teal-400' : 'w-2 h-2 bg-slate-700 group-hover:bg-slate-600'
+                    stage === i ? 'w-8 h-2 bg-emerald-400' : 'w-2 h-2 bg-slate-700 group-hover:bg-slate-600'
                   }`} />
                   <span className={`text-xs transition-colors ${
-                    stage === i ? 'text-teal-400' : 'text-slate-600 group-hover:text-slate-500'
+                    stage === i ? 'text-emerald-400' : 'text-slate-600 group-hover:text-slate-500'
                   }`}>
                     {label}
                   </span>
@@ -120,36 +122,20 @@ export function AnimatedHero() {
   )
 }
 
-// Stat counter with animation
-function StatTicker({ value, suffix = '', label, delay = 0 }) {
-  const [count, setCount] = useState(0)
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      let start = 0
-      const end = typeof value === 'number' ? value : parseFloat(value)
-      const increment = end / 60
-      const counter = setInterval(() => {
-        start += increment
-        if (start >= end) {
-          setCount(end)
-          clearInterval(counter)
-        } else {
-          setCount(start)
-        }
-      }, 16)
-    }, delay * 1000)
-
-    return () => clearTimeout(timer)
-  }, [value, delay])
-
+// Stat box with animation
+function StatBox({ value, label, delay = 0 }) {
   return (
-    <div>
-      <div className="text-3xl font-bold text-teal-400">
-        {count.toFixed(value % 1 !== 0 ? 1 : 0)}{suffix}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      className="text-center"
+    >
+      <div className="text-2xl lg:text-3xl font-bold text-emerald-400 mb-2">
+        {value}
       </div>
-      <div className="text-sm text-slate-500 mt-1">{label}</div>
-    </div>
+      <div className="text-xs lg:text-sm text-slate-400">{label}</div>
+    </motion.div>
   )
 }
 
