@@ -107,6 +107,7 @@ export default function Subscription() {
   const [subscription, setSubscription] = useState(null)
   const [loading, setLoading] = useState(true)
   const [upgrading, setUpgrading] = useState(false)
+  const [openingPortal, setOpeningPortal] = useState(false)
 
   const currentPlan = subscription?.plan_name ? subscription.plan_name.toLowerCase().replace(/\s+/g, '_') : 'free'
   const planStatus = subscription?.sub_status || 'free'
@@ -153,14 +154,22 @@ export default function Subscription() {
   }
 
   async function openBillingPortal() {
+    setOpeningPortal(true)
     try {
       const { data } = await api.post('/stripe/billing-portal')
       if (data.portal_url) {
         window.open(data.portal_url, '_blank')
+        toast.success('Opening billing portal...')
+      } else {
+        toast.error('Failed to load billing portal. Please try again.')
+        console.error('No portal_url returned from API')
       }
     } catch (error) {
-      toast.error('Failed to open billing portal')
-      console.error(error)
+      const errorMsg = error.response?.data?.detail || error.message || 'Failed to open billing portal'
+      toast.error(errorMsg)
+      console.error('Billing portal error:', error)
+    } finally {
+      setOpeningPortal(false)
     }
   }
 
@@ -223,9 +232,10 @@ export default function Subscription() {
               {isPremium && (
                 <button
                   onClick={openBillingPortal}
-                  className="rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition"
+                  disabled={openingPortal}
+                  className="rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Manage Billing
+                  {openingPortal ? 'Opening...' : 'Manage Billing'}
                 </button>
               )}
             </div>
@@ -248,7 +258,9 @@ export default function Subscription() {
 
               <div className="rounded-xl bg-blue-50 p-4 border border-blue-200">
                 <div className="text-xs font-semibold uppercase tracking-wide text-blue-600 mb-2">Uploads</div>
-                <div className="text-2xl font-bold text-blue-900">{uploadCount}/{uploadLimit || '∞'}</div>
+                <div className="text-2xl font-bold text-blue-900">
+                  {currentPlan === 'free' ? `${Math.max(0, uploadLimit - uploadCount)}/month` : 'Unlimited'}
+                </div>
               </div>
 
               <div className="rounded-xl bg-purple-50 p-4 border border-purple-200">
@@ -323,22 +335,24 @@ export default function Subscription() {
           </div>
         )}
 
-        {/* Plan Selection */}
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Choose Your Plan</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {Object.entries(PLANS).map(([key, plan]) => (
-              <PlanCard
-                key={key}
-                planKey={key}
-                plan={plan}
-                currentPlan={currentPlan}
-                onSelect={handleSelectPlan}
-                isLoading={upgrading}
-              />
-            ))}
+        {/* Plan Selection - only show for free users */}
+        {currentPlan === 'free' && (
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Choose Your Plan</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {Object.entries(PLANS).map(([key, plan]) => (
+                <PlanCard
+                  key={key}
+                  planKey={key}
+                  plan={plan}
+                  currentPlan={currentPlan}
+                  onSelect={handleSelectPlan}
+                  isLoading={upgrading}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Payment & Billing Info */}
         {isPremium && (
@@ -352,9 +366,10 @@ export default function Subscription() {
                 </p>
                 <button
                   onClick={openBillingPortal}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900 transition"
+                  disabled={openingPortal}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Open Billing Portal
+                  {openingPortal ? 'Opening...' : 'Open Billing Portal'}
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
