@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../lib/api.js'
 import ProtocolCard from '../components/ProtocolCard.jsx'
-import Paywall from '../components/Paywall.jsx'
-import { useSubscription } from '../hooks/useSubscription.js'
+import FeatureGate from '../components/FeatureGate.jsx'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
 import BiomarkerAlertsDisplay from '../components/BiomarkerAlertsDisplay.jsx'
@@ -101,7 +100,6 @@ const RESULTS_HINTS = [
 export default function Results() {
   const { uploadId } = useParams()
   const navigate = useNavigate()
-  const { isActive } = useSubscription()
   const { show: showHints, dismiss: dismissHints } = useTourHints('results')
   const [biomarkers, setBiomarkers] = useState([])
   const [protocol, setProtocol] = useState([])
@@ -596,8 +594,22 @@ export default function Results() {
             </button>
           </div>
 
-          {isActive ? (
-            protocol.length > 0 ? (
+          <FeatureGate
+            feature="basic_protocol"
+            onLocked={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))}
+            fallback={
+              <div className="bg-gradient-to-br from-emerald-50 to-blue-50 border border-emerald-200 rounded-xl p-8 text-center">
+                <div className="max-w-md mx-auto">
+                  <Activity className="h-12 w-12 text-emerald-600 mx-auto mb-4" />
+                  <h4 className="text-lg font-semibold text-slate-900 mb-2">Unlock Your Personalized Protocol</h4>
+                  <p className="text-slate-600 mb-6">
+                    Get AI-powered supplement recommendations tailored to your specific biomarker results and health goals.
+                  </p>
+                </div>
+              </div>
+            }
+          >
+            {protocol.length > 0 ? (
               <div className="space-y-4">
                 {protocol.map((rec, i) => <ProtocolCard key={i} recommendation={rec} />)}
               </div>
@@ -614,19 +626,8 @@ export default function Results() {
                   Generate / Open Protocol
                 </button>
               </div>
-            )
-          ) : (
-            <div className="bg-gradient-to-br from-emerald-50 to-blue-50 border border-emerald-200 rounded-xl p-8 text-center">
-              <div className="max-w-md mx-auto">
-                <Activity className="h-12 w-12 text-emerald-600 mx-auto mb-4" />
-                <h4 className="text-lg font-semibold text-slate-900 mb-2">Unlock Your Personalized Protocol</h4>
-                <p className="text-slate-600 mb-6">
-                  Get AI-powered supplement recommendations tailored to your specific biomarker results and health goals.
-                </p>
-                <Paywall />
-              </div>
-            </div>
-          )}
+            )}
+          </FeatureGate>
         </div>
       </div>
     </div>

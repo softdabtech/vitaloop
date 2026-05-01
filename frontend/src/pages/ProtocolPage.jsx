@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.js'
-import { useSubscription } from '../hooks/useSubscription.js'
+import { useFeature } from '../hooks/useFeature.js'
+import FeatureGate from '../components/FeatureGate.jsx'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
@@ -474,8 +475,8 @@ export default function ProtocolPage() {
   const { uploadId } = useParams()
   const navigate = useNavigate()
   const { user, signOut } = useAuth()
-  const { isActive, loading: subLoading } = useSubscription()
   const { show: showHints, dismiss: dismissHints } = useTourHints('protocol')
+  const { hasAccess: canExport } = useFeature('advanced_protocol')
   const [biomarkers, setBiomarkers] = useState([])
   const [protocol, setProtocol] = useState([])
   const [loading, setLoading] = useState(true)
@@ -510,7 +511,7 @@ export default function ProtocolPage() {
   ).length
 
   const handleExportPdf = async () => {
-    if (!isActive || sortedProtocol.length === 0 || exporting) return
+    if (!canExport || sortedProtocol.length === 0 || exporting) return
     try {
       setExporting(true)
       await exportProtocolPdf({
@@ -524,7 +525,7 @@ export default function ProtocolPage() {
     }
   }
 
-  if (loading || subLoading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-50">
         <div className="text-center space-y-3">
@@ -553,7 +554,7 @@ export default function ProtocolPage() {
           </div>
           <button
             onClick={handleExportPdf}
-            disabled={!isActive || sortedProtocol.length === 0 || exporting}
+            disabled={!canExport || sortedProtocol.length === 0 || exporting}
             className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-800 hover:border-slate-300 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" />
@@ -652,8 +653,18 @@ export default function ProtocolPage() {
                 <span className="text-xs text-slate-400">{sortedProtocol.length} supplements · 7 days</span>
               </div>
 
-              {isActive ? (
-                sortedProtocol.length > 0 ? (
+              <FeatureGate
+                feature="advanced_protocol"
+                onLocked={() =>
+                  window.dispatchEvent(
+                    new CustomEvent('paywall:trigger', {
+                      detail: { reason: 'SUBSCRIPTION_REQUIRED' },
+                    })
+                  )
+                }
+                fallback={<PaywallTeaser onUpgrade={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))} />}
+              >
+                {sortedProtocol.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
                       <thead>
@@ -675,18 +686,8 @@ export default function ProtocolPage() {
                   <div className="p-10 text-center text-slate-400 text-sm">
                     No supplement protocol generated yet.
                   </div>
-                )
-              ) : (
-                <PaywallTeaser
-                  onUpgrade={() =>
-                    window.dispatchEvent(
-                      new CustomEvent('paywall:trigger', {
-                        detail: { reason: 'SUBSCRIPTION_REQUIRED' },
-                      })
-                    )
-                  }
-                />
-              )}
+                )}
+              </FeatureGate>
             </div>
 
             {/* ── Lifestyle Recommendations ── */}
