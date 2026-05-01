@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Activity, Clock, RefreshCw, Sparkles, TrendingUp, TriangleAlert, Lightbulb, AlertCircle, BarChart3 } from 'lucide-react'
 import api from '../lib/api.js'
@@ -7,6 +8,7 @@ import toast from 'react-hot-toast'
 import BiomarkerAlertsDisplay from '../components/BiomarkerAlertsDisplay.jsx'
 import HealthTipsDisplay from '../components/HealthTipsDisplay.jsx'
 import TrendAnalyticsDashboard from '../components/TrendAnalyticsDashboard.jsx'
+import { useTimeline, useInsights, useHealthScore, useProgress } from '../hooks/useQueries.js'
 
 const EVENT_LABELS = {
   lab_uploaded: 'Upload',
@@ -53,36 +55,23 @@ function pickLatestBiomarkers(progressRows = []) {
 }
 
 export default function Insights() {
-  const [timeline, setTimeline] = useState([])
-  const [insights, setInsights] = useState([])
-  const [healthScore, setHealthScore] = useState(null)
-  const [biomarkers, setBiomarkers] = useState([])
-  const [loadingInsights, setLoadingInsights] = useState(false)
+  const queryClient = useQueryClient()
   const [tab, setTab] = useState('insights')
-  const [error, setError] = useState(null)
+  const [loadingInsights, setLoadingInsights] = useState(false)
 
-  useEffect(() => {
-    setError(null)
-    Promise.allSettled([
-      api.get('/timeline'),
-      api.get('/insights'),
-      api.get('/insights/health-score'),
-      api.get('/progress'),
-    ]).then(([timelineResult, insightsResult, healthResult, progressResult]) => {
-      if (timelineResult.status === 'fulfilled') setTimeline(timelineResult.value.data || [])
-      else setError('Failed to load timeline')
+  const { data: timeline = [], isError: timelineError } = useTimeline()
+  const { data: insights = [] } = useInsights()
+  const { data: healthScore = null } = useHealthScore()
+  const { data: progressRows = [] } = useProgress()
 
-      if (insightsResult.status === 'fulfilled') setInsights(insightsResult.value.data || [])
-      if (healthResult.status === 'fulfilled') setHealthScore(healthResult.value.data || null)
-      if (progressResult.status === 'fulfilled') setBiomarkers(pickLatestBiomarkers(progressResult.value.data || []))
-    }).catch(err => setError('Error loading insights'))
-  }, [])
+  const biomarkers = pickLatestBiomarkers(progressRows)
 
   async function generateInsights() {
     setLoadingInsights(true)
     try {
       const { data } = await api.post('/insights/generate')
-      setInsights((prev) => [...(data || []), ...prev])
+      // Optimistic update: prepend new insights to cache
+      queryClient.setQueryData(['insights'], (old = []) => [...(data || []), ...old])
       toast.success(`${data?.length || 0} new insight(s) generated`)
     } catch {
       toast.error('Failed to generate insights')
@@ -107,9 +96,9 @@ export default function Insights() {
         )}
       />
 
-      {error && (
+      {timelineError && (
         <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          {error} — Please refresh or try again later.
+          Failed to load timeline — Please refresh or try again later.
         </div>
       )}
 
