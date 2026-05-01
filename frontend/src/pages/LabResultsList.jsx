@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { FlaskConical, Calendar, ChevronRight, Upload, Activity, Sparkles } from 'lucide-react'
 import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
+import { useFeature } from '../hooks/useFeature.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
@@ -27,6 +28,7 @@ export default function LabResultsList() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { show: showHints, dismiss: dismissHints } = useTourHints('lab-results')
+  const { hasAccess } = useFeature()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -201,23 +203,25 @@ export default function LabResultsList() {
               })}
 
               {/* Premium features hint for free users */}
-              <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                <div className="flex items-start gap-3">
-                  <Sparkles className="mt-0.5 h-5 w-5 text-amber-600" />
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-amber-800">Premium features available</p>
-                    <p className="mt-1 text-sm text-amber-700">
-                      Upgrade to see your complete lab history, track trends over time, and get personalized supplement protocols.
-                    </p>
-                    <button
-                      onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'LAB_HISTORY_ACCESS' } }))}
-                      className="mt-3 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition"
-                    >
-                      Upgrade for $9.99/month
-                    </button>
+              {!hasAccess('progress') && (
+                <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="mt-0.5 h-5 w-5 text-amber-600" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-amber-800">Premium features available</p>
+                      <p className="mt-1 text-sm text-amber-700">
+                        Upgrade to see your complete lab history, track trends over time, and get personalized supplement protocols.
+                      </p>
+                      <button
+                        onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'LAB_HISTORY_ACCESS' } }))}
+                        className="mt-3 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition"
+                      >
+                        Upgrade for $9.99/month
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <aside className="vtl-light-card h-fit p-5">
