@@ -384,3 +384,16 @@ Key docs in this repository:
 - CRM/admin access depends on backend `/auth/me` user context, not only raw frontend auth state.
 - Frontend pricing copy should stay aligned with `frontend/src/lib/pricing.js`.
 - For frontend deploy validation, check `build-info.json`, not only the HTML shell.
+
+## Contributors
+
+This project is maintained by the VITALOOP team and supported by Claude AI (Claude Haiku 4.5) for continuous quality improvements, bug fixes, and testing.
+
+Recent contributions by Claude AI include:
+- Dashboard bug fixes (duplicate menu items, plan display, clickable uploads)
+- Biomarker status normalization and enum definitions
+- Subscription state management improvements
+- Date handling and fallback logic enhancements
+- Smoke testing and quality assurance automation
+
+For AI-assisted development history, see commit messages with `Co-Authored-By: Claude Haiku 4.5`.
