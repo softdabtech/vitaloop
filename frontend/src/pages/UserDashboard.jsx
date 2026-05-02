@@ -315,6 +315,100 @@ export default function UserDashboard() {
             latestCheckin={latestCheckin}
           />
 
+          {/* Health Score + Next Action Block */}
+          <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+            {/* Health Score Card */}
+            <DashboardCard title="Health Score" eyebrow="Overall status">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-4xl font-bold text-slate-900">{stats.health_score ?? 68}</div>
+                  <p className="text-sm text-slate-500 mt-2">
+                    {(stats.health_score ?? 68) >= 75 ? '✅ Great progress' : (stats.health_score ?? 68) >= 50 ? '⚠️ Keep going' : '📈 Get started'}
+                  </p>
+                  <div className="mt-4 space-y-2 text-xs text-slate-600">
+                    <div className="flex justify-between">
+                      <span>Adherence</span>
+                      <span className="font-semibold">{Math.round((stats.completed_tasks / Math.max(assignments.length, 1)) * 100)}%</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full"
+                        style={{ width: `${Math.round((stats.completed_tasks / Math.max(assignments.length, 1)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </DashboardCard>
+
+            {/* Next Action CTA */}
+            <DashboardCard title="What's next?" eyebrow="Recommended action">
+              <div className="space-y-3">
+                {!hasUploads ? (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <p className="text-sm font-semibold text-emerald-900 mb-2">📄 Upload your first lab</p>
+                    <p className="text-xs text-emerald-700 mb-3">Get your first biomarker analysis and personalized protocol in 2 minutes</p>
+                    <button
+                      onClick={() => navigate('/upload')}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition"
+                    >
+                      Start upload
+                      <ArrowRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : !onboardingComplete ? (
+                  <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                    <p className="text-sm font-semibold text-blue-900 mb-2">👤 Complete health profile</p>
+                    <p className="text-xs text-blue-700 mb-3">Personalize your results and get better recommendations</p>
+                    <button
+                      onClick={() => navigate('/health-profile')}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition"
+                    >
+                      Complete profile
+                      <ArrowRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : !latestCheckin || (new Date() - new Date(latestCheckin?.created_at || 0)) > 7 * 24 * 60 * 60 * 1000 ? (
+                  <div className="rounded-2xl border border-purple-200 bg-purple-50 p-4">
+                    <p className="text-sm font-semibold text-purple-900 mb-2">✅ Weekly check-in</p>
+                    <p className="text-xs text-purple-700 mb-3">Update us on how you're feeling and your progress</p>
+                    <button
+                      onClick={() => navigate('/check-ins')}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg transition"
+                    >
+                      Start check-in
+                      <ArrowRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : assignments.length > 0 && assignments.filter(a => String(a?.status || '').toLowerCase() !== 'completed').length > 0 ? (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-sm font-semibold text-amber-900 mb-2">📋 {assignments.filter(a => String(a?.status || '').toLowerCase() !== 'completed').length} task{assignments.filter(a => String(a?.status || '').toLowerCase() !== 'completed').length > 1 ? 's' : ''} pending</p>
+                    <p className="text-xs text-amber-700 mb-3">Keep your protocol on track</p>
+                    <button
+                      onClick={() => navigate('/assignments')}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition"
+                    >
+                      View tasks
+                      <ArrowRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <p className="text-sm font-semibold text-emerald-900 mb-2">🎉 You're all set!</p>
+                    <p className="text-xs text-emerald-700 mb-3">Stay consistent and track your progress</p>
+                    <button
+                      onClick={() => navigate('/progress')}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition"
+                    >
+                      View progress
+                      <ArrowRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </DashboardCard>
+          </div>
+
           {/* Achievement Banner */}
           {stats.completed_tasks > 0 && stats.completed_tasks % 5 === 0 && (
             <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-5">
