@@ -36,6 +36,10 @@ export default function Progress() {
       })
       setPhotos([...photos, response.data])
     } catch (error) {
+      if (error.response?.status === 402) {
+        handlePaywall()
+        return
+      }
       console.error('Photo upload failed:', error)
       throw error
     }
