@@ -103,13 +103,26 @@ export default function Progress() {
               </div>
             )}
 
-            <FeatureGate
-              feature="progress"
-              onLocked={handlePaywall}
-              fallback={<div className="rounded-xl border border-amber-200 bg-amber-50 p-8 text-center"><p className="text-amber-700">Advanced progress tracking available with Premium</p></div>}
-            >
-              <ProgressChart data={uploadsWithBiomarkers} />
-            </FeatureGate>
+            {uploadsWithBiomarkers.length >= 2 ? (
+              <FeatureGate
+                feature="progress"
+                onLocked={handlePaywall}
+                fallback={
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
+                    <p className="text-sm font-semibold text-amber-800 mb-2">Advanced Charts</p>
+                    <p className="text-sm text-amber-700 mb-3">Detailed trend charts available with Premium</p>
+                    <button
+                      onClick={handlePaywall}
+                      className="inline-flex items-center gap-2 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition"
+                    >
+                      Unlock Premium
+                    </button>
+                  </div>
+                }
+              >
+                <ProgressChart data={uploadsWithBiomarkers} />
+              </FeatureGate>
+            ) : null}
 
             <div className="vtl-light-card mt-6 p-5">
               <p className="mb-3 text-sm font-semibold text-slate-700">Upload Timeline</p>

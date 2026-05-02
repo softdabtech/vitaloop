@@ -37,31 +37,37 @@ export default function LabResultsList() {
     if (!user) return
 
     let active = true
-    api.get('/progress')
-      .then((res) => {
+
+    const fetchLabResults = async () => {
+      try {
+        const res = await api.get('/progress')
         if (!active) return
         const items = normalizeProgressPayload(res.data)
-        // For free users, only show the most recent upload if any
-        const displayItems = items.length > 0 ? [items[0]] : []
-        setItems(displayItems)
+        setItems(items)
         setError(null)
-      })
-      .catch((err) => {
+      } catch (err) {
         if (!active) return
         if (err.response?.status === 402) {
-          // For free users, try to get the most recent upload via a different endpoint
-          // or show empty state with upload option
-          setItems([])
-          setError(null) // Don't show error, just show empty state
+          try {
+            const fallbackRes = await api.get('/uploads/recent')
+            if (!active) return
+            const items = normalizeProgressPayload(fallbackRes.data)
+            setItems(items.slice(0, 1))
+            setError(null)
+          } catch {
+            setItems([])
+            setError(null)
+          }
         } else {
           setError('Could not load lab results.')
         }
-      })
-      .finally(() => {
+      } finally {
         if (!active) return
         setLoading(false)
-      })
+      }
+    }
 
+    fetchLabResults()
     return () => {
       active = false
     }
