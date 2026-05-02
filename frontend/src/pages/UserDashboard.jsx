@@ -319,25 +319,42 @@ export default function UserDashboard() {
           <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
             {/* Health Score Card */}
             <DashboardCard title="Health Score" eyebrow="Overall status">
-              <div className="flex items-center justify-between">
+              <div className="space-y-4">
                 <div>
                   <div className="text-4xl font-bold text-slate-900">{stats.health_score ?? 68}</div>
-                  <p className="text-sm text-slate-500 mt-2">
+                  <p className="text-sm text-slate-500 mt-1">
                     {(stats.health_score ?? 68) >= 75 ? '✅ Great progress' : (stats.health_score ?? 68) >= 50 ? '⚠️ Keep going' : '📈 Get started'}
                   </p>
-                  <div className="mt-4 space-y-2 text-xs text-slate-600">
-                    <div className="flex justify-between">
-                      <span>Adherence</span>
-                      <span className="font-semibold">{Math.round((stats.completed_tasks / Math.max(assignments.length, 1)) * 100)}%</span>
-                    </div>
-                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-500 rounded-full"
-                        style={{ width: `${Math.round((stats.completed_tasks / Math.max(assignments.length, 1)) * 100)}%` }}
-                      />
-                    </div>
+                </div>
+
+                {/* Adherence */}
+                <div className="pt-2 space-y-2 text-xs text-slate-600 border-t border-slate-100">
+                  <div className="flex justify-between">
+                    <span>Protocol Adherence</span>
+                    <span className="font-semibold">{Math.round((stats.completed_tasks / Math.max(assignments.length, 1)) * 100)}%</span>
+                  </div>
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 rounded-full"
+                      style={{ width: `${Math.round((stats.completed_tasks / Math.max(assignments.length, 1)) * 100)}%` }}
+                    />
                   </div>
                 </div>
+
+                {/* Check-in Status */}
+                {latestCheckin && (
+                  <div className="pt-2 space-y-2 text-xs text-slate-600 border-t border-slate-100">
+                    <div className="flex justify-between items-center">
+                      <span>Weekly Check-in</span>
+                      <span className="font-semibold text-emerald-600">✅ Done</span>
+                    </div>
+                    <p className="text-slate-500">
+                      {latestCheckin?.feeling === 'great' ? '🌟 Feeling great this week' :
+                       latestCheckin?.feeling === 'steady' ? '😊 Steady progress' :
+                       latestCheckin?.feeling === 'off' ? '⚠️ Needing support' : '💪 Building momentum'}
+                    </p>
+                  </div>
+                )}
               </div>
             </DashboardCard>
 
@@ -409,23 +426,55 @@ export default function UserDashboard() {
             </DashboardCard>
           </div>
 
-          {/* Achievement Banner */}
-          {stats.completed_tasks > 0 && stats.completed_tasks % 5 === 0 && (
-            <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-5">
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl bg-emerald-500 p-3">
-                  <CheckCircle2 className="h-6 w-6 text-white" />
+          {/* Celebration Features */}
+          <div className="space-y-4">
+            {/* Achievement Milestone */}
+            {stats.completed_tasks > 0 && stats.completed_tasks % 5 === 0 && (
+              <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-5">
+                <div className="flex items-center gap-4">
+                  <div className="rounded-xl bg-emerald-500 p-3">
+                    <CheckCircle2 className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-emerald-900">🎉 Milestone Reached!</h3>
+                    <p className="text-sm text-emerald-700">You've completed {stats.completed_tasks} health assignments. You're on fire! 🔥</p>
+                  </div>
+                  <button onClick={() => navigate('/assignments')} className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">
+                    View all →
+                  </button>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-emerald-900">🎉 Achievement Unlocked!</h3>
-                  <p className="text-sm text-emerald-700">You've completed {stats.completed_tasks} health assignments. Keep up the amazing work!</p>
-                </div>
-                <button onClick={() => navigate('/assignments')} className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">
-                  View all →
-                </button>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Recent Wins */}
+            {(stats.health_score > 70 || stats.completed_tasks > 0 || latestCheckin) && (
+              <div className="rounded-2xl border border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 p-5">
+                <h3 className="font-semibold text-purple-900 mb-3">⭐ Your Recent Wins</h3>
+                <div className="space-y-2">
+                  {stats.health_score > 70 && (
+                    <p className="text-sm text-purple-700 flex items-center gap-2">
+                      <span>🏆</span> Health Score is {stats.health_score} — keep up the great work!
+                    </p>
+                  )}
+                  {stats.completed_tasks > 0 && (
+                    <p className="text-sm text-purple-700 flex items-center gap-2">
+                      <span>✅</span> {stats.completed_tasks} task{stats.completed_tasks > 1 ? 's' : ''} completed this cycle
+                    </p>
+                  )}
+                  {latestCheckin && (
+                    <p className="text-sm text-purple-700 flex items-center gap-2">
+                      <span>📝</span> Consistent with your weekly check-ins — great habit!
+                    </p>
+                  )}
+                  {stats.total_uploads > 1 && (
+                    <p className="text-sm text-purple-700 flex items-center gap-2">
+                      <span>📊</span> {stats.total_uploads} lab uploads tracked — you're serious about your health!
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Share Progress */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
