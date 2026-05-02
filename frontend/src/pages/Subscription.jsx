@@ -141,7 +141,15 @@ export default function Subscription() {
 
     setUpgrading(true)
     try {
-      const { data } = await api.post('/stripe/checkout', { plan_tier: planKey })
+      // Map frontend plan keys to backend plan IDs
+      const planMap = {
+        'free': 'personal',
+        'personal_pro': 'personal',
+        'enterprise': 'practitioner',
+      }
+      const backendPlanId = planMap[planKey] || 'personal'
+
+      const { data } = await api.post('/stripe/checkout', { plan_id: backendPlanId })
       if (data.checkout_url) {
         window.location.href = data.checkout_url
       }
@@ -156,7 +164,7 @@ export default function Subscription() {
   async function openBillingPortal() {
     setOpeningPortal(true)
     try {
-      const { data } = await api.post('/stripe/billing-portal')
+      const { data } = await api.post('/stripe/portal')
       if (data.portal_url) {
         window.open(data.portal_url, '_blank')
         toast.success('Opening billing portal...')
