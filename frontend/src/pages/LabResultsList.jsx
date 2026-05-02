@@ -54,12 +54,16 @@ export default function LabResultsList() {
             const items = normalizeProgressPayload(fallbackRes.data)
             setItems(items.slice(0, 1))
             setError(null)
-          } catch {
+          } catch (fallbackErr) {
             setItems([])
             setError(null)
           }
         } else {
-          setError('Could not load lab results.')
+          const statusCode = err.response?.status || 'unknown'
+          const message = err.response?.data?.message || err.message || 'Could not load lab results.'
+          setError(`Error loading results (${statusCode}): ${message}`)
+          console.error('LabResultsList fetch error:', err)
+          setItems([])
         }
       } finally {
         if (!active) return
