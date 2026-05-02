@@ -43,7 +43,7 @@ elif settings.sentry_dsn and sentry_sdk is None:
     logger.warning("sentry_dsn_set_but_sdk_missing")
 from app.routers import health, llm_consult
 from app.routers.identity import auth, profile, onboarding
-from app.routers.analysis import analyze, insights, red_flags, timeline, dashboard
+from app.routers.analysis import analyze, insights, red_flags, timeline, dashboard, uploads
 from app.routers.protocol import protocol, progress, symptoms, checkins, questionnaire, assignments, compatibility
 from app.routers.notifications import notifications, complaints
 from app.routers.billing import stripe_router
@@ -156,4 +156,5 @@ app.include_router(auth.router, prefix="/users", tags=["users"])
 app.include_router(questionnaire.router, prefix="/questionnaires", tags=["questionnaire"])
 app.include_router(dashboard.router)
 app.include_router(compatibility.router)
+app.include_router(uploads.router, tags=["uploads"])
 app.include_router(llm_consult.router, prefix="/llm", tags=["llm"])
