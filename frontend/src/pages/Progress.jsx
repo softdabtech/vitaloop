@@ -1,9 +1,12 @@
 import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import ProgressChart from '../components/ProgressChart.jsx'
+import ProgressPhotoGallery from '../components/ProgressPhotoGallery.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import FeatureGate from '../components/FeatureGate.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useProgress } from '../hooks/useQueries.js'
+import api from '../lib/api.js'
 import '../styles/dashboard2026.css'
 
 function getBiomarkerValue(upload, name) {
@@ -20,9 +23,32 @@ function deltaPct(first, last) {
 export default function Progress() {
   const navigate = useNavigate()
   const { data = [], isLoading } = useProgress()
+  const [photos, setPhotos] = useState([])
 
   const handlePaywall = () => {
     window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))
+  }
+
+  const handlePhotoUpload = async (formData) => {
+    try {
+      const response = await api.post('/progress/photos', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setPhotos([...photos, response.data])
+    } catch (error) {
+      console.error('Photo upload failed:', error)
+      throw error
+    }
+  }
+
+  const handlePhotoDelete = async (photoId) => {
+    try {
+      await api.delete(`/progress/photos/${photoId}`)
+      setPhotos(photos.filter((p) => p.id !== photoId))
+    } catch (error) {
+      console.error('Photo delete failed:', error)
+      throw error
+    }
   }
 
   if (isLoading) {
@@ -137,6 +163,15 @@ export default function Progress() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Progress Photo Gallery */}
+            <div className="mt-8">
+              <ProgressPhotoGallery
+                photos={photos}
+                onUpload={handlePhotoUpload}
+                onDelete={handlePhotoDelete}
+              />
             </div>
 
             <div className="vtl-light-card mt-8 p-5 text-center">
