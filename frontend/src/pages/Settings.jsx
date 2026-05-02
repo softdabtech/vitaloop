@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { Mail, Bell, Lock, LogOut } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import NotificationPreferences from '../components/NotificationPreferences.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { supabase } from '../lib/supabase.js'
+import api from '../lib/api.js'
 import '../styles/dashboard2026.css'
 
 const fieldStyle = {
@@ -33,9 +35,12 @@ function Field({ label, children }) {
 export default function Settings() {
   const { user, signOut } = useAuth()
   const [notifications, setNotifications] = useState({
+    weekly_checkin: user?.user_metadata?.weekly_checkin !== false,
+    assignment_due: user?.user_metadata?.assignment_due !== false,
+    streak_reminder: user?.user_metadata?.streak_reminder !== false,
     weekly_digest: user?.user_metadata?.weekly_digest !== false,
-    checkin_reminders: user?.user_metadata?.checkin_reminders !== false,
-    product_updates: Boolean(user?.user_metadata?.product_updates),
+    achievement_unlock: user?.user_metadata?.achievement_unlock !== false,
+    biomarker_alert: user?.user_metadata?.biomarker_alert !== false,
   })
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -51,27 +56,6 @@ export default function Settings() {
     event.target.style.boxShadow = 'none'
   }
 
-  async function saveNotifications() {
-    setSaving(true)
-    try {
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          ...user?.user_metadata,
-          weekly_digest: notifications.weekly_digest,
-          checkin_reminders: notifications.checkin_reminders,
-          product_updates: notifications.product_updates,
-        },
-      })
-
-      if (error) throw error
-      toast.success('Notification preferences updated!')
-    } catch (error) {
-      toast.error('Failed to update preferences')
-      console.error(error)
-    } finally {
-      setSaving(false)
-    }
-  }
 
   async function updatePassword() {
     if (!newPassword.trim()) {
@@ -190,59 +174,13 @@ export default function Settings() {
 
         {/* Notifications */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-            <Bell size={18} style={{ color: '#1d9e75' }} />
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>Notifications</div>
-              <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>Choose which emails you'd like to receive</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
-            {[
-              { key: 'weekly_digest', label: 'Weekly Health Digest', description: 'Summary of your health trends and recommendations' },
-              { key: 'checkin_reminders', label: 'Check-in Reminders', description: 'Reminders to complete your weekly health check-ins' },
-              { key: 'product_updates', label: 'Product Updates', description: 'New features, improvements, and announcements' },
-            ].map((item) => (
-              <label
-                key={item.key}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                  padding: '14px 14px',
-                  borderRadius: 12,
-                  background: '#f8fafc',
-                  border: '1px solid rgba(15,23,42,0.08)',
-                  cursor: 'pointer',
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', marginBottom: 2 }}>
-                    {item.label}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#64748b' }}>
-                    {item.description}
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={Boolean(notifications[item.key])}
-                  onChange={(e) => setNotifications({ ...notifications, [item.key]: e.target.checked })}
-                  style={{ width: 16, height: 16, flexShrink: 0, marginTop: 2, cursor: 'pointer' }}
-                />
-              </label>
-            ))}
-          </div>
-
-          <button
-            onClick={saveNotifications}
-            disabled={saving}
-            className="rounded-2xl bg-emerald-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Preferences'}
-          </button>
+          <NotificationPreferences
+            currentPreferences={notifications}
+            onSave={(prefs) => {
+              setNotifications(prefs)
+              toast.success('Notification preferences updated!')
+            }}
+          />
         </div>
 
         {/* Danger Zone */}
