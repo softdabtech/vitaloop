@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react'
 import { useOnboardingState } from './hooks/useOnboardingState.js'
 import SupportChat from './components/SupportChat.jsx'
 import PaywallModal from './components/PaywallModal.jsx'
+import AppLoadingScreen from './components/AppLoadingScreen.jsx'
 import { gaPageView } from './lib/analytics.js'
 
 // Critical user path — eager
@@ -72,7 +73,7 @@ function GAPageTracker() {
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
-  if (loading) return <div className="flex items-center justify-center h-screen">Loading…</div>
+  if (loading) return <AppLoadingScreen />
   if (!user) return <Navigate to="/login" replace />
 
   return children
@@ -80,7 +81,7 @@ function ProtectedRoute({ children }) {
 
 function CRMRoute({ children, needsOps = false }) {
   const { loading, canAccessCRM, canAccessOps } = useCRMRoleAccess()
-  if (loading) return <div className="flex items-center justify-center h-screen">Loading…</div>
+  if (loading) return <AppLoadingScreen />
   if (needsOps && !canAccessOps) return <Navigate to="/dashboard" replace />
   if (!needsOps && !canAccessCRM) return <Navigate to="/dashboard" replace />
   return children
@@ -93,7 +94,7 @@ function EndUserFlowRoute({ children, allowBeforeOnboarding = false, redirectIfO
   const requiresOnboarding = Boolean(state?.requires_onboarding)
 
   if (loading || onboardingLoading || !onboardingStateKnown) {
-    return <div className="flex items-center justify-center h-screen">Loading…</div>
+    return <AppLoadingScreen />
   }
   if (requiresOnboarding && !allowBeforeOnboarding) return <Navigate to="/onboarding" replace />
   if (!requiresOnboarding && redirectIfOnboardingComplete) return <Navigate to="/dashboard" replace />
@@ -104,7 +105,7 @@ function EndUserFlowRoute({ children, allowBeforeOnboarding = false, redirectIfO
 // PremiumRoute removed — use <FeatureGate> component instead for fine-grained access control
 
 function RouteFallback() {
-  return <div className="flex items-center justify-center h-screen">Loading…</div>
+  return <AppLoadingScreen />
 }
 
 function FloatingSupportChat() {
