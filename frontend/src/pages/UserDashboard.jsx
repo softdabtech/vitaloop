@@ -20,6 +20,8 @@ import AssignmentCard from '../components/dashboard/AssignmentCard.jsx'
 import RecommendationsPanel from '../components/dashboard/RecommendationsPanel.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import MetricBar from '../components/dashboard/MetricBar.jsx'
+import StreakCounter from '../components/StreakCounter.jsx'
+import AchievementBadges from '../components/AchievementBadges.jsx'
 import { enrichAssignments } from '../lib/assignmentScoring.js'
 import '../styles/userDashboard.css'
 import '../styles/dashboard2026.css'
@@ -702,6 +704,34 @@ export default function UserDashboard() {
                     <p className="text-slate-500 py-4 text-center">No activity yet. Start by uploading your first lab report!</p>
                   )}
                 </div>
+              </DashboardCard>
+            </div>
+          </motion.div>
+
+          {/* Gamification Section - Streaks & Achievements */}
+          <motion.div {...fadeUp(0.08)} className="mt-8 space-y-6">
+            <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+              {/* Streaks */}
+              <DashboardCard title="Your Streaks" eyebrow="Motivation">
+                <StreakCounter
+                  checkInStreak={summary?.checkin_streak || 0}
+                  adherenceStreak={summary?.adherence_streak || 0}
+                  uploadStreak={summary?.upload_streak || 0}
+                />
+              </DashboardCard>
+
+              {/* Achievements */}
+              <DashboardCard title="Achievements" eyebrow="Unlock badges">
+                <AchievementBadges
+                  stats={{
+                    total_uploads: stats.total_uploads || 0,
+                    profile_complete: onboardingComplete,
+                    adherence_streak: summary?.adherence_streak || 0,
+                    checkins_completed: summary?.checkins_completed || 0,
+                    health_score: stats.health_score || 0,
+                    perfect_weeks: summary?.perfect_weeks || 0,
+                  }}
+                />
               </DashboardCard>
             </div>
           </motion.div>
