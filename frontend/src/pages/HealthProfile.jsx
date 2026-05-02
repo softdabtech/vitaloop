@@ -73,6 +73,9 @@ export default function HealthProfile() {
     weight_kg: '',
     goals: [],
     timezone: 'America/New_York',
+    medications: '',
+    allergies: '',
+    pregnancy_status: '',
   })
   const [saving, setSaving] = useState(false)
 
@@ -106,6 +109,9 @@ export default function HealthProfile() {
       weight_kg: meta.weight_kg || '',
       goals: meta.goals || [],
       timezone: meta.timezone || 'America/New_York',
+      medications: meta.medications || '',
+      allergies: meta.allergies || '',
+      pregnancy_status: meta.pregnancy_status || '',
     })
   }, [user])
 
@@ -119,6 +125,9 @@ export default function HealthProfile() {
         weight_kg: profile.weight_kg ? parseFloat(profile.weight_kg) : null,
         goals: profile.goals,
         timezone: profile.timezone,
+        medications: profile.medications || null,
+        allergies: profile.allergies || null,
+        pregnancy_status: profile.pregnancy_status || null,
       })
       toast.success('Health profile updated!')
     } catch (error) {
@@ -137,10 +146,10 @@ export default function HealthProfile() {
         helper="Keep this information up to date so recommendations are tailored to you."
       />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-6">
           {/* Main grid: Personal Info + Health Goals side by side */}
-          <div className="grid gap-6 md:grid-cols-[1fr_1.1fr]">
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
             {/* Biometrics Section - Left Column */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
               <h3 className="mb-6 text-lg font-bold text-slate-900">Personal Information</h3>
@@ -248,6 +257,62 @@ export default function HealthProfile() {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* Medical Flags - Important Context */}
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 sm:p-8">
+            <h3 className="mb-6 text-lg font-bold text-rose-900">⚠️ Important Medical Information</h3>
+            <p style={{ fontSize: 14, color: '#b91c1c', marginBottom: 20 }}>
+              This information helps us interpret biomarkers safely and avoid dangerous recommendations.
+            </p>
+
+            <div className="space-y-5">
+              <Field label="Current medications (if any)">
+                <textarea
+                  value={profile.medications}
+                  onChange={(e) => setProfile({ ...profile, medications: e.target.value })}
+                  placeholder="e.g., Aspirin 100mg daily, Vitamin D supplementation..."
+                  style={{
+                    ...fieldStyle,
+                    minHeight: 80,
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </Field>
+
+              <Field label="Known allergies">
+                <textarea
+                  value={profile.allergies}
+                  onChange={(e) => setProfile({ ...profile, allergies: e.target.value })}
+                  placeholder="e.g., Shellfish, Penicillin, Nuts..."
+                  style={{
+                    ...fieldStyle,
+                    minHeight: 80,
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </Field>
+
+              <Field label="Pregnancy / Breastfeeding status">
+                <select
+                  value={profile.pregnancy_status}
+                  onChange={(e) => setProfile({ ...profile, pregnancy_status: e.target.value })}
+                  style={fieldStyle}
+                >
+                  <option value="">Select status</option>
+                  <option value="pregnant">Currently pregnant</option>
+                  <option value="breastfeeding">Breastfeeding</option>
+                  <option value="planning">Planning to conceive</option>
+                  <option value="none">Not applicable</option>
+                </select>
+              </Field>
+            </div>
+
+            <p style={{ fontSize: 12, color: '#b91c1c', marginTop: 16 }}>
+              ✓ Your medical information is kept private and only used to provide safe, personalized recommendations.
+            </p>
           </div>
 
           {/* Save Button */}
