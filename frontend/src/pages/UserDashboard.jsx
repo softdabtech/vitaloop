@@ -22,6 +22,7 @@ import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import MetricBar from '../components/dashboard/MetricBar.jsx'
 import StreakCounter from '../components/StreakCounter.jsx'
 import AchievementBadges from '../components/AchievementBadges.jsx'
+import PersonalizedHealthTips from '../components/PersonalizedHealthTips.jsx'
 import { enrichAssignments } from '../lib/assignmentScoring.js'
 import '../styles/userDashboard.css'
 import '../styles/dashboard2026.css'
@@ -704,6 +705,15 @@ export default function UserDashboard() {
                     <p className="text-slate-500 py-4 text-center">No activity yet. Start by uploading your first lab report!</p>
                   )}
                 </div>
+              </DashboardCard>
+
+              {/* Personalized Health Tips */}
+              <DashboardCard title="Health Tips" eyebrow="Personalized">
+                <PersonalizedHealthTips
+                  profile={profile}
+                  latestUpload={latestUpload}
+                  allUploads={progress}
+                />
               </DashboardCard>
             </div>
           </motion.div>
