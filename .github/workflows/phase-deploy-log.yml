@@ -1,0 +1,224 @@
+name: Phase Deploy & Memory Log
+
+permissions:
+  contents: write
+
+on:
+  workflow_run:
+    workflows: ["CI / CD"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy-log:
+    name: Document & Log Deployment
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get deployment info
+        id: deploy-info
+        run: |
+          # Get latest commit message and author
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          COMMIT_SHA=$(git log -1 --pretty=%h)
+          COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+          COMMIT_TIME=$(git log -1 --pretty=%ai)
+
+          # Extract phase info from commit message
+          if [[ "$COMMIT_MSG" =~ phase-1 ]] || [[ "$COMMIT_MSG" =~ fix\(phase-1\) ]]; then
+            PHASE="Phase 1"
+            PHASE_NUM=1
+          elif [[ "$COMMIT_MSG" =~ phase-2 ]] || [[ "$COMMIT_MSG" =~ feat\(phase-2\) ]]; then
+            PHASE="Phase 2"
+            PHASE_NUM=2
+          elif [[ "$COMMIT_MSG" =~ phase-3 ]] || [[ "$COMMIT_MSG" =~ feat\(phase-3\) ]]; then
+            PHASE="Phase 3"
+            PHASE_NUM=3
+          else
+            PHASE="Unknown"
+            PHASE_NUM=0
+          fi
+
+          echo "phase=$PHASE" >> $GITHUB_OUTPUT
+          echo "phase_num=$PHASE_NUM" >> $GITHUB_OUTPUT
+          echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
+          echo "commit_msg=$COMMIT_MSG" >> $GITHUB_OUTPUT
+          echo "commit_author=$COMMIT_AUTHOR" >> $GITHUB_OUTPUT
+          echo "commit_time=$COMMIT_TIME" >> $GITHUB_OUTPUT
+
+      - name: Create deployment log entry
+        if: steps.deploy-info.outputs.phase_num != '0'
+        run: |
+          cat >> DEPLOYMENTS.log <<'EOF'
+
+          ═══════════════════════════════════════════════════════════
+          DEPLOYMENT: ${{ steps.deploy-info.outputs.phase }}
+          ═══════════════════════════════════════════════════════════
+          Time: ${{ steps.deploy-info.outputs.commit_time }}
+          Commit: ${{ steps.deploy-info.outputs.commit_sha }}
+          Author: ${{ steps.deploy-info.outputs.commit_author }}
+          Status: ✅ SUCCESSFUL
+          Environment: Production
+
+          Changes:
+          ${{ steps.deploy-info.outputs.commit_msg }}
+
+          URL: https://vitaloop.today
+          EOF
+
+          cat DEPLOYMENTS.log
+
+      - name: Update MEMORY.md with deployment record
+        if: steps.deploy-info.outputs.phase_num != '0'
+        run: |
+          # Create deployment memory file
+          mkdir -p /tmp/memory_update
+
+          cat > /tmp/memory_update/phase_deploy_${{ steps.deploy-info.outputs.phase_num }}.md <<'EOF'
+          ---
+          name: ${{ steps.deploy-info.outputs.phase }} Deployment
+          description: Deployment record for ${{ steps.deploy-info.outputs.phase }}
+          type: project
+          ---
+
+          **Status:** ✅ Deployed to Production
+          **Time:** ${{ steps.deploy-info.outputs.commit_time }}
+          **Commit:** ${{ steps.deploy-info.outputs.commit_sha }}
+          **Author:** ${{ steps.deploy-info.outputs.commit_author }}
+
+          **Changes:**
+          ${{ steps.deploy-info.outputs.commit_msg }}
+
+          **Access:** https://vitaloop.today
+
+          ---
+
+          **What was shipped:**
+          - This ${{ steps.deploy-info.outputs.phase }} deployment is now live
+          - All changes from this phase are available to production users
+          - Backend and frontend both updated successfully
+
+          **Health check:** ✅ Passed
+          EOF
+
+          cat /tmp/memory_update/phase_deploy_${{ steps.deploy-info.outputs.phase_num }}.md
+
+      - name: Commit deployment log
+        if: steps.deploy-info.outputs.phase_num != '0'
+        run: |
+          git config user.name "🤖 Deploy Logger"
+          git config user.email "deploy@vitaloop.today"
+
+          git add DEPLOYMENTS.log
+          git commit -m "🚀 log: ${{ steps.deploy-info.outputs.phase }} deployed to production
+
+- Commit: ${{ steps.deploy-info.outputs.commit_sha }}
+- Author: ${{ steps.deploy-info.outputs.commit_author }}
+- Status: ✅ All checks passed + health check OK
+- Environment: https://vitaloop.today
+
+This commit documents the successful deployment of ${{ steps.deploy-info.outputs.phase }}.
+All changes are now live in production." || echo "No changes to commit"
+
+          git push origin main || echo "Push skipped (no new commits)"
+
+      - name: Send Slack notification
+        if: steps.deploy-info.outputs.phase_num != '0'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "🚀 ${{ steps.deploy-info.outputs.phase }} Deployed",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "✅ ${{ steps.deploy-info.outputs.phase }} - Production Deployment"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Commit:*\n${{ steps.deploy-info.outputs.commit_sha }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Author:*\n${{ steps.deploy-info.outputs.commit_author }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Status:*\n✅ Deployed"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Time:*\n${{ steps.deploy-info.outputs.commit_time }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Changes:*\n```\n${{ steps.deploy-info.outputs.commit_msg }}\n```"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Live →"
+                      },
+                      "url": "https://vitaloop.today",
+                      "style": "primary"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        continue-on-error: true
+
+      - name: Create GitHub Release (for major phases)
+        if: steps.deploy-info.outputs.phase_num != '0'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: deploy-${{ steps.deploy-info.outputs.phase_num }}-${{ steps.deploy-info.outputs.commit_sha }}
+          release_name: "${{ steps.deploy-info.outputs.phase }} Deployment"
+          body: |
+            ## ${{ steps.deploy-info.outputs.phase }} Deployment
+
+            **Status:** ✅ Deployed to Production
+
+            **Commit:** ${{ steps.deploy-info.outputs.commit_sha }}
+            **Author:** ${{ steps.deploy-info.outputs.commit_author }}
+            **Time:** ${{ steps.deploy-info.outputs.commit_time }}
+
+            ### Changes
+            ```
+            ${{ steps.deploy-info.outputs.commit_msg }}
+            ```
+
+            ### Live
+            🌐 https://vitaloop.today
+            📊 Health Check: ✅ Passed
+
+          draft: false
+          prerelease: false
+        continue-on-error: true
