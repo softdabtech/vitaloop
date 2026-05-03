@@ -522,3 +522,68 @@ async def send_registration_alert_email(
         subject=f"New VITALOOP signup: {registered_email}",
         html=html,
     )
+
+
+async def send_analysis_ready_email(
+    to_email: str,
+    file_name: str,
+    dashboard_url: str = "https://vitaloop.today/lab-results",
+) -> bool:
+    """Send email notification that lab analysis is ready."""
+    html = f"""
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>Your Lab Analysis is Ready</title>
+      </head>
+      <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;">
+        <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="padding:40px 0;background:#f8fafc;">
+              <table role="presentation" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;border-collapse:collapse;">
+                <tr>
+                  <td style="padding:40px;background:#ffffff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+                    <h1 style="margin:0 0 16px 0;font-size:28px;font-weight:700;color:#0f172a;">
+                      Your Lab Analysis is Ready! 🎉
+                    </h1>
+                    <p style="margin:0 0 24px 0;font-size:16px;color:#475569;line-height:1.6;">
+                      Great news! We've completed the analysis of your lab results from <strong>{_safe(file_name)}</strong>.
+                    </p>
+                    <p style="margin:0 0 24px 0;font-size:16px;color:#475569;line-height:1.6;">
+                      Your personalized biomarker breakdown is now available in your VITALOOP dashboard.
+                      View detailed insights, see your health metrics, and get AI-powered recommendations for optimization.
+                    </p>
+                    <table role="presentation" cellspacing="0" cellpadding="0" style="margin:32px 0;">
+                      <tr>
+                        <td>
+                          <a href="{dashboard_url}" style="display:inline-block;padding:14px 32px;border-radius:8px;background:#1d9e75;color:#ffffff;font-weight:700;font-size:16px;text-decoration:none;">View Your Results</a>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="margin:32px 0 0;font-size:14px;color:#64748b;line-height:1.6;">
+                      <strong>What's included:</strong><br>
+                      ✓ Detailed biomarker analysis<br>
+                      ✓ Personalized supplement protocol<br>
+                      ✓ Health optimization recommendations<br>
+                      ✓ Comparison to reference ranges
+                    </p>
+                    <hr style="margin:24px 0;border:none;border-top:1px solid #e2e8f0;">
+                    <p style="margin:16px 0;font-size:12px;color:#94a3b8;line-height:1.6;">
+                      VITALOOP Team | <a href="https://vitaloop.today" style="color:#1d9e75;text-decoration:none;">vitaloop.today</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+    """.strip()
+
+    return await _deliver_html_email(
+        to_email=to_email,
+        subject="Your Lab Analysis is Ready - VITALOOP",
+        html=html,
+    )
