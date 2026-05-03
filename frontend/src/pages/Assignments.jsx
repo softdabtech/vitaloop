@@ -113,9 +113,9 @@ export default function Assignments() {
         <div className="mx-auto max-w-6xl">
           <div className="mb-6 h-8 w-64 animate-pulse rounded-xl bg-slate-200" />
           <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-          {[1, 2, 3, 4].map((n) => (
+            {[1, 2, 3, 4].map((n) => (
               <div key={n} className="h-20 animate-pulse rounded-xl bg-slate-100" />
-          ))}
+            ))}
           </div>
           <div className="space-y-3">
             {[1, 2, 3].map((n) => (
@@ -224,25 +224,25 @@ export default function Assignments() {
           </div>
         )}
 
-      {error && (
+        {error && (
           <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          {error}
-        </div>
-      )}
+            {error}
+          </div>
+        )}
 
         <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
           <div className="vtl-light-card p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Pending</p>
             <p className="mt-1 text-2xl font-bold text-amber-600">{summary.pending}</p>
-        </div>
+          </div>
           <div className="vtl-light-card p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">In Progress</p>
             <p className="mt-1 text-2xl font-bold text-blue-600">{summary.in_progress}</p>
-        </div>
+          </div>
           <div className="vtl-light-card p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Completed</p>
             <p className="mt-1 text-2xl font-bold text-emerald-600">{summary.completed}</p>
-        </div>
+          </div>
           <div className="vtl-light-card p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Overdue</p>
             <p className="mt-1 text-2xl font-bold text-rose-600">{summary.overdue}</p>
@@ -266,19 +266,19 @@ export default function Assignments() {
           ))}
         </div>
 
-      {filtered.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="vtl-light-card p-10 text-center">
-          {filter === 'completed' ? (
+            {filter === 'completed' ? (
               <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-500" />
-          ) : filter === 'overdue' ? (
+            ) : filter === 'overdue' ? (
               <AlertTriangle className="mx-auto mb-3 h-10 w-10 text-rose-400" />
-          ) : (
+            ) : (
               <Clock3 className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-          )}
+            )}
             <p className="mb-1 font-semibold text-slate-800">No assignments in this filter</p>
             <p className="text-sm text-slate-500">Try another filter or complete the questionnaire for new tasks.</p>
-        </div>
-      ) : (
+          </div>
+        ) : (
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             {filtered.map((assignment, idx) => (
               <AssignmentCard
@@ -294,7 +294,7 @@ export default function Assignments() {
               />
             ))}
           </div>
-      )}
+        )}
       </div>
     </div>
   )

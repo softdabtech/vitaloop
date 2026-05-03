@@ -99,14 +99,14 @@ export default function AdminShell({ title, subtitle, children, variant = 'clien
             style={({ isActive }) => {
               const active = variant === 'ops' ? isOpsTabActive(to) : isActive
               return {
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '10px 14px',
-              fontSize: 13, fontWeight: 500,
-              color: active ? '#1d9e75' : 'rgba(15,23,42,0.58)',
-              borderBottom: active ? '2px solid #1d9e75' : '2px solid transparent',
-              textDecoration: 'none', transition: 'color 0.2s',
-              marginBottom: -1,
-            }
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '10px 14px',
+                fontSize: 13, fontWeight: 500,
+                color: active ? '#1d9e75' : 'rgba(15,23,42,0.58)',
+                borderBottom: active ? '2px solid #1d9e75' : '2px solid transparent',
+                textDecoration: 'none', transition: 'color 0.2s',
+                marginBottom: -1,
+              }
             }}
           >
             <Icon size={14} />

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Calendar, CheckCircle, RefreshCw } from 'lucide-react';
+import React from 'react'
+import { Calendar, CheckCircle, RefreshCw } from 'lucide-react'
 
 export default function ProgressTimeline({ progress }) {
   const timelineEvents = progress
@@ -11,7 +11,7 @@ export default function ProgressTimeline({ progress }) {
       title: `${item.lab_name || 'Lab Upload'} Results`,
       description: `${item.biomarkers?.length || 0} biomarkers analyzed`,
       type: 'upload',
-    }));
+    }))
 
   return (
     <div className="vtl-light-card p-6">
@@ -53,5 +53,5 @@ export default function ProgressTimeline({ progress }) {
         </div>
       )}
     </div>
-  );
+  )
 }

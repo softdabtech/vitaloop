@@ -292,7 +292,7 @@ export default function ForNutritionists() {
         <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
             <motion.div variants={fadeUp} custom={0} initial="hidden" animate="visible">
-                <SectionLabel>For Nutritionists</SectionLabel>
+              <SectionLabel>For Nutritionists</SectionLabel>
             </motion.div>
             <motion.h1
               variants={fadeUpBlur}
@@ -350,7 +350,7 @@ export default function ForNutritionists() {
               animate="visible"
               className="mt-6 flex flex-wrap gap-4"
             >
-                {['Free starter plan', 'No EMR integration required', 'Works with any lab PDF'].map((t) => (
+              {['Free starter plan', 'No EMR integration required', 'Works with any lab PDF'].map((t) => (
                 <span key={t} className="inline-flex items-center gap-1.5 text-xs text-slate-400">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                   {t}
@@ -368,16 +368,16 @@ export default function ForNutritionists() {
             className="rounded-3xl border border-slate-200 bg-white p-6 backdrop-blur-sm"
           >
             <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-900">Patient: Anna K., 34</span>
-                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-600">Active protocol</span>
+              <span className="text-sm font-semibold text-slate-900">Patient: Anna K., 34</span>
+              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-600">Active protocol</span>
             </div>
             <div className="space-y-3">
               {[
-                  { marker: 'Ferritin', val: '11 ng/mL', flag: 'Low', color: '#ef4444' },
-                  { marker: 'Vitamin D (25-OH)', val: '18 nmol/L', flag: 'Deficient', color: '#f59e0b' },
-                  { marker: 'B12', val: '245 pmol/L', flag: 'Borderline', color: '#f59e0b' },
-                  { marker: 'TSH', val: '2.1 mIU/L', flag: 'Normal', color: '#10b981' },
-                  { marker: 'hsCRP', val: '0.8 mg/L', flag: 'Normal', color: '#10b981' },
+                { marker: 'Ferritin', val: '11 ng/mL', flag: 'Low', color: '#ef4444' },
+                { marker: 'Vitamin D (25-OH)', val: '18 nmol/L', flag: 'Deficient', color: '#f59e0b' },
+                { marker: 'B12', val: '245 pmol/L', flag: 'Borderline', color: '#f59e0b' },
+                { marker: 'TSH', val: '2.1 mIU/L', flag: 'Normal', color: '#10b981' },
+                { marker: 'hsCRP', val: '0.8 mg/L', flag: 'Normal', color: '#10b981' },
               ].map(({ marker, val, flag, color }) => (
                 <div key={marker} className="flex items-center justify-between rounded-xl bg-slate-100 px-4 py-2.5">
                   <span className="text-sm text-slate-700">{marker}</span>
@@ -419,7 +419,7 @@ export default function ForNutritionists() {
       {/* ── Pain points ── */}
       <section className="mx-auto max-w-[1240px] px-4 py-20 sm:px-6">
         <div className="mb-12 text-center">
-            <SectionLabel color="#ef4444">Common pain points</SectionLabel>
+          <SectionLabel color="#ef4444">Common pain points</SectionLabel>
           <motion.h2
             variants={fadeUp}
             custom={0}
@@ -448,7 +448,7 @@ export default function ForNutritionists() {
       <section className="border-y border-slate-200 bg-slate-50 py-20">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6">
           <div className="mb-14 max-w-xl">
-              <SectionLabel>Workflow</SectionLabel>
+            <SectionLabel>Workflow</SectionLabel>
             <motion.h2
               variants={fadeUp}
               custom={0}
@@ -481,7 +481,7 @@ export default function ForNutritionists() {
       {/* ── Capabilities ── */}
       <section className="mx-auto max-w-[1240px] px-4 py-20 sm:px-6">
         <div className="mb-12 text-center">
-            <SectionLabel>Capabilities</SectionLabel>
+          <SectionLabel>Capabilities</SectionLabel>
           <motion.h2
             variants={fadeUp}
             custom={0}
@@ -510,7 +510,7 @@ export default function ForNutritionists() {
       <section className="border-y border-slate-200 bg-slate-50 py-20">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6">
           <div className="mb-12 text-center">
-              <SectionLabel color="#8b5cf6">Use cases</SectionLabel>
+            <SectionLabel color="#8b5cf6">Use cases</SectionLabel>
             <motion.h2
               variants={fadeUp}
               custom={0}
@@ -546,7 +546,7 @@ export default function ForNutritionists() {
             whileInView="visible"
             viewport={{ once: true }}
           >
-              <SectionLabel color="#0ea5e9">Patient value</SectionLabel>
+            <SectionLabel color="#0ea5e9">Patient value</SectionLabel>
             <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
                 Patients see outcomes, not just recommendations
             </h2>
@@ -556,11 +556,11 @@ export default function ForNutritionists() {
             </p>
             <ul className="mt-6 space-y-3">
               {[
-                  'Full lab history in one place',
-                  'Clear interpretation for non-clinical users',
-                  'Weekly reminders for protocol adherence',
-                  'Progress trends improve motivation',
-                  'Mobile-friendly access from any device',
+                'Full lab history in one place',
+                'Clear interpretation for non-clinical users',
+                'Weekly reminders for protocol adherence',
+                'Progress trends improve motivation',
+                'Mobile-friendly access from any device',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-3 text-sm text-slate-600">
                   <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
@@ -580,14 +580,14 @@ export default function ForNutritionists() {
             className="rounded-3xl border border-slate-200 bg-white p-6 backdrop-blur-sm"
           >
             <div className="mb-5 flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-900">Anna's progress</span>
-                <span className="text-xs text-slate-500">8 weeks on protocol</span>
+              <span className="text-sm font-semibold text-slate-900">Anna's progress</span>
+              <span className="text-xs text-slate-500">8 weeks on protocol</span>
             </div>
             <div className="mb-4 space-y-3">
               {[
-                  { marker: 'Ferritin', before: '11', after: '28', unit: 'ng/mL', up: true },
-                  { marker: 'Vitamin D', before: '18', after: '47', unit: 'nmol/L', up: true },
-                  { marker: 'B12', before: '245', after: '390', unit: 'pmol/L', up: true },
+                { marker: 'Ferritin', before: '11', after: '28', unit: 'ng/mL', up: true },
+                { marker: 'Vitamin D', before: '18', after: '47', unit: 'nmol/L', up: true },
+                { marker: 'B12', before: '245', after: '390', unit: 'pmol/L', up: true },
               ].map(({ marker, before, after, unit, up }) => (
                 <div key={marker} className="rounded-xl bg-slate-100 px-4 py-3">
                   <div className="flex items-center justify-between">
@@ -610,11 +610,11 @@ export default function ForNutritionists() {
               ))}
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div className="mb-2 text-xs font-semibold text-slate-600">Weekly tasks</div>
+              <div className="mb-2 text-xs font-semibold text-slate-600">Weekly tasks</div>
               {[
-                  { done: true,  text: 'Take iron with vitamin C' },
-                  { done: true,  text: 'Take D3 + K2 in the morning with food' },
-                  { done: false, text: 'Complete CBC retest (scheduled)' },
+                { done: true,  text: 'Take iron with vitamin C' },
+                { done: true,  text: 'Take D3 + K2 in the morning with food' },
+                { done: false, text: 'Complete CBC retest (scheduled)' },
               ].map(({ done, text }) => (
                 <div key={text} className="flex items-center gap-2 py-1.5 text-sm">
                   <CheckCircle2 className={`h-4 w-4 shrink-0 ${done ? 'text-emerald-600' : 'text-slate-400'}`} />
@@ -629,7 +629,7 @@ export default function ForNutritionists() {
       {/* ── Pricing ── */}
       <section className="mx-auto max-w-[1240px] px-4 py-20 sm:px-6">
         <div className="mb-12 text-center">
-            <SectionLabel color="#10b981">Pricing</SectionLabel>
+          <SectionLabel color="#10b981">Pricing</SectionLabel>
           <motion.h2
             variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}
             className="mt-4 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl"
@@ -650,15 +650,15 @@ export default function ForNutritionists() {
             variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}
             className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-8 backdrop-blur-sm"
           >
-              <div className="mb-1 text-xs font-bold uppercase tracking-widest text-slate-600">Starter</div>
+            <div className="mb-1 text-xs font-bold uppercase tracking-widest text-slate-600">Starter</div>
             <div className="mb-1 text-4xl font-bold text-slate-900">$0</div>
-              <div className="mb-5 text-sm text-slate-600">free forever</div>
+            <div className="mb-5 text-sm text-slate-600">free forever</div>
             <ul className="mb-8 space-y-3">
               {[
-                  '1-2 analyses per month',
-                  'Basic flags and summary',
-                  '1 patient seat',
-                  'Protocol drafts',
+                '1-2 analyses per month',
+                'Basic flags and summary',
+                '1 patient seat',
+                'Protocol drafts',
               ].map((f) => (
                 <li key={f} className="flex items-center gap-2.5 text-sm text-slate-700">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-slate-400" />
@@ -690,18 +690,18 @@ export default function ForNutritionists() {
             <div className="mb-1 text-xs font-bold uppercase tracking-widest text-emerald-600">Practitioner Premium</div>
             <div className="mb-1 flex items-end gap-1">
               <span className="text-4xl font-bold text-slate-900">$29</span>
-                <span className="mb-1 text-sm text-slate-600">/month</span>
+              <span className="mb-1 text-sm text-slate-600">/month</span>
             </div>
-              <div className="mb-5 text-sm text-slate-600">or $299/year — save 17%</div>
+            <div className="mb-5 text-sm text-slate-600">or $299/year — save 17%</div>
             <ul className="mb-8 space-y-3">
               {[
-                  'Unlimited analyses',
-                  'Full biomarker-driven protocols',
-                  'Multiple active patients',
-                  'CRM workflows and task tracking',
-                  'Longitudinal biomarker trends',
-                  'Weekly patient check-ins',
-                  'Priority product updates',
+                'Unlimited analyses',
+                'Full biomarker-driven protocols',
+                'Multiple active patients',
+                'CRM workflows and task tracking',
+                'Longitudinal biomarker trends',
+                'Weekly patient check-ins',
+                'Priority product updates',
               ].map((f) => (
                 <li key={f} className="flex items-center gap-2.5 text-sm text-slate-700">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
@@ -729,7 +729,7 @@ export default function ForNutritionists() {
           variants={fadeUp} custom={0} initial="hidden" whileInView="visible" viewport={{ once: true }}
           className="mx-auto max-w-[680px] px-4 text-center sm:px-6"
         >
-            <SectionLabel color="#0ea5e9">Contact us</SectionLabel>
+          <SectionLabel color="#0ea5e9">Contact us</SectionLabel>
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
               Questions or enterprise requirements?
           </h2>
@@ -760,7 +760,7 @@ export default function ForNutritionists() {
             whileInView="visible"
             viewport={{ once: true }}
           >
-              <SectionLabel>Get started today</SectionLabel>
+            <SectionLabel>Get started today</SectionLabel>
             <h2 className="mt-5 text-4xl font-bold tracking-[-0.03em] text-slate-900 md:text-5xl">
                 Bring your first patient<br />
               <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">

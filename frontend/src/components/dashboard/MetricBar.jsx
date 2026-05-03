@@ -49,7 +49,7 @@ export default function MetricBar({ stats, uploadCount, uploadLimit, subStatus, 
 
       {/* Plan */}
       <div className={`flex items-center gap-2 rounded-2xl border p-4 ${getPlanColor(effectivePlan)}`}>
-        <div className={`flex items-center justify-center w-10 h-10 rounded-xl bg-current/15`}>
+        <div className={'flex items-center justify-center w-10 h-10 rounded-xl bg-current/15'}>
           <CreditCard className="w-5 h-5" />
         </div>
         <div>
@@ -71,7 +71,7 @@ export default function MetricBar({ stats, uploadCount, uploadLimit, subStatus, 
 
       {/* Check-in */}
       <div className={`flex items-center gap-2 rounded-2xl border p-4 ${checkInStatus.color}`}>
-        <div className={`flex items-center justify-center w-10 h-10 rounded-xl bg-current/15`}>
+        <div className={'flex items-center justify-center w-10 h-10 rounded-xl bg-current/15'}>
           <Clock className="w-5 h-5" />
         </div>
         <div className="min-w-0">

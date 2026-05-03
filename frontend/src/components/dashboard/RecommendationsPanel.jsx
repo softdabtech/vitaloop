@@ -1,5 +1,5 @@
-import React from 'react';
-import { Lightbulb, BookOpen, AlertCircle } from 'lucide-react';
+import React from 'react'
+import { Lightbulb, BookOpen, AlertCircle } from 'lucide-react'
 
 export default function RecommendationsPanel({ insights }) {
   return (
@@ -37,5 +37,5 @@ export default function RecommendationsPanel({ insights }) {
         </div>
       )}
     </div>
-  );
+  )
 }

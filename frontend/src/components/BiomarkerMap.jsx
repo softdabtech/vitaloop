@@ -88,7 +88,7 @@ const BODY_ZONES = [
 
 function getZoneColor(zone, biomarkers) {
   if (!biomarkers || biomarkers.length === 0) return 'rgb(75, 85, 99)' // gray
-  
+
   const relevantMarkers = biomarkers.filter((b) =>
     zone.keywords.some((kw) => b.name?.toLowerCase().includes(kw.toLowerCase()))
   )
@@ -292,9 +292,9 @@ export default function BiomarkerMap({ biomarkers = [] }) {
                             <p className="font-bold text-cyan-400">{marker.value}</p>
                             <p className={`text-xs font-semibold ${
                               marker.status === 'OPTIMAL' ? 'text-green-400' :
-                              marker.status === 'BORDERLINE' ? 'text-yellow-400' :
-                              marker.status === 'DEFICIENT' || marker.status === 'ELEVATED' ? 'text-red-400' :
-                              'text-gray-400'
+                                marker.status === 'BORDERLINE' ? 'text-yellow-400' :
+                                  marker.status === 'DEFICIENT' || marker.status === 'ELEVATED' ? 'text-red-400' :
+                                    'text-gray-400'
                             }`}>
                               {marker.status}
                             </p>

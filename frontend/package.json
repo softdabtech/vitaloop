@@ -14,7 +14,9 @@
     "preview": "vite preview",
     "qa:routes": "node ./scripts/qa-routes-links.mjs",
     "qa:endpoints": "node ./scripts/qa-endpoints.mjs",
-    "qa": "npm run qa:routes && npm run qa:endpoints"
+    "qa": "npm run qa:routes && npm run qa:endpoints",
+    "lint": "eslint src --ext .js,.jsx",
+    "lint:fix": "eslint src --ext .js,.jsx --fix"
   },
   "reactSnap": {
     "source": "dist",
@@ -59,8 +61,10 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
+    "eslint": "^9.39.4",
     "postcss": "^8.4.38",
     "react-snap": "^1.23.0",
     "tailwindcss": "^3.4.4",
