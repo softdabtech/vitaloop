@@ -262,11 +262,11 @@ function ZonePanel({ zone }) {
         alignSelf: 'flex-start',
         display: 'flex', alignItems: 'center', gap: 6,
       }}
-        onClick={() => navigate('/login?signup=true')}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--teal-600)'; e.currentTarget.style.transform = 'scale(1.02)' }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal-800)'; e.currentTarget.style.transform = 'scale(1)' }}
-        onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.98)' }}
-        onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1.02)' }}
+      onClick={() => navigate('/login?signup=true')}
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--teal-600)'; e.currentTarget.style.transform = 'scale(1.02)' }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--teal-800)'; e.currentTarget.style.transform = 'scale(1)' }}
+      onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.98)' }}
+      onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1.02)' }}
       >
         View full protocol
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">

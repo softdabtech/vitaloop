@@ -159,7 +159,7 @@ export default function AchievementShareModal({ achievement, onClose }) {
             </button>
 
             <button
-              onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=https://vitaloop.today`, '_blank')}
+              onClick={() => window.open('https://www.linkedin.com/sharing/share-offsite/?url=https://vitaloop.today', '_blank')}
               style={{
                 flex: 1,
                 background: '#0A66C2',

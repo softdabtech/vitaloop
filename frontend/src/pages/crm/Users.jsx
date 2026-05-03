@@ -50,8 +50,8 @@ export default function Users() {
 
   return (
     <CRMLayout title="Users">
-      <CRMPageHeader 
-        title="All Users" 
+      <CRMPageHeader
+        title="All Users"
         subtitle={`${totalUsers} registered users${orphaned > 0 ? ` (${orphaned} not synced)` : ''}`}
         actions={[
           <button
@@ -93,7 +93,7 @@ export default function Users() {
             </thead>
             <tbody>
               {clientsList.map((client, idx) => (
-                <tr 
+                <tr
                   key={client.id || idx}
                   style={{
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -110,14 +110,14 @@ export default function Users() {
                     <span style={{
                       padding: '4px 8px',
                       borderRadius: 4,
-                      background: 
+                      background:
                         client.onboarding_status === 'completed' ? 'rgba(34,197,94,0.2)' :
-                        client.onboarding_status === 'in_progress' ? 'rgba(245,158,11,0.2)' :
-                        'rgba(148,163,184,0.2)',
+                          client.onboarding_status === 'in_progress' ? 'rgba(245,158,11,0.2)' :
+                            'rgba(148,163,184,0.2)',
                       color:
                         client.onboarding_status === 'completed' ? '#bbf7d0' :
-                        client.onboarding_status === 'in_progress' ? '#fde68a' :
-                        '#cbd5e1',
+                          client.onboarding_status === 'in_progress' ? '#fde68a' :
+                            '#cbd5e1',
                       fontSize: 11,
                       fontWeight: 500,
                     }}>

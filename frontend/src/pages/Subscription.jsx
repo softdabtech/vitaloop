@@ -216,10 +216,10 @@ export default function Subscription() {
                     planStatus === 'active'
                       ? 'bg-emerald-100 text-emerald-700'
                       : planStatus === 'paused'
-                      ? 'bg-amber-100 text-amber-700'
-                      : planStatus === 'free'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-slate-100 text-slate-700'
+                        ? 'bg-amber-100 text-amber-700'
+                        : planStatus === 'free'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-slate-100 text-slate-700'
                   }`}>
                     {planStatus === 'active' && <CheckCircle2 className="w-4 h-4" />}
                     {planStatus === 'active' ? 'Active' : planStatus === 'paused' ? 'Paused' : planStatus === 'free' ? 'Free Plan' : 'Inactive'}
@@ -275,8 +275,8 @@ export default function Subscription() {
                 <div className="text-xs font-semibold uppercase tracking-wide text-purple-600 mb-2">Billing Status</div>
                 <div className={`text-sm font-bold capitalize ${
                   planStatus === 'active' ? 'text-purple-900' :
-                  planStatus === 'free' ? 'text-blue-900' :
-                  'text-amber-900'
+                    planStatus === 'free' ? 'text-blue-900' :
+                      'text-amber-900'
                 }`}>{planStatus === 'free' ? 'Free' : planStatus}</div>
               </div>
             </div>

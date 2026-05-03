@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'
 export default function Investors() {
-  return <div className="container mx-auto p-4"><h1 className="text-2xl font-bold mb-4">Investors</h1><p>Investor information will appear here.</p></div>;
+  return <div className="container mx-auto p-4"><h1 className="text-2xl font-bold mb-4">Investors</h1><p>Investor information will appear here.</p></div>
 }

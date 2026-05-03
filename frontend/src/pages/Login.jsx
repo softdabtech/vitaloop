@@ -93,29 +93,29 @@ function AbstractPanel({ side, variant = 'signin' }) {
       overflow: 'hidden',
     }}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none"
-           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
         {/* Connection lines */}
         {lines.map((l, i) => (
           <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-                stroke={accent} strokeWidth="0.15" opacity={l.op}/>
+            stroke={accent} strokeWidth="0.15" opacity={l.op}/>
         ))}
         {/* Particles */}
         {particles.map((p, i) => (
           <circle key={i} cx={p.x} cy={p.y} r={p.r}
-                  fill={i % 3 === 0 ? accent : baseColor} opacity={p.op}/>
+            fill={i % 3 === 0 ? accent : baseColor} opacity={p.op}/>
         ))}
         {/* Large decorative rings */}
         <circle cx={isLeft ? 20 : 80} cy="50" r="35"
-                fill="none" stroke={baseColor} strokeWidth="0.3" opacity="0.15"/>
+          fill="none" stroke={baseColor} strokeWidth="0.3" opacity="0.15"/>
         <circle cx={isLeft ? 20 : 80} cy="50" r="22"
-                fill="none" stroke={accent} strokeWidth="0.2" opacity="0.1"/>
+          fill="none" stroke={accent} strokeWidth="0.2" opacity="0.1"/>
         <circle cx={isLeft ? 80 : 20} cy="20" r="18"
-                fill="none" stroke={accent} strokeWidth="0.2" opacity="0.08"/>
+          fill="none" stroke={accent} strokeWidth="0.2" opacity="0.08"/>
         {/* ECG-like line */}
         <path d={isLeft
           ? 'M0,50 L15,50 L20,35 L25,65 L30,42 L35,50 L100,50'
           : 'M0,50 L65,50 L70,35 L75,65 L80,42 L85,50 L100,50'}
-              fill="none" stroke={accent} strokeWidth="0.4" opacity="0.25"/>
+        fill="none" stroke={accent} strokeWidth="0.4" opacity="0.25"/>
       </svg>
 
       {/* Tagline overlay */}
@@ -151,7 +151,7 @@ export default function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [email, setEmail] = useState('')
-    const [showResetInfo, setShowResetInfo] = useState(false)
+  const [showResetInfo, setShowResetInfo] = useState(false)
   const [password, setPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(searchParams.get('signup') === 'true')
   const [isForgot, setIsForgot] = useState(false)
@@ -164,21 +164,21 @@ export default function Login() {
 
   const authTheme = isSignUp
     ? {
-        appBg: '#071024',
-        centerBg: '#0b173f',
-        borderColor: 'rgba(96,165,250,0.25)',
-      }
+      appBg: '#071024',
+      centerBg: '#0b173f',
+      borderColor: 'rgba(96,165,250,0.25)',
+    }
     : {
-        appBg: '#050e09',
-        centerBg: '#0a0a0a',
-        borderColor: 'rgba(255,255,255,0.05)',
-      }
+      appBg: '#050e09',
+      centerBg: '#0a0a0a',
+      borderColor: 'rgba(255,255,255,0.05)',
+    }
 
   useEffect(() => {
-        // Show info if user comes from reset password link
-        if (searchParams.get('reset') === 'true') {
-          setShowResetInfo(true)
-        }
+    // Show info if user comes from reset password link
+    if (searchParams.get('reset') === 'true') {
+      setShowResetInfo(true)
+    }
     let active = true
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -382,7 +382,7 @@ export default function Login() {
             <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
               <circle cx="14" cy="14" r="13" fill="var(--teal-500,#1D9E75)"/>
               <path d="M4 14h4l2-6 4 12 2-7 2 4h6" stroke="white"
-                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
             </svg>
             <span style={{ fontSize: 16, fontWeight: 700, color: 'white', letterSpacing: '-0.01em' }}>
               VITALOOP
@@ -395,8 +395,8 @@ export default function Login() {
             {isForgot
               ? 'Enter your email to receive a reset link.'
               : isSignUp
-              ? 'Start your health optimization journey.'
-              : 'Sign in to your VITALOOP account.'}
+                ? 'Start your health optimization journey.'
+                : 'Sign in to your VITALOOP account.'}
           </p>
         </div>
 
@@ -560,8 +560,8 @@ export default function Login() {
           >
             {loading ? 'Loading…'
               : isForgot ? 'Send reset link'
-              : isSignUp ? 'Create account'
-              : 'Sign in'}
+                : isSignUp ? 'Create account'
+                  : 'Sign in'}
           </button>
         </form>
 

@@ -81,16 +81,16 @@ function motionPreset(reduced, delay = 0) {
 
 function miniPreviewTone(tone) {
   switch (tone) {
-    case 'emerald':
-      return 'from-emerald-400/20 to-emerald-200/0 border-emerald-300/40'
-    case 'cyan':
-      return 'from-cyan-300/20 to-cyan-100/0 border-cyan-300/35'
-    case 'violet':
-      return 'from-violet-300/20 to-violet-200/0 border-violet-300/35'
-    case 'amber':
-      return 'from-amber-300/20 to-amber-100/0 border-amber-300/35'
-    default:
-      return 'from-slate-300/20 to-slate-100/0 border-slate-300/35'
+  case 'emerald':
+    return 'from-emerald-400/20 to-emerald-200/0 border-emerald-300/40'
+  case 'cyan':
+    return 'from-cyan-300/20 to-cyan-100/0 border-cyan-300/35'
+  case 'violet':
+    return 'from-violet-300/20 to-violet-200/0 border-violet-300/35'
+  case 'amber':
+    return 'from-amber-300/20 to-amber-100/0 border-amber-300/35'
+  default:
+    return 'from-slate-300/20 to-slate-100/0 border-slate-300/35'
   }
 }
 
@@ -104,9 +104,9 @@ function PreviewCard({ item, index, reduced }) {
         reduced
           ? undefined
           : {
-              scale: 1.02,
-              boxShadow: '0 0 0 1px rgba(16,185,129,0.42), 0 20px 40px rgba(16,185,129,0.14)',
-            }
+            scale: 1.02,
+            boxShadow: '0 0 0 1px rgba(16,185,129,0.42), 0 20px 40px rgba(16,185,129,0.14)',
+          }
       }
       className="rounded-3xl border border-slate-700/70 bg-slate-900/55 p-8 backdrop-blur"
       style={{
@@ -288,9 +288,9 @@ export default function PremiumEmptyDashboardState({ userName, onUploadClick }) 
                   reduced
                     ? undefined
                     : {
-                        scale: 1.02,
-                        boxShadow: '0 0 0 1px rgba(16,185,129,0.42), 0 20px 40px rgba(16,185,129,0.14)',
-                      }
+                      scale: 1.02,
+                      boxShadow: '0 0 0 1px rgba(16,185,129,0.42), 0 20px 40px rgba(16,185,129,0.14)',
+                    }
                 }
                 className="rounded-3xl border border-slate-700/70 bg-slate-900/55 p-8"
                 style={{

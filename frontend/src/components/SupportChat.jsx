@@ -83,7 +83,7 @@ export default function SupportChat({ onClose }) {
             <svg width="16" height="16" viewBox="0 0 28 28" fill="none">
               <circle cx="14" cy="14" r="13" fill="rgba(255,255,255,0.2)"/>
               <path d="M4 14h4l2-6 4 12 2-7 2 4h6" stroke="white"
-                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
             </svg>
           </div>
           <div>

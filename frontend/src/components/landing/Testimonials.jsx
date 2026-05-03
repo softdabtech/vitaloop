@@ -13,7 +13,7 @@ const TESTIMONIALS = [
     initials: 'NI',
   },
   {
-    quote: "VITALOOP highlighted low ferritin early. I corrected it before it became a larger issue.",
+    quote: 'VITALOOP highlighted low ferritin early. I corrected it before it became a larger issue.',
     name: 'James', age: 41, tag: 'Ferritin · Sleep',
     initials: 'JA',
   },
