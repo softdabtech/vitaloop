@@ -28,7 +28,7 @@ export default function LabResultsList() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { show: showHints, dismiss: dismissHints } = useTourHints('lab-results')
-  const { hasAccess } = useFeature()
+  const { hasAccess } = useFeature('progress')
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -213,7 +213,7 @@ export default function LabResultsList() {
               })}
 
               {/* Premium features hint for free users */}
-              {!hasAccess('progress') && (
+              {!hasAccess && (
                 <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
                   <div className="flex items-start gap-3">
                     <Sparkles className="mt-0.5 h-5 w-5 text-amber-600" />
