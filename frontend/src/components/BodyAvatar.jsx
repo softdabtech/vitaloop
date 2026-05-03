@@ -99,9 +99,9 @@ export default function BodyAvatar({ biomarkers }) {
                   <span
                     className={
                       m.status === 'OPTIMAL' ? 'text-emerald-600' :
-                      m.status === 'BORDERLINE' ? 'text-amber-600' :
-                      m.status === 'DEFICIENT' ? 'text-rose-600' :
-                      m.status === 'ELEVATED' ? 'text-orange-600' : 'text-slate-500'
+                        m.status === 'BORDERLINE' ? 'text-amber-600' :
+                          m.status === 'DEFICIENT' ? 'text-rose-600' :
+                            m.status === 'ELEVATED' ? 'text-orange-600' : 'text-slate-500'
                     }
                   >
                     {m.status}

@@ -1,55 +1,55 @@
-import React, { useMemo } from 'react';
-import { TrendingUp, TrendingDown, Minus, CheckCircle, AlertTriangle, XCircle, Calendar } from 'lucide-react';
+import React, { useMemo } from 'react'
+import { TrendingUp, TrendingDown, Minus, CheckCircle, AlertTriangle, XCircle, Calendar } from 'lucide-react'
 
 export default function HealthChart({ progress }) {
   const normalizeStatus = (status) => {
-    const value = String(status || '').toLowerCase();
-    if (value.includes('optimal') || value.includes('normal')) return 'optimal';
-    if (value.includes('border') || value.includes('warn')) return 'warning';
-    if (value.includes('critical') || value.includes('deficient') || value.includes('elevated')) return 'critical';
-    return 'warning';
-  };
+    const value = String(status || '').toLowerCase()
+    if (value.includes('optimal') || value.includes('normal')) return 'optimal'
+    if (value.includes('border') || value.includes('warn')) return 'warning'
+    if (value.includes('critical') || value.includes('deficient') || value.includes('elevated')) return 'critical'
+    return 'warning'
+  }
 
   const healthMetrics = useMemo(() => {
-    if (!progress || progress.length === 0) return null;
+    if (!progress || progress.length === 0) return null
 
     const uploadsWithBiomarkers = progress.filter(
       (upload) => Array.isArray(upload?.biomarkers) && upload.biomarkers.length > 0
-    );
-    if (uploadsWithBiomarkers.length === 0) return null;
+    )
+    if (uploadsWithBiomarkers.length === 0) return null
 
-    const latest = uploadsWithBiomarkers[uploadsWithBiomarkers.length - 1];
-    const previous = uploadsWithBiomarkers.length > 1 ? uploadsWithBiomarkers[uploadsWithBiomarkers.length - 2] : null;
+    const latest = uploadsWithBiomarkers[uploadsWithBiomarkers.length - 1]
+    const previous = uploadsWithBiomarkers.length > 1 ? uploadsWithBiomarkers[uploadsWithBiomarkers.length - 2] : null
 
     const latestStats = {
       total: latest.biomarkers?.length || 0,
       optimal: latest.biomarkers?.filter(b => normalizeStatus(b.status) === 'optimal').length || 0,
       warning: latest.biomarkers?.filter(b => normalizeStatus(b.status) === 'warning').length || 0,
       critical: latest.biomarkers?.filter(b => normalizeStatus(b.status) === 'critical').length || 0,
-    };
+    }
 
     const previousStats = previous ? {
       total: previous.biomarkers?.length || 0,
       optimal: previous.biomarkers?.filter(b => normalizeStatus(b.status) === 'optimal').length || 0,
       warning: previous.biomarkers?.filter(b => normalizeStatus(b.status) === 'warning').length || 0,
       critical: previous.biomarkers?.filter(b => normalizeStatus(b.status) === 'critical').length || 0,
-    } : null;
+    } : null
 
     // Calculate trend
-    let trend = 'stable';
-    let trendDirection = null;
+    let trend = 'stable'
+    let trendDirection = null
     if (previousStats) {
-      const currentOptimalPercent = (latestStats.optimal / latestStats.total) * 100;
-      const previousOptimalPercent = (previousStats.optimal / previousStats.total) * 100;
-      const currentCriticalPercent = (latestStats.critical / latestStats.total) * 100;
-      const previousCriticalPercent = (previousStats.critical / previousStats.total) * 100;
+      const currentOptimalPercent = (latestStats.optimal / latestStats.total) * 100
+      const previousOptimalPercent = (previousStats.optimal / previousStats.total) * 100
+      const currentCriticalPercent = (latestStats.critical / latestStats.total) * 100
+      const previousCriticalPercent = (previousStats.critical / previousStats.total) * 100
 
       if (currentOptimalPercent > previousOptimalPercent + 5) {
-        trend = 'improving';
-        trendDirection = 'up';
+        trend = 'improving'
+        trendDirection = 'up'
       } else if (currentCriticalPercent > previousCriticalPercent + 5) {
-        trend = 'declining';
-        trendDirection = 'down';
+        trend = 'declining'
+        trendDirection = 'down'
       }
     }
 
@@ -61,33 +61,33 @@ export default function HealthChart({ progress }) {
       testDate: latest.test_date || latest.created_at?.split('T')[0] || null,
       totalLabs: uploadsWithBiomarkers.length,
       timeline: uploadsWithBiomarkers.slice(-5).reverse(),
-    };
-  }, [progress]);
+    }
+  }, [progress])
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'optimal': return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'warning': return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
-      case 'critical': return <XCircle className="w-4 h-4 text-red-600" />;
-      default: return <Minus className="w-4 h-4 text-gray-400" />;
+    case 'optimal': return <CheckCircle className="w-4 h-4 text-green-600" />
+    case 'warning': return <AlertTriangle className="w-4 h-4 text-yellow-600" />
+    case 'critical': return <XCircle className="w-4 h-4 text-red-600" />
+    default: return <Minus className="w-4 h-4 text-gray-400" />
     }
-  };
+  }
 
   const getTrendIcon = (trend) => {
     switch (trend) {
-      case 'improving': return <TrendingUp className="w-5 h-5 text-green-600" />;
-      case 'declining': return <TrendingDown className="w-5 h-5 text-red-600" />;
-      default: return <Minus className="w-5 h-5 text-gray-400" />;
+    case 'improving': return <TrendingUp className="w-5 h-5 text-green-600" />
+    case 'declining': return <TrendingDown className="w-5 h-5 text-red-600" />
+    default: return <Minus className="w-5 h-5 text-gray-400" />
     }
-  };
+  }
 
   const getTrendColor = (trend) => {
     switch (trend) {
-      case 'improving': return 'text-green-700 bg-green-50 border-green-200';
-      case 'declining': return 'text-red-700 bg-red-50 border-red-200';
-      default: return 'text-gray-700 bg-gray-50 border-gray-200';
+    case 'improving': return 'text-green-700 bg-green-50 border-green-200'
+    case 'declining': return 'text-red-700 bg-red-50 border-red-200'
+    default: return 'text-gray-700 bg-gray-50 border-gray-200'
     }
-  };
+  }
 
   if (!healthMetrics) {
     return (
@@ -96,7 +96,7 @@ export default function HealthChart({ progress }) {
         <p className="mb-2">No health data available yet</p>
         <p className="text-sm">Upload your lab results to see trends and insights</p>
       </div>
-    );
+    )
   }
 
   return (
@@ -167,9 +167,9 @@ export default function HealthChart({ progress }) {
         </h4>
         <div className="space-y-2">
           {healthMetrics.timeline.map((lab, index) => {
-            const optimalCount = lab.biomarkers?.filter(b => normalizeStatus(b.status) === 'optimal').length || 0;
-            const totalCount = lab.biomarkers?.length || 0;
-            const percentage = totalCount > 0 ? Math.round((optimalCount / totalCount) * 100) : 0;
+            const optimalCount = lab.biomarkers?.filter(b => normalizeStatus(b.status) === 'optimal').length || 0
+            const totalCount = lab.biomarkers?.length || 0
+            const percentage = totalCount > 0 ? Math.round((optimalCount / totalCount) * 100) : 0
 
             return (
               <div key={index} className="flex items-center justify-between py-2 px-3 bg-white rounded-lg border border-slate-100">
@@ -177,12 +177,12 @@ export default function HealthChart({ progress }) {
                   <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
                   <span className="text-sm text-slate-700">
                     {(() => {
-                      const dateStr = lab.test_date || lab.created_at;
-                      if (!dateStr) return 'Recently uploaded';
+                      const dateStr = lab.test_date || lab.created_at
+                      if (!dateStr) return 'Recently uploaded'
                       try {
-                        return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                       } catch {
-                        return 'Recently uploaded';
+                        return 'Recently uploaded'
                       }
                     })()}
                   </span>
@@ -191,14 +191,14 @@ export default function HealthChart({ progress }) {
                   <div className="text-sm font-medium text-slate-900">{optimalCount}/{totalCount}</div>
                   <div className={`text-xs px-2 py-1 rounded-full ${
                     percentage >= 70 ? 'bg-green-100 text-green-700' :
-                    percentage >= 40 ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
+                      percentage >= 40 ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
                   }`}>
                     {percentage}%
                   </div>
                 </div>
               </div>
-            );
+            )
           })}
         </div>
         <div className="mt-3 text-xs text-slate-500 text-center">
@@ -206,5 +206,5 @@ export default function HealthChart({ progress }) {
         </div>
       </div>
     </div>
-  );
+  )
 }

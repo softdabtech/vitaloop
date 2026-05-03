@@ -41,18 +41,18 @@ export default function TrendAnalyticsDashboard({ biomarkerHistory = [] }) {
                 style={{
                   padding: '12px 16px',
                   background: insight.includes('Great') ? '#f0fdf4' :
-                             insight.includes('Attention') ? '#fee2e2' :
-                             insight.includes('Volatile') ? '#fef3c7' : '#f0f9ff',
+                    insight.includes('Attention') ? '#fee2e2' :
+                      insight.includes('Volatile') ? '#fef3c7' : '#f0f9ff',
                   border: `1px solid ${
                     insight.includes('Great') ? '#dcfce7' :
-                    insight.includes('Attention') ? '#fecaca' :
-                    insight.includes('Volatile') ? '#fde68a' : '#bfdbfe'
+                      insight.includes('Attention') ? '#fecaca' :
+                        insight.includes('Volatile') ? '#fde68a' : '#bfdbfe'
                   }`,
                   borderRadius: '8px',
                   fontSize: '14px',
                   color: insight.includes('Great') ? '#166534' :
-                        insight.includes('Attention') ? '#991b1b' :
-                        insight.includes('Volatile') ? '#78350f' : '#0c2a47'
+                    insight.includes('Attention') ? '#991b1b' :
+                      insight.includes('Volatile') ? '#78350f' : '#0c2a47'
                 }}
               >
                 {insight}
@@ -279,10 +279,10 @@ export default function TrendAnalyticsDashboard({ biomarkerHistory = [] }) {
       <div style={{
         padding: '16px',
         background: analysis.overallStatus === 'improving' ? '#f0fdf4' :
-                   analysis.overallStatus === 'declining' ? '#fee2e2' : '#f0f9ff',
+          analysis.overallStatus === 'declining' ? '#fee2e2' : '#f0f9ff',
         border: `2px solid ${
           analysis.overallStatus === 'improving' ? '#dcfce7' :
-          analysis.overallStatus === 'declining' ? '#fecaca' : '#bfdbfe'
+            analysis.overallStatus === 'declining' ? '#fecaca' : '#bfdbfe'
         }`,
         borderRadius: '12px',
         textAlign: 'center'
@@ -295,7 +295,7 @@ export default function TrendAnalyticsDashboard({ biomarkerHistory = [] }) {
           fontSize: '16px',
           fontWeight: 700,
           color: analysis.overallStatus === 'improving' ? '#166534' :
-                 analysis.overallStatus === 'declining' ? '#991b1b' : '#0c2a47'
+            analysis.overallStatus === 'declining' ? '#991b1b' : '#0c2a47'
         }}>
           {analysis.overallStatus === 'improving' ? (
             <>

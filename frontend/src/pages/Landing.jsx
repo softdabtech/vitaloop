@@ -214,70 +214,70 @@ const HERO_TRUST_SIGNALS = [
   },
 ]
 
-  const FAQ_ITEMS = [
-    {
-      question: 'What is AI lab analysis and how does VITALOOP use it?',
-      answer: 'AI lab analysis uses machine learning to extract, normalize, and interpret biomarker data from blood test PDFs. VITALOOP applies Claude AI to identify deficiencies, flag out-of-range values, and map patterns across multiple test cycles — turning raw numbers into actionable health priorities.',
-    },
-    {
-      question: 'Which blood test formats does VITALOOP support?',
-      answer: 'VITALOOP supports PDF and image uploads from any laboratory. Our OCR engine normalizes units and reference ranges across 85+ biomarkers including CBC, metabolic panels, thyroid, hormones, vitamins, and inflammation markers.',
-    },
-    {
-      question: 'How accurate is AI blood test interpretation?',
-      answer: 'VITALOOP cross-references each biomarker against clinical reference ranges and your historical trends. The AI surfaces correlations a manual review might miss — like ferritin, transferrin saturation, and CRP together indicating iron metabolism issues — with confidence scores and source context.',
-    },
-    {
-      question: 'Is VITALOOP a medical device or replacement for a doctor?',
-      answer: 'No. VITALOOP is a health intelligence platform, not a licensed medical device. It provides educational insights and protocol suggestions based on your lab data. Always consult a qualified healthcare professional for medical decisions.',
-    },
-    {
-      question: 'What is longitudinal biomarker tracking?',
-      answer: 'Longitudinal biomarker tracking means analyzing the same health markers across multiple lab draws over time — weeks, months, or years. VITALOOP visualizes trend lines, detects recovery patterns, and alerts you when trajectories worsen, giving you a health timeline instead of a one-off snapshot.',
-    },
-    {
-      question: 'How is VITALOOP different from asking ChatGPT about my labs?',
-      answer: 'ChatGPT has no memory of your history, cannot parse lab PDFs reliably, and generates generic advice. VITALOOP maintains your longitudinal data, normalizes units, applies clinical reference logic, integrates weekly check-in feedback, and generates structured protocols tied to your specific biomarker patterns.',
-    },
-    {
-      question: 'How does VITALOOP compare with LabCorp MyChart, Everlywell, Levels, and Function Health?',
-      answer: 'Those platforms focus on record delivery, diagnostics access, or single-domain tracking. VITALOOP focuses on longitudinal decision-making and execution: prioritized protocol actions, weekly adherence loops, and practitioner workflows in one operating system.',
-    },
-    {
-      question: 'Can practitioners use VITALOOP for client management?',
-      answer: 'Yes. The Enterprise plan includes a full Practitioner CRM with multi-client dashboards, assignment workflows, protocol templates, and trend visibility — enabling functional medicine practitioners and health coaches to manage dozens of clients efficiently.',
-    },
-    {
-      question: 'How much does VITALOOP cost?',
-      answer: 'VITALOOP offers a free plan with 1 active upload and a core dashboard. Personal Premium is $9.99/month (or $95/year) and includes unlimited uploads, personalized AI protocols, and weekly check-ins. Enterprise plans start at $99/month for practitioner teams.',
-    },
-  ]
+const FAQ_ITEMS = [
+  {
+    question: 'What is AI lab analysis and how does VITALOOP use it?',
+    answer: 'AI lab analysis uses machine learning to extract, normalize, and interpret biomarker data from blood test PDFs. VITALOOP applies Claude AI to identify deficiencies, flag out-of-range values, and map patterns across multiple test cycles — turning raw numbers into actionable health priorities.',
+  },
+  {
+    question: 'Which blood test formats does VITALOOP support?',
+    answer: 'VITALOOP supports PDF and image uploads from any laboratory. Our OCR engine normalizes units and reference ranges across 85+ biomarkers including CBC, metabolic panels, thyroid, hormones, vitamins, and inflammation markers.',
+  },
+  {
+    question: 'How accurate is AI blood test interpretation?',
+    answer: 'VITALOOP cross-references each biomarker against clinical reference ranges and your historical trends. The AI surfaces correlations a manual review might miss — like ferritin, transferrin saturation, and CRP together indicating iron metabolism issues — with confidence scores and source context.',
+  },
+  {
+    question: 'Is VITALOOP a medical device or replacement for a doctor?',
+    answer: 'No. VITALOOP is a health intelligence platform, not a licensed medical device. It provides educational insights and protocol suggestions based on your lab data. Always consult a qualified healthcare professional for medical decisions.',
+  },
+  {
+    question: 'What is longitudinal biomarker tracking?',
+    answer: 'Longitudinal biomarker tracking means analyzing the same health markers across multiple lab draws over time — weeks, months, or years. VITALOOP visualizes trend lines, detects recovery patterns, and alerts you when trajectories worsen, giving you a health timeline instead of a one-off snapshot.',
+  },
+  {
+    question: 'How is VITALOOP different from asking ChatGPT about my labs?',
+    answer: 'ChatGPT has no memory of your history, cannot parse lab PDFs reliably, and generates generic advice. VITALOOP maintains your longitudinal data, normalizes units, applies clinical reference logic, integrates weekly check-in feedback, and generates structured protocols tied to your specific biomarker patterns.',
+  },
+  {
+    question: 'How does VITALOOP compare with LabCorp MyChart, Everlywell, Levels, and Function Health?',
+    answer: 'Those platforms focus on record delivery, diagnostics access, or single-domain tracking. VITALOOP focuses on longitudinal decision-making and execution: prioritized protocol actions, weekly adherence loops, and practitioner workflows in one operating system.',
+  },
+  {
+    question: 'Can practitioners use VITALOOP for client management?',
+    answer: 'Yes. The Enterprise plan includes a full Practitioner CRM with multi-client dashboards, assignment workflows, protocol templates, and trend visibility — enabling functional medicine practitioners and health coaches to manage dozens of clients efficiently.',
+  },
+  {
+    question: 'How much does VITALOOP cost?',
+    answer: 'VITALOOP offers a free plan with 1 active upload and a core dashboard. Personal Premium is $9.99/month (or $95/year) and includes unlimited uploads, personalized AI protocols, and weekly check-ins. Enterprise plans start at $99/month for practitioner teams.',
+  },
+]
 
-  const SCHEMA_HOWTO = {
-    '@context': 'https://schema.org',
-    '@type': 'HowTo',
-    name: 'How to Analyze Blood Test Results With AI Using VITALOOP',
-    description: 'Upload your lab report and receive AI-powered biomarker analysis in under 60 seconds. Full personalized protocol and weekly adaptive loop are available on paid plans.',
-    totalTime: 'PT1M',
-    estimatedCost: { '@type': 'MonetaryAmount', currency: 'USD', value: '0' },
-    step: [
-      { '@type': 'HowToStep', name: 'Upload your lab report', text: 'Drop a PDF or image of your blood test results into VITALOOP. Supported formats include any standard laboratory PDF or photo.', position: 1 },
-      { '@type': 'HowToStep', name: 'AI extracts and normalizes biomarkers', text: 'Our AI engine uses OCR to extract all biomarker values and normalizes them across units and reference ranges automatically.', position: 2 },
-      { '@type': 'HowToStep', name: 'Signal mapping and pattern detection', text: 'Deficiencies, elevations, and cross-biomarker correlations are surfaced and ranked by clinical significance.', position: 3 },
-      { '@type': 'HowToStep', name: 'Unlock your personalized protocol', text: 'Paid plans unlock a targeted protocol with supplement recommendations, nutrition actions, and weekly assignments tied to your biomarkers.', position: 4 },
-      { '@type': 'HowToStep', name: 'Track progress with adaptive check-ins', text: 'Paid plans include weekly AI check-ins and adaptation between lab cycles based on adherence and biomarker trends.', position: 5 },
-    ],
-  }
+const SCHEMA_HOWTO = {
+  '@context': 'https://schema.org',
+  '@type': 'HowTo',
+  name: 'How to Analyze Blood Test Results With AI Using VITALOOP',
+  description: 'Upload your lab report and receive AI-powered biomarker analysis in under 60 seconds. Full personalized protocol and weekly adaptive loop are available on paid plans.',
+  totalTime: 'PT1M',
+  estimatedCost: { '@type': 'MonetaryAmount', currency: 'USD', value: '0' },
+  step: [
+    { '@type': 'HowToStep', name: 'Upload your lab report', text: 'Drop a PDF or image of your blood test results into VITALOOP. Supported formats include any standard laboratory PDF or photo.', position: 1 },
+    { '@type': 'HowToStep', name: 'AI extracts and normalizes biomarkers', text: 'Our AI engine uses OCR to extract all biomarker values and normalizes them across units and reference ranges automatically.', position: 2 },
+    { '@type': 'HowToStep', name: 'Signal mapping and pattern detection', text: 'Deficiencies, elevations, and cross-biomarker correlations are surfaced and ranked by clinical significance.', position: 3 },
+    { '@type': 'HowToStep', name: 'Unlock your personalized protocol', text: 'Paid plans unlock a targeted protocol with supplement recommendations, nutrition actions, and weekly assignments tied to your biomarkers.', position: 4 },
+    { '@type': 'HowToStep', name: 'Track progress with adaptive check-ins', text: 'Paid plans include weekly AI check-ins and adaptation between lab cycles based on adherence and biomarker trends.', position: 5 },
+  ],
+}
 
-  const SCHEMA_FAQ = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: FAQ_ITEMS.map((item) => ({
-      '@type': 'Question',
-      name: item.question,
-      acceptedAnswer: { '@type': 'Answer', text: item.answer },
-    })),
-  }
+const SCHEMA_FAQ = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: { '@type': 'Answer', text: item.answer },
+  })),
+}
 
 const PRICING = {
   monthly: [
@@ -423,7 +423,7 @@ function MockupScreenContent({ title }) {
       {/* Result chips */}
       <div className="flex flex-wrap gap-1">
         {[['CBC', 'emerald'], ['Iron panel', 'sky'], ['Thyroid', 'violet'], ['Lipids', 'amber'], ['Metabolic', 'emerald']].map(([label, c]) => (
-          <span key={label} className={`rounded-full border px-1.5 py-0.5 text-[8px] font-semibold`} style={{ borderColor: `var(--${c}-400, #34d399)30`, background: `var(--${c}-500, #10b981)12`, color: `var(--${c}-300, #6ee7b7)` }}>{label}</span>
+          <span key={label} className={'rounded-full border px-1.5 py-0.5 text-[8px] font-semibold'} style={{ borderColor: `var(--${c}-400, #34d399)30`, background: `var(--${c}-500, #10b981)12`, color: `var(--${c}-300, #6ee7b7)` }}>{label}</span>
         ))}
       </div>
       <div className="flex items-center gap-1.5">
@@ -722,7 +722,7 @@ export default function Landing() {
             {NAV_LINKS.map((item) => (
               <button
                 key={item.id}
-                  onClick={() => navAction(item)}
+                onClick={() => navAction(item)}
                 className={`text-sm transition ${navTextClass}`}
               >
                 {item.label}
@@ -776,7 +776,7 @@ export default function Landing() {
                 {NAV_LINKS.map((item) => (
                   <button
                     key={item.id}
-                      onClick={() => navAction(item)}
+                    onClick={() => navAction(item)}
                     className="rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
                   >
                     {item.label}
@@ -838,7 +838,7 @@ export default function Landing() {
           <div className="grid gap-8 lg:grid-cols-2">
             {/* Traditional Problems */}
             <div className="space-y-4">
-              <motion.div 
+              <motion.div
                 {...fadeUp(reduced, 0.1)}
                 className="text-center"
               >
@@ -847,7 +847,7 @@ export default function Landing() {
                 </span>
               </motion.div>
 
-              
+
               {[
                 { icon: X, title: 'No Priority', stat: '0', label: 'Which marker to fix first?' },
                 { icon: X, title: 'No History', stat: '0', label: 'No trend tracking' },
@@ -864,7 +864,7 @@ export default function Landing() {
                     <motion.div
                       className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-orange-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     />
-                    
+
                     <div className="relative flex items-center gap-6">
                       <motion.div
                         className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-rose-50"
@@ -873,7 +873,7 @@ export default function Landing() {
                       >
                         <Icon className="h-10 w-10 text-rose-500" />
                       </motion.div>
-                      
+
                       <div className="flex-1">
                         <div className="text-3xl font-bold text-rose-600">{item.stat}</div>
                         <h3 className="mt-1 text-xl font-bold">{item.title}</h3>
@@ -887,7 +887,7 @@ export default function Landing() {
 
             {/* VITALOOP Solutions */}
             <div className="space-y-4">
-              <motion.div 
+              <motion.div
                 {...fadeUp(reduced, 0.1)}
                 className="text-center"
               >
@@ -895,7 +895,7 @@ export default function Landing() {
                   ✅ VITALOOP
                 </span>
               </motion.div>
-              
+
               {[
                 { icon: TrendingUp, title: 'AI Ranking', stat: '100%', label: 'Shows what matters most' },
                 { icon: Clock3, title: 'Full History', stat: '∞', label: 'Tracks every trend' },
@@ -913,7 +913,7 @@ export default function Landing() {
                     <motion.div
                       className="absolute inset-0 bg-gradient-to-br from-emerald-500/8 to-sky-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     />
-                    
+
                     <div className="relative flex items-center gap-6">
                       <motion.div
                         className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-50 to-sky-50"
@@ -927,7 +927,7 @@ export default function Landing() {
                         />
                         <Icon className="relative h-10 w-10 text-emerald-600" />
                       </motion.div>
-                      
+
                       <div className="flex-1">
                         <div className="text-3xl font-bold text-emerald-600">{item.stat}</div>
                         <h3 className="mt-1 text-xl font-bold">{item.title}</h3>
@@ -957,12 +957,12 @@ export default function Landing() {
           <motion.div variants={staggerParent} initial="hidden" whileInView="show" viewport={{ once: true, margin: '-10% 0px -10% 0px' }} className="relative">
             {/* Visual timeline connector */}
             <div className="pointer-events-none absolute left-1/2 top-0 hidden h-full w-1 -translate-x-1/2 md:block">
-              <motion.div 
+              <motion.div
                 className="h-full w-full rounded-full bg-gradient-to-b from-emerald-400 via-sky-400 to-violet-400 opacity-20"
                 initial={{ scaleY: 0 }}
                 whileInView={{ scaleY: 1 }}
                 viewport={{ once: true }}
-                transition={{ duration: 1.5, ease: "easeInOut" }}
+                transition={{ duration: 1.5, ease: 'easeInOut' }}
               />
             </div>
 
@@ -990,14 +990,14 @@ export default function Landing() {
                     <motion.div
                       className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-sky-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     />
-                    
+
                     {/* Large icon with pulse effect */}
                     <motion.div
                       className="relative mx-auto mb-6 flex h-24 w-24 items-center justify-center"
                       whileHover={reduced ? {} : { scale: 1.2 }}
                       transition={{ duration: 0.4 }}
                     >
-                      <motion.div 
+                      <motion.div
                         className="absolute inset-0 rounded-full bg-emerald-400/20 blur-2xl"
                         animate={reduced ? {} : { scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
                         transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
@@ -1006,13 +1006,13 @@ export default function Landing() {
                         <Icon className="h-8 w-8 text-emerald-600" />
                       </div>
                     </motion.div>
-                    
+
                     <h3 className="relative text-xl font-bold">{step.title}</h3>
                     <p className={`relative mt-3 text-sm ${'text-slate-600'}`}>{step.body}</p>
-                    
+
                     {/* Animated arrow for non-last items */}
                     {idx < STEPS.length - 1 && (
-                      <motion.div 
+                      <motion.div
                         className="absolute -right-4 top-1/2 hidden -translate-y-1/2 lg:block"
                         animate={reduced ? {} : { x: [0, 5, 0] }}
                         transition={{ duration: 1.5, repeat: Infinity }}
@@ -1058,7 +1058,7 @@ export default function Landing() {
                   <motion.div
                     className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-sky-500/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
                   />
-                  
+
                   {/* Premium badge */}
                   <motion.span
                     className={`absolute right-4 top-4 rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-wider ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}
@@ -1066,7 +1066,7 @@ export default function Landing() {
                   >
                     ✨ Premium
                   </motion.span>
-                  
+
                   {/* Large rotating icon */}
                   <motion.div
                     className="relative mb-6 flex h-24 w-24 items-center justify-center"
@@ -1078,7 +1078,7 @@ export default function Landing() {
                       <Icon className="h-8 w-8 text-emerald-600" />
                     </div>
                   </motion.div>
-                  
+
                   <h3 className="relative text-xl font-bold">{feature.title}</h3>
                   <p className={`relative mt-3 text-sm ${'text-slate-600'}`}>{feature.body}</p>
                 </motion.article>
@@ -1128,7 +1128,7 @@ export default function Landing() {
                   <motion.div
                     className="absolute inset-0 bg-gradient-to-br from-emerald-500/8 via-sky-500/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
                   />
-                  
+
                   {/* Large animated icon */}
                   <motion.div
                     className="relative mx-auto mb-4 flex h-20 w-20 items-center justify-center"
@@ -1138,7 +1138,7 @@ export default function Landing() {
                     <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400/20 to-sky-400/20 blur-xl" />
                     <Icon className="relative h-10 w-10 text-emerald-500" />
                   </motion.div>
-                  
+
                   {/* Large stat */}
                   <motion.div
                     className="relative mb-3 text-4xl font-bold text-emerald-600"
@@ -1149,7 +1149,7 @@ export default function Landing() {
                   >
                     {benefit.stat}
                   </motion.div>
-                  
+
                   <div className="relative text-xs font-semibold uppercase tracking-wider text-emerald-700">{benefit.label}</div>
                   <h3 className="relative mt-3 text-lg font-semibold">{benefit.title}</h3>
                   <p className={`relative mt-2 text-sm ${'text-slate-600'}`}>{benefit.body}</p>

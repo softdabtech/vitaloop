@@ -1,5 +1,5 @@
-import React from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import React from 'react'
+import { TrendingUp, TrendingDown } from 'lucide-react'
 
 export default function StatCard({ title, value, unit, icon: Icon, color, change, onClick }) {
   const colorConfig = {
@@ -23,9 +23,9 @@ export default function StatCard({ title, value, unit, icon: Icon, color, change
       border: 'border-orange-100',
       bar: 'bg-orange-400',
     },
-  };
+  }
 
-  const c = colorConfig[color] ?? colorConfig.emerald;
+  const c = colorConfig[color] ?? colorConfig.emerald
 
   return (
     <div
@@ -55,5 +55,5 @@ export default function StatCard({ title, value, unit, icon: Icon, color, change
         {unit && <span className="ml-1.5 text-sm font-normal text-slate-400">{unit}</span>}
       </p>
     </div>
-  );
+  )
 }

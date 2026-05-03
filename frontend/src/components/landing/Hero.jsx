@@ -175,7 +175,7 @@ export function CabinetPreviewModal({ open, onClose, reduced }) {
                     ))}
                   </div>
 
-                    <div style={{ display: 'grid', gap: 14, gridTemplateRows: 'auto auto 1fr auto' }}>
+                  <div style={{ display: 'grid', gap: 14, gridTemplateRows: 'auto auto 1fr auto' }}>
                     <div style={{ borderRadius: 20, background: '#ffffff', border: '1px solid rgba(148,163,184,0.16)', padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                       <div>
                         <div style={{ fontSize: 13, color: 'var(--gray-400)', marginBottom: 4 }}>VITALOOP user cabinet</div>

@@ -57,7 +57,7 @@ export function useOCR() {
 
     try {
       let text = ''
-      let confidence = null
+      const confidence = null
 
       if (file.type === 'application/pdf') {
         console.log('Processing as PDF')

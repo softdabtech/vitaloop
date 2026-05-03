@@ -266,275 +266,275 @@ export default function Onboarding() {
 
         <motion.div style={s.card} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
 
-        {/* ── Org-setup screen (shown only before health profile, when user has no org) ── */}
-        {!orgCheckDone && (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid #10b981', borderTopColor: 'transparent', margin: '0 auto', animation: 'spin 0.7s linear infinite' }} />
-            <div style={{ marginTop: 16, color: '#64748b', fontSize: 14 }}>Загружаем данные...</div>
-          </div>
-        )}
-
-        {orgCheckDone && needsOrg && (
-          <motion.div key="org-setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div style={{ textAlign: 'center', marginBottom: 8 }}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>👋</div>
-              <div style={s.title}>Добро пожаловать!</div>
-              <div style={s.sub}>Как назовём вашу организацию?</div>
+          {/* ── Org-setup screen (shown only before health profile, when user has no org) ── */}
+          {!orgCheckDone && (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid #10b981', borderTopColor: 'transparent', margin: '0 auto', animation: 'spin 0.7s linear infinite' }} />
+              <div style={{ marginTop: 16, color: '#64748b', fontSize: 14 }}>Загружаем данные...</div>
             </div>
-            <form onSubmit={handleCreateOrg}>
-              <label>
-                <span style={s.label}>Название организации</span>
-                <input
-                  style={s.input}
-                  type="text"
-                  placeholder="Например: HealthFirst Clinic"
-                  value={orgName}
-                  onChange={e => setOrgName(e.target.value)}
-                  autoFocus
-                  maxLength={120}
-                />
-              </label>
-              <button type="submit" style={{ ...s.btnPrimary, opacity: orgSaving ? 0.6 : 1 }} disabled={orgSaving}>
-                {orgSaving ? 'Создаём...' : 'Создать и войти в CRM →'}
-              </button>
-            </form>
-          </motion.div>
-        )}
+          )}
 
-        {/* ── Health-profile steps (default path for regular users) ── */}
-        {orgCheckDone && !needsOrg && (
-          <>
-        {/* Progress bar */}
-        <div style={s.progress}>
-          {steps.map((_, i) => <div key={i} style={s.dot(i === step, i < step)} />)}
-        </div>
-          <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 10 }}>
-          This onboarding captures practical baseline data for personalized tasks and protocol adjustments.
-        </div>
-          <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 24, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-          Step {step + 1} of {TOTAL} — {steps[step]}
-        </div>
-
-        {/* Step 0: Basics */}
-        {step === 0 && (
-          <motion.div key="basics" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <div style={s.title}><User size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />Your basics</div>
-            <div style={s.sub}>Help us personalize your health guidance.</div>
-            <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
-              💡 Height and weight help calculate healthy ranges for your biomarkers. List supplements and medications so the AI can flag interactions and avoid duplicating what you already take.
-            </div>
-            <div style={s.row}>
-              <div style={s.inputContainer}>
-                <label>
-                  <span style={{...s.label, color: '#ef4444'}}>* Height (cm) (required)</span>
-                  <input
-                    style={{...s.input, borderColor: validationErrors.height_cm ? '#ef4444' : 'rgba(15,23,42,0.12)'}}
-                    type="number"
-                    placeholder="175"
-                    value={profile.height_cm}
-                    onChange={handleHeightChange}
-                    min="50"
-                    max="250"
-                    required
-                  />
-                  {validationErrors.height_cm && <div style={s.error}>{validationErrors.height_cm}</div>}
-                </label>
+          {orgCheckDone && needsOrg && (
+            <motion.div key="org-setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>👋</div>
+                <div style={s.title}>Добро пожаловать!</div>
+                <div style={s.sub}>Как назовём вашу организацию?</div>
               </div>
-              <div style={s.inputContainer}>
+              <form onSubmit={handleCreateOrg}>
                 <label>
-                  <span style={{...s.label, color: '#ef4444'}}>* Weight (kg) (required)</span>
+                  <span style={s.label}>Название организации</span>
                   <input
-                    style={{...s.input, borderColor: validationErrors.weight_kg ? '#ef4444' : 'rgba(15,23,42,0.12)'}}
-                    type="number"
-                    placeholder="72"
-                    value={profile.weight_kg}
-                    onChange={handleWeightChange}
-                    min="20"
-                    max="300"
-                    required
+                    style={s.input}
+                    type="text"
+                    placeholder="Например: HealthFirst Clinic"
+                    value={orgName}
+                    onChange={e => setOrgName(e.target.value)}
+                    autoFocus
+                    maxLength={120}
                   />
-                  {validationErrors.weight_kg && <div style={s.error}>{validationErrors.weight_kg}</div>}
                 </label>
-              </div>
-            </div>
-            <div style={{ marginTop: 16 }}>
-              <span style={s.label}>Current supplements (comma-separated)</span>
-              <input style={s.input} placeholder="Vitamin D3, Magnesium, Omega-3" value={profile.current_supplements} onChange={e => setProfile(p => ({ ...p, current_supplements: e.target.value }))} />
-            </div>
-            <div style={{ marginTop: 16 }}>
-              <span style={s.label}>Current medications (comma-separated, optional)</span>
-              <input style={s.input} placeholder="Leave blank if none" value={profile.current_medications} onChange={e => setProfile(p => ({ ...p, current_medications: e.target.value }))} />
-            </div>
-          </motion.div>
-        )}
-
-        {/* Step 1: Goals */}
-        {step === 1 && (
-          <motion.div key="goals" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div style={s.title}>Your health goals</div>
-            <div style={s.sub}>Select everything that applies. We'll personalize your guidance around these.</div>
-            <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
-              💡 Pick all goals that feel relevant — you can select more than one. Your goals influence which biomarkers get flagged first and what supplements are included in your protocol.
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {GOAL_OPTIONS.map(g => (
-                <button key={g.id} style={s.goalChip(profile.goals.includes(g.id))} onClick={() => toggleGoal(g.id)}>
-                  {profile.goals.includes(g.id) && '✓ '}{g.label}
+                <button type="submit" style={{ ...s.btnPrimary, opacity: orgSaving ? 0.6 : 1 }} disabled={orgSaving}>
+                  {orgSaving ? 'Создаём...' : 'Создать и войти в CRM →'}
                 </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
+              </form>
+            </motion.div>
+          )}
 
-        {/* Step 2: Location */}
-        {step === 2 && (
-          <motion.div key="location" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <div style={s.title}><MapPin size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />Your location</div>
-            <div style={s.sub}>Used for future physician referral support and local care assistance.</div>
-            <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
-              💡 Location is optional. It helps us suggest nearby labs and practitioners when you're ready for in-person consultations. It is not shared with third parties.
-            </div>
-            <div style={s.inputContainer}>
-              <span style={s.label}>Country</span>
-              <input
-                style={s.input}
-                placeholder="Start typing to search countries..."
-                value={location.country}
-                onChange={(e) => {
-                  setLocation(l => ({ ...l, country: e.target.value, city: '' }))
-                  setShowSuggestions(prev => ({ ...prev, country: true }))
-                }}
-                onFocus={() => setShowSuggestions(prev => ({ ...prev, country: true }))}
-                onBlur={() => setTimeout(() => setShowSuggestions(prev => ({ ...prev, country: false })), 200)}
-              />
-              {showSuggestions.country && location.country && (
-                <div style={s.dropdown}>
-                  {COUNTRIES.filter(c => c.toLowerCase().includes(location.country.toLowerCase())).slice(0, 10).map(country => (
-                    <div
-                      key={country}
-                      style={s.dropdownItem}
-                      onMouseDown={() => setLocation(l => ({ ...l, country, city: '' }))}
-                      onMouseEnter={(e) => e.target.style.background = s.dropdownItemHover.background}
-                      onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                    >
-                      {country}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div style={{ marginTop: 16, ...s.inputContainer }}>
-              <span style={s.label}>City</span>
-              <input
-                style={s.input}
-                placeholder={location.country ? `Start typing ${location.country} cities...` : "Select country first"}
-                value={location.city}
-                onChange={(e) => {
-                  setLocation(l => ({ ...l, city: e.target.value }))
-                  setShowSuggestions(prev => ({ ...prev, city: true }))
-                }}
-                onFocus={() => setShowSuggestions(prev => ({ ...prev, city: true }))}
-                onBlur={() => setTimeout(() => setShowSuggestions(prev => ({ ...prev, city: false })), 200)}
-                disabled={!location.country}
-              />
-              {showSuggestions.city && location.city && location.country && CITIES_BY_COUNTRY[location.country] && (
-                <div style={s.dropdown}>
-                  {CITIES_BY_COUNTRY[location.country].filter(c => c.toLowerCase().includes(location.city.toLowerCase())).slice(0, 10).map(city => (
-                    <div
-                      key={city}
-                      style={s.dropdownItem}
-                      onMouseDown={() => setLocation(l => ({ ...l, city }))}
-                      onMouseEnter={(e) => e.target.style.background = s.dropdownItemHover.background}
-                      onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                    >
-                      {city}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div style={{ marginTop: 16 }}>
-              <span style={s.label}>State / Region (optional)</span>
-              <input style={s.input} placeholder="e.g. California, Ontario" value={location.state} onChange={e => setLocation(l => ({ ...l, state: e.target.value }))} />
-            </div>
-            <div style={{ marginTop: 16 }}>
-              <span style={s.label}>District / Area (optional)</span>
-              <input style={s.input} placeholder="e.g. Downtown, Central" value={location.district} onChange={e => setLocation(l => ({ ...l, district: e.target.value }))} />
-            </div>
-          </motion.div>
-        )}
-
-        {/* Step 3: Complaints */}
-        {step === 3 && (
-          <motion.div key="complaints" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div style={s.title}><AlertTriangle size={22} style={{ display: 'inline', marginRight: 10, color: '#f5a623' }} />Recurring complaints</div>
-            <div style={s.sub}>What has been bothering you? We'll factor this into your analysis.</div>
-            <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(245,166,35,0.07)', border: '1px solid rgba(245,166,35,0.25)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
-              💡 Even vague symptoms like "fatigue" or "brain fog" are valuable — the AI connects them to your biomarker patterns. You can add multiple complaints. Skip this step if you have no current symptoms.
-            </div>
-            {complaints.map((c, i) => (
-              <div key={i} style={{ marginBottom: 20, padding: 16, background: '#f8fafc', borderRadius: 12, border: '1px solid rgba(15,23,42,0.07)' }}>
-                <div style={s.inputContainer}>
-                  <span style={s.label}>Complaint {i + 1}</span>
-                  <input
-                    style={{ ...s.input, marginBottom: 10 }}
-                    placeholder="Start typing symptoms..."
-                    value={c.complaint}
-                    onChange={(e) => {
-                      updateComplaint(i, 'complaint', e.target.value)
-                      setShowSuggestions(prev => ({ ...prev, complaint: true }))
-                    }}
-                    onFocus={() => setShowSuggestions(prev => ({ ...prev, complaint: true }))}
-                    onBlur={() => setTimeout(() => setShowSuggestions(prev => ({ ...prev, complaint: false })), 200)}
-                  />
-                  {showSuggestions.complaint && c.complaint && (
-                    <div style={s.dropdown}>
-                      {COMMON_SYMPTOMS.filter(s => s.toLowerCase().includes(c.complaint.toLowerCase())).slice(0, 8).map(symptom => (
-                        <div
-                          key={symptom}
-                          style={s.dropdownItem}
-                          onMouseDown={() => updateComplaint(i, 'complaint', symptom)}
-                          onMouseEnter={(e) => e.target.style.background = s.dropdownItemHover.background}
-                          onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                        >
-                          {symptom}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <span style={s.label}>How long has this been present?</span>
-                <input style={{ ...s.input, marginBottom: 10 }} placeholder="e.g. 3 months, 1 year" value={c.duration_description} onChange={e => updateComplaint(i, 'duration_description', e.target.value)} />
-                <span style={s.label}>What have you tried so far?</span>
-                <input style={s.input} placeholder="e.g. Magnesium, better sleep schedule, diet changes" value={c.tried_interventions} onChange={e => updateComplaint(i, 'tried_interventions', e.target.value)} />
+          {/* ── Health-profile steps (default path for regular users) ── */}
+          {orgCheckDone && !needsOrg && (
+            <>
+              {/* Progress bar */}
+              <div style={s.progress}>
+                {steps.map((_, i) => <div key={i} style={s.dot(i === step, i < step)} />)}
               </div>
-            ))}
-            <button style={{ ...s.btnSec, marginTop: 4 }} onClick={addComplaint}>+ Add another complaint</button>
-          </motion.div>
-        )}
+              <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 10 }}>
+          This onboarding captures practical baseline data for personalized tasks and protocol adjustments.
+              </div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 24, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          Step {step + 1} of {TOTAL} — {steps[step]}
+              </div>
 
-        {/* Navigation */}
-        <div style={{ display: 'flex', gap: 12, marginTop: 28, alignItems: 'center' }}>
-          {step > 0 && (
-            <button style={{ ...s.btnPrimary, flex: 0.4, background: '#e2e8f0', color: '#475569', marginTop: 0 }} onClick={() => setStep(s => s - 1)}>
-              <ChevronLeft size={18} style={{ display: 'inline' }} /> Back
-            </button>
-          )}
-          {step < TOTAL - 1 ? (
-            <button style={{ ...s.btnPrimary, flex: 1, marginTop: 0 }} onClick={() => setStep(s => s + 1)}>
+              {/* Step 0: Basics */}
+              {step === 0 && (
+                <motion.div key="basics" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div style={s.title}><User size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />Your basics</div>
+                  <div style={s.sub}>Help us personalize your health guidance.</div>
+                  <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
+              💡 Height and weight help calculate healthy ranges for your biomarkers. List supplements and medications so the AI can flag interactions and avoid duplicating what you already take.
+                  </div>
+                  <div style={s.row}>
+                    <div style={s.inputContainer}>
+                      <label>
+                        <span style={{...s.label, color: '#ef4444'}}>* Height (cm) (required)</span>
+                        <input
+                          style={{...s.input, borderColor: validationErrors.height_cm ? '#ef4444' : 'rgba(15,23,42,0.12)'}}
+                          type="number"
+                          placeholder="175"
+                          value={profile.height_cm}
+                          onChange={handleHeightChange}
+                          min="50"
+                          max="250"
+                          required
+                        />
+                        {validationErrors.height_cm && <div style={s.error}>{validationErrors.height_cm}</div>}
+                      </label>
+                    </div>
+                    <div style={s.inputContainer}>
+                      <label>
+                        <span style={{...s.label, color: '#ef4444'}}>* Weight (kg) (required)</span>
+                        <input
+                          style={{...s.input, borderColor: validationErrors.weight_kg ? '#ef4444' : 'rgba(15,23,42,0.12)'}}
+                          type="number"
+                          placeholder="72"
+                          value={profile.weight_kg}
+                          onChange={handleWeightChange}
+                          min="20"
+                          max="300"
+                          required
+                        />
+                        {validationErrors.weight_kg && <div style={s.error}>{validationErrors.weight_kg}</div>}
+                      </label>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 16 }}>
+                    <span style={s.label}>Current supplements (comma-separated)</span>
+                    <input style={s.input} placeholder="Vitamin D3, Magnesium, Omega-3" value={profile.current_supplements} onChange={e => setProfile(p => ({ ...p, current_supplements: e.target.value }))} />
+                  </div>
+                  <div style={{ marginTop: 16 }}>
+                    <span style={s.label}>Current medications (comma-separated, optional)</span>
+                    <input style={s.input} placeholder="Leave blank if none" value={profile.current_medications} onChange={e => setProfile(p => ({ ...p, current_medications: e.target.value }))} />
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 1: Goals */}
+              {step === 1 && (
+                <motion.div key="goals" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div style={s.title}>Your health goals</div>
+                  <div style={s.sub}>Select everything that applies. We'll personalize your guidance around these.</div>
+                  <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
+              💡 Pick all goals that feel relevant — you can select more than one. Your goals influence which biomarkers get flagged first and what supplements are included in your protocol.
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    {GOAL_OPTIONS.map(g => (
+                      <button key={g.id} style={s.goalChip(profile.goals.includes(g.id))} onClick={() => toggleGoal(g.id)}>
+                        {profile.goals.includes(g.id) && '✓ '}{g.label}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 2: Location */}
+              {step === 2 && (
+                <motion.div key="location" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div style={s.title}><MapPin size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />Your location</div>
+                  <div style={s.sub}>Used for future physician referral support and local care assistance.</div>
+                  <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
+              💡 Location is optional. It helps us suggest nearby labs and practitioners when you're ready for in-person consultations. It is not shared with third parties.
+                  </div>
+                  <div style={s.inputContainer}>
+                    <span style={s.label}>Country</span>
+                    <input
+                      style={s.input}
+                      placeholder="Start typing to search countries..."
+                      value={location.country}
+                      onChange={(e) => {
+                        setLocation(l => ({ ...l, country: e.target.value, city: '' }))
+                        setShowSuggestions(prev => ({ ...prev, country: true }))
+                      }}
+                      onFocus={() => setShowSuggestions(prev => ({ ...prev, country: true }))}
+                      onBlur={() => setTimeout(() => setShowSuggestions(prev => ({ ...prev, country: false })), 200)}
+                    />
+                    {showSuggestions.country && location.country && (
+                      <div style={s.dropdown}>
+                        {COUNTRIES.filter(c => c.toLowerCase().includes(location.country.toLowerCase())).slice(0, 10).map(country => (
+                          <div
+                            key={country}
+                            style={s.dropdownItem}
+                            onMouseDown={() => setLocation(l => ({ ...l, country, city: '' }))}
+                            onMouseEnter={(e) => e.target.style.background = s.dropdownItemHover.background}
+                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                          >
+                            {country}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ marginTop: 16, ...s.inputContainer }}>
+                    <span style={s.label}>City</span>
+                    <input
+                      style={s.input}
+                      placeholder={location.country ? `Start typing ${location.country} cities...` : 'Select country first'}
+                      value={location.city}
+                      onChange={(e) => {
+                        setLocation(l => ({ ...l, city: e.target.value }))
+                        setShowSuggestions(prev => ({ ...prev, city: true }))
+                      }}
+                      onFocus={() => setShowSuggestions(prev => ({ ...prev, city: true }))}
+                      onBlur={() => setTimeout(() => setShowSuggestions(prev => ({ ...prev, city: false })), 200)}
+                      disabled={!location.country}
+                    />
+                    {showSuggestions.city && location.city && location.country && CITIES_BY_COUNTRY[location.country] && (
+                      <div style={s.dropdown}>
+                        {CITIES_BY_COUNTRY[location.country].filter(c => c.toLowerCase().includes(location.city.toLowerCase())).slice(0, 10).map(city => (
+                          <div
+                            key={city}
+                            style={s.dropdownItem}
+                            onMouseDown={() => setLocation(l => ({ ...l, city }))}
+                            onMouseEnter={(e) => e.target.style.background = s.dropdownItemHover.background}
+                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                          >
+                            {city}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ marginTop: 16 }}>
+                    <span style={s.label}>State / Region (optional)</span>
+                    <input style={s.input} placeholder="e.g. California, Ontario" value={location.state} onChange={e => setLocation(l => ({ ...l, state: e.target.value }))} />
+                  </div>
+                  <div style={{ marginTop: 16 }}>
+                    <span style={s.label}>District / Area (optional)</span>
+                    <input style={s.input} placeholder="e.g. Downtown, Central" value={location.district} onChange={e => setLocation(l => ({ ...l, district: e.target.value }))} />
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 3: Complaints */}
+              {step === 3 && (
+                <motion.div key="complaints" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div style={s.title}><AlertTriangle size={22} style={{ display: 'inline', marginRight: 10, color: '#f5a623' }} />Recurring complaints</div>
+                  <div style={s.sub}>What has been bothering you? We'll factor this into your analysis.</div>
+                  <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(245,166,35,0.07)', border: '1px solid rgba(245,166,35,0.25)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
+              💡 Even vague symptoms like "fatigue" or "brain fog" are valuable — the AI connects them to your biomarker patterns. You can add multiple complaints. Skip this step if you have no current symptoms.
+                  </div>
+                  {complaints.map((c, i) => (
+                    <div key={i} style={{ marginBottom: 20, padding: 16, background: '#f8fafc', borderRadius: 12, border: '1px solid rgba(15,23,42,0.07)' }}>
+                      <div style={s.inputContainer}>
+                        <span style={s.label}>Complaint {i + 1}</span>
+                        <input
+                          style={{ ...s.input, marginBottom: 10 }}
+                          placeholder="Start typing symptoms..."
+                          value={c.complaint}
+                          onChange={(e) => {
+                            updateComplaint(i, 'complaint', e.target.value)
+                            setShowSuggestions(prev => ({ ...prev, complaint: true }))
+                          }}
+                          onFocus={() => setShowSuggestions(prev => ({ ...prev, complaint: true }))}
+                          onBlur={() => setTimeout(() => setShowSuggestions(prev => ({ ...prev, complaint: false })), 200)}
+                        />
+                        {showSuggestions.complaint && c.complaint && (
+                          <div style={s.dropdown}>
+                            {COMMON_SYMPTOMS.filter(s => s.toLowerCase().includes(c.complaint.toLowerCase())).slice(0, 8).map(symptom => (
+                              <div
+                                key={symptom}
+                                style={s.dropdownItem}
+                                onMouseDown={() => updateComplaint(i, 'complaint', symptom)}
+                                onMouseEnter={(e) => e.target.style.background = s.dropdownItemHover.background}
+                                onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                              >
+                                {symptom}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <span style={s.label}>How long has this been present?</span>
+                      <input style={{ ...s.input, marginBottom: 10 }} placeholder="e.g. 3 months, 1 year" value={c.duration_description} onChange={e => updateComplaint(i, 'duration_description', e.target.value)} />
+                      <span style={s.label}>What have you tried so far?</span>
+                      <input style={s.input} placeholder="e.g. Magnesium, better sleep schedule, diet changes" value={c.tried_interventions} onChange={e => updateComplaint(i, 'tried_interventions', e.target.value)} />
+                    </div>
+                  ))}
+                  <button style={{ ...s.btnSec, marginTop: 4 }} onClick={addComplaint}>+ Add another complaint</button>
+                </motion.div>
+              )}
+
+              {/* Navigation */}
+              <div style={{ display: 'flex', gap: 12, marginTop: 28, alignItems: 'center' }}>
+                {step > 0 && (
+                  <button style={{ ...s.btnPrimary, flex: 0.4, background: '#e2e8f0', color: '#475569', marginTop: 0 }} onClick={() => setStep(s => s - 1)}>
+                    <ChevronLeft size={18} style={{ display: 'inline' }} /> Back
+                  </button>
+                )}
+                {step < TOTAL - 1 ? (
+                  <button style={{ ...s.btnPrimary, flex: 1, marginTop: 0 }} onClick={() => setStep(s => s + 1)}>
               Next <ChevronRight size={18} style={{ display: 'inline' }} />
-            </button>
-          ) : (
-            <button style={{ ...s.btnPrimary, flex: 1, marginTop: 0, opacity: saving ? 0.6 : 1 }} onClick={saveAll} disabled={saving}>
-              {saving ? 'Saving…' : <><CheckCircle size={18} style={{ display: 'inline', marginRight: 6 }} />Complete Profile</>}
-            </button>
+                  </button>
+                ) : (
+                  <button style={{ ...s.btnPrimary, flex: 1, marginTop: 0, opacity: saving ? 0.6 : 1 }} onClick={saveAll} disabled={saving}>
+                    {saving ? 'Saving…' : <><CheckCircle size={18} style={{ display: 'inline', marginRight: 6 }} />Complete Profile</>}
+                  </button>
+                )}
+              </div>
+              <div style={{ textAlign: 'center', marginTop: 16 }}>
+                <button style={s.btnSec} onClick={handleSkipOnboarding}>Skip for now</button>
+              </div>
+            </>
           )}
-        </div>
-        <div style={{ textAlign: 'center', marginTop: 16 }}>
-          <button style={s.btnSec} onClick={handleSkipOnboarding}>Skip for now</button>
-        </div>
-          </>
-        )}
         </motion.div>
       </div>
     </div>

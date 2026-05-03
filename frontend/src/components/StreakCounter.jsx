@@ -87,10 +87,10 @@ export default function StreakCounter({ checkInStreak = 0, adherenceStreak = 0, 
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
           <p className="text-sm text-slate-700">
             {totalStreak === 1 ? '🌱 One day builds a habit!' :
-             totalStreak < 7 ? '📈 Almost a week! Keep going!' :
-             totalStreak < 30 ? '🎯 A month of consistency! You\'re a legend!' :
-             totalStreak < 90 ? '👑 Three months strong! This is your new lifestyle!' :
-             '🏆 90+ days! You\'ve mastered this!'}
+              totalStreak < 7 ? '📈 Almost a week! Keep going!' :
+                totalStreak < 30 ? '🎯 A month of consistency! You\'re a legend!' :
+                  totalStreak < 90 ? '👑 Three months strong! This is your new lifestyle!' :
+                    '🏆 90+ days! You\'ve mastered this!'}
           </p>
         </div>
       )}

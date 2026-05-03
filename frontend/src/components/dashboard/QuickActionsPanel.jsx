@@ -1,6 +1,6 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Upload, FlaskConical, Clipboard, Activity, Calendar, BarChart3, Clock, Settings } from 'lucide-react';
+import React from 'react'
+import { Link } from 'react-router-dom'
+import { Upload, FlaskConical, Clipboard, Activity, Calendar, BarChart3, Clock, Settings } from 'lucide-react'
 
 export default function QuickActionsPanel() {
   const actions = [
@@ -60,7 +60,7 @@ export default function QuickActionsPanel() {
       href: '/settings',
       color: 'slate',
     },
-  ];
+  ]
 
   const colorClasses = {
     emerald: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100',
@@ -71,7 +71,7 @@ export default function QuickActionsPanel() {
     pink:    'bg-pink-50 text-pink-600 group-hover:bg-pink-100',
     indigo:  'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100',
     slate:   'bg-slate-100 text-slate-500 group-hover:bg-slate-200',
-  };
+  }
 
   return (
     <div className="vtl-light-card p-6">
@@ -94,5 +94,5 @@ export default function QuickActionsPanel() {
         ))}
       </div>
     </div>
-  );
+  )
 }

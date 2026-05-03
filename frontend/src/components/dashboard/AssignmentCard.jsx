@@ -1,5 +1,5 @@
-import React from 'react';
-import { Clock, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
+import React from 'react'
+import { Clock, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react'
 
 export default function AssignmentCard({ assignment, onClick }) {
   const statusColors = {
@@ -7,45 +7,45 @@ export default function AssignmentCard({ assignment, onClick }) {
     in_progress: 'bg-blue-50 text-blue-700 border-blue-200',
     completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     overdue: 'bg-rose-50 text-rose-700 border-rose-200',
-  };
+  }
 
   const statusIcons = {
     pending: Clock,
     in_progress: AlertCircle,
     completed: CheckCircle,
     overdue: AlertCircle,
-  };
+  }
 
-  const status = assignment.status || 'pending';
-  const StatusIcon = statusIcons[status] || Clock;
-  const statusClass = statusColors[status] || statusColors.pending;
+  const status = assignment.status || 'pending'
+  const StatusIcon = statusIcons[status] || Clock
+  const statusClass = statusColors[status] || statusColors.pending
 
-  const dueDate = assignment.due_date ? new Date(assignment.due_date).toLocaleDateString() : 'No due date';
-  const priority = assignment?.priority;
+  const dueDate = assignment.due_date ? new Date(assignment.due_date).toLocaleDateString() : 'No due date'
+  const priority = assignment?.priority
 
   const impactTone = {
     critical: 'text-rose-600 border-rose-200 bg-rose-50',
     high: 'text-orange-600 border-orange-200 bg-orange-50',
     medium: 'text-blue-600 border-blue-200 bg-blue-50',
     low: 'text-slate-500 border-slate-200 bg-slate-50',
-  };
+  }
 
   const urgencyTone = {
     overdue: 'text-rose-600',
     today: 'text-orange-600',
     soon: 'text-amber-600',
     normal: 'text-slate-400',
-  };
+  }
 
   return (
     <div
       className={`vtl-light-card vtl-light-card-hover p-4 flex items-start gap-4 transition group ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
       onKeyDown={(event) => {
-        if (!onClick) return;
+        if (!onClick) return
         if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onClick();
+          event.preventDefault()
+          onClick()
         }
       }}
       role={onClick ? 'button' : undefined}
@@ -92,5 +92,5 @@ export default function AssignmentCard({ assignment, onClick }) {
         <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition" />
       </div>
     </div>
-  );
+  )
 }

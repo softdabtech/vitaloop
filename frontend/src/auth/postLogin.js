@@ -38,7 +38,6 @@ function withToken(url, token) {
 }
 
 function postTokenHandoff(url, token) {
-  console.log('[STEP 5A] Creating form for CRM handoff', { url, tokenLength: token?.length })
   const form = document.createElement('form')
   form.method = 'POST'
   form.action = url
@@ -50,30 +49,22 @@ function postTokenHandoff(url, token) {
   tokenInput.value = token
   form.appendChild(tokenInput)
 
-  console.log('[STEP 5B] Form created and token input added', { formAction: form.action })
   document.body.appendChild(form)
-  console.log('[STEP 5C] Form appended to body, about to submit')
-  console.log('[STEP 5D] Form target:', { action: form.action, method: form.method })
   form.submit()
-  console.log('[STEP 5E] Form submitted!')
 }
 
 export function navigateToResolvedPath(_navigate, destination) {
-  console.log('[STEP 4] navigateToResolvedPath called', { destination, hasMethod: !!destination?.method })
   if (destination?.method === 'POST' && destination?.token) {
-    console.log('[STEP 5] POST method detected, initiating handoff')
     postTokenHandoff(destination.url, destination.token)
     return
   }
 
   const target = destination?.url || destination
   if (typeof target === 'string' && target.startsWith('/')) {
-    console.log('[STEP 5] Non-POST local redirect via SPA navigate', target)
     _navigate(target, { replace: true })
     return
   }
 
-  console.log('[STEP 5] Non-POST external redirect, using window.location.assign', target)
   window.location.assign(target)
 }
 
@@ -107,21 +98,15 @@ function resolveLocalProductPath(mePayload, normalizedReturnUrl) {
 }
 
 export async function resolvePostLoginDestination(returnUrl = null) {
-  console.log('[STEP 2] resolvePostLoginDestination called', { returnUrl })
-
   const normalized = normalizeReturnUrl(returnUrl)
   let authMe = null
   let authMeFailed = false
 
   // Attempt to fetch user context via /auth/me, but don't fail the entire handoff if it fails
   try {
-    console.log('[STEP 3A] Fetching /auth/me')
     const { data } = await api.get('/auth/me')
     authMe = data
-    console.log('[STEP 3B] User context fetched successfully:', data)
-  } catch (error) {
-    console.warn('[STEP 3B] Failed to fetch /auth/me context', error?.message || error)
-    console.log('[STEP 3C] Falling back to local dashboard path when /auth/me is unavailable')
+  } catch {
     authMeFailed = true
   }
 
@@ -193,20 +178,17 @@ export async function resolvePostLoginDestination(returnUrl = null) {
   }
 
   if (!hasSupabaseConfig) {
-    console.error('[STEP 3D] Supabase config unavailable!')
+    console.error('Supabase config is unavailable for CRM token handoff.')
     throw new Error('Supabase config is unavailable for CRM token handoff.')
   }
 
-  console.log('[STEP 3E] Getting Supabase session...')
   const { data: sessionData } = await supabase.auth.getSession()
   const accessToken = sessionData?.session?.access_token
-  
+
   if (!accessToken) {
-    console.error('[STEP 3F] No access token in session!', { sessionData })
+    console.error('Missing session token for CRM handoff.')
     throw new Error('Missing session token for CRM handoff.')
   }
-
-  console.log('[STEP 3G] Access token obtained, length:', accessToken.length)
 
   // Always hand off auth token via the dedicated auth bridge endpoint.
   const target = new URL(AUTH_POST_LOGIN_PATH)
@@ -215,8 +197,7 @@ export async function resolvePostLoginDestination(returnUrl = null) {
   }
 
   const baseTarget = target.toString()
-  console.log('[STEP 3H] Resolved target URL:', baseTarget)
-  
+
   const result = {
     url: baseTarget,
     method: 'POST',
@@ -224,7 +205,6 @@ export async function resolvePostLoginDestination(returnUrl = null) {
     // Temporary fallback for consumers still expecting a string URL.
     fallbackUrl: withToken(baseTarget, accessToken),
   }
-  
-  console.log('[STEP 3I] Destination resolved, returning result')
+
   return result
 }

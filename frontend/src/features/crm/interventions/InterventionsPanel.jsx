@@ -10,7 +10,7 @@ export default function InterventionsPanel({ assignmentId, clientId, interventio
     // Use clientId if provided, otherwise fall back to assignmentId
     const id = clientId || assignmentId
     if (!id) return
-    
+
     setFetchLoading(true)
     try {
       // Fetch interventions for this client across all programs

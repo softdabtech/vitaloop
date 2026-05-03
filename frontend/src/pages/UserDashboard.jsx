@@ -265,11 +265,11 @@ export default function UserDashboard() {
   const fadeUp = (delay = 0) => reduced
     ? {}
     : {
-        initial: { opacity: 0, y: 18 },
-        whileInView: { opacity: 1, y: 0 },
-        transition: { duration: 0.55, delay, ease: [0.2, 0.65, 0.3, 1] },
-        viewport: { once: true, margin: '-10% 0px -10% 0px' },
-      }
+      initial: { opacity: 0, y: 18 },
+      whileInView: { opacity: 1, y: 0 },
+      transition: { duration: 0.55, delay, ease: [0.2, 0.65, 0.3, 1] },
+      viewport: { once: true, margin: '-10% 0px -10% 0px' },
+    }
 
   return (
     <div className="space-y-6">
@@ -353,8 +353,8 @@ export default function UserDashboard() {
                     </div>
                     <p className="text-slate-500">
                       {latestCheckin?.feeling === 'great' ? '🌟 Feeling great this week' :
-                       latestCheckin?.feeling === 'steady' ? '😊 Steady progress' :
-                       latestCheckin?.feeling === 'off' ? '⚠️ Needing support' : '💪 Building momentum'}
+                        latestCheckin?.feeling === 'steady' ? '😊 Steady progress' :
+                          latestCheckin?.feeling === 'off' ? '⚠️ Needing support' : '💪 Building momentum'}
                     </p>
                   </div>
                 )}
@@ -488,11 +488,11 @@ export default function UserDashboard() {
               </div>
               <button
                 onClick={() => {
-                  const shareText = `Just improved my health score to ${stats.health_score || 0} on Vitaloop! 🚀 #HealthJourney #Vitaloop`;
+                  const shareText = `Just improved my health score to ${stats.health_score || 0} on Vitaloop! 🚀 #HealthJourney #Vitaloop`
                   if (navigator.share) {
-                    navigator.share({ text: shareText });
+                    navigator.share({ text: shareText })
                   } else {
-                    navigator.clipboard.writeText(shareText);
+                    navigator.clipboard.writeText(shareText)
                     // Show toast notification
                   }
                 }}

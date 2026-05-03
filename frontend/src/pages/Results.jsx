@@ -18,58 +18,58 @@ const STATUS_META = {
 
 const BIOMARKER_NAME_TRANSLATIONS = [
   // Reticulocytes (Ukrainian/Russian variations)
-  [/^Ретикулоцити\s*\(%\)$/i, "Reticulocytes (%)"],
-  [/^Ретикулоцити\s*\(Г\/л\)$/i, "Reticulocytes (G/L)"],
-  [/^Ретикулоцити$/i, "Reticulocytes"],
-  [/^Незрілі ретикулоцити$/i, "Immature Reticulocytes"],
-  [/^Зрілі ретикулоцити\s*\(%\)$/i, "Mature Reticulocytes (%)"],
-  [/^Зрілі ретикулоцити\s*\(Т\/л\)$/i, "Mature Reticulocytes (T/L)"],
-  [/^Зрілі ретикулоцити$/i, "Mature Reticulocytes"],
-  [/^Середній об[‘’]єм ретикулоцита$/i, "Mean Reticulocyte Volume"],
-  [/^Середній об[‘’]єм сферичних клітин$/i, "Mean Spherized Cell Volume"],
-  [/^Ширина розподілення ретикулоцитів по об[‘’]єму$/i, "Reticulocyte Volume Distribution Width"],
+  [/^Ретикулоцити\s*\(%\)$/i, 'Reticulocytes (%)'],
+  [/^Ретикулоцити\s*\(Г\/л\)$/i, 'Reticulocytes (G/L)'],
+  [/^Ретикулоцити$/i, 'Reticulocytes'],
+  [/^Незрілі ретикулоцити$/i, 'Immature Reticulocytes'],
+  [/^Зрілі ретикулоцити\s*\(%\)$/i, 'Mature Reticulocytes (%)'],
+  [/^Зрілі ретикулоцити\s*\(Т\/л\)$/i, 'Mature Reticulocytes (T/L)'],
+  [/^Зрілі ретикулоцити$/i, 'Mature Reticulocytes'],
+  [/^Середній об[‘’]єм ретикулоцита$/i, 'Mean Reticulocyte Volume'],
+  [/^Середній об[‘’]єм сферичних клітин$/i, 'Mean Spherized Cell Volume'],
+  [/^Ширина розподілення ретикулоцитів по об[‘’]єму$/i, 'Reticulocyte Volume Distribution Width'],
   // Red blood cell markers
-  [/^Еритроцити|^RBC|^Red blood cells?/i, "Red Blood Cells (RBC)"],
-  [/^Гемоглобін|^Hemoglobin|^HGB?$/i, "Hemoglobin"],
-  [/^Гематокрит|^Hematocrit|^HCT$/i, "Hematocrit"],
-  [/^MCV|^Середній об[‘’]єм еритроцита/i, "Mean Cell Volume (MCV)"],
-  [/^MCH|^Середній вміст гемоглобіна/i, "Mean Cell Hemoglobin (MCH)"],
-  [/^MCHC|^Середня концентрація гемоглобіна/i, "Mean Cell Hemoglobin Concentration (MCHC)"],
+  [/^Еритроцити|^RBC|^Red blood cells?/i, 'Red Blood Cells (RBC)'],
+  [/^Гемоглобін|^Hemoglobin|^HGB?$/i, 'Hemoglobin'],
+  [/^Гематокрит|^Hematocrit|^HCT$/i, 'Hematocrit'],
+  [/^MCV|^Середній об[‘’]єм еритроцита/i, 'Mean Cell Volume (MCV)'],
+  [/^MCH|^Середній вміст гемоглобіна/i, 'Mean Cell Hemoglobin (MCH)'],
+  [/^MCHC|^Середня концентрація гемоглобіна/i, 'Mean Cell Hemoglobin Concentration (MCHC)'],
   // White blood cell markers
-  [/^Лейкоцити|^WBC|^White blood cells?/i, "White Blood Cells (WBC)"],
-  [/^Нейтрофіли|^Neutrophils?/i, "Neutrophils"],
-  [/^Лімфоцити|^Lymphocytes?/i, "Lymphocytes"],
-  [/^Моноцити|^Monocytes?/i, "Monocytes"],
-  [/^Еозинофіли|^Eosinophils?/i, "Eosinophils"],
-  [/^Базофіли|^Basophils?/i, "Basophils"],
+  [/^Лейкоцити|^WBC|^White blood cells?/i, 'White Blood Cells (WBC)'],
+  [/^Нейтрофіли|^Neutrophils?/i, 'Neutrophils'],
+  [/^Лімфоцити|^Lymphocytes?/i, 'Lymphocytes'],
+  [/^Моноцити|^Monocytes?/i, 'Monocytes'],
+  [/^Еозинофіли|^Eosinophils?/i, 'Eosinophils'],
+  [/^Базофіли|^Basophils?/i, 'Basophils'],
   // Platelet markers
-  [/^Тромбоцити|^Platelets?|^PLT$/i, "Platelets"],
-  [/^MPV|^Середній об[‘’]єм тромбоцита/i, "Mean Platelet Volume (MPV)"],
+  [/^Тромбоцити|^Platelets?|^PLT$/i, 'Platelets'],
+  [/^MPV|^Середній об[‘’]єм тромбоцита/i, 'Mean Platelet Volume (MPV)'],
   // Common chemistry markers
-  [/^Глюкоза|^Glucose$/i, "Glucose"],
-  [/^Креатинін|^Creatinine$/i, "Creatinine"],
-  [/^Сечовина|^BUN|^Urea$/i, "Blood Urea Nitrogen (BUN)"],
-  [/^Білірубін|^Bilirubin$/i, "Bilirubin"],
-  [/^ALT|^SGPT|^Аланін амінотрансфераза/i, "Alanine Aminotransferase (ALT)"],
-  [/^AST|^SGOT|^Аспартат амінотрансфераза/i, "Aspartate Aminotransferase (AST)"],
-  [/^Лужна фосфатаза|^Alkaline phosphatase|^ALP$/i, "Alkaline Phosphatase"],
-  [/^ГГТ|^Gamma-glutamyl transferase|^GGT$/i, "Gamma-Glutamyl Transferase (GGT)"],
+  [/^Глюкоза|^Glucose$/i, 'Glucose'],
+  [/^Креатинін|^Creatinine$/i, 'Creatinine'],
+  [/^Сечовина|^BUN|^Urea$/i, 'Blood Urea Nitrogen (BUN)'],
+  [/^Білірубін|^Bilirubin$/i, 'Bilirubin'],
+  [/^ALT|^SGPT|^Аланін амінотрансфераза/i, 'Alanine Aminotransferase (ALT)'],
+  [/^AST|^SGOT|^Аспартат амінотрансфераза/i, 'Aspartate Aminotransferase (AST)'],
+  [/^Лужна фосфатаза|^Alkaline phosphatase|^ALP$/i, 'Alkaline Phosphatase'],
+  [/^ГГТ|^Gamma-glutamyl transferase|^GGT$/i, 'Gamma-Glutamyl Transferase (GGT)'],
   // Lipid markers
-  [/^Холестерин|^Total cholesterol|^TC$/i, "Total Cholesterol"],
-  [/^Тригліцериди|^Triglycerides?$/i, "Triglycerides"],
-  [/^ЛПНЩ|^LDL|^Low-density lipoprotein/i, "Low-Density Lipoprotein (LDL)"],
-  [/^ЛПВЩ|^HDL|^High-density lipoprotein/i, "High-Density Lipoprotein (HDL)"],
+  [/^Холестерин|^Total cholesterol|^TC$/i, 'Total Cholesterol'],
+  [/^Тригліцериди|^Triglycerides?$/i, 'Triglycerides'],
+  [/^ЛПНЩ|^LDL|^Low-density lipoprotein/i, 'Low-Density Lipoprotein (LDL)'],
+  [/^ЛПВЩ|^HDL|^High-density lipoprotein/i, 'High-Density Lipoprotein (HDL)'],
   // General markers
-  [/^Білки|^Total protein|^Protein$/i, "Total Protein"],
-  [/^Альбумін|^Albumin$/i, "Albumin"],
-  [/^Кальцій|^Calcium$/i, "Calcium"],
-  [/^Фосфор|^Phosphorus|^Phosphate$/i, "Phosphorus"],
-  [/^Магній|^Magnesium$/i, "Magnesium"],
-  [/^Калій|^Potassium|^K$/i, "Potassium"],
-  [/^Натрій|^Sodium|^Na$/i, "Sodium"],
-  [/^Хлор|^Chloride|^Cl$/i, "Chloride"],
-  [/^СОЕ|^ESR|^Erythrocyte sedimentation rate/i, "Erythrocyte Sedimentation Rate (ESR)"],
-  [/^CRP|^C-reactive protein/i, "C-Reactive Protein (CRP)"],
+  [/^Білки|^Total protein|^Protein$/i, 'Total Protein'],
+  [/^Альбумін|^Albumin$/i, 'Albumin'],
+  [/^Кальцій|^Calcium$/i, 'Calcium'],
+  [/^Фосфор|^Phosphorus|^Phosphate$/i, 'Phosphorus'],
+  [/^Магній|^Magnesium$/i, 'Magnesium'],
+  [/^Калій|^Potassium|^K$/i, 'Potassium'],
+  [/^Натрій|^Sodium|^Na$/i, 'Sodium'],
+  [/^Хлор|^Chloride|^Cl$/i, 'Chloride'],
+  [/^СОЕ|^ESR|^Erythrocyte sedimentation rate/i, 'Erythrocyte Sedimentation Rate (ESR)'],
+  [/^CRP|^C-reactive protein/i, 'C-Reactive Protein (CRP)'],
 ]
 
 function toEnglishBiomarkerName(name) {
@@ -400,7 +400,7 @@ export default function Results() {
 
           {!medicalAnalysisLoading && medicalAnalysis && (
             <div className="space-y-4">
-              {!!(medicalAnalysis.biomarkers || []).length ? (
+              {(medicalAnalysis.biomarkers || []).length ? (
                 <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
                   <table className="min-w-full text-sm">
                     <thead className="bg-slate-50 text-slate-700">
@@ -519,17 +519,17 @@ export default function Results() {
 
               // Determine trend icon and interpretation
               let trendIcon = <Minus className="h-4 w-4 text-slate-400" />
-              let trendText = "Within range"
-              let trendColor = "text-slate-600"
+              let trendText = 'Within range'
+              let trendColor = 'text-slate-600'
 
               if (value < low) {
                 trendIcon = <TrendingDown className="h-4 w-4 text-blue-600" />
-                trendText = "Below normal range"
-                trendColor = "text-blue-600"
+                trendText = 'Below normal range'
+                trendColor = 'text-blue-600'
               } else if (value > high) {
                 trendIcon = <TrendingUp className="h-4 w-4 text-rose-600" />
-                trendText = "Above normal range"
-                trendColor = "text-rose-600"
+                trendText = 'Above normal range'
+                trendColor = 'text-rose-600'
               }
 
               return (

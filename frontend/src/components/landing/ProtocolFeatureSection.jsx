@@ -87,7 +87,7 @@ export default function ProtocolFeatureSection() {
 
         {/* Two-column layout: mock UI left, feature cards right */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'start' }}
-             className="protocol-feature-grid">
+          className="protocol-feature-grid">
 
           {/* ── Mock Protocol UI preview ── */}
           <motion.div

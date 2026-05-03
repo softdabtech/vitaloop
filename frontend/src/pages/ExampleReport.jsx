@@ -123,7 +123,7 @@ export default function ExampleReport() {
         {/* Sample Protocol */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-gradient-to-br from-teal-900/20 to-teal-800/10 border rounded-xl p-8 mb-12" style={{ borderColor: 'var(--teal-500)' }}>
           <h3 className="text-2xl font-bold text-white mb-4">Sample Protocol Generated from This Avatar</h3>
-          
+
           <div className="space-y-6">
             <div>
               <h4 className="font-semibold mb-3" style={{ color: 'var(--teal-400)' }}>🧠 Brain & Cognition Protocol</h4>

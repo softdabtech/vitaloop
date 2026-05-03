@@ -91,9 +91,9 @@ export default function LabResultsList() {
         <div className="mx-auto max-w-6xl">
           <div className="mb-6 h-8 w-56 animate-pulse rounded-xl bg-slate-200" />
           <div className="space-y-3">
-          {[1, 2, 3].map((n) => (
+            {[1, 2, 3].map((n) => (
               <div key={n} className="h-24 animate-pulse rounded-xl bg-slate-100" />
-          ))}
+            ))}
           </div>
         </div>
       </div>

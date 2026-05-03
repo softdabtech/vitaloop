@@ -7,28 +7,28 @@ export const BIOMARKER_STATUS = {
   ALERT: 'alert',
   CAUTION: 'caution',
   ABNORMAL: 'abnormal',
-};
+}
 
 // Map API responses to normalized status
 export const normalizeStatus = (status) => {
-  if (!status) return BIOMARKER_STATUS.NORMAL;
+  if (!status) return BIOMARKER_STATUS.NORMAL
 
-  const normalized = String(status).toLowerCase().trim();
+  const normalized = String(status).toLowerCase().trim()
 
   // Handle common variations
-  if (normalized === 'optimal' || normalized === 'normal') return BIOMARKER_STATUS.OPTIMAL;
-  if (normalized === 'elevated' || normalized === 'high') return BIOMARKER_STATUS.ELEVATED;
-  if (normalized === 'low') return BIOMARKER_STATUS.LOW;
-  if (normalized === 'alert' || normalized === 'critical') return BIOMARKER_STATUS.ALERT;
-  if (normalized === 'caution' || normalized === 'warning') return BIOMARKER_STATUS.CAUTION;
-  if (normalized === 'abnormal') return BIOMARKER_STATUS.ABNORMAL;
+  if (normalized === 'optimal' || normalized === 'normal') return BIOMARKER_STATUS.OPTIMAL
+  if (normalized === 'elevated' || normalized === 'high') return BIOMARKER_STATUS.ELEVATED
+  if (normalized === 'low') return BIOMARKER_STATUS.LOW
+  if (normalized === 'alert' || normalized === 'critical') return BIOMARKER_STATUS.ALERT
+  if (normalized === 'caution' || normalized === 'warning') return BIOMARKER_STATUS.CAUTION
+  if (normalized === 'abnormal') return BIOMARKER_STATUS.ABNORMAL
 
-  return BIOMARKER_STATUS.NORMAL;
-};
+  return BIOMARKER_STATUS.NORMAL
+}
 
 // Get display color for status
 export const getStatusColor = (status) => {
-  const normalized = normalizeStatus(status);
+  const normalized = normalizeStatus(status)
 
   const colors = {
     [BIOMARKER_STATUS.OPTIMAL]: 'bg-emerald-100 text-emerald-700',
@@ -38,14 +38,14 @@ export const getStatusColor = (status) => {
     [BIOMARKER_STATUS.ALERT]: 'bg-rose-100 text-rose-700',
     [BIOMARKER_STATUS.CAUTION]: 'bg-orange-100 text-orange-700',
     [BIOMARKER_STATUS.ABNORMAL]: 'bg-red-100 text-red-700',
-  };
+  }
 
-  return colors[normalized] || colors[BIOMARKER_STATUS.NORMAL];
-};
+  return colors[normalized] || colors[BIOMARKER_STATUS.NORMAL]
+}
 
 // Get icon for status
 export const getStatusIcon = (status) => {
-  const normalized = normalizeStatus(status);
+  const normalized = normalizeStatus(status)
 
   const icons = {
     [BIOMARKER_STATUS.OPTIMAL]: '✨',
@@ -55,7 +55,7 @@ export const getStatusIcon = (status) => {
     [BIOMARKER_STATUS.ALERT]: '🚨',
     [BIOMARKER_STATUS.CAUTION]: '⚡',
     [BIOMARKER_STATUS.ABNORMAL]: '❌',
-  };
+  }
 
-  return icons[normalized] || '−';
-};
+  return icons[normalized] || '−'
+}

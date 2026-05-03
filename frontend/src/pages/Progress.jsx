@@ -92,100 +92,100 @@ export default function Progress() {
 
   return (
     <div className="mx-auto w-full max-w-6xl">
-        <CabinetPageHeader
-          title="Progress Tracker"
-          subtitle="Track concrete biomarker movement between uploads and monitor protocol effect over time."
-        />
-        {data.length === 0 ? (
-          <div className="space-y-4 py-8">
-            <div className="grid gap-4 md:grid-cols-3">
-              {[
-                'Expected biomarker movement between uploads',
-                'What improved after protocol adherence',
-                'Where retesting or deeper follow-up is needed',
-              ].map((item) => (
-                <div key={item} className="vtl-light-card p-5 text-sm text-slate-500">{item}</div>
+      <CabinetPageHeader
+        title="Progress Tracker"
+        subtitle="Track concrete biomarker movement between uploads and monitor protocol effect over time."
+      />
+      {data.length === 0 ? (
+        <div className="space-y-4 py-8">
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              'Expected biomarker movement between uploads',
+              'What improved after protocol adherence',
+              'Where retesting or deeper follow-up is needed',
+            ].map((item) => (
+              <div key={item} className="vtl-light-card p-5 text-sm text-slate-500">{item}</div>
+            ))}
+          </div>
+          <div className="py-10 text-center">
+            <EmptyState
+              icon="📈"
+              title="No lab results yet"
+              subtitle="Upload your first blood test to start tracking biomarker progress over time."
+              action="Upload First Test"
+              onAction={() => navigate('/upload')}
+            />
+          </div>
+        </div>
+      ) : (
+        <>
+          {deltas.length > 0 && (
+            <div className="mb-6 grid gap-3 sm:grid-cols-3">
+              {deltas.map((d) => (
+                <div key={d.key} className="vtl-light-card p-4">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{d.label}</p>
+                  <p className={`text-xl font-bold ${d.pct >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                    {d.pct >= 0 ? '+' : ''}{d.pct}%
+                  </p>
+                  <p className="mt-1 text-[11px] text-slate-400">{d.start} to {d.end}</p>
+                </div>
               ))}
             </div>
-            <div className="py-10 text-center">
-              <EmptyState
-                icon="📈"
-                title="No lab results yet"
-                subtitle="Upload your first blood test to start tracking biomarker progress over time."
-                action="Upload First Test"
-                onAction={() => navigate('/upload')}
-              />
+          )}
+
+          {uploadsWithBiomarkers.length >= 2 ? (
+            <FeatureGate
+              feature="progress"
+              onLocked={handlePaywall}
+              fallback={
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
+                  <p className="text-sm font-semibold text-amber-800 mb-2">Advanced Charts</p>
+                  <p className="text-sm text-amber-700 mb-3">Detailed trend charts available with Premium</p>
+                  <button
+                    onClick={handlePaywall}
+                    className="inline-flex items-center gap-2 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition"
+                  >
+                      Unlock Premium
+                  </button>
+                </div>
+              }
+            >
+              <ProgressChart data={uploadsWithBiomarkers} />
+            </FeatureGate>
+          ) : null}
+
+          <div className="vtl-light-card mt-6 p-5">
+            <p className="mb-3 text-sm font-semibold text-slate-700">Upload Timeline</p>
+            <div className="space-y-3">
+              {data.map((upload, index) => (
+                <div key={upload.id} className="flex items-start gap-3">
+                  <div className="mt-1 h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-slate-800">Upload #{index + 1}</p>
+                    <p className="text-xs text-slate-400">{upload.test_date || upload.created_at?.slice(0, 10) || 'Unknown date'} · {upload.lab_name || 'Unknown lab'}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        ) : (
-          <>
-            {deltas.length > 0 && (
-              <div className="mb-6 grid gap-3 sm:grid-cols-3">
-                {deltas.map((d) => (
-                  <div key={d.key} className="vtl-light-card p-4">
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{d.label}</p>
-                    <p className={`text-xl font-bold ${d.pct >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                      {d.pct >= 0 ? '+' : ''}{d.pct}%
-                    </p>
-                    <p className="mt-1 text-[11px] text-slate-400">{d.start} to {d.end}</p>
-                  </div>
-                ))}
-              </div>
-            )}
 
-            {uploadsWithBiomarkers.length >= 2 ? (
-              <FeatureGate
-                feature="progress"
-                onLocked={handlePaywall}
-                fallback={
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
-                    <p className="text-sm font-semibold text-amber-800 mb-2">Advanced Charts</p>
-                    <p className="text-sm text-amber-700 mb-3">Detailed trend charts available with Premium</p>
-                    <button
-                      onClick={handlePaywall}
-                      className="inline-flex items-center gap-2 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition"
-                    >
-                      Unlock Premium
-                    </button>
-                  </div>
-                }
-              >
-                <ProgressChart data={uploadsWithBiomarkers} />
-              </FeatureGate>
-            ) : null}
+          {/* Progress Photo Gallery */}
+          <div className="mt-8">
+            <ProgressPhotoGallery
+              photos={photos}
+              onUpload={handlePhotoUpload}
+              onDelete={handlePhotoDelete}
+            />
+          </div>
 
-            <div className="vtl-light-card mt-6 p-5">
-              <p className="mb-3 text-sm font-semibold text-slate-700">Upload Timeline</p>
-              <div className="space-y-3">
-                {data.map((upload, index) => (
-                  <div key={upload.id} className="flex items-start gap-3">
-                    <div className="mt-1 h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-slate-800">Upload #{index + 1}</p>
-                      <p className="text-xs text-slate-400">{upload.test_date || upload.created_at?.slice(0, 10) || 'Unknown date'} · {upload.lab_name || 'Unknown lab'}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Progress Photo Gallery */}
-            <div className="mt-8">
-              <ProgressPhotoGallery
-                photos={photos}
-                onUpload={handlePhotoUpload}
-                onDelete={handlePhotoDelete}
-              />
-            </div>
-
-            <div className="vtl-light-card mt-8 p-5 text-center">
-              <p className="text-sm text-slate-500">Retest recommended every 90 days to track improvements.</p>
-              <button onClick={() => navigate('/upload')} className="vtl-button-primary mt-3 px-6 text-sm">
+          <div className="vtl-light-card mt-8 p-5 text-center">
+            <p className="text-sm text-slate-500">Retest recommended every 90 days to track improvements.</p>
+            <button onClick={() => navigate('/upload')} className="vtl-button-primary mt-3 px-6 text-sm">
                 Upload New Test
-              </button>
-            </div>
-          </>
-        )}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
