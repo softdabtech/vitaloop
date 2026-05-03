@@ -231,3 +231,19 @@ async def notify_registration(
         created_at_iso=created_at_raw or None,
     )
     return {"ok": True, "sent": sent}
+
+
+@router.delete("")
+async def delete_account(current_user: dict = Depends(get_current_user)):
+    user_id = current_user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    supabase = svc._get_supabase()
+
+    # Delete the user account from Supabase auth
+    await svc._run(
+        lambda: supabase.auth.admin.delete_user(user_id)
+    )
+
+    return {"ok": True, "message": "Account deleted successfully"}
