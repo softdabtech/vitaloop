@@ -42,7 +42,7 @@ if settings.sentry_dsn and sentry_sdk is not None:
 elif settings.sentry_dsn and sentry_sdk is None:
     logger.warning("sentry_dsn_set_but_sdk_missing")
 from app.routers import health, llm_consult
-from app.routers.identity import auth, profile, onboarding, settings
+from app.routers.identity import auth, profile, onboarding, settings as settings_router
 from app.routers.analysis import analyze, insights, red_flags, timeline, dashboard, uploads
 from app.routers.protocol import protocol, progress, symptoms, checkins, questionnaire, assignments, compatibility
 from app.routers.notifications import notifications, complaints
@@ -142,7 +142,7 @@ app.include_router(crm_ops.router, tags=["crm"])
 app.include_router(assignments.router, tags=["crm-assignments"])
 app.include_router(crm.router, prefix="/admin", tags=["crm"])
 app.include_router(profile.router, prefix="/profile", tags=["profile"])
-app.include_router(settings.router, prefix="/settings", tags=["settings"])
+app.include_router(settings_router.router, prefix="/settings", tags=["settings"])
 app.include_router(complaints.router, prefix="/complaints", tags=["complaints"])
 app.include_router(checkins.router, prefix="/checkins", tags=["checkins"])
 app.include_router(timeline.router, prefix="/timeline", tags=["timeline"])
