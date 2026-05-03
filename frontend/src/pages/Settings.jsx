@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Mail, Bell, Lock, LogOut } from 'lucide-react'
+import { Mail, Bell, Lock, LogOut, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import NotificationPreferences from '../components/NotificationPreferences.jsx'
@@ -45,6 +45,10 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [saving, setSaving] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [canceling, setCanceling] = useState(false)
 
   function focusStyle(event) {
     event.target.style.borderColor = 'rgba(29,158,117,0.72)'
@@ -89,6 +93,40 @@ export default function Settings() {
       console.error(error)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function deleteAccount() {
+    setDeleting(true)
+    try {
+      await api.delete('/auth')
+      toast.success('Account deleted. Signing out...')
+      setTimeout(() => {
+        window.location.assign('/login')
+      }, 1000)
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete account')
+      console.error(error)
+    } finally {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+    }
+  }
+
+  async function cancelSubscription() {
+    setCanceling(true)
+    try {
+      await api.post('/stripe/cancel')
+      toast.success('Subscription cancelled successfully')
+      setShowCancelConfirm(false)
+      setTimeout(() => {
+        window.location.reload()
+      }, 1000)
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to cancel subscription')
+      console.error(error)
+    } finally {
+      setCanceling(false)
     }
   }
 
@@ -185,27 +223,106 @@ export default function Settings() {
 
         {/* Danger Zone */}
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 sm:p-8">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <LogOut size={18} style={{ color: '#dc2626' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+            <AlertTriangle size={18} style={{ color: '#dc2626' }} />
             <div>
               <div style={{ fontSize: 18, fontWeight: 700, color: '#991b1b' }}>Danger Zone</div>
               <div style={{ fontSize: 13, color: '#7f1d1d', marginTop: 2 }}>Irreversible actions</div>
             </div>
           </div>
 
-          <button
-            onClick={async () => {
-              await signOut()
-              window.location.assign('/login')
-            }}
-            className="w-full rounded-2xl border border-rose-300 bg-white px-6 py-3 text-center font-semibold text-rose-600 transition hover:bg-rose-50"
-          >
-            Sign Out from All Devices
-          </button>
+          <div style={{ display: 'grid', gap: 12 }}>
+            <div>
+              <button
+                onClick={async () => {
+                  await signOut()
+                  window.location.assign('/login')
+                }}
+                className="w-full rounded-2xl border border-rose-300 bg-white px-6 py-3 text-center font-semibold text-rose-600 transition hover:bg-rose-50"
+              >
+                Sign Out from All Devices
+              </button>
+              <p style={{ fontSize: 12, color: '#7f1d1d', marginTop: 8 }}>
+                Sign out of VITALOOP on all your devices. You'll need to log in again.
+              </p>
+            </div>
 
-          <p style={{ fontSize: 12, color: '#7f1d1d', marginTop: 12 }}>
-            This will sign you out of VITALOOP on all your devices and browsers. You'll need to log in again.
-          </p>
+            <div style={{ borderTop: '1px solid rgba(220, 38, 38, 0.2)', paddingTop: 12 }}>
+              {!showCancelConfirm ? (
+                <>
+                  <button
+                    onClick={() => setShowCancelConfirm(true)}
+                    className="w-full rounded-2xl border border-red-400 bg-white px-6 py-3 text-center font-semibold text-red-600 transition hover:bg-red-50"
+                  >
+                    Cancel Subscription
+                  </button>
+                  <p style={{ fontSize: 12, color: '#7f1d1d', marginTop: 8 }}>
+                    Cancel your premium subscription. You'll revert to the free plan.
+                  </p>
+                </>
+              ) : (
+                <div style={{ padding: '12px 14px', background: 'rgba(220, 38, 38, 0.1)', borderRadius: 12, borderLeft: '4px solid #dc2626' }}>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: '#991b1b', marginBottom: 10 }}>
+                    ⚠️ Are you sure? You'll lose access to premium features and revert to the free plan.
+                  </p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={cancelSubscription}
+                      disabled={canceling}
+                      className="flex-1 rounded-lg bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-700 transition disabled:opacity-60"
+                    >
+                      {canceling ? 'Canceling...' : 'Yes, Cancel'}
+                    </button>
+                    <button
+                      onClick={() => setShowCancelConfirm(false)}
+                      disabled={canceling}
+                      className="flex-1 rounded-lg border border-rose-300 bg-white text-rose-600 px-4 py-2 font-semibold hover:bg-rose-50 transition disabled:opacity-60"
+                    >
+                      Keep It
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ borderTop: '1px solid rgba(220, 38, 38, 0.2)', paddingTop: 12 }}>
+              {!showDeleteConfirm ? (
+                <>
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="w-full rounded-2xl border border-red-500 bg-white px-6 py-3 text-center font-semibold text-red-700 transition hover:bg-red-50"
+                  >
+                    Delete Account Permanently
+                  </button>
+                  <p style={{ fontSize: 12, color: '#7f1d1d', marginTop: 8 }}>
+                    Permanently delete your account and all associated data. This cannot be undone.
+                  </p>
+                </>
+              ) : (
+                <div style={{ padding: '12px 14px', background: 'rgba(220, 38, 38, 0.1)', borderRadius: 12, borderLeft: '4px solid #991b1b' }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: '#991b1b', marginBottom: 10 }}>
+                    🚨 WARNING: This will permanently delete your account and all data. This action cannot be reversed!
+                  </p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={deleteAccount}
+                      disabled={deleting}
+                      className="flex-1 rounded-lg bg-red-700 text-white px-4 py-2 font-semibold hover:bg-red-800 transition disabled:opacity-60"
+                    >
+                      {deleting ? 'Deleting...' : 'Yes, Delete Everything'}
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      disabled={deleting}
+                      className="flex-1 rounded-lg border border-rose-400 bg-white text-rose-700 px-4 py-2 font-semibold hover:bg-rose-50 transition disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </>
