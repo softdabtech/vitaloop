@@ -17,16 +17,59 @@ const STATUS_META = {
 }
 
 const BIOMARKER_NAME_TRANSLATIONS = [
-  [/^Ретикулоцити\s*\(%\)$/i, 'Reticulocytes (%)'],
-  [/^Ретикулоцити\s*\(Г\/л\)$/i, 'Reticulocytes (G/L)'],
-  [/^Ретикулоцити$/i, 'Reticulocytes'],
-  [/^Незрілі ретикулоцити$/i, 'Immature Reticulocytes'],
-  [/^Зрілі ретикулоцити\s*\(%\)$/i, 'Mature Reticulocytes (%)'],
-  [/^Зрілі ретикулоцити\s*\(Т\/л\)$/i, 'Mature Reticulocytes (T/L)'],
-  [/^Зрілі ретикулоцити$/i, 'Mature Reticulocytes'],
-  [/^Середній об['’]єм ретикулоцита$/i, 'Mean Reticulocyte Volume'],
-  [/^Середній об['’]єм сферичних клітин$/i, 'Mean Spherized Cell Volume'],
-  [/^Ширина розподілення ретикулоцитів по об['’]єму$/i, 'Reticulocyte Volume Distribution Width'],
+  // Reticulocytes (Ukrainian/Russian variations)
+  [/^Ретикулоцити\s*\(%\)$/i, "Reticulocytes (%)"],
+  [/^Ретикулоцити\s*\(Г\/л\)$/i, "Reticulocytes (G/L)"],
+  [/^Ретикулоцити$/i, "Reticulocytes"],
+  [/^Незрілі ретикулоцити$/i, "Immature Reticulocytes"],
+  [/^Зрілі ретикулоцити\s*\(%\)$/i, "Mature Reticulocytes (%)"],
+  [/^Зрілі ретикулоцити\s*\(Т\/л\)$/i, "Mature Reticulocytes (T/L)"],
+  [/^Зрілі ретикулоцити$/i, "Mature Reticulocytes"],
+  [/^Середній об[‘’]єм ретикулоцита$/i, "Mean Reticulocyte Volume"],
+  [/^Середній об[‘’]єм сферичних клітин$/i, "Mean Spherized Cell Volume"],
+  [/^Ширина розподілення ретикулоцитів по об[‘’]єму$/i, "Reticulocyte Volume Distribution Width"],
+  // Red blood cell markers
+  [/^Еритроцити|^RBC|^Red blood cells?/i, "Red Blood Cells (RBC)"],
+  [/^Гемоглобін|^Hemoglobin|^HGB?$/i, "Hemoglobin"],
+  [/^Гематокрит|^Hematocrit|^HCT$/i, "Hematocrit"],
+  [/^MCV|^Середній об[‘’]єм еритроцита/i, "Mean Cell Volume (MCV)"],
+  [/^MCH|^Середній вміст гемоглобіна/i, "Mean Cell Hemoglobin (MCH)"],
+  [/^MCHC|^Середня концентрація гемоглобіна/i, "Mean Cell Hemoglobin Concentration (MCHC)"],
+  // White blood cell markers
+  [/^Лейкоцити|^WBC|^White blood cells?/i, "White Blood Cells (WBC)"],
+  [/^Нейтрофіли|^Neutrophils?/i, "Neutrophils"],
+  [/^Лімфоцити|^Lymphocytes?/i, "Lymphocytes"],
+  [/^Моноцити|^Monocytes?/i, "Monocytes"],
+  [/^Еозинофіли|^Eosinophils?/i, "Eosinophils"],
+  [/^Базофіли|^Basophils?/i, "Basophils"],
+  // Platelet markers
+  [/^Тромбоцити|^Platelets?|^PLT$/i, "Platelets"],
+  [/^MPV|^Середній об[‘’]єм тромбоцита/i, "Mean Platelet Volume (MPV)"],
+  // Common chemistry markers
+  [/^Глюкоза|^Glucose$/i, "Glucose"],
+  [/^Креатинін|^Creatinine$/i, "Creatinine"],
+  [/^Сечовина|^BUN|^Urea$/i, "Blood Urea Nitrogen (BUN)"],
+  [/^Білірубін|^Bilirubin$/i, "Bilirubin"],
+  [/^ALT|^SGPT|^Аланін амінотрансфераза/i, "Alanine Aminotransferase (ALT)"],
+  [/^AST|^SGOT|^Аспартат амінотрансфераза/i, "Aspartate Aminotransferase (AST)"],
+  [/^Лужна фосфатаза|^Alkaline phosphatase|^ALP$/i, "Alkaline Phosphatase"],
+  [/^ГГТ|^Gamma-glutamyl transferase|^GGT$/i, "Gamma-Glutamyl Transferase (GGT)"],
+  // Lipid markers
+  [/^Холестерин|^Total cholesterol|^TC$/i, "Total Cholesterol"],
+  [/^Тригліцериди|^Triglycerides?$/i, "Triglycerides"],
+  [/^ЛПНЩ|^LDL|^Low-density lipoprotein/i, "Low-Density Lipoprotein (LDL)"],
+  [/^ЛПВЩ|^HDL|^High-density lipoprotein/i, "High-Density Lipoprotein (HDL)"],
+  // General markers
+  [/^Білки|^Total protein|^Protein$/i, "Total Protein"],
+  [/^Альбумін|^Albumin$/i, "Albumin"],
+  [/^Кальцій|^Calcium$/i, "Calcium"],
+  [/^Фосфор|^Phosphorus|^Phosphate$/i, "Phosphorus"],
+  [/^Магній|^Magnesium$/i, "Magnesium"],
+  [/^Калій|^Potassium|^K$/i, "Potassium"],
+  [/^Натрій|^Sodium|^Na$/i, "Sodium"],
+  [/^Хлор|^Chloride|^Cl$/i, "Chloride"],
+  [/^СОЕ|^ESR|^Erythrocyte sedimentation rate/i, "Erythrocyte Sedimentation Rate (ESR)"],
+  [/^CRP|^C-reactive protein/i, "C-Reactive Protein (CRP)"],
 ]
 
 function toEnglishBiomarkerName(name) {

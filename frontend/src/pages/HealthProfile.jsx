@@ -78,8 +78,7 @@ export default function HealthProfile() {
     pregnancy_status: '',
   })
   const [saving, setSaving] = useState(false)
-
-  const meta = user?.user_metadata || {}
+  const [loading, setLoading] = useState(true)
 
   const profileCompletion = useMemo(() => {
     const checks = [
@@ -101,24 +100,49 @@ export default function HealthProfile() {
   }, [profile.height_cm, profile.weight_kg])
 
   useEffect(() => {
-    // Load from user metadata
-    setProfile({
-      age: meta.age || '',
-      sex: meta.sex || '',
-      height_cm: meta.height_cm || '',
-      weight_kg: meta.weight_kg || '',
-      goals: meta.goals || [],
-      timezone: meta.timezone || 'America/New_York',
-      medications: meta.medications || '',
-      allergies: meta.allergies || '',
-      pregnancy_status: meta.pregnancy_status || '',
-    })
+    async function loadProfile() {
+      setLoading(true)
+      try {
+        const response = await api.get('/profile')
+        const data = response.data?.profile || {}
+        setProfile({
+          age: data.age || '',
+          sex: data.sex || '',
+          height_cm: data.height_cm || '',
+          weight_kg: data.weight_kg || '',
+          goals: Array.isArray(data.goals) ? data.goals : [],
+          timezone: data.timezone || 'America/New_York',
+          medications: data.medications || '',
+          allergies: data.allergies || '',
+          pregnancy_status: data.pregnancy_status || '',
+        })
+      } catch (error) {
+        const meta = user?.user_metadata || {}
+        setProfile({
+          age: meta.age || '',
+          sex: meta.sex || '',
+          height_cm: meta.height_cm || '',
+          weight_kg: meta.weight_kg || '',
+          goals: meta.goals || [],
+          timezone: meta.timezone || 'America/New_York',
+          medications: meta.medications || '',
+          allergies: meta.allergies || '',
+          pregnancy_status: meta.pregnancy_status || '',
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (user) {
+      loadProfile()
+    }
   }, [user])
 
   async function saveProfile() {
     setSaving(true)
     try {
-      await api.patch('/profile', {
+      const response = await api.patch('/profile', {
         age: profile.age ? parseInt(profile.age) : null,
         sex: profile.sex,
         height_cm: profile.height_cm ? parseFloat(profile.height_cm) : null,
@@ -128,6 +152,18 @@ export default function HealthProfile() {
         medications: profile.medications || null,
         allergies: profile.allergies || null,
         pregnancy_status: profile.pregnancy_status || null,
+      })
+      const data = response.data?.profile || {}
+      setProfile({
+        age: data.age || '',
+        sex: data.sex || '',
+        height_cm: data.height_cm || '',
+        weight_kg: data.weight_kg || '',
+        goals: Array.isArray(data.goals) ? data.goals : [],
+        timezone: data.timezone || 'America/New_York',
+        medications: data.medications || '',
+        allergies: data.allergies || '',
+        pregnancy_status: data.pregnancy_status || '',
       })
       toast.success('Health profile updated!')
     } catch (error) {
