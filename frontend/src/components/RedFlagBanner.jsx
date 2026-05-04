@@ -13,12 +13,19 @@ export default function RedFlagBanner() {
     api.get('/red-flags').then(r => {
       const active = (r.data || []).filter(f => !f.acknowledged)
       setFlags(active)
-    }).catch(() => {})
+    }).catch((err) => {
+      console.error('Failed to load red flags:', err)
+      // Continue without blocking
+    })
   }, [])
 
   const acknowledge = async (id) => {
     setFlags(prev => prev.filter(f => f.id !== id))
-    await api.post(`/red-flags/${id}/acknowledge`).catch(() => {})
+    await api.post(`/red-flags/${id}/acknowledge`).catch((err) => {
+      console.error('Failed to acknowledge red flag:', err)
+      // Re-add flag if acknowledgement failed
+      setFlags(prev => [...prev, { id }].concat(prev).slice(0, prev.length))
+    })
   }
 
   if (dismissed || flags.length === 0) return null

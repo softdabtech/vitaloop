@@ -38,9 +38,9 @@ class Settings(BaseSettings):
     stripe_price_id: str = ""  # Legacy fallback (same as stripe_price_id_personal)
     stripe_price_id_personal: str = ""  # Personal Premium $9.99/mo
     stripe_price_id_practitioner: str = ""  # Practitioner Premium $29/mo
-    stripe_success_url: str = "http://localhost:5173/dashboard?sub=success"
-    stripe_cancel_url: str = "http://localhost:5173/dashboard?sub=cancelled"
-    stripe_portal_return_url: str = "http://localhost:5173/dashboard"
+    stripe_success_url: str = "https://vitaloop.today/dashboard?sub=success"
+    stripe_cancel_url: str = "https://vitaloop.today/dashboard?sub=cancelled"
+    stripe_portal_return_url: str = "https://vitaloop.today/dashboard"
     freemium_upload_limit: int = 1  # free-tier lab uploads allowed before paywall
     resend_api_key: str = ""
     resend_from_email: str = "onboarding@resend.dev"
@@ -57,14 +57,19 @@ class Settings(BaseSettings):
         parsed = [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
 
         # Keep critical frontend origins available even if env config is missing
-        # or partially overwritten on a server.
+        # or partially overwritten on a server. Only include localhost in development.
         fallback_origins = [
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
             "https://vitaloop.today",
             "https://www.vitaloop.today",
             "https://crm.vitaloop.today",
         ]
+
+        # Add localhost only in development mode
+        if self.app_env in ("development", "staging"):
+            fallback_origins.extend([
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+            ])
 
         seen = set()
         merged: List[str] = []
