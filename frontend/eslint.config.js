@@ -41,13 +41,16 @@ export default [
         confirm: 'readonly',
         alert: 'readonly',
         ImageData: 'readonly',
+        Image: 'readonly',
+        Blob: 'readonly',
+        FileReader: 'readonly',
       },
     },
     rules: {
       ...js.configs.recommended.rules,
       // Code quality
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
       'prefer-const': 'warn',
       'no-var': 'warn',
       // Best practices
