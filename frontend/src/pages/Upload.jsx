@@ -43,7 +43,10 @@ export default function Upload() {
       if (!isComplete && !checklist.profile_basics) {
         setProfileIncomplete(true)
       }
-    }).catch(() => {})
+    }).catch((err) => {
+      console.error('Failed to load onboarding state:', err)
+      // Continue without blocking - onboarding check is optional
+    })
   }, [])
 
   const isBusy = isProcessing || analyzing
