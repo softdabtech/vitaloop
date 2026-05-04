@@ -36,3 +36,29 @@ class BiomarkerCreate(BaseModel):
     ref_high: Optional[float] = None
     status: BiomarkerStatus
     category: Optional[str] = None
+
+
+class ManualBiomarkerEntryRequest(BaseModel):
+    """Single manually entered biomarker value"""
+    biomarker_id: str
+    value: float
+    unit: str
+    date: Optional[datetime] = None
+
+
+class ManualAnalysisRequest(BaseModel):
+    """Request to analyze manually entered biomarkers"""
+    biomarkers: list[ManualBiomarkerEntryRequest]
+    lab_name: Optional[str] = None
+    test_date: Optional[datetime] = None
+    notes: Optional[str] = None
+
+
+class BiomarkerOption(BaseModel):
+    """Biomarker option for dropdown selection"""
+    id: str
+    name: str
+    category: str
+    default_unit: str
+    alternative_units: list[str]
+    priority: int
