@@ -14,6 +14,12 @@ CREATE TABLE public.users (
   sub_status TEXT DEFAULT 'free'
     CHECK (sub_status IN ('free', 'active', 'cancelled')),
   sub_id TEXT,
+  global_role TEXT DEFAULT 'user',
+  stripe_customer_id TEXT,
+  stripe_subscription_id TEXT,
+  subscription_status TEXT,
+  current_period_end TIMESTAMPTZ,
+  onboarding_completed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -171,8 +177,14 @@ CREATE POLICY "Protocols: update own"
 -- 6. USER PROFILE (extended baseline)
 CREATE TABLE public.user_profile (
   id UUID REFERENCES public.users(id) ON DELETE CASCADE PRIMARY KEY,
+  age SMALLINT CHECK (age > 0 AND age < 130),
+  sex TEXT CHECK (sex IN ('male', 'female', 'other')),
   height_cm NUMERIC(5,1),
   weight_kg NUMERIC(5,1),
+  timezone TEXT DEFAULT 'America/New_York',
+  medications TEXT,
+  allergies TEXT,
+  pregnancy_status TEXT,
   goals TEXT[] DEFAULT '{}',
   current_supplements TEXT[] DEFAULT '{}',
   current_medications TEXT[] DEFAULT '{}',
