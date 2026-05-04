@@ -28,9 +28,17 @@ from app.constants import (
     MAX_IDEMPOTENCY_KEY_LENGTH,
 )
 from app.utils.validation import normalize_symptoms as _normalize_symptoms
+from app.models.biomarker import (
+    ManualAnalysisRequest,
+    ManualBiomarkerEntryRequest,
+    BiomarkerOption,
+)
+from app.services.biomarker_service import BiomarkerService
+from app.services.biomarker_reference import get_all_biomarkers
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
+biomarker_service = BiomarkerService()
 
 _analyze_idempotency: dict[tuple[str, str], dict] = {}
 _analyze_idempotency_lock = asyncio.Lock()
@@ -335,3 +343,147 @@ async def get_results(
         "biomarkers": biomarkers,
         "protocol": protocol.get("recommendations", []) if protocol else [],
     }
+
+
+@router.get(
+    "/biomarkers/options",
+    response_model=List[BiomarkerOption],
+    summary="Get available biomarkers for manual entry"
+)
+async def get_biomarker_options(current_user: dict = Depends(get_current_user)):
+    """
+    Get list of available biomarkers for dropdown selection in manual entry.
+
+    Returns:
+        List of biomarker options with id, name, category, units
+    """
+    try:
+        options = biomarker_service.get_available_biomarkers()
+        return options
+    except Exception as e:
+        logger.error(f"Error getting biomarker options: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load biomarker options")
+
+
+@router.post(
+    "/analyze/manual",
+    response_model=AnalyzeResponse,
+    status_code=201,
+    summary="Analyze manually entered biomarkers"
+)
+async def analyze_manual_biomarkers(
+    request: ManualAnalysisRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Accept manually entered biomarker values and generate protocol.
+
+    Checks freemium limits (3 manual entries/month for free users).
+    Converts all values to standard units.
+    Generates personalized protocol via Claude.
+
+    Request body:
+    {
+        "biomarkers": [
+            {"biomarker_id": "hemoglobin", "value": 14.5, "unit": "g/dL"},
+            {"biomarker_id": "glucose", "value": 95, "unit": "mg/dL"}
+        ],
+        "lab_name": "Home Test",
+        "test_date": "2026-05-04T00:00:00",
+        "notes": "Optional notes"
+    }
+
+    Returns: Same format as PDF analysis (biomarkers + protocol)
+    """
+    user_id = current_user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        # Check freemium limit
+        can_proceed, message = await biomarker_service.check_freemium_limit(user_id)
+        if not can_proceed:
+            raise HTTPException(status_code=402, detail=message)
+
+        # Convert to ManualBiomarkerEntry objects
+        entry_dicts = [entry.dict() for entry in request.biomarkers]
+
+        # Validate all entries
+        valid_entries, errors = biomarker_service.validate_entries(entry_dicts)
+
+        if errors:
+            error_message = "; ".join(errors)
+            raise HTTPException(status_code=422, detail=f"Validation failed: {error_message}")
+
+        if not valid_entries:
+            raise HTTPException(status_code=400, detail="No valid biomarkers provided")
+
+        # Convert to standard units for Claude
+        converted_entries = biomarker_service.convert_to_standard_units(valid_entries)
+
+        # Create upload record in database
+        upload_result = await biomarker_service.create_upload_from_manual_entries(
+            user_id=user_id,
+            entries=converted_entries,
+            lab_name=request.lab_name,
+            test_date=request.test_date,
+            notes=request.notes,
+        )
+
+        upload_id = upload_result["upload_id"]
+        biomarkers_data = upload_result["biomarkers"]
+
+        # Format biomarkers for Claude analysis
+        formatted_text = biomarker_service.format_for_claude_analysis(converted_entries)
+
+        # Generate protocol via Claude
+        if not is_llm_configured():
+            logger.warning("LLM not configured, skipping protocol generation")
+            protocol = []
+        else:
+            try:
+                protocol_result = await extract_biomarkers(
+                    extracted_text=formatted_text,
+                    lab_name=request.lab_name or "Manual Entry",
+                    symptoms=request.biomarkers[0].dict() if request.biomarkers else {},
+                )
+                protocol = protocol_result.get("recommendations", []) if protocol_result else []
+            except Exception as e:
+                logger.error(f"Error generating protocol for manual upload: {e}")
+                protocol = []
+
+        # Save protocol
+        if protocol:
+            await save_protocol_for_upload(user_id, upload_id, protocol)
+
+        return {
+            "upload_id": upload_id,
+            "biomarkers": biomarkers_data,
+            "protocol": protocol,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error analyzing manual biomarkers: {e}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+async def save_protocol_for_upload(user_id: str, upload_id: str, recommendations: List[dict]):
+    """Save generated protocol to database"""
+    try:
+        protocol_data = {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "recommendations": recommendations,
+            "created_at": asyncio.get_event_loop().time(),
+        }
+        from app.services.supabase_service import _get_supabase, _run
+        sb = _get_supabase()
+        await _run(
+            lambda: sb.table("protocols").insert(protocol_data).execute()
+        )
+    except Exception as e:
+        logger.error(f"Failed to save protocol: {e}")
+        # Don't fail the entire request if protocol save fails
+        pass

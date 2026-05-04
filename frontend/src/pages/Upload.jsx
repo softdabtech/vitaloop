@@ -7,6 +7,7 @@ import { useOCR } from '../hooks/useOCR.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import UploadZone from '../components/UploadZone.jsx'
 import SymptomSelector from '../components/SymptomSelector.jsx'
+import ManualBiomarkerEntry from '../components/ManualBiomarkerEntry.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
@@ -29,6 +30,7 @@ export default function Upload() {
   const { processFile, progress, isProcessing } = useOCR()
   const { isPremium, uploadCount, uploadLimit, uploadsRemaining, loading: subLoading, refresh: refreshSub } = useSubscription()
   const { show: showHints, dismiss: dismissHints } = useTourHints('upload')
+  const [uploadMode, setUploadMode] = useState('pdf') // 'pdf' | 'manual'
   const [symptoms, setSymptoms] = useState([])
   const [labName, setLabName] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
@@ -175,6 +177,27 @@ export default function Upload() {
     await handleFile(selectedFile)
   }
 
+  const handleAnalyzeManual = (result) => {
+    // Same behavior as PDF upload - navigate to results with analysis
+    trackFunnelEvent('funnel_first_upload_completed', 'User completed first manual biomarker entry', {
+      upload_id: result.upload_id,
+      biomarker_count: result.biomarkers?.length || 0,
+      source: 'manual',
+    }, { oncePerSession: true })
+    gaLabUpload()
+    toast.success('Analysis complete!')
+    navigate(`/results/${result.upload_id}`)
+  }
+
+  const handleLoadingManual = (isLoading) => {
+    // Optional: could synchronize loading state if needed
+    if (isLoading) {
+      setAnalyzing(true)
+    } else {
+      setAnalyzing(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="mx-auto w-full max-w-6xl">
@@ -184,11 +207,35 @@ export default function Upload() {
           helper="Upload report -> add optional symptoms -> open biomarkers and generated protocol."
         />
 
+        {/* Tab Switcher */}
+        <div className="mb-6 flex gap-3 border-b border-slate-200">
+          <button
+            onClick={() => setUploadMode('pdf')}
+            className={`pb-3 px-1 text-sm font-medium transition-colors ${
+              uploadMode === 'pdf'
+                ? 'border-b-2 border-emerald-500 text-emerald-600'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            📄 Upload PDF / Photo
+          </button>
+          <button
+            onClick={() => setUploadMode('manual')}
+            className={`pb-3 px-1 text-sm font-medium transition-colors ${
+              uploadMode === 'manual'
+                ? 'border-b-2 border-emerald-500 text-emerald-600'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            ✋ Enter Manually
+          </button>
+        </div>
+
         {showHints && (
           <HintBanner hints={UPLOAD_HINTS} onDone={dismissHints} />
         )}
 
-        {profileIncomplete && (
+        {uploadMode === 'pdf' && profileIncomplete && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5 text-sm">
             <UserCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
             <div className="flex-1">
@@ -204,7 +251,7 @@ export default function Upload() {
           </div>
         )}
 
-        {!subLoading && !isPremium && uploadsRemaining === 0 && (
+        {uploadMode === 'pdf' && !subLoading && !isPremium && uploadsRemaining === 0 && (
           <div className="mb-6 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             <span>
               Free upload limit reached ({uploadCount}/{uploadLimit}).
@@ -218,106 +265,113 @@ export default function Upload() {
           </div>
         )}
 
-        {!subLoading && !isPremium && uploadsRemaining > 0 && (
+        {uploadMode === 'pdf' && !subLoading && !isPremium && uploadsRemaining > 0 && (
           <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
             Free plan: {uploadsRemaining} upload{uploadsRemaining !== 1 ? 's' : ''} remaining.
           </div>
         )}
 
-        <div className="mb-6 grid gap-3 lg:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Private first</div>
-            <p className="text-sm text-slate-500">Your file is read in the browser first. Only extracted text continues into the analysis workflow.</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" /> What unlocks next</div>
-            <p className="text-sm text-slate-500">One upload should open biomarkers, protocol, trends, and clearer assignments instead of a dead-end result page.</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><AlertCircle className="h-4 w-4 text-amber-500" /> Best results</div>
-            <p className="text-sm text-slate-500">Use a full-page PDF or a sharp photo where marker names, values, ranges, and units are clearly visible.</p>
-          </div>
-        </div>
-
-        <div className="mb-6 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
-          <div className={`rounded-xl border px-3 py-2 ${isProcessing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
-            1. Read document
-          </div>
-          <div className={`rounded-xl border px-3 py-2 ${analyzing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
-            2. Analyze biomarkers
-          </div>
-          <div className={`rounded-xl border px-3 py-2 ${!isBusy && selectedFileName ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
-            3. Open results
-          </div>
-        </div>
-
-        {errorMessage && (
-          <div className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">
-            {errorMessage}
-          </div>
-        )}
-
-        <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-          Tip: upload a clear full-page PDF or a sharp photo in good lighting.
-        </div>
-
-        <div className="mb-6">
-          <label className="mb-1 block text-sm font-medium text-slate-700">Lab / Clinic name (optional)</label>
-          <input
-            value={labName}
-            disabled={isBusy}
-            onChange={(e) => setLabName(e.target.value)}
-            placeholder="Quest, LabCorp, Other..."
-            className="vtl-focus-ring w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-800 placeholder-slate-400 disabled:cursor-not-allowed disabled:opacity-60 focus:border-emerald-400 focus:outline-none"
-          />
-          <p className="mt-2 flex items-start gap-2 text-xs text-slate-500">
-            <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
-            <span>* If your clinic or lab is not recognized yet, it is still fine. Our lab database is still growing and more providers will be added soon.</span>
-          </p>
-        </div>
-
-        <SymptomSelector selected={symptoms} onChange={setSymptoms} />
-
-        <div className="mt-6">
-          {isProcessing && (
-            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-              <div className="mb-2 text-sm text-emerald-700">Reading document... {progress}%</div>
-              <div className="h-2.5 w-full rounded-full bg-emerald-100">
-                <div className="h-2.5 rounded-full bg-emerald-500 transition-all" style={{ width: `${progress}%` }} />
+        {uploadMode === 'pdf' ? (
+          <>
+            <div className="mb-6 grid gap-3 lg:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Private first</div>
+                <p className="text-sm text-slate-500">Your file is read in the browser first. Only extracted text continues into the analysis workflow.</p>
               </div>
-              {selectedFileName && <div className="mt-2 truncate text-xs text-emerald-600">{selectedFileName}</div>}
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" /> What unlocks next</div>
+                <p className="text-sm text-slate-500">One upload should open biomarkers, protocol, trends, and clearer assignments instead of a dead-end result page.</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><AlertCircle className="h-4 w-4 text-amber-500" /> Best results</div>
+                <p className="text-sm text-slate-500">Use a full-page PDF or a sharp photo where marker names, values, ranges, and units are clearly visible.</p>
+              </div>
             </div>
-          )}
 
-          {analyzing && (
-            <div className="mb-4 animate-pulse rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              Extracting biomarkers... This usually takes under a minute.
+            <div className="mb-6 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
+              <div className={`rounded-xl border px-3 py-2 ${isProcessing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
+                1. Read document
+              </div>
+              <div className={`rounded-xl border px-3 py-2 ${analyzing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
+                2. Analyze biomarkers
+              </div>
+              <div className={`rounded-xl border px-3 py-2 ${!isBusy && selectedFileName ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
+                3. Open results
+              </div>
             </div>
-          )}
 
-          {errorMessage && (
-            <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-rose-900">{errorMessage}</p>
-                  <p className="mt-1 text-xs text-rose-700">Try uploading a clearer PDF or sharp photo of your full lab report.</p>
-                  {retryCount < 3 && selectedFile && (
-                    <button
-                      onClick={handleRetry}
-                      disabled={isBusy}
-                      className="mt-3 inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-60 transition"
-                    >
-                      ↻ Retry ({retryCount}/3)
-                    </button>
-                  )}
+            {errorMessage && (
+              <div className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">
+                {errorMessage}
+              </div>
+            )}
+
+            <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+              Tip: upload a clear full-page PDF or a sharp photo in good lighting.
+            </div>
+
+            <div className="mb-6">
+              <label className="mb-1 block text-sm font-medium text-slate-700">Lab / Clinic name (optional)</label>
+              <input
+                value={labName}
+                disabled={isBusy}
+                onChange={(e) => setLabName(e.target.value)}
+                placeholder="Quest, LabCorp, Other..."
+                className="vtl-focus-ring w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-800 placeholder-slate-400 disabled:cursor-not-allowed disabled:opacity-60 focus:border-emerald-400 focus:outline-none"
+              />
+              <p className="mt-2 flex items-start gap-2 text-xs text-slate-500">
+                <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                <span>* If your clinic or lab is not recognized yet, it is still fine. Our lab database is still growing and more providers will be added soon.</span>
+              </p>
+            </div>
+
+            <SymptomSelector selected={symptoms} onChange={setSymptoms} />
+
+            <div className="mt-6">
+              {isProcessing && (
+                <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="mb-2 text-sm text-emerald-700">Reading document... {progress}%</div>
+                  <div className="h-2.5 w-full rounded-full bg-emerald-100">
+                    <div className="h-2.5 rounded-full bg-emerald-500 transition-all" style={{ width: `${progress}%` }} />
+                  </div>
+                  {selectedFileName && <div className="mt-2 truncate text-xs text-emerald-600">{selectedFileName}</div>}
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {!isProcessing && !analyzing && <UploadZone onFile={handleFile} disabled={isBusy} />}
-        </div>
+              {analyzing && (
+                <div className="mb-4 animate-pulse rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                  Extracting biomarkers... This usually takes under a minute.
+                </div>
+              )}
+
+              {errorMessage && (
+                <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-rose-900">{errorMessage}</p>
+                      <p className="mt-1 text-xs text-rose-700">Try uploading a clearer PDF or sharp photo of your full lab report.</p>
+                      {retryCount < 3 && selectedFile && (
+                        <button
+                          onClick={handleRetry}
+                          disabled={isBusy}
+                          className="mt-3 inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-60 transition"
+                        >
+                          ↻ Retry ({retryCount}/3)
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!isProcessing && !analyzing && <UploadZone onFile={handleFile} disabled={isBusy} />}
+            </div>
+          </>
+        ) : (
+          // Manual Entry Mode
+          <ManualBiomarkerEntry onAnalyze={handleAnalyzeManual} onLoading={handleLoadingManual} />
+        )}
       </div>
     </div>
   )
