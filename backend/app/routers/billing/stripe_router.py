@@ -74,15 +74,28 @@ async def create_checkout_session(
     user_id: str = current_user["sub"]
     user_email: str = current_user.get("email", "")
 
-    session = stripe.checkout.Session.create(
-        mode="subscription",
-        line_items=[{"price": price_id, "quantity": 1}],
-        success_url=settings.stripe_success_url,
-        cancel_url=settings.stripe_cancel_url,
-        customer_email=user_email or None,
-        metadata={"user_id": user_id, "plan_name": plan_id},
-        client_reference_id=user_id,
-    )
+    try:
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=settings.stripe_success_url,
+            cancel_url=settings.stripe_cancel_url,
+            customer_email=user_email or None,
+            metadata={"user_id": user_id, "plan_name": plan_id},
+            client_reference_id=user_id,
+        )
+    except stripe.error.StripeError as e:
+        logger.error(f"stripe_checkout_create_failed user_id={user_id} error={str(e)}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to create checkout session: {str(e)}"
+        ) from e
+    except Exception as e:
+        logger.error(f"stripe_checkout_unexpected_error user_id={user_id} error={str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred while creating checkout session"
+        ) from e
 
     return {"checkout_url": session.url, "plan_id": plan_id}
 

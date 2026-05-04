@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import NotificationPreferences from '../components/NotificationPreferences.jsx'
 import { useAuth } from '../hooks/useAuth.js'
+import { useSubscription } from '../hooks/useSubscription.js'
 import { supabase } from '../lib/supabase.js'
 import api from '../lib/api.js'
 import '../styles/dashboard2026.css'
@@ -34,6 +35,7 @@ function Field({ label, children }) {
 
 export default function Settings() {
   const { user, signOut } = useAuth()
+  const { isPremium } = useSubscription()
   const [notifications, setNotifications] = useState({
     weekly_checkin: user?.user_metadata?.weekly_checkin !== false,
     assignment_due: user?.user_metadata?.assignment_due !== false,
@@ -247,43 +249,45 @@ export default function Settings() {
               </p>
             </div>
 
-            <div style={{ borderTop: '1px solid rgba(220, 38, 38, 0.2)', paddingTop: 12 }}>
-              {!showCancelConfirm ? (
-                <>
-                  <button
-                    onClick={() => setShowCancelConfirm(true)}
-                    className="w-full rounded-2xl border border-red-400 bg-white px-6 py-3 text-center font-semibold text-red-600 transition hover:bg-red-50"
-                  >
-                    Cancel Subscription
-                  </button>
-                  <p style={{ fontSize: 12, color: '#7f1d1d', marginTop: 8 }}>
-                    Cancel your premium subscription. You'll revert to the free plan.
-                  </p>
-                </>
-              ) : (
-                <div style={{ padding: '12px 14px', background: 'rgba(220, 38, 38, 0.1)', borderRadius: 12, borderLeft: '4px solid #dc2626' }}>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: '#991b1b', marginBottom: 10 }}>
-                    ⚠️ Are you sure? You'll lose access to premium features and revert to the free plan.
-                  </p>
-                  <div style={{ display: 'flex', gap: 8 }}>
+            {isPremium && (
+              <div style={{ borderTop: '1px solid rgba(220, 38, 38, 0.2)', paddingTop: 12 }}>
+                {!showCancelConfirm ? (
+                  <>
                     <button
-                      onClick={cancelSubscription}
-                      disabled={canceling}
-                      className="flex-1 rounded-lg bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-700 transition disabled:opacity-60"
+                      onClick={() => setShowCancelConfirm(true)}
+                      className="w-full rounded-2xl border border-red-400 bg-white px-6 py-3 text-center font-semibold text-red-600 transition hover:bg-red-50"
                     >
-                      {canceling ? 'Canceling...' : 'Yes, Cancel'}
+                      Cancel Subscription
                     </button>
-                    <button
-                      onClick={() => setShowCancelConfirm(false)}
-                      disabled={canceling}
-                      className="flex-1 rounded-lg border border-rose-300 bg-white text-rose-600 px-4 py-2 font-semibold hover:bg-rose-50 transition disabled:opacity-60"
-                    >
-                      Keep It
-                    </button>
+                    <p style={{ fontSize: 12, color: '#7f1d1d', marginTop: 8 }}>
+                      Cancel your premium subscription. You'll revert to the free plan.
+                    </p>
+                  </>
+                ) : (
+                  <div style={{ padding: '12px 14px', background: 'rgba(220, 38, 38, 0.1)', borderRadius: 12, borderLeft: '4px solid #dc2626' }}>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: '#991b1b', marginBottom: 10 }}>
+                      ⚠️ Are you sure? You'll lose access to premium features and revert to the free plan.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={cancelSubscription}
+                        disabled={canceling}
+                        className="flex-1 rounded-lg bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-700 transition disabled:opacity-60"
+                      >
+                        {canceling ? 'Canceling...' : 'Yes, Cancel'}
+                      </button>
+                      <button
+                        onClick={() => setShowCancelConfirm(false)}
+                        disabled={canceling}
+                        className="flex-1 rounded-lg border border-rose-300 bg-white text-rose-600 px-4 py-2 font-semibold hover:bg-rose-50 transition disabled:opacity-60"
+                      >
+                        Keep It
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             <div style={{ borderTop: '1px solid rgba(220, 38, 38, 0.2)', paddingTop: 12 }}>
               {!showDeleteConfirm ? (
