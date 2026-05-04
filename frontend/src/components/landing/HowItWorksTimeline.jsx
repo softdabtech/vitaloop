@@ -28,14 +28,14 @@ export function HowItWorksTimeline() {
           viewport={{ once: true }}
           className="text-center mb-20"
         >
-          <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-4">How it works</h2>
-          <p className="text-lg text-slate-600">From PDF to personalized protocol in 4 steps</p>
+          <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-3">The Feedback Loop: One Test is a Snapshot. Three is a System.</h2>
+          <p className="text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">Upload PDF → identify problems → execute protocol → weekly check-in → retest 12 weeks later → see measurable change. Each cycle is smarter than the last.</p>
         </motion.div>
 
         {/* Timeline */}
         <div className="relative">
           {/* Vertical line */}
-          <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-500 via-emerald-300 to-emerald-500/10 transform -translate-x-1/2">
+          <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-emerald-500 via-emerald-300 to-emerald-500/10 transform -translate-x-1/2">
             <motion.div
               className="absolute inset-0 bg-gradient-to-b from-emerald-400 via-emerald-300 to-transparent"
               style={{ scaleY, transformOrigin: 'top' }}
@@ -43,7 +43,7 @@ export function HowItWorksTimeline() {
           </div>
 
           {/* Steps */}
-          <div className="space-y-12">
+          <div className="space-y-8">
             {STEPS.map((step, i) => (
               <TimelineStep key={step.title} step={step} index={i} />
             ))}
@@ -66,14 +66,14 @@ function TimelineStep({ step, index }) {
       className={`flex items-center gap-8 relative ${isLeft ? '' : 'flex-row-reverse'}`}
     >
       {/* Content */}
-      <div className={`w-1/2 ${isLeft ? 'text-right' : 'text-left'}`}>
+      <div className={`w-1/2 ${isLeft ? 'text-right' : 'text-left'} px-2`}>
         <motion.div
-          whileHover={{ scale: 1.02, y: -4 }}
-          className="bg-white border border-slate-200 rounded-2xl p-6 hover:border-emerald-300 transition-colors hover:shadow-md"
+          whileHover={{ scale: 1.03, y: -6 }}
+          className="bg-white border border-slate-200 rounded-2xl p-6 hover:border-emerald-400 hover:shadow-lg transition-all"
         >
-          <div className="text-sm font-semibold text-emerald-700 mb-2">Step {index + 1}</div>
-          <h3 className="text-2xl font-bold text-slate-900 mb-2">{step.title}</h3>
-          <p className="text-slate-600">{step.body}</p>
+          <div className="text-[10px] font-semibold text-emerald-600 mb-2 uppercase tracking-widest">Step {index + 1}</div>
+          <h3 className="text-base font-bold text-slate-900 mb-2">{step.title}</h3>
+          <p className="text-xs text-slate-600 leading-relaxed">{step.body}</p>
         </motion.div>
       </div>
 
@@ -84,7 +84,7 @@ function TimelineStep({ step, index }) {
           whileInView={{ scale: 1 }}
           transition={{ duration: 0.4, type: 'spring', stiffness: 200 }}
           viewport={{ once: true }}
-          className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center text-3xl border-4 border-white shadow-lg shadow-emerald-500/30"
+          className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center text-2xl border-4 border-white shadow-lg shadow-emerald-500/30"
         >
           {step.icon}
         </motion.div>

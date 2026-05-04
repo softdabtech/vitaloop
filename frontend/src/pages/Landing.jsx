@@ -26,7 +26,6 @@ import {
 import Seo from '../components/Seo.jsx'
 import { AnimatedHero } from '../components/landing/AnimatedHero.jsx'
 import { TrustedServicesSection } from '../components/landing/TrustedServicesSection.jsx'
-import { ComparisonTable } from '../components/landing/ComparisonTable.jsx'
 import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx'
 import { TestimonialsCarousel } from '../components/landing/TestimonialsCarousel.jsx'
 import { InteractivePricing } from '../components/landing/InteractivePricing.jsx'
@@ -817,21 +816,145 @@ export default function Landing() {
       <main>
         <AnimatedHero />
 
-        <ComparisonTable />
-
         <section id="problem" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
-          <motion.div {...fadeUp(reduced)} className="mb-7">
+          <motion.div {...fadeUp(reduced)} className="mb-12 text-center">
             <motion.h2
-              className="text-[28px] font-semibold tracking-tight md:text-[34px]"
-              initial={reduced ? false : { opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              className="text-[32px] font-bold tracking-tight md:text-[40px]"
+              initial={reduced ? false : { opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              How It Works
+              Your Doctor{' '}
+              <span className="relative">
+                <span className="bg-gradient-to-r from-rose-600 to-orange-600 bg-clip-text text-transparent">vs</span>
+              </span>{' '}
+              VITALOOP
             </motion.h2>
-            <p className={`mt-3 max-w-2xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
-              Upload → AI Analysis → Action Plan → Track Progress
+            <p className={`mx-auto mt-4 max-w-2xl text-lg ${'text-slate-600'}`}>
+              What they say vs what you actually need
+            </p>
+          </motion.div>
+
+          <div className="grid gap-8 lg:grid-cols-2 mb-12">
+            {/* Traditional Problems */}
+            <div className="space-y-4">
+              <motion.div
+                {...fadeUp(reduced, 0.1)}
+                className="text-center mb-6"
+              >
+                <span className="inline-flex rounded-full bg-rose-100 px-4 py-2 text-sm font-bold uppercase tracking-wider text-rose-700">
+                  ❌ Traditional Labs
+                </span>
+              </motion.div>
+
+              {[
+                { icon: X, title: 'No priority', stat: '0', label: 'Which marker to fix first?' },
+                { icon: X, title: 'No history', stat: '0', label: 'No trend tracking' },
+                { icon: X, title: 'No execution', stat: '0', label: 'Just reference ranges' },
+              ].map((item, idx) => {
+                const Icon = item.icon
+                return (
+                  <motion.article
+                    key={item.title}
+                    {...fadeUp(reduced, idx * 0.08 + 0.2)}
+                    whileHover={reduced ? undefined : { scale: 1.02, x: -4 }}
+                    className={`group relative overflow-hidden rounded-2xl border bg-white p-6 ${'border-rose-200'}`}
+                  >
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-orange-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    />
+
+                    <div className="relative flex items-start gap-4">
+                      <motion.div
+                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-rose-50"
+                        whileHover={reduced ? {} : { rotate: [0, -10, 10, 0] }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <Icon className="h-7 w-7 text-rose-500" />
+                      </motion.div>
+
+                      <div className="flex-1 pt-1">
+                        <div className="text-2xl font-bold text-rose-600">{item.stat}</div>
+                        <h3 className="text-sm font-bold text-slate-900">{item.title}</h3>
+                        <p className="mt-1 text-xs text-slate-600">{item.label}</p>
+                      </div>
+                    </div>
+                  </motion.article>
+                )
+              })}
+            </div>
+
+            {/* VITALOOP Solutions */}
+            <div className="space-y-4">
+              <motion.div
+                {...fadeUp(reduced, 0.1)}
+                className="text-center mb-6"
+              >
+                <span className="inline-flex rounded-full bg-emerald-100 px-4 py-2 text-sm font-bold uppercase tracking-wider text-emerald-700">
+                  ✅ VITALOOP
+                </span>
+              </motion.div>
+
+              {[
+                { icon: TrendingUp, title: 'Clear priorities', stat: '01', label: 'Top 3 problems ranked by impact' },
+                { icon: Clock3, title: 'Trends over time', stat: '5+', label: 'Every test compared to previous' },
+                { icon: Sparkles, title: 'Exact protocol', stat: '7 dy', label: 'Know what to do and when' },
+              ].map((item, idx) => {
+                const Icon = item.icon
+                return (
+                  <motion.article
+                    key={item.title}
+                    {...fadeUp(reduced, idx * 0.08 + 0.2)}
+                    whileHover={reduced ? undefined : { scale: 1.02, x: 4 }}
+                    className={`group relative overflow-hidden rounded-2xl border bg-white p-6 ${'border-emerald-200'}`}
+                    style={{ boxShadow: '0 0 0 1px rgba(16,185,129,0.1)' }}
+                  >
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-sky-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    />
+
+                    <div className="relative flex items-start gap-4">
+                      <motion.div
+                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-50 to-sky-50"
+                        whileHover={reduced ? {} : { rotate: 360, scale: 1.1 }}
+                        transition={{ duration: 0.6 }}
+                      >
+                        <motion.div
+                          className="absolute inset-0 rounded-xl bg-emerald-400/20 blur-xl"
+                          animate={reduced ? {} : { scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+                          transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
+                        />
+                        <Icon className="relative h-7 w-7 text-emerald-600" />
+                      </motion.div>
+
+                      <div className="flex-1 pt-1">
+                        <div className="text-2xl font-bold text-emerald-600">{item.stat}</div>
+                        <h3 className="text-sm font-bold text-slate-900">{item.title}</h3>
+                        <p className="mt-1 text-xs text-slate-600">{item.label}</p>
+                      </div>
+                    </div>
+                  </motion.article>
+                )
+              })}
+            </div>
+          </div>
+
+          <motion.div {...fadeUp(reduced)} className="mb-12 text-center">
+            <motion.h2
+              className="text-[32px] font-bold tracking-tight md:text-[40px]"
+              initial={reduced ? false : { opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              From PDF to personalized protocol in{' '}
+              <span className="relative">
+                <span className="bg-gradient-to-r from-emerald-600 to-sky-600 bg-clip-text text-transparent">4 steps</span>
+              </span>
+            </motion.h2>
+            <p className={`mx-auto mt-4 max-w-2xl text-lg ${'text-slate-600'}`}>
+              Upload your lab report, get AI analysis, execute protocol, track weekly progress
             </p>
           </motion.div>
 
@@ -847,20 +970,20 @@ export default function Landing() {
               />
             </div>
 
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-6 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((step, idx) => {
                 const Icon = step.icon
                 return (
                   <motion.article
                     key={step.title}
                     variants={fadeUp(reduced, idx * 0.04)}
-                    whileHover={reduced ? undefined : { y: -16, scale: 1.08 }}
-                    className={`group relative z-10 overflow-hidden rounded-3xl border p-8 text-center transition ${'border-slate-200 bg-white'}`}
+                    whileHover={reduced ? undefined : { y: -8, scale: 1.05 }}
+                    className={`group relative z-10 overflow-hidden rounded-2xl border p-6 text-center transition ${'border-slate-200 bg-white'}`}
                     style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08), inset 0 1px 0 rgba(16,185,129,0.08)' }}
                   >
                     {/* Step number badge */}
                     <motion.div
-                      className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-sky-400 text-xs font-bold text-white shadow-lg"
+                      className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-sky-400 text-[10px] font-bold text-white shadow-lg"
                       whileHover={reduced ? {} : { rotate: 360 }}
                       transition={{ duration: 0.5 }}
                     >
@@ -872,24 +995,24 @@ export default function Landing() {
                       className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-sky-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     />
 
-                    {/* Large icon with pulse effect */}
+                    {/* Icon with pulse effect */}
                     <motion.div
-                      className="relative mx-auto mb-6 flex h-24 w-24 items-center justify-center"
-                      whileHover={reduced ? {} : { scale: 1.2 }}
+                      className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center"
+                      whileHover={reduced ? {} : { scale: 1.1 }}
                       transition={{ duration: 0.4 }}
                     >
                       <motion.div
-                        className="absolute inset-0 rounded-full bg-emerald-400/20 blur-2xl"
-                        animate={reduced ? {} : { scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
+                        className="absolute inset-0 rounded-full bg-emerald-400/20 blur-xl"
+                        animate={reduced ? {} : { scale: [1, 1.15, 1], opacity: [0.5, 0.7, 0.5] }}
                         transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
                       />
-                      <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-50 to-sky-50">
-                        <Icon className="h-8 w-8 text-emerald-600" />
+                      <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-50 to-sky-50">
+                        <Icon className="h-6 w-6 text-emerald-600" />
                       </div>
                     </motion.div>
 
-                    <h3 className="relative text-xl font-bold">{step.title}</h3>
-                    <p className={`relative mt-3 text-sm ${'text-slate-600'}`}>{step.body}</p>
+                    <h3 className="relative text-base font-bold">{step.title}</h3>
+                    <p className={`relative mt-2 text-xs ${'text-slate-600'}`}>{step.body}</p>
 
                     {/* Animated arrow for non-last items */}
                     {idx < STEPS.length - 1 && (
