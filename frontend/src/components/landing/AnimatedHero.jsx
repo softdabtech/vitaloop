@@ -25,7 +25,7 @@ export function AnimatedHero() {
     <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
       <ParticleField />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-24 lg:py-32">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-16 lg:py-24">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start lg:items-center">
           {/* Left: Headline + CTA */}
           <motion.div
@@ -35,13 +35,16 @@ export function AnimatedHero() {
           >
             {/* Badge */}
             <motion.div
-              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full mb-6"
+              className="inline-flex flex-col items-start gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full mb-6"
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
             >
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-sm font-semibold text-emerald-400 tracking-wider">AI LAB INTELLIGENCE</span>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-sm font-semibold text-emerald-400 tracking-wider">AI LAB INTELLIGENCE</span>
+              </div>
+              <span className="text-xs text-emerald-300/70 tracking-wide ml-4">Extract biomarkers in 60 seconds</span>
             </motion.div>
 
             {/* Headline */}
@@ -78,9 +81,10 @@ export function AnimatedHero() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/#traction')}
                 className="px-8 py-3 border-2 border-slate-600 hover:border-emerald-400 text-slate-100 hover:text-white rounded-full font-semibold transition-all whitespace-nowrap"
               >
-                Watch 60s demo
+                Invest in us
               </motion.button>
             </div>
 
@@ -152,20 +156,31 @@ function StageUpload() {
   return (
     <motion.div
       className="absolute inset-0 flex items-center justify-center"
-      initial={{ opacity: 0, scale: 0.8, rotateY: -20 }}
-      animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.2 }}
       transition={{ duration: 0.6 }}
     >
-      <div className="relative">
+      <div className="relative w-80 h-96">
+        {/* Background blurred biomarker list */}
+        <div className="absolute inset-0 bg-white rounded-2xl shadow-2xl p-8 opacity-20 blur-sm pointer-events-none">
+          {[...Array(15)].map((_, i) => (
+            <div
+              key={`bg-${i}`}
+              className="h-3 bg-slate-300 rounded mb-3"
+              style={{ width: `${60 + Math.random() * 40}%` }}
+            />
+          ))}
+        </div>
+
         {/* PDF */}
         <motion.div
-          className="w-80 h-96 bg-white rounded-2xl shadow-2xl p-8 relative overflow-hidden"
+          className="absolute inset-0 w-80 h-96 bg-white rounded-2xl shadow-2xl p-8 relative overflow-hidden"
+          style={{ perspective: '1000px' }}
           animate={{
-            rotateY: [0, 5, -5, 0],
-            rotateX: [0, 2, -2, 0],
+            y: [0, -8, 8, 0],
           }}
-          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
         >
           {[...Array(12)].map((_, i) => (
             <motion.div
@@ -217,51 +232,93 @@ function StageExtract() {
   return (
     <motion.div
       className="absolute inset-0 flex items-center justify-center"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.4 }}
     >
-      <svg className="w-full h-full" viewBox="0 0 600 600">
-        {/* Input nodes */}
+      <svg className="w-full h-full max-w-sm" viewBox="0 0 400 400" style={{ filter: 'drop-shadow(0 0 40px rgba(20, 184, 166, 0.2))' }}>
+        {/* Input nodes - PDF document symbols */}
         {[...Array(5)].map((_, i) => (
           <g key={`input-${i}`}>
-            <motion.circle
-              cx={50}
-              cy={100 + i * 100}
-              r={8}
-              fill="#14b8a6"
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
+            <motion.rect
+              x={30}
+              y={60 + i * 70}
+              width={24}
+              height={30}
+              rx={3}
+              fill="none"
+              stroke="#14b8a6"
+              strokeWidth={1.5}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               transition={{ delay: i * 0.1 }}
+            />
+            <motion.line
+              x1={35}
+              y1={70 + i * 70}
+              x2={48}
+              y2={70 + i * 70}
+              stroke="#14b8a6"
+              strokeWidth={1}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: i * 0.1 + 0.05 }}
             />
           </g>
         ))}
 
-        {/* Hidden nodes */}
-        {[...Array(8)].map((_, i) => (
-          <motion.circle
-            key={`hidden-${i}`}
-            cx={250}
-            cy={50 + i * 70}
-            r={12}
-            fill="#0d9488"
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: [1, 1.3, 1] }}
-            transition={{ delay: 0.5 + i * 0.08, repeat: Infinity, duration: 2 }}
-          />
+        {/* Processing nodes - animated */}
+        {[...Array(6)].map((_, i) => (
+          <motion.g key={`process-${i}`}>
+            <motion.circle
+              cx={200}
+              cy={40 + i * 60}
+              r={10}
+              fill="#0d9488"
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: [1, 1.2, 1] }}
+              transition={{ delay: 0.3 + i * 0.1, duration: 1.5, repeat: Infinity }}
+            />
+            {/* Connecting lines */}
+            <motion.line
+              x1={54}
+              y1={75 + i * 70}
+              x2={190}
+              y2={40 + i * 60}
+              stroke="#14b8a6"
+              strokeWidth={1}
+              opacity={0.3}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0.3, 0.6, 0.3] }}
+              transition={{ delay: 0.3 + i * 0.1, duration: 1.5, repeat: Infinity }}
+            />
+          </motion.g>
         ))}
 
-        {/* Output nodes */}
-        {[...Array(3)].map((_, i) => (
+        {/* Output nodes - biomarker results */}
+        {[...Array(5)].map((_, i) => (
           <g key={`output-${i}`}>
             <motion.circle
-              cx={450}
-              cy={150 + i * 150}
-              r={10}
+              cx={350}
+              cy={80 + i * 70}
+              r={8}
               fill="#06b6d4"
               initial={{ opacity: 0, scale: 0 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 1 + i * 0.15 }}
+              transition={{ delay: 0.8 + i * 0.12 }}
+            />
+            <motion.line
+              x1={210}
+              y1={40 + i * 60}
+              x2={342}
+              y2={80 + i * 70}
+              stroke="#06b6d4"
+              strokeWidth={1}
+              opacity={0.4}
+              initial={{ opacity: 0, pathLength: 0 }}
+              animate={{ opacity: [0.4, 0.7, 0.4], pathLength: 1 }}
+              transition={{ delay: 0.8 + i * 0.12, duration: 1.2, repeat: Infinity }}
             />
           </g>
         ))}
@@ -269,27 +326,34 @@ function StageExtract() {
 
       {/* Stats panel */}
       <motion.div
-        className="absolute top-12 right-12 bg-slate-900/90 backdrop-blur-xl rounded-2xl p-6 border border-teal-500/30 shadow-2xl"
-        initial={{ x: 100, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ delay: 0.5 }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-slate-900/95 backdrop-blur-xl rounded-2xl p-6 border border-teal-500/30 shadow-2xl w-80"
+        initial={{ y: 50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.3 }}
       >
-        <div className="text-5xl font-bold text-teal-400 mb-2">85</div>
-        <div className="text-sm text-slate-400">Biomarkers detected</div>
+        <motion.div
+          className="text-4xl font-bold text-teal-400 mb-3"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.6, type: 'spring', stiffness: 150 }}
+        >
+          85+
+        </motion.div>
+        <div className="text-sm text-slate-400 mb-4">Biomarkers extracted</div>
 
-        <div className="mt-4 space-y-2">
+        <div className="space-y-2">
           {['Vitamin D', 'Ferritin', 'TSH', 'CRP'].map((marker, i) => (
             <motion.div
               key={marker}
               className="flex items-center gap-2 text-xs text-slate-300"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 1 + i * 0.2 }}
+              transition={{ delay: 0.8 + i * 0.15 }}
             >
               <motion.div
                 className="w-2 h-2 rounded-full bg-teal-400"
-                animate={{ scale: [1, 1.5, 1] }}
-                transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                animate={{ scale: [1, 1.4, 1] }}
+                transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
               />
               {marker}
             </motion.div>
