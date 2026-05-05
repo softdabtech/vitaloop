@@ -816,7 +816,7 @@ export default function Landing() {
       <main>
         <AnimatedHero />
 
-        <section id="problem" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
+        <section id="problem" className="mx-auto w-full max-w-[990px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-12 text-center">
             <motion.h2
               className="text-[32px] font-bold tracking-tight md:text-[40px]"
@@ -838,7 +838,7 @@ export default function Landing() {
 
           <div className="grid gap-8 lg:grid-cols-2 mb-12">
             {/* Traditional Problems */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               <motion.div
                 {...fadeUp(reduced, 0.1)}
                 className="text-center mb-6"
@@ -859,25 +859,29 @@ export default function Landing() {
                     key={item.title}
                     {...fadeUp(reduced, idx * 0.08 + 0.2)}
                     whileHover={reduced ? undefined : { scale: 1.02, x: -4 }}
-                    className={`group relative overflow-hidden rounded-2xl border bg-white p-6 ${'border-rose-200'}`}
+                    className={`group relative overflow-hidden rounded-2xl border bg-white p-3 ${'border-rose-200'}`}
                   >
                     <motion.div
                       className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-orange-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     />
 
-                    <div className="relative flex items-start gap-4">
+                    <div className="relative flex items-center justify-center gap-3 text-center">
                       <motion.div
-                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-rose-50"
+                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-rose-50"
                         whileHover={reduced ? {} : { rotate: [0, -10, 10, 0] }}
                         transition={{ duration: 0.5 }}
                       >
-                        <Icon className="h-7 w-7 text-rose-500" />
+                        <Icon className="h-6 w-6 text-rose-500" />
                       </motion.div>
 
-                      <div className="flex-1 pt-1">
-                        <div className="text-2xl font-bold text-rose-600">{item.stat}</div>
-                        <h3 className="text-sm font-bold text-slate-900">{item.title}</h3>
-                        <p className="mt-1 text-xs text-slate-600">{item.label}</p>
+                      <div className="flex-1">
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-baseline gap-2 justify-center">
+                            <div className="text-lg font-bold text-rose-600">{item.stat}</div>
+                            <h3 className="text-base font-bold text-slate-900">{item.title}</h3>
+                          </div>
+                          <p className="mt-1 text-sm text-slate-600">{item.label}</p>
+                        </div>
                       </div>
                     </div>
                   </motion.article>
@@ -886,7 +890,7 @@ export default function Landing() {
             </div>
 
             {/* VITALOOP Solutions */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               <motion.div
                 {...fadeUp(reduced, 0.1)}
                 className="text-center mb-6"
@@ -907,31 +911,35 @@ export default function Landing() {
                     key={item.title}
                     {...fadeUp(reduced, idx * 0.08 + 0.2)}
                     whileHover={reduced ? undefined : { scale: 1.02, x: 4 }}
-                    className={`group relative overflow-hidden rounded-2xl border bg-white p-6 ${'border-emerald-200'}`}
+                    className={`group relative overflow-hidden rounded-2xl border bg-white p-3 ${'border-emerald-200'}`}
                     style={{ boxShadow: '0 0 0 1px rgba(16,185,129,0.1)' }}
                   >
                     <motion.div
                       className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-sky-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     />
 
-                    <div className="relative flex items-start gap-4">
+                    <div className="relative flex items-center justify-center gap-3 text-center">
                       <motion.div
-                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-50 to-sky-50"
+                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-50 to-sky-50"
                         whileHover={reduced ? {} : { rotate: 360, scale: 1.1 }}
                         transition={{ duration: 0.6 }}
                       >
                         <motion.div
-                          className="absolute inset-0 rounded-xl bg-emerald-400/20 blur-xl"
+                          className="absolute inset-0 rounded-lg bg-emerald-400/20 blur-xl"
                           animate={reduced ? {} : { scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
                           transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
                         />
-                        <Icon className="relative h-7 w-7 text-emerald-600" />
+                        <Icon className="relative h-6 w-6 text-emerald-600" />
                       </motion.div>
 
-                      <div className="flex-1 pt-1">
-                        <div className="text-2xl font-bold text-emerald-600">{item.stat}</div>
-                        <h3 className="text-sm font-bold text-slate-900">{item.title}</h3>
-                        <p className="mt-1 text-xs text-slate-600">{item.label}</p>
+                      <div className="flex-1">
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-baseline gap-2 justify-center">
+                            <div className="text-lg font-bold text-emerald-600">{item.stat}</div>
+                            <h3 className="text-base font-bold text-slate-900">{item.title}</h3>
+                          </div>
+                          <p className="mt-1 text-sm text-slate-600">{item.label}</p>
+                        </div>
                       </div>
                     </div>
                   </motion.article>
@@ -1031,7 +1039,7 @@ export default function Landing() {
           </motion.div>
         </section>
 
-        <section className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
+        <section className="mx-auto w-full max-w-[990px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7 text-center">
             <motion.h2
               className="text-[28px] font-semibold tracking-tight md:text-[34px]"

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import Seo from '../components/Seo.jsx'
+import Footer from '../components/landing/Footer.jsx'
 
 export default function Privacy() {
   const navigate = useNavigate()
@@ -62,6 +63,8 @@ export default function Privacy() {
           <p>Questions? Email us at <a href="mailto:privacy@vitaloop.com" style={{ color: 'var(--teal-500)' }}>privacy@vitaloop.com</a>.</p>
         </div>
       </section>
+
+      <Footer />
     </div>
   )
 }

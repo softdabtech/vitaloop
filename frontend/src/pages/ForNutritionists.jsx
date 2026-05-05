@@ -20,6 +20,7 @@ import {
   Users,
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
+import Footer from '../components/landing/Footer.jsx'
 import { fadeUp, fadeUpBlur, stagger, staggerChild, EASE } from '../lib/motion.js'
 import { gaEvent } from '../lib/analytics.js'
 
@@ -797,6 +798,8 @@ export default function ForNutritionists() {
           </motion.div>
         </div>
       </section>
+
+      <Footer />
     </div>
   )
 }

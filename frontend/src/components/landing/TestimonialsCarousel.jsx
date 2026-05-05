@@ -160,28 +160,28 @@ function BeforeAfterChart({ testimonial }) {
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.6 }}
-      className="relative bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 flex flex-col justify-between min-h-96"
+      className="relative bg-white border border-slate-200 rounded-2xl p-6 sm:p-8"
     >
-      <div className="text-center mb-6 sm:mb-8">
+      <div className="text-center mb-8">
         <h3 className="text-xs sm:text-sm font-semibold text-slate-600 uppercase tracking-wide">{label}</h3>
       </div>
 
-      <div className="flex items-end justify-around gap-3 sm:gap-4 flex-1 mb-8">
+      <div className="flex items-end justify-around gap-3 sm:gap-4 mb-8" style={{ height: '140px' }}>
         {/* Before bar */}
         <motion.div
-          initial={{ height: 0 }}
-          animate={{ height: '100%' }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
           className="flex flex-col items-center flex-1"
         >
-          <div className="text-3xl font-bold text-slate-700 mb-2">{before}</div>
+          <div className="text-2xl font-bold text-slate-700 mb-3">{before}</div>
           <motion.div
             initial={{ height: 0 }}
-            animate={{ height: `${(before / Math.max(before, after)) * 200}px` }}
+            animate={{ height: `${(before / Math.max(before, after)) * 100}px` }}
             transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }}
             className="w-full bg-gradient-to-t from-slate-300 to-slate-400 rounded-lg opacity-60"
           />
-          <div className="text-sm text-slate-600 mt-3">Before</div>
+          <div className="text-xs text-slate-600 mt-3">Before</div>
         </motion.div>
 
         {/* Arrow */}
@@ -189,28 +189,28 @@ function BeforeAfterChart({ testimonial }) {
           initial={{ scale: 0, rotate: -90 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="text-2xl text-emerald-500"
+          className="text-xl text-emerald-500"
         >
           →
         </motion.div>
 
         {/* After bar */}
         <motion.div
-          initial={{ height: 0 }}
-          animate={{ height: '100%' }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
           className="flex flex-col items-center flex-1"
         >
-          <div className={`text-3xl font-bold bg-gradient-to-r ${color} bg-clip-text text-transparent mb-2`}>
+          <div className={`text-2xl font-bold bg-gradient-to-r ${color} bg-clip-text text-transparent mb-3`}>
             {after}
           </div>
           <motion.div
             initial={{ height: 0 }}
-            animate={{ height: `${(after / Math.max(before, after)) * 200}px` }}
+            animate={{ height: `${(after / Math.max(before, after)) * 100}px` }}
             transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }}
             className={`w-full bg-gradient-to-t ${color} rounded-lg`}
           />
-          <div className="text-sm text-slate-400 mt-3">After</div>
+          <div className="text-xs text-slate-400 mt-3">After</div>
         </motion.div>
       </div>
 
