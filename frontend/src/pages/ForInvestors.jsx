@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Building2, ChartNoAxesCombined, CheckCircle2, ShieldCheck, Users, Workflow } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
+import Footer from '../components/landing/Footer.jsx'
 
 const TRACTION_METRICS = [
   { value: '85+', label: 'Biomarkers normalized per upload' },
@@ -236,6 +237,8 @@ export default function ForInvestors() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   )
 }

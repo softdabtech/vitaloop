@@ -8,7 +8,8 @@ const PRICING = {
       name: 'Free',
       price: '$0',
       period: '/month',
-      points: ['1 active upload', 'Basic biomarker summary', 'Core dashboard'],
+      description: 'Test with your own labs',
+      points: ['1 active lab upload', 'All 85+ biomarkers analyzed', 'Top 3 problems identified', 'Basic dashboard'],
       cta: 'Try free',
       featured: false,
     },
@@ -16,7 +17,8 @@ const PRICING = {
       name: 'Personal Premium',
       price: '$9.99',
       period: '/month',
-      points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
+      description: 'Complete health management',
+      points: ['Unlimited uploads & retests', 'Exact dosage protocols', 'Weekly AI check-ins', 'Progress timeline tracking', 'Protocol adaptation', 'Priority support'],
       cta: 'Upgrade',
       featured: true,
     },
@@ -24,7 +26,8 @@ const PRICING = {
       name: 'Enterprise',
       price: 'Custom',
       period: 'contact sales',
-      points: ['Practitioner CRM', 'Multi-client dashboards', 'API access', 'Custom integration'],
+      description: 'For practitioners & teams',
+      points: ['Practitioner CRM (10+ clients)', 'Client progress dashboards', 'Assignment workflows', 'API access & integrations', 'Custom branding', 'Team management'],
       cta: 'Contact',
       featured: false,
     },
@@ -34,7 +37,8 @@ const PRICING = {
       name: 'Free',
       price: '$0',
       period: '/year',
-      points: ['1 active upload', 'Basic biomarker summary', 'Core dashboard'],
+      description: 'Test with your own labs',
+      points: ['1 active lab upload', 'All 85+ biomarkers analyzed', 'Top 3 problems identified', 'Basic dashboard'],
       cta: 'Try free',
       featured: false,
     },
@@ -42,7 +46,8 @@ const PRICING = {
       name: 'Personal Premium',
       price: '$95',
       period: '/year',
-      points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights', 'Save 21%'],
+      description: 'Complete health management',
+      points: ['Unlimited uploads & retests', 'Exact dosage protocols', 'Weekly AI check-ins', 'Progress timeline tracking', 'Protocol adaptation', 'Save 21% vs monthly'],
       cta: 'Upgrade',
       featured: true,
     },
@@ -50,7 +55,8 @@ const PRICING = {
       name: 'Enterprise',
       price: 'Custom',
       period: 'contact sales',
-      points: ['Practitioner CRM', 'Multi-client dashboards', 'API access', 'Custom integration'],
+      description: 'For practitioners & teams',
+      points: ['Practitioner CRM (10+ clients)', 'Client progress dashboards', 'Assignment workflows', 'API access & integrations', 'Custom branding', 'Team management'],
       cta: 'Contact',
       featured: false,
     },
@@ -159,7 +165,10 @@ function PricingCard({ plan, index, isAnnual }) {
 
       <div className="p-8">
         {/* Plan name */}
-        <h3 className="text-2xl font-bold text-slate-900 mb-2">{plan.name}</h3>
+        <h3 className="text-2xl font-bold text-slate-900 mb-1">{plan.name}</h3>
+
+        {/* Description */}
+        <p className="text-sm text-slate-600 mb-6">{plan.description}</p>
 
         {/* Price */}
         <motion.div

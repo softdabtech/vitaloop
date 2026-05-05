@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, BrainCircuit, CheckCircle2, FileText, HeartPulse, LayoutDashboard, Sparkles, Stethoscope, TrendingUp, Upload } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
+import Footer from '../components/landing/Footer.jsx'
 
 export default function HowItWorks() {
   const navigate = useNavigate()
@@ -239,6 +240,8 @@ export default function HowItWorks() {
           </div>
         </div>
       </motion.section>
+
+      <Footer />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import Seo from '../components/Seo.jsx'
+import Footer from '../components/landing/Footer.jsx'
 
 export default function Terms() {
   const navigate = useNavigate()
@@ -63,6 +64,8 @@ export default function Terms() {
           <p>Legal inquiries: <a href="mailto:legal@vitaloop.com" style={{ color: 'var(--teal-500)' }}>legal@vitaloop.com</a></p>
         </div>
       </section>
+
+      <Footer />
     </div>
   )
 }
