@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from app.dependencies import get_current_user
@@ -42,6 +42,20 @@ async def get_profile(current_user: dict = Depends(get_current_user)):
 async def update_profile(body: ProfileUpdate, current_user: dict = Depends(get_current_user)):
     user_id = current_user["sub"]
     data = {k: v for k, v in body.model_dump().items() if v is not None}
+    if "sex" in data:
+        raw_sex = str(data.get("sex") or "").strip().lower()
+        sex_aliases = {
+            "m": "male",
+            "male": "male",
+            "f": "female",
+            "female": "female",
+            "o": "other",
+            "other": "other",
+        }
+        normalized = sex_aliases.get(raw_sex)
+        if raw_sex and not normalized:
+            raise HTTPException(status_code=422, detail="sex must be one of: male, female, other")
+        data["sex"] = normalized
     if not data:
         return {"profile": await svc.get_user_profile(user_id)}
     updated = await svc.upsert_user_profile(user_id, data)

@@ -64,6 +64,14 @@ function MetricTile({ label, value, tone = 'default' }) {
   )
 }
 
+function normalizeSexValue(value) {
+  const normalized = String(value || '').trim().toLowerCase()
+  if (normalized === 'm' || normalized === 'male') return 'male'
+  if (normalized === 'f' || normalized === 'female') return 'female'
+  if (normalized === 'o' || normalized === 'other') return 'other'
+  return ''
+}
+
 export default function HealthProfile() {
   const { user } = useAuth()
   const [profile, setProfile] = useState({
@@ -107,7 +115,7 @@ export default function HealthProfile() {
         const data = response.data?.profile || {}
         setProfile({
           age: data.age || '',
-          sex: data.sex || '',
+          sex: normalizeSexValue(data.sex),
           height_cm: data.height_cm || '',
           weight_kg: data.weight_kg || '',
           goals: Array.isArray(data.goals) ? data.goals : [],
@@ -120,7 +128,7 @@ export default function HealthProfile() {
         const meta = user?.user_metadata || {}
         setProfile({
           age: meta.age || '',
-          sex: meta.sex || '',
+          sex: normalizeSexValue(meta.sex),
           height_cm: meta.height_cm || '',
           weight_kg: meta.weight_kg || '',
           goals: meta.goals || [],
@@ -156,7 +164,7 @@ export default function HealthProfile() {
       const data = response.data?.profile || {}
       setProfile({
         age: data.age || '',
-        sex: data.sex || '',
+        sex: normalizeSexValue(data.sex),
         height_cm: data.height_cm || '',
         weight_kg: data.weight_kg || '',
         goals: Array.isArray(data.goals) ? data.goals : [],
@@ -210,9 +218,9 @@ export default function HealthProfile() {
                     style={fieldStyle}
                   >
                     <option value="">Select sex</option>
-                    <option value="M">Male</option>
-                    <option value="F">Female</option>
-                    <option value="O">Other</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
                   </select>
                 </Field>
 
