@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { CreditCard, CheckCircle2, AlertCircle, ArrowRight, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
@@ -104,17 +105,24 @@ function PlanCard({ plan, planKey, currentPlan, onSelect, isLoading }) {
 
 export default function Subscription() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [subscription, setSubscription] = useState(null)
   const [loading, setLoading] = useState(true)
   const [upgrading, setUpgrading] = useState(false)
   const [openingPortal, setOpeningPortal] = useState(false)
 
-  const currentPlan = subscription?.plan_name ? subscription.plan_name.toLowerCase().replace(/\s+/g, '_') : 'free'
+  const _planNameToKey = { personal: 'personal_pro', practitioner: 'enterprise' }
+  const currentPlan = subscription
+    ? (subscription.is_premium
+        ? (_planNameToKey[subscription.plan_name] || 'personal_pro')
+        : 'free')
+    : 'free'
   const planStatus = subscription?.sub_status || 'free'
   const daysRemaining = subscription?.current_period_end ? Math.ceil((subscription.current_period_end - Date.now() / 1000) / 86400) : null
   const uploadCount = subscription?.upload_count || 0
-  const uploadLimit = subscription?.upload_limit || 1
+  const uploadLimit = subscription?.upload_limit ?? null  // null means unlimited (premium)
   const isPremium = subscription?.is_premium ?? false
+  const hasStripeCustomer = subscription?.has_stripe_customer ?? false
 
   useEffect(() => {
     loadSubscription()
@@ -162,6 +170,10 @@ export default function Subscription() {
   }
 
   async function openBillingPortal() {
+    if (!hasStripeCustomer) {
+      navigate('/billing-history')
+      return
+    }
     setOpeningPortal(true)
     try {
       const { data } = await api.post('/stripe/portal')
@@ -243,7 +255,7 @@ export default function Subscription() {
                   disabled={openingPortal}
                   className="rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {openingPortal ? 'Opening...' : 'Manage Billing'}
+                  {openingPortal ? 'Opening...' : hasStripeCustomer ? 'Manage Billing' : 'Billing History'}
                 </button>
               )}
             </div>
@@ -292,13 +304,13 @@ export default function Subscription() {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-semibold text-slate-700">Lab Uploads</span>
-                  {uploadLimit ? (
+                  {uploadLimit !== null ? (
                     <span className="text-sm font-semibold text-slate-500">{uploadCount} of {uploadLimit}</span>
                   ) : (
                     <span className="text-sm font-semibold text-emerald-600">Unlimited</span>
                   )}
                 </div>
-                {uploadLimit && (
+                {uploadLimit !== null && (
                   <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                     <div
                       className="bg-emerald-500 h-full transition-all"
@@ -368,16 +380,20 @@ export default function Subscription() {
             <div className="flex items-start gap-3">
               <CreditCard className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-semibold text-blue-900 mb-1">Manage Payment Method & Billing</h4>
+                <h4 className="font-semibold text-blue-900 mb-1">
+                  {hasStripeCustomer ? 'Manage Payment Method & Billing' : 'Billing History'}
+                </h4>
                 <p className="text-sm text-blue-800 mb-4">
-                  Update your billing address, payment method, view invoices, and manage your subscription renewal.
+                  {hasStripeCustomer
+                    ? 'Update your billing address, payment method, view invoices, and manage your subscription renewal.'
+                    : 'View your subscription timeline and plan change history.'}
                 </p>
                 <button
                   onClick={openBillingPortal}
                   disabled={openingPortal}
                   className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {openingPortal ? 'Opening...' : 'Open Billing Portal'}
+                  {openingPortal ? 'Opening...' : hasStripeCustomer ? 'Open Billing Portal' : 'View Billing History'}
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>

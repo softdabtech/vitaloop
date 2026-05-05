@@ -585,6 +585,19 @@ async def get_user_account(user_id: str) -> Dict[str, Any]:
     )
 
 
+async def get_user_subscription_history(user_id: str) -> List[Dict]:
+    """Return all subscription rows for a user ordered newest-first."""
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("subscriptions")
+        .select("plan_name, status, stripe_status, started_at, current_period_start, current_period_end, cancel_at_period_end, updated_at")
+        .eq("user_id", user_id)
+        .order("updated_at", desc=True)
+        .execute()
+    )
+    return resp.data or []
+
+
 async def get_user_upload_count(user_id: str) -> int:
     """Return the total number of lab uploads for a user (used for freemium gating)."""
     supabase = _get_supabase()

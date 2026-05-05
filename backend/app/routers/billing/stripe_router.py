@@ -16,6 +16,7 @@ from app.services.supabase_service import (
     sync_stripe_subscription_to_subscriptions_table,
     get_user_account,
     get_user_upload_count,
+    get_user_subscription_history,
 )
 
 stripe.api_key = settings.stripe_secret_key
@@ -330,12 +331,14 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
 
     limit = settings.freemium_upload_limit
     is_free = sub_status != "active" and global_role == "end_user"
+    customer_id = (active_sub or {}).get("stripe_customer_id")
 
     return {
         "sub_status": sub_status,
         "plan_name": plan_name,  # "personal" | "practitioner" | None
         "global_role": global_role,
         "is_premium": sub_status == "active" or global_role != "end_user",
+        "has_stripe_customer": bool(customer_id),
         "cancel_at_period_end": (active_sub or {}).get("cancel_at_period_end", False),
         "current_period_end": (active_sub or {}).get("current_period_end"),
         "upload_count": upload_count,
@@ -368,6 +371,14 @@ async def cancel_subscription(current_user: dict = Depends(get_current_user)):
 
     logger.info(f"stripe_subscription_cancel_requested user_id={user_id} sub_id={stripe_sub_id[:20]}")
     return {"ok": True, "cancel_at_period_end": True, "period_end": updated.get("current_period_end")}
+
+
+@router.get("/billing-history")
+async def get_billing_history(current_user: dict = Depends(get_current_user)):
+    """Return all subscription history rows for the authenticated user."""
+    user_id: str = current_user["sub"]
+    rows = await get_user_subscription_history(user_id)
+    return {"history": rows}
 
 
 @router.post("/portal")
