@@ -36,6 +36,7 @@ const Avatar = lazy(() => import('./pages/Avatar.jsx'))
 const Settings = lazy(() => import('./pages/Settings.jsx'))
 const HealthProfile = lazy(() => import('./pages/HealthProfile.jsx'))
 const Subscription = lazy(() => import('./pages/Subscription.jsx'))
+const BillingHistory = lazy(() => import('./pages/BillingHistory.jsx'))
 const Onboarding = lazy(() => import('./pages/Onboarding.jsx'))
 const WeeklyCheckIn = lazy(() => import('./pages/WeeklyCheckIn.jsx'))
 const Questionnaire = lazy(() => import('./pages/Questionnaire.jsx'))
@@ -124,6 +125,7 @@ function FloatingSupportChat() {
     '/settings',
     '/health-profile',
     '/subscription',
+    '/billing-history',
     '/onboarding',
     '/questionnaire',
     '/check-ins',
@@ -201,6 +203,7 @@ export default function App() {
           <Route path="/settings" element={renderCabinetRoute(<Settings />)} />
           <Route path="/health-profile" element={renderCabinetRoute(<HealthProfile />)} />
           <Route path="/subscription" element={renderCabinetRoute(<Subscription />)} />
+          <Route path="/billing-history" element={renderCabinetRoute(<BillingHistory />)} />
           <Route path="/admin" element={<ProtectedRoute><CRMRoute needsOps><Navigate to="/ops" replace /></CRMRoute></ProtectedRoute>} />
           <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<ProtectedRoute><CRMRoute><OpsDashboard /></CRMRoute></ProtectedRoute>} />
