@@ -42,6 +42,9 @@ jobs:
           E2E_BEARER_TOKEN: ${{ secrets.E2E_BEARER_TOKEN }}
           E2E_ORG_ID: ${{ secrets.E2E_ORG_ID }}
           E2E_INVITE_EMAIL: ${{ secrets.E2E_INVITE_EMAIL }}
+          E2E_SUPABASE_URL: ${{ secrets['E2E_SUPABASE_URL'] }}
+          E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets['E2E_SUPABASE_SERVICE_ROLE_KEY'] }}
+          E2E_SUPABASE_ANON_KEY: ${{ secrets['E2E_SUPABASE_ANON_KEY'] }}
         run: |
           if [ -z "${E2E_API_BASE_URL}" ]; then
             echo "Missing required secret: E2E_API_BASE_URL"
@@ -51,8 +54,20 @@ jobs:
             echo "Missing required secret: E2E_BEARER_TOKEN"
             exit 1
           fi
+          if [ -z "${E2E_SUPABASE_URL}" ]; then
+            echo "Missing required secret: E2E_SUPABASE_URL"
+            exit 1
+          fi
+          if [ -z "${E2E_SUPABASE_SERVICE_ROLE_KEY}" ]; then
+            echo "Missing required secret: E2E_SUPABASE_SERVICE_ROLE_KEY"
+            exit 1
+          fi
+          if [ -z "${E2E_SUPABASE_ANON_KEY}" ]; then
+            echo "Missing required secret: E2E_SUPABASE_ANON_KEY"
+            exit 1
+          fi
           set +e
-          pytest -q tests/test_staging_live_supabase_smoke.py 2>&1 | tee smoke-output.txt
+          pytest -q tests/test_staging_live_supabase_smoke.py tests/test_health_profile_live_smoke.py 2>&1 | tee smoke-output.txt
           test_exit_code=${PIPESTATUS[0]}
           echo "exit_code=${test_exit_code}" >> "$GITHUB_OUTPUT"
           exit ${test_exit_code}
