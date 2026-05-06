@@ -352,6 +352,21 @@ async def send_welcome_email(
                 </tr>
               </table>
 
+              <!-- Help Center block -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:16px;">
+                <tr>
+                  <td style="background:#f0fdf9;border:1px solid #a7f3d0;border-radius:10px;padding:16px 20px;text-align:center;">
+                    <div style="font-size:13px;color:#475569;line-height:1.6;">
+                      <span style="font-size:16px;">📖</span>&nbsp;
+                      <strong style="color:#0f6e56;">New to VITALOOP?</strong>
+                      Visit our
+                      <a href="https://vitaloop.today/help" style="color:#1d9e75;font-weight:600;text-decoration:none;">Help Center</a>
+                      — step-by-step guides on uploading labs, reading your results, and getting the most out of your protocol.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
             </td>
           </tr>
 
