@@ -49,6 +49,7 @@ const ForInvestors = lazy(() => import('./pages/ForInvestors.jsx'))
 const ForNutritionists = lazy(() => import('./pages/ForNutritionists.jsx'))
 const Privacy = lazy(() => import('./pages/Privacy.jsx'))
 const Terms = lazy(() => import('./pages/Terms.jsx'))
+const Help = lazy(() => import('./pages/Help.jsx'))
 
 // CRM pages — lazy (role-gated, not on main user path)
 const OpsDashboard = lazy(() => import('./pages/crm/OpsDashboard.jsx'))
@@ -189,6 +190,9 @@ export default function App() {
           <Route path="/for-nutritionists" element={<ForNutritionists />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/help/section/:sectionId" element={<Help />} />
+          <Route path="/help/:articleId" element={<Help />} />
           <Route path="/login" element={<Login />} />
           <Route path="/auth/confirmation" element={<EmailConfirmation />} />
           <Route path="/dashboard" element={renderCabinetRoute(<UserDashboard />, { allowBeforeOnboarding: true })} />
