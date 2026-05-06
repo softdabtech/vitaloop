@@ -226,23 +226,32 @@ async def send_welcome_email(
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Welcome to VITALOOP</title>
 </head>
-<body style="margin:0;padding:0;background:#0b1221;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#e2e8f0;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 12px;background:#0b1221;">
+<body style="margin:0;padding:0;background:#f4f7f8;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 12px;background:#f4f7f8;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-radius:18px;overflow:hidden;border:1px solid rgba(100,180,240,0.15);">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-radius:18px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);border:1px solid #e2e8f0;">
 
           <!-- HEADER -->
           <tr>
-            <td style="background:linear-gradient(135deg,#0a2540 0%,#0e3d6b 40%,#0c5a82 70%,#0d8a8a 100%);padding:36px 32px 28px;text-align:center;">
-              <div style="display:inline-block;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:12px;padding:10px 20px;margin-bottom:18px;">
-                <span style="font-size:20px;font-weight:800;letter-spacing:0.12em;color:#ffffff;text-transform:uppercase;">VITA<span style="color:#7dd3c0;">LOOP</span></span>
-              </div>
-              <div style="font-size:13px;letter-spacing:0.15em;font-weight:600;text-transform:uppercase;color:rgba(180,230,255,0.7);margin-bottom:10px;">Health Intelligence Platform</div>
-              <h1 style="margin:0;font-size:26px;font-weight:700;line-height:1.25;color:#ffffff;">
+            <td style="background:linear-gradient(135deg,#0b4033 0%,#0f6e56 50%,#1d9e75 100%);padding:36px 32px 32px;text-align:center;">
+              <!-- Logo -->
+              <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto 20px;">
+                <tr>
+                  <td style="vertical-align:middle;padding-right:12px;">
+                    <img src="https://vitaloop.today/icons/icon-192.png" alt="VITALOOP" width="44" height="44"
+                      style="display:block;border-radius:10px;border:2px solid rgba(255,255,255,0.25);"/>
+                  </td>
+                  <td style="vertical-align:middle;">
+                    <span style="font-size:22px;font-weight:800;letter-spacing:0.1em;color:#ffffff;text-transform:uppercase;">VITA<span style="color:#86efcb;">LOOP</span></span>
+                  </td>
+                </tr>
+              </table>
+              <div style="font-size:11px;letter-spacing:0.18em;font-weight:600;text-transform:uppercase;color:rgba(180,255,220,0.7);margin-bottom:12px;">Health Intelligence Platform</div>
+              <h1 style="margin:0;font-size:28px;font-weight:700;line-height:1.2;color:#ffffff;">
                 Welcome, {safe_name}!
               </h1>
-              <p style="margin:10px 0 0;font-size:15px;color:rgba(200,235,255,0.75);line-height:1.5;">
+              <p style="margin:12px 0 0;font-size:15px;color:rgba(200,255,230,0.8);line-height:1.5;">
                 Your personal health intelligence cabinet is ready.
               </p>
             </td>
@@ -250,58 +259,58 @@ async def send_welcome_email(
 
           <!-- BODY -->
           <tr>
-            <td style="background:#0f1c2e;padding:32px;">
+            <td style="background:#ffffff;padding:32px 32px 24px;">
 
               <!-- Login info block -->
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:28px;">
                 <tr>
-                  <td style="background:#0a1628;border:1px solid rgba(100,180,240,0.2);border-radius:12px;padding:18px 20px;">
-                    <div style="font-size:11px;letter-spacing:0.12em;font-weight:700;text-transform:uppercase;color:rgba(100,180,240,0.7);margin-bottom:10px;">Your account credentials</div>
+                  <td style="background:#f0fdf9;border:1px solid #a7f3d0;border-radius:12px;padding:18px 20px;">
+                    <div style="font-size:11px;letter-spacing:0.12em;font-weight:700;text-transform:uppercase;color:#0f6e56;margin-bottom:10px;">Your account credentials</div>
                     <table role="presentation" cellspacing="0" cellpadding="0">
                       <tr>
-                        <td style="font-size:13px;color:#94a3b8;padding-bottom:6px;padding-right:12px;">Login (email):</td>
-                        <td style="font-size:13px;font-weight:600;color:#e2e8f0;padding-bottom:6px;">{safe_email}</td>
+                        <td style="font-size:13px;color:#64748b;padding-bottom:6px;padding-right:16px;white-space:nowrap;">Login (email):</td>
+                        <td style="font-size:13px;font-weight:600;color:#0f172a;padding-bottom:6px;">{safe_email}</td>
                       </tr>
                       <tr>
-                        <td style="font-size:13px;color:#94a3b8;padding-right:12px;">Password:</td>
-                        <td style="font-size:13px;color:#94a3b8;">The password you set during registration</td>
+                        <td style="font-size:13px;color:#64748b;padding-right:16px;white-space:nowrap;">Password:</td>
+                        <td style="font-size:13px;color:#64748b;">The password you set during registration</td>
                       </tr>
                     </table>
                     <div style="margin-top:12px;">
-                      <a href="{login_url}" style="font-size:12px;color:rgba(100,180,240,0.8);text-decoration:none;">→ Sign in at vitaloop.today</a>
+                      <a href="{login_url}" style="font-size:13px;color:#1d9e75;text-decoration:none;font-weight:600;">→ Sign in at vitaloop.today</a>
                     </div>
                   </td>
                 </tr>
               </table>
 
-              <!-- How to get started -->
-              <div style="font-size:11px;letter-spacing:0.12em;font-weight:700;text-transform:uppercase;color:rgba(100,180,240,0.7);margin-bottom:16px;">How to get started</div>
+              <!-- How to get started heading -->
+              <div style="font-size:11px;letter-spacing:0.15em;font-weight:700;text-transform:uppercase;color:#1d9e75;margin-bottom:18px;">How to get started</div>
 
               <!-- Step 1 -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:14px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:16px;">
                 <tr>
-                  <td width="44" style="vertical-align:top;padding-top:2px;">
-                    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0e3d6b,#0d8a8a);display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#ffffff;text-align:center;line-height:32px;">1</div>
+                  <td width="48" style="vertical-align:top;padding-top:1px;">
+                    <div style="width:34px;height:34px;border-radius:50%;background:#1d9e75;text-align:center;line-height:34px;font-size:14px;font-weight:800;color:#ffffff;">1</div>
                   </td>
                   <td style="vertical-align:top;">
-                    <div style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Upload your lab report</div>
-                    <div style="font-size:13px;color:#94a3b8;line-height:1.5;">
-                      Go to <strong style="color:#7dd3c0;">Dashboard → Upload Lab Report</strong>. Drag and drop any PDF or image with blood/urine test results. The AI extracts all biomarkers automatically in under 60 seconds.
+                    <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px;">Upload your lab report</div>
+                    <div style="font-size:13px;color:#475569;line-height:1.6;">
+                      Drop any PDF or image with blood/urine test results in <strong style="color:#0f6e56;">Dashboard → Upload Lab Report</strong>. AI extracts 85+ biomarkers automatically in under 60 seconds.
                     </div>
                   </td>
                 </tr>
               </table>
 
               <!-- Step 2 -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:14px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:16px;">
                 <tr>
-                  <td width="44" style="vertical-align:top;padding-top:2px;">
-                    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0e3d6b,#0d8a8a);display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#ffffff;text-align:center;line-height:32px;">2</div>
+                  <td width="48" style="vertical-align:top;padding-top:1px;">
+                    <div style="width:34px;height:34px;border-radius:50%;background:#1d9e75;text-align:center;line-height:34px;font-size:14px;font-weight:800;color:#ffffff;">2</div>
                   </td>
                   <td style="vertical-align:top;">
-                    <div style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Get AI-powered analysis</div>
-                    <div style="font-size:13px;color:#94a3b8;line-height:1.5;">
-                      VITALOOP analyses every biomarker against clinical norms and highlights what needs attention — deficiencies, risks, trends. Free plan includes standard analysis; Premium unlocks deep insights.
+                    <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px;">Get AI-powered analysis</div>
+                    <div style="font-size:13px;color:#475569;line-height:1.6;">
+                      VITALOOP flags deficiencies, risks, and trends ranked by severity. Free plan includes standard analysis; <strong style="color:#0f6e56;">Premium</strong> unlocks exact dosage protocols.
                     </div>
                   </td>
                 </tr>
@@ -310,23 +319,23 @@ async def send_welcome_email(
               <!-- Step 3 -->
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:28px;">
                 <tr>
-                  <td width="44" style="vertical-align:top;padding-top:2px;">
-                    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0e3d6b,#0d8a8a);display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#ffffff;text-align:center;line-height:32px;">3</div>
+                  <td width="48" style="vertical-align:top;padding-top:1px;">
+                    <div style="width:34px;height:34px;border-radius:50%;background:#1d9e75;text-align:center;line-height:34px;font-size:14px;font-weight:800;color:#ffffff;">3</div>
                   </td>
                   <td style="vertical-align:top;">
-                    <div style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Follow your personal protocol</div>
-                    <div style="font-size:13px;color:#94a3b8;line-height:1.5;">
-                      Open <strong style="color:#7dd3c0;">Protocols</strong> to see your personalised supplement and lifestyle recommendations based on your actual biomarker profile.
+                    <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px;">Follow your personal protocol</div>
+                    <div style="font-size:13px;color:#475569;line-height:1.6;">
+                      Open <strong style="color:#0f6e56;">Protocols</strong> for personalized supplement and lifestyle recommendations — exact dosages, timing, and 12-week milestones.
                     </div>
                   </td>
                 </tr>
               </table>
 
               <!-- CTA Button -->
-              <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="margin-bottom:24px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="margin-bottom:28px;">
                 <tr>
                   <td align="center">
-                    <a href="{safe_url}" style="display:inline-block;padding:15px 40px;border-radius:999px;background:linear-gradient(90deg,#0e3d6b,#0d8a8a);color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;letter-spacing:0.03em;">Open My Dashboard →</a>
+                    <a href="{safe_url}" style="display:inline-block;padding:15px 44px;border-radius:999px;background:#1d9e75;color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;letter-spacing:0.02em;">Open My Dashboard →</a>
                   </td>
                 </tr>
               </table>
@@ -334,11 +343,10 @@ async def send_welcome_email(
               <!-- Tips block -->
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td style="background:#0a1628;border:1px solid rgba(100,180,240,0.15);border-radius:10px;padding:16px 18px;">
-                    <div style="font-size:12px;color:#64748b;line-height:1.6;">
-                      💡 <strong style="color:#7dd3c0;">Tips:</strong>
-                      Fill in your <strong style="color:#cbd5e1;">Health Profile</strong> (age, sex, weight) for more accurate analysis.
-                      You can also enter biomarkers manually without uploading a file.
+                  <td style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #1d9e75;border-radius:0 8px 8px 0;padding:14px 16px;">
+                    <div style="font-size:13px;color:#475569;line-height:1.6;">
+                      <strong style="color:#1d9e75;">💡 Tip:</strong>
+                      Fill in your <strong style="color:#334155;">Health Profile</strong> (age, sex, weight) for more accurate AI analysis. You can also enter biomarkers manually without uploading a file.
                     </div>
                   </td>
                 </tr>
@@ -349,14 +357,21 @@ async def send_welcome_email(
 
           <!-- FOOTER -->
           <tr>
-            <td style="background:#080f1c;padding:20px 32px;text-align:center;border-top:1px solid rgba(100,180,240,0.08);">
-              <div style="font-size:12px;color:#475569;line-height:1.6;">
+            <td style="background:#f8fafc;padding:20px 32px;text-align:center;border-top:1px solid #e2e8f0;">
+              <div style="font-size:12px;color:#94a3b8;line-height:1.7;">
                 You received this email because you registered at
-                <a href="https://vitaloop.today" style="color:rgba(100,180,240,0.6);text-decoration:none;">vitaloop.today</a>.<br/>
-                Questions? Reply to this email or visit our <a href="https://vitaloop.today" style="color:rgba(100,180,240,0.6);text-decoration:none;">help centre</a>.
+                <a href="https://vitaloop.today" style="color:#1d9e75;text-decoration:none;">vitaloop.today</a>.<br/>
+                Questions? Reply to this email or contact <a href="mailto:info@softdab.tech" style="color:#1d9e75;text-decoration:none;">info@softdab.tech</a>
               </div>
-              <div style="margin-top:12px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#1e3a5f;">
-                VITALOOP · Health Intelligence Platform
+              <div style="margin-top:14px;">
+                <img src="https://vitaloop.today/icons/icon-192.png" alt="" width="24" height="24"
+                  style="display:inline-block;border-radius:6px;vertical-align:middle;margin-right:6px;opacity:0.5;"/>
+                <span style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#cbd5e1;vertical-align:middle;">
+                  VITALOOP · Health Intelligence Platform
+                </span>
+              </div>
+              <div style="margin-top:8px;font-size:11px;color:#cbd5e1;">
+                NOT MEDICAL ADVICE. Always work with a qualified clinician for diagnosis and treatment.
               </div>
             </td>
           </tr>
