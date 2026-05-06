@@ -3,26 +3,35 @@ import { Suspense, lazy } from 'react'
 import Landing from './pages/Landing.jsx'
 import Login from './pages/Login.jsx'
 import NotFound from './pages/NotFound.jsx'
-import Product from './pages/Product.jsx'
-import Features from './pages/Features.jsx'
-import Pricing from './pages/Pricing.jsx'
-import Stories from './pages/Stories.jsx'
-import Investors from './pages/Investors.jsx'
-import FAQ from './pages/FAQ.jsx'
+import AppLoadingScreen from './components/AppLoadingScreen.jsx'
 import { useAuth } from './hooks/useAuth.js'
 import { useSubscription } from './hooks/useSubscription.js'
 import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
 import { useEffect, useState } from 'react'
 import { useOnboardingState } from './hooks/useOnboardingState.js'
-import SupportChat from './components/SupportChat.jsx'
-import PaywallModal from './components/PaywallModal.jsx'
-import AppLoadingScreen from './components/AppLoadingScreen.jsx'
 import { gaPageView } from './lib/analytics.js'
 
-// Critical user path — eager
-import EmailConfirmation from './pages/EmailConfirmation.jsx'
+// Marketing pages — lazy
+const Product = lazy(() => import('./pages/Product.jsx'))
+const Features = lazy(() => import('./pages/Features.jsx'))
+const Pricing = lazy(() => import('./pages/Pricing.jsx'))
+const Stories = lazy(() => import('./pages/Stories.jsx'))
+const Investors = lazy(() => import('./pages/Investors.jsx'))
+const FAQ = lazy(() => import('./pages/FAQ.jsx'))
+const EmailConfirmation = lazy(() => import('./pages/EmailConfirmation.jsx'))
+const ExampleReport = lazy(() => import('./pages/ExampleReport.jsx'))
+const HowItWorks = lazy(() => import('./pages/HowItWorks.jsx'))
+const ForInvestors = lazy(() => import('./pages/ForInvestors.jsx'))
+const ForNutritionists = lazy(() => import('./pages/ForNutritionists.jsx'))
+const Privacy = lazy(() => import('./pages/Privacy.jsx'))
+const Terms = lazy(() => import('./pages/Terms.jsx'))
+const Help = lazy(() => import('./pages/Help.jsx'))
 
-// All other pages — lazy (reduces initial bundle by ~60%)
+// UI components — lazy
+const SupportChat = lazy(() => import('./components/SupportChat.jsx'))
+const PaywallModal = lazy(() => import('./components/PaywallModal.jsx'))
+
+// Cabinet pages — lazy
 const UserDashboard = lazy(() => import('./pages/UserDashboard.jsx'))
 const Upload = lazy(() => import('./pages/Upload.jsx'))
 const Results = lazy(() => import('./pages/Results.jsx'))
@@ -41,15 +50,6 @@ const Onboarding = lazy(() => import('./pages/Onboarding.jsx'))
 const WeeklyCheckIn = lazy(() => import('./pages/WeeklyCheckIn.jsx'))
 const Questionnaire = lazy(() => import('./pages/Questionnaire.jsx'))
 const UserCabinetLayout = lazy(() => import('./components/dashboard/UserCabinetLayout.jsx'))
-
-// Marketing pages — lazy
-const ExampleReport = lazy(() => import('./pages/ExampleReport.jsx'))
-const HowItWorks = lazy(() => import('./pages/HowItWorks.jsx'))
-const ForInvestors = lazy(() => import('./pages/ForInvestors.jsx'))
-const ForNutritionists = lazy(() => import('./pages/ForNutritionists.jsx'))
-const Privacy = lazy(() => import('./pages/Privacy.jsx'))
-const Terms = lazy(() => import('./pages/Terms.jsx'))
-const Help = lazy(() => import('./pages/Help.jsx'))
 
 // CRM pages — lazy (role-gated, not on main user path)
 const OpsDashboard = lazy(() => import('./pages/crm/OpsDashboard.jsx'))
@@ -153,7 +153,7 @@ function FloatingSupportChat() {
         }
       </button>
 
-      {chatOpen && <SupportChat onClose={() => setChatOpen(false)} />}
+      {chatOpen && <Suspense fallback={null}><SupportChat onClose={() => setChatOpen(false)} /></Suspense>}
     </>
   )
 }
@@ -172,7 +172,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <PaywallModal />
+      <Suspense fallback={null}><PaywallModal /></Suspense>
       <GAPageTracker />
       <ScrollToTop />
       <Suspense fallback={<RouteFallback />}>

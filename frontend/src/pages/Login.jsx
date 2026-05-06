@@ -8,6 +8,7 @@ import { trackFunnelEvent } from '../lib/funnel.js'
 import { gaSignUp, gaLogin } from '../lib/analytics.js'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import Seo from '../components/Seo.jsx'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -485,6 +486,12 @@ export default function Login() {
   }
 
   return (
+    <>
+      <Seo
+        title="Log In or Sign Up | VITALOOP"
+        description="Sign in to your VITALOOP account or create a free account to start interpreting blood test results with AI. No credit card required."
+        path="/login"
+      />
     <div style={{
       minHeight: '100svh', display: 'flex',
       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Premium Display", sans-serif',
@@ -795,5 +802,6 @@ export default function Login() {
         <AbstractPanel side="right" variant={isSignUp ? 'signup' : 'signin'} />
       </div>
     </div>
+    </>
   )
 }
