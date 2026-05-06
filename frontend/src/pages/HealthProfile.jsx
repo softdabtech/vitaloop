@@ -84,6 +84,9 @@ export default function HealthProfile() {
     medications: '',
     allergies: '',
     pregnancy_status: '',
+    current_supplements: '',
+    current_medications: '',
+    prior_diagnoses: '',
   })
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -123,6 +126,9 @@ export default function HealthProfile() {
           medications: data.medications || '',
           allergies: data.allergies || '',
           pregnancy_status: data.pregnancy_status || '',
+          current_supplements: Array.isArray(data.current_supplements) ? data.current_supplements.join(', ') : (data.current_supplements || ''),
+          current_medications: Array.isArray(data.current_medications) ? data.current_medications.join(', ') : (data.current_medications || ''),
+          prior_diagnoses: data.prior_diagnoses || '',
         })
       } catch (error) {
         const meta = user?.user_metadata || {}
@@ -136,6 +142,9 @@ export default function HealthProfile() {
           medications: meta.medications || '',
           allergies: meta.allergies || '',
           pregnancy_status: meta.pregnancy_status || '',
+          current_supplements: '',
+          current_medications: '',
+          prior_diagnoses: '',
         })
       } finally {
         setLoading(false)
@@ -150,6 +159,8 @@ export default function HealthProfile() {
   async function saveProfile() {
     setSaving(true)
     try {
+      const supplementsList = profile.current_supplements ? profile.current_supplements.split(',').map(s => s.trim()).filter(Boolean) : []
+      const medicationsList = profile.current_medications ? profile.current_medications.split(',').map(s => s.trim()).filter(Boolean) : []
       const response = await api.patch('/profile', {
         age: profile.age ? parseInt(profile.age) : null,
         sex: profile.sex,
@@ -160,6 +171,9 @@ export default function HealthProfile() {
         medications: profile.medications || null,
         allergies: profile.allergies || null,
         pregnancy_status: profile.pregnancy_status || null,
+        current_supplements: supplementsList.length ? supplementsList : null,
+        current_medications: medicationsList.length ? medicationsList : null,
+        prior_diagnoses: profile.prior_diagnoses || null,
       })
       const data = response.data?.profile || {}
       setProfile({
@@ -172,6 +186,9 @@ export default function HealthProfile() {
         medications: data.medications || '',
         allergies: data.allergies || '',
         pregnancy_status: data.pregnancy_status || '',
+        current_supplements: Array.isArray(data.current_supplements) ? data.current_supplements.join(', ') : (data.current_supplements || ''),
+        current_medications: Array.isArray(data.current_medications) ? data.current_medications.join(', ') : (data.current_medications || ''),
+        prior_diagnoses: data.prior_diagnoses || '',
       })
       toast.success('Health profile updated!')
     } catch (error) {
@@ -351,6 +368,48 @@ export default function HealthProfile() {
                   <option value="planning">Planning to conceive</option>
                   <option value="none">Not applicable</option>
                 </select>
+              </Field>
+
+              <Field label="Current supplements (comma-separated)">
+                <textarea
+                  value={profile.current_supplements}
+                  onChange={(e) => setProfile({ ...profile, current_supplements: e.target.value })}
+                  placeholder="e.g., Vitamin D 2000IU, Magnesium 400mg, Omega-3..."
+                  style={{
+                    ...fieldStyle,
+                    minHeight: 80,
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </Field>
+
+              <Field label="Current prescribed medications (comma-separated)">
+                <textarea
+                  value={profile.current_medications}
+                  onChange={(e) => setProfile({ ...profile, current_medications: e.target.value })}
+                  placeholder="e.g., Metformin 500mg, Lisinopril 10mg..."
+                  style={{
+                    ...fieldStyle,
+                    minHeight: 80,
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </Field>
+
+              <Field label="Prior diagnoses / chronic conditions">
+                <textarea
+                  value={profile.prior_diagnoses}
+                  onChange={(e) => setProfile({ ...profile, prior_diagnoses: e.target.value })}
+                  placeholder="e.g., Type 2 diabetes, Hypothyroidism, IBS..."
+                  style={{
+                    ...fieldStyle,
+                    minHeight: 80,
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                  }}
+                />
               </Field>
             </div>
 

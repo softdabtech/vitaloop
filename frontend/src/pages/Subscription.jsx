@@ -83,7 +83,7 @@ function PlanCard({ plan, planKey, currentPlan, onSelect, isLoading }) {
         </div>
       )}
 
-      {plan.comingSoon && (
+      {plan.comingSoon && !isCurrentPlan && (
         <div className="absolute top-4 right-4 flex items-center gap-1 bg-slate-400 text-white px-3 py-1 rounded-full text-xs font-semibold">
           Coming Soon
         </div>
@@ -312,7 +312,7 @@ export default function Subscription() {
               <div className="rounded-xl bg-blue-50 p-4 border border-blue-200">
                 <div className="text-xs font-semibold uppercase tracking-wide text-blue-600 mb-2">Uploads</div>
                 <div className="text-2xl font-bold text-blue-900">
-                  {currentPlan === 'free' ? `${Math.max(0, uploadLimit - uploadCount)}/month` : 'Unlimited'}
+                  {currentPlan === 'free' && uploadLimit !== null ? `${Math.max(0, uploadLimit - uploadCount)}/month` : 'Unlimited'}
                 </div>
               </div>
 
