@@ -164,14 +164,14 @@ export default function Login() {
 
   const authTheme = isSignUp
     ? {
-      appBg: '#071024',
-      centerBg: '#0b173f',
-      borderColor: 'rgba(96,165,250,0.25)',
+      appBg: '#08102e',
+      centerBg: 'linear-gradient(180deg, #0f1f52 0%, #0b173f 60%, #080e2a 100%)',
+      borderColor: 'rgba(96,165,250,0.22)',
     }
     : {
-      appBg: '#050e09',
-      centerBg: '#0a0a0a',
-      borderColor: 'rgba(255,255,255,0.05)',
+      appBg: '#04342C',
+      centerBg: 'linear-gradient(180deg, #093320 0%, #071a12 55%, #040d08 100%)',
+      borderColor: 'rgba(29,158,117,0.22)',
     }
 
   useEffect(() => {
