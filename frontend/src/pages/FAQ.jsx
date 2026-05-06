@@ -81,7 +81,7 @@ const FAQ_ITEMS = [
       },
       {
         q: 'What\'s the Practitioner plan?',
-        a: 'The Practitioner plan is $29.99/month and lets doctors manage up to 50 patients, batch-send recommendations, track adherence, and generate clinical reports automatically.',
+        a: 'The Practitioner plan is $29/month and lets doctors manage up to 50 patients, batch-send recommendations, track adherence, and generate clinical reports automatically.',
       },
       {
         q: 'Do you integrate with EMR systems?',

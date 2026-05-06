@@ -226,7 +226,7 @@ export default function LabResultsList() {
                         onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'LAB_HISTORY_ACCESS' } }))}
                         className="mt-3 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition"
                       >
-                        Upgrade for $9.99/month
+                        Upgrade for $19.99/month
                       </button>
                     </div>
                   </div>

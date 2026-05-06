@@ -73,7 +73,7 @@ export function AnimatedHero() {
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-8 border-t border-slate-700">
               <StatBox value="Ferritin" label="14 → 68 in 12 weeks" delay={0.5} />
-              <StatBox value="$9.99" label="/mo vs $400 spent" delay={0.6} />
+              <StatBox value="$19.99" label="/mo vs $400 spent" delay={0.6} />
               <StatBox value="7 days" label="until first check-in" delay={0.7} />
               <StatBox value="Free" label="first result analysis" delay={0.8} />
             </div>

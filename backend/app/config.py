@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_price_id: str = ""  # Legacy fallback (same as stripe_price_id_personal)
-    stripe_price_id_personal: str = ""  # Personal Premium $9.99/mo
+    stripe_price_id_personal: str = ""  # Premium $19.99/mo
     stripe_price_id_practitioner: str = ""  # Practitioner Premium $29/mo
     stripe_success_url: str = "https://vitaloop.today/dashboard?sub=success"
     stripe_cancel_url: str = "https://vitaloop.today/dashboard?sub=cancelled"

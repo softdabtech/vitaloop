@@ -86,7 +86,7 @@ export function LightHero() {
               className="grid grid-cols-2 gap-6 pt-8 border-t border-slate-200"
             >
               <div>
-                <div className="text-2xl font-bold text-slate-900">$9.99/mo</div>
+                <div className="text-2xl font-bold text-slate-900">$19.99/mo</div>
                 <div className="text-sm text-slate-600">vs $400 spent</div>
               </div>
               <div>
