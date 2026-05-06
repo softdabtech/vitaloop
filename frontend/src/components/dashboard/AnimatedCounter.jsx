@@ -1,5 +1,4 @@
-import { useEffect, useRef } from 'react'
-import { motion, useMotionValue, useTransform } from 'framer-motion'
+import { useEffect, useState } from 'react'
 
 /**
  * AnimatedCounter Component
@@ -16,31 +15,47 @@ export default function AnimatedCounter({
   className = '',
   animated = true,
 }) {
-  const count = useMotionValue(0)
-  const rounded = useTransform(count, (latest) => {
-    const rounded = Math.round(latest * Math.pow(10, decimals)) / Math.pow(10, decimals)
-    return decimals > 0 ? rounded.toFixed(decimals) : Math.round(rounded)
-  })
+  const [displayValue, setDisplayValue] = useState(value)
 
   useEffect(() => {
     if (!animated) {
-      count.set(value)
+      setDisplayValue(value)
       return
     }
 
-    const animation = count.animate(value, {
-      duration: duration,
-      ease: [0.25, 0.46, 0.45, 0.94], // easeOutQuad-like
-    })
+    const startTime = Date.now()
+    const startValue = displayValue
+    const difference = value - startValue
 
-    return () => animation.stop()
-  }, [value, duration, animated, count])
+    const animate = () => {
+      const elapsed = Date.now() - startTime
+      const progress = Math.min(elapsed / (duration * 1000), 1)
+
+      // Easing function: easeOutQuad
+      const easeProgress = 1 - (1 - progress) * (1 - progress)
+      const currentValue = startValue + difference * easeProgress
+
+      const rounded = Math.round(currentValue * Math.pow(10, decimals)) / Math.pow(10, decimals)
+      const formatted = decimals > 0 ? rounded.toFixed(decimals) : Math.round(rounded)
+
+      setDisplayValue(formatted)
+
+      if (progress < 1) {
+        requestAnimationFrame(animate)
+      } else {
+        setDisplayValue(value)
+      }
+    }
+
+    const animationId = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(animationId)
+  }, [value, duration, animated, decimals, displayValue])
 
   return (
-    <motion.span className={className}>
+    <span className={className}>
       {prefix}
-      {rounded}
+      {displayValue}
       {suffix}
-    </motion.span>
+    </span>
   )
 }
