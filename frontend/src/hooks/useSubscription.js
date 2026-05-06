@@ -7,8 +7,8 @@ export function useSubscription() {
   const [subStatus, setSubStatus] = useState('free')
   const [isPremium, setIsPremium] = useState(false)
   const [uploadCount, setUploadCount] = useState(0)
-  const [uploadLimit, setUploadLimit] = useState(1)
-  const [uploadsRemaining, setUploadsRemaining] = useState(1)
+  const [uploadLimit, setUploadLimit] = useState(null)
+  const [uploadsRemaining, setUploadsRemaining] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(() => {
