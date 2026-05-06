@@ -9,9 +9,9 @@ REMOTE_HOST="root@159.65.252.227"
 REMOTE_DIST_DIR="/var/www/VITALOOP/frontend/dist/"
 
 # Rsync dist to server (delete removed files, preserve permissions)
-rsync -az --delete "$LOCAL_DIST_DIR/" "$REMOTE_HOST:$REMOTE_DIST_DIR"
+rsync -az --delete -e "ssh -i ~/.ssh/softdab_new" "$LOCAL_DIST_DIR/" "$REMOTE_HOST:$REMOTE_DIST_DIR"
 
-# Optionally, reload nginx or frontend service if needed
-# ssh $REMOTE_HOST 'systemctl reload nginx'
+# Reload nginx to clear any caches
+ssh -i ~/.ssh/softdab_new "$REMOTE_HOST" 'systemctl reload nginx'
 
 echo "✅ Frontend dist deployed to $REMOTE_HOST:$REMOTE_DIST_DIR"
