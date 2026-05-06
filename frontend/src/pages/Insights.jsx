@@ -156,7 +156,12 @@ export default function Insights() {
       <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
         <div>
           {tab === 'insights' && (
-            <section className="vtl-light-card rounded-3xl p-6">
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="vtl-light-card rounded-3xl p-6"
+            >
               <div className="mb-5 text-lg font-semibold text-slate-900">Current insights</div>
 
               {insights.length === 0 && (
@@ -209,11 +214,16 @@ export default function Insights() {
                   )
                 })}
               </div>
-            </section>
+            </motion.section>
           )}
 
           {tab === 'alerts' && (
-            <section className="vtl-light-card rounded-3xl p-6">
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="vtl-light-card rounded-3xl p-6"
+            >
               <div className="mb-5 text-lg font-semibold text-slate-900">Biomarker Alerts</div>
 
               {biomarkers.length === 0 ? (
@@ -227,11 +237,16 @@ export default function Insights() {
                   userPreferences={{}}
                 />
               )}
-            </section>
+            </motion.section>
           )}
 
           {tab === 'tips' && (
-            <section className="vtl-light-card rounded-3xl p-6">
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="vtl-light-card rounded-3xl p-6"
+            >
               <div className="mb-5 text-lg font-semibold text-slate-900">Personalized Health Tips</div>
 
               {biomarkers.length === 0 ? (
@@ -249,11 +264,16 @@ export default function Insights() {
                   }}
                 />
               )}
-            </section>
+            </motion.section>
           )}
 
           {tab === 'trends' && (
-            <section className="vtl-light-card rounded-3xl p-6">
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="vtl-light-card rounded-3xl p-6"
+            >
               <div className="mb-5 text-lg font-semibold text-slate-900">Trend Analysis</div>
 
               {biomarkers.length === 0 ? (
@@ -272,11 +292,16 @@ export default function Insights() {
                   }))}
                 />
               )}
-            </section>
+            </motion.section>
           )}
 
           {tab === 'timeline' && (
-            <section className="vtl-light-card rounded-3xl p-6">
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="vtl-light-card rounded-3xl p-6"
+            >
               <div className="mb-5 text-lg font-semibold text-slate-900">Activity timeline</div>
 
               {timeline.length === 0 && (
@@ -302,18 +327,24 @@ export default function Insights() {
                   </motion.div>
                 ))}
               </div>
-            </section>
+            </motion.section>
           )}
         </div>
 
-        <aside className="vtl-light-card rounded-3xl p-6 xl:sticky xl:top-24 xl:h-fit">
+        <motion.aside
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4 }}
+          className="vtl-light-card rounded-3xl p-6 xl:sticky xl:top-24 xl:h-fit"
+        >
           <div className="mb-4 text-lg font-semibold text-slate-900">How insights work</div>
           <div className="space-y-3 text-sm text-slate-500">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">AI analyzes your uploaded biomarkers and symptoms to identify trends — not just flag out-of-range values.</div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">Insights update automatically after each new upload or weekly check-in, or you can refresh them manually.</div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">Each insight ends with a concrete next step: upload, recheck, adjust your protocol, or consult a practitioner.</div>
           </div>
-        </aside>
+        </motion.aside>
       </div>
     </div>
   )

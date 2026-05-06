@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, BrainCircuit, CheckCircle2, FileText, HeartPulse, LayoutDashboard, Sparkles, Stethoscope, TrendingUp, Upload } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
 import Footer from '../components/landing/Footer.jsx'
+import { PageHeader } from '../components/landing/PageHeader.jsx'
 
 export default function HowItWorks() {
   const navigate = useNavigate()
@@ -73,15 +74,7 @@ export default function HowItWorks() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_88%_6%,rgba(14,165,233,0.06),transparent_30%)]" />
       </div>
 
-      <div className="mx-auto max-w-[1240px] px-4 py-6 sm:px-6">
-        <button
-          onClick={() => navigate('/')}
-          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-slate-100"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to site
-        </button>
-      </div>
+      <PageHeader />
 
       <section className="mx-auto grid max-w-[1240px] gap-8 px-4 pb-14 pt-8 sm:px-6 lg:grid-cols-[1.02fr_0.98fr] lg:pt-12">
         <div>

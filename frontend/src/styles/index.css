@@ -1,3 +1,9 @@
+/* Design System Imports - MUST come first */
+@import './animations.css';
+@import './cabinet-design-system.css';
+@import './dashboard2026.css';
+@import './userDashboard.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

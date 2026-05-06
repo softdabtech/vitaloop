@@ -1,0 +1,520 @@
+/* ============================================
+   Cabinet Design System — Premium UI Tokens
+   Based on Landing Page Design Language
+   ============================================ */
+
+:root {
+  /* ── Color Palette (Landing-inspired) ── */
+  --cabinet-primary-50:   #E1F5EE;
+  --cabinet-primary-100:  #B3E5DB;
+  --cabinet-primary-200:  #80D4C7;
+  --cabinet-primary-300:  #5DCAA5;
+  --cabinet-primary-400:  #2DB887;
+  --cabinet-primary-500:  #1D9E75;  /* Primary emerald */
+  --cabinet-primary-600:  #0F6E56;  /* Darker emerald */
+  --cabinet-primary-700:  #0A5244;
+
+  --cabinet-slate-50:     #f8fafc;
+  --cabinet-slate-100:    #f1f5f9;
+  --cabinet-slate-200:    #e2e8f0;
+  --cabinet-slate-300:    #cbd5e1;
+  --cabinet-slate-500:    #64748b;
+  --cabinet-slate-600:    #475569;
+  --cabinet-slate-700:    #334155;
+  --cabinet-slate-900:    #0f172a;
+
+  --cabinet-rose-50:      #fff7ed;
+  --cabinet-rose-100:     #fee2e2;
+  --cabinet-rose-500:     #ef4444;  /* Critical/warning */
+
+  --cabinet-amber-50:     #fffbeb;
+  --cabinet-amber-100:    #fef3c7;
+  --cabinet-amber-500:    #f59e0b;  /* Warning */
+
+  /* ── Shadow System ── */
+  --cabinet-shadow-sm:    0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --cabinet-shadow-md:    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --cabinet-shadow-lg:    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --cabinet-shadow-xl:    0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --cabinet-shadow-2xl:   0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+  /* Premium shadow with emerald glow */
+  --cabinet-shadow-premium: 0 20px 25px -5px rgb(0 0 0 / 0.08),
+                             0 8px 10px -6px rgb(0 0 0 / 0.06),
+                             inset 0 1px 0 rgba(29, 158, 117, 0.08);
+
+  --cabinet-shadow-glow:   0 0 0 4px rgba(29, 158, 117, 0.15),
+                            0 20px 25px -5px rgb(0 0 0 / 0.08);
+
+  /* ── Border Radius ── */
+  --cabinet-radius-sm:    8px;
+  --cabinet-radius-md:    12px;
+  --cabinet-radius-lg:    16px;
+  --cabinet-radius-xl:    20px;
+  --cabinet-radius-2xl:   28px;
+  --cabinet-radius-full:  9999px;
+
+  /* ── Spacing (Tailwind-compatible) ── */
+  --cabinet-space-1:      4px;
+  --cabinet-space-2:      8px;
+  --cabinet-space-3:      12px;
+  --cabinet-space-4:      16px;
+  --cabinet-space-6:      24px;
+  --cabinet-space-8:      32px;
+  --cabinet-space-12:     48px;
+  --cabinet-space-16:     64px;
+
+  /* ── Typography ── */
+  --cabinet-font-size-xs:    12px;
+  --cabinet-font-size-sm:    14px;
+  --cabinet-font-size-base:  16px;
+  --cabinet-font-size-lg:    18px;
+  --cabinet-font-size-xl:    20px;
+  --cabinet-font-size-2xl:   24px;
+  --cabinet-font-size-3xl:   30px;
+  --cabinet-font-size-4xl:   36px;
+
+  --cabinet-line-height-tight:   1.25;
+  --cabinet-line-height-normal:  1.5;
+  --cabinet-line-height-relaxed: 1.75;
+}
+
+/* ============================================
+   Framer Motion Animation Keyframes
+   ============================================ */
+
+/* Fade-up entrance */
+@keyframes cabinet-fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide in from left */
+@keyframes cabinet-slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Slide in from right */
+@keyframes cabinet-slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Scale up entrance */
+@keyframes cabinet-scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Counter animation (used for animated numbers) */
+@keyframes cabinet-counterPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Glow pulse effect */
+@keyframes cabinet-glowPulse {
+  0%, 100% {
+    opacity: 0.8;
+    box-shadow: 0 0 0 0 rgba(29, 158, 117, 0.4);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 0 8px rgba(29, 158, 117, 0);
+  }
+}
+
+/* Shimmer/skeleton loading */
+@keyframes cabinet-shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Bounce effect for badges */
+@keyframes cabinet-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+/* Fade-up animations */
+.cabinet-fadeUp {
+  animation: cabinet-fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Staggered animations for list items */
+.cabinet-stagger > * {
+  animation: cabinet-fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.cabinet-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.cabinet-stagger > *:nth-child(2) { animation-delay: 80ms; }
+.cabinet-stagger > *:nth-child(3) { animation-delay: 160ms; }
+.cabinet-stagger > *:nth-child(4) { animation-delay: 240ms; }
+.cabinet-stagger > *:nth-child(5) { animation-delay: 320ms; }
+.cabinet-stagger > *:nth-child(6) { animation-delay: 400ms; }
+.cabinet-stagger > *:nth-child(7) { animation-delay: 480ms; }
+.cabinet-stagger > *:nth-child(8) { animation-delay: 560ms; }
+
+/* Premium card styling */
+.cabinet-card {
+  border-radius: var(--cabinet-radius-xl);
+  border: 1px solid var(--cabinet-slate-200);
+  background: white;
+  box-shadow: var(--cabinet-shadow-md);
+  transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cabinet-card-hover:hover {
+  box-shadow: var(--cabinet-shadow-glow);
+  border-color: var(--cabinet-primary-500);
+  transform: translateY(-2px);
+}
+
+/* Gradient backgrounds */
+.cabinet-gradient-primary {
+  background: linear-gradient(135deg, var(--cabinet-primary-500) 0%, var(--cabinet-primary-600) 100%);
+}
+
+.cabinet-gradient-light {
+  background: linear-gradient(135deg, var(--cabinet-primary-50) 0%, rgba(224, 242, 238, 0.5) 100%);
+}
+
+.cabinet-gradient-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.cabinet-gradient-warning {
+  background: linear-gradient(135deg, var(--cabinet-amber-500) 0%, #d97706 100%);
+}
+
+.cabinet-gradient-danger {
+  background: linear-gradient(135deg, var(--cabinet-rose-500) 0%, #dc2626 100%);
+}
+
+/* Glow effect */
+.cabinet-glow {
+  box-shadow: var(--cabinet-shadow-glow);
+}
+
+.cabinet-glow-hover:hover {
+  box-shadow: var(--cabinet-shadow-glow);
+}
+
+/* Border accent */
+.cabinet-border-accent {
+  border: 1px solid var(--cabinet-primary-500);
+  border-radius: var(--cabinet-radius-lg);
+}
+
+/* Text colors */
+.cabinet-text-primary {
+  color: var(--cabinet-slate-900);
+}
+
+.cabinet-text-secondary {
+  color: var(--cabinet-slate-600);
+}
+
+.cabinet-text-muted {
+  color: var(--cabinet-slate-500);
+}
+
+.cabinet-text-emerald {
+  color: var(--cabinet-primary-600);
+}
+
+/* Badge styles */
+.cabinet-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--cabinet-radius-full);
+  padding: 4px 12px;
+  font-size: var(--cabinet-font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.cabinet-badge-primary {
+  background: var(--cabinet-primary-100);
+  color: var(--cabinet-primary-600);
+}
+
+.cabinet-badge-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.cabinet-badge-warning {
+  background: var(--cabinet-amber-100);
+  color: #92400e;
+}
+
+.cabinet-badge-danger {
+  background: var(--cabinet-rose-100);
+  color: #7f1d1d;
+}
+
+/* Button base styles */
+.cabinet-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--cabinet-radius-lg);
+  padding: 12px 24px;
+  font-size: var(--cabinet-font-size-sm);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 44px;
+  gap: 8px;
+}
+
+.cabinet-button-primary {
+  background: var(--cabinet-primary-500);
+  color: white;
+}
+
+.cabinet-button-primary:hover {
+  background: var(--cabinet-primary-600);
+  box-shadow: var(--cabinet-shadow-glow);
+  transform: translateY(-1px);
+}
+
+.cabinet-button-secondary {
+  background: white;
+  color: var(--cabinet-slate-900);
+  border: 1px solid var(--cabinet-slate-200);
+}
+
+.cabinet-button-secondary:hover {
+  background: var(--cabinet-slate-50);
+  border-color: var(--cabinet-primary-500);
+  box-shadow: var(--cabinet-shadow-md);
+}
+
+.cabinet-button-ghost {
+  background: transparent;
+  color: var(--cabinet-primary-600);
+}
+
+.cabinet-button-ghost:hover {
+  background: var(--cabinet-primary-50);
+}
+
+/* Progress bar with gradient */
+.cabinet-progress {
+  height: 6px;
+  border-radius: var(--cabinet-radius-full);
+  background: var(--cabinet-slate-200);
+  overflow: hidden;
+}
+
+.cabinet-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cabinet-primary-500) 0%, var(--cabinet-primary-400) 100%);
+  border-radius: var(--cabinet-radius-full);
+  transition: width 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Skeleton loading */
+.cabinet-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--cabinet-slate-200) 25%,
+    var(--cabinet-slate-100) 50%,
+    var(--cabinet-slate-200) 75%
+  );
+  background-size: 1000px 100%;
+  animation: cabinet-shimmer 2s infinite;
+  border-radius: var(--cabinet-radius-lg);
+}
+
+/* Health ring styling */
+.cabinet-health-ring {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--cabinet-primary-500) 0deg 270deg,
+    var(--cabinet-slate-200) 270deg 360deg
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+.cabinet-health-ring-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  box-shadow: var(--cabinet-shadow-lg);
+}
+
+/* Stat card styling */
+.cabinet-stat-card {
+  border-radius: var(--cabinet-radius-xl);
+  border: 1px solid var(--cabinet-slate-200);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  padding: 24px;
+  box-shadow: var(--cabinet-shadow-md);
+  transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cabinet-stat-card:hover {
+  box-shadow: var(--cabinet-shadow-glow);
+  border-color: var(--cabinet-primary-500);
+  transform: translateY(-4px);
+}
+
+/* Status indicator */
+.cabinet-status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  animation: cabinet-glowPulse 2s ease-in-out infinite;
+}
+
+.cabinet-status-optimal {
+  background: #10b981;
+}
+
+.cabinet-status-warning {
+  background: var(--cabinet-amber-500);
+}
+
+.cabinet-status-critical {
+  background: var(--cabinet-rose-500);
+}
+
+/* Empty state styling */
+.cabinet-empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  border-radius: var(--cabinet-radius-xl);
+  background: linear-gradient(135deg, var(--cabinet-primary-50) 0%, #f0fdf4 100%);
+  border: 2px dashed var(--cabinet-primary-200);
+}
+
+.cabinet-empty-state-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  padding: 20px;
+  border-radius: var(--cabinet-radius-xl);
+  background: white;
+  color: var(--cabinet-primary-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Timeline styling */
+.cabinet-timeline {
+  position: relative;
+  padding-left: 40px;
+}
+
+.cabinet-timeline::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--cabinet-slate-200);
+}
+
+.cabinet-timeline-item {
+  position: relative;
+  margin-bottom: 32px;
+}
+
+.cabinet-timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -36px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--cabinet-primary-500);
+  border: 3px solid white;
+  box-shadow: var(--cabinet-shadow-md);
+}
+
+/* Responsive utilities */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dark mode support (optional for future) */
+@media (prefers-color-scheme: dark) {
+  .cabinet-card {
+    background: var(--cabinet-slate-900);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--cabinet-slate-100);
+  }
+
+  .cabinet-stat-card {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--cabinet-slate-100);
+  }
+}

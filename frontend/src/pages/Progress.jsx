@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import ProgressChart from '../components/ProgressChart.jsx'
 import ProgressPhotoGallery from '../components/ProgressPhotoGallery.jsx'
 import EmptyState from '../components/EmptyState.jsx'
@@ -120,17 +121,36 @@ export default function Progress() {
       ) : (
         <>
           {deltas.length > 0 && (
-            <div className="mb-6 grid gap-3 sm:grid-cols-3">
-              {deltas.map((d) => (
-                <div key={d.key} className="vtl-light-card p-4">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{d.label}</p>
-                  <p className={`text-xl font-bold ${d.pct >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="mb-6 grid gap-3 sm:grid-cols-3"
+            >
+              {deltas.map((d, idx) => (
+                <motion.div
+                  key={d.key}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: idx * 0.1 }}
+                  whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                  className="cabinet-card p-5 transition-all"
+                >
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{d.label}</p>
+                  <motion.p
+                    initial={{ scale: 0.8 }}
+                    whileInView={{ scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: idx * 0.15 + 0.1 }}
+                    className={`text-2xl font-bold ${d.pct >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}
+                  >
                     {d.pct >= 0 ? '+' : ''}{d.pct}%
-                  </p>
-                  <p className="mt-1 text-[11px] text-slate-400">{d.start} to {d.end}</p>
-                </div>
+                  </motion.p>
+                  <p className="mt-2 text-xs text-slate-500">{d.start} → {d.end}</p>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
 
           {uploadsWithBiomarkers.length >= 2 ? (
@@ -154,20 +174,37 @@ export default function Progress() {
             </FeatureGate>
           ) : null}
 
-          <div className="vtl-light-card mt-6 p-5">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="cabinet-card mt-6 p-5"
+          >
             <p className="mb-3 text-sm font-semibold text-slate-700">Upload Timeline</p>
             <div className="space-y-3">
               {data.map((upload, index) => (
-                <div key={upload.id} className="flex items-start gap-3">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                <motion.div
+                  key={upload.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  className="flex items-start gap-3"
+                >
+                  <motion.div
+                    animate={{ scale: [1, 1.3, 1] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
+                    className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-500 flex-shrink-0"
+                  />
                   <div>
-                    <p className="text-sm text-slate-800">Upload #{index + 1}</p>
-                    <p className="text-xs text-slate-400">{upload.test_date || upload.created_at?.slice(0, 10) || 'Unknown date'} · {upload.lab_name || 'Unknown lab'}</p>
+                    <p className="text-sm font-medium text-slate-800">Upload #{index + 1}</p>
+                    <p className="text-xs text-slate-500">{upload.test_date || upload.created_at?.slice(0, 10) || 'Unknown date'} · {upload.lab_name || 'Unknown lab'}</p>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Progress Photo Gallery */}
           <div className="mt-8">

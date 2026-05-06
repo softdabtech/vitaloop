@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { ClipboardList, Filter, CheckCircle2, Clock3, AlertTriangle, Check, Sparkles } from 'lucide-react'
 import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
@@ -156,7 +157,13 @@ export default function Assignments() {
 
         {/* Today's Checklist */}
         {todayItems.length > 0 && (
-          <div className="mb-6 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mb-6 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-6"
+          >
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold text-emerald-900">✅ Today's Checklist</h3>
@@ -221,7 +228,7 @@ export default function Assignments() {
                 <p className="text-sm font-semibold text-emerald-700">🎉 All done for today! Great job!</p>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
 
         {error && (
@@ -230,24 +237,57 @@ export default function Assignments() {
           </div>
         )}
 
-        <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <div className="vtl-light-card p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4"
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0 }}
+            whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+            className="vtl-light-card p-4 transition-all"
+          >
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Pending</p>
             <p className="mt-1 text-2xl font-bold text-amber-600">{summary.pending}</p>
-          </div>
-          <div className="vtl-light-card p-4">
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+            className="vtl-light-card p-4 transition-all"
+          >
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">In Progress</p>
             <p className="mt-1 text-2xl font-bold text-blue-600">{summary.in_progress}</p>
-          </div>
-          <div className="vtl-light-card p-4">
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+            className="vtl-light-card p-4 transition-all"
+          >
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Completed</p>
             <p className="mt-1 text-2xl font-bold text-emerald-600">{summary.completed}</p>
-          </div>
-          <div className="vtl-light-card p-4">
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+            className="vtl-light-card p-4 transition-all"
+          >
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Overdue</p>
             <p className="mt-1 text-2xl font-bold text-rose-600">{summary.overdue}</p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Filter className="h-4 w-4 text-slate-400" />
@@ -279,21 +319,33 @@ export default function Assignments() {
             <p className="text-sm text-slate-500">Try another filter or complete the questionnaire for new tasks.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="grid grid-cols-1 gap-4 xl:grid-cols-2"
+          >
             {filtered.map((assignment, idx) => (
-              <AssignmentCard
+              <motion.div
                 key={assignment.id || `${assignment.title || 'a'}-${idx}`}
-                assignment={assignment}
-                onClick={() => {
-                  if (assignment?.id) {
-                    navigate(`/assignments/${assignment.id}`)
-                    return
-                  }
-                  navigate(resolveAssignmentPath(assignment))
-                }}
-              />
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: idx * 0.05 }}
+              >
+                <AssignmentCard
+                  assignment={assignment}
+                  onClick={() => {
+                    if (assignment?.id) {
+                      navigate(`/assignments/${assignment.id}`)
+                      return
+                    }
+                    navigate(resolveAssignmentPath(assignment))
+                  }}
+                />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import { Heart, CreditCard, Upload, Clock, Target, TrendingUp } from 'lucide-react'
 
 export default function MetricBar({ stats, uploadCount, uploadLimit, subStatus, isPremium, latestCheckin }) {
@@ -29,80 +30,59 @@ export default function MetricBar({ stats, uploadCount, uploadLimit, subStatus, 
   const streakDays = stats.streak_days || 0
   const goalsAchieved = stats.goals_achieved || 0
 
+  const metrics = [
+    { id: 'health', icon: Heart, label: 'Health Score', value: stats.health_score ?? 0, color: 'emerald', delay: 0 },
+    { id: 'plan', icon: CreditCard, label: 'Plan', value: getPlanName(effectivePlan), color: 'blue', delay: 0.1 },
+    { id: 'uploads', icon: Upload, label: 'Uploads', value: `${uploadCount}/${uploadDisplayLimit}`, color: 'blue', delay: 0.2 },
+    { id: 'checkin', icon: Clock, label: 'Check-in', value: checkInStatus.label, color: 'amber', delay: 0.3 },
+    { id: 'streak', icon: Target, label: 'Streak', value: `${streakDays}d`, color: 'orange', delay: 0.4 },
+    { id: 'goals', icon: TrendingUp, label: 'Goals', value: goalsAchieved, color: 'purple', delay: 0.5 },
+  ]
+
+  const colorMap = {
+    emerald: 'from-emerald-50 to-white border-emerald-200 text-emerald-600',
+    blue: 'from-blue-50 to-white border-blue-200 text-blue-600',
+    purple: 'from-purple-50 to-white border-purple-200 text-purple-600',
+    orange: 'from-orange-50 to-white border-orange-200 text-orange-600',
+    amber: 'from-amber-50 to-white border-amber-200 text-amber-600',
+  }
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
-      {/* Health Score */}
-      <div className="flex items-center gap-2 rounded-2xl bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 p-4">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/15">
-          <Heart className="w-5 h-5 text-emerald-600" />
-        </div>
-        <div className="min-w-0">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Health Score</div>
-          <div className="text-2xl font-bold text-emerald-700">{stats.health_score ?? 0}</div>
-          {stats.health_score_change !== undefined && stats.health_score_change !== 0 && (
-            <div className={`text-xs font-semibold ${stats.health_score_change > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-              {stats.health_score_change > 0 ? '+' : ''}{stats.health_score_change}%
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-100px' }}
+      transition={{ duration: 0.6 }}
+      className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8"
+    >
+      {metrics.map((metric) => {
+        const Icon = metric.icon
+        const colorClass = colorMap[metric.color] || colorMap.blue
+
+        return (
+          <motion.div
+            key={metric.id}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: metric.delay }}
+            whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+            className={`flex items-center gap-2 rounded-2xl bg-gradient-to-br ${colorClass} border p-4 transition-all cursor-default`}
+          >
+            <motion.div
+              animate={{ rotate: [0, 5, -5, 0] }}
+              transition={{ duration: 3, repeat: Infinity, delay: metric.delay }}
+              className="flex items-center justify-center w-10 h-10 rounded-xl bg-current/15 flex-shrink-0"
+            >
+              <Icon className="w-5 h-5" />
+            </motion.div>
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{metric.label}</div>
+              <div className="text-lg font-bold text-current truncate">{metric.value}</div>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Plan */}
-      <div className={`flex items-center gap-2 rounded-2xl border p-4 ${getPlanColor(effectivePlan)}`}>
-        <div className={'flex items-center justify-center w-10 h-10 rounded-xl bg-current/15'}>
-          <CreditCard className="w-5 h-5" />
-        </div>
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wide opacity-70">Plan</div>
-          <div className="text-xl font-bold">{getPlanName(effectivePlan)}</div>
-        </div>
-      </div>
-
-      {/* Uploads */}
-      <div className="flex items-center gap-2 rounded-2xl bg-gradient-to-br from-blue-50 to-white border border-blue-200 p-4">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-500/15">
-          <Upload className="w-5 h-5 text-blue-600" />
-        </div>
-        <div>
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Uploads</div>
-          <div className="text-xl font-bold text-blue-700">{uploadCount}/{uploadDisplayLimit}</div>
-        </div>
-      </div>
-
-      {/* Check-in */}
-      <div className={`flex items-center gap-2 rounded-2xl border p-4 ${checkInStatus.color}`}>
-        <div className={'flex items-center justify-center w-10 h-10 rounded-xl bg-current/15'}>
-          <Clock className="w-5 h-5" />
-        </div>
-        <div className="min-w-0">
-          <div className="text-xs font-semibold uppercase tracking-wide opacity-70">Status</div>
-          <div className="text-sm font-bold truncate">{checkInStatus.label}</div>
-        </div>
-      </div>
-
-      {/* Streak */}
-      <div className="flex items-center gap-2 rounded-2xl bg-gradient-to-br from-orange-50 to-white border border-orange-200 p-4">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-500/15">
-          <TrendingUp className="w-5 h-5 text-orange-600" />
-        </div>
-        <div className="min-w-0">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Streak</div>
-          <div className="text-2xl font-bold text-orange-700">{streakDays}</div>
-          <div className="text-xs text-slate-500">days</div>
-        </div>
-      </div>
-
-      {/* Goals Achieved */}
-      <div className="flex items-center gap-2 rounded-2xl bg-gradient-to-br from-purple-50 to-white border border-purple-200 p-4">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-purple-500/15">
-          <Target className="w-5 h-5 text-purple-600" />
-        </div>
-        <div className="min-w-0">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Goals</div>
-          <div className="text-2xl font-bold text-purple-700">{goalsAchieved}</div>
-          <div className="text-xs text-slate-500">achieved</div>
-        </div>
-      </div>
-    </div>
+          </motion.div>
+        )
+      })}
+    </motion.div>
   )
 }

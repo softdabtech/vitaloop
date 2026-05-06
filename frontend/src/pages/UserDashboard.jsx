@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion, useReducedMotion, AnimatePresence } from 'framer-motion'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
 import {
@@ -27,13 +27,25 @@ import { enrichAssignments } from '../lib/assignmentScoring.js'
 import '../styles/userDashboard.css'
 import '../styles/dashboard2026.css'
 
-function DashboardCard({ title, eyebrow, children, action }) {
+function DashboardCard({ title, eyebrow, children, action, animated = true, delay = 0 }) {
+  const animationProps = animated
+    ? {
+        initial: { opacity: 0, y: 20 },
+        whileInView: { opacity: 1, y: 0 },
+        viewport: { once: true, margin: '-100px' },
+        transition: { duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] },
+      }
+    : {}
+
+  const WrapperComponent = animated ? motion.section : 'section'
+
   return (
-    <section
-      className="rounded-3xl border border-slate-200/80 bg-white/95 p-5 backdrop-blur-sm sm:p-6"
+    <WrapperComponent
+      className="cabinet-card rounded-3xl p-5 sm:p-6 hover:shadow-lg transition-all duration-300"
       style={{
         boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.06), inset 0 1px 0 rgba(29,158,117,0.08)',
       }}
+      {...animationProps}
     >
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
@@ -43,22 +55,41 @@ function DashboardCard({ title, eyebrow, children, action }) {
         {action}
       </div>
       {children}
-    </section>
+    </WrapperComponent>
   )
 }
 
-function EmptyBlock({ title, body, cta, onClick }) {
+function EmptyBlock({ title, body, cta, onClick, animated = true, delay = 0 }) {
+  const animationProps = animated
+    ? {
+        initial: { opacity: 0, y: 20 },
+        whileInView: { opacity: 1, y: 0 },
+        viewport: { once: true, margin: '-100px' },
+        transition: { duration: 0.5, delay },
+      }
+    : {}
+
+  const WrapperComponent = animated ? motion.div : 'div'
+
   return (
-    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/85 p-5 text-center">
+    <WrapperComponent
+      className="rounded-2xl border border-dashed border-emerald-300 bg-gradient-to-br from-emerald-50 to-green-50 p-6 text-center hover:border-emerald-400 transition-all duration-300"
+      {...animationProps}
+    >
       <div className="text-sm font-semibold text-slate-800">{title}</div>
-      <p className="mt-2 text-sm text-slate-500">{body}</p>
+      <p className="mt-2 text-sm text-slate-600">{body}</p>
       {cta && (
-        <button onClick={onClick} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600">
+        <motion.button
+          onClick={onClick}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 shadow-lg hover:shadow-emerald-500/30"
+        >
           {cta}
           <ArrowRight className="h-4 w-4" />
-        </button>
+        </motion.button>
       )}
-    </div>
+    </WrapperComponent>
   )
 }
 
@@ -67,13 +98,25 @@ function DashboardLoadingState() {
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-[128px] animate-pulse rounded-3xl border border-slate-200/80 bg-white/90" />
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: index * 0.1 }}
+            className="h-[128px] rounded-3xl border border-slate-200/80 bg-gradient-to-br from-slate-100 to-slate-50 cabinet-skeleton"
+          />
         ))}
       </div>
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.95fr_320px]">
-        <div className="h-[320px] animate-pulse rounded-3xl border border-slate-200/80 bg-white/90" />
-        <div className="h-[320px] animate-pulse rounded-3xl border border-slate-200/80 bg-white/90" />
-        <div className="h-[320px] animate-pulse rounded-3xl border border-slate-200/80 bg-white/90" />
+        {Array.from({ length: 3 }).map((_, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 + index * 0.1 }}
+            className="h-[320px] rounded-3xl border border-slate-200/80 bg-gradient-to-br from-slate-100 to-slate-50 cabinet-skeleton"
+          />
+        ))}
       </div>
     </div>
   )
@@ -88,7 +131,13 @@ function FirstRunDashboard({ startHere, steps, completedCount, onboardingComplet
 
   return (
     <div className="space-y-4">
-      <section className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_48%),linear-gradient(135deg,_#ffffff,_#effcf6_55%,_#f8fafc)] p-4 shadow-sm sm:p-6">
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-100px' }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_48%),linear-gradient(135deg,_#ffffff,_#effcf6_55%,_#f8fafc)] p-4 shadow-lg sm:p-6 hover:shadow-xl transition-all duration-300"
+      >
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2.5">
             <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Start here</div>
@@ -120,10 +169,10 @@ function FirstRunDashboard({ startHere, steps, completedCount, onboardingComplet
             )}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-        <DashboardCard title="What unlocks after the first upload" eyebrow="Immediate value">
+        <DashboardCard title="What unlocks after the first upload" eyebrow="Immediate value" animated delay={0.2}>
           <div className="space-y-3">
             {[
               'Structured biomarker extraction from your report',
@@ -138,7 +187,7 @@ function FirstRunDashboard({ startHere, steps, completedCount, onboardingComplet
           </div>
         </DashboardCard>
 
-        <DashboardCard title="Account readiness" eyebrow="Setup progress">
+        <DashboardCard title="Account readiness" eyebrow="Setup progress" animated delay={0.35}>
           <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 sm:px-4">
             <div className="mb-1 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
               <span>Progress</span>
@@ -165,20 +214,53 @@ function FirstRunDashboard({ startHere, steps, completedCount, onboardingComplet
 
 function HealthRing({ value }) {
   const safeValue = Number.isFinite(Number(value)) ? Math.max(0, Math.min(100, Number(value))) : 0
+  const displayValue = value ?? '--'
+
   return (
-    <div className="mx-auto flex h-[240px] w-[240px] items-center justify-center">
-      <div
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true, margin: '-100px' }}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      className="mx-auto flex h-[240px] w-[240px] items-center justify-center"
+    >
+      <motion.div
+        animate={{ rotate: [0, 5, -5, 0] }}
+        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         className="relative h-[220px] w-[220px] rounded-full"
-        style={{ background: `conic-gradient(#10B981 ${safeValue * 3.6}deg, rgba(148,163,184,0.18) 0deg)` }}
+        style={{
+          background: `conic-gradient(#10B981 ${safeValue * 3.6}deg, rgba(148,163,184,0.18) 0deg)`,
+          boxShadow: '0 0 0 8px rgba(16, 185, 129, 0.1)',
+        }}
       >
-        <div className="absolute inset-[16px] flex items-center justify-center rounded-full bg-white shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
+        <motion.div
+          animate={{ boxShadow: ['0 12px 34px rgba(15,23,42,0.08)', '0 20px 45px rgba(15,23,42,0.12)', '0 12px 34px rgba(15,23,42,0.08)'] }}
+          transition={{ duration: 3, repeat: Infinity }}
+          className="absolute inset-[16px] flex items-center justify-center rounded-full bg-white"
+        >
           <div className="text-center">
-            <div className="text-5xl font-bold tracking-tight text-slate-900">{value ?? '--'}</div>
-            <div className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">health score</div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-5xl font-bold tracking-tight text-slate-900"
+            >
+              {displayValue}
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400"
+            >
+              health score
+            </motion.div>
           </div>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -321,14 +403,19 @@ export default function UserDashboard() {
           {/* Health Score + Next Action Block */}
           <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
             {/* Health Score Card */}
-            <DashboardCard title="Health Score" eyebrow="Overall status">
+            <DashboardCard title="Health Score" eyebrow="Overall status" animated delay={0.15}>
               <div className="space-y-4">
-                <div>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.25 }}
+                >
                   <div className="text-4xl font-bold text-slate-900">{stats.health_score ?? 68}</div>
                   <p className="text-sm text-slate-500 mt-1">
                     {(stats.health_score ?? 68) >= 75 ? '✅ Great progress' : (stats.health_score ?? 68) >= 50 ? '⚠️ Keep going' : '📈 Get started'}
                   </p>
-                </div>
+                </motion.div>
 
                 {/* Adherence */}
                 <div className="pt-2 space-y-2 text-xs text-slate-600 border-t border-slate-100">
@@ -362,7 +449,7 @@ export default function UserDashboard() {
             </DashboardCard>
 
             {/* Next Action CTA */}
-            <DashboardCard title="What's next?" eyebrow="Recommended action">
+            <DashboardCard title="What's next?" eyebrow="Recommended action" animated delay={0.25}>
               <div className="space-y-3">
                 {!hasUploads ? (
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
@@ -525,7 +612,7 @@ export default function UserDashboard() {
             {/* Left: Chart + Next Task */}
             <div className="space-y-6">
               {progress.length > 0 ? (
-                <DashboardCard title="Biomarker Trends" eyebrow="Health data">
+                <DashboardCard title="Biomarker Trends" eyebrow="Health data" animated delay={0.15}>
                   <HealthChart progress={progress} />
                   <div className="mt-4 flex gap-2">
                     <button onClick={() => navigate('/progress')} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
@@ -550,7 +637,7 @@ export default function UserDashboard() {
               )}
 
               {todayFocus.length > 0 && (
-                <DashboardCard title="Next Task" eyebrow="Priority">
+                <DashboardCard title="Next Task" eyebrow="Priority" animated delay={0.25}>
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                     <div className="flex items-start gap-3">
                       <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
@@ -576,7 +663,7 @@ export default function UserDashboard() {
               )}
 
               {/* Health Goals Section */}
-              <DashboardCard title="Health Goals" eyebrow="Progress tracking">
+              <DashboardCard title="Health Goals" eyebrow="Progress tracking" animated delay={0.35}>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-slate-700">Optimize Vitamin D levels</span>
