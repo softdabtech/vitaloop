@@ -59,8 +59,26 @@ function mapAuthErrorMessage(message) {
 }
 
 // Medical hexagon panel for Sign In
-function MedicalPanel({ side }) {
+function MedicalPanel({ side, signup = false }) {
   const isLeft = side === 'left'
+
+  // Color palette swapped per variant
+  const bg = signup
+    ? 'linear-gradient(135deg, #0e0820 0%, #1e0d48 30%, #2e1870 55%, #4a2aa8 80%, #c4b5e8 100%)'
+    : 'linear-gradient(135deg, #0a2540 0%, #0e3d6b 30%, #0c5a82 55%, #0d8a8a 80%, #b8d8e8 100%)'
+  const glow1 = signup ? 'rgba(160,120,255,0.18)' : 'rgba(120,200,255,0.18)'
+  const glow2 = signup ? 'rgba(200,180,255,0.12)' : 'rgba(180,230,255,0.12)'
+  const stroke = signup ? 'rgba(200,180,255,0.6)' : 'rgba(160,220,255,0.6)'
+  const fill8 = signup ? 'rgba(140,100,255,0.08)' : 'rgba(100,180,240,0.08)'
+  const nodeStroke = signup ? 'rgba(200,180,255,0.45)' : 'rgba(160,220,255,0.45)'
+  const nodeDot = signup ? 'rgba(220,210,255,0.8)' : 'rgba(200,235,255,0.8)'
+  const dnaStroke = signup ? 'rgba(200,180,255,0.5)' : 'rgba(160,220,255,0.5)'
+  const icon = signup ? 'rgba(220,210,255,0.7)' : 'rgba(200,235,255,0.7)'
+  const iconSoft = signup ? 'rgba(220,210,255,0.6)' : 'rgba(200,235,255,0.6)'
+  const iconFaint = signup ? 'rgba(220,210,255,0.45)' : 'rgba(200,235,255,0.45)'
+  const molFill = signup ? 'rgba(180,160,255,0.4)' : 'rgba(200,235,255,0.4)'
+  const molStroke = signup ? 'rgba(160,130,255,0.5)' : 'rgba(160,220,255,0.5)'
+  const molLine = signup ? 'rgba(160,130,255,0.35)' : 'rgba(160,220,255,0.35)'
 
   // Hexagon grid positions
   const hexagons = [
@@ -123,19 +141,21 @@ function MedicalPanel({ side }) {
   return (
     <div style={{
       position: 'absolute', inset: 0, overflow: 'hidden',
-      background: 'linear-gradient(135deg, #0a2540 0%, #0e3d6b 30%, #0c5a82 55%, #0d8a8a 80%, #b8d8e8 100%)',
+      background: bg,
     }}>
       {/* Soft radial glow spots */}
       <div style={{
         position: 'absolute', width: '60%', height: '60%',
         top: '5%', left: '10%',
-        background: 'radial-gradient(ellipse, rgba(120,200,255,0.18) 0%, transparent 70%)',
+        background: `radial-gradient(ellipse, ${glow1} 0%, transparent 70%)`,
+
         borderRadius: '50%',
       }}/>
       <div style={{
         position: 'absolute', width: '40%', height: '50%',
         bottom: '10%', right: '5%',
-        background: 'radial-gradient(ellipse, rgba(180,230,255,0.12) 0%, transparent 70%)',
+        background: `radial-gradient(ellipse, ${glow2} 0%, transparent 70%)`,
+
         borderRadius: '50%',
       }}/>
 
@@ -146,11 +166,11 @@ function MedicalPanel({ side }) {
         {hexagons.map((h, i) => (
           <g key={i}>
             <path d={hexPath(h.x, h.y, h.size / 2)}
-              fill="none" stroke="rgba(160,220,255,0.6)" strokeWidth="0.4" opacity={h.op}/>
+              fill="none" stroke={stroke} strokeWidth="0.4" opacity={h.op}/>
             {/* Some hexagons with subtle fill */}
             {i % 3 === 0 && (
               <path d={hexPath(h.x, h.y, h.size / 2)}
-                fill="rgba(100,180,240,0.08)" opacity={h.op * 0.8}/>
+                fill={fill8} opacity={h.op * 0.8}/>
             )}
           </g>
         ))}
@@ -160,87 +180,87 @@ function MedicalPanel({ side }) {
           <line key={i}
             x1={nodes[a].x} y1={nodes[a].y}
             x2={nodes[b].x} y2={nodes[b].y}
-            stroke="rgba(160,220,255,0.45)" strokeWidth="0.3"/>
+            stroke={nodeStroke} strokeWidth="0.3"/>
         ))}
         {/* Node dots */}
         {nodes.map((n, i) => (
           <circle key={i} cx={n.x} cy={n.y} r={0.8}
-            fill="rgba(200,235,255,0.8)"/>
+            fill={nodeDot}/>
         ))}
 
         {/* DNA double helix */}
-        <path d={dna1} fill="none" stroke="rgba(160,220,255,0.5)" strokeWidth="0.5"/>
-        <path d={dna2} fill="none" stroke="rgba(160,220,255,0.5)" strokeWidth="0.5"/>
+        <path d={dna1} fill="none" stroke={dnaStroke} strokeWidth="0.5"/>
+        <path d={dna2} fill="none" stroke={dnaStroke} strokeWidth="0.5"/>
         {rungs.map((r, i) => (
           <line key={i} x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2}
-            stroke="rgba(180,230,255,0.35)" strokeWidth="0.35"/>
+            stroke={dnaStroke} strokeWidth="0.35"/>
         ))}
 
         {/* Medical cross icon */}
         <g opacity="0.65" transform="translate(60,28)">
-          <rect x="-3.5" y="-1.2" width="7" height="2.4" rx="0.5" fill="rgba(200,235,255,0.7)"/>
-          <rect x="-1.2" y="-3.5" width="2.4" height="7" rx="0.5" fill="rgba(200,235,255,0.7)"/>
+          <rect x="-3.5" y="-1.2" width="7" height="2.4" rx="0.5" fill={icon}/>
+          <rect x="-1.2" y="-3.5" width="2.4" height="7" rx="0.5" fill={icon}/>
         </g>
 
         {/* Heart with pulse */}
         <g opacity="0.55" transform="translate(80,18)">
           <path d="M0,-1.5 C-0.8,-2.8 -3,-2.8 -3,-1 C-3,0.5 0,2.5 0,2.5 C0,2.5 3,0.5 3,-1 C3,-2.8 0.8,-2.8 0,-1.5Z"
-            fill="none" stroke="rgba(200,235,255,0.7)" strokeWidth="0.4"/>
+            fill="none" stroke={icon} strokeWidth="0.4"/>
           {/* Pulse line through heart */}
           <path d="M-5,0 L-3,0 L-2,-1.5 L-1,1.5 L0,-0.5 L1,0 L5,0"
-            fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.35"/>
+            fill="none" stroke={iconSoft} strokeWidth="0.35"/>
         </g>
 
         {/* Syringe icon */}
         <g opacity="0.50" transform="translate(32,58) rotate(-45)">
-          <rect x="-0.8" y="-3" width="1.6" height="5" rx="0.3" fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.35"/>
-          <line x1="0" y1="2" x2="0" y2="4" stroke="rgba(200,235,255,0.6)" strokeWidth="0.4"/>
-          <line x1="-1.5" y1="-1" x2="-2.5" y2="-1" stroke="rgba(200,235,255,0.5)" strokeWidth="0.3"/>
-          <line x1="-1.5" y1="0.5" x2="-2.5" y2="0.5" stroke="rgba(200,235,255,0.5)" strokeWidth="0.3"/>
+          <rect x="-0.8" y="-3" width="1.6" height="5" rx="0.3" fill="none" stroke={iconSoft} strokeWidth="0.35"/>
+          <line x1="0" y1="2" x2="0" y2="4" stroke={iconSoft} strokeWidth="0.4"/>
+          <line x1="-1.5" y1="-1" x2="-2.5" y2="-1" stroke={iconFaint} strokeWidth="0.3"/>
+          <line x1="-1.5" y1="0.5" x2="-2.5" y2="0.5" stroke={iconFaint} strokeWidth="0.3"/>
         </g>
 
         {/* Person / doctor icon */}
         <g opacity="0.50" transform="translate(20,80)">
-          <circle cx="0" cy="-3" r="1.5" fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.4"/>
+          <circle cx="0" cy="-3" r="1.5" fill="none" stroke={iconSoft} strokeWidth="0.4"/>
           <path d="M-2.5,0 C-2.5,-1.5 2.5,-1.5 2.5,0 L2.5,4 L-2.5,4 Z"
-            fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.4"/>
+            fill="none" stroke={iconSoft} strokeWidth="0.4"/>
           {/* Tie */}
-          <path d="M-0.6,-0.5 L0,1.5 L0.6,-0.5" fill="rgba(200,235,255,0.4)" stroke="none"/>
+          <path d="M-0.6,-0.5 L0,1.5 L0.6,-0.5" fill={iconFaint} stroke="none"/>
         </g>
 
         {/* Flask icon */}
         <g opacity="0.45" transform="translate(50,82)">
           <path d="M-1.5,-3 L-1.5,0 L-3,3.5 L3,3.5 L1.5,0 L1.5,-3"
-            fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.4"/>
-          <line x1="-1.5" y1="-3" x2="1.5" y2="-3" stroke="rgba(200,235,255,0.5)" strokeWidth="0.4"/>
-          <ellipse cx="0" cy="2.5" rx="1.5" ry="0.7" fill="rgba(130,200,255,0.25)"/>
+            fill="none" stroke={iconSoft} strokeWidth="0.4"/>
+          <line x1="-1.5" y1="-3" x2="1.5" y2="-3" stroke={iconFaint} strokeWidth="0.4"/>
+          <ellipse cx="0" cy="2.5" rx="1.5" ry="0.7" fill={signup ? 'rgba(120,90,220,0.25)' : 'rgba(130,200,255,0.25)'}/>
         </g>
 
         {/* Clipboard / medical chart */}
         <g opacity="0.45" transform="translate(48,50)">
-          <rect x="-2.5" y="-4" width="5" height="6.5" rx="0.5" fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.35"/>
-          <rect x="-1" y="-4.8" width="2" height="1.2" rx="0.3" fill="rgba(200,235,255,0.5)"/>
-          <line x1="-1.5" y1="-1.5" x2="1.5" y2="-1.5" stroke="rgba(200,235,255,0.45)" strokeWidth="0.3"/>
-          <line x1="-1.5" y1="-0.2" x2="1.5" y2="-0.2" stroke="rgba(200,235,255,0.45)" strokeWidth="0.3"/>
-          <line x1="-1.5" y1="1.1" x2="0.5" y2="1.1" stroke="rgba(200,235,255,0.45)" strokeWidth="0.3"/>
+          <rect x="-2.5" y="-4" width="5" height="6.5" rx="0.5" fill="none" stroke={iconSoft} strokeWidth="0.35"/>
+          <rect x="-1" y="-4.8" width="2" height="1.2" rx="0.3" fill={iconFaint}/>
+          <line x1="-1.5" y1="-1.5" x2="1.5" y2="-1.5" stroke={iconFaint} strokeWidth="0.3"/>
+          <line x1="-1.5" y1="-0.2" x2="1.5" y2="-0.2" stroke={iconFaint} strokeWidth="0.3"/>
+          <line x1="-1.5" y1="1.1" x2="0.5" y2="1.1" stroke={iconFaint} strokeWidth="0.3"/>
         </g>
 
         {/* Lock/shield icon */}
         <g opacity="0.45" transform="translate(36,38)">
-          <rect x="-2" y="-1" width="4" height="3.5" rx="0.5" fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.35"/>
-          <path d="M-1.2,-1 C-1.2,-2.5 1.2,-2.5 1.2,-1" fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.35"/>
-          <circle cx="0" cy="0.8" r="0.5" fill="rgba(200,235,255,0.5)"/>
+          <rect x="-2" y="-1" width="4" height="3.5" rx="0.5" fill="none" stroke={iconSoft} strokeWidth="0.35"/>
+          <path d="M-1.2,-1 C-1.2,-2.5 1.2,-2.5 1.2,-1" fill="none" stroke={iconSoft} strokeWidth="0.35"/>
+          <circle cx="0" cy="0.8" r="0.5" fill={iconFaint}/>
         </g>
 
         {/* Molecule dots */}
         {[{x:62,y:58,r:1.2},{x:68,y:62,r:0.8},{x:58,y:64,r:0.9},{x:64,y:68,r:1.0}].map((d,i) => (
           <circle key={i} cx={d.x} cy={d.y} r={d.r}
-            fill="rgba(200,235,255,0.4)" stroke="rgba(160,220,255,0.5)" strokeWidth="0.2"/>
+            fill={molFill} stroke={molStroke} strokeWidth="0.2"/>
         ))}
-        <line x1="62" y1="58" x2="68" y2="62" stroke="rgba(160,220,255,0.35)" strokeWidth="0.3"/>
-        <line x1="62" y1="58" x2="58" y2="64" stroke="rgba(160,220,255,0.35)" strokeWidth="0.3"/>
-        <line x1="68" y1="62" x2="64" y2="68" stroke="rgba(160,220,255,0.35)" strokeWidth="0.3"/>
-        <line x1="58" y1="64" x2="64" y2="68" stroke="rgba(160,220,255,0.35)" strokeWidth="0.3"/>
+        <line x1="62" y1="58" x2="68" y2="62" stroke={molLine} strokeWidth="0.3"/>
+        <line x1="62" y1="58" x2="58" y2="64" stroke={molLine} strokeWidth="0.3"/>
+        <line x1="68" y1="62" x2="64" y2="68" stroke={molLine} strokeWidth="0.3"/>
+        <line x1="58" y1="64" x2="64" y2="68" stroke={molLine} strokeWidth="0.3"/>
       </svg>
 
       {/* Tagline */}
@@ -271,87 +291,7 @@ function AbstractPanel({ side, variant = 'signin' }) {
   if (!signup) {
     return <MedicalPanel side={side} />
   }
-
-  const baseColor = isLeft ? '#1e3a8a' : '#1e40af'
-  const accent = isLeft ? '#60a5fa' : '#93c5fd'
-  const gradient = `linear-gradient(${isLeft ? '135deg' : '225deg'}, #0b173f 0%, #1e3a8a 45%, #020617 100%)`
-
-  // Deterministic particles based on side
-  const particles = Array.from({ length: 60 }, (_, i) => ({
-    x: isLeft
-      ? 20 + ((i * 137.5) % 80)
-      : 5 + ((i * 97.3) % 88),
-    y: 2 + ((i * 73.1) % 96),
-    r: 0.8 + (i % 5) * 0.9,
-    op: 0.15 + (i % 7) * 0.08,
-  }))
-
-  const lines = Array.from({ length: 18 }, (_, i) => ({
-    x1: (i * 31) % 100,
-    y1: (i * 17) % 100,
-    x2: ((i * 31 + 40) % 100),
-    y2: ((i * 17 + 30) % 100),
-    op: 0.04 + (i % 4) * 0.03,
-  }))
-
-  return (
-    <div style={{
-      position: 'absolute', inset: 0,
-      background: gradient,
-      overflow: 'hidden',
-    }}>
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none"
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-        {/* Connection lines */}
-        {lines.map((l, i) => (
-          <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-            stroke={accent} strokeWidth="0.15" opacity={l.op}/>
-        ))}
-        {/* Particles */}
-        {particles.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r={p.r}
-            fill={i % 3 === 0 ? accent : baseColor} opacity={p.op}/>
-        ))}
-        {/* Large decorative rings */}
-        <circle cx={isLeft ? 20 : 80} cy="50" r="35"
-          fill="none" stroke={baseColor} strokeWidth="0.3" opacity="0.15"/>
-        <circle cx={isLeft ? 20 : 80} cy="50" r="22"
-          fill="none" stroke={accent} strokeWidth="0.2" opacity="0.1"/>
-        <circle cx={isLeft ? 80 : 20} cy="20" r="18"
-          fill="none" stroke={accent} strokeWidth="0.2" opacity="0.08"/>
-        {/* ECG-like line */}
-        <path d={isLeft
-          ? 'M0,50 L15,50 L20,35 L25,65 L30,42 L35,50 L100,50'
-          : 'M0,50 L65,50 L70,35 L75,65 L80,42 L85,50 L100,50'}
-        fill="none" stroke={accent} strokeWidth="0.4" opacity="0.25"/>
-      </svg>
-
-      {/* Tagline overlay */}
-      <div style={{
-        position: 'absolute', bottom: 40,
-        left: isLeft ? 32 : 'auto', right: isLeft ? 'auto' : 32,
-        maxWidth: 200,
-      }}>
-        <div style={{
-          fontSize: 11, fontWeight: 700, letterSpacing: '0.15em',
-          color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', marginBottom: 6,
-        }}>
-          {signup
-            ? (isLeft ? 'Create your\nhealth baseline.' : 'Secure\nmember onboarding.')
-            : (isLeft ? 'Your biology,\ndecoded.' : 'HIPAA-ready\narchitecture.')}
-        </div>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.12)', lineHeight: 1.5 }}>
-          {signup
-            ? (isLeft
-              ? 'Set up your profile and unlock a personalized health cabinet.'
-              : 'Protected onboarding flow with verified session and secure storage.')
-            : (isLeft
-              ? 'Upload any lab result - AI extracts every biomarker in 60 seconds.'
-              : 'Your PDF never leaves your device. OCR runs 100% client-side.')}
-        </div>
-      </div>
-    </div>
-  )
+  return <MedicalPanel side={side} signup={true} />
 }
 
 export default function Login() {
@@ -372,9 +312,9 @@ export default function Login() {
 
   const authTheme = isSignUp
     ? {
-      appBg: '#08102e',
-      centerBg: 'linear-gradient(180deg, #0f1f52 0%, #0b173f 60%, #080e2a 100%)',
-      borderColor: 'rgba(96,165,250,0.22)',
+      appBg: '#0b0618',
+      centerBg: 'linear-gradient(180deg, #150930 0%, #0e0624 55%, #080312 100%)',
+      borderColor: 'rgba(160,120,255,0.22)',
     }
     : {
       appBg: '#071c33',
