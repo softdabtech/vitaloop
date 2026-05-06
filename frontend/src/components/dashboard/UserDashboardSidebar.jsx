@@ -8,6 +8,7 @@ import {
   Crown,
   FileText,
   Flame,
+  HelpCircle,
   Home,
   Lock,
   LogOut,
@@ -30,6 +31,7 @@ const MENU_ITEMS = [
   { icon: Flame,      label: 'Health Profile',  path: '/health-profile', badge: null },
   { icon: CreditCard, label: 'Subscription',    path: '/subscription', badge: null },
   { icon: Settings,   label: 'Account',        path: '/settings',    badge: null },
+  { icon: HelpCircle, label: 'Help Center',     path: '/help',         badge: null },
 ]
 
 function isItemActive(currentPath, itemPath) {
