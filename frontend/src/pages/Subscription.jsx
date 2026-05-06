@@ -13,42 +13,48 @@ const PLANS = {
     name: 'Free',
     price: '$0',
     period: '/month',
+    description: 'Get started',
     features: [
-      '1 active upload',
-      'Basic biomarker summary',
-      'Core dashboard',
-      'Community support'
+      'Health score & index',
+      '2–3 key insights',
+      '1 basic recommendation',
+      'Limited tracking access'
     ],
     color: 'slate',
   },
-  personal_pro: {
-    name: 'Personal Premium',
-    price: '$9.99',
+  basic: {
+    name: 'Premium',
+    price: '$19.99',
     period: '/month',
+    description: 'Most popular',
     features: [
-      'Unlimited uploads',
-      'Personalized protocol',
+      'Full analysis of blood tests',
+      'Prioritized problem list (top 3)',
+      'Personalized action protocol',
       'Weekly AI check-ins',
-      'Priority insights',
-      'Email support',
+      'Basic symptom tracking',
+      'Updated recommendations',
       'Progress tracking'
     ],
     color: 'emerald',
-    yearly: '$95/year (save 21%)',
+    yearly: '$199/year (save 17%)',
+    cta: 'Get Started'
   },
-  enterprise: {
-    name: 'Enterprise',
-    price: '$99+',
+  pro: {
+    name: 'Pro',
+    price: '$39.99',
     period: '/month',
+    description: 'Coming soon',
     features: [
-      'Team seats',
-      'Practitioner CRM',
-      'Workflow automation',
-      'Dedicated onboarding',
-      'Priority support',
-      'Custom integrations'
+      'Everything in Premium',
+      'Deeper health insights',
+      'Long-term trend analysis',
+      'Advanced tracking',
+      'Priority updates',
+      'Early access to new features'
     ],
     color: 'blue',
+    comingSoon: true
   },
 }
 
@@ -77,6 +83,12 @@ function PlanCard({ plan, planKey, currentPlan, onSelect, isLoading }) {
         </div>
       )}
 
+      {plan.comingSoon && (
+        <div className="absolute top-4 right-4 flex items-center gap-1 bg-slate-400 text-white px-3 py-1 rounded-full text-xs font-semibold">
+          Coming Soon
+        </div>
+      )}
+
       <h3 className="text-2xl font-bold text-slate-900 mb-2">{plan.name}</h3>
       <div className="mb-6">
         <span className="text-4xl font-bold text-slate-900">{plan.price}</span>
@@ -97,15 +109,17 @@ function PlanCard({ plan, planKey, currentPlan, onSelect, isLoading }) {
 
       <button
         onClick={() => onSelect(planKey)}
-        disabled={isCurrentPlan || isLoading}
+        disabled={isCurrentPlan || isLoading || plan.comingSoon}
         className={`w-full py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 ${
           isCurrentPlan
+            ? 'bg-slate-300 text-slate-600 cursor-default'
+            : plan.comingSoon
             ? 'bg-slate-300 text-slate-600 cursor-default'
             : `${colors.button} text-white`
         }`}
       >
-        {isCurrentPlan ? 'Current Plan' : planKey === 'enterprise' ? 'Contact Sales' : 'Select Plan'}
-        {!isCurrentPlan && planKey !== 'enterprise' && <ArrowRight className="w-4 h-4" />}
+        {isCurrentPlan ? 'Current Plan' : plan.comingSoon ? 'Coming Soon' : planKey === 'pro' ? 'Upgrade' : 'Select Plan'}
+        {!isCurrentPlan && !plan.comingSoon && planKey !== 'pro' && <ArrowRight className="w-4 h-4" />}
       </button>
     </motion.div>
   )
@@ -119,10 +133,10 @@ export default function Subscription() {
   const [upgrading, setUpgrading] = useState(false)
   const [openingPortal, setOpeningPortal] = useState(false)
 
-  const _planNameToKey = { personal: 'personal_pro', practitioner: 'enterprise' }
+  const _planNameToKey = { personal: 'basic', practitioner: 'pro' }
   const currentPlan = subscription
     ? (subscription.is_premium
-        ? (_planNameToKey[subscription.plan_name] || 'personal_pro')
+        ? (_planNameToKey[subscription.plan_name] || 'basic')
         : 'free')
     : 'free'
   const planStatus = subscription?.sub_status || 'free'
@@ -155,13 +169,18 @@ export default function Subscription() {
       return
     }
 
+    if (planKey === 'pro' || planKey === 'comingSoon') {
+      toast.error('Pro plan coming soon!')
+      return
+    }
+
     setUpgrading(true)
     try {
       // Map frontend plan keys to backend plan IDs
       const planMap = {
         'free': 'personal',
-        'personal_pro': 'personal',
-        'enterprise': 'practitioner',
+        'basic': 'personal',
+        'pro': 'practitioner',
       }
       const backendPlanId = planMap[planKey] || 'personal'
 
