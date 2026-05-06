@@ -503,11 +503,18 @@ export default function Help() {
     ? HELP_SECTIONS.find(s => s.id === sectionId)?.title
     : 'Help Center'
 
+  const canonicalPath = articleId
+    ? `/help/${articleId}`
+    : sectionId
+    ? `/help/section/${sectionId}`
+    : '/help'
+
   return (
     <>
       <Seo
         title={pageTitle ? `${pageTitle} — VITALOOP Help` : 'Help Center — VITALOOP'}
         description="Everything you need to know about using VITALOOP — uploads, results, protocols, billing, and more."
+        path={canonicalPath}
       />
       <div className="min-h-screen bg-slate-50">
         <Navbar />
