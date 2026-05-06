@@ -85,7 +85,7 @@ export function useSubscription() {
 
   return {
     subStatus,
-    isActive: subStatus === 'active',
+    isActive: isPremium, // Use isPremium (which checks both auth and stripe) instead of just subStatus
     isPremium,
     uploadCount,
     uploadLimit,

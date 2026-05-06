@@ -95,24 +95,27 @@ export default function Progress() {
     <div className="mx-auto w-full max-w-6xl">
       <CabinetPageHeader
         title="Progress Tracker"
-        subtitle="Track concrete biomarker movement between uploads and monitor protocol effect over time."
+        subtitle="See how your biomarkers are changing over time. Upload multiple tests to track your improvements."
       />
       {data.length === 0 ? (
-        <div className="space-y-4 py-8">
+        <div className="space-y-6 py-8">
           <div className="grid gap-4 md:grid-cols-3">
             {[
-              'Expected biomarker movement between uploads',
-              'What improved after protocol adherence',
-              'Where retesting or deeper follow-up is needed',
+              { title: '📊 Track Changes', desc: 'See which biomarkers improved or need attention' },
+              { title: '🎯 Measure Impact', desc: 'Know if your protocol is actually working' },
+              { title: '📈 Plan Next Steps', desc: 'Decide when to retest and what to adjust' },
             ].map((item) => (
-              <div key={item} className="vtl-light-card p-5 text-sm text-slate-500">{item}</div>
+              <div key={item.title} className="vtl-light-card p-5 rounded-2xl">
+                <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                <p className="mt-1 text-xs text-slate-600">{item.desc}</p>
+              </div>
             ))}
           </div>
           <div className="py-10 text-center">
             <EmptyState
               icon="📈"
               title="No lab results yet"
-              subtitle="Upload your first blood test to start tracking biomarker progress over time."
+              subtitle="Upload your first blood test to start tracking biomarker progress."
               action="Upload First Test"
               onAction={() => navigate('/upload')}
             />
@@ -120,69 +123,87 @@ export default function Progress() {
         </div>
       ) : (
         <>
+          {/* Progress Summary */}
           {deltas.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="mb-6 grid gap-3 sm:grid-cols-3"
-            >
-              {deltas.map((d, idx) => (
-                <motion.div
-                  key={d.key}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: idx * 0.1 }}
-                  whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
-                  className="cabinet-card p-5 transition-all"
-                >
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{d.label}</p>
-                  <motion.p
-                    initial={{ scale: 0.8 }}
-                    whileInView={{ scale: 1 }}
+            <>
+              <div className="mb-2 text-sm font-semibold text-slate-700">Your Progress</div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="mb-8 grid gap-4 sm:grid-cols-3"
+              >
+                {deltas.map((d, idx) => (
+                  <motion.div
+                    key={d.key}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.4, delay: idx * 0.15 + 0.1 }}
-                    className={`text-2xl font-bold ${d.pct >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}
+                    transition={{ duration: 0.5, delay: idx * 0.1 }}
+                    whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                    className={`rounded-2xl border p-6 transition-all ${
+                      d.pct >= 0
+                        ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50'
+                        : 'border-rose-200 bg-gradient-to-br from-rose-50 to-pink-50'
+                    }`}
                   >
-                    {d.pct >= 0 ? '+' : ''}{d.pct}%
-                  </motion.p>
-                  <p className="mt-2 text-xs text-slate-500">{d.start} → {d.end}</p>
-                </motion.div>
-              ))}
-            </motion.div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">{d.label}</p>
+                    <motion.p
+                      initial={{ scale: 0.8 }}
+                      whileInView={{ scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: idx * 0.15 + 0.1 }}
+                      className={`mt-3 text-3xl font-bold ${d.pct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                    >
+                      {d.pct >= 0 ? '↑' : '↓'} {Math.abs(d.pct)}%
+                    </motion.p>
+                    <p className="mt-2 text-xs text-slate-500">
+                      {d.start} <span className="mx-1">→</span> {d.end}
+                    </p>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </>
           )}
 
+          {/* Chart - Premium Feature */}
           {uploadsWithBiomarkers.length >= 2 ? (
             <FeatureGate
               feature="progress"
               onLocked={handlePaywall}
               fallback={
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
-                  <p className="text-sm font-semibold text-amber-800 mb-2">Advanced Charts</p>
-                  <p className="text-sm text-amber-700 mb-3">Detailed trend charts available with Premium</p>
-                  <button
-                    onClick={handlePaywall}
-                    className="inline-flex items-center gap-2 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition"
-                  >
-                      Unlock Premium
-                  </button>
+                <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 p-8 mb-8">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-lg font-semibold text-blue-900">📊 Advanced Trend Charts</p>
+                      <p className="mt-1 text-sm text-blue-700">See detailed biomarker trends across all your uploads</p>
+                    </div>
+                    <button
+                      onClick={handlePaywall}
+                      className="ml-4 rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-semibold text-white transition whitespace-nowrap"
+                    >
+                      Unlock
+                    </button>
+                  </div>
                 </div>
               }
             >
-              <ProgressChart data={uploadsWithBiomarkers} />
+              <div className="mb-8">
+                <ProgressChart data={uploadsWithBiomarkers} />
+              </div>
             </FeatureGate>
           ) : null}
 
+          {/* Upload Timeline */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-100px' }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="cabinet-card mt-6 p-5"
+            className="rounded-2xl border border-slate-200 bg-white p-6 mb-8"
           >
-            <p className="mb-3 text-sm font-semibold text-slate-700">Upload Timeline</p>
-            <div className="space-y-3">
+            <p className="mb-5 text-lg font-semibold text-slate-900">Test History</p>
+            <div className="space-y-4">
               {data.map((upload, index) => (
                 <motion.div
                   key={upload.id}
@@ -190,24 +211,27 @@ export default function Progress() {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: index * 0.05 }}
-                  className="flex items-start gap-3"
+                  className="flex items-center gap-4 pb-4 last:pb-0 border-b last:border-b-0"
                 >
-                  <motion.div
-                    animate={{ scale: [1, 1.3, 1] }}
-                    transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
-                    className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-500 flex-shrink-0"
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">Upload #{index + 1}</p>
-                    <p className="text-xs text-slate-500">{upload.test_date || upload.created_at?.slice(0, 10) || 'Unknown date'} · {upload.lab_name || 'Unknown lab'}</p>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+                    <span className="text-sm font-bold text-emerald-700">#{data.length - index}</span>
                   </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900">{upload.test_date || upload.created_at?.slice(0, 10) || 'Unknown date'}</p>
+                    <p className="text-sm text-slate-500">{upload.lab_name || 'Lab name not specified'}</p>
+                  </div>
+                  {Array.isArray(upload.biomarkers) && upload.biomarkers.length > 0 && (
+                    <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                      {upload.biomarkers.length} markers
+                    </span>
+                  )}
                 </motion.div>
               ))}
             </div>
           </motion.div>
 
           {/* Progress Photo Gallery */}
-          <div className="mt-8">
+          <div className="mb-8">
             <ProgressPhotoGallery
               photos={photos}
               onUpload={handlePhotoUpload}
@@ -215,10 +239,12 @@ export default function Progress() {
             />
           </div>
 
-          <div className="vtl-light-card mt-8 p-5 text-center">
-            <p className="text-sm text-slate-500">Retest recommended every 90 days to track improvements.</p>
-            <button onClick={() => navigate('/upload')} className="vtl-button-primary mt-3 px-6 text-sm">
-                Upload New Test
+          {/* Call to Action */}
+          <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 p-6 text-center">
+            <p className="text-lg font-semibold text-emerald-900">Ready for a Retest?</p>
+            <p className="mt-2 text-sm text-emerald-700">Recommended every 90 days to track improvements</p>
+            <button onClick={() => navigate('/upload')} className="vtl-button-primary mt-4 px-8">
+              Upload New Test
             </button>
           </div>
         </>
