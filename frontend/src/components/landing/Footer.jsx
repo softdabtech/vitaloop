@@ -9,6 +9,7 @@ const COL_PRODUCT = [
 ]
 const COL_COMPANY = [
   { label: 'For nutritionists', href: '/for-nutritionists' },
+  { label: 'Help Center',       href: '/help' },
   { label: 'Privacy policy',    href: '/privacy' },
   { label: 'Terms of service',  href: '/terms' },
   { label: 'For Investors',     href: '/for-investors' },
