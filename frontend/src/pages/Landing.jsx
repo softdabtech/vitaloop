@@ -1344,6 +1344,9 @@ export default function Landing() {
               <button onClick={() => navigate('/how-it-works')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                 Explore product
               </button>
+              <a href="/help" className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+                Help Center
+              </a>
             </div>
           </motion.div>
         </section>
@@ -1396,6 +1399,7 @@ export default function Landing() {
             <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>Company</div>
             <div className="mt-4 flex flex-col items-start gap-3 text-left">
               <button onClick={() => navigate('/for-nutritionists')} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>For Nutritionists</button>
+              <a href="/help" className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>Help Center</a>
               <button onClick={() => navigate('/terms')} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>Terms</button>
               <button onClick={() => navigate('/privacy')} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>Privacy</button>
               <button onClick={() => navigate('/for-investors')} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>For Investors</button>
