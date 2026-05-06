@@ -211,65 +211,167 @@ async def send_welcome_email(
     organization_name: str,
     dashboard_url: str,
 ) -> bool:
-    """Send a styled welcome email to new team member."""
+    """Send a styled welcome email to a newly registered VITALOOP user."""
 
     safe_name = _safe(user_name)
-    safe_org = _safe(organization_name)
+    safe_email = _safe(to_email)
     safe_url = _safe(dashboard_url)
+    login_url = _safe(dashboard_url.replace("/dashboard", "/login"))
 
     html = f"""
 <!doctype html>
 <html lang="en">
-  <body style="margin:0;padding:0;background:#f4f7f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:24px 12px;">
-      <tr>
-        <td align="center">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
-            <tr>
-              <td style="background:linear-gradient(135deg,#0b4033,#1d9e75);padding:32px 28px;color:#ffffff;">
-                <div style="font-size:12px;letter-spacing:.12em;font-weight:700;text-transform:uppercase;opacity:.85;">Welcome to VITALOOP</div>
-                <h1 style="margin:16px 0 0;font-size:28px;line-height:1.2;">Welcome, {safe_name}!</h1>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:32px;">
-                <p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#334155;">
-                  You're now part of the <strong>{safe_org}</strong> team on VITALOOP.
-                </p>
-                <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#334155;">
-                  Get started by exploring your team's biomarker data, progress tracking, and personalized protocols in your dashboard.
-                </p>
-                <table role="presentation" cellspacing="0" cellpadding="0" style="margin:28px 0;">
-                  <tr>
-                    <td>
-                      <a href="{safe_url}" style="display:inline-block;padding:14px 28px;border-radius:999px;background:#1d9e75;color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;">Go to Dashboard</a>
-                    </td>
-                  </tr>
-                </table>
-                <div style="background:#f1f5f9;border-left:4px solid #1d9e75;padding:16px;border-radius:6px;margin:24px 0;">
-                  <p style="margin:0;font-size:13px;color:#475569;line-height:1.6;">
-                    <strong style="color:#1d9e75;">Quick tips:</strong><br/>
-                    • View team health metrics in the Funnel overview<br/>
-                    • Track individual progress with assignments<br/>
-                    • Generate personalized protocols based on biomarkers
-                  </p>
-                </div>
-                <p style="margin:24px 0 0;font-size:13px;color:#64748b;line-height:1.6;">
-                  Have questions? Contact your team administrator for support.
-                </p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Welcome to VITALOOP</title>
+</head>
+<body style="margin:0;padding:0;background:#0b1221;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#e2e8f0;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 12px;background:#0b1221;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;border-radius:18px;overflow:hidden;border:1px solid rgba(100,180,240,0.15);">
+
+          <!-- HEADER -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#0a2540 0%,#0e3d6b 40%,#0c5a82 70%,#0d8a8a 100%);padding:36px 32px 28px;text-align:center;">
+              <div style="display:inline-block;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:12px;padding:10px 20px;margin-bottom:18px;">
+                <span style="font-size:20px;font-weight:800;letter-spacing:0.12em;color:#ffffff;text-transform:uppercase;">VITA<span style="color:#7dd3c0;">LOOP</span></span>
+              </div>
+              <div style="font-size:13px;letter-spacing:0.15em;font-weight:600;text-transform:uppercase;color:rgba(180,230,255,0.7);margin-bottom:10px;">Health Intelligence Platform</div>
+              <h1 style="margin:0;font-size:26px;font-weight:700;line-height:1.25;color:#ffffff;">
+                Welcome, {safe_name}!
+              </h1>
+              <p style="margin:10px 0 0;font-size:15px;color:rgba(200,235,255,0.75);line-height:1.5;">
+                Your personal health intelligence cabinet is ready.
+              </p>
+            </td>
+          </tr>
+
+          <!-- BODY -->
+          <tr>
+            <td style="background:#0f1c2e;padding:32px;">
+
+              <!-- Login info block -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:28px;">
+                <tr>
+                  <td style="background:#0a1628;border:1px solid rgba(100,180,240,0.2);border-radius:12px;padding:18px 20px;">
+                    <div style="font-size:11px;letter-spacing:0.12em;font-weight:700;text-transform:uppercase;color:rgba(100,180,240,0.7);margin-bottom:10px;">Your account credentials</div>
+                    <table role="presentation" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td style="font-size:13px;color:#94a3b8;padding-bottom:6px;padding-right:12px;">Login (email):</td>
+                        <td style="font-size:13px;font-weight:600;color:#e2e8f0;padding-bottom:6px;">{safe_email}</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:13px;color:#94a3b8;padding-right:12px;">Password:</td>
+                        <td style="font-size:13px;color:#94a3b8;">The password you set during registration</td>
+                      </tr>
+                    </table>
+                    <div style="margin-top:12px;">
+                      <a href="{login_url}" style="font-size:12px;color:rgba(100,180,240,0.8);text-decoration:none;">→ Sign in at vitaloop.today</a>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- How to get started -->
+              <div style="font-size:11px;letter-spacing:0.12em;font-weight:700;text-transform:uppercase;color:rgba(100,180,240,0.7);margin-bottom:16px;">How to get started</div>
+
+              <!-- Step 1 -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:14px;">
+                <tr>
+                  <td width="44" style="vertical-align:top;padding-top:2px;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0e3d6b,#0d8a8a);display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#ffffff;text-align:center;line-height:32px;">1</div>
+                  </td>
+                  <td style="vertical-align:top;">
+                    <div style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Upload your lab report</div>
+                    <div style="font-size:13px;color:#94a3b8;line-height:1.5;">
+                      Go to <strong style="color:#7dd3c0;">Dashboard → Upload Lab Report</strong>. Drag and drop any PDF or image with blood/urine test results. The AI extracts all biomarkers automatically in under 60 seconds.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Step 2 -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:14px;">
+                <tr>
+                  <td width="44" style="vertical-align:top;padding-top:2px;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0e3d6b,#0d8a8a);display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#ffffff;text-align:center;line-height:32px;">2</div>
+                  </td>
+                  <td style="vertical-align:top;">
+                    <div style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Get AI-powered analysis</div>
+                    <div style="font-size:13px;color:#94a3b8;line-height:1.5;">
+                      VITALOOP analyses every biomarker against clinical norms and highlights what needs attention — deficiencies, risks, trends. Free plan includes standard analysis; Premium unlocks deep insights.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Step 3 -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:28px;">
+                <tr>
+                  <td width="44" style="vertical-align:top;padding-top:2px;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0e3d6b,#0d8a8a);display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#ffffff;text-align:center;line-height:32px;">3</div>
+                  </td>
+                  <td style="vertical-align:top;">
+                    <div style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Follow your personal protocol</div>
+                    <div style="font-size:13px;color:#94a3b8;line-height:1.5;">
+                      Open <strong style="color:#7dd3c0;">Protocols</strong> to see your personalised supplement and lifestyle recommendations based on your actual biomarker profile.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="margin-bottom:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="{safe_url}" style="display:inline-block;padding:15px 40px;border-radius:999px;background:linear-gradient(90deg,#0e3d6b,#0d8a8a);color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;letter-spacing:0.03em;">Open My Dashboard →</a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Tips block -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="background:#0a1628;border:1px solid rgba(100,180,240,0.15);border-radius:10px;padding:16px 18px;">
+                    <div style="font-size:12px;color:#64748b;line-height:1.6;">
+                      💡 <strong style="color:#7dd3c0;">Tips:</strong>
+                      Fill in your <strong style="color:#cbd5e1;">Health Profile</strong> (age, sex, weight) for more accurate analysis.
+                      You can also enter biomarkers manually without uploading a file.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background:#080f1c;padding:20px 32px;text-align:center;border-top:1px solid rgba(100,180,240,0.08);">
+              <div style="font-size:12px;color:#475569;line-height:1.6;">
+                You received this email because you registered at
+                <a href="https://vitaloop.today" style="color:rgba(100,180,240,0.6);text-decoration:none;">vitaloop.today</a>.<br/>
+                Questions? Reply to this email or visit our <a href="https://vitaloop.today" style="color:rgba(100,180,240,0.6);text-decoration:none;">help centre</a>.
+              </div>
+              <div style="margin-top:12px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#1e3a5f;">
+                VITALOOP · Health Intelligence Platform
+              </div>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
 </html>
 """.strip()
 
     return await _deliver_html_email(
         to_email=to_email,
-        subject=f"Welcome to {organization_name} on VITALOOP",
+        subject="Welcome to VITALOOP — Your health cabinet is ready",
         html=html,
     )
 
