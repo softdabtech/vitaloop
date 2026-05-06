@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useFeature } from '../hooks/useFeature.js'
@@ -393,12 +394,22 @@ function SupplementRow({ rec, index }) {
   const schedule = TIMING_TO_SCHEDULE[rec.timing] ?? (rec.timing?.replace(/_/g, ' ') ?? '—')
 
   return (
-    <tr className={`border-b border-slate-100 transition-colors ${isHighlighted ? 'bg-emerald-50/70 hover:bg-emerald-50' : 'hover:bg-slate-50/80'}`}>
+    <motion.tr
+      initial={{ opacity: 0, x: -20 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.4, delay: index * 0.05 }}
+      className={`border-b border-slate-100 transition-colors ${isHighlighted ? 'bg-emerald-50/70 hover:bg-emerald-50' : 'hover:bg-slate-50/80'}`}
+    >
       <td className="px-4 py-3.5">
         <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isHighlighted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+          <motion.div
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 3, repeat: isHighlighted ? Infinity : 0 }}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isHighlighted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}
+          >
             <Pill className="w-3.5 h-3.5" />
-          </div>
+          </motion.div>
           <div>
             <div className={`font-semibold text-sm ${isHighlighted ? 'text-emerald-900' : 'text-slate-900'}`}>
               {rec.supplement}
@@ -431,7 +442,7 @@ function SupplementRow({ rec, index }) {
           )}
         </div>
       </td>
-    </tr>
+    </motion.tr>
   )
 }
 
@@ -578,7 +589,13 @@ export default function ProtocolPage() {
             )}
 
             {/* Hero header */}
-            <div className="rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 p-6 sm:p-8 text-white shadow-lg overflow-hidden relative">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 p-6 sm:p-8 text-white shadow-lg overflow-hidden relative"
+            >
               <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 50%)' }} />
               <p className="text-emerald-100 text-xs font-semibold uppercase tracking-widest mb-2">Personalized Protocol</p>
               <h2 className="text-2xl sm:text-3xl font-bold leading-tight mb-2">Your 7-Day Health Plan</h2>
@@ -586,25 +603,46 @@ export default function ProtocolPage() {
                 Based on your lab results{deficientCount > 0 ? ` and ${deficientCount} flagged biomarkers` : ''}, here is your personalized supplement, nutrition, and lifestyle protocol.
               </p>
               <div className="flex flex-wrap gap-6 mt-5">
-                <div>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: 0.1 }}
+                >
                   <div className="text-2xl font-bold">{sortedProtocol.length}</div>
                   <div className="text-emerald-200 text-xs uppercase tracking-wider">Supplements</div>
-                </div>
+                </motion.div>
                 <div className="w-px bg-emerald-400/60" />
-                <div>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: 0.2 }}
+                >
                   <div className="text-2xl font-bold">{nutritionGroups.length}</div>
                   <div className="text-emerald-200 text-xs uppercase tracking-wider">Food Groups</div>
-                </div>
+                </motion.div>
                 <div className="w-px bg-emerald-400/60" />
-                <div>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: 0.3 }}
+                >
                   <div className="text-2xl font-bold">3</div>
                   <div className="text-emerald-200 text-xs uppercase tracking-wider">Lifestyle Areas</div>
-                </div>
+                </motion.div>
               </div>
-            </div>
+            </motion.div>
 
             {/* ── Nutrition Plan ── */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-100px' }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
+            >
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                 <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                   <UtensilsCrossed className="w-4 h-4 text-emerald-600" />
@@ -617,8 +655,13 @@ export default function ProtocolPage() {
                   const c = COLOR_CLASSES[group.color] ?? COLOR_CLASSES.emerald
                   const isHighlight = i < 2
                   return (
-                    <div
+                    <motion.div
                       key={group.name}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: i * 0.1 }}
+                      whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
                       className={`rounded-xl p-4 transition-shadow ${
                         isHighlight
                           ? `${c.bg} ${c.text} shadow-md`
@@ -637,14 +680,20 @@ export default function ProtocolPage() {
                           </li>
                         ))}
                       </ul>
-                    </div>
+                    </motion.div>
                   )
                 })}
               </div>
-            </div>
+            </motion.div>
 
             {/* ── Supplement Protocol Table ── */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-100px' }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
+            >
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                 <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                   <Pill className="w-4 h-4 text-emerald-600" />
@@ -688,10 +737,16 @@ export default function ProtocolPage() {
                   </div>
                 )}
               </FeatureGate>
-            </div>
+            </motion.div>
 
             {/* ── Lifestyle Recommendations ── */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-100px' }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
+            >
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                 <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                   <Zap className="w-4 h-4 text-emerald-600" />
@@ -700,14 +755,26 @@ export default function ProtocolPage() {
                 <span className="text-xs text-slate-400">Daily habits for best results</span>
               </div>
               <div className="p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {LIFESTYLE_SECTIONS.map(({ icon: Icon, title, color, items }) => {
+                {LIFESTYLE_SECTIONS.map(({ icon: Icon, title, color, items }, idx) => {
                   const c = COLOR_CLASSES[color] ?? COLOR_CLASSES.emerald
                   return (
-                    <div key={title} className="rounded-xl border border-slate-200 bg-slate-50 p-4 hover:shadow-sm transition-shadow">
+                    <motion.div
+                      key={title}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: idx * 0.1 }}
+                      whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-4 hover:shadow-sm transition-shadow"
+                    >
                       <div className="flex items-center gap-2.5 mb-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${c.bg} text-white shadow-sm`}>
+                        <motion.div
+                          animate={{ rotate: [0, 5, -5, 0] }}
+                          transition={{ duration: 3, repeat: Infinity, delay: idx * 0.2 }}
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center ${c.bg} text-white shadow-sm`}
+                        >
                           <Icon className="w-4 h-4" />
-                        </div>
+                        </motion.div>
                         <span className="font-semibold text-sm text-slate-900">{title}</span>
                       </div>
                       <ul className="space-y-2">
@@ -718,11 +785,11 @@ export default function ProtocolPage() {
                           </li>
                         ))}
                       </ul>
-                    </div>
+                    </motion.div>
                   )
                 })}
               </div>
-            </div>
+            </motion.div>
 
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import api from '../lib/api.js'
 import ProtocolCard from '../components/ProtocolCard.jsx'
 import FeatureGate from '../components/FeatureGate.jsx'
@@ -304,36 +305,82 @@ export default function Results() {
           <HintBanner hints={RESULTS_HINTS} onDone={dismissHints} />
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="vtl-light-card p-6 text-center">
-            <div className="flex items-center justify-center mb-2">
-              <CheckCircle className="h-6 w-6 text-emerald-600 mr-2" />
-              <div className="text-2xl font-bold text-emerald-600">{optimal}</div>
-            </div>
-            <div className="text-sm font-medium text-slate-900 mb-1">Optimal</div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+            className="cabinet-card p-6 text-center transition-all"
+          >
+            <motion.div
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="flex items-center justify-center mb-3"
+            >
+              <CheckCircle className="h-8 w-8 text-emerald-600 mr-2" />
+              <div className="text-3xl font-bold text-emerald-600">{optimal}</div>
+            </motion.div>
+            <div className="text-sm font-semibold text-slate-900 mb-1">Optimal</div>
             <div className="text-xs text-slate-500">Within healthy range</div>
-          </div>
-          <div className="vtl-light-card p-6 text-center">
-            <div className="flex items-center justify-center mb-2">
-              <Info className="h-6 w-6 text-amber-600 mr-2" />
-              <div className="text-2xl font-bold text-amber-600">{borderline}</div>
-            </div>
-            <div className="text-sm font-medium text-slate-900 mb-1">Borderline</div>
-            <div className="text-xs text-slate-500">Monitor closely</div>
-          </div>
-          <div className="vtl-light-card p-6 text-center">
-            <div className="flex items-center justify-center mb-2">
-              <AlertTriangle className="h-6 w-6 text-rose-600 mr-2" />
-              <div className="text-2xl font-bold text-rose-600">{deficient.length}</div>
-            </div>
-            <div className="text-sm font-medium text-slate-900 mb-1">Needs Attention</div>
-            <div className="text-xs text-slate-500">Requires action</div>
-          </div>
-        </div>
+          </motion.div>
 
-        <div className="mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+            className="cabinet-card p-6 text-center transition-all"
+          >
+            <motion.div
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2.5, repeat: Infinity, delay: 0.3 }}
+              className="flex items-center justify-center mb-3"
+            >
+              <Info className="h-8 w-8 text-amber-600 mr-2" />
+              <div className="text-3xl font-bold text-amber-600">{borderline}</div>
+            </motion.div>
+            <div className="text-sm font-semibold text-slate-900 mb-1">Borderline</div>
+            <div className="text-xs text-slate-500">Monitor closely</div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+            className="cabinet-card p-6 text-center transition-all"
+          >
+            <motion.div
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
+              className="flex items-center justify-center mb-3"
+            >
+              <AlertTriangle className="h-8 w-8 text-rose-600 mr-2" />
+              <div className="text-3xl font-bold text-rose-600">{deficient.length}</div>
+            </motion.div>
+            <div className="text-sm font-semibold text-slate-900 mb-1">Needs Attention</div>
+            <div className="text-xs text-slate-500">Requires action</div>
+          </motion.div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-100px' }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mb-8"
+        >
           <h3 className="text-xl font-bold text-slate-900 mb-4">Results Table</h3>
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white cabinet-card">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-slate-700">
                 <tr>
@@ -357,17 +404,37 @@ export default function Results() {
               </tbody>
             </table>
           </div>
-        </div>
+        </motion.div>
 
         {topPriority && (
-          <div className="mb-8 rounded-2xl border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-md">
-            <div className="flex items-center gap-3 mb-2">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+            whileHover={{ boxShadow: '0 20px 40px rgba(16, 185, 129, 0.15)' }}
+            className="mb-8 rounded-2xl border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 to-white p-6 transition-all"
+            style={{
+              boxShadow: '0 10px 30px rgba(16, 185, 129, 0.1), inset 0 1px 0 rgba(16, 185, 129, 0.1)',
+            }}
+          >
+            <motion.div
+              animate={{ rotate: [0, 5, -5, 0] }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="flex items-center gap-3 mb-3"
+            >
               <AlertTriangle className="h-6 w-6 text-emerald-600" />
               <div className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">🎯 Start Here</div>
-            </div>
-            <h3 className="text-2xl font-bold text-slate-900 mb-2">
+            </motion.div>
+            <motion.h3
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="text-2xl font-bold text-slate-900 mb-2"
+            >
               Your Top Priority: {topPriority.name_en}
-            </h3>
+            </motion.h3>
             <div className="mb-4 flex items-baseline gap-2">
               <span className="text-3xl font-bold text-emerald-600">{formatMetric(topPriority)}</span>
               <span className="text-sm text-slate-600">(Reference: {topPriority.ref_low}-{topPriority.ref_high} {topPriority.unit})</span>
@@ -381,7 +448,7 @@ export default function Results() {
             >
               Get Supplement Plan for This →
             </button>
-          </div>
+          </motion.div>
         )}
 
         <div className="mb-8">

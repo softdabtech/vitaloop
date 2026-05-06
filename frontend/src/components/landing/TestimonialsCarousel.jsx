@@ -62,6 +62,23 @@ export function TestimonialsCarousel() {
   return (
     <section id="testimonials" className="relative py-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
+        {/* Illustration */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="mb-16 flex justify-center"
+        >
+          <div className="w-full max-w-sm">
+            <img
+              src="/images/biohacking-health-cards.png"
+              alt="Person tracking health data with multiple biomarker cards"
+              className="w-full h-auto rounded-2xl shadow-lg"
+            />
+          </div>
+        </motion.div>
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

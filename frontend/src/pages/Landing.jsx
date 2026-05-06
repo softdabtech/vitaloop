@@ -24,7 +24,8 @@ import {
   X,
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
-import { AnimatedHero } from '../components/landing/AnimatedHero.jsx'
+import { LightHero } from '../components/landing/LightHero.jsx'
+import { StatsBar } from '../components/landing/StatsBar.jsx'
 import { TrustedServicesSection } from '../components/landing/TrustedServicesSection.jsx'
 import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx'
 import { TestimonialsCarousel } from '../components/landing/TestimonialsCarousel.jsx'
@@ -82,22 +83,22 @@ const BENEFITS = [
 const PREMIUM_FEATURES = [
   {
     title: 'Biomarker Timeline',
-    body: 'Track all markers over time',
+    body: "Track ferritin, vitamin D, thyroid over months. See what's improving.",
     icon: TrendingUp,
   },
   {
     title: 'AI Protocol',
-    body: 'Ranked action items',
+    body: 'Not "take iron" — Ferrous Bisglycinate 25mg, morning, 8 weeks.',
     icon: Sparkles,
   },
   {
     title: 'Weekly Check-ins',
-    body: 'Adaptive adjustments',
+    body: "Energy level? Side effects? We adjust your protocol based on feedback.",
     icon: HeartPulse,
   },
   {
     title: 'Practitioner CRM',
-    body: 'Client management',
+    body: 'Manage 50 clients, not 15. Multi-client dashboard, protocol templates.',
     icon: Users,
   },
 ]
@@ -814,7 +815,8 @@ export default function Landing() {
       </header>
 
       <main>
-        <AnimatedHero />
+        <LightHero />
+        <StatsBar />
 
         <section id="problem" className="mx-auto w-full max-w-[990px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-12 text-center">
@@ -834,24 +836,27 @@ export default function Landing() {
             <p className={`mx-auto mt-4 max-w-2xl text-lg ${'text-slate-600'}`}>
               What they say vs what you actually need
             </p>
+            <p className={`mx-auto mt-6 max-w-3xl text-base ${'text-slate-600'}`}>
+              We're not against doctors. We offer a different approach to your health — one that helps you catch patterns your annual checkup might miss, track trends over time, and avoid unnecessary risks. The goal: work alongside your healthcare provider with better data.
+            </p>
           </motion.div>
 
           <div className="grid gap-8 lg:grid-cols-2 mb-12">
-            {/* Traditional Problems */}
+            {/* Traditional Lab Report */}
             <div className="space-y-3">
               <motion.div
                 {...fadeUp(reduced, 0.1)}
                 className="text-center mb-6"
               >
-                <span className="inline-flex rounded-full bg-rose-100 px-4 py-2 text-sm font-bold uppercase tracking-wider text-rose-700">
-                  ❌ Traditional Labs
+                <span className="inline-flex rounded-full bg-slate-100 px-4 py-2 text-sm font-bold uppercase tracking-wider text-slate-700">
+                  📄 Lab Report
                 </span>
               </motion.div>
 
               {[
-                { icon: X, title: 'No priority', stat: '0', label: 'Which marker to fix first?' },
-                { icon: X, title: 'No history', stat: '0', label: 'No trend tracking' },
-                { icon: X, title: 'No execution', stat: '0', label: 'Just reference ranges' },
+                { icon: X, title: 'Numbers only', stat: '•', label: 'Values + reference ranges' },
+                { icon: X, title: 'One-time view', stat: '•', label: 'Single snapshot, no trends' },
+                { icon: X, title: 'No next steps', stat: '•', label: 'You figure out what to do' },
               ].map((item, idx) => {
                 const Icon = item.icon
                 return (
@@ -859,25 +864,25 @@ export default function Landing() {
                     key={item.title}
                     {...fadeUp(reduced, idx * 0.08 + 0.2)}
                     whileHover={reduced ? undefined : { scale: 1.02, x: -4 }}
-                    className={`group relative overflow-hidden rounded-2xl border bg-white p-3 ${'border-rose-200'}`}
+                    className={`group relative overflow-hidden rounded-2xl border bg-white p-3 ${'border-slate-200'}`}
                   >
                     <motion.div
-                      className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-orange-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                      className="absolute inset-0 bg-gradient-to-br from-slate-500/5 to-slate-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     />
 
                     <div className="relative flex items-center justify-center gap-3 text-center">
                       <motion.div
-                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-rose-50"
+                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-slate-100"
                         whileHover={reduced ? {} : { rotate: [0, -10, 10, 0] }}
                         transition={{ duration: 0.5 }}
                       >
-                        <Icon className="h-6 w-6 text-rose-500" />
+                        <Icon className="h-6 w-6 text-slate-400" />
                       </motion.div>
 
                       <div className="flex-1">
                         <div className="flex flex-col items-center">
                           <div className="flex items-baseline gap-2 justify-center">
-                            <div className="text-lg font-bold text-rose-600">{item.stat}</div>
+                            <div className="text-lg font-bold text-slate-400">{item.stat}</div>
                             <h3 className="text-base font-bold text-slate-900">{item.title}</h3>
                           </div>
                           <p className="mt-1 text-sm text-slate-600">{item.label}</p>
@@ -901,9 +906,9 @@ export default function Landing() {
               </motion.div>
 
               {[
-                { icon: TrendingUp, title: 'Clear priorities', stat: '01', label: 'Top 3 problems ranked by impact' },
-                { icon: Clock3, title: 'Trends over time', stat: '5+', label: 'Every test compared to previous' },
-                { icon: Sparkles, title: 'Exact protocol', stat: '7 dy', label: 'Know what to do and when' },
+                { icon: TrendingUp, title: 'Prioritized', stat: '✓', label: 'Top 3 problems ranked by severity' },
+                { icon: Clock3, title: 'Track trends', stat: '✓', label: 'Biomarkers compared over time' },
+                { icon: Sparkles, title: 'Actionable', stat: '✓', label: 'Exact dosages, timing, duration' },
               ].map((item, idx) => {
                 const Icon = item.icon
                 return (
@@ -935,7 +940,7 @@ export default function Landing() {
                       <div className="flex-1">
                         <div className="flex flex-col items-center">
                           <div className="flex items-baseline gap-2 justify-center">
-                            <div className="text-lg font-bold text-emerald-600">{item.stat}</div>
+                            <div className="text-xl font-bold text-emerald-500">{item.stat}</div>
                             <h3 className="text-base font-bold text-slate-900">{item.title}</h3>
                           </div>
                           <p className="mt-1 text-sm text-slate-600">{item.label}</p>
@@ -966,27 +971,17 @@ export default function Landing() {
             </p>
           </motion.div>
 
-          <motion.div variants={staggerParent} initial="hidden" whileInView="show" viewport={{ once: true, margin: '-10% 0px -10% 0px' }} className="relative">
-            {/* Visual timeline connector */}
-            <div className="pointer-events-none absolute left-1/2 top-0 hidden h-full w-1 -translate-x-1/2 md:block">
-              <motion.div
-                className="h-full w-full rounded-full bg-gradient-to-b from-emerald-400 via-sky-400 to-violet-400 opacity-20"
-                initial={{ scaleY: 0 }}
-                whileInView={{ scaleY: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.5, ease: 'easeInOut' }}
-              />
-            </div>
-
-            <div className="grid gap-6 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <motion.div variants={staggerParent} initial="hidden" whileInView="show" viewport={{ once: true, margin: '-10% 0px -10% 0px' }} className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* LEFT: 4-step grid */}
+            <div className="grid grid-cols-2 gap-4 md:gap-6">
               {STEPS.map((step, idx) => {
                 const Icon = step.icon
                 return (
                   <motion.article
                     key={step.title}
                     variants={fadeUp(reduced, idx * 0.04)}
-                    whileHover={reduced ? undefined : { y: -8, scale: 1.05 }}
-                    className={`group relative z-10 overflow-hidden rounded-2xl border p-6 text-center transition ${'border-slate-200 bg-white'}`}
+                    whileHover={reduced ? undefined : { y: -6, scale: 1.03 }}
+                    className={`group relative overflow-hidden rounded-2xl border p-6 text-center transition ${'border-slate-200 bg-white'}`}
                     style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08), inset 0 1px 0 rgba(16,185,129,0.08)' }}
                   >
                     {/* Step number badge */}
@@ -1005,7 +1000,7 @@ export default function Landing() {
 
                     {/* Icon with pulse effect */}
                     <motion.div
-                      className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center"
+                      className="relative mx-auto mb-3 flex h-14 w-14 items-center justify-center"
                       whileHover={reduced ? {} : { scale: 1.1 }}
                       transition={{ duration: 0.4 }}
                     >
@@ -1014,28 +1009,43 @@ export default function Landing() {
                         animate={reduced ? {} : { scale: [1, 1.15, 1], opacity: [0.5, 0.7, 0.5] }}
                         transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
                       />
-                      <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-50 to-sky-50">
-                        <Icon className="h-6 w-6 text-emerald-600" />
+                      <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-50 to-sky-50">
+                        <Icon className="h-5 w-5 text-emerald-600" />
                       </div>
                     </motion.div>
 
-                    <h3 className="relative text-base font-bold">{step.title}</h3>
-                    <p className={`relative mt-2 text-xs ${'text-slate-600'}`}>{step.body}</p>
-
-                    {/* Animated arrow for non-last items */}
-                    {idx < STEPS.length - 1 && (
-                      <motion.div
-                        className="absolute -right-4 top-1/2 hidden -translate-y-1/2 lg:block"
-                        animate={reduced ? {} : { x: [0, 5, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                      >
-                        <ArrowRight className="h-8 w-8 text-emerald-400/50" />
-                      </motion.div>
-                    )}
+                    <h3 className="relative text-sm font-bold">{step.title}</h3>
+                    <p className={`relative mt-1 text-xs ${'text-slate-600'}`}>{step.body}</p>
                   </motion.article>
                 )
               })}
             </div>
+
+            {/* RIGHT: Biohacking Illustration */}
+            <motion.div
+              initial={{ opacity: 0, y: 40, x: 40 }}
+              whileInView={{ opacity: 1, y: 0, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              viewport={{ once: true }}
+              className="flex justify-center lg:justify-end"
+            >
+              <div className="relative w-full max-w-md">
+                <img
+                  src="/images/biohacking-arms-open.png"
+                  alt="Your complete health optimization system with biohacking technology"
+                  className="w-full h-auto rounded-2xl shadow-lg"
+                />
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  viewport={{ once: true }}
+                  className="mt-6 text-center text-sm text-slate-600"
+                >
+                  Your complete health optimization system
+                </motion.p>
+              </div>
+            </motion.div>
           </motion.div>
         </section>
 

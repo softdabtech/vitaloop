@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { CreditCard, CheckCircle2, AlertCircle, ArrowRight, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
@@ -61,7 +62,14 @@ function PlanCard({ plan, planKey, currentPlan, onSelect, isLoading }) {
   const colors = colorMap[plan.color]
 
   return (
-    <div className={`rounded-2xl border-2 ${isCurrentPlan ? colors.border : 'border-slate-200'} ${colors.bg} p-6 sm:p-8 relative overflow-hidden`}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5 }}
+      whileHover={{ y: -4, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}
+      className={`rounded-2xl border-2 ${isCurrentPlan ? colors.border : 'border-slate-200'} ${colors.bg} p-6 sm:p-8 relative overflow-hidden transition-all`}
+    >
       {isCurrentPlan && (
         <div className="absolute top-4 right-4 flex items-center gap-1 bg-emerald-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
           <CheckCircle2 className="w-3 h-3" />
@@ -99,7 +107,7 @@ function PlanCard({ plan, planKey, currentPlan, onSelect, isLoading }) {
         {isCurrentPlan ? 'Current Plan' : planKey === 'enterprise' ? 'Contact Sales' : 'Select Plan'}
         {!isCurrentPlan && planKey !== 'enterprise' && <ArrowRight className="w-4 h-4" />}
       </button>
-    </div>
+    </motion.div>
   )
 }
 
@@ -219,7 +227,13 @@ export default function Subscription() {
       <div className="grid gap-8">
         {/* Current Status */}
         {subscription && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0 }}
+            className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+          >
             <div className="flex items-start justify-between mb-6">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 mb-2">Current Subscription</h3>
@@ -292,12 +306,18 @@ export default function Subscription() {
                 }`}>{planStatus === 'free' ? 'Free' : planStatus}</div>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Usage Statistics */}
         {subscription && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+          >
             <h3 className="text-lg font-bold text-slate-900 mb-6">Usage & Limits</h3>
 
             <div className="space-y-4">
@@ -335,12 +355,18 @@ export default function Subscription() {
                 </ul>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Free Plan Info */}
         {currentPlan === 'free' && (
-          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6 sm:p-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="rounded-2xl border border-blue-200 bg-blue-50 p-6 sm:p-8"
+          >
             <h3 className="font-semibold text-blue-900 mb-3">💡 About Your Free Plan</h3>
             <div className="space-y-2 text-sm text-blue-800">
               <p>You're currently using the Free plan which includes:</p>
@@ -352,12 +378,17 @@ export default function Subscription() {
               </ul>
               <p className="pt-2 text-blue-900 font-medium">Upgrade to Personal Premium to unlock unlimited uploads and AI-powered protocols.</p>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Plan Selection - only show for free users */}
         {currentPlan === 'free' && (
-          <div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
             <h3 className="text-lg font-bold text-slate-900 mb-4">Choose Your Plan</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {Object.entries(PLANS).map(([key, plan]) => (
@@ -371,12 +402,18 @@ export default function Subscription() {
                 />
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Payment & Billing Info */}
         {isPremium && (
-          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6 sm:p-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="rounded-2xl border border-blue-200 bg-blue-50 p-6 sm:p-8"
+          >
             <div className="flex items-start gap-3">
               <CreditCard className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
@@ -398,11 +435,17 @@ export default function Subscription() {
                 </button>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Need Help */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+          className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+        >
           <h3 className="text-lg font-bold text-slate-900 mb-4">Questions About Your Plan?</h3>
           <p className="text-slate-600 mb-4">
             If you have any questions about your subscription, pricing, or need help choosing the right plan for your needs, please contact our support team.
@@ -414,7 +457,7 @@ export default function Subscription() {
             Contact Support
             <ArrowRight className="w-4 h-4" />
           </a>
-        </div>
+        </motion.div>
       </div>
     </>
   )

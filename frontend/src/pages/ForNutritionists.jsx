@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
 import Footer from '../components/landing/Footer.jsx'
+import { PageHeader } from '../components/landing/PageHeader.jsx'
 import { fadeUp, fadeUpBlur, stagger, staggerChild, EASE } from '../lib/motion.js'
 import { gaEvent } from '../lib/analytics.js'
 
@@ -277,16 +278,7 @@ export default function ForNutritionists() {
 
       <GlowBg />
 
-      {/* Nav back */}
-      <div className="mx-auto max-w-[1240px] px-4 py-6 sm:px-6">
-        <button
-          onClick={() => navigate('/')}
-          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:bg-slate-100"
-        >
-          <ArrowLeft className="h-4 w-4" />
-            Back to home
-        </button>
-      </div>
+      <PageHeader />
 
       {/* ── Hero ── */}
       <section className="mx-auto max-w-[1240px] px-4 pb-20 pt-8 sm:px-6">

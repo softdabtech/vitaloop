@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { Mail, Bell, Lock, LogOut, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
@@ -142,7 +143,13 @@ export default function Settings() {
 
       <div className="grid gap-6 max-w-2xl">
         {/* Account Info */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0 }}
+          className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
             <Mail size={18} style={{ color: '#1d9e75' }} />
             <div>
@@ -165,10 +172,16 @@ export default function Settings() {
           <p style={{ fontSize: 12, color: '#64748b', marginTop: 10 }}>
             Contact support@vitaloop.today to change your email address.
           </p>
-        </div>
+        </motion.div>
 
         {/* Password */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
             <Lock size={18} style={{ color: '#1d9e75' }} />
             <div>
@@ -210,10 +223,16 @@ export default function Settings() {
               {saving ? 'Updating...' : 'Update Password'}
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Notifications */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+        >
           <NotificationPreferences
             currentPreferences={notifications}
             onSave={(prefs) => {
@@ -221,10 +240,16 @@ export default function Settings() {
               toast.success('Notification preferences updated!')
             }}
           />
-        </div>
+        </motion.div>
 
         {/* Danger Zone */}
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 sm:p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="rounded-2xl border border-rose-200 bg-rose-50 p-6 sm:p-8"
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
             <AlertTriangle size={18} style={{ color: '#dc2626' }} />
             <div>
@@ -327,7 +352,7 @@ export default function Settings() {
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </>
   )

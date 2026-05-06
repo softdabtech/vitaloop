@@ -33,14 +33,14 @@ export function AnimatedHero() {
             </motion.div>
 
             <h1 className="text-4xl lg:text-5xl font-bold mb-6 leading-[1.1]">
-              <span className="block text-white">Stop guessing.</span>
+              <span className="block text-white">Spent $400 on blood tests.</span>
               <span className="block bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-400 bg-clip-text text-transparent">
-                Get exact protocol
+                Don't know what to do?
               </span>
             </h1>
 
             <p className="text-xl text-slate-300 mb-10 leading-relaxed max-w-lg">
-              Dosages. Timing. Priorities. Not interpretation—execution. Weekly check-ins. Real results in 12 weeks.
+              Upload your PDF. Get a protocol with dosages in 60 seconds. Not interpretation. Execution.
             </p>
 
             {/* CTA buttons */}
@@ -51,7 +51,7 @@ export function AnimatedHero() {
                 onClick={() => navigate('/upload')}
                 className="group px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-white rounded-full font-semibold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
               >
-                Try with your lab
+                Upload lab PDF (free)
                 <motion.span
                   className="inline-block"
                   animate={{ x: [0, 5, 0] }}

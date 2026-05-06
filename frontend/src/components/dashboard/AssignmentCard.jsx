@@ -1,7 +1,8 @@
 import React from 'react'
+import { motion } from 'framer-motion'
 import { Clock, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react'
 
-export default function AssignmentCard({ assignment, onClick }) {
+export default function AssignmentCard({ assignment, onClick, animated = true, delay = 0 }) {
   const statusColors = {
     pending: 'bg-amber-50 text-amber-700 border-amber-200',
     in_progress: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -31,15 +32,27 @@ export default function AssignmentCard({ assignment, onClick }) {
   }
 
   const urgencyTone = {
-    overdue: 'text-rose-600',
-    today: 'text-orange-600',
+    overdue: 'text-rose-600 font-bold',
+    today: 'text-orange-600 font-bold',
     soon: 'text-amber-600',
     normal: 'text-slate-400',
   }
 
+  const animationProps = animated
+    ? {
+        initial: { opacity: 0, x: -20 },
+        whileInView: { opacity: 1, x: 0 },
+        viewport: { once: true, margin: '-100px' },
+        transition: { duration: 0.4, delay, ease: [0.16, 1, 0.3, 1] },
+        whileHover: { x: 4 },
+      }
+    : {}
+
+  const WrapperComponent = animated ? motion.div : 'div'
+
   return (
-    <div
-      className={`vtl-light-card vtl-light-card-hover p-4 flex items-start gap-4 transition group ${onClick ? 'cursor-pointer' : ''}`}
+    <WrapperComponent
+      className={`cabinet-card p-4 flex items-start gap-4 transition-all duration-300 group ${onClick ? 'cursor-pointer cabinet-card-hover' : ''}`}
       onClick={onClick}
       onKeyDown={(event) => {
         if (!onClick) return
@@ -50,11 +63,17 @@ export default function AssignmentCard({ assignment, onClick }) {
       }}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
+      {...animationProps}
     >
       {/* Icon */}
-      <div className={`p-2.5 rounded-xl flex-shrink-0 ${statusClass} border`}>
-        <StatusIcon className="w-4 h-4" />
-      </div>
+      <motion.div
+        className={`p-2.5 rounded-lg flex-shrink-0 ${statusClass} border`}
+        whileHover={{ scale: 1.1, rotate: 5 }}
+        whileTap={{ scale: 0.95 }}
+        transition={{ duration: 0.2 }}
+      >
+        <StatusIcon className="w-5 h-5" />
+      </motion.div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
@@ -67,13 +86,17 @@ export default function AssignmentCard({ assignment, onClick }) {
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-slate-400 text-xs">{dueDate}</p>
           {priority?.urgency && (
-            <span className={`text-[11px] font-semibold ${urgencyTone[priority.urgency] || urgencyTone.normal}`}>
+            <motion.span
+              className={`text-[11px] font-semibold ${urgencyTone[priority.urgency] || urgencyTone.normal}`}
+              animate={priority.urgency === 'overdue' ? { opacity: [0.7, 1, 0.7] } : {}}
+              transition={priority.urgency === 'overdue' ? { duration: 2, repeat: Infinity } : {}}
+            >
               {priority.urgency.toUpperCase()}
-            </span>
+            </motion.span>
           )}
           {priority?.impact && (
             <span className={`text-[11px] border rounded px-1.5 py-0.5 ${impactTone[priority.impact] || impactTone.low}`}>
-              IMPACT {priority.impact.toUpperCase()}
+              {priority.impact.toUpperCase()}
             </span>
           )}
         </div>
@@ -82,15 +105,24 @@ export default function AssignmentCard({ assignment, onClick }) {
       {/* Status Badge & Arrow */}
       <div className="flex items-center gap-2 flex-shrink-0">
         {priority?.score != null && (
-          <span className="px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 border border-slate-200 text-slate-600">
-            {priority.score}
-          </span>
+          <motion.span
+            className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-600"
+            whileHover={{ scale: 1.1 }}
+          >
+            #{priority.score}
+          </motion.span>
         )}
-        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${statusClass} border`}>
+        <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${statusClass} border`}>
           {status.replace('_', ' ').toUpperCase()}
         </span>
-        <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition" />
+        <motion.div
+          animate={{ x: [0, 3, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="text-slate-400 group-hover:text-emerald-600 transition"
+        >
+          <ArrowRight className="w-4 h-4" />
+        </motion.div>
       </div>
-    </div>
+    </WrapperComponent>
   )
 }
