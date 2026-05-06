@@ -43,3 +43,31 @@ export async function notifyRegistrationAlert(flow = 'signup') {
     return false
   }
 }
+
+export async function sendWelcomeEmail() {
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
+  const accessToken = session?.access_token
+
+  if (!user?.id || !accessToken) {
+    return false
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/auth/registration/welcome`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
+
+    if (!response.ok) {
+      return false
+    }
+
+    return true
+  } catch {
+    return false
+  }
+}
