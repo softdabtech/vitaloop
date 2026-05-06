@@ -31,6 +31,7 @@ import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx
 import { TestimonialsCarousel } from '../components/landing/TestimonialsCarousel.jsx'
 import { InteractivePricing } from '../components/landing/InteractivePricing.jsx'
 import { AnimatedFAQ } from '../components/landing/AnimatedFAQ.jsx'
+import Footer from '../components/landing/Footer.jsx'
 
 const NAV_LINKS = [
   { id: 'how-it-works', label: 'Product' },
@@ -1352,61 +1353,7 @@ export default function Landing() {
         </section>
       </main>
 
-      <footer className={`border-t ${'border-slate-200 bg-white'} py-10`}>
-        <div className="mx-auto grid w-full max-w-[1240px] gap-8 px-4 text-sm sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/90 text-white">
-                <HeartPulse className="h-5 w-5" />
-              </span>
-              <span className="text-base font-semibold tracking-tight">VITALOOP</span>
-            </div>
-            <p className={`mt-4 max-w-md leading-relaxed ${'text-slate-500'}`}>
-              AI lab analysis, personalized protocols, and longitudinal biomarker tracking for people who want a repeatable health system instead of one-off interpretations.
-            </p>
-            <p className={`mt-4 text-xs uppercase tracking-[0.16em] ${'text-slate-400'}`}>Not medical advice. Always work with a qualified clinician for diagnosis and treatment decisions.</p>
-            <div className="mt-6 flex flex-col items-start gap-2">
-              <a
-                href="mailto:info@softdab.tech"
-                className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}
-              >
-                info@softdab.tech
-              </a>
-              <p className={`text-left ${'text-slate-400'}`}>
-                © 2026 VITALOOP. Made by{' '}
-                <a
-                  href="https://softdab.tech"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`${'text-emerald-700 hover:text-emerald-600'} underline-offset-2 hover:underline`}
-                >
-                  SoftDAB
-                </a>
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>Product</div>
-            <div className="mt-4 flex flex-col gap-3">
-              <button onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>How it works</button>
-              <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>Pricing</button>
-              <button onClick={() => navigate('/how-it-works')} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>Health Intelligence Hub</button>
-            </div>
-          </div>
-
-          <div>
-            <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>Company</div>
-            <div className="mt-4 flex flex-col items-start gap-3 text-left">
-              <button onClick={() => navigate('/for-nutritionists')} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>For Nutritionists</button>
-              <a href="/help" className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>Help Center</a>
-              <button onClick={() => navigate('/terms')} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>Terms</button>
-              <button onClick={() => navigate('/privacy')} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>Privacy</button>
-              <button onClick={() => navigate('/for-investors')} className={`text-left underline-offset-2 hover:underline ${'text-slate-500'}`}>For Investors</button>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }
