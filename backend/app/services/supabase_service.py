@@ -222,6 +222,9 @@ async def save_biomarkers(upload_id: str, user_id: str, biomarkers: List[Dict]) 
         }
         for b in biomarkers
     ]
+    # Delete any existing biomarkers for this upload before inserting
+    # (handles re-analysis retries; unique constraint on upload_id+lower(name) would fail otherwise)
+    await _run(lambda: supabase.table("biomarkers").delete().eq("upload_id", upload_id).execute())
     resp = await _run(lambda: supabase.table("biomarkers").insert(rows).execute())
     await _run(lambda: supabase.table("lab_uploads").update({"status": "done"}).eq("id", upload_id).execute())
     return resp.data
