@@ -328,7 +328,10 @@ export default function UserDashboard() {
   const latestUpload = summary?.blocks?.latest_upload || null
   const latestCheckin = summary?.blocks?.latest_checkin || null
   const hasUploads = Number(stats.total_uploads || 0) > 0
-  const onboardingComplete = Boolean(user?.onboarding_complete || profile?.onboarding_complete)
+  const onboardingComplete = Boolean(
+    profile?.onboarding?.checklist?.onboarding_complete
+    || profile?.onboarding?.requires_onboarding === false
+  )
   const hasProtocol = Boolean(stats.active_program && String(stats.active_program).toLowerCase() !== 'not started')
   const isFirstRun = !loading && !hasUploads
   const showStartHere = Boolean(startHere?.enabled && isFirstRun)
