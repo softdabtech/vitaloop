@@ -58,15 +58,223 @@ function mapAuthErrorMessage(message) {
   }
 }
 
-// Abstract particle art panels
+// Medical hexagon panel for Sign In
+function MedicalPanel({ side }) {
+  const isLeft = side === 'left'
+
+  // Hexagon grid positions
+  const hexagons = [
+    { x: 15, y: 12, size: 14, op: 0.55 },
+    { x: 36, y: 8, size: 10, op: 0.35 },
+    { x: 55, y: 18, size: 16, op: 0.45 },
+    { x: 75, y: 10, size: 12, op: 0.60 },
+    { x: 88, y: 28, size: 18, op: 0.50 },
+    { x: 8, y: 35, size: 8, op: 0.30 },
+    { x: 28, y: 40, size: 13, op: 0.40 },
+    { x: 50, y: 45, size: 10, op: 0.35 },
+    { x: 68, y: 38, size: 15, op: 0.55 },
+    { x: 82, y: 55, size: 11, op: 0.40 },
+    { x: 20, y: 62, size: 12, op: 0.35 },
+    { x: 42, y: 68, size: 9, op: 0.30 },
+    { x: 62, y: 70, size: 14, op: 0.45 },
+    { x: 78, y: 78, size: 10, op: 0.35 },
+    { x: 10, y: 80, size: 16, op: 0.45 },
+    { x: 35, y: 85, size: 8, op: 0.25 },
+    { x: 55, y: 88, size: 12, op: 0.35 },
+    { x: 90, y: 68, size: 9, op: 0.30 },
+  ]
+
+  // Hexagon path helper (flat-top, centered at cx,cy with given "size" in viewBox units)
+  function hexPath(cx, cy, r) {
+    const pts = Array.from({ length: 6 }, (_, i) => {
+      const a = (Math.PI / 180) * (60 * i - 30)
+      return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`
+    })
+    return `M${pts.join('L')}Z`
+  }
+
+  // DNA helix — sinusoidal backbone
+  const dnaPoints1 = Array.from({ length: 30 }, (_, i) => ({
+    x: 5 + i * 3.1,
+    y: 72 - Math.sin(i * 0.7) * 8,
+  }))
+  const dnaPoints2 = Array.from({ length: 30 }, (_, i) => ({
+    x: 5 + i * 3.1,
+    y: 72 + Math.sin(i * 0.7) * 8,
+  }))
+  const dna1 = 'M' + dnaPoints1.map(p => `${p.x},${p.y}`).join(' L')
+  const dna2 = 'M' + dnaPoints2.map(p => `${p.x},${p.y}`).join(' L')
+
+  // Connector rungs
+  const rungs = dnaPoints1.filter((_, i) => i % 3 === 0).map((p, i) => ({
+    x1: p.x, y1: p.y,
+    x2: dnaPoints2[i * 3].x, y2: dnaPoints2[i * 3].y,
+  }))
+
+  // Connection node dots
+  const nodes = [
+    { x: 45, y: 30 }, { x: 58, y: 22 }, { x: 72, y: 35 }, { x: 65, y: 48 },
+    { x: 52, y: 55 }, { x: 40, y: 48 }, { x: 80, y: 22 }, { x: 85, y: 42 },
+  ]
+  const nodeLines = [
+    [0,1],[1,2],[2,3],[3,4],[4,5],[0,5],[1,6],[2,7],[3,7],
+  ]
+
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, overflow: 'hidden',
+      background: 'linear-gradient(135deg, #0a2540 0%, #0e3d6b 30%, #0c5a82 55%, #0d8a8a 80%, #b8d8e8 100%)',
+    }}>
+      {/* Soft radial glow spots */}
+      <div style={{
+        position: 'absolute', width: '60%', height: '60%',
+        top: '5%', left: '10%',
+        background: 'radial-gradient(ellipse, rgba(120,200,255,0.18) 0%, transparent 70%)',
+        borderRadius: '50%',
+      }}/>
+      <div style={{
+        position: 'absolute', width: '40%', height: '50%',
+        bottom: '10%', right: '5%',
+        background: 'radial-gradient(ellipse, rgba(180,230,255,0.12) 0%, transparent 70%)',
+        borderRadius: '50%',
+      }}/>
+
+      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+
+        {/* Hexagon grid */}
+        {hexagons.map((h, i) => (
+          <g key={i}>
+            <path d={hexPath(h.x, h.y, h.size / 2)}
+              fill="none" stroke="rgba(160,220,255,0.6)" strokeWidth="0.4" opacity={h.op}/>
+            {/* Some hexagons with subtle fill */}
+            {i % 3 === 0 && (
+              <path d={hexPath(h.x, h.y, h.size / 2)}
+                fill="rgba(100,180,240,0.08)" opacity={h.op * 0.8}/>
+            )}
+          </g>
+        ))}
+
+        {/* Node network lines */}
+        {nodeLines.map(([a, b], i) => (
+          <line key={i}
+            x1={nodes[a].x} y1={nodes[a].y}
+            x2={nodes[b].x} y2={nodes[b].y}
+            stroke="rgba(160,220,255,0.45)" strokeWidth="0.3"/>
+        ))}
+        {/* Node dots */}
+        {nodes.map((n, i) => (
+          <circle key={i} cx={n.x} cy={n.y} r={0.8}
+            fill="rgba(200,235,255,0.8)"/>
+        ))}
+
+        {/* DNA double helix */}
+        <path d={dna1} fill="none" stroke="rgba(160,220,255,0.5)" strokeWidth="0.5"/>
+        <path d={dna2} fill="none" stroke="rgba(160,220,255,0.5)" strokeWidth="0.5"/>
+        {rungs.map((r, i) => (
+          <line key={i} x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2}
+            stroke="rgba(180,230,255,0.35)" strokeWidth="0.35"/>
+        ))}
+
+        {/* Medical cross icon */}
+        <g opacity="0.65" transform="translate(60,28)">
+          <rect x="-3.5" y="-1.2" width="7" height="2.4" rx="0.5" fill="rgba(200,235,255,0.7)"/>
+          <rect x="-1.2" y="-3.5" width="2.4" height="7" rx="0.5" fill="rgba(200,235,255,0.7)"/>
+        </g>
+
+        {/* Heart with pulse */}
+        <g opacity="0.55" transform="translate(80,18)">
+          <path d="M0,-1.5 C-0.8,-2.8 -3,-2.8 -3,-1 C-3,0.5 0,2.5 0,2.5 C0,2.5 3,0.5 3,-1 C3,-2.8 0.8,-2.8 0,-1.5Z"
+            fill="none" stroke="rgba(200,235,255,0.7)" strokeWidth="0.4"/>
+          {/* Pulse line through heart */}
+          <path d="M-5,0 L-3,0 L-2,-1.5 L-1,1.5 L0,-0.5 L1,0 L5,0"
+            fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.35"/>
+        </g>
+
+        {/* Syringe icon */}
+        <g opacity="0.50" transform="translate(32,58) rotate(-45)">
+          <rect x="-0.8" y="-3" width="1.6" height="5" rx="0.3" fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.35"/>
+          <line x1="0" y1="2" x2="0" y2="4" stroke="rgba(200,235,255,0.6)" strokeWidth="0.4"/>
+          <line x1="-1.5" y1="-1" x2="-2.5" y2="-1" stroke="rgba(200,235,255,0.5)" strokeWidth="0.3"/>
+          <line x1="-1.5" y1="0.5" x2="-2.5" y2="0.5" stroke="rgba(200,235,255,0.5)" strokeWidth="0.3"/>
+        </g>
+
+        {/* Person / doctor icon */}
+        <g opacity="0.50" transform="translate(20,80)">
+          <circle cx="0" cy="-3" r="1.5" fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.4"/>
+          <path d="M-2.5,0 C-2.5,-1.5 2.5,-1.5 2.5,0 L2.5,4 L-2.5,4 Z"
+            fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.4"/>
+          {/* Tie */}
+          <path d="M-0.6,-0.5 L0,1.5 L0.6,-0.5" fill="rgba(200,235,255,0.4)" stroke="none"/>
+        </g>
+
+        {/* Flask icon */}
+        <g opacity="0.45" transform="translate(50,82)">
+          <path d="M-1.5,-3 L-1.5,0 L-3,3.5 L3,3.5 L1.5,0 L1.5,-3"
+            fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.4"/>
+          <line x1="-1.5" y1="-3" x2="1.5" y2="-3" stroke="rgba(200,235,255,0.5)" strokeWidth="0.4"/>
+          <ellipse cx="0" cy="2.5" rx="1.5" ry="0.7" fill="rgba(130,200,255,0.25)"/>
+        </g>
+
+        {/* Clipboard / medical chart */}
+        <g opacity="0.45" transform="translate(48,50)">
+          <rect x="-2.5" y="-4" width="5" height="6.5" rx="0.5" fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.35"/>
+          <rect x="-1" y="-4.8" width="2" height="1.2" rx="0.3" fill="rgba(200,235,255,0.5)"/>
+          <line x1="-1.5" y1="-1.5" x2="1.5" y2="-1.5" stroke="rgba(200,235,255,0.45)" strokeWidth="0.3"/>
+          <line x1="-1.5" y1="-0.2" x2="1.5" y2="-0.2" stroke="rgba(200,235,255,0.45)" strokeWidth="0.3"/>
+          <line x1="-1.5" y1="1.1" x2="0.5" y2="1.1" stroke="rgba(200,235,255,0.45)" strokeWidth="0.3"/>
+        </g>
+
+        {/* Lock/shield icon */}
+        <g opacity="0.45" transform="translate(36,38)">
+          <rect x="-2" y="-1" width="4" height="3.5" rx="0.5" fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.35"/>
+          <path d="M-1.2,-1 C-1.2,-2.5 1.2,-2.5 1.2,-1" fill="none" stroke="rgba(200,235,255,0.6)" strokeWidth="0.35"/>
+          <circle cx="0" cy="0.8" r="0.5" fill="rgba(200,235,255,0.5)"/>
+        </g>
+
+        {/* Molecule dots */}
+        {[{x:62,y:58,r:1.2},{x:68,y:62,r:0.8},{x:58,y:64,r:0.9},{x:64,y:68,r:1.0}].map((d,i) => (
+          <circle key={i} cx={d.x} cy={d.y} r={d.r}
+            fill="rgba(200,235,255,0.4)" stroke="rgba(160,220,255,0.5)" strokeWidth="0.2"/>
+        ))}
+        <line x1="62" y1="58" x2="68" y2="62" stroke="rgba(160,220,255,0.35)" strokeWidth="0.3"/>
+        <line x1="62" y1="58" x2="58" y2="64" stroke="rgba(160,220,255,0.35)" strokeWidth="0.3"/>
+        <line x1="68" y1="62" x2="64" y2="68" stroke="rgba(160,220,255,0.35)" strokeWidth="0.3"/>
+        <line x1="58" y1="64" x2="64" y2="68" stroke="rgba(160,220,255,0.35)" strokeWidth="0.3"/>
+      </svg>
+
+      {/* Tagline */}
+      <div style={{
+        position: 'absolute', bottom: 40,
+        left: isLeft ? 32 : 'auto', right: isLeft ? 'auto' : 32,
+        maxWidth: 200,
+      }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em',
+          color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', marginBottom: 6 }}>
+          {isLeft ? 'Your biology,\ndecoded.' : 'HIPAA-ready\narchitecture.'}
+        </div>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.18)', lineHeight: 1.5 }}>
+          {isLeft
+            ? 'Upload any lab result — AI extracts every biomarker in 60 seconds.'
+            : 'Your PDF never leaves your device. OCR runs 100% client-side.'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Abstract particle art panels (used for Sign Up)
 function AbstractPanel({ side, variant = 'signin' }) {
   const isLeft = side === 'left'
   const signup = variant === 'signup'
-  const baseColor = signup ? (isLeft ? '#1e3a8a' : '#1e40af') : (isLeft ? '#1D9E75' : '#085041')
-  const accent = signup ? (isLeft ? '#60a5fa' : '#93c5fd') : (isLeft ? '#5DCAA5' : '#1D9E75')
-  const gradient = signup
-    ? `linear-gradient(${isLeft ? '135deg' : '225deg'}, #0b173f 0%, #1e3a8a 45%, #020617 100%)`
-    : `linear-gradient(${isLeft ? '135deg' : '225deg'}, #04342C 0%, #085041 40%, #0a0a0a 100%)`
+
+  if (!signup) {
+    return <MedicalPanel side={side} />
+  }
+
+  const baseColor = isLeft ? '#1e3a8a' : '#1e40af'
+  const accent = isLeft ? '#60a5fa' : '#93c5fd'
+  const gradient = `linear-gradient(${isLeft ? '135deg' : '225deg'}, #0b173f 0%, #1e3a8a 45%, #020617 100%)`
 
   // Deterministic particles based on side
   const particles = Array.from({ length: 60 }, (_, i) => ({
@@ -169,9 +377,9 @@ export default function Login() {
       borderColor: 'rgba(96,165,250,0.22)',
     }
     : {
-      appBg: '#04342C',
-      centerBg: 'linear-gradient(180deg, #093320 0%, #071a12 55%, #040d08 100%)',
-      borderColor: 'rgba(29,158,117,0.22)',
+      appBg: '#071c33',
+      centerBg: 'linear-gradient(180deg, #0c2d4a 0%, #091e33 55%, #050e1a 100%)',
+      borderColor: 'rgba(100,180,240,0.22)',
     }
 
   useEffect(() => {
