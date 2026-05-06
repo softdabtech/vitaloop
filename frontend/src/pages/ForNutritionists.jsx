@@ -274,6 +274,26 @@ export default function ForNutritionists() {
         title="AI Lab Analysis for Nutritionists | VITALOOP"
         description="Manage clients, interpret blood test labs in minutes, and run personalized nutrition protocols in one practitioner workspace. Start free with VITALOOP."
         path="/for-nutritionists"
+        schemas={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'Service',
+            name: 'AI Lab Analysis for Nutritionists',
+            description:
+              'VITALOOP provides nutritionists and dietitians with AI-powered blood test analysis, client management, personalized protocol generation, and longitudinal biomarker tracking.',
+            provider: {
+              '@type': 'Organization',
+              name: 'VITALOOP',
+              url: 'https://vitaloop.today',
+            },
+            url: 'https://vitaloop.today/for-nutritionists',
+            serviceType: 'Health Technology Platform',
+            audience: {
+              '@type': 'Audience',
+              audienceType: 'Nutritionists, Dietitians, Functional Medicine Practitioners',
+            },
+          },
+        ]}
       />
 
       <GlowBg />

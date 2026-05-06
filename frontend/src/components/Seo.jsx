@@ -10,6 +10,8 @@ const DEFAULT_DESCRIPTION = 'Upload your blood test PDF, get AI biomarker analys
  * @param {string}  description - Meta description (150–160 chars ideal).
  * @param {string}  path        - Canonical path, e.g. '/how-it-works'. Defaults to '/'.
  * @param {string}  image       - Absolute OG image URL.
+ * @param {string}  imageAlt    - Alt text for the OG/Twitter image.
+ * @param {boolean} noindex     - Set true to prevent indexing (404, private pages).
  * @param {Array}   schemas     - JSON-LD schema objects to inject as <script type="application/ld+json">.
  */
 export default function Seo({
@@ -17,17 +19,22 @@ export default function Seo({
   description,
   path = '/',
   image = `${BASE_URL}/og-cover.jpg`,
+  imageAlt = 'VITALOOP — AI-powered blood test analysis and biohacking platform dashboard',
+  noindex = false,
   schemas = [],
 }) {
   const fullTitle = title || DEFAULT_TITLE
   const safeDescription = description || DEFAULT_DESCRIPTION
   const canonical = `${BASE_URL}${path}`
+  const robotsContent = noindex
+    ? 'noindex,nofollow'
+    : 'index,follow,max-image-preview:large,max-snippet:-1'
 
   return (
     <Helmet>
       <title>{fullTitle}</title>
       <meta name="description" content={safeDescription} />
-      <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+      <meta name="robots" content={robotsContent} />
       <link rel="canonical" href={canonical} />
 
       <meta property="og:type" content="website" />
@@ -38,12 +45,16 @@ export default function Seo({
       <meta property="og:image" content={image} />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
+      <meta property="og:image:alt" content={imageAlt} />
+      <meta property="og:locale" content="en_US" />
 
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:site" content="@vitaloop" />
+      <meta name="twitter:creator" content="@vitaloop" />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={safeDescription} />
       <meta name="twitter:image" content={image} />
+      <meta name="twitter:image:alt" content={imageAlt} />
 
       {schemas.map((schema, i) => (
         <script key={i} type="application/ld+json">

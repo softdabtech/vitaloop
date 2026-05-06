@@ -68,6 +68,42 @@ export default function HowItWorks() {
         title="How AI Blood Test Analysis Works | VITALOOP"
         description="See how VITALOOP turns blood test uploads into prioritized biomarker insights and step-by-step weekly protocols. Start free and test your first report."
         path="/how-it-works"
+        schemas={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'HowTo',
+            name: 'How to Interpret Blood Test Results with AI',
+            description:
+              'Upload your blood test PDF or image, let VITALOOP AI extract and analyze 85+ biomarkers, and receive a personalized health protocol with ranked recommendations.',
+            totalTime: 'PT1M',
+            step: [
+              {
+                '@type': 'HowToStep',
+                name: 'Upload your lab report',
+                text: 'Upload a blood test PDF or photo of your lab results. VITALOOP\'s OCR engine extracts all biomarkers automatically.',
+                position: 1,
+              },
+              {
+                '@type': 'HowToStep',
+                name: 'AI analyzes your biomarkers',
+                text: 'Our AI maps your results against 85+ markers, flags abnormal values, and identifies cross-biomarker patterns.',
+                position: 2,
+              },
+              {
+                '@type': 'HowToStep',
+                name: 'Get your personalized protocol',
+                text: 'Receive ranked supplement, nutrition, and lifestyle recommendations tailored to your unique lab data.',
+                position: 3,
+              },
+              {
+                '@type': 'HowToStep',
+                name: 'Track progress over time',
+                text: 'Re-upload labs every 8–12 weeks. VITALOOP\'s longitudinal engine shows trends and adapts your protocol.',
+                position: 4,
+              },
+            ],
+          },
+        ]}
       />
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(16,185,129,0.08),transparent_34%)]" />

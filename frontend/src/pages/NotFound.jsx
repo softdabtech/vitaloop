@@ -5,9 +5,10 @@ export default function NotFound() {
   return (
     <>
       <Seo
-        title="404 Not Found"
+        title="Page Not Found | VITALOOP"
         description="The page you are looking for does not exist. Return to VITALOOP home."
-        path="/404.html"
+        path="/404"
+        noindex
       />
       <main
         style={{

@@ -165,8 +165,25 @@ export default function FAQ() {
   return (
     <>
       <Seo
-        title="FAQ - VITALOOP"
-        description="Frequently asked questions about VITALOOP. Learn about features, privacy, plans, doctor collaboration, and more."
+        title="Blood Test Analysis FAQ | VITALOOP"
+        description="Answers to common questions about VITALOOP: AI lab analysis, blood test uploads, biomarker protocols, privacy, plans, and practitioner collaboration."
+        path="/faq"
+        schemas={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: FAQ_ITEMS.flatMap((section) =>
+              section.questions.map((item) => ({
+                '@type': 'Question',
+                name: item.q,
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: item.a,
+                },
+              }))
+            ),
+          },
+        ]}
       />
 
       <div className="min-h-screen bg-white">
