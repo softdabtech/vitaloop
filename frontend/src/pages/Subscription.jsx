@@ -395,7 +395,7 @@ export default function Subscription() {
                 <li>Core dashboard access</li>
                 <li>Community support</li>
               </ul>
-              <p className="pt-2 text-blue-900 font-medium">Upgrade to Personal Premium to unlock unlimited uploads and AI-powered protocols.</p>
+              <p className="pt-2 text-blue-900 font-medium">Upgrade to Premium to unlock unlimited uploads and AI-powered protocols.</p>
             </div>
           </motion.div>
         )}

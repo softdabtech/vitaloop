@@ -19,7 +19,7 @@ function fmt(ts) {
   return isNaN(d) ? '—' : d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-const PLAN_LABELS = { personal: 'Personal Premium', practitioner: 'Enterprise', core: 'Personal Premium' }
+const PLAN_LABELS = { personal: 'Premium', practitioner: 'Enterprise', core: 'Premium' }
 
 export default function BillingHistory() {
   const { user } = useAuth()
