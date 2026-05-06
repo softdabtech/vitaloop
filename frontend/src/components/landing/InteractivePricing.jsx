@@ -14,8 +14,8 @@ const PRICING = {
       featured: false,
     },
     {
-      name: 'Personal Premium',
-      price: '$9.99',
+      name: 'Premium',
+      price: '$19.99',
       period: '/month',
       description: 'Complete health management',
       points: ['Unlimited uploads & retests', 'Exact dosage protocols', 'Weekly AI check-ins', 'Progress timeline tracking', 'Protocol adaptation', 'Priority support'],
@@ -43,8 +43,8 @@ const PRICING = {
       featured: false,
     },
     {
-      name: 'Personal Premium',
-      price: '$95',
+      name: 'Premium',
+      price: '$199',
       period: '/year',
       description: 'Complete health management',
       points: ['Unlimited uploads & retests', 'Exact dosage protocols', 'Weekly AI check-ins', 'Progress timeline tracking', 'Protocol adaptation', 'Save 21% vs monthly'],

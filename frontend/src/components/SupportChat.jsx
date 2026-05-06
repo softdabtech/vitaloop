@@ -21,7 +21,7 @@ const AUTO_ANSWERS = {
   'Is my data secure?':
     'Your PDF never leaves your device - OCR runs 100% in your browser. Only the extracted text values are stored, encrypted in our database. You can delete your data anytime.',
   'How much does it cost?':
-    `Free plan to try: upload 1 lab and see basic results. Personal Premium is ${PERSONAL_PLAN.monthly}${PERSONAL_PLAN.period}, and Practitioner Premium is ${PRACTITIONER_PLAN.monthly}${PRACTITIONER_PLAN.period}. Cancel anytime.`,
+    `Free plan to try: upload 1 lab and see basic results. Premium is ${PERSONAL_PLAN.monthly}${PERSONAL_PLAN.period}, and Practitioner Premium is ${PRACTITIONER_PLAN.monthly}${PRACTITIONER_PLAN.period}. Cancel anytime.`,
   'Can I cancel anytime?':
     'Yes, 1-click cancellation from your account settings. No questions asked, no fees.',
 }

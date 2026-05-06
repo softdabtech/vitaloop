@@ -37,7 +37,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'How much does VITALOOP cost?',
-    answer: 'VITALOOP offers a free plan with 1 active upload and a core dashboard. Personal Premium is $9.99/month (or $95/year) and includes unlimited uploads, personalized AI protocols, and weekly check-ins. Enterprise plans start at $99/month for practitioner teams.',
+    answer: 'VITALOOP offers a free plan with 1 active upload and a core dashboard. Premium is $19.99/month (or $199/year) and includes unlimited uploads, personalized AI protocols, and weekly check-ins. Enterprise plans start at $99/month for practitioner teams.',
   },
 ]
 

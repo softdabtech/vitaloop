@@ -26,22 +26,22 @@ export const LANDING_PRICING_PLANS = [
   },
   {
     id: PRICING_PLAN_IDS.PERSONAL,
-    name: 'Personal Premium',
-    monthly: '$9.99',
-    yearly: '$99',
+    name: 'Premium',
+    monthly: '$19.99',
+    yearly: '$199',
     period: '/mo',
     annualNote: 'Save 17% on yearly billing',
-    desc: 'Unlimited analysis, full protocols, and personal timeline tracking.',
+    desc: 'Full blood test analysis, personalized protocol, and weekly check-ins.',
     badge: 'MOST POPULAR',
     dark: false,
     featured: true,
-    cta: 'Get Personal Premium',
+    cta: 'Get Premium',
     features: [
-      { text: 'Unlimited analyses', ok: true },
-      { text: 'Full biomarker protocols', ok: true },
-      { text: 'Personalized recommendations', ok: true },
-      { text: 'Timeline tracking', ok: true },
-      { text: 'Priority product updates', ok: true },
+      { text: 'Full analysis of blood tests', ok: true },
+      { text: 'Prioritized problem list', ok: true },
+      { text: 'Personalized action protocol', ok: true },
+      { text: 'Weekly AI check-ins', ok: true },
+      { text: 'Progress tracking', ok: true },
     ],
   },
   {
@@ -87,5 +87,5 @@ export const LANDING_PRICING_PLANS = [
 ]
 
 export const CLIENT_PREMIUM_PLAN = LANDING_PRICING_PLANS.find((plan) => plan.id === PRICING_PLAN_IDS.PERSONAL)
-export const PREMIUM_MONTHLY_PRICE = 9.99
+export const PREMIUM_MONTHLY_PRICE = 19.99
 export const PREMIUM_PRICE_LABEL = `${CLIENT_PREMIUM_PLAN.monthly} / month`
