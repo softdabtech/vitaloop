@@ -74,7 +74,7 @@ export function LightHero() {
                 onClick={() => navigate('/for-nutritionists')}
                 className="px-8 py-4 border-2 border-teal-500 text-teal-600 hover:bg-teal-50 rounded-lg font-semibold transition-all"
               >
-                Стать партнёром
+                For Nutritionists
               </button>
             </motion.div>
 
