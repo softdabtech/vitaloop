@@ -366,7 +366,7 @@ async def get_biomarker_options(current_user: dict = Depends(get_current_user)):
 
 
 @router.post(
-    "/analyze/manual",
+    "/manual",
     response_model=AnalyzeResponse,
     status_code=201,
     summary="Analyze manually entered biomarkers"
