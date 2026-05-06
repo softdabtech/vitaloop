@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     routellm_api_key: str = ""
     routellm_base_url: str = "https://routellm.abacus.ai/v1"
     routellm_model: str = "route-llm"
+    # DigitalOcean Claude API (via Agents endpoint)
+    digitalocean_claude_api_key: str = ""
+    digitalocean_claude_base_url: str = "https://agents.do-ai.run"
+    digitalocean_claude_model: str = "claude-3-5-sonnet"
     app_env: str = "development"
     allowed_origins: str = "http://localhost:5173"
     security_enable_headers: bool = True
@@ -81,15 +85,21 @@ class Settings(BaseSettings):
 
     @property
     def active_llm_api_key(self) -> str:
-        """RouteLLM API key. Accepts both ROUTELLM_API_KEY and legacy ABACUS_AI_API_KEY env vars."""
-        return self.routellm_api_key or self.abacus_ai_api_key
+        """Active LLM API key. Priority: DigitalOcean Claude > RouteLLM > Anthropic"""
+        return self.digitalocean_claude_api_key or self.routellm_api_key or self.abacus_ai_api_key
 
     @property
     def active_llm_base_url(self) -> str:
+        """Active LLM base URL. Priority: DigitalOcean Claude > RouteLLM > Anthropic"""
+        if self.digitalocean_claude_api_key:
+            return self.digitalocean_claude_base_url
         return self.routellm_base_url or self.abacus_ai_base_url or "https://routellm.abacus.ai/v1"
 
     @property
     def active_llm_model(self) -> str:
+        """Active LLM model. Priority: DigitalOcean Claude > RouteLLM > Anthropic"""
+        if self.digitalocean_claude_api_key:
+            return self.digitalocean_claude_model
         return self.routellm_model or self.abacus_ai_model or "route-llm"
 
     # Backward-compatible aliases (deprecated — use active_llm_* instead)
