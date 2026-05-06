@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { label: 'Stories', href: '#testimonials' },
   { label: 'FAQ', href: '#faq' },
   { label: 'For Nutritionists', href: '/for-nutritionists', page: true },
+  { label: 'Help', href: '/help', page: true },
 ]
 
 function LogoIcon() {
