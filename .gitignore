@@ -20,3 +20,21 @@ test_*.json
 test_*.txt
 test_*.html
 create_test_pdf.js
+
+# Backend environment files (NEVER COMMIT)
+backend/.env
+backend/.env.local
+backend/.env.production
+backend/app/.env*
+
+# API keys and secrets (NEVER COMMIT)
+*.key
+*.pem
+*.secret
+*_secret
+*_token
+*.credentials
+
+# Sensitive configs
+config/secrets.json
+config/api-keys.json
