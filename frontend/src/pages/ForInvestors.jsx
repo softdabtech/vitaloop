@@ -106,9 +106,28 @@ export default function ForInvestors() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
-        title="For Investors | VITALOOP"
+        title="Investor Overview | VITALOOP AI Health Platform"
         description="Investor overview of VITALOOP: AI blood test platform traction, product moat, enterprise practitioner workflows, and growth narrative."
         path="/for-investors"
+        schemas={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: 'VITALOOP',
+            url: 'https://vitaloop.today',
+            logo: 'https://vitaloop.today/og-cover.jpg',
+            description:
+              'VITALOOP is an AI-powered blood test analysis and biohacking platform that turns lab reports into personalized health protocols in under 60 seconds.',
+            sameAs: [
+              'https://twitter.com/vitaloop',
+            ],
+            contactPoint: {
+              '@type': 'ContactPoint',
+              contactType: 'Investor Relations',
+              email: 'hello@vitaloop.today',
+            },
+          },
+        ]}
       />
 
       <div className="pointer-events-none fixed inset-0 -z-10">

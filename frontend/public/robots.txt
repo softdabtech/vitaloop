@@ -1,11 +1,27 @@
 User-agent: *
 Allow: /
 
+# API and backend
 Disallow: /api/
+
+# Cabinet / private user routes
+Disallow: /dashboard
 Disallow: /dashboard/
 Disallow: /upload
+Disallow: /lab-results
+Disallow: /lab-results/
 Disallow: /results/
 Disallow: /protocol/
 Disallow: /settings
+Disallow: /assignments
+Disallow: /check-ins
+Disallow: /insights
+Disallow: /health-profile
+Disallow: /billing-history
+Disallow: /subscription
+Disallow: /onboarding
+Disallow: /questionnaire
+Disallow: /admin
+Disallow: /ops
 
 Sitemap: https://vitaloop.today/sitemap.xml
