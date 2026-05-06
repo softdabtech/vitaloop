@@ -621,7 +621,7 @@ export default function UserDashboard() {
                     <button onClick={() => navigate('/progress')} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
                       View detailed trends →
                     </button>
-                    <button onClick={() => navigate('/results')} className="text-sm text-slate-500 hover:text-slate-600">
+                    <button onClick={() => navigate('/lab-results')} className="text-sm text-slate-500 hover:text-slate-600">
                       All lab results →
                     </button>
                   </div>
