@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import ProgressChart from '../components/ProgressChart.jsx'
 import ProgressPhotoGallery from '../components/ProgressPhotoGallery.jsx'
@@ -26,9 +26,9 @@ export default function Progress() {
   const { data = [], isLoading } = useProgress()
   const [photos, setPhotos] = useState([])
 
-  const handlePaywall = () => {
+  const handlePaywall = useCallback(() => {
     window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))
-  }
+  }, [])
 
   const handlePhotoUpload = async (formData) => {
     try {
