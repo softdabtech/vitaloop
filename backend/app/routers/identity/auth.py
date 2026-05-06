@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from app.dependencies import get_current_user
 from app.config import settings
 from app.services import supabase_service as svc
-from app.services.email_service import send_registration_alert_email
+from app.services.email_service import send_registration_alert_email, send_welcome_email
 from app.utils.roles import normalize_global_role as _normalize_global_role, as_bool as _as_bool
 
 router = APIRouter()
@@ -231,6 +231,39 @@ async def notify_registration(
         created_at_iso=created_at_raw or None,
     )
     return {"ok": True, "sent": sent}
+
+
+@router.post("/registration/welcome")
+async def send_welcome_email_to_user(
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Send a welcome email to newly registered users.
+    Called by frontend after successful registration.
+    """
+    user_id = current_user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    account = await svc.get_user_account(user_id)
+    email = str(account.get("email") or current_user.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="User email not found")
+
+    full_name = account.get("full_name") or email.split("@")[0]
+
+    # For now, use a simple organization name. In the future, could be customized.
+    organization_name = "VITALOOP"
+    dashboard_url = f"{settings.frontend_base_url.rstrip('/')}/dashboard"
+
+    sent = await send_welcome_email(
+        to_email=email,
+        user_name=full_name,
+        organization_name=organization_name,
+        dashboard_url=dashboard_url,
+    )
+
+    return {"ok": True, "sent": sent, "recipient": email}
 
 
 @router.delete("")

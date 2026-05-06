@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
 import { supabase } from '../lib/supabase.js'
 import { navigateToResolvedPath, resolvePostLoginDestination } from '../auth/postLogin.js'
-import { notifyRegistrationAlert } from '../auth/registrationAlert.js'
+import { notifyRegistrationAlert, sendWelcomeEmail } from '../auth/registrationAlert.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
 import { gaSignUp, gaLogin } from '../lib/analytics.js'
 import toast from 'react-hot-toast'
@@ -309,6 +309,7 @@ export default function Login() {
 
       if (authData?.session?.access_token) {
         await notifyRegistrationAlert('email_signup')
+        await sendWelcomeEmail()
         import('./UserDashboard.jsx').catch(() => {})
         toast.success('Account created. Continue with onboarding.')
         navigate('/onboarding', { replace: true })
