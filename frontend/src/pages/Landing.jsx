@@ -109,7 +109,7 @@ const PLAN_DETAILS = {
     description: 'For first-time users who want to upload one report, see the dashboard structure, and understand how VITALOOP turns raw biomarker values into usable context.',
     idealFor: 'Best for: trying your first blood test interpretation without commitment.',
   },
-  'Personal Premium': {
+  'Premium': {
     eyebrow: 'Most chosen plan',
     description: 'For users actively running a health protocol who need unlimited uploads, longitudinal tracking, weekly adaptation, and fast feedback between lab cycles.',
     idealFor: 'Best for: people serious about biohacking, recovery, hormone optimization, or deficiency correction.',
@@ -251,7 +251,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'How much does VITALOOP cost?',
-    answer: 'VITALOOP offers a free plan with 1 active upload and a core dashboard. Personal Premium is $9.99/month (or $95/year) and includes unlimited uploads, personalized AI protocols, and weekly check-ins. Enterprise plans start at $99/month for practitioner teams.',
+    answer: 'VITALOOP offers a free plan with 1 active upload and a core dashboard. Premium is $19.99/month (or $199/year) and includes unlimited uploads, personalized AI protocols, and weekly check-ins. Enterprise plans start at $99/month for practitioner teams.',
   },
 ]
 
@@ -292,8 +292,8 @@ const PRICING = {
       featured: false,
     },
     {
-      name: 'Personal Premium',
-      price: '$9.99',
+      name: 'Premium',
+      price: '$19.99',
       period: '/month',
       points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
       cta: 'Upgrade',
@@ -318,8 +318,8 @@ const PRICING = {
       featured: false,
     },
     {
-      name: 'Personal Premium',
-      price: '$95',
+      name: 'Premium',
+      price: '$199',
       period: '/year',
       points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
       cta: 'Upgrade',

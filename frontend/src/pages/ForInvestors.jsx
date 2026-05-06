@@ -217,7 +217,7 @@ export default function ForInvestors() {
             ))}
           </div>
           <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-7 text-slate-600">
-            <strong className="text-slate-900">Path to revenue per user &gt;$15/month:</strong> Free tier funnel → $9.99/mo Premium → enterprise upsell at $1.2-5K/month across practitioner bases scales unit economics.
+            <strong className="text-slate-900">Path to revenue per user &gt;$15/month:</strong> Free tier funnel → $19.99/mo Premium → enterprise upsell at $1.2-5K/month across practitioner bases scales unit economics.
           </div>
         </div>
       </section>

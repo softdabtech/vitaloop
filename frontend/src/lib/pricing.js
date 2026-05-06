@@ -57,7 +57,7 @@ export const LANDING_PRICING_PLANS = [
     premium: true,
     cta: 'Get Practitioner Premium',
     features: [
-      { text: 'Everything in Personal Premium', ok: true },
+      { text: 'Everything in Premium', ok: true },
       { text: 'Built-in practitioner CRM', ok: true },
       { text: 'White-label reports', ok: true },
       { text: 'Up to 10 patients', ok: true },
