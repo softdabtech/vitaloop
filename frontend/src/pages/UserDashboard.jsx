@@ -356,7 +356,7 @@ export default function UserDashboard() {
   return (
     <div className="space-y-6">
       <CabinetPageHeader
-        title={`Welcome back, ${greeting}`}
+        title={`${isFirstRun ? 'Welcome' : 'Welcome back'}, ${greeting}`}
         subtitle={profile?.onboarding?.requires_onboarding ? profile?.onboarding?.current_stage_label || 'Continue onboarding' : 'Your dashboard is assembled from current uploads, assignments, and check-ins.'}
         helper={isFirstRun ? 'Start with one upload. The dashboard expands as soon as your first lab is processed.' : `Your biomarker trends, supplement protocol, and assignments are all kept in sync here. ${isPremium ? '🌟 Premium Member' : '📋 Free Plan'}`}
         action={!loading && !isFirstRun ? (

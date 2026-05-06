@@ -192,7 +192,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/auth/confirmation" element={<EmailConfirmation />} />
           <Route path="/dashboard" element={renderCabinetRoute(<UserDashboard />, { allowBeforeOnboarding: true })} />
-          <Route path="/upload" element={renderCabinetRoute(<Upload />)} />
+          <Route path="/upload" element={renderCabinetRoute(<Upload />, { allowBeforeOnboarding: true })} />
           <Route path="/results/:uploadId" element={renderCabinetRoute(<Results />)} />
           <Route path="/protocol/:uploadId" element={renderCabinetRoute(<ProtocolPage />)} />
           <Route path="/avatar" element={renderCabinetRoute(<Avatar />)} />
@@ -200,10 +200,10 @@ export default function App() {
           <Route path="/assignments" element={renderCabinetRoute(<Assignments />, { allowBeforeOnboarding: true })} />
           <Route path="/assignments/:assignmentId" element={renderCabinetRoute(<AssignmentDetails />, { allowBeforeOnboarding: true })} />
           <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />, { allowBeforeOnboarding: true })} />
-          <Route path="/settings" element={renderCabinetRoute(<Settings />)} />
-          <Route path="/health-profile" element={renderCabinetRoute(<HealthProfile />)} />
-          <Route path="/subscription" element={renderCabinetRoute(<Subscription />)} />
-          <Route path="/billing-history" element={renderCabinetRoute(<BillingHistory />)} />
+          <Route path="/settings" element={renderCabinetRoute(<Settings />, { allowBeforeOnboarding: true })} />
+          <Route path="/health-profile" element={renderCabinetRoute(<HealthProfile />, { allowBeforeOnboarding: true })} />
+          <Route path="/subscription" element={renderCabinetRoute(<Subscription />, { allowBeforeOnboarding: true })} />
+          <Route path="/billing-history" element={renderCabinetRoute(<BillingHistory />, { allowBeforeOnboarding: true })} />
           <Route path="/admin" element={<ProtectedRoute><CRMRoute needsOps><Navigate to="/ops" replace /></CRMRoute></ProtectedRoute>} />
           <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<ProtectedRoute><CRMRoute><OpsDashboard /></CRMRoute></ProtectedRoute>} />
