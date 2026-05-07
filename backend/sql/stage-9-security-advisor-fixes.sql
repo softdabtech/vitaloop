@@ -132,87 +132,44 @@ BEGIN
 END
 $$;
 
--- organization_memberships RLS policies (idempotent).
-DO $$
-DECLARE
-  status_predicate TEXT := '';
-  role_predicate TEXT := '';
-BEGIN
-  IF EXISTS (
+-- organization_memberships RLS policies (idempotent, non-recursive).
+-- Drop and recreate to eliminate legacy recursive policy bodies.
+DROP POLICY IF EXISTS "OrgMemberships: admins see org members" ON public.organization_memberships;
+DROP POLICY IF EXISTS "OrgMemberships: see own membership" ON public.organization_memberships;
+
+-- Create the helper function (no nested quotes).
+CREATE OR REPLACE FUNCTION public.is_org_membership_admin(target_org_id UUID, actor_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $func$
+  SELECT EXISTS (
     SELECT 1
-    FROM information_schema.tables
-    WHERE table_schema = 'public'
-      AND table_name = 'organization_memberships'
-  ) THEN
-    IF EXISTS (
-      SELECT 1
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND table_name = 'organization_memberships'
-        AND column_name = 'status'
-    ) THEN
-      status_predicate := ' AND COALESCE(status::text, ''active'') = ''active''';
-    END IF;
+    FROM public.organization_memberships om
+    WHERE om.organization_id = target_org_id
+      AND om.user_id = actor_user_id
+      AND COALESCE(om.status::text, 'active') = 'active'
+      AND om.role IN ('org_owner', 'client_admin', 'manager')
+  );
+$func$;
 
-    IF EXISTS (
-      SELECT 1
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND table_name = 'organization_memberships'
-        AND column_name = 'role'
-    ) THEN
-      role_predicate := ' AND role IN (''org_owner'', ''client_admin'', ''manager'')';
-    END IF;
+-- Grant execute permissions on the helper function.
+REVOKE ALL ON FUNCTION public.is_org_membership_admin(UUID, UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_org_membership_admin(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_org_membership_admin(UUID, UUID) TO service_role;
 
-    IF EXISTS (
-      SELECT 1
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND table_name = 'organization_memberships'
-        AND column_name = 'user_id'
-    ) AND NOT EXISTS (
-      SELECT 1
-      FROM pg_policies
-      WHERE schemaname = 'public'
-        AND tablename = 'organization_memberships'
-        AND policyname = 'OrgMemberships: see own membership'
-    ) THEN
-      EXECUTE $sql$
-        CREATE POLICY "OrgMemberships: see own membership"
-        ON public.organization_memberships
-        FOR SELECT
-        USING (auth.uid() = user_id)
-      $sql$;
-    END IF;
+-- Create policies using the helper function.
+CREATE POLICY "OrgMemberships: see own membership"
+ON public.organization_memberships
+FOR SELECT
+USING (auth.uid() = user_id);
 
-    IF EXISTS (
-      SELECT 1
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND table_name = 'organization_memberships'
-        AND column_name = 'organization_id'
-    ) AND EXISTS (
-      SELECT 1
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND table_name = 'organization_memberships'
-        AND column_name = 'user_id'
-    ) AND NOT EXISTS (
-      SELECT 1
-      FROM pg_policies
-      WHERE schemaname = 'public'
-        AND tablename = 'organization_memberships'
-        AND policyname = 'OrgMemberships: admins see org members'
-    ) THEN
-      EXECUTE format(
-        'CREATE POLICY "OrgMemberships: admins see org members" ON public.organization_memberships FOR SELECT USING (organization_id IN (SELECT organization_id FROM public.organization_memberships WHERE user_id = auth.uid()%s%s))',
-        role_predicate,
-        status_predicate
-      );
-    END IF;
-  END IF;
-END
-$$;
+CREATE POLICY "OrgMemberships: admins see org members"
+ON public.organization_memberships
+FOR SELECT
+USING (public.is_org_membership_admin(organization_id, auth.uid()));
 
 -- ------------------------------------------------------------
 -- 3) search_path hardening for mutable functions
