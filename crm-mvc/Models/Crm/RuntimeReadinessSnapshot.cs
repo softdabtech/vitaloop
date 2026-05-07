@@ -13,6 +13,9 @@ public sealed class RuntimeReadinessSnapshot
     [JsonPropertyName("missing")]
     public IReadOnlyList<string> Missing { get; init; } = Array.Empty<string>();
 
+    [JsonPropertyName("warnings")]
+    public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
+
     [JsonPropertyName("rate_limiter")]
     public RuntimeRateLimiterStatus? RateLimiter { get; init; }
 }

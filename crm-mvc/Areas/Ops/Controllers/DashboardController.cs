@@ -90,6 +90,7 @@ public class DashboardController : Controller
                 Available = runtimeReadiness is not null,
                 Ok = runtimeReadiness?.Ok ?? false,
                 MissingCount = runtimeReadiness?.MissingCount ?? 0,
+                WarningCount = runtimeReadiness?.Warnings.Count ?? 0,
                 LimiterBackend = runtimeReadiness?.RateLimiter?.Backend ?? "unknown",
                 LimiterOk = runtimeReadiness?.RateLimiter?.Ok ?? false,
                 RedisRequired = runtimeReadiness?.RateLimiter?.Redis?.Required ?? false,

@@ -3,6 +3,7 @@ namespace Vitaloop.Crm.Web.Models.Auth;
 // Projection loaded from the backend /auth/me endpoint via IUserContextDataSource.
 public sealed class UserContextRecord
 {
+    public string? Email { get; init; }
     public string? GlobalRole { get; init; }
     public bool? OnboardingCompleted { get; init; }
     public bool? SubscriptionActive { get; init; }

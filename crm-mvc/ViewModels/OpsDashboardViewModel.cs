@@ -22,6 +22,7 @@ public sealed class OpsRuntimeReadinessViewModel
     public bool? RedisReachable { get; init; }
     public string RedisReason { get; init; } = "n/a";
     public int MissingCount { get; init; }
+    public int WarningCount { get; init; }
 }
 
 public sealed class OpsAuditLogViewModel

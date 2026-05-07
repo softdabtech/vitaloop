@@ -88,25 +88,32 @@ async def _build_runtime_readiness_payload() -> dict:
     rate_limiter = await _get_rate_limiter_runtime_status()
     requires_redis_url = rate_limiter["backend"] == "redis"
 
-    checks = {
+    # Required: app cannot function without these
+    required_checks = {
         "supabase_url": _is_set(settings.supabase_url),
         "supabase_service_role_key": _is_set(settings.supabase_service_role_key),
         "llm_provider_key": is_llm_configured(),
         "resend_api_key": _is_set(settings.resend_api_key),
         "resend_from_email": _is_set(settings.resend_from_email),
-        "sentry_dsn": _is_set(settings.sentry_dsn),
         "stripe_secret_key": _is_set(settings.stripe_secret_key),
         "stripe_webhook_secret": _is_set(settings.stripe_webhook_secret),
         "stripe_price_id": _is_set(settings.stripe_price_id),
         "rate_limit_backend": _is_set(settings.rate_limit_backend),
         "rate_limit_redis_url": (not requires_redis_url) or _is_set(settings.rate_limit_redis_url),
     }
-    missing = [name for name, ok in checks.items() if not ok]
+    # Optional: desirable but not blocking
+    optional_checks = {
+        "sentry_dsn": _is_set(settings.sentry_dsn),
+    }
+    all_checks = {**required_checks, **optional_checks}
+    missing = [name for name, ok in required_checks.items() if not ok]
+    warnings = [name for name, ok in optional_checks.items() if not ok]
     return {
         "ok": len(missing) == 0 and rate_limiter["ok"],
-        "checks": checks,
+        "checks": all_checks,
         "missing": missing,
         "missing_count": len(missing),
+        "warnings": warnings,
         "rate_limiter": rate_limiter,
     }
 

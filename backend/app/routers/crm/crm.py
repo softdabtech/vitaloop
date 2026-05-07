@@ -215,15 +215,41 @@ def _serialize_invitation(row: dict) -> dict[str, Any]:
     }
 
 
+async def _load_fallback_owner(sb) -> Optional[dict]:
+    """Return first super_admin user for use as org owner fallback when owner_id column is absent."""
+    try:
+        resp = await svc._run(
+            lambda: sb.table("users")
+            .select("id, email, full_name")
+            .eq("global_role", "super_admin")
+            .order("created_at")
+            .limit(1)
+            .execute()
+        )
+        return resp.data[0] if resp.data else None
+    except Exception:
+        return None
+
+
+def _resolve_owner(row: dict, owners: dict, fallback: Optional[dict]) -> Optional[dict]:
+    """Resolve the owner dict for an org row, using fallback when owner_id column is absent."""
+    owner_id = row.get("owner_id")
+    if owner_id:
+        return owners.get(str(owner_id))
+    # owner_id column doesn't exist on this DB schema – use fallback
+    return fallback if not row.get("owner_name") else None
+
+
 @router.get("/organizations")
 async def list_organizations(current_user: dict = Depends(get_current_user)):
     sb = await _get_supabase()
 
     if await _is_super_admin(current_user):
         org_resp = await svc._run(lambda: sb.table("organizations").select("*").order("created_at").execute())
-        owner_ids = [row.get("owner_id") for row in (org_resp.data or [])]
-        owners = await _load_users_by_ids(sb, owner_ids)
-        return [_serialize_organization(row, owners.get(str(row.get("owner_id")))) for row in (org_resp.data or [])]
+        owner_ids = [row.get("owner_id") for row in (org_resp.data or []) if row.get("owner_id")]
+        owners = await _load_users_by_ids(sb, owner_ids) if owner_ids else {}
+        fallback = await _load_fallback_owner(sb) if not owners else None
+        return [_serialize_organization(row, _resolve_owner(row, owners, fallback)) for row in (org_resp.data or [])]
 
     membership_resp = await svc._run(
         lambda: sb.table("organization_members")
@@ -243,9 +269,10 @@ async def list_organizations(current_user: dict = Depends(get_current_user)):
         .order("created_at")
         .execute()
     )
-    owner_ids = [row.get("owner_id") for row in (org_resp.data or [])]
-    owners = await _load_users_by_ids(sb, owner_ids)
-    return [_serialize_organization(row, owners.get(str(row.get("owner_id")))) for row in (org_resp.data or [])]
+    owner_ids = [row.get("owner_id") for row in (org_resp.data or []) if row.get("owner_id")]
+    owners = await _load_users_by_ids(sb, owner_ids) if owner_ids else {}
+    fallback = await _load_fallback_owner(sb) if not owners else None
+    return [_serialize_organization(row, _resolve_owner(row, owners, fallback)) for row in (org_resp.data or [])]
 
 
 @router.get("/organizations/{org_id}")
@@ -264,8 +291,10 @@ async def get_organization(org_id: UUID, current_user: dict = Depends(get_curren
     if not row:
         raise HTTPException(status_code=404, detail="Organization not found")
 
-    owners = await _load_users_by_ids(sb, [row.get("owner_id")])
-    return _serialize_organization(row, owners.get(str(row.get("owner_id"))))
+    owner_id = row.get("owner_id")
+    owners = await _load_users_by_ids(sb, [owner_id]) if owner_id else {}
+    fallback = await _load_fallback_owner(sb) if not owners else None
+    return _serialize_organization(row, _resolve_owner(row, owners, fallback))
 
 
 @router.get("/organizations/{org_id}/settings")
@@ -375,8 +404,10 @@ async def update_organization(org_id: UUID, req: OrganizationUpdate, current_use
         organization_id=str(org_id),
     )
 
-    owners = await _load_users_by_ids(sb, [row.get("owner_id")])
-    return _serialize_organization(row, owners.get(str(row.get("owner_id"))))
+    owner_id = row.get("owner_id")
+    owners = await _load_users_by_ids(sb, [owner_id]) if owner_id else {}
+    fallback = await _load_fallback_owner(sb) if not owners else None
+    return _serialize_organization(row, _resolve_owner(row, owners, fallback))
 
 
 @router.get("/members")
