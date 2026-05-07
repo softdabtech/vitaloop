@@ -87,10 +87,12 @@ async def get_auth_me(current_user: dict = Depends(get_current_user)):
 
     active_sub = await svc.get_user_active_subscription(user_id)
     subscription_status = account.get("sub_status")
-    sub_table_status = (active_sub or {}).get("status", "free")
+    sub_table_status = str((active_sub or {}).get("status") or "free").lower()
+    sub_table_plan = str((active_sub or {}).get("plan_name") or "").strip().lower()
+    paid_from_sub_table = sub_table_status == "active" and bool(sub_table_plan) and sub_table_plan != "free"
     has_active_subscription = (
         str(subscription_status or "").lower() == "active"
-        or sub_table_status == "active"
+        or paid_from_sub_table
     )
 
     return {

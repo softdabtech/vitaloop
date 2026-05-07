@@ -157,6 +157,18 @@ async def analyze_lab(
 ):
     user_id: str = current_user["sub"]
 
+    # Check unified freemium biomarker quota (1 total entry for free users)
+    quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "pdf")
+    if not quota_ok:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "detail": quota_msg,
+                "code": "BIOMARKER_QUOTA_EXCEEDED",
+                "used_by": used_by,
+            },
+        )
+
     normalized_text = _normalize_lab_text(request.extracted_text)
     normalized_symptoms = _normalize_symptoms(request.symptoms or [])
     normalized_lab_name = request.lab_name.strip() if request.lab_name else None
@@ -400,10 +412,17 @@ async def analyze_manual_biomarkers(
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     try:
-        # Check freemium limit
-        can_proceed, message = await biomarker_service.check_freemium_limit(user_id)
-        if not can_proceed:
-            raise HTTPException(status_code=402, detail=message)
+        # Check unified freemium biomarker quota (1 total entry for free users)
+        quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "manual")
+        if not quota_ok:
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "detail": quota_msg,
+                    "code": "BIOMARKER_QUOTA_EXCEEDED",
+                    "used_by": used_by,
+                },
+            )
 
         # Convert to ManualBiomarkerEntry objects
         entry_dicts = [entry.dict() for entry in request.biomarkers]

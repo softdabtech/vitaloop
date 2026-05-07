@@ -295,6 +295,66 @@ class BiomarkerService:
             # Be permissive on error - don't block user
             return True, "Unable to verify limit - proceeding anyway"
 
+    async def check_freemium_biomarker_quota(self, user_id: str, entry_type: str) -> Tuple[bool, str, Optional[str]]:
+        """
+        Check if freemium user has exceeded their unified biomarker entry quota.
+        
+        Free users get 1 entry total (either PDF upload OR manual entry).
+        Premium users get unlimited entries.
+        
+        Args:
+            user_id: User ID to check
+            entry_type: Either "pdf" or "manual" - the type of entry being attempted
+        
+        Returns:
+            (can_proceed: bool, message: str, used_by: Optional[str])
+            where used_by is None if quota available, or "pdf"/"manual" if quota already used
+        """
+        try:
+            # Check user subscription status
+            account = await svc.get_user_account(user_id)
+            if not account:
+                return False, "User account not found", None
+
+            # Check if user has active subscription
+            is_premium = account.get("subscription_status") == "active"
+            if is_premium:
+                return True, "Premium user - unlimited biomarker entries", None
+
+            # Count all biomarker uploads (both PDF and manual) for this user
+            sb = svc._get_supabase()
+            
+            response = await svc._run(
+                lambda: sb.table("lab_uploads")
+                .select("id, analyze_prompt_version")
+                .eq("user_id", user_id)
+                .execute()
+            )
+
+            uploads = response.data or []
+            
+            # Check if any upload exists
+            if not uploads:
+                # Quota available - user hasn't used any entry method yet
+                return True, "Biomarker entry available", None
+            
+            # User already has an entry - determine what type
+            first_upload = uploads[0]
+            used_by_type = "manual" if first_upload.get("analyze_prompt_version") == "manual_v1" else "pdf"
+            
+            if entry_type == used_by_type:
+                # Same type - shouldn't happen, but allow it
+                return True, "Entry allowed", None
+            
+            # Different type - quota exceeded
+            msg = f"You've already used your 1 free biomarker entry via {used_by_type} upload. Upgrade to Premium for unlimited entries."
+            return False, msg, used_by_type
+
+        except Exception as e:
+            logger.error(f"Error checking freemium biomarker quota: {e}")
+            # Be permissive on error - don't block user
+            return True, "Unable to verify quota - proceeding anyway", None
+
     def convert_to_standard_units(self, entries: List[ManualBiomarkerEntry]) -> List[ManualBiomarkerEntry]:
         """
         Convert all biomarker values to standard units for Claude analysis.
