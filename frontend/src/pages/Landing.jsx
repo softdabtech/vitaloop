@@ -657,7 +657,7 @@ export default function Landing() {
   const [pricingMode, setPricingMode] = useState('monthly')
   const [loopActive, setLoopActive] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
   const navAction = (item) => {
@@ -734,15 +734,16 @@ export default function Landing() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Log in link — only for non-authenticated visitors */}
-            {!user && (
-              <button
-                onClick={() => navigate('/login')}
-                className="hidden sm:inline-flex h-11 items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-              >
-                Log in
-              </button>
-            )}
+            {/* Log in link — only for non-authenticated visitors; visibility keeps space reserved during auth check */}
+            <button
+              onClick={() => navigate('/login')}
+              className="hidden sm:inline-flex h-11 items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+              style={{ visibility: (!authLoading && user) ? 'hidden' : 'visible' }}
+              tabIndex={(!authLoading && user) ? -1 : 0}
+              aria-hidden={(!authLoading && user) ? true : undefined}
+            >
+              Log in
+            </button>
 
             {/* Cabinet / Sign Up button */}
             <button

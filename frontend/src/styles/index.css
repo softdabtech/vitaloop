@@ -22,6 +22,8 @@ body {
   background: #f8fafc;
   color: #1d1d1f;
   min-height: 100vh;
+  /* Prevent layout shift when scrollbar appears on content load */
+  scrollbar-gutter: stable;
 }
 
 * {
