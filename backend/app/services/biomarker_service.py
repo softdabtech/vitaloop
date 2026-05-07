@@ -175,11 +175,11 @@ class BiomarkerService:
 
             upload_data = {
                 "user_id": user_id,
-                "source": "manual",  # vs "pdf"
                 "lab_name": lab_name or "Manual Entry",
                 "test_date": (test_date or datetime.utcnow()).isoformat(),
                 "extracted_text": notes or "",
-                "processing_status": "completed",
+                "analyze_prompt_version": "manual_v1",
+                "status": "done",
                 "created_at": datetime.utcnow().isoformat(),
             }
 
@@ -273,7 +273,7 @@ class BiomarkerService:
                 lambda: sb.table("lab_uploads")
                 .select("id")
                 .eq("user_id", user_id)
-                .eq("source", "manual")
+                .eq("analyze_prompt_version", "manual_v1")
                 .gte("created_at", month_start)
                 .execute()
             )

@@ -329,7 +329,7 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
 
         # Check weekly checkins
         checkin_resp = await svc._run(
-            lambda: sb.table("weekly_checkins")
+            lambda: sb.table("checkins_weekly")
             .select("created_at")
             .eq("user_id", user_id)
             .order("created_at", desc=True)
@@ -355,14 +355,15 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     goals_achieved = 0
     try:
         sb = svc._get_supabase()
-        goals_resp = await svc._run(
-            lambda: sb.table("user_goals")
-            .select("id, status")
-            .eq("user_id", user_id)
-            .eq("status", "achieved")
+        profile_resp = await svc._run(
+            lambda: sb.table("user_profile")
+            .select("goals")
+            .eq("id", user_id)
+            .limit(1)
             .execute()
         )
-        goals_achieved = len(goals_resp.data or [])
+        goals = (profile_resp.data or [{}])[0].get("goals") or []
+        goals_achieved = len(goals) if isinstance(goals, list) else 0
     except Exception:
         goals_achieved = 0
 
@@ -380,7 +381,7 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
         sb = svc._get_supabase()
         weekly_checkin_resp, questionnaire_resp = await asyncio.gather(
             svc._run(
-                lambda: sb.table("weekly_checkins")
+                lambda: sb.table("checkins_weekly")
                 .select("week_start, created_at, energy_score, sleep_quality, mood_score, protocol_adherence")
                 .eq("user_id", user_id)
                 .order("created_at", desc=True)

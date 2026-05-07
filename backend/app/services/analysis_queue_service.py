@@ -65,11 +65,11 @@ async def schedule_pdf_analysis(
             await svc._run(
                 lambda: svc._get_supabase().table("notifications").insert({
                     "user_id": user_id,
-                    "type": "analysis_ready",
-                    "title": "Lab Analysis Ready",
-                    "message": f"Your analysis for {file_name} is ready. Click to view results.",
-                    "data": {"upload_id": upload_id},
-                    "read": False,
+                    "trigger_type": "general",
+                    "channel": "in_app",
+                    "subject": "Lab Analysis Ready",
+                    "body": f"Your analysis for {file_name} is ready. Upload ID: {upload_id}.",
+                    "delivery_status": "sent",
                     "created_at": datetime.now().isoformat(),
                 }).execute()
             )
@@ -90,11 +90,11 @@ async def schedule_pdf_analysis(
                 await svc._run(
                     lambda: svc._get_supabase().table("notifications").insert({
                         "user_id": user_id,
-                        "type": "analysis_error",
-                        "title": "Analysis Failed",
-                        "message": f"Could not process {file_name}. Please try again.",
-                        "data": {"upload_id": upload_id, "error": str(e)},
-                        "read": False,
+                        "trigger_type": "general",
+                        "channel": "in_app",
+                        "subject": "Analysis Failed",
+                        "body": f"Could not process {file_name}. Please try again. Upload ID: {upload_id}.",
+                        "delivery_status": "failed",
                         "created_at": datetime.now().isoformat(),
                     }).execute()
                 )
