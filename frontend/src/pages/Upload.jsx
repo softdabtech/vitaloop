@@ -150,7 +150,22 @@ export default function Upload() {
       const errorDetail = typeof errorData?.detail === 'string' ? errorData.detail : null
       let message = errorDetail || 'Analysis failed. Please try again.'
 
-      if (err.response?.status === 422) {
+      if (err.response?.status === 402) {
+        // Quota exceeded - could be either "manual" or not yet used
+        if (errorCode === 'BIOMARKER_QUOTA_EXCEEDED') {
+          const usedBy = errorData?.used_by
+          if (usedBy === 'manual') {
+            message = 'You\'ve already entered biomarkers manually. Free plan allows 1 entry via PDF OR manual. Upgrade to Premium for unlimited entries.'
+          } else {
+            message = errorDetail || 'Your free biomarker entry quota is full. Upgrade to Premium for unlimited entries.'
+          }
+          // Trigger paywall
+          window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'BIOMARKER_QUOTA_EXCEEDED', used_by: usedBy } }))
+        } else {
+          message = errorDetail || 'Subscription required for this action. Upgrade to Premium.'
+          window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))
+        }
+      } else if (err.response?.status === 422) {
         if (errorCode === 'LAB_TEXT_TOO_SHORT') {
           message = 'Not enough readable text found in the report. Please upload a clearer PDF or photo with full biomarker table visible.'
         } else if (errorCode === 'BIOMARKERS_NOT_EXTRACTED') {
@@ -254,10 +269,10 @@ export default function Upload() {
         {uploadMode === 'pdf' && !subLoading && !isPremium && uploadsRemaining === 0 && (
           <div className="mb-6 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             <span>
-              Free upload limit reached ({uploadCount}/{uploadLimit}).
+              Your free biomarker entry was already used. You can upload a PDF OR enter manually, but not both.
             </span>
             <button
-              onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'UPLOAD_LIMIT_REACHED' } }))}
+              onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'BIOMARKER_QUOTA_EXCEEDED' } }))}
               className="ml-4 rounded-lg bg-emerald-500 hover:bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition"
             >
               Upgrade {PREMIUM_PRICE_LABEL}
@@ -267,7 +282,7 @@ export default function Upload() {
 
         {uploadMode === 'pdf' && !subLoading && !isPremium && uploadsRemaining > 0 && (
           <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-            Free plan: {uploadsRemaining} upload{uploadsRemaining !== 1 ? 's' : ''} remaining.
+            Free plan: 1 biomarker entry allowed (via PDF upload or manual entry).
           </div>
         )}
 

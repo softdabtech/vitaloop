@@ -29,6 +29,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 VALID_PLANS = {"personal", "practitioner"}
+_FREE_PLAN_NAMES = {"free"}
 
 
 def _price_id_for_plan(plan_id: str) -> str:
@@ -317,12 +318,21 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
         upload_count = await get_user_upload_count(user_id)
         active_sub = await get_user_active_subscription(user_id)
         account_sub_status = str(account.get("sub_status") or "free").lower()
-        # Also trust the subscriptions table — may be more up-to-date than users.sub_status
-        sub_table_status = (active_sub or {}).get("status", "free")
+        # Subscriptions table can be newer than users.sub_status, but an active
+        # free plan must not be interpreted as paid premium access.
+        sub_table_status = str((active_sub or {}).get("status") or "free").lower()
         claim_sub_status = "active" if bool(current_user.get("subscription_active")) else str(current_user.get("subscription_status") or "free").lower()
-        sub_status = "active" if (claim_sub_status == "active" or sub_table_status == "active" or account_sub_status == "active") else account_sub_status
         global_role = str(account.get("global_role") or current_user.get("global_role") or "end_user").lower()
-        plan_name = (active_sub or {}).get("plan_name") or account.get("plan_tier") or None
+        plan_name = str((active_sub or {}).get("plan_name") or account.get("plan_tier") or "").strip().lower() or None
+        paid_from_sub_table = bool(
+            active_sub
+            and sub_table_status == "active"
+            and plan_name
+            and plan_name not in _FREE_PLAN_NAMES
+        )
+        paid_from_account = account_sub_status == "active"
+        is_premium = global_role != "end_user" or paid_from_account or paid_from_sub_table
+        sub_status = "active" if is_premium and global_role == "end_user" else account_sub_status
     except Exception as ex:
         logger.warning("stripe_subscription_status_fallback user_id=%s error=%s", user_id, repr(ex))
         # Degrade gracefully on transient data-layer failures.
@@ -330,16 +340,17 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
         global_role = str(current_user.get("global_role") or "end_user").lower()
         plan_name = None
         upload_count = 0
+        is_premium = sub_status == "active" or global_role != "end_user"
 
     limit = settings.freemium_upload_limit
-    is_free = sub_status != "active" and global_role == "end_user"
+    is_free = not is_premium and global_role == "end_user"
     customer_id = (active_sub or {}).get("stripe_customer_id")
 
     return {
         "sub_status": sub_status,
         "plan_name": plan_name,  # "personal" | "practitioner" | None
         "global_role": global_role,
-        "is_premium": sub_status == "active" or global_role != "end_user",
+        "is_premium": is_premium,
         "has_stripe_customer": bool(customer_id),
         "cancel_at_period_end": (active_sub or {}).get("cancel_at_period_end", False),
         "current_period_end": (active_sub or {}).get("current_period_end"),

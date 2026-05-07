@@ -206,6 +206,28 @@ async def test_subscription_status_practitioner(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_subscription_status_active_free_plan_is_not_premium(monkeypatch):
+    free_active_sub = {
+        **_ACTIVE_SUBSCRIPTION,
+        "plan_name": "free",
+        "status": "active",
+        "stripe_subscription_id": None,
+        "stripe_customer_id": None,
+    }
+
+    monkeypatch.setattr(billing, "get_user_account", lambda _uid: _coro(_USER_ACCOUNT_FREE))
+    monkeypatch.setattr(billing, "get_user_upload_count", lambda _uid: _coro(1))
+    monkeypatch.setattr(billing, "get_user_active_subscription", lambda _uid: _coro(free_active_sub))
+
+    result = await billing.get_subscription_status(current_user=CURRENT_USER)
+
+    assert result["sub_status"] == "free"
+    assert result["is_premium"] is False
+    assert result["plan_name"] == "free"
+    assert result["upload_limit"] is not None
+
+
+@pytest.mark.asyncio
 async def test_subscription_cancel_at_period_end_reflected(monkeypatch):
     cancelling_sub = {**_ACTIVE_SUBSCRIPTION, "cancel_at_period_end": True}
 
