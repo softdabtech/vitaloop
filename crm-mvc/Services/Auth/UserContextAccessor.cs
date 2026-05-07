@@ -84,12 +84,13 @@ public sealed class UserContextAccessor : IUserContextAccessor
         var subscriptionStatus = principal.FindFirstValue("subscription_status") ?? "inactive";
 
         var record = await _userContextDataSource.GetByUserAsync(userId, email, ct);
+        var resolvedEmail = record?.Email ?? email;
 
         var memberships = record?.Memberships ?? baseMemberships;
         var userCtx = new UserContext
         {
             UserId = userId,
-            Email = email,
+            Email = resolvedEmail,
             GlobalRole = record?.GlobalRole ?? globalRole ?? "end_user",
             OnboardingCompleted = record?.OnboardingCompleted ?? ParseBoolClaim(principal, "onboarding_completed"),
             SubscriptionActive = record?.SubscriptionActive ?? ParseSubscriptionActive(subscriptionStatus),

@@ -78,6 +78,10 @@ public sealed class HttpUserContextDataSource : IUserContextDataSource
 
     private UserContextRecord Map(JsonElement root)
     {
+        var email = ReadString(root, "email")
+            ?? ReadNestedString(root, "user", "email")
+            ?? ReadNestedString(root, "profile", "email");
+
         var globalRole = ReadString(root, "global_role")
             ?? ReadString(root, "globalRole")
             ?? ReadNestedString(root, "user", "global_role")
@@ -97,6 +101,7 @@ public sealed class HttpUserContextDataSource : IUserContextDataSource
 
         return new UserContextRecord
         {
+            Email = email,
             GlobalRole = globalRole,
             OnboardingCompleted = onboarding,
             SubscriptionActive = subscriptionActive,
