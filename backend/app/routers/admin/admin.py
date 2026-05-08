@@ -15,6 +15,12 @@ class AdminUserSubscriptionUpdateRequest(BaseModel):
     sub_status: str = Field(min_length=1, max_length=64)
 
 
+class AdminUserUpdateRequest(BaseModel):
+    full_name: str | None = Field(default=None, max_length=255)
+    global_role: str | None = Field(default=None, min_length=1, max_length=64)
+    sub_status: str | None = Field(default=None, min_length=1, max_length=64)
+
+
 def _is_set(value: str) -> bool:
     return bool(str(value or "").strip())
 
@@ -168,6 +174,38 @@ async def admin_user_detail(user_id: str, _: dict = Depends(_require_super_admin
     return await svc.get_admin_user_detail(user_id)
 
 
+@router.patch("/users/{user_id}")
+async def admin_update_user(
+    user_id: str,
+    body: AdminUserUpdateRequest,
+    _: dict = Depends(_require_super_admin),
+):
+    allowed_global_roles = {"end_user", "support", "practitioner", "client_admin", "super_admin"}
+    full_name = body.full_name.strip() if isinstance(body.full_name, str) else None
+    global_role = str(body.global_role or "").strip().lower() or None
+    sub_status = str(body.sub_status or "").strip().lower() or None
+
+    if global_role is not None and global_role not in allowed_global_roles:
+        raise HTTPException(status_code=400, detail="Unsupported global_role")
+
+    if full_name is None and global_role is None and sub_status is None:
+        raise HTTPException(status_code=400, detail="At least one field is required")
+
+    await svc.update_admin_user_fields(
+        user_id,
+        full_name=full_name,
+        global_role=global_role,
+        sub_status=sub_status,
+    )
+    return {
+        "ok": True,
+        "user_id": user_id,
+        "full_name": full_name,
+        "global_role": global_role,
+        "sub_status": sub_status,
+    }
+
+
 @router.patch("/users/{user_id}/subscription")
 async def admin_update_user_subscription(
     user_id: str,
@@ -185,6 +223,18 @@ async def admin_update_user_subscription(
 @router.get("/platform-overview")
 async def admin_platform_overview(_: dict = Depends(_require_super_admin)):
     return await svc.get_platform_overview()
+
+
+@router.get("/public-platform-stats")
+async def admin_public_platform_stats():
+    overview = await svc.get_platform_overview()
+    return {
+        "total_users": overview.get("total_users", 0),
+        "total_organizations": overview.get("total_organizations", 0),
+        "active_programs": overview.get("active_programs", 0),
+        "new_registrations_24h": overview.get("new_registrations_24h", 0),
+        "generated_at": overview.get("generated_at"),
+    }
 
 
 @router.get("/funnel-overview")

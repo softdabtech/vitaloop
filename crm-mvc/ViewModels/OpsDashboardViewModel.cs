@@ -7,6 +7,7 @@ public sealed class OpsDashboardViewModel
     public int TotalOrganizations { get; init; }
     public int ActivePrograms { get; init; }
     public int NewRegistrations24h { get; init; }
+    public DateTimeOffset LastUpdatedAt { get; init; }
     public IReadOnlyList<OpsAuditLogViewModel> RecentAuditLogs { get; init; } = Array.Empty<OpsAuditLogViewModel>();
     public OpsRuntimeReadinessViewModel RuntimeReadiness { get; init; } = new();
 }

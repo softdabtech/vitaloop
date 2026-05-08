@@ -93,6 +93,25 @@ public sealed class MembershipService
         await _gateway.UpdateGlobalUserSubscription(userId, normalized, ct);
     }
 
+    public async Task UpdateGlobalUser(UserContext userCtx, Guid userId, string? fullName, string? globalRole, string? subscriptionStatus, CancellationToken ct = default)
+    {
+        if (!_accessPolicyService.HasGlobalRole(userCtx, "super_admin"))
+        {
+            throw new UnauthorizedAccessException("Global user update access denied.");
+        }
+
+        var normalizedName = string.IsNullOrWhiteSpace(fullName) ? null : fullName.Trim();
+        var normalizedRole = string.IsNullOrWhiteSpace(globalRole) ? null : globalRole.Trim().ToLowerInvariant();
+        var normalizedStatus = string.IsNullOrWhiteSpace(subscriptionStatus) ? null : subscriptionStatus.Trim().ToLowerInvariant();
+
+        if (normalizedName is null && normalizedRole is null && normalizedStatus is null)
+        {
+            throw new ArgumentException("At least one field is required.", nameof(userId));
+        }
+
+        await _gateway.UpdateGlobalUser(userId, normalizedName, normalizedRole, normalizedStatus, ct);
+    }
+
     public async Task<PlatformOverview?> GetPlatformOverview(UserContext userCtx, CancellationToken ct = default)
     {
         if (!_accessPolicyService.HasGlobalRole(userCtx, "super_admin"))

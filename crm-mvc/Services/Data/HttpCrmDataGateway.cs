@@ -128,6 +128,13 @@ public sealed class HttpCrmDataGateway : ICrmDataGateway
     public Task<IReadOnlyList<GlobalUser>> GetGlobalUsers(CancellationToken ct = default)
         => GetList<GlobalUser>(_options.GlobalUsersPath, ct);
 
+    public Task UpdateGlobalUser(Guid userId, string? fullName, string? globalRole, string? subscriptionStatus, CancellationToken ct = default)
+        => SendWithoutResponse(
+            new HttpMethod("PATCH"),
+            $"{_options.GlobalUsersPath}/{userId}",
+            new { full_name = fullName, global_role = globalRole, sub_status = subscriptionStatus },
+            ct);
+
     public Task UpdateGlobalUserSubscription(Guid userId, string subscriptionStatus, CancellationToken ct = default)
         => SendWithoutResponse(
             new HttpMethod("PATCH"),
