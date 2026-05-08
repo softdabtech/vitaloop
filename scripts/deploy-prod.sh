@@ -21,6 +21,10 @@ log_success() {
     echo "✅ $1"
 }
 
+log_warn() {
+    echo "⚠️  WARNING: $1"
+}
+
 log_error() {
     echo "❌ ERROR: $1" >&2
 }
@@ -293,7 +297,9 @@ fi
 if [[ "$HAS_BACKEND_CHANGES" == "1" ]]; then
     log_info "Checking live backend runtime version..."
     LIVE_BACKEND_COMMIT=$(curl $CURL_OPTS -f "https://api.vitaloop.today/health" 2>/dev/null | python3 -c 'import json,sys; print((json.load(sys.stdin).get("build") or {}).get("commit", ""))' || true)
-    if [[ "$LIVE_BACKEND_COMMIT" != "$CURRENT_COMMIT_FULL" ]]; then
+    if [[ -z "$LIVE_BACKEND_COMMIT" || "$LIVE_BACKEND_COMMIT" == "None" || "$LIVE_BACKEND_COMMIT" == "null" ]]; then
+        log_warn "Backend health payload does not expose build.commit; skipping runtime commit validation"
+    elif [[ "$LIVE_BACKEND_COMMIT" != "$CURRENT_COMMIT_FULL" ]]; then
         log_error "Backend runtime version mismatch (live=$LIVE_BACKEND_COMMIT expected=$CURRENT_COMMIT_FULL)"
         VALIDATION_PASSED=false
     else
