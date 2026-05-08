@@ -27,9 +27,18 @@ public sealed class GlobalUser
     [JsonPropertyName("full_name")]
     public string FullName { get; init; } = string.Empty;
 
+    [JsonPropertyName("age")]
+    public int? Age { get; init; }
+
+    [JsonPropertyName("sex")]
+    public string? Sex { get; init; }
+
     [JsonPropertyName("global_role")]
     public string GlobalRole { get; init; } = "end_user";
 
     [JsonPropertyName("sub_status")]
     public string Status { get; init; } = "active";
+
+    [JsonPropertyName("created_at")]
+    public DateTimeOffset? CreatedAt { get; init; }
 }

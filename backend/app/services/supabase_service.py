@@ -456,6 +456,29 @@ async def update_user_subscription(user_id: str, sub_status: str, sub_id: Option
     await _run(lambda: supabase.table("users").update(payload).eq("id", user_id).execute())
 
 
+async def update_admin_user_fields(
+    user_id: str,
+    *,
+    full_name: Optional[str] = None,
+    global_role: Optional[str] = None,
+    sub_status: Optional[str] = None,
+) -> None:
+    supabase = _get_supabase()
+    payload: Dict[str, Any] = {}
+
+    if full_name is not None:
+        payload["full_name"] = full_name
+    if global_role is not None:
+        payload["global_role"] = global_role
+    if sub_status is not None:
+        payload["sub_status"] = sub_status
+
+    if not payload:
+        return
+
+    await _run(lambda: supabase.table("users").update(payload).eq("id", user_id).execute())
+
+
 async def get_user_by_stripe_sub(sub_id: str) -> Optional[Dict]:
     supabase = _get_supabase()
     resp = await _run(lambda: supabase.table("users").select("id").eq("sub_id", sub_id).execute())

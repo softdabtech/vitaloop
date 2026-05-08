@@ -20,14 +20,20 @@
 </nav>
 
 <section class="vo-grid two-up" style="margin-bottom: var(--vo-space-6);">
-  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Total Users", Value = Model.TotalUsers.ToString(), Trend = "All organizations", Tone = "teal" })
-  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Organizations", Value = Model.TotalOrganizations.ToString(), Trend = "Multi-org scope", Tone = "default" })
-  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Active Programs", Value = Model.ActivePrograms.ToString(), Trend = "Active assignments", Tone = "default" })
-  @await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "New Registrations (24h)", Value = Model.NewRegistrations24h.ToString(), Trend = "Last 24 hours", Tone = "default" })
+  <div id="ops-stat-total-users">@await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Total Users", Value = Model.TotalUsers.ToString(), Trend = "All organizations", Tone = "teal" })</div>
+  <div id="ops-stat-total-organizations">@await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Organizations", Value = Model.TotalOrganizations.ToString(), Trend = "Multi-org scope", Tone = "default" })</div>
+  <div id="ops-stat-active-programs">@await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Active Programs", Value = Model.ActivePrograms.ToString(), Trend = "Active assignments", Tone = "default" })</div>
+  <div id="ops-stat-new-registrations">@await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "New Registrations (24h)", Value = Model.NewRegistrations24h.ToString(), Trend = "Last 24 hours", Tone = "default" })</div>
 </section>
 
 <section class="vo-panel" style="margin-bottom: var(--vo-space-6);">
-  <h3 style="margin:0 0 8px 0;">Rate Limiter Runtime</h3>
+  <div style="display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:8px;">
+    <div>
+      <h3 style="margin:0;">Rate Limiter Runtime</h3>
+      <p id="ops-last-updated" style="margin:6px 0 0 0; opacity:.7; font-size:.85rem;">Last updated: @Model.LastUpdatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</p>
+    </div>
+    <button id="ops-refresh-button" type="button" class="vo-btn vo-btn-secondary">Refresh now</button>
+  </div>
   @if (!Model.RuntimeReadiness.Available)
   {
     <p style="margin:0; opacity:.8;">Runtime readiness feed is unavailable.</p>
@@ -40,37 +46,47 @@
     <div class="vo-grid three-up">
       <div>
         <div style="font-size:.8rem; opacity:.7;">Backend</div>
-        <strong>@Model.RuntimeReadiness.LimiterBackend</strong>
+        <strong id="ops-runtime-backend">@Model.RuntimeReadiness.LimiterBackend</strong>
       </div>
       <div>
         <div style="font-size:.8rem; opacity:.7;">Limiter OK</div>
-        <strong>@(Model.RuntimeReadiness.LimiterOk ? "yes" : "no")</strong>
+        <strong id="ops-runtime-limiter-ok">@(Model.RuntimeReadiness.LimiterOk ? "yes" : "no")</strong>
       </div>
       <div>
         <div style="font-size:.8rem; opacity:.7;">Overall runtime OK</div>
-        <strong>@(Model.RuntimeReadiness.Ok ? "yes" : "no")</strong>
+        <strong id="ops-runtime-ok">@(Model.RuntimeReadiness.Ok ? "yes" : "no")</strong>
       </div>
       <div>
         <div style="font-size:.8rem; opacity:.7;">Redis required</div>
-        <strong>@(Model.RuntimeReadiness.RedisRequired ? "yes" : "no")</strong>
+        <strong id="ops-runtime-redis-required">@(Model.RuntimeReadiness.RedisRequired ? "yes" : "no")</strong>
       </div>
       <div>
         <div style="font-size:.8rem; opacity:.7;">Redis configured</div>
-        <strong>@(Model.RuntimeReadiness.RedisConfigured ? "yes" : "no")</strong>
+        <strong id="ops-runtime-redis-configured">@(Model.RuntimeReadiness.RedisConfigured ? "yes" : "no")</strong>
       </div>
       <div>
         <div style="font-size:.8rem; opacity:.7;">Redis reachable</div>
-        <strong>@redisReachable</strong>
+        <strong id="ops-runtime-redis-reachable">@redisReachable</strong>
       </div>
     </div>
-    <p style="margin:10px 0 0 0; opacity:.8;">Reason: @Model.RuntimeReadiness.RedisReason | Missing checks: @Model.RuntimeReadiness.MissingCount | Warnings: @Model.RuntimeReadiness.WarningCount</p>
+    <p id="ops-runtime-summary" style="margin:10px 0 0 0; opacity:.8;">Reason: @Model.RuntimeReadiness.RedisReason | Missing checks: @Model.RuntimeReadiness.MissingCount | Warnings: @Model.RuntimeReadiness.WarningCount</p>
   }
 </section>
 
 @{
+  var globalRoleOptions = new[] { "end_user", "support", "practitioner", "client_admin", "super_admin" };
   var tariffOptions = new[] { "free", "active", "trialing", "past_due", "canceled", "incomplete", "unpaid" };
   var globalUserRows = Model.GlobalUsers.Select(u =>
   {
+    var roleOptions = globalRoleOptions
+      .Select(option => new EditableTableOptionViewModel
+      {
+        Value = option,
+        Label = option,
+        Selected = string.Equals(option, u.GlobalRole, StringComparison.OrdinalIgnoreCase),
+      })
+      .ToList();
+
     var options = tariffOptions
       .Select(option => new EditableTableOptionViewModel
       {
@@ -95,8 +111,9 @@
       RowKey = u.UserId.ToString("N"),
       Cells = new List<EditableTableCellViewModel>
       {
-        new() { Kind = EditableTableCellKind.Text, Text = u.DisplayName },
-        new() { Kind = EditableTableCellKind.Text, Text = u.GlobalRole },
+        new() { Kind = EditableTableCellKind.InputText, Name = "fullName", Value = u.FullName, Placeholder = u.Email, CssClass = "inline-input" },
+        new() { Kind = EditableTableCellKind.Text, Text = u.Email },
+        new() { Kind = EditableTableCellKind.Select, Name = "globalRole", CssClass = "inline-input", Options = roleOptions },
         new()
         {
           Kind = EditableTableCellKind.Select,
@@ -104,11 +121,13 @@
           CssClass = "inline-input",
           Options = options,
         },
-        new() { Kind = EditableTableCellKind.Code, Text = u.UserId.ToString() },
+        new() { Kind = EditableTableCellKind.Text, Text = u.Age.HasValue || !string.IsNullOrWhiteSpace(u.Sex) ? $"{(u.Age?.ToString() ?? "-")} / {(string.IsNullOrWhiteSpace(u.Sex) ? "-" : u.Sex)}" : "-" },
+        new() { Kind = EditableTableCellKind.Text, Text = u.MembershipStatus },
+        new() { Kind = EditableTableCellKind.Text, Text = u.UserId.ToString() },
       },
       PrimaryAction = new EditableTableActionViewModel
       {
-        ActionUrl = $"/ops/users/{u.UserId}/subscription",
+        ActionUrl = $"/ops/users/{u.UserId}",
         SubmitLabel = "Save",
         SubmitButtonClass = "vo-btn vo-btn-secondary",
       },
@@ -119,7 +138,7 @@
 @await Html.PartialAsync("~/Views/Shared/Ui/_EditableTable.cshtml", new EditableTableViewModel
 {
   Title = "Global Users",
-  Columns = new[] { "User", "Global Role", "Tariff Plan", "User ID" },
+  Columns = new[] { "Name", "Email", "Global Role", "Tariff Plan", "Age / Sex", "Status", "User ID" },
   EmptyMessage = "No global users found.",
   Rows = globalUserRows,
 })
@@ -141,7 +160,56 @@
 })
 
 <script>
-  setTimeout(function () {
-    window.location.reload();
-  }, 30000);
+  (function () {
+    const endpoints = {
+      snapshot: '/ops/live-snapshot',
+    };
+
+    const updateText = (id, value) => {
+      const node = document.getElementById(id);
+      if (node) node.textContent = value;
+    };
+
+    const updateStatCard = (id, label, value, trend, tone) => {
+      const node = document.getElementById(id);
+      if (!node) return;
+      node.innerHTML = `
+        <article class="vo-stat-card tone-${tone}">
+          <div class="vo-stat-card-label">${label}</div>
+          <div class="vo-stat-card-value">${value}</div>
+          <div class="vo-stat-card-trend">${trend}</div>
+        </article>`;
+    };
+
+    const refreshSnapshot = async () => {
+      try {
+        const response = await fetch(endpoints.snapshot, { credentials: 'same-origin' });
+        if (!response.ok) return;
+
+        const data = await response.json();
+        updateStatCard('ops-stat-total-users', 'Total Users', String(data.totalUsers ?? 0), 'All organizations', 'teal');
+        updateStatCard('ops-stat-total-organizations', 'Organizations', String(data.totalOrganizations ?? 0), 'Multi-org scope', 'default');
+        updateStatCard('ops-stat-active-programs', 'Active Programs', String(data.activePrograms ?? 0), 'Active assignments', 'default');
+        updateStatCard('ops-stat-new-registrations', 'New Registrations (24h)', String(data.newRegistrations24h ?? 0), 'Last 24 hours', 'default');
+
+        const runtime = data.runtimeReadiness || {};
+        updateText('ops-runtime-backend', runtime.limiterBackend || 'unknown');
+        updateText('ops-runtime-limiter-ok', runtime.limiterOk ? 'yes' : 'no');
+        updateText('ops-runtime-ok', runtime.ok ? 'yes' : 'no');
+        updateText('ops-runtime-redis-required', runtime.redisRequired ? 'yes' : 'no');
+        updateText('ops-runtime-redis-configured', runtime.redisConfigured ? 'yes' : 'no');
+        updateText('ops-runtime-redis-reachable', typeof runtime.redisReachable === 'boolean' ? (runtime.redisReachable ? 'yes' : 'no') : 'n/a');
+        updateText('ops-runtime-summary', `Reason: ${runtime.redisReason || 'n/a'} | Missing checks: ${runtime.missingCount ?? 0} | Warnings: ${runtime.warningCount ?? 0}`);
+
+        if (data.lastUpdatedAt) {
+          const formatted = new Date(data.lastUpdatedAt).toLocaleString();
+          updateText('ops-last-updated', `Last updated: ${formatted}`);
+        }
+      } catch {
+      }
+    };
+
+    document.getElementById('ops-refresh-button')?.addEventListener('click', refreshSnapshot);
+    window.setInterval(refreshSnapshot, 30000);
+  })();
 </script>

@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { DollarSign, Calendar, TrendingUp, Zap } from 'lucide-react'
 
 const STATS = [
@@ -32,22 +31,11 @@ export function StatsBar() {
           {STATS.map((stat, idx) => {
             const Icon = stat.icon
             return (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1, duration: 0.6 }}
-                viewport={{ once: true }}
-                className="flex flex-col items-center text-center"
-              >
+              <div key={stat.label} className="flex flex-col items-center text-center">
                 {/* Icon */}
-                <motion.div
-                  className="mb-6"
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  transition={{ type: 'spring', stiffness: 300 }}
-                >
+                <div className="mb-6 transition-transform duration-200 hover:scale-105">
                   <Icon className="w-8 h-8 text-teal-500" />
-                </motion.div>
+                </div>
 
                 {/* Number */}
                 <div className="text-2xl lg:text-3xl font-bold text-slate-900 mb-3 leading-snug">
@@ -58,7 +46,7 @@ export function StatsBar() {
                 <div className="text-sm text-slate-600">
                   {stat.label}
                 </div>
-              </motion.div>
+              </div>
             )
           })}
         </div>

@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import api from '../api/client.ts'
 import {
   ArrowRight,
   BrainCircuit,
@@ -657,7 +658,36 @@ export default function Landing() {
   const [pricingMode, setPricingMode] = useState('monthly')
   const [loopActive, setLoopActive] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [tractionUsers, setTractionUsers] = useState(null)
   const { user, loading: authLoading } = useAuth()
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      return () => {
+        cancelled = true
+      }
+    }
+
+    const loadPlatformStats = async () => {
+      try {
+        const { data } = await api.get('/admin/public-platform-stats')
+        if (!cancelled && Number.isFinite(data?.total_users)) {
+          setTractionUsers(data.total_users)
+        }
+      } catch {
+      }
+    }
+
+    loadPlatformStats()
+    const intervalId = window.setInterval(loadPlatformStats, 60000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+    }
+  }, [])
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
   const navAction = (item) => {
@@ -691,26 +721,10 @@ export default function Landing() {
       />
 
 
-      {/* Animated hero background */}
-      <motion.div
-        className="pointer-events-none fixed inset-0 -z-10"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1.2 }}
-      >
-        <motion.div
-          className="absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(16,185,129,0.18),transparent_42%)]"
-          initial={{ scale: 0.98, opacity: 0.7 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 1.2, delay: 0.2 }}
-        />
-        <motion.div
-          className="absolute inset-0 bg-[radial-gradient(circle_at_90%_2%,rgba(59,130,246,0.12),transparent_38%)]"
-          initial={{ scale: 1.04, opacity: 0.7 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 1.2, delay: 0.4 }}
-        />
-      </motion.div>
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_5%,rgba(16,185,129,0.18),transparent_42%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_90%_2%,rgba(59,130,246,0.12),transparent_38%)]" />
+      </div>
 
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/85 backdrop-blur">
         <div className="mx-auto flex h-[72px] w-full max-w-[1240px] items-center justify-between px-4 sm:px-6">
@@ -1214,7 +1228,8 @@ export default function Landing() {
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
                   <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Early access</div>
-                  <div className="mt-1 text-sm font-semibold">10 users</div>
+                  <div className="mt-1 text-sm font-semibold">{typeof tractionUsers === 'number' ? `${tractionUsers.toLocaleString()} users` : 'Loading…'}</div>
+                  <div className={`mt-1 text-[11px] ${'text-emerald-700'}`}>Live from CRM</div>
                 </div>
                 <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
                   <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Lab integrations</div>
