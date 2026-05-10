@@ -21,7 +21,6 @@ import {
   Stethoscope,
   TrendingUp,
   Upload,
-  Users,
   X,
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
@@ -85,23 +84,23 @@ const BENEFITS = [
 const PREMIUM_FEATURES = [
   {
     title: 'Biomarker Timeline',
-    body: "Track ferritin, vitamin D, thyroid over months. See what's improving.",
+    body: 'Track biomarker trends over time to see what improves after each protocol update.',
     icon: TrendingUp,
   },
   {
     title: 'AI Protocol',
-    body: 'Not "take iron" — Ferrous Bisglycinate 25mg, morning, 8 weeks.',
+    body: 'Receive a structured plan with dosage, timing, and follow-up actions tailored to your labs.',
     icon: Sparkles,
   },
   {
     title: 'Weekly Check-ins',
-    body: "Energy level? Side effects? We adjust your protocol based on feedback.",
+    body: 'Report symptoms weekly and get adaptive protocol adjustments between lab cycles.',
     icon: HeartPulse,
   },
   {
-    title: 'Practitioner CRM',
-    body: 'Manage 50 clients, not 15. Multi-client dashboard, protocol templates.',
-    icon: Users,
+    title: 'Unlimited Uploads & Retests',
+    body: 'Upload new reports anytime and compare retests across cycles without feature limits.',
+    icon: Upload,
   },
 ]
 
@@ -145,26 +144,31 @@ const LOOP_FLOW = [
   {
     title: 'Upload data',
     body: 'Bring in a new lab report or retest.',
+    detail: 'PDF and image uploads are normalized automatically across lab formats.',
     icon: Upload,
   },
   {
     title: 'Extract signals',
     body: 'AI normalizes biomarkers and flags patterns.',
+    detail: 'Outliers, trend breaks, and related marker clusters are prioritized for action.',
     icon: BrainCircuit,
   },
   {
     title: 'Run protocol',
     body: 'You execute the highest-leverage actions.',
+    detail: 'Dosage, timing, and nutrition actions are structured into a weekly plan.',
     icon: Sparkles,
   },
   {
     title: 'Check weekly response',
     body: 'Symptoms and adherence explain what changed.',
+    detail: 'Weekly logs capture energy, sleep, side effects, and protocol consistency.',
     icon: HeartPulse,
   },
   {
     title: 'Adapt the next cycle',
     body: 'The next upload becomes more precise than the last.',
+    detail: 'Each completed cycle updates recommendations before the next lab retest.',
     icon: TrendingUp,
   },
 ]
@@ -655,7 +659,6 @@ function MockupCard({ title, alt, index, reduced, device = 'desktop' }) {
 export default function Landing() {
   const navigate = useNavigate()
   const reduced = useReducedMotion()
-  const [pricingMode, setPricingMode] = useState('monthly')
   const [loopActive, setLoopActive] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [tractionUsers, setTractionUsers] = useState(null)
@@ -699,9 +702,7 @@ export default function Landing() {
     setTimeout(() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' }), mobileMenuOpen ? 280 : 0)
   }
 
-  const pricingCards = PRICING[pricingMode]
-
-  const rootClasses = 'bg-white text-slate-900'
+  const rootClasses = 'overflow-x-hidden bg-white text-slate-900'
   const sectionCard = 'border border-slate-200 bg-white/85 backdrop-blur'
   const ctaBase = 'inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50'
   const navTextClass = 'text-slate-600 hover:text-slate-900'
@@ -762,7 +763,7 @@ export default function Landing() {
             {/* Cabinet / Sign Up button */}
             <button
               onClick={() => navigate(user ? '/dashboard' : '/login?signup=true')}
-              className={`${ctaBase} border border-slate-300 bg-white text-slate-900 hover:border-emerald-300`}
+              className={`hidden sm:inline-flex ${ctaBase} border border-slate-300 bg-white text-slate-900 hover:border-emerald-300`}
             >
               {user ? 'Cabinet' : 'Sign Up'}
             </button>
@@ -880,29 +881,27 @@ export default function Landing() {
                     key={item.title}
                     {...fadeUp(reduced, idx * 0.08 + 0.2)}
                     whileHover={reduced ? undefined : { scale: 1.02, x: -4 }}
-                    className={`group relative overflow-hidden rounded-2xl border bg-white p-3 ${'border-slate-200'}`}
+                    className={`group relative overflow-hidden rounded-2xl border bg-white p-4 sm:p-5 ${'border-slate-200'}`}
                   >
                     <motion.div
                       className="absolute inset-0 bg-gradient-to-br from-slate-500/5 to-slate-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     />
 
-                    <div className="relative flex items-center justify-center gap-3 text-center">
+                    <div className="relative grid grid-cols-[72px_1fr] items-center gap-4 sm:grid-cols-[88px_1fr]">
                       <motion.div
-                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-slate-100"
+                        className="mx-auto flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-slate-100"
                         whileHover={reduced ? {} : { rotate: [0, -10, 10, 0] }}
                         transition={{ duration: 0.5 }}
                       >
                         <Icon className="h-6 w-6 text-slate-400" />
                       </motion.div>
 
-                      <div className="flex-1">
-                        <div className="flex flex-col items-center">
-                          <div className="flex items-baseline gap-2 justify-center">
-                            <div className="text-lg font-bold text-slate-400">{item.stat}</div>
-                            <h3 className="text-base font-bold text-slate-900">{item.title}</h3>
-                          </div>
-                          <p className="mt-1 text-sm text-slate-600">{item.label}</p>
+                      <div className="min-w-0 text-left">
+                        <div className="flex items-baseline gap-2">
+                          <div className="inline-flex w-4 shrink-0 justify-center text-lg font-bold text-slate-400">{item.stat}</div>
+                          <h3 className="text-base font-bold leading-tight text-slate-900">{item.title}</h3>
                         </div>
+                        <p className="mt-1 pl-6 text-sm text-slate-600">{item.label}</p>
                       </div>
                     </div>
                   </motion.article>
@@ -932,16 +931,16 @@ export default function Landing() {
                     key={item.title}
                     {...fadeUp(reduced, idx * 0.08 + 0.2)}
                     whileHover={reduced ? undefined : { scale: 1.02, x: 4 }}
-                    className={`group relative overflow-hidden rounded-2xl border bg-white p-3 ${'border-emerald-200'}`}
+                    className={`group relative overflow-hidden rounded-2xl border bg-white p-4 sm:p-5 ${'border-emerald-200'}`}
                     style={{ boxShadow: '0 0 0 1px rgba(16,185,129,0.1)' }}
                   >
                     <motion.div
                       className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-sky-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     />
 
-                    <div className="relative flex items-center justify-center gap-3 text-center">
+                    <div className="relative grid grid-cols-[72px_1fr] items-center gap-4 sm:grid-cols-[88px_1fr]">
                       <motion.div
-                        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-50 to-sky-50"
+                        className="mx-auto flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-50 to-sky-50"
                         whileHover={reduced ? {} : { rotate: 360, scale: 1.1 }}
                         transition={{ duration: 0.6 }}
                       >
@@ -953,14 +952,12 @@ export default function Landing() {
                         <Icon className="relative h-6 w-6 text-emerald-600" />
                       </motion.div>
 
-                      <div className="flex-1">
-                        <div className="flex flex-col items-center">
-                          <div className="flex items-baseline gap-2 justify-center">
-                            <div className="text-xl font-bold text-emerald-500">{item.stat}</div>
-                            <h3 className="text-base font-bold text-slate-900">{item.title}</h3>
-                          </div>
-                          <p className="mt-1 text-sm text-slate-600">{item.label}</p>
+                      <div className="min-w-0 text-left">
+                        <div className="flex items-baseline gap-2">
+                          <div className="inline-flex w-4 shrink-0 justify-center text-xl font-bold text-emerald-500">{item.stat}</div>
+                          <h3 className="text-base font-bold leading-tight text-slate-900">{item.title}</h3>
                         </div>
+                        <p className="mt-1 pl-6 text-sm text-slate-600">{item.label}</p>
                       </div>
                     </div>
                   </motion.article>
@@ -1045,21 +1042,12 @@ export default function Landing() {
               viewport={{ once: true }}
               className="flex justify-center lg:justify-end"
             >
-              <div className="relative w-full max-w-md">
+              <div className="relative w-full max-w-lg lg:max-w-xl">
                 <img
                   src="/images/biohacking-arms-open.png"
                   alt="Your complete health optimization system with biohacking technology"
                   className="w-full h-auto rounded-2xl shadow-lg"
                 />
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                  viewport={{ once: true }}
-                  className="mt-6 text-center text-sm text-slate-600"
-                >
-                  Your complete health optimization system
-                </motion.p>
               </div>
             </motion.div>
           </motion.div>
@@ -1081,7 +1069,7 @@ export default function Landing() {
             </p>
           </motion.div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {PREMIUM_FEATURES.map((feature, index) => {
               const Icon = feature.icon
               return (
@@ -1089,7 +1077,7 @@ export default function Landing() {
                   key={feature.title}
                   {...fadeUp(reduced, index * 0.05)}
                   whileHover={reduced ? undefined : { y: -12, scale: 1.05, rotate: index % 2 === 0 ? 1 : -1 }}
-                  className={`group relative flex flex-col items-center overflow-hidden rounded-3xl border p-8 text-center ${'border-slate-200 bg-white'}`}
+                  className={`group relative flex h-full flex-col items-center overflow-hidden rounded-3xl border p-6 text-center sm:p-7 md:p-8 ${'border-slate-200 bg-white'}`}
                   style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.1), inset 0 1px 0 rgba(16,185,129,0.08)' }}
                 >
                   {/* Animated gradient background */}
@@ -1117,8 +1105,8 @@ export default function Landing() {
                     </div>
                   </motion.div>
 
-                  <h3 className="relative text-xl font-bold">{feature.title}</h3>
-                  <p className={`relative mt-3 text-sm ${'text-slate-600'}`}>{feature.body}</p>
+                  <h3 className="relative text-xl font-bold md:min-h-[96px]">{feature.title}</h3>
+                  <p className={`relative mt-3 text-sm leading-6 md:min-h-[88px] ${'text-slate-600'}`}>{feature.body}</p>
                 </motion.article>
               )
             })}
@@ -1130,7 +1118,7 @@ export default function Landing() {
         <HowItWorksTimeline />
 
         <section id="why-vitaloop" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
-          <motion.div {...fadeUp(reduced)} className="mb-7">
+          <motion.div {...fadeUp(reduced)} className="mb-7 text-center">
             <motion.h2
               className="text-[28px] font-semibold tracking-tight md:text-[34px]"
               initial={reduced ? false : { opacity: 0, scale: 0.9 }}
@@ -1213,7 +1201,7 @@ export default function Landing() {
 
             <div className={`mt-4 rounded-3xl border p-5 md:p-6 ${'border-slate-200 bg-white'}`}>
               <p className={`text-sm leading-relaxed ${'text-slate-700'}`}>
-                Built by Alex Bombela - founder at SoftDAB Tech, building AI infrastructure products and leading VITALOOP execution.
+                VITALOOP is in early access and already used by real customers in live protocol cycles.
                 {' '}
                 <a
                   href="https://www.linkedin.com/in/aleksey-bombela/"
@@ -1221,26 +1209,26 @@ export default function Landing() {
                   rel="noreferrer"
                   className={`${'text-emerald-700 hover:text-emerald-600'} font-semibold`}
                 >
-                  LinkedIn
+                  Founder profile
                 </a>
               </p>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Early access</div>
-                  <div className="mt-1 text-sm font-semibold">{typeof tractionUsers === 'number' ? `${tractionUsers.toLocaleString()} users` : 'Loading…'}</div>
-                  <div className={`mt-1 text-[11px] ${'text-emerald-700'}`}>Live from CRM</div>
+                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Early adopters</div>
+                  <div className="mt-1 text-sm font-semibold">{typeof tractionUsers === 'number' ? `${tractionUsers.toLocaleString()} early users` : 'Loading…'}</div>
+                  <div className={`mt-1 text-[11px] ${'text-emerald-700'}`}>Validated in live product usage</div>
                 </div>
                 <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Lab integrations</div>
-                  <div className="mt-1 text-sm font-semibold">Quest, LabCorp, +50 formats</div>
+                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Lab compatibility</div>
+                  <div className="mt-1 text-sm font-semibold">Quest, LabCorp, and 50+ report formats</div>
                 </div>
                 <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Launch and stack</div>
-                  <div className="mt-1 text-sm font-semibold">Launch: May 2026 · FastAPI + Claude AI + Supabase</div>
+                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Launch & stack</div>
+                  <div className="mt-1 text-sm font-semibold">May 2026 launch · FastAPI + Claude AI + Supabase</div>
                 </div>
                 <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Contact</div>
+                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Founder contact</div>
                   <a href="mailto:bombela@softdab.tech" className={`mt-1 inline-flex text-sm font-semibold ${'text-emerald-700 hover:text-emerald-600'}`}>
                     bombela@softdab.tech
                   </a>
@@ -1251,8 +1239,6 @@ export default function Landing() {
         </section>
 
         <TestimonialsCarousel />
-
-        <AnimatedFAQ />
 
         {/* === Blog teaser === */}
         <section aria-label="Health intelligence resources" className="mx-auto w-full max-w-[1240px] px-4 py-8 sm:px-6">
@@ -1311,10 +1297,10 @@ export default function Landing() {
             className={`rounded-3xl border p-6 text-center md:p-10 ${sectionCard}`}
           >
             <h2 className="text-[28px] font-semibold tracking-tight">The Biohacking Feedback Loop: How Longitudinal Lab Tracking Works</h2>
-            <p className={`mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
+            <p className={`mx-auto mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
               Biohacking is not a one-time blood test — it is a continuous feedback cycle. VITALOOP makes that loop automatic: data → AI insight → action protocol → weekly check-in → next lab upload. Each cycle makes the next one smarter.
             </p>
-            <div className="mt-6 grid grid-cols-2 gap-4 xl:grid-cols-[repeat(5,minmax(0,1fr))]">
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-[repeat(5,minmax(0,1fr))]">
               {LOOP_FLOW.map((item, idx) => {
                 const Icon = item.icon
                 return (
@@ -1332,14 +1318,15 @@ export default function Landing() {
                       transition={{ duration: 0.75, delay: idx * 0.14, ease: 'easeInOut' }}
                       className={`relative h-full rounded-[28px] border px-4 py-5 ${'border-slate-200 bg-white'}`}
                     >
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
                         <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${'bg-emerald-50 text-emerald-700'}`}>
                           <Icon className="h-5 w-5" />
                         </span>
-                        <span className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>0{idx + 1}</span>
+                        <span className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full border px-2 text-xs font-semibold ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{idx + 1}</span>
                       </div>
                       <h3 className="mt-4 text-base font-semibold">{item.title}</h3>
                       <p className={`mt-2 text-sm leading-relaxed ${'text-slate-600'}`}>{item.body}</p>
+                      <p className={`mt-2 text-xs leading-relaxed ${'text-slate-500'}`}>{item.detail}</p>
                     </motion.article>
                   </div>
                 )
@@ -1367,6 +1354,8 @@ export default function Landing() {
             </div>
           </motion.div>
         </section>
+
+        <AnimatedFAQ />
       </main>
 
       <Footer />
