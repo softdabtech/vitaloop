@@ -248,12 +248,15 @@ export default function Testimonials() {
                   key={i}
                   onClick={() => { setIndex(i); resetTimer() }}
                   aria-label={`Go to testimonial ${i + 1}`}
+                  className="inline-icon"
                   style={{
-                    width: i === index ? 20 : 6,
-                    height: 6, borderRadius: 3,
+                    width: 8,
+                    height: 8,
+                    borderRadius: 999,
                     background: i === index ? 'var(--teal-500)' : 'var(--gray-200)',
                     border: 'none', padding: 0, cursor: 'pointer',
-                    transition: 'width 300ms ease, background 300ms ease',
+                    transition: 'background 300ms ease, transform 300ms ease',
+                    transform: i === index ? 'scale(1.15)' : 'scale(1)',
                   }}
                 />
               ))}
