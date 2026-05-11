@@ -481,30 +481,6 @@ function Sidebar({ activeSection, activeArticle }) {
   )
 }
 
-function MobileTopicChips() {
-  const navigate = useNavigate()
-
-  return (
-    <div className="lg:hidden">
-      <div className="mb-2 px-0.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-        Quick topics
-      </div>
-      <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-        {HELP_SECTIONS.map((section) => (
-          <button
-            key={section.id}
-            onClick={() => navigate(`/help/section/${section.id}`)}
-            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
-          >
-            <span>{section.icon}</span>
-            <span>{section.title}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Help() {
@@ -584,10 +560,6 @@ export default function Help() {
                   ✕
                 </button>
               )}
-            </div>
-
-            <div className="mx-auto mt-4 max-w-xl">
-              <MobileTopicChips />
             </div>
           </div>
         </div>
