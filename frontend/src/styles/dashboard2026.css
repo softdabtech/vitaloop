@@ -71,7 +71,7 @@ button[aria-label].inline-icon {
 }
 
 .vtl-shell {
-  min-height: 100vh;
+  min-height: 100svh;
   background: radial-gradient(circle at 8% 5%, rgba(var(--brand-rgb, 29, 158, 117), 0.14), transparent 28%),
               radial-gradient(circle at 92% 0%, rgba(var(--brand-rgb, 29, 158, 117), 0.1), transparent 26%),
               var(--vtl-bg-dark);

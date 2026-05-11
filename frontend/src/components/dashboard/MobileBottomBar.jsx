@@ -23,7 +23,7 @@ export default function MobileBottomBar() {
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/97 backdrop-blur-xl md:hidden"
-      style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}
+      style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))', minHeight: 'var(--vtl-bottom-bar-height)' }}
       aria-label="Main navigation"
     >
       <div className="flex items-end justify-around px-1 pt-2">
@@ -50,7 +50,7 @@ export default function MobileBottomBar() {
                 >
                   <Icon className="h-6 w-6 text-white" />
                 </span>
-                <span className={`mt-1.5 text-[10px] font-semibold ${active ? 'text-emerald-600' : 'text-slate-400'}`}>
+                <span className={`mt-1.5 text-xs font-semibold ${active ? 'text-emerald-700' : 'text-slate-500'}`}>
                   {item.label}
                 </span>
               </button>
@@ -75,7 +75,7 @@ export default function MobileBottomBar() {
                   />
                 )}
               </span>
-              <span className={`text-[10px] font-semibold leading-none transition-colors duration-200 ${active ? 'text-emerald-600' : 'text-slate-400'}`}>
+              <span className={`text-xs font-semibold leading-none transition-colors duration-200 ${active ? 'text-emerald-700' : 'text-slate-500'}`}>
                 {item.label}
               </span>
             </button>
