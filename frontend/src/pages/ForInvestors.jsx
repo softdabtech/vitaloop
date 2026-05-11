@@ -115,7 +115,7 @@ export default function ForInvestors() {
             '@type': 'Organization',
             name: 'VITALOOP',
             url: 'https://vitaloop.today',
-            logo: 'https://vitaloop.today/og-cover.jpg',
+            logo: 'https://vitaloop.today/og-cover-2026-05.jpg',
             description:
               'VITALOOP is an AI-powered blood test analysis and biohacking platform that turns lab reports into personalized health protocols in under 60 seconds.',
             sameAs: [
