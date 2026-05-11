@@ -1,4 +1,4 @@
-import { HeartPulse, Instagram } from 'lucide-react'
+import { HeartPulse } from 'lucide-react'
 
 const PRODUCT_LINKS = [
   { label: 'How it works', href: '/#how-it-works' },
@@ -15,8 +15,18 @@ const COMPANY_LINKS = [
 ]
 
 const SOCIAL_LINKS = [
-  { icon: Instagram, label: 'Instagram', href: 'https://www.instagram.com/vitaloop.today/' },
+  { label: 'Instagram', href: 'https://www.instagram.com/vitaloop.today/' },
 ]
+
+function InstagramIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <circle cx="17.5" cy="6.5" r="1.5" />
+    </svg>
+  )
+}
 
 export default function Footer() {
   return (
@@ -50,21 +60,18 @@ export default function Footer() {
             </p>
           </div>
           <div className="mt-6 flex items-center gap-3">
-            {SOCIAL_LINKS.map((link) => {
-              const Icon = link.icon
-              return (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={link.label}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition hover:bg-emerald-500/20 hover:text-emerald-600"
-                >
-                  <Icon className="h-4 w-4" />
-                </a>
-              )
-            })}
+            {SOCIAL_LINKS.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={link.label}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition hover:bg-emerald-500/20 hover:text-emerald-600"
+              >
+                <InstagramIcon />
+              </a>
+            ))}
           </div>
         </div>
 
