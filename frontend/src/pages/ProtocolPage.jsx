@@ -149,16 +149,34 @@ async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSecti
   const lowPriority = Math.max(0, supplementsTotal - highPriority - mediumPriority)
 
   const drawLogo = () => {
+    const cx = margin + 16
+    const cy = 40
+
     doc.setFillColor(255, 255, 255)
-    doc.roundedRect(margin, 24, 32, 32, 6, 6, 'F')
-    doc.setTextColor(16, 185, 129)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(14)
-    doc.text('V', margin + 11, 44)
-    doc.setLineWidth(1.8)
-    doc.setDrawColor(16, 185, 129)
-    doc.line(margin + 19, 42, margin + 23, 46)
-    doc.line(margin + 23, 46, margin + 29, 36)
+    doc.circle(cx, cy, 15, 'F')
+
+    doc.setDrawColor(94, 234, 212)
+    doc.setLineWidth(1.3)
+    doc.circle(cx, cy, 13, 'S')
+
+    doc.setFillColor(43, 138, 138)
+    doc.ellipse(cx, cy + 2, 7, 9, 'F')
+
+    doc.setDrawColor(255, 255, 255)
+    doc.setLineWidth(1.2)
+    doc.line(cx, cy - 6, cx, cy + 5)
+    doc.line(cx - 3.2, cy - 1.5, cx, cy - 5.2)
+    doc.line(cx, cy - 5.2, cx + 3.2, cy - 1.5)
+
+    doc.setDrawColor(255, 255, 255)
+    doc.setLineWidth(1.1)
+    doc.line(cx - 9, cy + 8, cx - 5, cy + 8)
+    doc.line(cx - 5, cy + 8, cx - 3, cy + 5)
+    doc.line(cx - 3, cy + 5, cx - 1, cy + 10)
+    doc.line(cx - 1, cy + 10, cx + 1, cy + 6)
+    doc.line(cx + 1, cy + 6, cx + 3, cy + 9)
+    doc.line(cx + 3, cy + 9, cx + 5, cy + 8)
+    doc.line(cx + 5, cy + 8, cx + 9, cy + 8)
   }
 
   const drawHeader = (title, subtitle) => {

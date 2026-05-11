@@ -14,23 +14,7 @@ const NAV_LINKS = [
   { label: 'Help', href: '/help', page: true },
 ]
 
-function LogoIcon() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-      {/* Outer light teal circle */}
-      <circle cx="32" cy="32" r="25" stroke="#5EEAD4" strokeWidth="3.5" fill="none" />
-      
-      {/* Dark teal drop shape */}
-      <path d="M 32 12 C 43 20 50 25 50 32 C 50 42 43 52 32 52 C 21 52 14 42 14 32 C 14 25 21 20 32 12 Z" fill="#2B8A8A" />
-      
-      {/* White arrow up inside drop */}
-      <path d="M 32 20 L 32 35 M 25 30 L 32 23 L 39 30" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      
-      {/* White heartbeat line */}
-      <path d="M 16 40 L 21 40 L 24 35 L 27 42 L 29 40 L 32 40 L 35 40 L 38 38 L 41 42 L 44 40 L 48 40" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </svg>
-  )
-}
+const BRAND_LOGO_SRC = '/images/vitaloop-logo-wordmark.svg'
 
 export default function Navbar() {
   const navigate = useNavigate()
@@ -107,14 +91,15 @@ export default function Navbar() {
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           aria-label="VITALOOP home"
           style={{
-            display: 'flex', alignItems: 'center', gap: 8,
+            display: 'flex', alignItems: 'center',
             background: 'none', border: 'none', cursor: 'pointer', padding: 0,
           }}
         >
-          <LogoIcon />
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--teal-800)', letterSpacing: '-0.01em' }}>
-            VITALOOP
-          </span>
+          <img
+            src={BRAND_LOGO_SRC}
+            alt="VITALOOP"
+            style={{ width: 132, height: 28, objectFit: 'contain' }}
+          />
         </button>
 
         {/* Desktop nav */}
