@@ -534,15 +534,8 @@ export default function Login() {
 
         {/* Logo */}
         <div style={{ marginBottom: 40, marginTop: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
-              <circle cx="14" cy="14" r="13" fill="var(--teal-500,#1D9E75)"/>
-              <path d="M4 14h4l2-6 4 12 2-7 2 4h6" stroke="white"
-                strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-            </svg>
-            <span style={{ fontSize: 16, fontWeight: 700, color: 'white', letterSpacing: '-0.01em' }}>
-              VITALOOP
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+            <img src="/images/vitaloop-logo-wordmark.svg" alt="VITALOOP" style={{ height: 28, width: 'auto' }} />
           </div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: 'white', margin: '16px 0 4px' }}>
             {isForgot ? 'Reset password' : isSignUp ? 'Create account' : 'Welcome back'}
