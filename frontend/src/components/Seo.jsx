@@ -18,7 +18,7 @@ export default function Seo({
   title,
   description,
   path = '/',
-  image = `${BASE_URL}/og-cover.jpg`,
+  image = `${BASE_URL}/og-cover-2026-05.jpg`,
   imageAlt = 'VITALOOP — AI-powered blood test analysis and biohacking platform dashboard',
   noindex = false,
   schemas = [],
