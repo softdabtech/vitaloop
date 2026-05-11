@@ -1,4 +1,4 @@
-import { HeartPulse } from 'lucide-react'
+import { HeartPulse, Instagram } from 'lucide-react'
 
 const PRODUCT_LINKS = [
   { label: 'How it works', href: '/#how-it-works' },
@@ -12,6 +12,10 @@ const COMPANY_LINKS = [
   { label: 'Terms', href: '/terms' },
   { label: 'Privacy', href: '/privacy' },
   { label: 'For Investors', href: '/for-investors' },
+]
+
+const SOCIAL_LINKS = [
+  { icon: Instagram, label: 'Instagram', href: 'https://www.instagram.com/vitaloop.today/' },
 ]
 
 export default function Footer() {
@@ -44,6 +48,23 @@ export default function Footer() {
                 SoftDAB
               </a>
             </p>
+          </div>
+          <div className="mt-6 flex items-center gap-3">
+            {SOCIAL_LINKS.map((link) => {
+              const Icon = link.icon
+              return (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={link.label}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 transition hover:bg-emerald-500/20 hover:text-emerald-600"
+                >
+                  <Icon className="h-4 w-4" />
+                </a>
+              )
+            })}
           </div>
         </div>
 
