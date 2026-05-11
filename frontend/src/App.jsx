@@ -139,7 +139,7 @@ function FloatingSupportChat() {
         onClick={() => setChatOpen((v) => !v)}
         aria-label="Open support chat"
         className={`fixed right-6 z-[2999] flex h-[52px] w-[52px] items-center justify-center rounded-full border-0 bg-[var(--teal-800,#085041)] shadow-[0_4px_20px_rgba(8,80,65,0.35)] transition hover:bg-[var(--teal-600,#0F6E56)] ${isCabinetRoute ? 'bottom-24 md:bottom-6' : 'bottom-6'}`}
-        style={{ bottom: isCabinetRoute ? 'max(96px, calc(env(safe-area-inset-bottom) + 76px))' : 'max(24px, calc(env(safe-area-inset-bottom) + 12px))' }}
+        style={{ bottom: isCabinetRoute ? 'calc(env(safe-area-inset-bottom) + var(--vtl-bottom-bar-height) + 12px)' : 'max(24px, calc(env(safe-area-inset-bottom) + 12px))' }}
       >
         {chatOpen
           ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none"

@@ -50,7 +50,7 @@ export default function UserCabinetLayout({ children }) {
 
   return (
     <div
-      className="vtl-page flex min-h-screen text-slate-900"
+      className="vtl-page flex min-h-[100svh] text-slate-900"
       style={{
         background: 'radial-gradient(circle at top left, rgba(var(--brand-rgb,29,158,117),0.1), transparent 20%), linear-gradient(180deg, #f8fafc 0%, #f3f7f5 100%)',
       }}
@@ -126,7 +126,7 @@ export default function UserCabinetLayout({ children }) {
         </div>
 
         <main className="flex-1 overflow-x-hidden">
-          <div className="mx-auto w-full max-w-[1380px] px-3 py-5 pb-28 sm:px-5 sm:py-7 md:pb-8 lg:px-6">
+          <div className="mx-auto w-full max-w-[1380px] px-3 py-5 pb-[calc(var(--vtl-bottom-bar-height)+20px)] sm:px-5 sm:py-7 md:pb-8 lg:px-6">
             {location.pathname === '/dashboard' && <PWAInstallBanner />}
             {children}
           </div>
