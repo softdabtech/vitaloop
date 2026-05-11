@@ -3,7 +3,12 @@ export default function AppLoadingScreen() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
       <div className="flex flex-col items-center gap-6">
         {/* Logo */}
-        <img src="/images/vitaloop-logo-wordmark.svg" alt="VITALOOP" className="h-12 w-auto" />
+        <div className="flex items-center gap-2">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+            <span className="text-2xl font-bold text-white">❤️</span>
+          </div>
+          <div className="text-xl font-bold text-slate-900">VITALOOP</div>
+        </div>
 
         {/* Loading Animation */}
         <div className="flex gap-2">

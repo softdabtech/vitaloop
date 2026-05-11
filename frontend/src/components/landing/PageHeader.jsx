@@ -2,9 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.js'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Menu, X } from 'lucide-react'
-
-const BRAND_LOGO_SRC = '/images/vitaloop-logo-wordmark.svg'
+import { HeartPulse, Menu, X } from 'lucide-react'
 
 const NAV_LINKS = [
   { id: 'how-it-works', label: 'Product' },
@@ -40,9 +38,12 @@ export function PageHeader() {
       <div className="mx-auto flex h-[72px] w-full max-w-[1240px] items-center justify-between px-4 sm:px-6">
         <button
           onClick={() => navigate('/')}
-          className="flex items-center transition hover:opacity-80"
+          className="flex items-center gap-2 transition hover:opacity-80"
         >
-          <img src={BRAND_LOGO_SRC} alt="VITALOOP" className="h-9 w-auto" />
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/90 text-white">
+            <HeartPulse className="h-5 w-5" />
+          </span>
+          <span className="text-base font-semibold tracking-tight">VITALOOP</span>
         </button>
 
         <nav className="hidden items-center gap-7 md:flex">

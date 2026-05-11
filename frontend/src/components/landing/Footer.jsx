@@ -1,4 +1,4 @@
-const BRAND_LOGO_SRC = '/images/vitaloop-logo-wordmark.svg'
+import { HeartPulse } from 'lucide-react'
 
 const PRODUCT_LINKS = [
   { label: 'How it works', href: '/#how-it-works' },
@@ -34,7 +34,10 @@ export default function Footer() {
       <div className="mx-auto grid w-full max-w-[1240px] gap-8 px-4 text-sm sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
         <div>
           <div className="flex items-center gap-2">
-            <img src={BRAND_LOGO_SRC} alt="VITALOOP" className="h-9 w-auto" />
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/90 text-white">
+              <HeartPulse className="h-5 w-5" />
+            </span>
+            <span className="text-base font-semibold tracking-tight">VITALOOP</span>
           </div>
           <p className="mt-4 max-w-md leading-relaxed text-slate-500">
             AI lab analysis, personalized protocols, and longitudinal biomarker tracking for people who want a repeatable health system instead of one-off interpretations.
