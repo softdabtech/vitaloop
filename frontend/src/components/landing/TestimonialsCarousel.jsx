@@ -79,7 +79,7 @@ export function TestimonialsCarousel() {
             <button
               key={i}
               onClick={() => setActive(i)}
-              className={`h-1 rounded-full transition-all ${i === active ? 'w-4 bg-emerald-500' : 'w-1 bg-slate-300 hover:bg-slate-400'}`}
+              className={`inline-icon h-2 w-2 rounded-full p-0 transition-all ${i === active ? 'bg-emerald-500' : 'bg-slate-300 hover:bg-slate-400'}`}
               aria-label={`Show testimonial group starting from ${i + 1}`}
             />
           ))}
