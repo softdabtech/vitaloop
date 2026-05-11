@@ -1,17 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Vitaloop">
-  <!-- White background -->
-  <rect width="64" height="64" fill="white"/>
-  
-  <!-- Outer light teal circle -->
-  <circle cx="32" cy="32" r="25" stroke="#5EEAD4" stroke-width="3.5" fill="none"/>
-  
-  <!-- Dark teal drop shape -->
-  <path d="M 32 12 C 43 20 50 25 50 32 C 50 42 43 52 32 52 C 21 52 14 42 14 32 C 14 25 21 20 32 12 Z" fill="#2B8A8A"/>
-  
-  <!-- White arrow up inside drop -->
-  <path d="M 32 20 L 32 35 M 25 30 L 32 23 L 39 30" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  
-  <!-- White heartbeat line -->
-  <path d="M 16 40 L 21 40 L 24 35 L 27 42 L 29 40 L 32 40 L 35 40 L 38 38 L 41 42 L 44 40 L 48 40" 
-        stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Vitaloop favicon">
+  <defs>
+    <linearGradient id="ringGradient" x1="18" y1="128" x2="238" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#87EBD7"/>
+      <stop offset="1" stop-color="#4CBDB3"/>
+    </linearGradient>
+    <linearGradient id="dropGradient" x1="88" y1="50" x2="186" y2="220" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#46AFAD"/>
+      <stop offset="1" stop-color="#329DA0"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="128" cy="128" r="110" fill="none" stroke="url(#ringGradient)" stroke-width="10"/>
+
+  <path
+    d="M128 38C146 63 194 129 194 160C194 210 162 228 128 228C94 228 62 210 62 160C62 129 110 63 128 38Z"
+    fill="url(#dropGradient)"
+  />
+
+  <path d="M128 88V168" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round"/>
+  <path d="M104 128L128 94L152 128H104Z" fill="#FFFFFF"/>
+
+  <path
+    d="M56 194H90L100 175L112 212L122 165L136 202L145 182L150 194H200"
+    fill="none"
+    stroke="#F3F4F3"
+    stroke-width="8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
 </svg>
