@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
-import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { HELP_SECTIONS, HELP_ARTICLES, getArticle, searchArticles } from '../data/helpArticles.js'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { HELP_SECTIONS, getArticle, searchArticles } from '../data/helpArticles.js'
 import Navbar from '../components/landing/Navbar.jsx'
 import Footer from '../components/landing/Footer.jsx'
 import Seo from '../components/Seo.jsx'
@@ -175,23 +175,23 @@ function ArticleView({ articleId, onBack }) {
   return (
     <div>
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate-400 mb-6">
+      <div className="mb-6 flex flex-wrap items-center gap-1.5 text-xs text-slate-400 sm:gap-2 sm:text-sm">
         <button onClick={onBack} className="hover:text-emerald-600 transition-colors">Help Center</button>
         <span>›</span>
         <span className="text-slate-500">{section?.title}</span>
         <span>›</span>
-        <span className="text-slate-700 font-medium truncate">{article.title}</span>
+        <span className="text-slate-700 font-medium break-words">{article.title}</span>
       </div>
 
       {/* Article header */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
             {section?.icon} {section?.title}
           </span>
           <span className="text-xs text-slate-400">{article.readTime} read</span>
         </div>
-        <h1 className="text-3xl font-bold text-slate-900 leading-tight">{article.title}</h1>
+        <h1 className="text-2xl font-bold text-slate-900 leading-tight sm:text-3xl">{article.title}</h1>
       </div>
 
       {/* Article content */}
@@ -330,14 +330,14 @@ function SectionView({ sectionId, onBack }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2 text-sm text-slate-400 mb-6">
+      <div className="mb-6 flex flex-wrap items-center gap-1.5 text-xs text-slate-400 sm:gap-2 sm:text-sm">
         <button onClick={onBack} className="hover:text-emerald-600 transition-colors">Help Center</button>
         <span>›</span>
         <span className="text-slate-700 font-medium">{section.title}</span>
       </div>
-      <div className="flex items-center gap-3 mb-8">
-        <span className="text-4xl">{section.icon}</span>
-        <h1 className="text-3xl font-bold text-slate-900">{section.title}</h1>
+      <div className="mb-7 flex items-center gap-3 sm:mb-8">
+        <span className="text-3xl sm:text-4xl">{section.icon}</span>
+        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">{section.title}</h1>
       </div>
       <div className="space-y-2">
         {section.articles.map(articleId => {
@@ -374,14 +374,14 @@ function SearchResults({ query, onClear }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Search results</h2>
           <p className="text-sm text-slate-500 mt-0.5">
             {results.length} result{results.length !== 1 ? 's' : ''} for "{query}"
           </p>
         </div>
-        <button onClick={onClear} className="text-sm text-emerald-600 font-semibold hover:underline">
+        <button onClick={onClear} className="self-start text-sm text-emerald-600 font-semibold hover:underline sm:self-auto">
           Clear search
         </button>
       </div>
@@ -425,7 +425,7 @@ function SearchResults({ query, onClear }) {
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-function Sidebar({ activeSection, activeArticle, onNavigate }) {
+function Sidebar({ activeSection, activeArticle }) {
   const navigate = useNavigate()
 
   return (
@@ -481,6 +481,30 @@ function Sidebar({ activeSection, activeArticle, onNavigate }) {
   )
 }
 
+function MobileTopicChips() {
+  const navigate = useNavigate()
+
+  return (
+    <div className="lg:hidden">
+      <div className="mb-2 px-0.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        Quick topics
+      </div>
+      <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        {HELP_SECTIONS.map((section) => (
+          <button
+            key={section.id}
+            onClick={() => navigate(`/help/section/${section.id}`)}
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
+          >
+            <span>{section.icon}</span>
+            <span>{section.title}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Help() {
@@ -490,10 +514,9 @@ export default function Help() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const searchRef = useRef(null)
 
-  // Derive active section for sidebar highlighting
-  const activeArticleSection = articleId
-    ? HELP_SECTIONS.find(s => s.articles.includes(articleId))?.id
-    : sectionId
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [articleId, sectionId])
 
   const handleBack = () => navigate('/help')
 
@@ -520,25 +543,25 @@ export default function Help() {
         <Navbar />
 
         {/* Hero */}
-        <div className="bg-white border-b border-slate-200">
-          <div className="max-w-6xl mx-auto px-4 py-10 md:py-14">
-            <div className="max-w-2xl mx-auto text-center mb-8">
+        <div className="border-b border-slate-200 bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10 md:py-14">
+            <div className="mx-auto mb-6 max-w-2xl text-center sm:mb-8">
               <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                   <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
                 </svg>
                 Help Center
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
+              <h1 className="mb-3 text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl">
                 How can we help you?
               </h1>
-              <p className="text-slate-500 text-lg">
+              <p className="text-base text-slate-500 sm:text-lg">
                 Find answers to common questions about VITALOOP.
               </p>
             </div>
 
             {/* Search bar */}
-            <div className="max-w-xl mx-auto relative">
+            <div className="relative mx-auto max-w-xl">
               <svg
                 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none"
                 fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -551,7 +574,7 @@ export default function Help() {
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search articles… (e.g. upload, protocol, billing)"
-                className="w-full pl-12 pr-12 py-3.5 rounded-2xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm text-base"
+                className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-12 text-base text-slate-900 placeholder-slate-400 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               {searchQuery && (
                 <button
@@ -562,12 +585,16 @@ export default function Help() {
                 </button>
               )}
             </div>
+
+            <div className="mx-auto mt-4 max-w-xl">
+              <MobileTopicChips />
+            </div>
           </div>
         </div>
 
         {/* Main layout */}
-        <div className="max-w-6xl mx-auto px-4 py-8 md:py-12">
-          <div className="flex gap-8">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8 md:py-12">
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-8">
 
             {/* Sidebar — desktop */}
             <aside className="hidden lg:block w-64 flex-shrink-0">
@@ -575,36 +602,34 @@ export default function Help() {
                 <Sidebar
                   activeSection={sectionId}
                   activeArticle={articleId}
-                  onNavigate={id => navigate(`/help/${id}`)}
                 />
               </div>
             </aside>
 
             {/* Mobile sidebar toggle */}
-            <div className="lg:hidden mb-4 w-full">
+            <div className="lg:hidden mb-1 w-full">
               <button
                 onClick={() => setMobileMenuOpen(v => !v)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
-                Browse topics
+                {mobileMenuOpen ? 'Hide topics' : 'Browse all topics'}
               </button>
               {mobileMenuOpen && (
-                <div className="mt-2 bg-white border border-slate-200 rounded-2xl p-4 shadow-lg">
+                <div className="mt-2 max-h-[60svh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-lg">
                   <Sidebar
                     activeSection={sectionId}
                     activeArticle={articleId}
-                    onNavigate={id => { navigate(`/help/${id}`); setMobileMenuOpen(false) }}
                   />
                 </div>
               )}
             </div>
 
             {/* Main content */}
-            <main className="flex-1 min-w-0">
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8">
+            <main className="min-w-0">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 sm:rounded-2xl sm:p-6 md:p-8">
                 {searchQuery.length >= 2 ? (
                   <SearchResults query={searchQuery} onClear={() => setSearchQuery('')} />
                 ) : articleId ? (
@@ -617,7 +642,7 @@ export default function Help() {
               </div>
 
               {/* Contact block */}
-              <div className="mt-6 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-6 text-white text-center">
+              <div className="mt-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-center text-white sm:mt-6 sm:rounded-2xl sm:p-6">
                 <h3 className="text-lg font-bold mb-1">Still need help?</h3>
                 <p className="text-emerald-100 text-sm mb-4">
                   Our team usually replies within one business day.
