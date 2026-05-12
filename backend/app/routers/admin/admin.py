@@ -30,6 +30,15 @@ def _is_http_url(value: str) -> bool:
     return raw.startswith("http://") or raw.startswith("https://")
 
 
+# Error message constants
+_UNSUPPORTED_GLOBAL_ROLE = "Unsupported global_role"
+_AT_LEAST_ONE_FIELD_REQUIRED = "At least one field is required"
+_SUB_STATUS_REQUIRED = "sub_status is required"
+_RECIPIENT_EMAIL_REQUIRED = "recipient_email is required"
+_ALERT_TITLE_REQUIRED = "alert_title is required"
+_ALERT_MESSAGE_REQUIRED = "alert_message is required"
+
+
 async def _probe_redis_connectivity(redis_url: str, timeout_seconds: float = 1.5) -> tuple[bool, str | None]:
     try:
         import redis.asyncio as redis
@@ -186,10 +195,10 @@ async def admin_update_user(
     sub_status = str(body.sub_status or "").strip().lower() or None
 
     if global_role is not None and global_role not in allowed_global_roles:
-        raise HTTPException(status_code=400, detail="Unsupported global_role")
+        raise HTTPException(status_code=400, detail=_UNSUPPORTED_GLOBAL_ROLE)
 
     if full_name is None and global_role is None and sub_status is None:
-        raise HTTPException(status_code=400, detail="At least one field is required")
+        raise HTTPException(status_code=400, detail=_AT_LEAST_ONE_FIELD_REQUIRED)
 
     await svc.update_admin_user_fields(
         user_id,
@@ -214,7 +223,7 @@ async def admin_update_user_subscription(
 ):
     sub_status = str(body.sub_status or "").strip().lower()
     if not sub_status:
-        raise HTTPException(status_code=400, detail="sub_status is required")
+        raise HTTPException(status_code=400, detail=_SUB_STATUS_REQUIRED)
 
     await svc.update_user_subscription(user_id=user_id, sub_status=sub_status)
     return {"ok": True, "user_id": user_id, "sub_status": sub_status}
@@ -346,11 +355,11 @@ async def admin_send_ops_alert(
     action_url = str(body.get("action_url") or "").strip() or None
 
     if not recipient_email:
-        raise HTTPException(status_code=400, detail="recipient_email is required")
+        raise HTTPException(status_code=400, detail=_RECIPIENT_EMAIL_REQUIRED)
     if not alert_title:
-        raise HTTPException(status_code=400, detail="alert_title is required")
+        raise HTTPException(status_code=400, detail=_ALERT_TITLE_REQUIRED)
     if not alert_message:
-        raise HTTPException(status_code=400, detail="alert_message is required")
+        raise HTTPException(status_code=400, detail=_ALERT_MESSAGE_REQUIRED)
 
     if alert_level not in ("warning", "critical", "info"):
         alert_level = "warning"

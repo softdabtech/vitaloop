@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
 
@@ -108,4 +109,14 @@ function TimelineStep({ step, index }) {
       <div className="hidden sm:block sm:w-1/2" />
     </motion.div>
   )
+}
+
+TimelineStep.propTypes = {
+  step: PropTypes.shape({
+    icon: PropTypes.string.isRequired,
+    title: PropTypes.string.isRequired,
+    body: PropTypes.string.isRequired,
+    detail: PropTypes.string.isRequired,
+  }).isRequired,
+  index: PropTypes.number.isRequired,
 }

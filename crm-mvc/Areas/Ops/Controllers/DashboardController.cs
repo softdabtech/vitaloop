@@ -119,6 +119,12 @@ public class DashboardController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateUser(Guid userId, [FromForm] string? fullName, [FromForm] string? globalRole, [FromForm] string? subscriptionStatus, CancellationToken ct)
     {
+        if (!ModelState.IsValid)
+        {
+            TempData["ErrorMessage"] = "Invalid user update request.";
+            return RedirectToAction(nameof(Index));
+        }
+
         try
         {
             var userCtx = await _userContextAccessor.GetOrThrow(ct);
@@ -142,6 +148,12 @@ public class DashboardController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateSubscription(Guid userId, [FromForm] string subscriptionStatus, CancellationToken ct)
     {
+        if (!ModelState.IsValid)
+        {
+            TempData["ErrorMessage"] = "Invalid subscription update request.";
+            return RedirectToAction(nameof(Index));
+        }
+
         try
         {
             var userCtx = await _userContextAccessor.GetOrThrow(ct);

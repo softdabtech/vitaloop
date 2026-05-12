@@ -400,76 +400,64 @@ export default function Login() {
     }
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setAuthAlert(null)
-    // Honeypot check - bots fill hidden fields
-    if (honeypot) return
-
-    // reCAPTCHA check (only for sign up) — удалено
-
-    const now = Date.now()
-    if (rateLimitedUntil > now) {
+  // Validate submission form inputs
+  function validateSubmission() {
+    if (rateLimitedUntil > Date.now()) {
       toast.error('Too many attempts. Please wait 1 minute and try again.')
-      return
+      return null
     }
 
     if (!registerAttempt()) {
       toast.error('Too many attempts. Please wait 1 minute and try again.')
-      return
+      return null
     }
 
     const normalizedEmail = email.trim()
     if (!isValidEmail(normalizedEmail)) {
       toast.error('Введите корректный email.')
-      return
+      return null
     }
 
     if (!isForgot && !hasAnyPasswordSymbol(password)) {
       toast.error('Пароль должен содержать минимум 1 символ.')
+      return null
+    }
+
+    return normalizedEmail
+  }
+
+  // Handle password reset flow
+  async function handleResetFlow(normalizedEmail) {
+    const { error } = await resetPassword(normalizedEmail)
+    if (error) toast.error(error.message)
+    else {
+      toast.success('Reset link sent - check your email')
+      setIsForgot(false)
+    }
+  }
+
+  // Handle sign-up completion and navigation
+  async function handleSignUpSuccess(authData, normalizedEmail) {
+    gaSignUp('email')
+    trackFunnelEvent('funnel_signup_completed', 'User completed signup', {
+      auth_provider: 'email',
+    }, { oncePerSession: true })
+
+    if (authData?.session?.access_token) {
+      await notifyRegistrationAlert('email_signup')
+      await sendWelcomeEmail()
+      import('./UserDashboard.jsx').catch(() => {})
+      toast.success('Account created. Continue with onboarding.')
+      navigate('/onboarding', { replace: true })
       return
     }
 
-    setLoading(true)
+    toast.success('Account created. Confirm your email to continue.')
+    navigate(`/auth/confirmation?pending=1&email=${encodeURIComponent(normalizedEmail)}`, { replace: true })
+  }
 
-    if (isForgot) {
-      const { error } = await resetPassword(normalizedEmail)
-      setLoading(false)
-      if (error) toast.error(error.message)
-      else { toast.success('Reset link sent - check your email'); setIsForgot(false) }
-      return
-    }
-
-    const fn = isSignUp ? signUpWithEmail : signInWithEmail
-    const { data: authData, error } = await fn(normalizedEmail, password)
-    setLoading(false)
-    if (error) {
-      const mapped = mapAuthErrorMessage(error.message)
-      setAuthAlert(mapped)
-      toast.error(mapped.text)
-      return
-    }
-
-    if (isSignUp) {
-      gaSignUp('email')
-      trackFunnelEvent('funnel_signup_completed', 'User completed signup', {
-        auth_provider: 'email',
-      }, { oncePerSession: true })
-
-      if (authData?.session?.access_token) {
-        await notifyRegistrationAlert('email_signup')
-        await sendWelcomeEmail()
-        import('./UserDashboard.jsx').catch(() => {})
-        toast.success('Account created. Continue with onboarding.')
-        navigate('/onboarding', { replace: true })
-        return
-      }
-
-      toast.success('Account created. Confirm your email to continue.')
-      navigate(`/auth/confirmation?pending=1&email=${encodeURIComponent(normalizedEmail)}`, { replace: true })
-      return
-    }
-
+  // Handle sign-in completion and navigation
+  async function handleSignInSuccess() {
     try {
       gaLogin('email')
       import('./UserDashboard.jsx').catch(() => {})
@@ -482,6 +470,41 @@ export default function Login() {
       await signOut()
       toast.error('Session validation failed. Please sign in again.')
       navigate('/login', { replace: true })
+    }
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setAuthAlert(null)
+    // Honeypot check - bots fill hidden fields
+    if (honeypot) return
+
+    const normalizedEmail = validateSubmission()
+    if (!normalizedEmail) return
+
+    setLoading(true)
+
+    if (isForgot) {
+      await handleResetFlow(normalizedEmail)
+      setLoading(false)
+      return
+    }
+
+    const fn = isSignUp ? signUpWithEmail : signInWithEmail
+    const { data: authData, error } = await fn(normalizedEmail, password)
+    setLoading(false)
+    
+    if (error) {
+      const mapped = mapAuthErrorMessage(error.message)
+      setAuthAlert(mapped)
+      toast.error(mapped.text)
+      return
+    }
+
+    if (isSignUp) {
+      await handleSignUpSuccess(authData, normalizedEmail)
+    } else {
+      await handleSignInSuccess()
     }
   }
 

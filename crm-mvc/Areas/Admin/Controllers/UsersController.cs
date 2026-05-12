@@ -133,6 +133,12 @@ public class UsersController : Controller
     {
         var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
 
+        if (!ModelState.IsValid)
+        {
+            TempData["ErrorMessage"] = "Invalid member profile update request.";
+            return RedirectToAction(nameof(Index));
+        }
+
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
             return BadRequest("No active organization");

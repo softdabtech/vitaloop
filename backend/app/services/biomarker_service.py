@@ -6,7 +6,7 @@ Integrates with biomarker_reference database and existing Claude service.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 from uuid import UUID
 
@@ -35,7 +35,7 @@ class ManualBiomarkerEntry:
         self.biomarker_id = biomarker_id
         self.value = value
         self.unit = unit
-        self.date = date or datetime.utcnow()
+        self.date = date or datetime.now(timezone.utc)
         self.errors: List[str] = []
         self.is_valid = False
         self.status = "OPTIMAL"
@@ -176,11 +176,11 @@ class BiomarkerService:
             upload_data = {
                 "user_id": user_id,
                 "lab_name": lab_name or "Manual Entry",
-                "test_date": (test_date or datetime.utcnow()).isoformat(),
+                "test_date": (test_date or datetime.now(timezone.utc)).isoformat(),
                 "extracted_text": notes or "",
                 "analyze_prompt_version": "manual_v1",
                 "status": "done",
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }
 
             # Insert upload record
@@ -201,7 +201,7 @@ class BiomarkerService:
                     {
                         "upload_id": upload_id,
                         "user_id": user_id,
-                        "created_at": datetime.utcnow().isoformat(),
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                     }
                 )
                 biomarker_records.append(biomarker_dict)
@@ -234,7 +234,7 @@ class BiomarkerService:
                 "upload_id": str(upload_id),
                 "biomarkers": [e.to_dict() for e in entries],
                 "source": "manual",
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }
 
         except Exception as e:
@@ -264,7 +264,7 @@ class BiomarkerService:
             from datetime import datetime, timedelta
 
             month_start = (
-                datetime.utcnow()
+                datetime.now(timezone.utc)
                 .replace(day=1, hour=0, minute=0, second=0, microsecond=0)
                 .isoformat()
             )

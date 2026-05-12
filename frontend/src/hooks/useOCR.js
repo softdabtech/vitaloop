@@ -89,6 +89,64 @@ export function useOCR() {
     }
   }
 
+  // Helper: Run OCR with a specific configuration
+  async function runOCRConfig(canvas, lang, config, progressStart, progressEnd) {
+    try {
+      const result = await Tesseract.recognize(canvas, lang, {
+        ...config,
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            setProgress(progressStart + Math.round(m.progress * (progressEnd - progressStart)))
+          }
+        },
+      })
+      return { text: result.data.text, confidence: result.data.confidence }
+    } catch (e) {
+      console.warn(`OCR config (${lang}) failed:`, e)
+      return null
+    }
+  }
+
+  // Helper: Determine best OCR result from multiple configs
+  async function runMultipleOCRConfigs(processedCanvas) {
+    const results = await Promise.all([
+      runOCRConfig(processedCanvas, 'rus+ukr+eng', {}, 0, 30),
+      runOCRConfig(processedCanvas, 'eng', { tessedit_pageseg_mode: '6' }, 30, 60),
+      runOCRConfig(processedCanvas, 'eng', { tessedit_pageseg_mode: '3' }, 60, 100),
+    ])
+
+    let bestResult = { text: '', confidence: 0 }
+    for (const result of results) {
+      if (result && result.confidence > bestResult.confidence) {
+        bestResult = result
+      }
+    }
+    return bestResult
+  }
+
+  // Helper: Validate and return OCR text with fallback
+  async function validateOCRText(localText, file) {
+    const hasEnoughSignal = (localText.match(/\d+/g) || []).length >= 8
+
+    // If local OCR looks weak, use analysis-service OCR fallback
+    if (localText.length < 120 || !hasEnoughSignal) {
+      try {
+        const serviceText = await extractFromAnalysisService(file)
+        if (serviceText.trim().length >= 40) {
+          return serviceText
+        }
+      } catch (serviceError) {
+        console.warn('Image OCR analysis-service fallback failed:', serviceError)
+      }
+    }
+
+    if (localText.length < 20) {
+      throw new Error('Could not extract readable text from the image. Please ensure the photo is clear, well-lit, and the text is legible.')
+    }
+
+    return localText
+  }
+
   async function processImageWithOCR(file) {
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
@@ -97,83 +155,11 @@ export function useOCR() {
     return new Promise((resolve, reject) => {
       img.onload = async () => {
         try {
-          // Preprocess image
           const processedCanvas = preprocessImage(canvas, ctx, img)
-
-          // Try OCR with multiple configurations
-          let bestResult = { text: '', confidence: 0 }
-
-          // Configuration 1: English + Russian + Ukrainian
-          try {
-            const result1 = await Tesseract.recognize(processedCanvas, 'rus+ukr+eng', {
-              logger: (m) => {
-                if (m.status === 'recognizing text') {
-                  setProgress(Math.round(m.progress * 100 * 0.3))
-                }
-              },
-            })
-            if (result1.data.confidence > bestResult.confidence) {
-              bestResult = { text: result1.data.text, confidence: result1.data.confidence }
-            }
-          } catch (e) {
-            console.warn('OCR config 1 failed:', e)
-          }
-
-          // Configuration 2: Just English with PSM 6 (uniform block of text)
-          try {
-            const result2 = await Tesseract.recognize(processedCanvas, 'eng', {
-              tessedit_pageseg_mode: '6', // Uniform block of text
-              logger: (m) => {
-                if (m.status === 'recognizing text') {
-                  setProgress(30 + Math.round(m.progress * 100 * 0.3))
-                }
-              },
-            })
-            if (result2.data.confidence > bestResult.confidence) {
-              bestResult = { text: result2.data.text, confidence: result2.data.confidence }
-            }
-          } catch (e) {
-            console.warn('OCR config 2 failed:', e)
-          }
-
-          // Configuration 3: English with PSM 3 (fully automatic page segmentation)
-          try {
-            const result3 = await Tesseract.recognize(processedCanvas, 'eng', {
-              tessedit_pageseg_mode: '3', // Fully automatic page segmentation
-              logger: (m) => {
-                if (m.status === 'recognizing text') {
-                  setProgress(60 + Math.round(m.progress * 100 * 0.4))
-                }
-              },
-            })
-            if (result3.data.confidence > bestResult.confidence) {
-              bestResult = { text: result3.data.text, confidence: result3.data.confidence }
-            }
-          } catch (e) {
-            console.warn('OCR config 3 failed:', e)
-          }
-
+          const bestResult = await runMultipleOCRConfigs(processedCanvas)
           const localText = (bestResult.text || '').trim()
-          const hasEnoughSignal = (localText.match(/\d+/g) || []).length >= 8
-
-          // If local OCR looks weak, use analysis-service OCR fallback for better table extraction.
-          if (localText.length < 120 || !hasEnoughSignal) {
-            try {
-              const serviceText = await extractFromAnalysisService(file)
-              if (serviceText.trim().length >= 40) {
-                resolve(serviceText)
-                return
-              }
-            } catch (serviceError) {
-              console.warn('Image OCR analysis-service fallback failed:', serviceError)
-            }
-          }
-
-          if (localText.length < 20) {
-            throw new Error('Could not extract readable text from the image. Please ensure the photo is clear, well-lit, and the text is legible.')
-          }
-
-          resolve(localText)
+          const validText = await validateOCRText(localText, file)
+          resolve(validText)
         } catch (error) {
           reject(new Error('Failed to process image. Please try a different photo or PDF format.'))
         }

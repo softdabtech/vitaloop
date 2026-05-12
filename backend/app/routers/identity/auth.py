@@ -12,6 +12,12 @@ from app.utils.roles import normalize_global_role as _normalize_global_role, as_
 
 router = APIRouter()
 
+# Error message constants
+_UNAUTHORIZED_DETAIL = "Unauthorized"
+_USER_EMAIL_NOT_FOUND_DETAIL = "User email not found"
+_ORGANIZATION_NAME_REQUIRED = "Organization name is required."
+_FAILED_TO_CREATE_ORGANIZATION = "Failed to create organization."
+
 
 @router.get("/me")
 async def get_auth_me(current_user: dict = Depends(get_current_user)):
@@ -147,7 +153,7 @@ async def onboarding_create_organization(
     user_id = current_user.get("sub")
     name = req.name.strip()
     if not name:
-        raise HTTPException(status_code=422, detail="Organization name is required.")
+        raise HTTPException(status_code=422, detail=_ORGANIZATION_NAME_REQUIRED)
 
     supabase = svc._get_supabase()
 
@@ -173,7 +179,7 @@ async def onboarding_create_organization(
         .execute()
     )
     if not org_resp.data:
-        raise HTTPException(status_code=500, detail="Failed to create organization.")
+        raise HTTPException(status_code=500, detail=_FAILED_TO_CREATE_ORGANIZATION)
 
     org = org_resp.data[0]
     org_id = org["id"]
@@ -213,12 +219,12 @@ async def notify_registration(
 ):
     user_id = current_user.get("sub")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=401, detail=_UNAUTHORIZED_DETAIL)
 
     account = await svc.get_user_account(user_id)
     email = str(account.get("email") or current_user.get("email") or "").strip().lower()
     if not email:
-        raise HTTPException(status_code=400, detail="User email not found")
+        raise HTTPException(status_code=400, detail=_USER_EMAIL_NOT_FOUND_DETAIL)
 
     created_at_raw = str(account.get("created_at") or "").strip()
     if created_at_raw:
@@ -250,12 +256,12 @@ async def send_welcome_email_to_user(
     """
     user_id = current_user.get("sub")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=401, detail=_UNAUTHORIZED_DETAIL)
 
     account = await svc.get_user_account(user_id)
     email = str(account.get("email") or current_user.get("email") or "").strip().lower()
     if not email:
-        raise HTTPException(status_code=400, detail="User email not found")
+        raise HTTPException(status_code=400, detail=_USER_EMAIL_NOT_FOUND_DETAIL)
 
     full_name = account.get("full_name") or email.split("@")[0]
 
@@ -277,7 +283,7 @@ async def send_welcome_email_to_user(
 async def delete_account(current_user: dict = Depends(get_current_user)):
     user_id = current_user.get("sub")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=401, detail=_UNAUTHORIZED_DETAIL)
 
     supabase = svc._get_supabase()
 

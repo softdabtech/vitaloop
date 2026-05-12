@@ -58,6 +58,35 @@ const PLANS = {
   },
 }
 
+// Plan mapping from frontend keys to backend IDs
+const PLAN_KEY_TO_BACKEND = {
+  'free': 'personal',
+  'basic': 'personal',
+  'pro': 'practitioner',
+}
+
+// Special plan handlers
+function handleEnterprisePlan() {
+  window.location.href = 'mailto:sales@vitaloop.today?subject=Enterprise%20Plan%20Inquiry'
+}
+
+function handleComingSoonPlan() {
+  toast.error('Pro plan coming soon!')
+}
+
+function getPlanValidationError(planKey, currentPlan) {
+  if (planKey === currentPlan) return null
+  if (planKey === 'enterprise') {
+    handleEnterprisePlan()
+    return 'enterprise'
+  }
+  if (planKey === 'pro' || planKey === 'comingSoon') {
+    handleComingSoonPlan()
+    return 'coming_soon'
+  }
+  return null
+}
+
 function PlanCard({ plan, planKey, currentPlan, onSelect, isLoading }) {
   const isCurrentPlan = currentPlan === planKey
   const colorMap = {
@@ -163,27 +192,12 @@ export default function Subscription() {
   }
 
   async function handleSelectPlan(planKey) {
-    if (planKey === currentPlan) return
-    if (planKey === 'enterprise') {
-      window.location.href = 'mailto:sales@vitaloop.today?subject=Enterprise%20Plan%20Inquiry'
-      return
-    }
-
-    if (planKey === 'pro' || planKey === 'comingSoon') {
-      toast.error('Pro plan coming soon!')
-      return
-    }
+    const validationError = getPlanValidationError(planKey, currentPlan)
+    if (validationError) return
 
     setUpgrading(true)
     try {
-      // Map frontend plan keys to backend plan IDs
-      const planMap = {
-        'free': 'personal',
-        'basic': 'personal',
-        'pro': 'practitioner',
-      }
-      const backendPlanId = planMap[planKey] || 'personal'
-
+      const backendPlanId = PLAN_KEY_TO_BACKEND[planKey] || 'personal'
       const { data } = await api.post('/stripe/checkout', { plan_id: backendPlanId })
       if (data.checkout_url) {
         window.location.href = data.checkout_url

@@ -210,6 +210,13 @@ public class AssignmentsController : Controller
     public async Task<IActionResult> Update(Guid assignmentId, [FromForm] string status, [FromForm] string notes, CancellationToken ct)
     {
         var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
+
+        if (!ModelState.IsValid)
+        {
+            TempData["ErrorMessage"] = "Invalid assignment update request.";
+            return RedirectToAction(nameof(Index));
+        }
+
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
             TempData["ErrorMessage"] = "No active organization selected.";

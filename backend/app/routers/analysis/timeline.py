@@ -17,7 +17,10 @@ class TimelineEventCreate(BaseModel):
 
 
 @router.get("")
-async def get_timeline(current_user: dict = Depends(require_active_subscription)):
+async def get_timeline(
+    current_user: dict = Depends(get_current_user),
+    _subscription_check: None = Depends(require_active_subscription),
+):
     user_id = current_user["sub"]
     return await svc.get_user_timeline(user_id)
 
