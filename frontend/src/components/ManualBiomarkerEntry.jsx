@@ -149,10 +149,14 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
           message = errorDetail || 'Your free biomarker entry quota is full. Upgrade to Premium for unlimited entries.'
         }
         // Trigger paywall
-        window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'BIOMARKER_QUOTA_EXCEEDED', used_by: usedBy } }))
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'BIOMARKER_QUOTA_EXCEEDED', used_by: usedBy } }))
+        }
       } else if (err.response?.status === 402) {
         message = errorDetail || 'Subscription required for this action. Upgrade to Premium.'
-        window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))
+        }
       }
       
       setGlobalError(message)
