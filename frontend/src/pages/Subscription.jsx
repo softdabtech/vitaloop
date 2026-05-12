@@ -65,9 +65,21 @@ const PLAN_KEY_TO_BACKEND = {
   'pro': 'practitioner',
 }
 
+function navigateToUrl(url) {
+  if (typeof window !== 'undefined') {
+    window.location.href = url
+  }
+}
+
+function openUrlInNewTab(url) {
+  if (typeof window !== 'undefined') {
+    window.open(url, '_blank')
+  }
+}
+
 // Special plan handlers
 function handleEnterprisePlan() {
-  window.location.href = 'mailto:sales@vitaloop.today?subject=Enterprise%20Plan%20Inquiry'
+  navigateToUrl('mailto:sales@vitaloop.today?subject=Enterprise%20Plan%20Inquiry')
 }
 
 function handleComingSoonPlan() {
@@ -200,7 +212,7 @@ export default function Subscription() {
       const backendPlanId = PLAN_KEY_TO_BACKEND[planKey] || 'personal'
       const { data } = await api.post('/stripe/checkout', { plan_id: backendPlanId })
       if (data.checkout_url) {
-        window.location.href = data.checkout_url
+        navigateToUrl(data.checkout_url)
       }
     } catch (error) {
       toast.error('Failed to initiate checkout')
@@ -219,7 +231,7 @@ export default function Subscription() {
     try {
       const { data } = await api.post('/stripe/portal')
       if (data.portal_url) {
-        window.open(data.portal_url, '_blank')
+        openUrlInNewTab(data.portal_url)
         toast.success('Opening billing portal...')
       } else {
         toast.error('Failed to load billing portal. Please try again.')
