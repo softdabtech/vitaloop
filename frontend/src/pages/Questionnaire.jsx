@@ -20,6 +20,58 @@ const DIMENSION_LABELS = {
   behavior: 'Healthy Habits',
 }
 
+function getViewportWidth() {
+  if (typeof window === 'undefined') return 1024
+  return window.innerWidth
+}
+
+function getQuestionnaireStyles(viewportWidth) {
+  const isMobile = viewportWidth < 500
+  return {
+    wrap: {
+      minHeight: '100vh',
+      background: '#f8fafc',
+      color: '#0f172a',
+      fontFamily: 'system-ui, sans-serif',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      padding: isMobile ? '24px 16px' : '24px 16px',
+    },
+    card: {
+      width: '100%',
+      maxWidth: 720,
+      background: '#ffffff',
+      border: '1px solid rgba(15,23,42,0.08)',
+      borderRadius: 24,
+      padding: isMobile ? '24px 16px' : '34px 30px',
+      boxShadow: '0 1px 3px rgba(15,23,42,0.06)',
+    },
+  }
+}
+
+function parseApiError(err, fallback) {
+  const detail = err?.response?.data?.detail
+  return typeof detail === 'string' ? detail : fallback
+}
+
+function normalizeSessionData(data) {
+  return {
+    session: data?.session || null,
+    nextQuestion: data?.next_question || null,
+    answeredCount: Number(data?.answered_count || 0),
+    remainingCount: Number(data?.remaining_count || 0),
+  }
+}
+
+function normalizeCompletedResults(completedSession) {
+  return {
+    completion_score: completedSession?.completion_score ?? null,
+    dimension_scores: completedSession?.dimension_scores ?? {},
+    llm_summary: completedSession?.llm_summary ?? null,
+  }
+}
+
 function ScoreBar({ label, value }) {
   const color = value >= 70 ? '#10b981' : value >= 45 ? '#f59e0b' : '#ef4444'
   return (
@@ -35,28 +87,6 @@ function ScoreBar({ label, value }) {
   )
 }
 
-const s = {
-  wrap: {
-    minHeight: '100vh',
-    background: '#f8fafc',
-    color: '#0f172a',
-    fontFamily: 'system-ui, sans-serif',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    padding: window.innerWidth < 500 ? '24px 16px' : '24px 16px',
-  },
-  card: {
-    width: '100%',
-    maxWidth: 720,
-    background: '#ffffff',
-    border: '1px solid rgba(15,23,42,0.08)',
-    borderRadius: 24,
-    padding: window.innerWidth < 500 ? '24px 16px' : '34px 30px',
-    boxShadow: '0 1px 3px rgba(15,23,42,0.06)',
-  },
-}
-
 export default function Questionnaire() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
@@ -69,6 +99,9 @@ export default function Questionnaire() {
   const [answerValue, setAnswerValue] = useState(5)
   const [answerText, setAnswerText] = useState('')
   const [results, setResults] = useState(null)  // { completion_score, dimension_scores, llm_summary }
+  const [viewportWidth, setViewportWidth] = useState(getViewportWidth)
+
+  const styles = useMemo(() => getQuestionnaireStyles(viewportWidth), [viewportWidth])
 
   const totalCount = useMemo(() => answeredCount + remainingCount, [answeredCount, remainingCount])
   const progressPct = useMemo(() => {
@@ -76,18 +109,25 @@ export default function Questionnaire() {
     return Math.round((answeredCount / totalCount) * 100)
   }, [answeredCount, totalCount])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const onResize = () => setViewportWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   async function loadSession() {
     setLoading(true)
     setError('')
     try {
       const { data } = await api.get('/questionnaire/session')
-      setSession(data?.session || null)
-      setNextQuestion(data?.next_question || null)
-      setAnsweredCount(Number(data?.answered_count || 0))
-      setRemainingCount(Number(data?.remaining_count || 0))
+      const normalized = normalizeSessionData(data)
+      setSession(normalized.session)
+      setNextQuestion(normalized.nextQuestion)
+      setAnsweredCount(normalized.answeredCount)
+      setRemainingCount(normalized.remainingCount)
     } catch (err) {
-      const detail = err?.response?.data?.detail
-      setError(typeof detail === 'string' ? detail : 'Failed to load questionnaire.')
+      setError(parseApiError(err, 'Failed to load questionnaire.'))
     } finally {
       setLoading(false)
     }
@@ -121,15 +161,11 @@ export default function Questionnaire() {
         }, { oncePerSession: true })
         const completedSession = completeResp?.data?.session || {}
         gaQuestionnaireComplete(completedSession.completion_score ?? undefined)
-        setResults({
-          completion_score: completedSession.completion_score ?? null,
-          dimension_scores: completedSession.dimension_scores ?? {},
-          llm_summary: completedSession.llm_summary ?? null,
-        })
+        setResults(normalizeCompletedResults(completedSession))
         toast.success('Questionnaire completed!')
       }
     } catch (err) {
-      toast.error(err?.response?.data?.detail || 'Failed to save answer.')
+      toast.error(parseApiError(err, 'Failed to save answer.'))
     } finally {
       setSaving(false)
     }
@@ -137,16 +173,16 @@ export default function Questionnaire() {
 
   if (loading) {
     return (
-      <div style={s.wrap}>
-        <div style={s.card}>Loading questionnaire...</div>
+      <div style={styles.wrap}>
+        <div style={styles.card}>Loading questionnaire...</div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div style={s.wrap}>
-        <div style={s.card}>
+      <div style={styles.wrap}>
+        <div style={styles.card}>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#0f172a' }}>Questionnaire unavailable</div>
           <div style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>{error}</div>
           <div style={{ display: 'flex', gap: 10 }}>
@@ -159,8 +195,8 @@ export default function Questionnaire() {
 
   if (!nextQuestion && !results) {
     return (
-      <div style={s.wrap}>
-        <div style={s.card}>
+      <div style={styles.wrap}>
+        <div style={styles.card}>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#0f172a' }}>No pending questions</div>
           <div style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>You are all set for now.</div>
           <button onClick={() => navigate('/dashboard')} style={{ background: '#10b981', border: 'none', color: '#fff', borderRadius: 10, padding: '10px 16px', cursor: 'pointer' }}>Continue to dashboard</button>
@@ -174,8 +210,8 @@ export default function Questionnaire() {
     const scoreColor = score >= 70 ? '#10b981' : score >= 45 ? '#f59e0b' : '#ef4444'
     const dims = results.dimension_scores || {}
     return (
-      <div style={s.wrap}>
-        <motion.div style={s.card} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+      <div style={styles.wrap}>
+        <motion.div style={styles.card} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <div style={{ fontSize: 13, color: '#64748b', marginBottom: 6 }}>Assessment Complete</div>
             <div style={{ fontSize: 28, fontWeight: 900, color: scoreColor, marginBottom: 2 }}>
@@ -221,7 +257,7 @@ export default function Questionnaire() {
   }
 
   return (
-    <div style={s.wrap}>
+    <div style={styles.wrap}>
       <div style={{ width: '100%', maxWidth: 760 }}>
         <CabinetPageHeader
           title="Adaptive Questionnaire"
@@ -229,7 +265,7 @@ export default function Questionnaire() {
           helper="Your answers update scorecards by dimension and improve protocol personalization."
         />
 
-        <motion.div style={s.card} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div style={styles.card} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 14, alignItems: 'center' }}>
             <div>
