@@ -17,15 +17,27 @@ function resolveEmailConfirmationRedirect() {
   if (configured && /^https?:\/\//i.test(configured)) {
     return configured
   }
-  return `${getBrowserOrigin()}/auth/confirmation`
+  const origin = getBrowserOrigin()
+  return origin ? `${origin}/auth/confirmation` : '/auth/confirmation'
 }
 
-function getConfirmationParams() {
+function getCurrentBrowserUrl() {
   if (typeof window === 'undefined') {
     return null
   }
 
-  const currentUrl = new URL(window.location.href)
+  try {
+    return new URL(window.location.href)
+  } catch {
+    return null
+  }
+}
+
+function getConfirmationParams() {
+  const currentUrl = getCurrentBrowserUrl()
+  if (!currentUrl) {
+    return null
+  }
   const hashParams = new URLSearchParams(currentUrl.hash.replace(/^#/, ''))
   return {
     code: currentUrl.searchParams.get('code'),
