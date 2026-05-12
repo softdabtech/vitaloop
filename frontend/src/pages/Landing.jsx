@@ -43,6 +43,26 @@ const NAV_LINKS = [
   { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
 ]
 
+// S7764 helper functions for safe window access
+function scrollToTop() {
+  if (typeof window !== 'undefined') {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
+function setWindowInterval(fn, delay) {
+  if (typeof window !== 'undefined') {
+    return window.setInterval(fn, delay)
+  }
+  return null
+}
+
+function clearWindowInterval(id) {
+  if (typeof window !== 'undefined' && id !== null) {
+    window.clearInterval(id)
+  }
+}
+
 const STEPS = [
   { icon: Upload, title: 'Upload', body: 'Drop your lab PDF' },
   { icon: BrainCircuit, title: 'AI Analysis', body: '85+ biomarkers extracted' },
@@ -684,11 +704,11 @@ export default function Landing() {
     }
 
     loadPlatformStats()
-    const intervalId = window.setInterval(loadPlatformStats, 60000)
+    const intervalId = setWindowInterval(loadPlatformStats, 60000)
 
     return () => {
       cancelled = true
-      window.clearInterval(intervalId)
+      clearWindowInterval(intervalId)
     }
   }, [])
 
@@ -729,7 +749,7 @@ export default function Landing() {
 
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/85 backdrop-blur">
         <div className="mx-auto flex h-[72px] w-full max-w-[1240px] items-center justify-between px-4 sm:px-6">
-          <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2">
+          <button onClick={() => scrollToTop()} className="flex items-center gap-2">
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/90 text-white">
               <HeartPulse className="h-5 w-5" />
             </span>

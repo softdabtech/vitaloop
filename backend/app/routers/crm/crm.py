@@ -19,6 +19,21 @@ _ALLOWED_ORG_ROLES = {"org_owner", "client_admin", "manager", "practitioner", "s
 _MEMBER_NOT_FOUND_DETAIL = "Member not found"
 _ORG_ID_REQUIRED_DETAIL = "org_id is required"
 
+# Error message constants (S1192 - reduce string duplication)
+_SUPER_ADMIN_REQUIRED = "Super admin access required"
+_ACCESS_DENIED = "Access denied"
+_ORG_ADMIN_REQUIRED = "Organization admin access required"
+_ORG_NOT_FOUND = "Organization not found"
+_FAILED_CREATE_ORG = "Failed to create organization"
+_NO_ORG_FIELDS = "No organization fields provided"
+_FAILED_ADD_MEMBER = "Failed to add member"
+_EMAIL_REQUIRED = "email is required"
+_INVITATION_NOT_FOUND = "Invitation not found"
+_TOKEN_REQUIRED = "token is required"
+_INVITATION_EXPIRED = "Invitation expired"
+_INVITATION_INVALID = "Invitation is no longer valid"
+_EMAIL_MISMATCH = "Invitation email does not match current account"
+
 
 async def _write_audit_log(
     sb,
@@ -114,7 +129,7 @@ async def _get_supabase():
 
 async def _require_super_admin(current_user: dict = Depends(get_current_user)) -> dict:
     if not await _is_super_admin(current_user):
-        raise HTTPException(status_code=403, detail="Super admin access required")
+        raise HTTPException(status_code=403, detail=_SUPER_ADMIN_REQUIRED)
     return current_user
 
 
@@ -136,7 +151,7 @@ async def _require_org_access(sb, org_id: UUID, current_user: dict) -> Optional[
 
     membership = await _get_membership(sb, org_id, current_user["sub"])
     if not membership:
-        raise HTTPException(status_code=403, detail="Access denied")
+        raise HTTPException(status_code=403, detail=_ACCESS_DENIED)
     return membership
 
 
@@ -147,7 +162,7 @@ async def _require_org_role(sb, org_id: UUID, current_user: dict, allowed_roles:
     membership = await _get_membership(sb, org_id, current_user["sub"])
     role = str((membership or {}).get("role") or "").lower()
     if not membership or role not in allowed_roles:
-        raise HTTPException(status_code=403, detail="Organization admin access required")
+        raise HTTPException(status_code=403, detail=_ORG_ADMIN_REQUIRED)
     return membership
 
 
@@ -291,7 +306,7 @@ async def get_organization(org_id: UUID, current_user: dict = Depends(get_curren
     )
     row = resp.data[0] if resp.data else None
     if not row:
-        raise HTTPException(status_code=404, detail="Organization not found")
+        raise HTTPException(status_code=404, detail=_ORG_NOT_FOUND)
 
     owner_id = row.get("owner_id")
     owners = await _load_users_by_ids(sb, [owner_id]) if owner_id else {}
@@ -336,7 +351,7 @@ async def create_organization(req: OrganizationCreate, current_user: dict = Depe
         .execute()
     )
     if not org_resp.data:
-        raise HTTPException(status_code=400, detail="Failed to create organization")
+        raise HTTPException(status_code=400, detail=_FAILED_CREATE_ORG)
 
     created = org_resp.data[0]
     await svc._run(
@@ -373,7 +388,7 @@ async def update_organization(org_id: UUID, req: OrganizationUpdate, current_use
 
     update_data = {key: value for key, value in req.model_dump().items() if value is not None}
     if not update_data:
-        raise HTTPException(status_code=400, detail="No organization fields provided")
+        raise HTTPException(status_code=400, detail=_NO_ORG_FIELDS)
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     old_resp = await svc._run(
@@ -392,7 +407,7 @@ async def update_organization(org_id: UUID, req: OrganizationUpdate, current_use
         .execute()
     )
     if not resp.data:
-        raise HTTPException(status_code=404, detail="Organization not found")
+        raise HTTPException(status_code=404, detail=_ORG_NOT_FOUND)
 
     row = resp.data[0]
     await _write_audit_log(
@@ -449,7 +464,7 @@ async def add_member(org_id: UUID, req: OrganizationMemberCreate, current_user: 
     )
     row = resp.data[0] if resp.data else None
     if not row:
-        raise HTTPException(status_code=400, detail="Failed to add member")
+        raise HTTPException(status_code=400, detail=_FAILED_ADD_MEMBER)
 
     users = await _load_users_by_ids(sb, [str(req.user_id)])
     await _write_audit_log(
@@ -620,7 +635,7 @@ async def create_invitation(body: dict[str, Any] = Body(...), current_user: dict
     if not org_id_raw:
         raise HTTPException(status_code=400, detail=_ORG_ID_REQUIRED_DETAIL)
     if not email:
-        raise HTTPException(status_code=400, detail="email is required")
+        raise HTTPException(status_code=400, detail=_EMAIL_REQUIRED)
     if role not in _ALLOWED_ORG_ROLES:
         raise HTTPException(status_code=422, detail=f"Unsupported role '{role}'")
     org_id = UUID(str(org_id_raw))
@@ -703,7 +718,7 @@ async def revoke_invitation(invitation_id: UUID, org_id: UUID = Query(...), curr
         .execute()
     )
     if not resp.data:
-        raise HTTPException(status_code=404, detail="Invitation not found")
+        raise HTTPException(status_code=404, detail=_INVITATION_NOT_FOUND)
 
     await _write_audit_log(
         sb,
@@ -726,7 +741,7 @@ async def accept_invitation(
 ):
     token = str(body.get("token") or "").strip()
     if not token:
-        raise HTTPException(status_code=400, detail="token is required")
+        raise HTTPException(status_code=400, detail=_TOKEN_REQUIRED)
 
     sb = await _get_supabase()
     invite_resp = await _run_invitations_query(
@@ -738,17 +753,17 @@ async def accept_invitation(
     )
     invitation = invite_resp.data[0] if invite_resp.data else None
     if not invitation:
-        raise HTTPException(status_code=404, detail="Invitation not found")
+        raise HTTPException(status_code=404, detail=_INVITATION_NOT_FOUND)
 
     status = str(invitation.get("status") or "sent").lower()
     if status != "sent":
-        raise HTTPException(status_code=400, detail="Invitation is no longer valid")
+        raise HTTPException(status_code=400, detail=_INVITATION_INVALID)
 
     expires_at = invitation.get("expires_at")
     if expires_at:
         try:
             if datetime.fromisoformat(str(expires_at).replace("Z", "+00:00")) < datetime.now(timezone.utc):
-                raise HTTPException(status_code=400, detail="Invitation expired")
+                raise HTTPException(status_code=400, detail=_INVITATION_EXPIRED)
         except HTTPException:
             raise
         except Exception:
@@ -757,7 +772,7 @@ async def accept_invitation(
     invite_email = str(invitation.get("email") or "").strip().lower()
     current_email = str(current_user.get("email") or "").strip().lower()
     if invite_email and current_email and invite_email != current_email:
-        raise HTTPException(status_code=403, detail="Invitation email does not match current account")
+        raise HTTPException(status_code=403, detail=_EMAIL_MISMATCH)
 
     org_id = _as_text(invitation.get("organization_id"))
     member_resp = await svc._run(

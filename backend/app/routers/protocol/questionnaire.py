@@ -27,6 +27,13 @@ QUESTION_BANK: List[Dict[str, Any]] = [
 
 QUESTION_INDEX: Dict[str, Dict[str, Any]] = {q["id"]: q for q in QUESTION_BANK}
 
+# Error message constants (S1192 - reduce string duplication)
+_INIT_QUESTIONNAIRE_FAILED = "Failed to initialize questionnaire session"
+_STORAGE_NOT_INITIALIZED = "Questionnaire storage not initialized."
+_INVALID_QUESTION_ID = "Invalid question_id"
+_ALREADY_ANSWERED = "Question already answered in this session"
+_STORAGE_MIGRATION_NEEDED = "Questionnaire storage not initialized. Apply stage-8 + stage-10 SQL migrations."
+
 
 # ---------------------------------------------------------------------------
 # Scoring
@@ -133,7 +140,7 @@ async def _get_or_create_active_session(user_id: str) -> Dict[str, Any]:
         .execute()
     )
     if not create.data:
-        raise HTTPException(status_code=500, detail="Failed to initialize questionnaire session")
+        raise HTTPException(status_code=500, detail=_INIT_QUESTIONNAIRE_FAILED)
     return create.data[0]
 
 
@@ -170,7 +177,7 @@ async def list_questionnaires(current_user: dict = Depends(get_current_user)):
         return {"questionnaires": items, "total": len(items)}
     except Exception as ex:
         if _is_missing_questionnaire_tables(ex):
-            raise HTTPException(status_code=503, detail="Questionnaire storage not initialized.")
+            raise HTTPException(status_code=503, detail=_STORAGE_NOT_INITIALIZED)
         raise
 
 
@@ -190,7 +197,7 @@ async def create_questionnaire(
         }
     except Exception as ex:
         if _is_missing_questionnaire_tables(ex):
-            raise HTTPException(status_code=503, detail="Questionnaire storage not initialized.")
+            raise HTTPException(status_code=503, detail=_STORAGE_NOT_INITIALIZED)
         raise
 
 
@@ -222,8 +229,7 @@ async def get_questionnaire_session(current_user: dict = Depends(get_current_use
         raise
     except Exception as ex:
         if _is_missing_questionnaire_tables(ex):
-            raise HTTPException(status_code=503,
-                detail="Questionnaire storage not initialized. Apply stage-8 + stage-10 SQL migrations.")
+            raise HTTPException(status_code=503, detail=_STORAGE_MIGRATION_NEEDED)
         raise
 
 
@@ -235,13 +241,13 @@ async def submit_questionnaire_answer(
     user_id = current_user.get("sub")
     is_core = body.question_id in QUESTION_INDEX
     if not is_core and len(body.question_id) > 100:
-        raise HTTPException(status_code=422, detail="Invalid question_id")
+        raise HTTPException(status_code=422, detail=_INVALID_QUESTION_ID)
     try:
         session = await _get_or_create_active_session(user_id)
         answers = await _get_session_answers(session["id"])
         answered_ids = {str(a.get("question_id")) for a in answers if a.get("question_id")}
         if body.question_id in answered_ids:
-            raise HTTPException(status_code=409, detail="Question already answered in this session")
+            raise HTTPException(status_code=409, detail=_ALREADY_ANSWERED)
 
         question_order = len(answers) + 1
         q_meta = QUESTION_INDEX.get(body.question_id) or {}
@@ -306,7 +312,7 @@ async def submit_questionnaire_answer(
         raise
     except Exception as ex:
         if _is_missing_questionnaire_tables(ex):
-            raise HTTPException(status_code=503, detail="Questionnaire storage not initialized.")
+            raise HTTPException(status_code=503, detail=_STORAGE_NOT_INITIALIZED)
         raise
 
 
@@ -409,5 +415,5 @@ async def get_questionnaire_results(current_user: dict = Depends(get_current_use
         raise
     except Exception as ex:
         if _is_missing_questionnaire_tables(ex):
-            raise HTTPException(status_code=503, detail="Questionnaire storage not initialized.")
+            raise HTTPException(status_code=503, detail=_STORAGE_NOT_INITIALIZED)
         raise

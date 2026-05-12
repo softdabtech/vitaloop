@@ -27,6 +27,36 @@ import { enrichAssignments } from '../lib/assignmentScoring.js'
 import '../styles/userDashboard.css'
 import '../styles/dashboard2026.css'
 
+// Helper functions for computing dashboard state
+function computeOnboardingComplete(profile) {
+  return Boolean(
+    profile?.onboarding?.checklist?.onboarding_complete
+    || profile?.onboarding?.requires_onboarding === false
+  )
+}
+
+function computeHasProtocol(stats) {
+  return Boolean(stats?.active_program && String(stats.active_program).toLowerCase() !== 'not started')
+}
+
+function buildJourneySteps(hasUploads, onboardingComplete, latestCheckin, hasProtocol) {
+  return [
+    { id: 'account', label: 'Account created', done: true },
+    { id: 'upload', label: 'Upload your first lab', done: hasUploads },
+    { id: 'profile', label: 'Complete health profile', done: onboardingComplete },
+    { id: 'symptoms', label: 'Add symptoms or check-in', done: Boolean(latestCheckin) },
+    { id: 'protocol', label: 'Unlock first protocol', done: hasProtocol },
+  ]
+}
+
+function getGreeting(profile, userEmail) {
+  return profile?.first_name || userEmail?.split('@')?.[0] || 'there'
+}
+
+function getLatestUploadId(latestUpload) {
+  return latestUpload?.upload_id || latestUpload?.id || null
+}
+
 function DashboardCard({ title, eyebrow, children, action, animated = true, delay = 0 }) {
   const animationProps = animated
     ? {
@@ -48,6 +78,16 @@ function DashboardCard({ title, eyebrow, children, action, animated = true, dela
       {...animationProps}
     >
       <div className="mb-4 flex items-start justify-between gap-4">
+        {eyebrow && <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest">{eyebrow}</div>}
+        {action && <div className="ml-auto flex-shrink-0">{action}</div>}
+      </div>
+      {title && <h3 className="mb-3 text-lg font-semibold text-slate-900">{title}</h3>}
+      {children}
+    </WrapperComponent>
+  )
+}
+
+export default function UserDashboard() {
         <div>
           {eyebrow && <div className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-600">{eyebrow}</div>}
           <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-900">{title}</h2>
@@ -328,24 +368,15 @@ export default function UserDashboard() {
   const latestUpload = summary?.blocks?.latest_upload || null
   const latestCheckin = summary?.blocks?.latest_checkin || null
   const hasUploads = Number(stats.total_uploads || 0) > 0
-  const onboardingComplete = Boolean(
-    profile?.onboarding?.checklist?.onboarding_complete
-    || profile?.onboarding?.requires_onboarding === false
-  )
-  const hasProtocol = Boolean(stats.active_program && String(stats.active_program).toLowerCase() !== 'not started')
+  const onboardingComplete = computeOnboardingComplete(profile)
+  const hasProtocol = computeHasProtocol(stats)
   const isFirstRun = !loading && !hasUploads
   const showStartHere = Boolean(startHere?.enabled && isFirstRun)
-  const journeySteps = [
-    { id: 'account', label: 'Account created', done: true },
-    { id: 'upload', label: 'Upload your first lab', done: hasUploads },
-    { id: 'profile', label: 'Complete health profile', done: onboardingComplete },
-    { id: 'symptoms', label: 'Add symptoms or check-in', done: Boolean(latestCheckin) },
-    { id: 'protocol', label: 'Unlock first protocol', done: hasProtocol },
-  ]
+  const journeySteps = buildJourneySteps(hasUploads, onboardingComplete, latestCheckin, hasProtocol)
   const completedJourneyCount = journeySteps.filter((step) => step.done).length
 
-  const greeting = useMemo(() => profile?.first_name || user?.email?.split('@')?.[0] || 'there', [profile?.first_name, user?.email])
-  const latestUploadId = latestUpload?.upload_id || latestUpload?.id || null
+  const greeting = useMemo(() => getGreeting(profile, user?.email), [profile?.first_name, user?.email])
+  const latestUploadId = getLatestUploadId(latestUpload)
 
   const fadeUp = (delay = 0) => reduced
     ? {}
