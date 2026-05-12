@@ -103,14 +103,24 @@ const COLOR_CLASSES = {
 }
 
 const PRIORITY_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 }
+const NUTRITION_RELEVANT_STATUSES = new Set(['DEFICIENT', 'BORDERLINE'])
+const DEFICIENT_STATUSES = new Set(['DEFICIENT', 'ELEVATED'])
+
+function hasStatusIn(status, allowedStatuses) {
+  return allowedStatuses.has(String(status || '').toUpperCase())
+}
+
+function normalizeBiomarkerName(name) {
+  return String(name || '').toLowerCase()
+}
 
 function deriveNutritionGroups(biomarkers) {
   if (!biomarkers?.length) return NUTRITION_MAP.slice(0, 3)
   const deficientNames = biomarkers
-    .filter((b) => b.status === 'DEFICIENT' || b.status === 'BORDERLINE')
-    .map((b) => (b.name || '').toLowerCase())
+    .filter((biomarker) => hasStatusIn(biomarker.status, NUTRITION_RELEVANT_STATUSES))
+    .map((biomarker) => normalizeBiomarkerName(biomarker.name))
   const matched = NUTRITION_MAP.filter((group) =>
-    group.keywords.some((kw) => deficientNames.some((n) => n.includes(kw)))
+    group.keywords.some((keyword) => deficientNames.some((name) => name.includes(keyword)))
   )
   const unmatched = NUTRITION_MAP.filter((g) => !matched.includes(g))
   return [...matched, ...unmatched].slice(0, Math.max(3, matched.length))
@@ -127,7 +137,7 @@ function sortProtocolByPriority(protocol) {
 }
 
 function countDeficientBiomarkers(biomarkers) {
-  return biomarkers.filter((b) => b.status === 'DEFICIENT' || b.status === 'ELEVATED').length
+  return biomarkers.filter((biomarker) => hasStatusIn(biomarker.status, DEFICIENT_STATUSES)).length
 }
 
 function triggerSubscriptionRequiredPaywall() {
