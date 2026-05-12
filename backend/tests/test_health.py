@@ -79,3 +79,34 @@ async def test_llm_health_reachable_via_chat_fallback(monkeypatch):
     assert payload["probe"]["configured"] is True
     assert payload["probe"]["name"] == "chat_completions"
     assert payload["probe"]["reachable"] is True
+
+
+@pytest.mark.asyncio
+async def test_detailed_health_marks_stripe_configured_with_new_price_ids(monkeypatch):
+    monkeypatch.setattr(health.settings, "supabase_url", "https://example.supabase.co")
+    monkeypatch.setattr(health.settings, "supabase_service_role_key", "service-role-key")
+    monkeypatch.setattr(health.settings, "resend_api_key", "resend-key")
+    monkeypatch.setattr(health.settings, "sentry_dsn", "")
+    monkeypatch.setattr(health.settings, "stripe_secret_key", "stripe-secret")
+    monkeypatch.setattr(health.settings, "stripe_webhook_secret", "stripe-wh")
+    monkeypatch.setattr(health.settings, "stripe_price_id", "")
+    monkeypatch.setattr(health.settings, "stripe_price_id_personal", "")
+    monkeypatch.setattr(health.settings, "stripe_price_id_personal_monthly", "price_personal_monthly")
+    monkeypatch.setattr(health.settings, "stripe_price_id_personal_yearly", "price_personal_yearly")
+    monkeypatch.setattr(health.settings, "stripe_price_id_practitioner", "")
+    monkeypatch.setattr(health.settings, "stripe_price_id_practitioner_monthly", "price_practitioner_monthly")
+    monkeypatch.setattr(health.settings, "stripe_price_id_practitioner_yearly", "price_practitioner_yearly")
+
+    async def _fake_run(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(health.svc, "_run", _fake_run)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.get("/health/detailed")
+
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["status"] == "ok"
+    assert payload["services"]["stripe"]["status"] == "ok"

@@ -17,6 +17,7 @@ from app.middleware.security import (
 from app.utils.build_info import APP_VERSION
 import logging
 from app.utils import checkin_reminder
+from app.utils.stripe_config import is_stripe_price_configured
 
 from app.services.claude_service import is_llm_configured
 
@@ -52,10 +53,14 @@ from app.routers.admin import admin
 
 
 def _check_runtime_readiness() -> None:
-    stripe_price_configured = bool(
-        (settings.stripe_price_id or "").strip()
-        or (settings.stripe_price_id_personal or "").strip()
-        or (settings.stripe_price_id_personal_monthly or "").strip()
+    stripe_price_configured = is_stripe_price_configured(
+        settings.stripe_price_id,
+        settings.stripe_price_id_personal,
+        settings.stripe_price_id_personal_monthly,
+        settings.stripe_price_id_personal_yearly,
+        settings.stripe_price_id_practitioner,
+        settings.stripe_price_id_practitioner_monthly,
+        settings.stripe_price_id_practitioner_yearly,
     )
     checks = {
         "supabase_url": bool((settings.supabase_url or "").strip()),

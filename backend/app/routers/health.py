@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.config import settings
 from app.services import supabase_service as svc
 from app.utils.build_info import get_build_info
+from app.utils.stripe_config import is_stripe_price_configured
 import logging
 
 logger = logging.getLogger("vitaloop.health")
@@ -135,7 +136,18 @@ async def detailed_health_check():
         checks["status"] = "degraded"
 
     # Check API Gateway configuration
-    stripe_ok = bool(settings.stripe_secret_key and settings.stripe_price_id)
+    stripe_ok = bool(
+        settings.stripe_secret_key
+        and is_stripe_price_configured(
+            settings.stripe_price_id,
+            settings.stripe_price_id_personal,
+            settings.stripe_price_id_personal_monthly,
+            settings.stripe_price_id_personal_yearly,
+            settings.stripe_price_id_practitioner,
+            settings.stripe_price_id_practitioner_monthly,
+            settings.stripe_price_id_practitioner_yearly,
+        )
+    )
     checks["services"]["stripe"] = {"status": "ok" if stripe_ok else "unconfigured"}
     if not stripe_ok:
         checks["status"] = "degraded"

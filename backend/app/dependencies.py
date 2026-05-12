@@ -113,7 +113,3 @@ async def require_freemium_analyze(current_user: dict = Depends(get_current_user
                     "used_by": used_by,
                 },
             )
-
-        status_code=status.HTTP_402_PAYMENT_REQUIRED,
-        detail={"detail": "Active subscription required", "code": "SUBSCRIPTION_REQUIRED"},
-    )
