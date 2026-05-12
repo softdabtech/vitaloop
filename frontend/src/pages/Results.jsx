@@ -134,6 +134,66 @@ function normalizeBiomarkerStatus(biomarker) {
   return 'BORDERLINE'
 }
 
+function buildMedicalAnalysisLines(normalizedBiomarkers) {
+  return normalizedBiomarkers.map((b) => {
+    const low = b?.ref_low != null ? String(b.ref_low) : ''
+    const high = b?.ref_high != null ? String(b.ref_high) : ''
+    const rangePart = low && high ? ` (${low}-${high})` : ''
+    const unitPart = b?.unit ? ` ${b.unit}` : ''
+    return `${b?.name_en || 'Unknown'}: ${b?.value ?? '--'}${unitPart}${rangePart}`
+  })
+}
+
+async function requestMedicalAnalysis(normalizedBiomarkers) {
+  const lines = buildMedicalAnalysisLines(normalizedBiomarkers)
+  const formData = new FormData()
+  formData.append('text', lines.join('\n'))
+
+  const response = await fetch('/api/v1/analyze/text', {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!response.ok) {
+    throw new Error(`Medical analysis failed: ${response.status}`)
+  }
+
+  return response.json()
+}
+
+function resolveTrendMeta(value, low, high) {
+  if (value < low) {
+    return {
+      icon: TrendingDown,
+      text: 'Below normal range',
+      color: 'text-blue-600',
+      iconColor: 'text-blue-600',
+    }
+  }
+
+  if (value > high) {
+    return {
+      icon: TrendingUp,
+      text: 'Above normal range',
+      color: 'text-rose-600',
+      iconColor: 'text-rose-600',
+    }
+  }
+
+  return {
+    icon: Minus,
+    text: 'Within range',
+    color: 'text-slate-600',
+    iconColor: 'text-slate-400',
+  }
+}
+
+function triggerSubscriptionRequiredPaywall() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))
+  }
+}
+
 const RESULTS_HINTS = [
   '� Your results are color-coded: Green = optimal, Yellow = borderline, Red = needs attention. Focus on red markers first.',
   '🎯 The position indicator shows where your value falls within the reference range. 50% means you\'re right in the middle!',
@@ -191,27 +251,7 @@ export default function Results() {
       setMedicalAnalysisError('')
 
       try {
-        const lines = normalizedBiomarkers.map((b) => {
-          const low = b?.ref_low != null ? String(b.ref_low) : ''
-          const high = b?.ref_high != null ? String(b.ref_high) : ''
-          const rangePart = low && high ? ` (${low}-${high})` : ''
-          const unitPart = b?.unit ? ` ${b.unit}` : ''
-          return `${b?.name_en || 'Unknown'}: ${b?.value ?? '--'}${unitPart}${rangePart}`
-        })
-
-        const formData = new FormData()
-        formData.append('text', lines.join('\n'))
-
-        const response = await fetch('/api/v1/analyze/text', {
-          method: 'POST',
-          body: formData,
-        })
-
-        if (!response.ok) {
-          throw new Error(`Medical analysis failed: ${response.status}`)
-        }
-
-        const payload = await response.json()
+        const payload = await requestMedicalAnalysis(normalizedBiomarkers)
         if (active) {
           setMedicalAnalysis(payload)
         }
@@ -583,21 +623,8 @@ export default function Results() {
               const value = Number(b.value)
               const low = Number(b.ref_low)
               const high = Number(b.ref_high)
-
-              // Determine trend icon and interpretation
-              let trendIcon = <Minus className="h-4 w-4 text-slate-400" />
-              let trendText = 'Within range'
-              let trendColor = 'text-slate-600'
-
-              if (value < low) {
-                trendIcon = <TrendingDown className="h-4 w-4 text-blue-600" />
-                trendText = 'Below normal range'
-                trendColor = 'text-blue-600'
-              } else if (value > high) {
-                trendIcon = <TrendingUp className="h-4 w-4 text-rose-600" />
-                trendText = 'Above normal range'
-                trendColor = 'text-rose-600'
-              }
+              const trend = resolveTrendMeta(value, low, high)
+              const TrendIcon = trend.icon
 
               return (
                 <div key={b.id || `${b.name_en}-${b.value}`} className={`relative overflow-hidden rounded-xl border bg-white p-6 ${meta.border} shadow-sm`}>
@@ -607,8 +634,8 @@ export default function Results() {
                     <div className="flex-1">
                       <h4 className="text-lg font-semibold text-slate-900 mb-1">{b.name_en}</h4>
                       <div className="flex items-center gap-2 mb-2">
-                        {trendIcon}
-                        <span className={`text-sm font-medium ${trendColor}`}>{trendText}</span>
+                        <TrendIcon className={`h-4 w-4 ${trend.iconColor}`} />
+                        <span className={`text-sm font-medium ${trend.color}`}>{trend.text}</span>
                       </div>
                     </div>
                     <span className={`rounded-full px-3 py-1 text-sm font-semibold ${meta.badge}`}>{status}</span>
@@ -713,7 +740,7 @@ export default function Results() {
 
           <FeatureGate
             feature="basic_protocol"
-            onLocked={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))}
+            onLocked={triggerSubscriptionRequiredPaywall}
             fallback={
               <div className="bg-gradient-to-br from-emerald-50 to-blue-50 border border-emerald-200 rounded-xl p-8 text-center">
                 <div className="max-w-md mx-auto">

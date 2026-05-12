@@ -5,12 +5,80 @@ import toast from 'react-hot-toast'
 import { resolvePostLoginDestination, navigateToResolvedPath } from '../auth/postLogin'
 import { notifyRegistrationAlert } from '../auth/registrationAlert'
 
+function getBrowserOrigin() {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+  return window.location.origin
+}
+
 function resolveEmailConfirmationRedirect() {
   const configured = import.meta.env.VITE_EMAIL_CONFIRMATION_PATH
   if (configured && /^https?:\/\//i.test(configured)) {
     return configured
   }
-  return `${window.location.origin}/auth/confirmation`
+  return `${getBrowserOrigin()}/auth/confirmation`
+}
+
+function getConfirmationParams() {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  const currentUrl = new URL(window.location.href)
+  const hashParams = new URLSearchParams(currentUrl.hash.replace(/^#/, ''))
+  return {
+    code: currentUrl.searchParams.get('code'),
+    tokenHash: currentUrl.searchParams.get('token_hash'),
+    type: currentUrl.searchParams.get('type'),
+    hasAccessToken: Boolean(hashParams.get('access_token')),
+  }
+}
+
+async function applyConfirmationParams(params) {
+  if (!params) {
+    throw new Error('Не удалось прочитать параметры подтверждения.')
+  }
+
+  if (params.code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(params.code)
+    if (error) throw error
+    return
+  }
+
+  if (params.tokenHash && params.type) {
+    const { error } = await supabase.auth.verifyOtp({
+      type: params.type,
+      token_hash: params.tokenHash,
+    })
+    if (error) throw error
+    return
+  }
+
+  if (params.hasAccessToken) {
+    await supabase.auth.getSession()
+  }
+}
+
+function waitForSessionThenNavigate(navigate) {
+  let attempts = 0
+
+  const poll = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) {
+      navigate('/onboarding', { replace: true })
+      return
+    }
+
+    attempts += 1
+    if (attempts < 15) {
+      setTimeout(poll, 200)
+    } else {
+      navigate('/login', { replace: true })
+    }
+  }
+
+  setTimeout(poll, 300)
 }
 
 export default function EmailConfirmation() {
@@ -45,25 +113,7 @@ export default function EmailConfirmation() {
       }
 
       try {
-        const currentUrl = new URL(window.location.href)
-        const hashParams = new URLSearchParams(currentUrl.hash.replace(/^#/, ''))
-        const code = currentUrl.searchParams.get('code')
-        const tokenHash = currentUrl.searchParams.get('token_hash')
-        const type = currentUrl.searchParams.get('type')
-
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code)
-          if (error) throw error
-        } else if (tokenHash && type) {
-          const { error } = await supabase.auth.verifyOtp({
-            type,
-            token_hash: tokenHash,
-          })
-          if (error) throw error
-        } else if (hashParams.get('access_token')) {
-          // Session may already be populated from hash-based callback.
-          await supabase.auth.getSession()
-        }
+        await applyConfirmationParams(getConfirmationParams())
 
         const { data: { user }, error: userError } = await supabase.auth.getUser()
         if (userError) {
@@ -81,24 +131,7 @@ export default function EmailConfirmation() {
           setStatus('success')
           toast.success('✅ Email confirmed! Redirecting...')
           setRedirecting(true)
-
-          // Wait for the session token to be persisted before entering protected routes.
-          let attempts = 0
-          const waitForSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession()
-            if (session?.access_token) {
-              navigate('/onboarding', { replace: true })
-              return
-            }
-            attempts += 1
-            if (attempts < 15) {
-              setTimeout(waitForSession, 200)
-            } else {
-              navigate('/login', { replace: true })
-            }
-          }
-
-          setTimeout(waitForSession, 300)
+          waitForSessionThenNavigate(navigate)
         } else {
           setStatus('error')
           setErrorMsg('Email пока не подтвержден. Проверьте, что открыта актуальная ссылка из письма.')
