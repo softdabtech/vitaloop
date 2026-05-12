@@ -57,6 +57,12 @@ function getLatestUploadId(latestUpload) {
   return latestUpload?.upload_id || latestUpload?.id || null
 }
 
+function triggerDashboardUpgradePaywall() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED', source: 'dashboard-upgrade' } }))
+  }
+}
+
 function DashboardCard({ title, eyebrow, children, action, animated = true, delay = 0 }) {
   const animationProps = animated
     ? {
@@ -633,7 +639,7 @@ export default function UserDashboard() {
                 <div className="flex-1">
                   <h3 className="font-semibold text-amber-900 mb-1">Unlock your full potential with Premium</h3>
                   <p className="text-sm text-amber-800 mb-4">Get unlimited uploads, personalized AI protocols, weekly check-ins, and detailed biomarker tracking — all powered by advanced health intelligence.</p>
-                  <button onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED', source: 'dashboard-upgrade' } }))} className="inline-flex items-center gap-2 rounded-xl bg-amber-600 text-white px-4 py-2 text-sm font-semibold hover:bg-amber-700 transition">
+                  <button onClick={triggerDashboardUpgradePaywall} className="inline-flex items-center gap-2 rounded-xl bg-amber-600 text-white px-4 py-2 text-sm font-semibold hover:bg-amber-700 transition">
                     Upgrade to Premium
                     <ArrowRight className="h-4 w-4" />
                   </button>

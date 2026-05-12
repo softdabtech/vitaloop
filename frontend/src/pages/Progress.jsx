@@ -21,13 +21,19 @@ function deltaPct(first, last) {
   return Math.round(((last - first) / first) * 100)
 }
 
+function triggerSubscriptionRequiredPaywall() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))
+  }
+}
+
 export default function Progress() {
   const navigate = useNavigate()
   const { data = [], isLoading } = useProgress()
   const [photos, setPhotos] = useState([])
 
   const handlePaywall = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))
+    triggerSubscriptionRequiredPaywall()
   }, [])
 
   const handlePhotoUpload = async (formData) => {
@@ -35,7 +41,7 @@ export default function Progress() {
       const response = await api.post('/progress/photos', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      setPhotos([...photos, response.data])
+      setPhotos((prev) => [...prev, response.data])
     } catch (error) {
       if (error.response?.status === 402) {
         handlePaywall()
@@ -49,7 +55,7 @@ export default function Progress() {
   const handlePhotoDelete = async (photoId) => {
     try {
       await api.delete(`/progress/photos/${photoId}`)
-      setPhotos(photos.filter((p) => p.id !== photoId))
+      setPhotos((prev) => prev.filter((p) => p.id !== photoId))
     } catch (error) {
       console.error('Photo delete failed:', error)
       throw error
