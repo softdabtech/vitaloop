@@ -8,6 +8,24 @@ import { Calendar, TrendingUp, Heart, CreditCard, Download, AlertTriangle } from
 import { motion } from 'framer-motion'
 import AdminShell from '../components/admin/AdminShell.jsx'
 
+async function fetchDashboardData(userId) {
+  const [profileResp, uploadsResp, subscriptionResp, symptomsResp] = await Promise.allSettled([
+    supabase.from('users').select('*').eq('id', userId).single(),
+    supabase.from('lab_uploads').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+    supabase.from('users').select('sub_status, sub_current_period_end').eq('id', userId).single(),
+    api.get('/symptoms/summary?days=30'),
+  ])
+
+  return { profileResp, uploadsResp, subscriptionResp, symptomsResp }
+}
+
+function buildStatsFromUploads(uploads) {
+  return {
+    totalTests: uploads.length,
+    lastTest: uploads[0]?.created_at ? new Date(uploads[0].created_at) : null,
+  }
+}
+
 export default function ClientAdmin() {
   const { user } = useAuth()
   const [profile, setProfile] = useState(null)
@@ -31,13 +49,12 @@ export default function ClientAdmin() {
 
     async function loadDashboardData() {
       setLoading(true)
-
-      const [profileResp, uploadsResp, subscriptionResp, symptomsResp] = await Promise.allSettled([
-        supabase.from('users').select('*').eq('id', user.id).single(),
-        supabase.from('lab_uploads').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('users').select('sub_status, sub_current_period_end').eq('id', user.id).single(),
-        api.get('/symptoms/summary?days=30'),
-      ])
+      const {
+        profileResp,
+        uploadsResp,
+        subscriptionResp,
+        symptomsResp,
+      } = await fetchDashboardData(user.id)
 
       if (profileResp.status === 'fulfilled') {
         setProfile(profileResp.value.data)
@@ -48,8 +65,7 @@ export default function ClientAdmin() {
         setUploads(data)
         setStats((prev) => ({
           ...prev,
-          totalTests: data.length,
-          lastTest: data[0]?.created_at ? new Date(data[0].created_at) : null,
+          ...buildStatsFromUploads(data),
         }))
       }
 
