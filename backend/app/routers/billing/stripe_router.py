@@ -30,6 +30,7 @@ _STRIPE_WEBHOOK_SECRET_NOT_CONFIGURED = "Webhook secret not configured"
 _INVALID_WEBHOOK_SIGNATURE = "Invalid webhook signature"
 _NO_ACTIVE_SUBSCRIPTION = "No active subscription found"
 _NO_BILLING_ACCOUNT = "No billing account found. Subscribe first."
+_CHECKOUT_UNEXPECTED_ERROR = "An unexpected error occurred while creating checkout session"
 
 # ---------------------------------------------------------------------------
 # Plan → Stripe price ID mapping
@@ -103,7 +104,7 @@ async def create_checkout_session(
         logger.error(f"stripe_checkout_unexpected_error user_id={user_id} error={str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail="An unexpected error occurred while creating checkout session"
+            detail=_CHECKOUT_UNEXPECTED_ERROR
         ) from e
 
     return {"checkout_url": session.url, "plan_id": plan_id}
