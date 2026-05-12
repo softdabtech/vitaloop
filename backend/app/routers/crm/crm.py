@@ -33,6 +33,13 @@ _TOKEN_REQUIRED = "token is required"
 _INVITATION_EXPIRED = "Invitation expired"
 _INVITATION_INVALID = "Invitation is no longer valid"
 _EMAIL_MISMATCH = "Invitation email does not match current account"
+_FAILED_CREATE_INVITATION = "Failed to create invitation"
+_ASSIGNMENT_FIELDS_REQUIRED = "org_id, practitioner_id, and client_id are required"
+_FAILED_CREATE_ASSIGNMENT = "Failed to create assignment"
+_ASSIGNMENT_NOT_FOUND = "Assignment not found"
+_PRACTITIONER_OWN_CLIENTS_ONLY = "Practitioner can only edit own clients"
+_MANAGER_OR_ADMIN_REASSIGN_ONLY = "Only managers/admins can reassign practitioners"
+_NO_ASSIGNMENT_CHANGES = "No assignment changes provided"
 
 
 async def _write_audit_log(
@@ -669,7 +676,7 @@ async def create_invitation(body: dict[str, Any] = Body(...), current_user: dict
     )
     row = resp.data[0] if resp.data else None
     if not row:
-        raise HTTPException(status_code=400, detail="Failed to create invitation")
+        raise HTTPException(status_code=400, detail=_FAILED_CREATE_INVITATION)
 
     invitation_accept_url = f"{settings.crm_base_url.rstrip('/')}/invitations/accept?token={row['token']}"
     inviter_name = current_user.get("email") or "Team Admin"
@@ -974,7 +981,7 @@ async def create_assignment(body: dict[str, Any] = Body(...), current_user: dict
     practitioner_id = body.get("practitioner_id")
     client_id = body.get("client_id")
     if not org_id_raw or not practitioner_id or not client_id:
-        raise HTTPException(status_code=400, detail="org_id, practitioner_id, and client_id are required")
+        raise HTTPException(status_code=400, detail=_ASSIGNMENT_FIELDS_REQUIRED)
     org_id = UUID(str(org_id_raw))
 
     sb = await _get_supabase()
@@ -995,7 +1002,7 @@ async def create_assignment(body: dict[str, Any] = Body(...), current_user: dict
     )
     row = resp.data[0] if resp.data else None
     if not row:
-        raise HTTPException(status_code=400, detail="Failed to create assignment")
+        raise HTTPException(status_code=400, detail=_FAILED_CREATE_ASSIGNMENT)
 
     await _write_audit_log(
         sb,
@@ -1038,14 +1045,14 @@ async def reassign_assignment(
     )
     existing = existing_resp.data[0] if existing_resp.data else None
     if not existing:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+        raise HTTPException(status_code=404, detail=_ASSIGNMENT_NOT_FOUND)
 
     role = str((membership or {}).get("role") or "").lower()
     is_practitioner = role == "practitioner"
     is_admin_like = await _is_super_admin(current_user) or role in {"org_owner", "client_admin", "manager"}
 
     if is_practitioner and str(existing.get("practitioner_id")) != str(current_user["sub"]):
-        raise HTTPException(status_code=403, detail="Practitioner can only edit own clients")
+        raise HTTPException(status_code=403, detail=_PRACTITIONER_OWN_CLIENTS_ONLY)
 
     update_data: dict[str, Any] = {"updated_at": datetime.now(timezone.utc).isoformat()}
     if notes is not None:
@@ -1055,11 +1062,11 @@ async def reassign_assignment(
 
     if practitioner_id is not None:
         if not is_admin_like:
-            raise HTTPException(status_code=403, detail="Only managers/admins can reassign practitioners")
+            raise HTTPException(status_code=403, detail=_MANAGER_OR_ADMIN_REASSIGN_ONLY)
         update_data["practitioner_id"] = str(practitioner_id)
 
     if len(update_data) == 1:
-        raise HTTPException(status_code=400, detail="No assignment changes provided")
+        raise HTTPException(status_code=400, detail=_NO_ASSIGNMENT_CHANGES)
 
     resp = await svc._run(
         lambda: sb.table("practitioner_assignments")
@@ -1070,7 +1077,7 @@ async def reassign_assignment(
     )
     row = resp.data[0] if resp.data else None
     if not row:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+        raise HTTPException(status_code=404, detail=_ASSIGNMENT_NOT_FOUND)
 
     await _write_audit_log(
         sb,
