@@ -8,6 +8,7 @@ from app.services import supabase_service as svc
 router = APIRouter(prefix="/auth/onboarding", tags=["onboarding"])
 
 _CRM_ROLES = {"super_admin", "admin", "org_admin", "org_owner", "client_admin", "manager", "practitioner"}
+_PROFILE_NOT_FOUND = "Profile not found"
 
 
 def _as_bool(value: Any) -> bool:
@@ -161,7 +162,7 @@ async def complete_onboarding(current_user: dict = Depends(get_current_user)):
     profile = await svc.get_user_profile(user_id)
 
     if not profile:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PROFILE_NOT_FOUND)
 
     updated = await svc.upsert_user_profile(user_id, {"onboarding_complete": True})
     return {"ok": True, "profile": updated}

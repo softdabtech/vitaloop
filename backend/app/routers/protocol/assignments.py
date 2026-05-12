@@ -14,11 +14,14 @@ from app.services.assignment_service import AssignmentService
 router = APIRouter(prefix="/crm/assignments", tags=["crm-assignments"])
 service = AssignmentService()
 
+_ADMIN_ACCESS_REQUIRED = "Admin-level access required"
+_ASSIGNMENT_NOT_FOUND = "Assignment not found"
+
 
 def _require_admin_like(user_context: UserContext) -> None:
     role = (user_context.global_role or "").lower()
     if role not in {"super_admin", "admin", "org_admin", "org_owner", "client_admin", "manager"}:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin-level access required")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_ADMIN_ACCESS_REQUIRED)
 
 
 @router.post("", response_model=AssignmentResponse, status_code=status.HTTP_201_CREATED)
@@ -116,5 +119,5 @@ async def get_assignment(
         global_role=user_context.global_role,
     )
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_ASSIGNMENT_NOT_FOUND)
     return AssignmentResponse(**row)

@@ -5,6 +5,8 @@ from app.services import supabase_service as svc
 
 router = APIRouter()
 
+_UNAUTHORIZED_DETAIL = "Unauthorized"
+
 
 class NotificationPreferencesUpdate(BaseModel):
     weekly_checkin: bool = None
@@ -22,7 +24,7 @@ async def update_notification_preferences(
 ):
     user_id = current_user.get("sub")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=401, detail=_UNAUTHORIZED_DETAIL)
 
     supabase = svc._get_supabase()
 

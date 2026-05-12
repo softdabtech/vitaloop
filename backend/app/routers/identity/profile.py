@@ -6,6 +6,8 @@ from app.services import supabase_service as svc
 
 router = APIRouter()
 
+_INVALID_SEX_DETAIL = "sex must be one of: male, female, other"
+
 
 class ProfileUpdate(BaseModel):
     age: Optional[int] = None
@@ -54,7 +56,7 @@ async def update_profile(body: ProfileUpdate, current_user: dict = Depends(get_c
         }
         normalized = sex_aliases.get(raw_sex)
         if raw_sex and not normalized:
-            raise HTTPException(status_code=422, detail="sex must be one of: male, female, other")
+            raise HTTPException(status_code=422, detail=_INVALID_SEX_DETAIL)
         data["sex"] = normalized
     if not data:
         return {"profile": await svc.get_user_profile(user_id)}
