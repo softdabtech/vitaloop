@@ -23,6 +23,25 @@ const fieldStyle = {
   transition: 'border-color 200ms, box-shadow 200ms',
 }
 
+function safeNavigateToLogin() {
+  if (typeof window !== 'undefined') {
+    window.location.assign('/login')
+  }
+}
+
+function safeReloadPage() {
+  if (typeof window !== 'undefined') {
+    window.location.reload()
+  }
+}
+
+function validatePasswordInput(newPassword, confirmPassword) {
+  if (!newPassword.trim()) return 'Password cannot be empty'
+  if (newPassword !== confirmPassword) return 'Passwords do not match'
+  if (newPassword.length < 8) return 'Password must be at least 8 characters'
+  return ''
+}
+
 function Field({ label, children }) {
   return (
     <div>
@@ -65,18 +84,9 @@ export default function Settings() {
 
 
   async function updatePassword() {
-    if (!newPassword.trim()) {
-      toast.error('Password cannot be empty')
-      return
-    }
-
-    if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match')
-      return
-    }
-
-    if (newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters')
+    const validationError = validatePasswordInput(newPassword, confirmPassword)
+    if (validationError) {
+      toast.error(validationError)
       return
     }
 
@@ -105,7 +115,7 @@ export default function Settings() {
       await api.delete('/auth')
       toast.success('Account deleted. Signing out...')
       setTimeout(() => {
-        window.location.assign('/login')
+        safeNavigateToLogin()
       }, 1000)
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to delete account')
@@ -123,7 +133,7 @@ export default function Settings() {
       toast.success('Subscription cancelled successfully')
       setShowCancelConfirm(false)
       setTimeout(() => {
-        window.location.reload()
+        safeReloadPage()
       }, 1000)
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to cancel subscription')
@@ -263,7 +273,7 @@ export default function Settings() {
               <button
                 onClick={async () => {
                   await signOut()
-                  window.location.assign('/login')
+                  safeNavigateToLogin()
                 }}
                 className="w-full rounded-2xl border border-rose-300 bg-white px-6 py-3 text-center font-semibold text-rose-600 transition hover:bg-rose-50"
               >
