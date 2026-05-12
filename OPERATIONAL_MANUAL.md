@@ -101,7 +101,11 @@ Production policy:
 | `ROUTELLM_MODEL` | Active model ID | `qwen2.5:0.5b` (internal baseline) |
 | `STRIPE_SECRET_KEY` | Stripe server-side API key | Stripe Dashboard -> Developers -> API Keys |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signature verification | Stripe Dashboard -> Webhooks |
-| `STRIPE_PRICE_ID` | Subscription billing price | Stripe Dashboard -> Products |
+| `STRIPE_PRICE_ID` | Legacy personal monthly fallback price | Stripe Dashboard -> Products |
+| `STRIPE_PRICE_ID_PERSONAL_MONTHLY` | Personal monthly subscription price | Stripe Dashboard -> Products |
+| `STRIPE_PRICE_ID_PERSONAL_YEARLY` | Personal yearly subscription price | Stripe Dashboard -> Products |
+| `STRIPE_PRICE_ID_PRACTITIONER_MONTHLY` | Practitioner monthly subscription price | Stripe Dashboard -> Products |
+| `STRIPE_PRICE_ID_PRACTITIONER_YEARLY` | Practitioner yearly subscription price | Stripe Dashboard -> Products |
 | `STRIPE_SUCCESS_URL` | Post-checkout redirect | App URL config |
 | `STRIPE_CANCEL_URL` | Checkout cancel redirect | App URL config |
 | `SENTRY_DSN` | Backend error reporting | Sentry project settings |
