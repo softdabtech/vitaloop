@@ -56,9 +56,52 @@ const COMMON_SYMPTOMS = [
   'Blood pressure issues', 'Heart palpitations', 'Shortness of breath', 'Dizziness'
 ]
 
+function getViewportWidth() {
+  if (typeof window === 'undefined') return 1024
+  return window.innerWidth
+}
+
+function parseCsvList(value) {
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function buildProfilePayload(profile) {
+  return {
+    height_cm: Number(profile.height_cm),
+    weight_kg: Number(profile.weight_kg),
+    goals: profile.goals,
+    current_supplements: parseCsvList(profile.current_supplements),
+    current_medications: parseCsvList(profile.current_medications),
+    prior_diagnoses: profile.prior_diagnoses || undefined,
+    onboarding_complete: true,
+  }
+}
+
+function getCountrySuggestions(query) {
+  return COUNTRIES
+    .filter((country) => country.toLowerCase().includes(String(query || '').toLowerCase()))
+    .slice(0, 10)
+}
+
+function getCitySuggestions(country, query) {
+  const cities = CITIES_BY_COUNTRY[country] || []
+  return cities
+    .filter((city) => city.toLowerCase().includes(String(query || '').toLowerCase()))
+    .slice(0, 10)
+}
+
+function getComplaintSuggestions(query) {
+  return COMMON_SYMPTOMS
+    .filter((symptom) => symptom.toLowerCase().includes(String(query || '').toLowerCase()))
+    .slice(0, 8)
+}
+
 const s = {
   wrap: { minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '24px 16px' },
-  card: { width: '100%', maxWidth: 560, background: '#ffffff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 24, padding: window.innerWidth < 500 ? '24px 16px' : '40px 36px', boxShadow: '0 1px 3px rgba(15,23,42,0.06)' },
+  card: { width: '100%', maxWidth: 560, background: '#ffffff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 24, padding: '40px 36px', boxShadow: '0 1px 3px rgba(15,23,42,0.06)' },
   title: { fontSize: 26, fontWeight: 700, color: '#0f172a', marginBottom: 6 },
   sub: { fontSize: 15, color: '#64748b', marginBottom: 32 },
   label: { display: 'block', fontSize: 13, color: '#475569', marginBottom: 8, fontWeight: 500, letterSpacing: '0.03em' },
@@ -71,7 +114,7 @@ const s = {
   inputContainer: { position: 'relative' },
   btnPrimary: { width: '100%', padding: '14px', background: '#10b981', borderRadius: 12, color: '#ffffff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', marginTop: 24, minHeight: '44px' },
   btnSec: { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: 14, marginTop: 12, textDecoration: 'underline', padding: 0 },
-  row: { display: 'grid', gridTemplateColumns: window.innerWidth < 600 ? '1fr' : '1fr 1fr', gap: 16 },
+  row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
   goalChip: (active) => ({
     padding: '10px 14px', borderRadius: 10, border: `1px solid ${active ? '#10b981' : 'rgba(15,23,42,0.1)'}`,
     background: active ? 'rgba(16,185,129,0.08)' : '#f8fafc',
@@ -90,6 +133,7 @@ export default function Onboarding() {
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [viewportWidth, setViewportWidth] = useState(getViewportWidth)
 
   // Org-setup state (shown before health-profile steps when user has no org)
   const [orgCheckDone, setOrgCheckDone] = useState(false)
@@ -197,6 +241,13 @@ export default function Onboarding() {
     }).catch(() => {})
   }, [navigate])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const onResize = () => setViewportWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   const toggleGoal = (id) => setProfile(prev => ({
     ...prev,
     goals: prev.goals.includes(id) ? prev.goals.filter(g => g !== id) : [...prev.goals, id],
@@ -216,31 +267,21 @@ export default function Onboarding() {
     }
     setSaving(true)
     try {
-      const profilePayload = {
-        height_cm: Number(profile.height_cm),
-        weight_kg: Number(profile.weight_kg),
-        goals: profile.goals,
-        current_supplements: profile.current_supplements ? profile.current_supplements.split(',').map(s => s.trim()).filter(Boolean) : [],
-        current_medications: profile.current_medications ? profile.current_medications.split(',').map(s => s.trim()).filter(Boolean) : [],
-        prior_diagnoses: profile.prior_diagnoses || undefined,
-        onboarding_complete: true,
-      }
-      await api.patch('/profile', profilePayload)
+      await api.patch('/profile', buildProfilePayload(profile))
 
       if (location.city || location.country) {
         await api.patch('/profile/location', location)
       }
 
-      for (const c of complaints) {
-        if (c.complaint.trim()) {
-          await api.post('/complaints', c)
-        }
+      const validComplaints = complaints.filter((complaint) => complaint.complaint.trim())
+      for (const complaint of validComplaints) {
+        await api.post('/complaints', complaint)
       }
 
       await api.post('/auth/onboarding/complete')
       trackFunnelEvent('funnel_onboarding_completed', 'User completed onboarding profile flow', {
         goals_count: profile.goals.length,
-        complaints_count: complaints.filter((c) => c.complaint.trim()).length,
+        complaints_count: validComplaints.length,
       }, { oncePerSession: true })
 
       toast.success('Profile saved!')
@@ -254,6 +295,14 @@ export default function Onboarding() {
 
   const steps = ['Basics', 'Goals', 'Location', 'Complaints']
   const TOTAL = steps.length
+  const cardStyle = {
+    ...s.card,
+    padding: viewportWidth < 500 ? '24px 16px' : '40px 36px',
+  }
+  const rowStyle = {
+    ...s.row,
+    gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr',
+  }
 
   return (
     <div style={s.wrap}>
@@ -264,7 +313,7 @@ export default function Onboarding() {
           helper="Concrete profile data here influences your assignments, insights and recommendations."
         />
 
-        <motion.div style={s.card} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div style={cardStyle} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
 
           {/* ── Org-setup screen (shown only before health profile, when user has no org) ── */}
           {!orgCheckDone && (
@@ -323,7 +372,7 @@ export default function Onboarding() {
                   <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
               💡 Height and weight help calculate healthy ranges for your biomarkers. List supplements and medications so the AI can flag interactions and avoid duplicating what you already take.
                   </div>
-                  <div style={s.row}>
+                  <div style={rowStyle}>
                     <div style={s.inputContainer}>
                       <label>
                         <span style={{...s.label, color: '#ef4444'}}>* Height (cm) (required)</span>
@@ -409,7 +458,7 @@ export default function Onboarding() {
                     />
                     {showSuggestions.country && location.country && (
                       <div style={s.dropdown}>
-                        {COUNTRIES.filter(c => c.toLowerCase().includes(location.country.toLowerCase())).slice(0, 10).map(country => (
+                        {getCountrySuggestions(location.country).map(country => (
                           <div
                             key={country}
                             style={s.dropdownItem}
@@ -439,7 +488,7 @@ export default function Onboarding() {
                     />
                     {showSuggestions.city && location.city && location.country && CITIES_BY_COUNTRY[location.country] && (
                       <div style={s.dropdown}>
-                        {CITIES_BY_COUNTRY[location.country].filter(c => c.toLowerCase().includes(location.city.toLowerCase())).slice(0, 10).map(city => (
+                        {getCitySuggestions(location.country, location.city).map(city => (
                           <div
                             key={city}
                             style={s.dropdownItem}
@@ -489,7 +538,7 @@ export default function Onboarding() {
                         />
                         {showSuggestions.complaint && c.complaint && (
                           <div style={s.dropdown}>
-                            {COMMON_SYMPTOMS.filter(s => s.toLowerCase().includes(c.complaint.toLowerCase())).slice(0, 8).map(symptom => (
+                            {getComplaintSuggestions(c.complaint).map(symptom => (
                               <div
                                 key={symptom}
                                 style={s.dropdownItem}
