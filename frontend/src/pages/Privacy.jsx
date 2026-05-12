@@ -2,6 +2,11 @@ import { useNavigate } from 'react-router-dom'
 import Seo from '../components/Seo.jsx'
 import Footer from '../components/landing/Footer.jsx'
 
+function getLegalPagePadding() {
+  if (typeof window === 'undefined') return '80px 24px'
+  return window.innerWidth < 500 ? '40px 16px' : '80px 24px'
+}
+
 export default function Privacy() {
   const navigate = useNavigate()
   return (
@@ -10,7 +15,7 @@ export default function Privacy() {
       background: 'var(--white, #ffffff)',
       color: 'var(--gray-900, #1d1d1f)',
       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Premium Display", sans-serif',
-      padding: window.innerWidth < 500 ? '40px 16px' : '80px 24px',
+      padding: getLegalPagePadding(),
       maxWidth: 720,
       margin: '0 auto',
     }}>
