@@ -105,28 +105,6 @@ export default function Assignments() {
 
   const prioritized = useMemo(() => {
     return enrichAssignments(items)
-    fetchAssignmentsWithFallback()
-      .then((data) => {
-        if (!active) return
-        setItems(data)
-        setError(null)
-      })
-      .catch(() => {
-        if (!active) return
-        setError('Could not load assignments.')
-      })
-      .finally(() => {
-        if (!active) return
-        setLoading(false)
-      })
-
-    return () => {
-      active = false
-    }
-  }, [user])
-
-  const prioritized = useMemo(() => {
-    return enrichAssignments(items)
       .sort((a, b) => (b?.priority?.score || 0) - (a?.priority?.score || 0))
   }, [items])
 
@@ -146,6 +124,22 @@ export default function Assignments() {
   const handleQuickComplete = (itemId) => {
     setCompletedToday((prev) => toggleIdInSet(prev, itemId))
   }
+
+  if (loading) {
+    return (
+      <div className="min-h-[50vh] grid place-items-center text-slate-500">
+        Loading assignments...
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen vtl-cabinet-bg px-4 pb-16 pt-6 sm:px-6 lg:px-10">
+      <div className="mx-auto max-w-6xl">
+        <CabinetPageHeader
+          icon={ClipboardList}
+          eyebrow="Care Workflow"
+          title="Assignments"
           subtitle="Track active tasks from your care protocol and coaching workflow."
           helper="Concrete next actions with due dates, urgency and health-impact scoring."
           action={(

@@ -39,7 +39,6 @@ function validateFileInput(file) {
   return ''
 }
 
-async function handleAnalysisError(err) {
 function build402ErrorMessage({ errorCode, errorDetail, usedBy }) {
   if (errorCode === 'BIOMARKER_QUOTA_EXCEEDED') {
     if (usedBy === 'manual') {
