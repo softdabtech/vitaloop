@@ -99,39 +99,45 @@ function computeRangePercent(biomarker) {
   return Math.max(0, Math.min(100, ((value - low) / (high - low)) * 100))
 }
 
-function normalizeBiomarkerStatus(biomarker) {
-  const raw = String(biomarker?.status || '').trim().toUpperCase()
-  const mapped = {
-    OPTIMAL: 'OPTIMAL',
-    NORMAL: 'OPTIMAL',
-    N: 'OPTIMAL',
-    BORDERLINE: 'BORDERLINE',
-    'LOW NORMAL': 'BORDERLINE',
-    'HIGH NORMAL': 'BORDERLINE',
-    LOW: 'DEFICIENT',
-    L: 'DEFICIENT',
-    DEFICIENT: 'DEFICIENT',
-    HIGH: 'ELEVATED',
-    H: 'ELEVATED',
-    ELEVATED: 'ELEVATED',
-    CRITICAL: 'ELEVATED',
-  }
-  if (mapped[raw]) return mapped[raw]
+const STATUS_ALIAS_MAP = {
+  OPTIMAL: 'OPTIMAL',
+  NORMAL: 'OPTIMAL',
+  N: 'OPTIMAL',
+  BORDERLINE: 'BORDERLINE',
+  'LOW NORMAL': 'BORDERLINE',
+  'HIGH NORMAL': 'BORDERLINE',
+  LOW: 'DEFICIENT',
+  L: 'DEFICIENT',
+  DEFICIENT: 'DEFICIENT',
+  HIGH: 'ELEVATED',
+  H: 'ELEVATED',
+  ELEVATED: 'ELEVATED',
+  CRITICAL: 'ELEVATED',
+}
 
+function inferStatusFromRange(biomarker) {
   const low = Number(biomarker?.ref_low)
   const high = Number(biomarker?.ref_high)
   const value = Number(biomarker?.value)
-  if (Number.isFinite(low) && Number.isFinite(high) && Number.isFinite(value) && high > low) {
-    if (value < low) return 'DEFICIENT'
-    if (value > high) return 'ELEVATED'
-    const band = high - low
-    const lowerWarn = low + band * 0.15
-    const upperWarn = high - band * 0.15
-    if (value <= lowerWarn || value >= upperWarn) return 'BORDERLINE'
-    return 'OPTIMAL'
+
+  if (!Number.isFinite(low) || !Number.isFinite(high) || !Number.isFinite(value) || high <= low) {
+    return 'BORDERLINE'
   }
 
-  return 'BORDERLINE'
+  if (value < low) return 'DEFICIENT'
+  if (value > high) return 'ELEVATED'
+
+  const band = high - low
+  const lowerWarn = low + band * 0.15
+  const upperWarn = high - band * 0.15
+  if (value <= lowerWarn || value >= upperWarn) return 'BORDERLINE'
+  return 'OPTIMAL'
+}
+
+function normalizeBiomarkerStatus(biomarker) {
+  const raw = String(biomarker?.status || '').trim().toUpperCase()
+  if (STATUS_ALIAS_MAP[raw]) return STATUS_ALIAS_MAP[raw]
+  return inferStatusFromRange(biomarker)
 }
 
 function buildMedicalAnalysisLines(normalizedBiomarkers) {
