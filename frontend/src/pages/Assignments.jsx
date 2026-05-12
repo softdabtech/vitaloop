@@ -25,6 +25,49 @@ function normalizeAssignmentsPayload(data) {
   return []
 }
 
+async function fetchAssignmentsWithFallback() {
+  const primary = await api.get('/assignments').catch(() => null)
+  if (primary) return normalizeAssignmentsPayload(primary.data)
+  const fallback = await api.get('/crm/assignments')
+  return normalizeAssignmentsPayload(fallback.data)
+}
+
+function buildSummaryBuckets(prioritized) {
+  const buckets = {
+    pending: 0,
+    in_progress: 0,
+    completed: 0,
+    overdue: 0,
+  }
+
+  prioritized.forEach((item) => {
+    const status = String(item?.status || '').toLowerCase()
+    if (status in buckets) buckets[status] += 1
+  })
+
+  return buckets
+}
+
+function getTodayItems(prioritized) {
+  const today = new Date().toDateString()
+  return prioritized.filter((item) => {
+    const dueDate = item?.due_date || item?.deadline || item?.due_at
+    if (!dueDate) return false
+    const itemDate = new Date(dueDate).toDateString()
+    return itemDate === today && String(item?.status || '').toLowerCase() !== 'completed'
+  })
+}
+
+function toggleIdInSet(sourceSet, id) {
+  const next = new Set(sourceSet)
+  if (next.has(id)) {
+    next.delete(id)
+  } else {
+    next.add(id)
+  }
+  return next
+}
+
 export default function Assignments() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -62,6 +105,28 @@ export default function Assignments() {
 
   const prioritized = useMemo(() => {
     return enrichAssignments(items)
+    fetchAssignmentsWithFallback()
+      .then((data) => {
+        if (!active) return
+        setItems(data)
+        setError(null)
+      })
+      .catch(() => {
+        if (!active) return
+        setError('Could not load assignments.')
+      })
+      .finally(() => {
+        if (!active) return
+        setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [user])
+
+  const prioritized = useMemo(() => {
+    return enrichAssignments(items)
       .sort((a, b) => (b?.priority?.score || 0) - (a?.priority?.score || 0))
   }, [items])
 
@@ -70,69 +135,17 @@ export default function Assignments() {
     return prioritized.filter((item) => String(item?.status || '').toLowerCase() === filter)
   }, [prioritized, filter])
 
-  const summary = useMemo(() => {
-    const buckets = {
-      pending: 0,
-      in_progress: 0,
-      completed: 0,
-      overdue: 0,
-    }
-    prioritized.forEach((item) => {
-      const status = String(item?.status || '').toLowerCase()
-      if (status in buckets) buckets[status] += 1
-    })
-    return buckets
-  }, [prioritized])
+  const summary = useMemo(() => buildSummaryBuckets(prioritized), [prioritized])
 
-  const todayItems = useMemo(() => {
-    const today = new Date().toDateString()
-    return prioritized.filter((item) => {
-      const dueDate = item?.due_date || item?.deadline || item?.due_at
-      if (!dueDate) return false
-      const itemDate = new Date(dueDate).toDateString()
-      return itemDate === today && String(item?.status || '').toLowerCase() !== 'completed'
-    })
-  }, [prioritized])
+  const todayItems = useMemo(() => getTodayItems(prioritized), [prioritized])
 
   const todayCompleted = useMemo(() => {
     return Array.from(completedToday).length
   }, [completedToday])
 
   const handleQuickComplete = (itemId) => {
-    const newCompleted = new Set(completedToday)
-    if (newCompleted.has(itemId)) {
-      newCompleted.delete(itemId)
-    } else {
-      newCompleted.add(itemId)
-    }
-    setCompletedToday(newCompleted)
+    setCompletedToday((prev) => toggleIdInSet(prev, itemId))
   }
-
-  if (loading) {
-    return (
-      <div className="vtl-page px-4 py-8 sm:px-6">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-6 h-8 w-64 animate-pulse rounded-xl bg-slate-200" />
-          <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-            {[1, 2, 3, 4].map((n) => (
-              <div key={n} className="h-20 animate-pulse rounded-xl bg-slate-100" />
-            ))}
-          </div>
-          <div className="space-y-3">
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="h-24 animate-pulse rounded-xl bg-slate-100" />
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="vtl-page px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <CabinetPageHeader
-          title="Assignments"
           subtitle="Track active tasks from your care protocol and coaching workflow."
           helper="Concrete next actions with due dates, urgency and health-impact scoring."
           action={(
