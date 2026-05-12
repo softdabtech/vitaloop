@@ -72,6 +72,66 @@ function normalizeSexValue(value) {
   return ''
 }
 
+function parseCommaSeparatedList(value) {
+  return value
+    ? value.split(',').map((item) => item.trim()).filter(Boolean)
+    : []
+}
+
+function mapProfileFromApi(data) {
+  return {
+    age: data.age || '',
+    sex: normalizeSexValue(data.sex),
+    height_cm: data.height_cm || '',
+    weight_kg: data.weight_kg || '',
+    goals: Array.isArray(data.goals) ? data.goals : [],
+    timezone: data.timezone || 'America/New_York',
+    medications: data.medications || '',
+    allergies: data.allergies || '',
+    pregnancy_status: data.pregnancy_status || '',
+    current_supplements: Array.isArray(data.current_supplements) ? data.current_supplements.join(', ') : (data.current_supplements || ''),
+    current_medications: Array.isArray(data.current_medications) ? data.current_medications.join(', ') : (data.current_medications || ''),
+    prior_diagnoses: data.prior_diagnoses || '',
+  }
+}
+
+function mapProfileFromUserMeta(meta) {
+  return {
+    age: meta.age || '',
+    sex: normalizeSexValue(meta.sex),
+    height_cm: meta.height_cm || '',
+    weight_kg: meta.weight_kg || '',
+    goals: meta.goals || [],
+    timezone: meta.timezone || 'America/New_York',
+    medications: meta.medications || '',
+    allergies: meta.allergies || '',
+    pregnancy_status: meta.pregnancy_status || '',
+    current_supplements: '',
+    current_medications: '',
+    prior_diagnoses: '',
+  }
+}
+
+function buildProfileUpdatePayload(profile) {
+  const supplementsList = parseCommaSeparatedList(profile.current_supplements)
+  const medicationsList = parseCommaSeparatedList(profile.current_medications)
+
+  return {
+    age: profile.age ? parseInt(profile.age, 10) : null,
+    sex: profile.sex,
+    height_cm: profile.height_cm ? parseFloat(profile.height_cm) : null,
+    weight_kg: profile.weight_kg ? parseFloat(profile.weight_kg) : null,
+    goals: profile.goals,
+    timezone: profile.timezone,
+    medications: profile.medications || null,
+    allergies: profile.allergies || null,
+    pregnancy_status: profile.pregnancy_status || null,
+    current_supplements: supplementsList.length ? supplementsList : null,
+    current_medications: medicationsList.length ? medicationsList : null,
+    prior_diagnoses: profile.prior_diagnoses || null,
+  }
+}
+
 export default function HealthProfile() {
   const { user } = useAuth()
   const [profile, setProfile] = useState({
@@ -116,36 +176,10 @@ export default function HealthProfile() {
       try {
         const response = await api.get('/profile')
         const data = response.data?.profile || {}
-        setProfile({
-          age: data.age || '',
-          sex: normalizeSexValue(data.sex),
-          height_cm: data.height_cm || '',
-          weight_kg: data.weight_kg || '',
-          goals: Array.isArray(data.goals) ? data.goals : [],
-          timezone: data.timezone || 'America/New_York',
-          medications: data.medications || '',
-          allergies: data.allergies || '',
-          pregnancy_status: data.pregnancy_status || '',
-          current_supplements: Array.isArray(data.current_supplements) ? data.current_supplements.join(', ') : (data.current_supplements || ''),
-          current_medications: Array.isArray(data.current_medications) ? data.current_medications.join(', ') : (data.current_medications || ''),
-          prior_diagnoses: data.prior_diagnoses || '',
-        })
+        setProfile(mapProfileFromApi(data))
       } catch (error) {
         const meta = user?.user_metadata || {}
-        setProfile({
-          age: meta.age || '',
-          sex: normalizeSexValue(meta.sex),
-          height_cm: meta.height_cm || '',
-          weight_kg: meta.weight_kg || '',
-          goals: meta.goals || [],
-          timezone: meta.timezone || 'America/New_York',
-          medications: meta.medications || '',
-          allergies: meta.allergies || '',
-          pregnancy_status: meta.pregnancy_status || '',
-          current_supplements: '',
-          current_medications: '',
-          prior_diagnoses: '',
-        })
+        setProfile(mapProfileFromUserMeta(meta))
       } finally {
         setLoading(false)
       }
@@ -159,37 +193,9 @@ export default function HealthProfile() {
   async function saveProfile() {
     setSaving(true)
     try {
-      const supplementsList = profile.current_supplements ? profile.current_supplements.split(',').map(s => s.trim()).filter(Boolean) : []
-      const medicationsList = profile.current_medications ? profile.current_medications.split(',').map(s => s.trim()).filter(Boolean) : []
-      const response = await api.patch('/profile', {
-        age: profile.age ? parseInt(profile.age) : null,
-        sex: profile.sex,
-        height_cm: profile.height_cm ? parseFloat(profile.height_cm) : null,
-        weight_kg: profile.weight_kg ? parseFloat(profile.weight_kg) : null,
-        goals: profile.goals,
-        timezone: profile.timezone,
-        medications: profile.medications || null,
-        allergies: profile.allergies || null,
-        pregnancy_status: profile.pregnancy_status || null,
-        current_supplements: supplementsList.length ? supplementsList : null,
-        current_medications: medicationsList.length ? medicationsList : null,
-        prior_diagnoses: profile.prior_diagnoses || null,
-      })
+      const response = await api.patch('/profile', buildProfileUpdatePayload(profile))
       const data = response.data?.profile || {}
-      setProfile({
-        age: data.age || '',
-        sex: normalizeSexValue(data.sex),
-        height_cm: data.height_cm || '',
-        weight_kg: data.weight_kg || '',
-        goals: Array.isArray(data.goals) ? data.goals : [],
-        timezone: data.timezone || 'America/New_York',
-        medications: data.medications || '',
-        allergies: data.allergies || '',
-        pregnancy_status: data.pregnancy_status || '',
-        current_supplements: Array.isArray(data.current_supplements) ? data.current_supplements.join(', ') : (data.current_supplements || ''),
-        current_medications: Array.isArray(data.current_medications) ? data.current_medications.join(', ') : (data.current_medications || ''),
-        prior_diagnoses: data.prior_diagnoses || '',
-      })
+      setProfile(mapProfileFromApi(data))
       toast.success('Health profile updated!')
     } catch (error) {
       toast.error('Failed to save profile')
