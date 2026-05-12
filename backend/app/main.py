@@ -52,6 +52,11 @@ from app.routers.admin import admin
 
 
 def _check_runtime_readiness() -> None:
+    stripe_price_configured = bool(
+        (settings.stripe_price_id or "").strip()
+        or (settings.stripe_price_id_personal or "").strip()
+        or (settings.stripe_price_id_personal_monthly or "").strip()
+    )
     checks = {
         "supabase_url": bool((settings.supabase_url or "").strip()),
         "supabase_service_role_key": bool((settings.supabase_service_role_key or "").strip()),
@@ -59,7 +64,7 @@ def _check_runtime_readiness() -> None:
         "resend_api_key": bool((settings.resend_api_key or "").strip()),
         "stripe_secret_key": bool((settings.stripe_secret_key or "").strip()),
         "stripe_webhook_secret": bool((settings.stripe_webhook_secret or "").strip()),
-        "stripe_price_id": bool((settings.stripe_price_id or "").strip()),
+        "stripe_price_id": stripe_price_configured,
     }
     missing = [name for name, ok in checks.items() if not ok]
     if missing:
