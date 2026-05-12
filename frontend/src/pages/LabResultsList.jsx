@@ -37,27 +37,35 @@ function getBiomarkerCounts(item) {
   }
 }
 
+async function fetchRecentUploadFallback() {
+  try {
+    const fallbackRes = await api.get('/uploads/recent')
+    return normalizeProgressPayload(fallbackRes.data).slice(0, 1)
+  } catch {
+    return []
+  }
+}
+
+function buildFetchResultsError(err) {
+  const statusCode = err.response?.status || 'unknown'
+  const message = err.response?.data?.message || err.message || 'Could not load lab results.'
+  return {
+    items: [],
+    error: `Error loading results (${statusCode}): ${message}`,
+    originalError: err,
+  }
+}
+
 async function fetchResultsWithFallback() {
   try {
     const res = await api.get('/progress')
     return { items: normalizeProgressPayload(res.data), error: null }
   } catch (err) {
     if (err.response?.status === 402) {
-      try {
-        const fallbackRes = await api.get('/uploads/recent')
-        return { items: normalizeProgressPayload(fallbackRes.data).slice(0, 1), error: null }
-      } catch {
-        return { items: [], error: null }
-      }
+      return { items: await fetchRecentUploadFallback(), error: null }
     }
 
-    const statusCode = err.response?.status || 'unknown'
-    const message = err.response?.data?.message || err.message || 'Could not load lab results.'
-    return {
-      items: [],
-      error: `Error loading results (${statusCode}): ${message}`,
-      originalError: err,
-    }
+    return buildFetchResultsError(err)
   }
 }
 
