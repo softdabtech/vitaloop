@@ -239,6 +239,131 @@ def _build_start_here(onboarding: Dict[str, Any], progress: List[Dict[str, Any]]
     return {"enabled": False}
 
 
+# Helper functions for get_dashboard_summary to reduce cognitive complexity
+
+async def _fetch_health_and_streak(user_id: str) -> tuple[Optional[dict], float, int]:
+    """Fetch health metrics and calculate streak days"""
+    health_latest = None
+    health_delta = 0
+    streak_days = 0
+
+    try:
+        sb = svc._get_supabase()
+        health_resp = await svc._run(
+            lambda: sb.table("health_scores")
+            .select("score,calculated_at")
+            .eq("user_id", user_id)
+            .order("calculated_at", desc=True)
+            .limit(2)
+            .execute()
+        )
+        rows = health_resp.data or []
+        await svc.write_audit_log(
+            user_id=user_id,
+            action="read",
+            entity_type="health_scores",
+            entity_id=user_id,
+            new_value={"scope": "medical", "rows": len(rows)},
+        )
+        if rows:
+            health_latest = rows[0]
+            health_delta = round(float(rows[0].get("score") or 0) - float(rows[1].get("score") or 0), 1) if len(rows) > 1 else 0
+        else:
+            generated = await svc.calculate_health_score(user_id)
+            health_latest = {"score": generated.get("score"), "calculated_at": generated.get("calculated_at")}
+            health_delta = 0
+    except Exception:
+        health_latest = {"score": None, "calculated_at": None}
+        health_delta = 0
+
+    # Calculate streak days
+    try:
+        sb = svc._get_supabase()
+        recent_activity_resp = await svc._run(
+            lambda: sb.table("lab_uploads")
+            .select("created_at")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(30)
+            .execute()
+        )
+        activity_dates = set()
+        for upload in recent_activity_resp.data or []:
+            if upload.get("created_at"):
+                activity_dates.add(upload["created_at"].split("T")[0])
+
+        checkin_resp = await svc._run(
+            lambda: sb.table("checkins_weekly")
+            .select("created_at")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(10)
+            .execute()
+        )
+        for checkin in checkin_resp.data or []:
+            if checkin.get("created_at"):
+                activity_dates.add(checkin["created_at"].split("T")[0])
+
+        today = datetime.now(timezone.utc).date()
+        for i in range(30):
+            check_date = (today - timedelta(days=i)).isoformat()
+            if check_date in activity_dates:
+                streak_days += 1
+            else:
+                break
+    except Exception:
+        streak_days = 0
+
+    return health_latest, health_delta, streak_days
+
+
+async def _fetch_user_goals(user_id: str) -> int:
+    """Fetch and count user goals"""
+    try:
+        sb = svc._get_supabase()
+        profile_resp = await svc._run(
+            lambda: sb.table("user_profile")
+            .select("goals")
+            .eq("id", user_id)
+            .limit(1)
+            .execute()
+        )
+        goals = (profile_resp.data or [{}])[0].get("goals") or []
+        return len(goals) if isinstance(goals, list) else 0
+    except Exception:
+        return 0
+
+
+async def _fetch_latest_activity(user_id: str) -> tuple[Optional[dict], Optional[dict]]:
+    """Fetch latest weekly checkin and questionnaire"""
+    try:
+        sb = svc._get_supabase()
+        weekly_checkin_resp, questionnaire_resp = await asyncio.gather(
+            svc._run(
+                lambda: sb.table("checkins_weekly")
+                .select("week_start, created_at, energy_score, sleep_quality, mood_score, protocol_adherence")
+                .eq("user_id", user_id)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            ),
+            svc._run(
+                lambda: sb.table("questionnaire_sessions")
+                .select("id, completed_at, completion_score")
+                .eq("user_id", user_id)
+                .eq("status", "completed")
+                .order("completed_at", desc=True)
+                .limit(1)
+                .execute()
+            ),
+        )
+        weekly_checkin = (weekly_checkin_resp.data or [None])[0]
+        questionnaire_latest = (questionnaire_resp.data or [None])[0]
+        return weekly_checkin, questionnaire_latest
+    except Exception:
+        return None, None
+
+
 @router.get("/summary")
 async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     user_id = current_user.get("sub")
@@ -279,93 +404,9 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     except Exception:
         upload_count = len(progress)
 
-    health_latest = None
-    try:
-        sb = svc._get_supabase()
-        health_resp = await svc._run(
-            lambda: sb.table("health_scores")
-            .select("score,calculated_at")
-            .eq("user_id", user_id)
-            .order("calculated_at", desc=True)
-            .limit(2)
-            .execute()
-        )
-        rows = health_resp.data or []
-        await svc.write_audit_log(
-            user_id=user_id,
-            action="read",
-            entity_type="health_scores",
-            entity_id=user_id,
-            new_value={"scope": "medical", "rows": len(rows)},
-        )
-        if rows:
-            health_latest = rows[0]
-            health_delta = round(float(rows[0].get("score") or 0) - float(rows[1].get("score") or 0), 1) if len(rows) > 1 else 0
-        else:
-            generated = await svc.calculate_health_score(user_id)
-            health_latest = {"score": generated.get("score"), "calculated_at": generated.get("calculated_at")}
-            health_delta = 0
-    except Exception:
-        health_latest = {"score": None, "calculated_at": None}
-        health_delta = 0
-
-    # Calculate streak days (consecutive days with activity)
-    streak_days = 0
-    try:
-        sb = svc._get_supabase()
-        # Get recent activity (uploads, checkins, assignments completed)
-        recent_activity_resp = await svc._run(
-            lambda: sb.table("lab_uploads")
-            .select("created_at")
-            .eq("user_id", user_id)
-            .order("created_at", desc=True)
-            .limit(30)
-            .execute()
-        )
-        activity_dates = set()
-        for upload in recent_activity_resp.data or []:
-            if upload.get("created_at"):
-                activity_dates.add(upload["created_at"].split("T")[0])
-
-        # Check weekly checkins
-        checkin_resp = await svc._run(
-            lambda: sb.table("checkins_weekly")
-            .select("created_at")
-            .eq("user_id", user_id)
-            .order("created_at", desc=True)
-            .limit(10)
-            .execute()
-        )
-        for checkin in checkin_resp.data or []:
-            if checkin.get("created_at"):
-                activity_dates.add(checkin["created_at"].split("T")[0])
-
-        # Calculate streak
-        today = datetime.now(timezone.utc).date()
-        for i in range(30):  # Check last 30 days
-            check_date = (today - timedelta(days=i)).isoformat()
-            if check_date in activity_dates:
-                streak_days += 1
-            else:
-                break
-    except Exception:
-        streak_days = 0
-
-    # Calculate goals achieved
-    goals_achieved = 0
-    try:
-        sb = svc._get_supabase()
-        profile_resp = await svc._run(
-            lambda: sb.table("user_profile")
-            .select("goals")
-            .eq("id", user_id)
-            .limit(1)
-            .execute()
-        )
-        goals = (profile_resp.data or [{}])[0].get("goals") or []
-        goals_achieved = len(goals) if isinstance(goals, list) else 0
-    except Exception:
-        goals_achieved = 0
+    health_latest, health_delta, streak_days = await _fetch_health_and_streak(user_id)
+    goals_achieved = await _fetch_user_goals(user_id)
+    weekly_checkin, questionnaire_latest = await _fetch_latest_activity(user_id)
 
     active_assignments = [
         item
@@ -374,35 +415,6 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     ]
     completed_assignments = [item for item in assignments if str(item.get("status") or "").lower() == "completed"]
     latest_upload = progress[-1] if progress else None
-
-    weekly_checkin = None
-    questionnaire_latest = None
-    try:
-        sb = svc._get_supabase()
-        weekly_checkin_resp, questionnaire_resp = await asyncio.gather(
-            svc._run(
-                lambda: sb.table("checkins_weekly")
-                .select("week_start, created_at, energy_score, sleep_quality, mood_score, protocol_adherence")
-                .eq("user_id", user_id)
-                .order("created_at", desc=True)
-                .limit(1)
-                .execute()
-            ),
-            svc._run(
-                lambda: sb.table("questionnaire_sessions")
-                .select("id, completed_at, completion_score")
-                .eq("user_id", user_id)
-                .eq("status", "completed")
-                .order("completed_at", desc=True)
-                .limit(1)
-                .execute()
-            ),
-        )
-        weekly_checkin = (weekly_checkin_resp.data or [None])[0]
-        questionnaire_latest = (questionnaire_resp.data or [None])[0]
-    except Exception:
-        weekly_checkin = None
-        questionnaire_latest = None
 
     try:
         next_best_action = _build_next_best_action(onboarding, assignments, progress)

@@ -73,7 +73,7 @@ async def create_checkout_session(
 ):
     """Create a Stripe Checkout session for the requested subscription plan."""
     if not settings.stripe_secret_key:
-        raise HTTPException(status_code=503, detail="Stripe not configured")
+        raise HTTPException(status_code=503, detail=_STRIPE_NOT_CONFIGURED)
 
     plan_id = body.plan_id.lower()
     if plan_id not in VALID_PLANS:
@@ -120,13 +120,13 @@ async def stripe_webhook(request: Request):
     sig_header = request.headers.get("stripe-signature", "")
 
     if not settings.stripe_webhook_secret:
-        raise HTTPException(status_code=503, detail="Webhook secret not configured")
+        raise HTTPException(status_code=503, detail=_STRIPE_WEBHOOK_SECRET_NOT_CONFIGURED)
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, settings.stripe_webhook_secret)
     except stripe.error.SignatureVerificationError:
         logger.warning("stripe_webhook_invalid_signature")
-        raise HTTPException(status_code=400, detail="Invalid webhook signature")
+        raise HTTPException(status_code=400, detail=_INVALID_WEBHOOK_SIGNATURE)
 
     event_id = event.get("id", "unknown")
     event_type = event.get("type", "unknown")
@@ -371,12 +371,12 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
 async def cancel_subscription(current_user: dict = Depends(get_current_user)):
     """Schedule the current subscription to cancel at period end."""
     if not settings.stripe_secret_key:
-        raise HTTPException(status_code=503, detail="Stripe not configured")
+        raise HTTPException(status_code=503, detail=_STRIPE_NOT_CONFIGURED)
 
     user_id: str = current_user["sub"]
     active_sub = await get_user_active_subscription(user_id)
     if not active_sub or not active_sub.get("stripe_subscription_id"):
-        raise HTTPException(status_code=404, detail="No active subscription found")
+        raise HTTPException(status_code=404, detail=_NO_ACTIVE_SUBSCRIPTION)
 
     stripe_sub_id = active_sub["stripe_subscription_id"]
     updated = stripe.Subscription.modify(stripe_sub_id, cancel_at_period_end=True)
@@ -405,13 +405,13 @@ async def get_billing_history(current_user: dict = Depends(get_current_user)):
 async def create_customer_portal(current_user: dict = Depends(get_current_user)):
     """Create a Stripe Customer Portal session so the user can manage billing details."""
     if not settings.stripe_secret_key:
-        raise HTTPException(status_code=503, detail="Stripe not configured")
+        raise HTTPException(status_code=503, detail=_STRIPE_NOT_CONFIGURED)
 
     user_id: str = current_user["sub"]
     active_sub = await get_user_active_subscription(user_id)
     customer_id = (active_sub or {}).get("stripe_customer_id")
     if not customer_id:
-        raise HTTPException(status_code=404, detail="No billing account found. Subscribe first.")
+        raise HTTPException(status_code=404, detail=_NO_BILLING_ACCOUNT)
 
     portal_session = stripe.billing_portal.Session.create(
         customer=customer_id,
