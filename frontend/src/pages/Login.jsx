@@ -20,12 +20,37 @@ function hasAnyPasswordSymbol(value) {
   return String(value || '').trim().length >= 1
 }
 
+function getBrowserOrigin() {
+  if (typeof window === 'undefined') return ''
+  return window.location.origin
+}
+
+function getViewportWidth() {
+  if (typeof window === 'undefined') return 1024
+  return window.innerWidth
+}
+
+function readLocalStorageArray(key) {
+  if (typeof window === 'undefined') return []
+  try {
+    return JSON.parse(window.localStorage.getItem(key) || '[]')
+  } catch {
+    return []
+  }
+}
+
+function writeLocalStorageArray(key, value) {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(key, JSON.stringify(value))
+}
+
 function resolveEmailConfirmationRedirect() {
   const configured = import.meta.env.VITE_EMAIL_CONFIRMATION_PATH
   if (configured && /^https?:\/\//i.test(configured)) {
     return configured
   }
-  return `${window.location.origin}/auth/confirmation`
+  const origin = getBrowserOrigin()
+  return origin ? `${origin}/auth/confirmation` : '/auth/confirmation'
 }
 
 function mapAuthErrorMessage(message) {
@@ -310,6 +335,7 @@ export default function Login() {
   const [honeypot, setHoneypot] = useState('')  // bot trap
   const [authAlert, setAuthAlert] = useState(null)
   const [rateLimitedUntil, setRateLimitedUntil] = useState(0)
+  const [viewportWidth, setViewportWidth] = useState(getViewportWidth)
 
   const authTheme = isSignUp
     ? {
@@ -350,21 +376,23 @@ export default function Login() {
     }
   }, [navigate, searchParams])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const onResize = () => setViewportWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   const ATTEMPT_KEY = 'vo:auth-attempts'
   const ATTEMPT_WINDOW_MS = 10 * 60 * 1000
   const ATTEMPT_LIMIT = 8
 
   function registerAttempt() {
     const now = Date.now()
-    let attempts = []
-    try {
-      attempts = JSON.parse(window.localStorage.getItem(ATTEMPT_KEY) || '[]')
-    } catch {
-      attempts = []
-    }
+    const attempts = readLocalStorageArray(ATTEMPT_KEY)
     const recent = attempts.filter((t) => Number.isFinite(t) && (now - t) < ATTEMPT_WINDOW_MS)
     recent.push(now)
-    window.localStorage.setItem(ATTEMPT_KEY, JSON.stringify(recent))
+    writeLocalStorageArray(ATTEMPT_KEY, recent)
 
     if (recent.length > ATTEMPT_LIMIT) {
       const blockUntil = now + 60 * 1000
@@ -530,7 +558,7 @@ export default function Login() {
         width: '100%', maxWidth: 440,
         display: 'flex', flexDirection: 'column',
         justifyContent: 'center',
-        padding: window.innerWidth < 600 ? '32px 16px' : '48px 40px',
+        padding: viewportWidth < 600 ? '32px 16px' : '48px 40px',
         background: authTheme.centerBg, position: 'relative', zIndex: 1,
         borderLeft: `0.5px solid ${authTheme.borderColor}`,
         borderRight: `0.5px solid ${authTheme.borderColor}`,
