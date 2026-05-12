@@ -68,6 +68,40 @@ logger = logging.getLogger("crm.router")
 
 router = APIRouter(prefix="/crm", tags=["crm"])
 
+# Error detail constants (S1192)
+_FAILED_CREATE_CLIENT = "Failed to create client"
+_CLIENT_NOT_FOUND = "Client not found"
+_FAILED_FETCH_CLIENT = "Failed to fetch client"
+_FAILED_FETCH_CLIENTS = "Failed to fetch clients"
+_FAILED_UPDATE_CLIENT = "Failed to update client"
+_FAILED_CREATE_PRACTITIONER = "Failed to create practitioner"
+_PRACTITIONER_NOT_FOUND = "Practitioner not found"
+_FAILED_FETCH_PRACTITIONER = "Failed to fetch practitioner"
+_ACCESS_DENIED = "Access denied"
+_FAILED_FETCH_PRACTITIONERS = "Failed to fetch practitioners"
+_FAILED_ASSIGN_PRACTITIONER = "Failed to assign practitioner"
+_FAILED_CREATE_PROGRAM = "Failed to create program"
+_PROGRAM_NOT_FOUND = "Program not found"
+_FAILED_FETCH_PROGRAM = "Failed to fetch program"
+_FAILED_FETCH_PROGRAMS = "Failed to fetch programs"
+_FAILED_ASSIGN_PROGRAM = "Failed to assign program"
+_ASSIGNMENT_NOT_FOUND = "Assignment not found"
+_FAILED_FETCH_ASSIGNMENT = "Failed to fetch assignment"
+_FAILED_START_PROGRAM = "Failed to start program"
+_FAILED_PAUSE_PROGRAM = "Failed to pause program"
+_FAILED_COMPLETE_PROGRAM = "Failed to complete program"
+_QUESTIONNAIRE_NOT_FOUND = "Questionnaire not found"
+_FAILED_FETCH_QUESTIONNAIRE = "Failed to fetch questionnaire"
+_FAILED_SUBMIT_QUESTIONNAIRE = "Failed to submit questionnaire"
+_FAILED_CREATE_INTERVENTION = "Failed to create intervention"
+_NO_ACTIVE_SUBSCRIPTION = "No active subscription"
+_FAILED_FETCH_SUBSCRIPTION = "Failed to fetch subscription"
+_FAILED_CREATE_SUBSCRIPTION = "Failed to create subscription"
+_FAILED_FETCH_QUESTIONNAIRES = "Failed to fetch questionnaires"
+_FAILED_FETCH_INTERVENTIONS = "Failed to fetch interventions"
+_FAILED_FETCH_FULL_CLIENT_VIEW = "Failed to fetch full client view"
+_FAILED_FETCH_AUDIT_LOGS = "Failed to fetch audit logs"
+
 # Service instances (stateless, can be reused)
 client_service = ClientService()
 practitioner_service = PractitionerService()
@@ -105,7 +139,7 @@ async def create_client(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
         logger.error(f"Create client failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create client")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_CREATE_CLIENT)
 
 
 @router.get("/clients/{client_id}", response_model=ClientDetailResponse, summary="Get client detail")
@@ -120,7 +154,7 @@ async def get_client(
     try:
         client_data = await client_service.get_client(client_id)
         if not client_data:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CLIENT_NOT_FOUND)
 
         result = ClientDetailResponse(**client_data)
 
@@ -140,7 +174,7 @@ async def get_client(
         raise
     except Exception as e:
         logger.error(f"Get client failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch client")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_FETCH_CLIENT)
 
 
 @router.get("/clients", response_model=ClientListResponse, summary="List clients")
@@ -188,7 +222,7 @@ async def list_clients(
         )
     except Exception as e:
         logger.error(f"List clients failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch clients")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_FETCH_CLIENTS)
 
 
 @router.patch("/clients/{client_id}", response_model=ClientResponse, summary="Update client")
@@ -214,7 +248,7 @@ async def update_client(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
         logger.error(f"Update client failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update client")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_UPDATE_CLIENT)
 
 
 # ============================================================
@@ -243,7 +277,7 @@ async def create_practitioner(
         return PractitionerResponse(**practitioner)
     except Exception as e:
         logger.error(f"Create practitioner failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create practitioner")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_CREATE_PRACTITIONER)
 
 
 @router.get("/practitioners/{practitioner_id}", response_model=PractitionerResponse, summary="Get practitioner")
@@ -258,13 +292,13 @@ async def get_practitioner(
     try:
         practitioner = await practitioner_service.get_practitioner(practitioner_id)
         if not practitioner:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Practitioner not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PRACTITIONER_NOT_FOUND)
         return PractitionerResponse(**practitioner)
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Get practitioner failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch practitioner")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_FETCH_PRACTITIONER)
 
 
 @router.get("/practitioners", response_model=PractitionerListResponse, summary="List practitioners")
@@ -301,7 +335,7 @@ async def list_practitioners(
                 total=1,
             )
         else:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_ACCESS_DENIED)
 
         return PractitionerListResponse(
             items=[PractitionerResponse(**p) for p in practitioners],
@@ -311,7 +345,7 @@ async def list_practitioners(
         raise
     except Exception as e:
         logger.error(f"List practitioners failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch practitioners")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_FETCH_PRACTITIONERS)
 
 
 @router.post(
@@ -336,7 +370,7 @@ async def assign_practitioner_to_client(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
         logger.error(f"Assign practitioner failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to assign practitioner")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_ASSIGN_PRACTITIONER)
 
 
 # ============================================================
@@ -371,7 +405,7 @@ async def create_program(
         return ProgramResponse(**program)
     except Exception as e:
         logger.error(f"Create program failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create program")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_CREATE_PROGRAM)
 
 
 @router.get("/programs/{program_id}", response_model=ProgramResponse, summary="Get program")
@@ -385,13 +419,13 @@ async def get_program(
     try:
         program = await program_service.get_program(program_id)
         if not program:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Program not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PROGRAM_NOT_FOUND)
         return ProgramResponse(**program)
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Get program failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch program")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_FETCH_PROGRAM)
 
 
 @router.get("/programs", response_model=ProgramListResponse, summary="List programs")
@@ -416,7 +450,7 @@ async def list_programs(
         return ProgramListResponse(items=[ProgramResponse(**p) for p in programs], total=len(programs))
     except Exception as e:
         logger.error(f"List programs failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch programs")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_FETCH_PROGRAMS)
 
 
 # ============================================================
@@ -447,7 +481,7 @@ async def assign_program_to_client(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
         logger.error(f"Assign program failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to assign program")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_ASSIGN_PROGRAM)
 
 
 @router.get("/client-programs/{assignment_id}", response_model=ClientProgramResponse, summary="Get program assignment")
@@ -461,13 +495,13 @@ async def get_client_program(
     try:
         assignment = await client_program_service.repo.get_by_id(assignment_id)
         if not assignment:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_ASSIGNMENT_NOT_FOUND)
         return ClientProgramResponse(**assignment)
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Get assignment failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch assignment")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_FETCH_ASSIGNMENT)
 
 
 @router.post(
@@ -489,7 +523,7 @@ async def start_program(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
         logger.error(f"Start program failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to start program")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_START_PROGRAM)
 
 
 @router.post(
@@ -511,7 +545,7 @@ async def pause_program(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
         logger.error(f"Pause program failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to pause program")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_PAUSE_PROGRAM)
 
 
 @router.post(
@@ -533,7 +567,7 @@ async def complete_program(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
         logger.error(f"Complete program failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to complete program")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_COMPLETE_PROGRAM)
 
 
 # ============================================================
@@ -552,13 +586,13 @@ async def get_questionnaire(
     try:
         questionnaire = await questionnaire_service.get_questionnaire(questionnaire_id)
         if not questionnaire:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Questionnaire not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_QUESTIONNAIRE_NOT_FOUND)
         return QuestionnaireResponse(**questionnaire)
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Get questionnaire failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch questionnaire")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_FETCH_QUESTIONNAIRE)
 
 
 @router.post(
@@ -585,7 +619,7 @@ async def submit_questionnaire(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
         logger.error(f"Submit questionnaire failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to submit questionnaire")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_SUBMIT_QUESTIONNAIRE)
 
 
 # ============================================================
@@ -623,7 +657,7 @@ async def create_intervention(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:
         logger.error(f"Create intervention failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create intervention")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_CREATE_INTERVENTION)
 
 
 # ============================================================
@@ -641,13 +675,13 @@ async def get_subscription(
     try:
         subscription = await subscription_service.get_subscription(user_context.user_id)
         if not subscription:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active subscription")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NO_ACTIVE_SUBSCRIPTION)
         return SubscriptionResponse(**subscription)
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Get subscription failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch subscription")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_FETCH_SUBSCRIPTION)
 
 
 @router.post(
@@ -673,7 +707,7 @@ async def create_subscription(
         return SubscriptionResponse(**subscription)
     except Exception as e:
         logger.error(f"Create subscription failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create subscription")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_CREATE_SUBSCRIPTION)
 
 
 # ============================================================
@@ -698,7 +732,7 @@ async def get_client_questionnaire_history(
         return [ClientQuestionnaireHistoryItem(**item) for item in items]
     except Exception as e:
         logger.error(f"Get client questionnaire history failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch questionnaires")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_FETCH_QUESTIONNAIRES)
 
 
 @router.get(
@@ -718,7 +752,7 @@ async def get_client_interventions_history(
         return [ClientInterventionHistoryItem(**item) for item in items]
     except Exception as e:
         logger.error(f"Get client interventions history failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch interventions")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_FETCH_INTERVENTIONS)
 
 
 @router.get(
@@ -736,7 +770,7 @@ async def get_client_full_view(
     try:
         payload = await client_service.get_full_view(client_id)
         if not payload:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CLIENT_NOT_FOUND)
 
         return ClientFullResponse(
             client=ClientResponse(**payload["client"]),
@@ -751,7 +785,7 @@ async def get_client_full_view(
         raise
     except Exception as e:
         logger.error(f"Get client full view failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch full client view")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_FETCH_FULL_CLIENT_VIEW)
 
 
 # ============================================================
@@ -787,4 +821,4 @@ async def list_audit_logs(
         )
     except Exception as e:
         logger.error(f"List audit logs failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch audit logs")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_FAILED_FETCH_AUDIT_LOGS)

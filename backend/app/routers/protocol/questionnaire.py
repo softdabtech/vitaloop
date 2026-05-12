@@ -386,7 +386,7 @@ async def complete_questionnaire(
         raise
     except Exception as ex:
         if _is_missing_questionnaire_tables(ex):
-            raise HTTPException(status_code=503, detail="Questionnaire storage not initialized.")
+            raise HTTPException(status_code=503, detail=_STORAGE_NOT_INITIALIZED)
         raise
 
 
