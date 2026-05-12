@@ -38,19 +38,41 @@ _CHECKOUT_UNEXPECTED_ERROR = "An unexpected error occurred while creating checko
 
 VALID_PLANS = {"personal", "practitioner"}
 _FREE_PLAN_NAMES = {"free"}
+_VALID_BILLING_CYCLES = {"monthly", "yearly"}
 
 
-def _price_id_for_plan(plan_id: str) -> str:
-    """Return the configured Stripe price ID for a given plan slug."""
-    mapping = {
-        "personal": settings.stripe_price_id_personal or settings.stripe_price_id,
-        "practitioner": settings.stripe_price_id_practitioner,
+def _normalize_billing_cycle(value: str) -> str:
+    cycle = str(value or "monthly").strip().lower()
+    if cycle not in _VALID_BILLING_CYCLES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid billing_cycle. Choose from: {', '.join(sorted(_VALID_BILLING_CYCLES))}",
+        )
+    return cycle
+
+
+def _price_id_for_plan(plan_id: str, billing_cycle: str = "monthly") -> str:
+    """Return configured Stripe price ID for a plan and billing cycle.
+
+    Falls back to legacy env vars for backward compatibility.
+    """
+    cycle = _normalize_billing_cycle(billing_cycle)
+    cycle_mapping = {
+        "personal": {
+            "monthly": settings.stripe_price_id_personal_monthly or settings.stripe_price_id_personal or settings.stripe_price_id,
+            "yearly": settings.stripe_price_id_personal_yearly,
+        },
+        "practitioner": {
+            "monthly": settings.stripe_price_id_practitioner_monthly or settings.stripe_price_id_practitioner,
+            "yearly": settings.stripe_price_id_practitioner_yearly,
+        },
     }
-    price_id = mapping.get(plan_id, "")
+
+    price_id = (cycle_mapping.get(plan_id, {}) or {}).get(cycle, "")
     if not price_id:
         raise HTTPException(
             status_code=503,
-            detail=f"Stripe price not configured for plan '{plan_id}'",
+            detail=f"Stripe price not configured for plan '{plan_id}' with '{cycle}' billing cycle",
         )
     return price_id
 
@@ -61,6 +83,7 @@ def _price_id_for_plan(plan_id: str) -> str:
 
 class CheckoutRequest(BaseModel):
     plan_id: str = "personal"  # "personal" | "practitioner"
+    billing_cycle: str = "monthly"  # "monthly" | "yearly"
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +103,9 @@ async def create_checkout_session(
     if plan_id not in VALID_PLANS:
         raise HTTPException(status_code=422, detail=f"Invalid plan_id. Choose from: {', '.join(VALID_PLANS)}")
 
-    price_id = _price_id_for_plan(plan_id)
+    billing_cycle = _normalize_billing_cycle(body.billing_cycle)
+
+    price_id = _price_id_for_plan(plan_id, billing_cycle)
     user_id: str = current_user["sub"]
     user_email: str = current_user.get("email", "")
 
@@ -91,7 +116,7 @@ async def create_checkout_session(
             success_url=settings.stripe_success_url,
             cancel_url=settings.stripe_cancel_url,
             customer_email=user_email or None,
-            metadata={"user_id": user_id, "plan_name": plan_id},
+            metadata={"user_id": user_id, "plan_name": plan_id, "billing_cycle": billing_cycle},
             client_reference_id=user_id,
         )
     except stripe.error.StripeError as e:
@@ -107,7 +132,7 @@ async def create_checkout_session(
             detail=_CHECKOUT_UNEXPECTED_ERROR
         ) from e
 
-    return {"checkout_url": session.url, "plan_id": plan_id}
+    return {"checkout_url": session.url, "plan_id": plan_id, "billing_cycle": billing_cycle}
 
 
 @router.post("/webhook")

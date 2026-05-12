@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     stripe_price_id: str = ""  # Legacy fallback (same as stripe_price_id_personal)
     stripe_price_id_personal: str = ""  # Premium $19.99/mo
     stripe_price_id_practitioner: str = ""  # Practitioner Premium $29/mo
+    stripe_price_id_personal_monthly: str = ""  # Preferred personal monthly price ID
+    stripe_price_id_personal_yearly: str = ""  # Personal yearly price ID
+    stripe_price_id_practitioner_monthly: str = ""  # Preferred practitioner monthly price ID
+    stripe_price_id_practitioner_yearly: str = ""  # Practitioner yearly price ID
     stripe_success_url: str = "https://vitaloop.today/dashboard?sub=success"
     stripe_cancel_url: str = "https://vitaloop.today/dashboard?sub=cancelled"
     stripe_portal_return_url: str = "https://vitaloop.today/dashboard"
