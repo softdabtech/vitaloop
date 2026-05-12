@@ -93,18 +93,6 @@ function DashboardCard({ title, eyebrow, children, action, animated = true, dela
   )
 }
 
-export default function UserDashboard() {
-        <div>
-          {eyebrow && <div className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-600">{eyebrow}</div>}
-          <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-900">{title}</h2>
-        </div>
-        {action}
-      </div>
-      {children}
-    </WrapperComponent>
-  )
-}
-
 function EmptyBlock({ title, body, cta, onClick, animated = true, delay = 0 }) {
   const animationProps = animated
     ? {
