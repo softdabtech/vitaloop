@@ -118,8 +118,7 @@ async def test_crm_client_visibility():
             print(f"    ⚠ Cleanup failed: {e}")
         
         print("\n✅ TEST PASSED: CRM client visibility working correctly")
-        return True
-        
+
     except AssertionError as e:
         print(f"\n❌ TEST FAILED: {e}")
         raise
@@ -178,8 +177,7 @@ async def test_crm_client_list_orphaned_users():
                 assert len(orphaned) == 0, f"Found {len(orphaned)} orphaned users"
         
         print("\n✅ TEST PASSED: No orphaned users found")
-        return True
-        
+
     except AssertionError as e:
         print(f"\n⚠️  TEST FAILED: {e}")
         print("   Action: Apply backend/sql/fix_crm_visibility.sql")
@@ -229,12 +227,10 @@ async def test_crm_trigger_active():
             print("  Event: AFTER INSERT ON auth.users")
         
         print("\n✅ TEST PASSED: Trigger check completed")
-        return True
-        
+
     except Exception as e:
         print(f"\n⚠️  TEST WARNING: {e}")
         print("   Trigger status check may require manual verification")
-        return True  # Don't fail, just warn
 
 
 if __name__ == "__main__":

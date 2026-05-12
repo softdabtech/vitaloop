@@ -1,6 +1,6 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 from app.services import supabase_service as svc
 from app.config import settings
@@ -26,7 +26,7 @@ Vitaloop Team
 
 def weekly_checkin_reminder():
     logger.info("Running weekly check-in reminder job...")
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     week_ago = now - timedelta(days=7)
     users = svc.get_users_for_checkin_reminder(since=week_ago)
     for user in users:

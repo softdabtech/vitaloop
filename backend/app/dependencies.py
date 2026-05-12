@@ -63,7 +63,7 @@ def require_same_user(user_id: str, current_user: dict) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
 
-async def require_active_subscription(current_user: dict = Depends(get_current_user)) -> dict:
+async def require_active_subscription(current_user: dict = Depends(get_current_user)) -> None:
     """Require active paid subscription for end-user premium routes."""
     user_id = current_user.get("sub")
     jwt_role = str(current_user.get("global_role") or current_user.get("role") or "").lower()
@@ -73,19 +73,16 @@ async def require_active_subscription(current_user: dict = Depends(get_current_u
     sub_status = str(account.get("sub_status") or "").lower()
 
     # Non-end-user roles (ops/admin/practitioner) bypass B2C subscription gating.
-    if global_role != "end_user":
-        return current_user
-
-    if sub_status == "active":
-        return current_user
-
-    raise HTTPException(
-        status_code=status.HTTP_402_PAYMENT_REQUIRED,
-        detail={"detail": "Active subscription required", "code": "SUBSCRIPTION_REQUIRED"},
-    )
+    if global_role != "end_user" or sub_status == "active":
+        pass
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail={"detail": "Active subscription required", "code": "SUBSCRIPTION_REQUIRED"},
+        )
 
 
-async def require_freemium_analyze(current_user: dict = Depends(get_current_user)) -> dict:
+async def require_freemium_analyze(current_user: dict = Depends(get_current_user)) -> None:
     """Allow free users up to 1 biomarker analysis (PDF upload OR manual entry).
 
     Premium users and non-end-user roles (admin/ops/practitioner) bypass this gate.
@@ -100,21 +97,23 @@ async def require_freemium_analyze(current_user: dict = Depends(get_current_user
 
     # Non-end-users and active subscribers pass through unconditionally.
     if global_role != "end_user" or sub_status == "active":
-        return current_user
+        pass
+    else:
+        # For free users, check the unified biomarker quota
+        from app.services.biomarker_service import BiomarkerService
+        biomarker_service = BiomarkerService()
+        quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "pdf")
 
-    # For free users, check the unified biomarker quota
-    from app.services.biomarker_service import BiomarkerService
-    biomarker_service = BiomarkerService()
-    quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "pdf")
-    
-    if not quota_ok:
-        raise HTTPException(
-            status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail={
-                "detail": quota_msg,
-                "code": "BIOMARKER_QUOTA_EXCEEDED",
-                "used_by": used_by,
-            },
-        )
+        if not quota_ok:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail={
+                    "detail": quota_msg,
+                    "code": "BIOMARKER_QUOTA_EXCEEDED",
+                    "used_by": used_by,
+                },
+            )
 
-    return current_user
+        status_code=status.HTTP_402_PAYMENT_REQUIRED,
+        detail={"detail": "Active subscription required", "code": "SUBSCRIPTION_REQUIRED"},
+    )

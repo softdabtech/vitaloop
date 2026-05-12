@@ -24,6 +24,13 @@ logger = logging.getLogger("uvicorn.error")
 
 router = APIRouter()
 
+# Error message constants
+_STRIPE_NOT_CONFIGURED = "Stripe not configured"
+_STRIPE_WEBHOOK_SECRET_NOT_CONFIGURED = "Webhook secret not configured"
+_INVALID_WEBHOOK_SIGNATURE = "Invalid webhook signature"
+_NO_ACTIVE_SUBSCRIPTION = "No active subscription found"
+_NO_BILLING_ACCOUNT = "No billing account found. Subscribe first."
+
 # ---------------------------------------------------------------------------
 # Plan → Stripe price ID mapping
 # ---------------------------------------------------------------------------

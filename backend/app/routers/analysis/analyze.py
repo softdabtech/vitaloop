@@ -152,7 +152,8 @@ async def _drop_idempotency(*, user_id: str, idempotency_key: str) -> None:
 @router.post("", response_model=AnalyzeResponse)
 async def analyze_lab(
     request: AnalyzeRequest,
-    current_user: dict = Depends(require_freemium_analyze),
+    current_user: dict = Depends(get_current_user),
+    _freemium_check: None = Depends(require_freemium_analyze),
     idempotency_key: Optional[str] = Header(default=None, alias="X-Idempotency-Key"),
 ):
     user_id: str = current_user["sub"]
@@ -383,6 +384,55 @@ async def get_biomarker_options(current_user: dict = Depends(get_current_user)):
     status_code=201,
     summary="Analyze manually entered biomarkers"
 )
+async def _check_and_validate_manual_entries(user_id: str, request: ManualAnalysisRequest):
+    """Check quota and validate biomarker entries"""
+    # Check unified freemium biomarker quota (1 total entry for free users)
+    quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "manual")
+    if not quota_ok:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "detail": quota_msg,
+                "code": "BIOMARKER_QUOTA_EXCEEDED",
+                "used_by": used_by,
+            },
+        )
+
+    # Convert to ManualBiomarkerEntry objects
+    entry_dicts = [entry.dict() for entry in request.biomarkers]
+
+    # Validate all entries
+    valid_entries, errors = biomarker_service.validate_entries(entry_dicts)
+
+    if errors:
+        error_message = "; ".join(errors)
+        raise HTTPException(status_code=422, detail=f"Validation failed: {error_message}")
+
+    if not valid_entries:
+        raise HTTPException(status_code=400, detail="No valid biomarkers provided")
+
+    return biomarker_service.convert_to_standard_units(valid_entries)
+
+
+async def _generate_protocol_for_manual_entries(request: ManualAnalysisRequest, converted_entries: list) -> list:
+    """Generate protocol via Claude if available"""
+    if not is_llm_configured():
+        logger.warning("LLM not configured, skipping protocol generation")
+        return []
+
+    try:
+        formatted_text = biomarker_service.format_for_claude_analysis(converted_entries)
+        protocol_result = await extract_biomarkers(
+            extracted_text=formatted_text,
+            lab_name=request.lab_name or "Manual Entry",
+            symptoms=request.biomarkers[0].dict() if request.biomarkers else {},
+        )
+        return protocol_result.get("recommendations", []) if protocol_result else []
+    except Exception as e:
+        logger.error(f"Error generating protocol for manual upload: {e}")
+        return []
+
+
 async def analyze_manual_biomarkers(
     request: ManualAnalysisRequest,
     current_user: dict = Depends(get_current_user),
@@ -412,33 +462,7 @@ async def analyze_manual_biomarkers(
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     try:
-        # Check unified freemium biomarker quota (1 total entry for free users)
-        quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "manual")
-        if not quota_ok:
-            raise HTTPException(
-                status_code=402,
-                detail={
-                    "detail": quota_msg,
-                    "code": "BIOMARKER_QUOTA_EXCEEDED",
-                    "used_by": used_by,
-                },
-            )
-
-        # Convert to ManualBiomarkerEntry objects
-        entry_dicts = [entry.dict() for entry in request.biomarkers]
-
-        # Validate all entries
-        valid_entries, errors = biomarker_service.validate_entries(entry_dicts)
-
-        if errors:
-            error_message = "; ".join(errors)
-            raise HTTPException(status_code=422, detail=f"Validation failed: {error_message}")
-
-        if not valid_entries:
-            raise HTTPException(status_code=400, detail="No valid biomarkers provided")
-
-        # Convert to standard units for Claude
-        converted_entries = biomarker_service.convert_to_standard_units(valid_entries)
+        converted_entries = await _check_and_validate_manual_entries(user_id, request)
 
         # Create upload record in database
         upload_result = await biomarker_service.create_upload_from_manual_entries(
@@ -452,24 +476,8 @@ async def analyze_manual_biomarkers(
         upload_id = upload_result["upload_id"]
         biomarkers_data = upload_result["biomarkers"]
 
-        # Format biomarkers for Claude analysis
-        formatted_text = biomarker_service.format_for_claude_analysis(converted_entries)
-
         # Generate protocol via Claude
-        if not is_llm_configured():
-            logger.warning("LLM not configured, skipping protocol generation")
-            protocol = []
-        else:
-            try:
-                protocol_result = await extract_biomarkers(
-                    extracted_text=formatted_text,
-                    lab_name=request.lab_name or "Manual Entry",
-                    symptoms=request.biomarkers[0].dict() if request.biomarkers else {},
-                )
-                protocol = protocol_result.get("recommendations", []) if protocol_result else []
-            except Exception as e:
-                logger.error(f"Error generating protocol for manual upload: {e}")
-                protocol = []
+        protocol = await _generate_protocol_for_manual_entries(request, converted_entries)
 
         # Save protocol
         if protocol:

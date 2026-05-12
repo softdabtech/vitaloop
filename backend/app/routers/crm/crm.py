@@ -16,6 +16,8 @@ from app.services.email_service import send_invitation_accepted_email, send_invi
 router = APIRouter()
 
 _ALLOWED_ORG_ROLES = {"org_owner", "client_admin", "manager", "practitioner", "support", "member"}
+_MEMBER_NOT_FOUND_DETAIL = "Member not found"
+_ORG_ID_REQUIRED_DETAIL = "org_id is required"
 
 
 async def _write_audit_log(
@@ -491,7 +493,7 @@ async def change_member_role(
     )
     row = resp.data[0] if resp.data else None
     if not row:
-        raise HTTPException(status_code=404, detail="Member not found")
+        raise HTTPException(status_code=404, detail=_MEMBER_NOT_FOUND_DETAIL)
 
     await _write_audit_log(
         sb,
@@ -516,7 +518,7 @@ async def update_member_profile(
 ):
     org_id_raw = body.get("org_id") or body.get("organization_id")
     if not org_id_raw:
-        raise HTTPException(status_code=400, detail="org_id is required")
+        raise HTTPException(status_code=400, detail=_ORG_ID_REQUIRED_DETAIL)
     org_id = UUID(str(org_id_raw))
 
     sb = await _get_supabase()
@@ -550,7 +552,7 @@ async def update_member_profile(
     )
     row = member_resp.data[0] if member_resp.data else None
     if not row:
-        raise HTTPException(status_code=404, detail="Member not found")
+        raise HTTPException(status_code=404, detail=_MEMBER_NOT_FOUND_DETAIL)
 
     users = await _load_users_by_ids(sb, [str(user_id)])
     return _serialize_member(row, users.get(str(user_id)))
@@ -579,7 +581,7 @@ async def remove_member(user_id: UUID, org_id: UUID = Query(...), current_user: 
         .execute()
     )
     if not resp.data:
-        raise HTTPException(status_code=404, detail="Member not found")
+        raise HTTPException(status_code=404, detail=_MEMBER_NOT_FOUND_DETAIL)
 
     await _write_audit_log(
         sb,
@@ -616,7 +618,7 @@ async def create_invitation(body: dict[str, Any] = Body(...), current_user: dict
     email = str(body.get("email") or "").strip().lower()
     role = str(body.get("role") or "member").strip() or "member"
     if not org_id_raw:
-        raise HTTPException(status_code=400, detail="org_id is required")
+        raise HTTPException(status_code=400, detail=_ORG_ID_REQUIRED_DETAIL)
     if not email:
         raise HTTPException(status_code=400, detail="email is required")
     if role not in _ALLOWED_ORG_ROLES:
@@ -1005,7 +1007,7 @@ async def reassign_assignment(
     status = body.get("status")
     notes = body.get("notes")
     if not org_id_raw:
-        raise HTTPException(status_code=400, detail="org_id is required")
+        raise HTTPException(status_code=400, detail=_ORG_ID_REQUIRED_DETAIL)
     org_id = UUID(str(org_id_raw))
 
     sb = await _get_supabase()

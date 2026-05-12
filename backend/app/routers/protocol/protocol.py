@@ -37,7 +37,8 @@ class ProtocolResponse(BaseModel):
 @router.post("", response_model=ProtocolResponse)
 async def create_protocol(
     request: ProtocolRequest,
-    current_user: dict = Depends(require_active_subscription),
+    current_user: dict = Depends(get_current_user),
+    _subscription_check: None = Depends(require_active_subscription),
 ):
     user_id: str = current_user["sub"]
     upload_id = str(request.upload_id)
