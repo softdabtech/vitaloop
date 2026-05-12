@@ -19,6 +19,37 @@ function renderInline(text) {
   })
 }
 
+function renderMultilineInline(text) {
+  const lines = String(text || '').split('\n')
+  return lines.map((line, index) => (
+    <span key={index}>
+      {renderInline(line)}
+      {index < lines.length - 1 && <br />}
+    </span>
+  ))
+}
+
+function resolveHelpPageMeta(articleId, sectionId) {
+  if (articleId) {
+    return {
+      pageTitle: getArticle(articleId)?.title || 'Help Center',
+      canonicalPath: `/help/${articleId}`,
+    }
+  }
+
+  if (sectionId) {
+    return {
+      pageTitle: HELP_SECTIONS.find((s) => s.id === sectionId)?.title || 'Help Center',
+      canonicalPath: `/help/section/${sectionId}`,
+    }
+  }
+
+  return {
+    pageTitle: 'Help Center',
+    canonicalPath: '/help',
+  }
+}
+
 function ArticleBlock({ block }) {
   switch (block.type) {
     case 'intro':
@@ -61,9 +92,7 @@ function ArticleBlock({ block }) {
               <div className="flex-1 pt-0.5">
                 <div className="font-semibold text-slate-900 mb-1">{step.title}</div>
                 <div className="text-slate-600 leading-relaxed text-sm">
-                  {step.body.split('\n').map((line, j) => (
-                    <span key={j}>{renderInline(line)}{j < step.body.split('\n').length - 1 && <br/>}</span>
-                  ))}
+                  {renderMultilineInline(step.body)}
                 </div>
               </div>
             </li>
@@ -495,18 +524,10 @@ export default function Help() {
   }, [articleId, sectionId])
 
   const handleBack = () => navigate('/help')
-
-  const pageTitle = articleId
-    ? getArticle(articleId)?.title
-    : sectionId
-    ? HELP_SECTIONS.find(s => s.id === sectionId)?.title
-    : 'Help Center'
-
-  const canonicalPath = articleId
-    ? `/help/${articleId}`
-    : sectionId
-    ? `/help/section/${sectionId}`
-    : '/help'
+  const { pageTitle, canonicalPath } = useMemo(
+    () => resolveHelpPageMeta(articleId, sectionId),
+    [articleId, sectionId]
+  )
 
   return (
     <>
