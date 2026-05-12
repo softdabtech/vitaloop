@@ -86,17 +86,11 @@ function handleComingSoonPlan() {
   toast.error('Pro plan coming soon!')
 }
 
-function getPlanValidationError(planKey, currentPlan) {
-  if (planKey === currentPlan) return null
-  if (planKey === 'enterprise') {
-    handleEnterprisePlan()
-    return 'enterprise'
-  }
-  if (planKey === 'pro' || planKey === 'comingSoon') {
-    handleComingSoonPlan()
-    return 'coming_soon'
-  }
-  return null
+function resolvePlanSelectionAction(planKey, currentPlan) {
+  if (planKey === currentPlan) return 'noop'
+  if (planKey === 'enterprise') return 'enterprise'
+  if (planKey === 'pro' || planKey === 'comingSoon') return 'coming_soon'
+  return 'checkout'
 }
 
 function PlanCard({ plan, planKey, currentPlan, onSelect, isLoading }) {
@@ -204,8 +198,16 @@ export default function Subscription() {
   }
 
   async function handleSelectPlan(planKey) {
-    const validationError = getPlanValidationError(planKey, currentPlan)
-    if (validationError) return
+    const action = resolvePlanSelectionAction(planKey, currentPlan)
+    if (action === 'noop') return
+    if (action === 'enterprise') {
+      handleEnterprisePlan()
+      return
+    }
+    if (action === 'coming_soon') {
+      handleComingSoonPlan()
+      return
+    }
 
     setUpgrading(true)
     try {
