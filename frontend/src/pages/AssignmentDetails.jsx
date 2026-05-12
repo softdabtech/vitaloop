@@ -19,6 +19,26 @@ function normalizeAssignmentsPayload(data) {
   return []
 }
 
+async function fetchAssignmentById(assignmentId) {
+  try {
+    const direct = await api.get(`/crm/assignments/${assignmentId}`)
+    return direct.data || null
+  } catch {
+    const list = await api.get('/assignments').catch(() => api.get('/crm/assignments'))
+    const all = normalizeAssignmentsPayload(list.data)
+    return all.find((a) => String(a?.id) === String(assignmentId)) || null
+  }
+}
+
+function formatDueDate(dueDateValue) {
+  if (!dueDateValue) return 'No due date'
+  return new Date(dueDateValue).toLocaleDateString()
+}
+
+function formatStatusLabel(status) {
+  return String(status || 'pending').replace('_', ' ').toUpperCase()
+}
+
 export default function AssignmentDetails() {
   const { user } = useAuth()
   const { assignmentId } = useParams()
@@ -35,26 +55,17 @@ export default function AssignmentDetails() {
 
     async function load() {
       try {
-        const direct = await api.get(`/crm/assignments/${assignmentId}`)
+        const found = await fetchAssignmentById(assignmentId)
         if (!active) return
-        setItem(direct.data || null)
-        setError(null)
-      } catch {
-        try {
-          const list = await api.get('/assignments').catch(() => api.get('/crm/assignments'))
-          if (!active) return
-          const all = normalizeAssignmentsPayload(list.data)
-          const found = all.find((a) => String(a?.id) === String(assignmentId))
-          if (found) {
-            setItem(found)
-            setError(null)
-          } else {
-            setError('Assignment not found.')
-          }
-        } catch {
-          if (!active) return
-          setError('Could not load assignment details.')
+        if (found) {
+          setItem(found)
+          setError(null)
+        } else {
+          setError('Assignment not found.')
         }
+      } catch {
+        if (!active) return
+        setError('Could not load assignment details.')
       } finally {
         if (!active) return
         setLoading(false)
@@ -71,10 +82,7 @@ export default function AssignmentDetails() {
   const status = String(item?.status || 'pending').toLowerCase()
   const statusClass = STATUS_STYLE[status] || STATUS_STYLE.pending
 
-  const dueDate = useMemo(() => {
-    if (!item?.due_date) return 'No due date'
-    return new Date(item.due_date).toLocaleDateString()
-  }, [item])
+  const dueDate = useMemo(() => formatDueDate(item?.due_date), [item?.due_date])
 
   if (loading) {
     return (
@@ -109,7 +117,7 @@ export default function AssignmentDetails() {
                   <p className="text-slate-500 text-sm">{item?.description || 'Complete this assignment to improve your health plan quality and recommendations.'}</p>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusClass}`}>
-                  {status.replace('_', ' ').toUpperCase()}
+                  {formatStatusLabel(status)}
                 </span>
               </div>
 

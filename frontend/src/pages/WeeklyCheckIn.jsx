@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
@@ -18,6 +18,32 @@ const ADHERENCE_OPTIONS = [
   { value: 'no', label: 'Not this week', hint: 'I could not follow the plan yet', score: 1 },
 ]
 
+function buildCheckinPayload({ userId, selectedFeeling, sleepStars, selectedAdherence, changes }) {
+  const now = new Date()
+  return {
+    user_id: userId,
+    week_start: now.toISOString().slice(0, 10),
+    energy_score: selectedFeeling?.score ?? 5,
+    mood_score: selectedFeeling?.score ?? 5,
+    sleep_quality: Math.max(1, Math.min(10, sleepStars * 2)),
+    protocol_adherence: selectedAdherence?.score ?? 3,
+    symptom_changes: changes.trim(),
+    new_complaints: '',
+    notes: [
+      selectedFeeling ? `Weekly feeling: ${selectedFeeling.label}` : '',
+      `Sleep rating: ${sleepStars}/5`,
+      selectedAdherence ? `Protocol adherence: ${selectedAdherence.label}` : '',
+    ]
+      .filter(Boolean)
+      .join(' | '),
+  }
+}
+
+function getViewportWidth() {
+  if (typeof window === 'undefined') return 1024
+  return window.innerWidth
+}
+
 export default function WeeklyCheckIn() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -28,9 +54,18 @@ export default function WeeklyCheckIn() {
   const [changes, setChanges] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+  const [viewportWidth, setViewportWidth] = useState(getViewportWidth)
 
   const totalSteps = 4
   const progress = Math.round((step / totalSteps) * 100)
+  const isMobile = viewportWidth < 500
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const onResize = () => setViewportWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const selectedFeeling = useMemo(() => FEELING_OPTIONS.find((opt) => opt.value === feeling) || null, [feeling])
   const selectedAdherence = useMemo(() => ADHERENCE_OPTIONS.find((opt) => opt.value === adherence) || null, [adherence])
@@ -56,24 +91,13 @@ export default function WeeklyCheckIn() {
     if (!user?.id || submitting) return
 
     setSubmitting(true)
-    const now = new Date()
-    const payload = {
-      user_id: user.id,
-      week_start: now.toISOString().slice(0, 10),
-      energy_score: selectedFeeling?.score ?? 5,
-      mood_score: selectedFeeling?.score ?? 5,
-      sleep_quality: Math.max(1, Math.min(10, sleepStars * 2)),
-      protocol_adherence: selectedAdherence?.score ?? 3,
-      symptom_changes: changes.trim(),
-      new_complaints: '',
-      notes: [
-        selectedFeeling ? `Weekly feeling: ${selectedFeeling.label}` : '',
-        `Sleep rating: ${sleepStars}/5`,
-        selectedAdherence ? `Protocol adherence: ${selectedAdherence.label}` : '',
-      ]
-        .filter(Boolean)
-        .join(' | '),
-    }
+    const payload = buildCheckinPayload({
+      userId: user.id,
+      selectedFeeling,
+      sleepStars,
+      selectedAdherence,
+      changes,
+    })
 
     try {
       await api.post('/checkins', payload)
@@ -181,14 +205,14 @@ export default function WeeklyCheckIn() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 py-8" style={{ paddingLeft: window.innerWidth < 500 ? '16px' : '24px', paddingRight: window.innerWidth < 500 ? '16px' : '24px' }}>
+    <main className="min-h-screen bg-slate-50 py-8" style={{ paddingLeft: isMobile ? '16px' : '24px', paddingRight: isMobile ? '16px' : '24px' }}>
       <div className="mx-auto max-w-3xl space-y-6">
         <CabinetPageHeader
           title="Weekly Check-in"
           subtitle="A quick 4-step reflection to keep your protocol adaptive and accurate."
         />
 
-        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm" style={{ padding: window.innerWidth < 500 ? '20px 16px' : '24px' }}>
+        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm" style={{ padding: isMobile ? '20px 16px' : '24px' }}>
           {!done ? (
             <>
               <div className="mb-6">
