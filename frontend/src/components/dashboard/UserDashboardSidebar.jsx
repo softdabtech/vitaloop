@@ -53,6 +53,12 @@ function isItemActive(currentPath, itemPath) {
   return currentPath === itemPath || currentPath.startsWith(`${itemPath}/`)
 }
 
+function triggerPaywall(detail) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('paywall:trigger', { detail }))
+  }
+}
+
 export default function UserDashboardSidebar({
   collapsed = false,
   onToggleCollapse,
@@ -69,13 +75,11 @@ export default function UserDashboardSidebar({
   function handleLockedFeature(item) {
     if (!item.premium || subscriptionLoading || hasPremium) return
 
-    window.dispatchEvent(new CustomEvent('paywall:trigger', {
-      detail: {
-        reason: 'SUBSCRIPTION_REQUIRED',
-        feature: item.label,
-        source: item.path,
-      },
-    }))
+    triggerPaywall({
+      reason: 'SUBSCRIPTION_REQUIRED',
+      feature: item.label,
+      source: item.path,
+    })
   }
 
   return (
@@ -172,7 +176,7 @@ export default function UserDashboardSidebar({
       <div className="border-t border-slate-100 p-3">
         {!collapsed && !subscriptionLoading && !hasPremium && (
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED', source: 'sidebar-upgrade' } }))}
+            onClick={() => triggerPaywall({ reason: 'SUBSCRIPTION_REQUIRED', source: 'sidebar-upgrade' })}
             className="mb-2 w-full rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-3 py-3 text-left transition hover:border-amber-300 hover:shadow-sm"
           >
             <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">Premium access</div>
