@@ -24,6 +24,49 @@ function normalizeProgressPayload(payload) {
   return []
 }
 
+function getItemDate(item) {
+  return item?.test_date || item?.created_at?.slice(0, 10) || 'Unknown date'
+}
+
+function getBiomarkerCounts(item) {
+  const biomarkers = Array.isArray(item?.biomarkers) ? item.biomarkers : []
+  return {
+    optimal: biomarkers.filter((b) => normalizeStatus(b?.status) === 'optimal').length,
+    warning: biomarkers.filter((b) => normalizeStatus(b?.status) === 'warning').length,
+    critical: biomarkers.filter((b) => normalizeStatus(b?.status) === 'critical').length,
+  }
+}
+
+async function fetchResultsWithFallback() {
+  try {
+    const res = await api.get('/progress')
+    return { items: normalizeProgressPayload(res.data), error: null }
+  } catch (err) {
+    if (err.response?.status === 402) {
+      try {
+        const fallbackRes = await api.get('/uploads/recent')
+        return { items: normalizeProgressPayload(fallbackRes.data).slice(0, 1), error: null }
+      } catch {
+        return { items: [], error: null }
+      }
+    }
+
+    const statusCode = err.response?.status || 'unknown'
+    const message = err.response?.data?.message || err.message || 'Could not load lab results.'
+    return {
+      items: [],
+      error: `Error loading results (${statusCode}): ${message}`,
+      originalError: err,
+    }
+  }
+}
+
+function triggerLabHistoryAccessPaywall() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'LAB_HISTORY_ACCESS' } }))
+  }
+}
+
 export default function LabResultsList() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -40,30 +83,12 @@ export default function LabResultsList() {
 
     const fetchLabResults = async () => {
       try {
-        const res = await api.get('/progress')
+        const result = await fetchResultsWithFallback()
         if (!active) return
-        const items = normalizeProgressPayload(res.data)
-        setItems(items)
-        setError(null)
-      } catch (err) {
-        if (!active) return
-        if (err.response?.status === 402) {
-          try {
-            const fallbackRes = await api.get('/uploads/recent')
-            if (!active) return
-            const items = normalizeProgressPayload(fallbackRes.data)
-            setItems(items.slice(0, 1))
-            setError(null)
-          } catch (fallbackErr) {
-            setItems([])
-            setError(null)
-          }
-        } else {
-          const statusCode = err.response?.status || 'unknown'
-          const message = err.response?.data?.message || err.message || 'Could not load lab results.'
-          setError(`Error loading results (${statusCode}): ${message}`)
-          console.error('LabResultsList fetch error:', err)
-          setItems([])
+        setItems(result.items)
+        setError(result.error)
+        if (result.originalError) {
+          console.error('LabResultsList fetch error:', result.originalError)
         }
       } finally {
         if (!active) return
@@ -166,11 +191,8 @@ export default function LabResultsList() {
               </div>
 
               {sortedItems.map((item, index) => {
-                const date = item?.test_date || item?.created_at?.slice(0, 10) || 'Unknown date'
-                const biomarkers = Array.isArray(item?.biomarkers) ? item.biomarkers : []
-                const optimal = biomarkers.filter((b) => normalizeStatus(b?.status) === 'optimal').length
-                const warning = biomarkers.filter((b) => normalizeStatus(b?.status) === 'warning').length
-                const critical = biomarkers.filter((b) => normalizeStatus(b?.status) === 'critical').length
+                const date = getItemDate(item)
+                const { optimal, warning, critical } = getBiomarkerCounts(item)
                 const uploadId = item?.upload_id || item?.id
 
                 return (
@@ -223,7 +245,7 @@ export default function LabResultsList() {
                         Upgrade to see your complete lab history, track trends over time, and get personalized supplement protocols.
                       </p>
                       <button
-                        onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'LAB_HISTORY_ACCESS' } }))}
+                        onClick={triggerLabHistoryAccessPaywall}
                         className="mt-3 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition"
                       >
                         Upgrade for $19.99/month

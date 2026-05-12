@@ -102,6 +102,8 @@ const COLOR_CLASSES = {
   indigo:  { bg: 'bg-indigo-500',  text: 'text-white', ring: 'ring-indigo-500/20' },
 }
 
+const PRIORITY_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 }
+
 function deriveNutritionGroups(biomarkers) {
   if (!biomarkers?.length) return NUTRITION_MAP.slice(0, 3)
   const deficientNames = biomarkers
@@ -116,6 +118,38 @@ function deriveNutritionGroups(biomarkers) {
 
 function formatPriority(priority) {
   return String(priority || 'LOW').toUpperCase()
+}
+
+function sortProtocolByPriority(protocol) {
+  return [...protocol].sort((a, b) => {
+    return (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9)
+  })
+}
+
+function countDeficientBiomarkers(biomarkers) {
+  return biomarkers.filter((b) => b.status === 'DEFICIENT' || b.status === 'ELEVATED').length
+}
+
+function triggerSubscriptionRequiredPaywall() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('paywall:trigger', {
+        detail: { reason: 'SUBSCRIPTION_REQUIRED' },
+      })
+    )
+  }
+}
+
+async function loadProtocolData(uploadId) {
+  const [bmRes, prRes] = await Promise.all([
+    supabase.from('biomarkers').select('*').eq('upload_id', uploadId),
+    supabase.from('protocols').select('*').eq('upload_id', uploadId).single(),
+  ])
+
+  return {
+    biomarkers: bmRes.data ?? [],
+    protocol: prRes.data?.recommendations ?? [],
+  }
 }
 
 function buildPdfRows(protocolRows) {
@@ -495,12 +529,9 @@ export default function ProtocolPage() {
 
   useEffect(() => {
     async function load() {
-      const [bmRes, prRes] = await Promise.all([
-        supabase.from('biomarkers').select('*').eq('upload_id', uploadId),
-        supabase.from('protocols').select('*').eq('upload_id', uploadId).single(),
-      ])
-      setBiomarkers(bmRes.data ?? [])
-      setProtocol(prRes.data?.recommendations ?? [])
+      const data = await loadProtocolData(uploadId)
+      setBiomarkers(data.biomarkers)
+      setProtocol(data.protocol)
       setLoading(false)
     }
     load()
@@ -512,14 +543,9 @@ export default function ProtocolPage() {
   }
 
   const nutritionGroups = deriveNutritionGroups(biomarkers)
-  const sortedProtocol = [...protocol].sort((a, b) => {
-    const order = { HIGH: 0, MEDIUM: 1, LOW: 2 }
-    return (order[a.priority] ?? 9) - (order[b.priority] ?? 9)
-  })
+  const sortedProtocol = sortProtocolByPriority(protocol)
 
-  const deficientCount = biomarkers.filter(
-    (b) => b.status === 'DEFICIENT' || b.status === 'ELEVATED'
-  ).length
+  const deficientCount = countDeficientBiomarkers(biomarkers)
 
   const handleExportPdf = async () => {
     if (!canExport || sortedProtocol.length === 0 || exporting) return
@@ -704,14 +730,8 @@ export default function ProtocolPage() {
 
               <FeatureGate
                 feature="advanced_protocol"
-                onLocked={() =>
-                  window.dispatchEvent(
-                    new CustomEvent('paywall:trigger', {
-                      detail: { reason: 'SUBSCRIPTION_REQUIRED' },
-                    })
-                  )
-                }
-                fallback={<PaywallTeaser onUpgrade={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))} />}
+                onLocked={triggerSubscriptionRequiredPaywall}
+                fallback={<PaywallTeaser onUpgrade={triggerSubscriptionRequiredPaywall} />}
               >
                 {sortedProtocol.length > 0 ? (
                   <div className="overflow-x-auto">
