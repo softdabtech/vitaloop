@@ -27,6 +27,18 @@ function triggerSubscriptionRequiredPaywall() {
   }
 }
 
+async function executePhotoAction(action, onPaywall) {
+  try {
+    return await action()
+  } catch (error) {
+    if (error.response?.status === 402) {
+      onPaywall()
+      return null
+    }
+    throw error
+  }
+}
+
 export default function Progress() {
   const navigate = useNavigate()
   const { data = [], isLoading } = useProgress()
@@ -38,15 +50,14 @@ export default function Progress() {
 
   const handlePhotoUpload = async (formData) => {
     try {
-      const response = await api.post('/progress/photos', formData, {
+      const response = await executePhotoAction(() => api.post('/progress/photos', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      setPhotos((prev) => [...prev, response.data])
-    } catch (error) {
-      if (error.response?.status === 402) {
-        handlePaywall()
+      }), handlePaywall)
+      if (!response) {
         return
       }
+      setPhotos((prev) => [...prev, response.data])
+    } catch (error) {
       console.error('Photo upload failed:', error)
       throw error
     }
@@ -54,7 +65,10 @@ export default function Progress() {
 
   const handlePhotoDelete = async (photoId) => {
     try {
-      await api.delete(`/progress/photos/${photoId}`)
+      const deleted = await executePhotoAction(() => api.delete(`/progress/photos/${photoId}`), handlePaywall)
+      if (!deleted) {
+        return
+      }
       setPhotos((prev) => prev.filter((p) => p.id !== photoId))
     } catch (error) {
       console.error('Photo delete failed:', error)
