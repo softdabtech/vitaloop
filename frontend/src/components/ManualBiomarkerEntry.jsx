@@ -3,6 +3,12 @@ import { ChevronRight, Trash2, Plus } from 'lucide-react'
 import api from '../lib/api.js'
 import '../styles/manual-entry.css'
 
+function triggerPaywall(detail) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('paywall:trigger', { detail }))
+  }
+}
+
 export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
   const [entries, setEntries] = useState([])
   const [biomarkerOptions, setBiomarkerOptions] = useState([])
@@ -149,14 +155,10 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
           message = errorDetail || 'Your free biomarker entry quota is full. Upgrade to Premium for unlimited entries.'
         }
         // Trigger paywall
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'BIOMARKER_QUOTA_EXCEEDED', used_by: usedBy } }))
-        }
+        triggerPaywall({ reason: 'BIOMARKER_QUOTA_EXCEEDED', used_by: usedBy })
       } else if (err.response?.status === 402) {
         message = errorDetail || 'Subscription required for this action. Upgrade to Premium.'
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))
-        }
+        triggerPaywall({ reason: 'SUBSCRIPTION_REQUIRED' })
       }
       
       setGlobalError(message)
