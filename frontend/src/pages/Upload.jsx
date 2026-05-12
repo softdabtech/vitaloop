@@ -40,39 +40,60 @@ function validateFileInput(file) {
 }
 
 async function handleAnalysisError(err) {
-  const errorData = err.response?.data || {}
-  const errorCode = errorData?.code
-  const errorDetail = typeof errorData?.detail === 'string' ? errorData.detail : null
-  let message = errorDetail || 'Analysis failed. Please try again.'
+function build402ErrorMessage({ errorCode, errorDetail, usedBy }) {
+  if (errorCode === 'BIOMARKER_QUOTA_EXCEEDED') {
+    if (usedBy === 'manual') {
+      return 'You\'ve already entered biomarkers manually. Free plan allows 1 entry via PDF OR manual. Upgrade to Premium for unlimited entries.'
+    }
+    return errorDetail || 'Your free biomarker entry quota is full. Upgrade to Premium for unlimited entries.'
+  }
+  return errorDetail || 'Subscription required for this action. Upgrade to Premium.'
+}
 
-  if (err.response?.status === 402) {
-    const usedBy = errorData?.used_by
-    if (errorCode === 'BIOMARKER_QUOTA_EXCEEDED') {
-      if (usedBy === 'manual') {
-        message = 'You\'ve already entered biomarkers manually. Free plan allows 1 entry via PDF OR manual. Upgrade to Premium for unlimited entries.'
-      } else {
-        message = errorDetail || 'Your free biomarker entry quota is full. Upgrade to Premium for unlimited entries.'
-      }
-      triggerPaywall({ reason: 'BIOMARKER_QUOTA_EXCEEDED', used_by: usedBy })
-    } else {
-      message = errorDetail || 'Subscription required for this action. Upgrade to Premium.'
-      triggerPaywall({ reason: 'SUBSCRIPTION_REQUIRED' })
-    }
-  } else if (err.response?.status === 422) {
-    if (errorCode === 'LAB_TEXT_TOO_SHORT') {
-      message = 'Not enough readable text found in the report. Please upload a clearer PDF or photo with full biomarker table visible.'
-    } else if (errorCode === 'BIOMARKERS_NOT_EXTRACTED') {
-      message = 'Could not detect biomarkers in this report format. Try a clearer full-page PDF or a sharp photo with names, values, and ranges visible.'
-    } else {
-      message = 'Lab report format not recognized. Please upload a standard lab PDF or clear photo.'
-    }
-  } else if (err.response?.status === 413) {
-    message = 'File too large for processing. Please upload a file under 20MB.'
-  } else if (err.response?.status === 429) {
-    message = 'Too many uploads. Please wait and try again later.'
+function maybeTriggerPaywall({ status, errorCode, usedBy }) {
+  if (status !== 402) return
+  if (errorCode === 'BIOMARKER_QUOTA_EXCEEDED') {
+    triggerPaywall({ reason: 'BIOMARKER_QUOTA_EXCEEDED', used_by: usedBy })
+    return
+  }
+  triggerPaywall({ reason: 'SUBSCRIPTION_REQUIRED' })
+}
+
+function resolveAnalysisErrorMessage({ status, errorCode, errorDetail, usedBy }) {
+  if (status === 402) {
+    return build402ErrorMessage({ errorCode, errorDetail, usedBy })
   }
 
-  return message
+  if (status === 422) {
+    if (errorCode === 'LAB_TEXT_TOO_SHORT') {
+      return 'Not enough readable text found in the report. Please upload a clearer PDF or photo with full biomarker table visible.'
+    }
+    if (errorCode === 'BIOMARKERS_NOT_EXTRACTED') {
+      return 'Could not detect biomarkers in this report format. Try a clearer full-page PDF or a sharp photo with names, values, and ranges visible.'
+    }
+    return 'Lab report format not recognized. Please upload a standard lab PDF or clear photo.'
+  }
+
+  if (status === 413) {
+    return 'File too large for processing. Please upload a file under 20MB.'
+  }
+
+  if (status === 429) {
+    return 'Too many uploads. Please wait and try again later.'
+  }
+
+  return errorDetail || 'Analysis failed. Please try again.'
+}
+
+function handleAnalysisError(err) {
+  const errorData = err.response?.data || {}
+  const status = err.response?.status
+  const errorCode = errorData?.code
+  const errorDetail = typeof errorData?.detail === 'string' ? errorData.detail : null
+  const usedBy = errorData?.used_by
+
+  maybeTriggerPaywall({ status, errorCode, usedBy })
+  return resolveAnalysisErrorMessage({ status, errorCode, errorDetail, usedBy })
 }
 
 async function sendAnalysisMetadata(uploadId, symptoms) {
@@ -180,7 +201,7 @@ export default function Upload() {
       toast.success('Analysis complete!')
       navigate(`/results/${data.upload_id}`)
     } catch (err) {
-      const message = await handleAnalysisError(err)
+      const message = handleAnalysisError(err)
       setErrorMessage(message)
       toast.error(message)
     } finally {
