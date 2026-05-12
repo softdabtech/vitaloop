@@ -40,6 +40,13 @@ router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
 biomarker_service = BiomarkerService()
 
+# Error message constants (S1192 - reduce string duplication)
+_TEXT_TOO_SHORT_DETAIL = {"detail": "Extracted text is too short", "code": "LAB_TEXT_TOO_SHORT"}
+_FAILED_LOAD_BIOMARKERS = "Failed to load biomarker options"
+_NO_VALID_BIOMARKERS = "No valid biomarkers provided"
+_UNAUTHORIZED_DETAIL = "Unauthorized"
+_ANALYSIS_FAILED = "Analysis failed"
+
 _analyze_idempotency: dict[tuple[str, str], dict] = {}
 _analyze_idempotency_lock = asyncio.Lock()
 
@@ -181,7 +188,7 @@ async def analyze_lab(
         )
 
     if len(normalized_text) < 20:
-        raise HTTPException(status_code=422, detail={"detail": "Extracted text is too short", "code": "LAB_TEXT_TOO_SHORT"})
+        raise HTTPException(status_code=422, detail=_TEXT_TOO_SHORT_DETAIL)
 
     normalized_key: Optional[str] = None
     if idempotency_key:
@@ -375,7 +382,7 @@ async def get_biomarker_options(current_user: dict = Depends(get_current_user)):
         return options
     except Exception as e:
         logger.error(f"Error getting biomarker options: {e}")
-        raise HTTPException(status_code=500, detail="Failed to load biomarker options")
+        raise HTTPException(status_code=500, detail=_FAILED_LOAD_BIOMARKERS)
 
 
 @router.post(
@@ -409,7 +416,7 @@ async def _check_and_validate_manual_entries(user_id: str, request: ManualAnalys
         raise HTTPException(status_code=422, detail=f"Validation failed: {error_message}")
 
     if not valid_entries:
-        raise HTTPException(status_code=400, detail="No valid biomarkers provided")
+        raise HTTPException(status_code=400, detail=_NO_VALID_BIOMARKERS)
 
     return biomarker_service.convert_to_standard_units(valid_entries)
 
@@ -459,7 +466,7 @@ async def analyze_manual_biomarkers(
     """
     user_id = current_user.get("sub")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=401, detail=_UNAUTHORIZED_DETAIL)
 
     try:
         converted_entries = await _check_and_validate_manual_entries(user_id, request)
