@@ -44,6 +44,41 @@ function getViewportWidth() {
   return window.innerWidth
 }
 
+function canContinueAtStep({ step, feeling, sleepStars, adherence }) {
+  if (step === 1) return Boolean(feeling)
+  if (step === 2) return sleepStars >= 1
+  if (step === 3) return Boolean(adherence)
+  return true
+}
+
+function getStepTitleAndSubtitle(step) {
+  if (step === 1) {
+    return {
+      title: 'How are you feeling this week?',
+      subtitle: 'Choose the option that best matches your overall state.',
+    }
+  }
+
+  if (step === 2) {
+    return {
+      title: 'How was your sleep quality?',
+      subtitle: 'Rate your average sleep for the week.',
+    }
+  }
+
+  if (step === 3) {
+    return {
+      title: 'Did you follow your protocol?',
+      subtitle: 'Honest tracking helps personalize your next recommendations.',
+    }
+  }
+
+  return {
+    title: 'Any notable changes this week?',
+    subtitle: 'Optional: symptoms, side effects, wins, or challenges.',
+  }
+}
+
 export default function WeeklyCheckIn() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -69,13 +104,12 @@ export default function WeeklyCheckIn() {
 
   const selectedFeeling = useMemo(() => FEELING_OPTIONS.find((opt) => opt.value === feeling) || null, [feeling])
   const selectedAdherence = useMemo(() => ADHERENCE_OPTIONS.find((opt) => opt.value === adherence) || null, [adherence])
+  const stepInfo = useMemo(() => getStepTitleAndSubtitle(step), [step])
 
-  const canContinue = useMemo(() => {
-    if (step === 1) return Boolean(feeling)
-    if (step === 2) return sleepStars >= 1
-    if (step === 3) return Boolean(adherence)
-    return true
-  }, [step, feeling, sleepStars, adherence])
+  const canContinue = useMemo(
+    () => canContinueAtStep({ step, feeling, sleepStars, adherence }),
+    [step, feeling, sleepStars, adherence]
+  )
 
   const nextStep = () => {
     if (!canContinue || step >= totalSteps) return
@@ -113,8 +147,8 @@ export default function WeeklyCheckIn() {
     if (step === 1) {
       return (
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">How are you feeling this week?</h2>
-          <p className="mt-1 text-sm text-slate-600">Choose the option that best matches your overall state.</p>
+          <h2 className="text-xl font-semibold text-slate-900">{stepInfo.title}</h2>
+          <p className="mt-1 text-sm text-slate-600">{stepInfo.subtitle}</p>
           <div className="mt-4 grid gap-3">
             {FEELING_OPTIONS.map((opt) => (
               <button
@@ -139,8 +173,8 @@ export default function WeeklyCheckIn() {
     if (step === 2) {
       return (
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">How was your sleep quality?</h2>
-          <p className="mt-1 text-sm text-slate-600">Rate your average sleep for the week.</p>
+          <h2 className="text-xl font-semibold text-slate-900">{stepInfo.title}</h2>
+          <p className="mt-1 text-sm text-slate-600">{stepInfo.subtitle}</p>
           <div className="mt-6 flex items-center gap-2">
             {[1, 2, 3, 4, 5].map((n) => (
               <button
@@ -166,8 +200,8 @@ export default function WeeklyCheckIn() {
     if (step === 3) {
       return (
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Did you follow your protocol?</h2>
-          <p className="mt-1 text-sm text-slate-600">Honest tracking helps personalize your next recommendations.</p>
+          <h2 className="text-xl font-semibold text-slate-900">{stepInfo.title}</h2>
+          <p className="mt-1 text-sm text-slate-600">{stepInfo.subtitle}</p>
           <div className="mt-4 grid gap-3">
             {ADHERENCE_OPTIONS.map((opt) => (
               <button
@@ -191,8 +225,8 @@ export default function WeeklyCheckIn() {
 
     return (
       <div>
-        <h2 className="text-xl font-semibold text-slate-900">Any notable changes this week?</h2>
-        <p className="mt-1 text-sm text-slate-600">Optional: symptoms, side effects, wins, or challenges.</p>
+        <h2 className="text-xl font-semibold text-slate-900">{stepInfo.title}</h2>
+        <p className="mt-1 text-sm text-slate-600">{stepInfo.subtitle}</p>
         <textarea
           rows={6}
           className="mt-4 w-full rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
