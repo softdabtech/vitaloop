@@ -40,6 +40,7 @@ const NAV_LINKS = [
   { id: 'testimonials', label: 'Stories' },
   { id: 'traction', label: 'Investors' },
   { id: 'faq', label: 'FAQ' },
+  { label: 'About', route: '/about' },
   { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
 ]
 

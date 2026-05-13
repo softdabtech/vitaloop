@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { label: 'Pricing', href: '#pricing' },
   { label: 'Stories', href: '#testimonials' },
   { label: 'FAQ', href: '#faq' },
+  { label: 'About', href: '/about', page: true },
   { label: 'For Nutritionists', href: '/for-nutritionists', page: true },
   { label: 'Help', href: '/help', page: true },
 ]
