@@ -24,7 +24,8 @@
       "/",
       "/how-it-works",
       "/example-report",
-      "/about"
+      "/about",
+      "/legal-safety"
     ],
     "puppeteerArgs": [
       "--no-sandbox",

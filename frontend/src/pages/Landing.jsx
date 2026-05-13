@@ -810,6 +810,36 @@ export default function Landing() {
         <LightHero />
         <StatsBar />
 
+        <section className="mx-auto max-w-[1240px] px-4 pb-6 sm:px-6">
+          <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-6 md:p-8">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600">Regulatory readiness</p>
+                <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-slate-900 md:text-3xl">Built with wellness-only guardrails and legal review in mind</h2>
+              </div>
+              <p className="max-w-2xl text-sm leading-6 text-slate-600">A short public signal that the product is being positioned carefully, with explicit attention to claim scope, dosage safety, and jurisdictional differences.</p>
+            </div>
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              {[
+                { title: 'Wellness-first language', body: 'Public claims stay in the wellness and decision-support category, not diagnosis or treatment.', icon: ShieldCheck },
+                { title: 'Dosage guardrails', body: 'Exact dosage guidance is constrained by evidence tiers, contraindications, and escalation prompts.', icon: Shield },
+                { title: 'Counsel review path', body: 'US/EU jurisdiction mapping and legal review are part of the operating plan before broader scale.', icon: Lock },
+              ].map((item) => {
+                const Icon = item.icon
+                return (
+                  <article key={item.title} className="rounded-3xl border border-slate-200 bg-white p-5">
+                    <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="mt-4 text-base font-semibold text-slate-900">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{item.body}</p>
+                  </article>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
         <section id="problem" className="mx-auto w-full max-w-[990px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-12 text-center">
             <motion.h2
