@@ -13,13 +13,13 @@ const STATS = [
   },
   {
     icon: TrendingUp,
-    number: '25%',
-    label: 'Free-to-paid conversion'
+    number: '85+',
+    label: 'Biomarkers interpreted'
   },
   {
     icon: Zap,
-    number: '<60s',
-    label: 'Upload to protocol'
+    number: 'Weekly',
+    label: 'Adaptive check-in loop'
   }
 ]
 
@@ -28,7 +28,7 @@ export function StatsBar() {
     <section className="bg-white border-t border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
-          {STATS.map((stat, idx) => {
+          {STATS.map((stat) => {
             const Icon = stat.icon
             return (
               <div key={stat.label} className="flex flex-col items-center text-center">

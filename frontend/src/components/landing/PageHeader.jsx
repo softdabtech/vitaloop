@@ -5,14 +5,11 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { HeartPulse, Menu, X } from 'lucide-react'
 
 const NAV_LINKS = [
-  { id: 'how-it-works', label: 'Product' },
-  { id: 'why-vitaloop', label: 'Features' },
-  { id: 'pricing', label: 'Pricing' },
-  { id: 'testimonials', label: 'Stories' },
-  { id: 'traction', label: 'Investors' },
-  { id: 'faq', label: 'FAQ' },
+  { label: 'Product', route: '/product' },
+  { label: 'Features', route: '/features' },
+  { label: 'Pricing', route: '/pricing' },
+  { label: 'For Investors', route: '/for-investors' },
   { label: 'About', route: '/about' },
-  { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
 ]
 
 export function PageHeader() {
@@ -50,7 +47,7 @@ export function PageHeader() {
         <nav className="hidden items-center gap-7 md:flex">
           {NAV_LINKS.map((item) => (
             <button
-              key={item.id}
+              key={item.id || item.route || item.label}
               onClick={() => navAction(item)}
               className={`text-sm transition ${navTextClass}`}
             >
@@ -104,7 +101,7 @@ export function PageHeader() {
             <div className="mx-auto flex max-w-[1240px] flex-col gap-1 px-4 py-4">
               {NAV_LINKS.map((item) => (
                 <button
-                  key={item.id}
+                  key={item.id || item.route || item.label}
                   onClick={() => navAction(item)}
                   className="rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
                 >

@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import api from '../api/client.ts'
 import {
   ArrowRight,
   BrainCircuit,
@@ -37,30 +36,14 @@ const NAV_LINKS = [
   { id: 'how-it-works', label: 'Product' },
   { id: 'why-vitaloop', label: 'Features' },
   { id: 'pricing', label: 'Pricing' },
-  { id: 'testimonials', label: 'Stories' },
-  { id: 'traction', label: 'Investors' },
-  { id: 'faq', label: 'FAQ' },
+  { label: 'For Investors', route: '/for-investors' },
   { label: 'About', route: '/about' },
-  { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
 ]
 
 // S7764 helper functions for safe window access
 function scrollToTop() {
   if (typeof window !== 'undefined') {
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-}
-
-function setWindowInterval(fn, delay) {
-  if (typeof window !== 'undefined') {
-    return window.setInterval(fn, delay)
-  }
-  return null
-}
-
-function clearWindowInterval(id) {
-  if (typeof window !== 'undefined' && id !== null) {
-    window.clearInterval(id)
   }
 }
 
@@ -90,8 +73,8 @@ const BENEFITS = [
     title: 'AI Powered',
     body: 'Smart recommendations',
     icon: BrainCircuit,
-    stat: '<60s',
-    label: 'Analysis'
+    stat: '85+',
+    label: 'Biomarkers'
   },
   {
     title: 'Secure',
@@ -237,8 +220,8 @@ const HERO_TRUST_SIGNALS = [
     icon: Lock,
   },
   {
-    title: 'Action in under 60 seconds',
-    body: 'From upload to personalized protocol with weekly adaptation loop.',
+    title: 'Actionable from first upload',
+    body: 'From biomarker extraction to prioritized protocol with weekly adaptation loop.',
     icon: Clock3,
   },
 ]
@@ -286,7 +269,7 @@ const SCHEMA_HOWTO = {
   '@context': 'https://schema.org',
   '@type': 'HowTo',
   name: 'How to Analyze Blood Test Results With AI Using VITALOOP',
-  description: 'Upload your lab report and receive AI-powered biomarker analysis in under 60 seconds. Full personalized protocol and weekly adaptive loop are available on paid plans.',
+  description: 'Upload your lab report and receive AI-powered biomarker analysis with prioritized insights. Full personalized protocol and weekly adaptive loop are available on paid plans.',
   totalTime: 'PT1M',
   estimatedCost: { '@type': 'MonetaryAmount', currency: 'USD', value: '0' },
   step: [
@@ -682,37 +665,7 @@ export default function Landing() {
   const reduced = useReducedMotion()
   const [loopActive, setLoopActive] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [tractionUsers, setTractionUsers] = useState(null)
   const { user, loading: authLoading } = useAuth()
-
-  useEffect(() => {
-    let cancelled = false
-
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      return () => {
-        cancelled = true
-      }
-    }
-
-    const loadPlatformStats = async () => {
-      try {
-        const { data } = await api.get('/admin/public-platform-stats')
-        if (!cancelled && Number.isFinite(data?.total_users)) {
-          setTractionUsers(data.total_users)
-        }
-      } catch {
-        /* empty */
-      }
-    }
-
-    loadPlatformStats()
-    const intervalId = setWindowInterval(loadPlatformStats, 60000)
-
-    return () => {
-      cancelled = true
-      clearWindowInterval(intervalId)
-    }
-  }, [])
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
   const navAction = (item) => {
@@ -738,7 +691,7 @@ export default function Landing() {
     <div className={rootClasses}>
       <Seo
         title="Interpret Blood Test Results with AI | VITALOOP"
-        description="Analyze blood test results with AI in under 60 seconds. Upload your lab PDF, see prioritized biomarkers, and start a personalized weekly protocol for free."
+        description="Analyze blood test results with AI, see prioritized biomarkers, and start a personalized weekly protocol for free."
         path="/"
         schemas={[SCHEMA_HOWTO, SCHEMA_FAQ]}
       />
@@ -761,7 +714,7 @@ export default function Landing() {
           <nav className="hidden items-center gap-7 md:flex">
             {NAV_LINKS.map((item) => (
               <button
-                key={item.id}
+                key={item.id || item.route || item.label}
                 onClick={() => navAction(item)}
                 className={`text-sm transition ${navTextClass}`}
               >
@@ -816,7 +769,7 @@ export default function Landing() {
               <div className="mx-auto flex max-w-[1240px] flex-col gap-1 px-4 py-4">
                 {NAV_LINKS.map((item) => (
                   <button
-                    key={item.id}
+                    key={item.id || item.route || item.label}
                     onClick={() => navAction(item)}
                     className="rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
                   >
@@ -1208,57 +1161,6 @@ export default function Landing() {
         </section>
 
         <InteractivePricing />
-
-        <section id="traction" className="mx-auto w-full max-w-[1240px] px-4 py-8 sm:px-6 md:py-10">
-          <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>Traction</p>
-              <button
-                onClick={() => navigate('/for-investors')}
-                className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700 hover:text-emerald-600'}`}
-              >
-                Open full investor page
-              </button>
-            </div>
-
-            <div className={`mt-4 rounded-3xl border p-5 md:p-6 ${'border-slate-200 bg-white'}`}>
-              <p className={`text-sm leading-relaxed ${'text-slate-700'}`}>
-                VITALOOP is in early access and already used by real customers in live protocol cycles.
-                {' '}
-                <a
-                  href="https://www.linkedin.com/in/aleksey-bombela/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`${'text-emerald-700 hover:text-emerald-600'} font-semibold`}
-                >
-                  Founder profile
-                </a>
-              </p>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Early adopters</div>
-                  <div className="mt-1 text-sm font-semibold">{typeof tractionUsers === 'number' ? `${tractionUsers.toLocaleString()} early users` : 'Loading…'}</div>
-                  <div className={`mt-1 text-[11px] ${'text-emerald-700'}`}>Validated in live product usage</div>
-                </div>
-                <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Lab compatibility</div>
-                  <div className="mt-1 text-sm font-semibold">Quest, LabCorp, and 50+ report formats</div>
-                </div>
-                <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Launch & stack</div>
-                  <div className="mt-1 text-sm font-semibold">May 2026 launch · FastAPI + Claude AI + Supabase</div>
-                </div>
-                <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Founder contact</div>
-                  <a href="mailto:bombela@softdab.tech" className={`mt-1 inline-flex text-sm font-semibold ${'text-emerald-700 hover:text-emerald-600'}`}>
-                    bombela@softdab.tech
-                  </a>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </section>
 
         <TestimonialsCarousel />
 

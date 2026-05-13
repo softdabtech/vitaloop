@@ -1,15 +1,33 @@
 import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Building2, ChartNoAxesCombined, CheckCircle2, ShieldCheck, Users, Workflow, TrendingUp, Zap, DollarSign, Target } from 'lucide-react'
+import { ArrowRight, Building2, CheckCircle2, Users, Workflow, TrendingUp, Zap, DollarSign, Target } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
 import Footer from '../components/landing/Footer.jsx'
 import { PageHeader } from '../components/landing/PageHeader.jsx'
+import api from '../api/client.ts'
 
-const TRACTION_METRICS = [
-  { value: '85+', label: 'Biomarkers normalized per upload' },
-  { value: '<60s', label: 'Upload to first protocol draft' },
-  { value: '3', label: 'Monetization layers (Free, Premium, Enterprise)' },
-  { value: 'Weekly', label: 'Retention loop via check-ins' },
+const REGULATORY_WORKSTREAMS = [
+  {
+    title: 'Regulatory counsel and jurisdiction map',
+    status: 'In progress',
+    detail: 'External healthcare counsel engagement to map US state-by-state constraints and EU/UK expansion requirements before scale.',
+  },
+  {
+    title: 'Wellness vs medical-device boundary',
+    status: 'In progress',
+    detail: 'Public claim policy limits product language to wellness decision-support and excludes diagnosis/treatment claims.',
+  },
+  {
+    title: 'Dosage safety guardrails',
+    status: 'Active',
+    detail: 'Exact dosage output is constrained by evidence tiers, contraindication checks, and escalation prompts to licensed clinicians.',
+  },
+  {
+    title: 'Clinical governance and audit trail',
+    status: 'Active',
+    detail: 'Recommendations, inputs, and changes are logged for review; high-risk profiles can be routed to practitioner oversight.',
+  },
 ]
 
 const TEAM = [
@@ -102,6 +120,34 @@ const COMPETITOR_ROWS = [
 
 export default function ForInvestors() {
   const navigate = useNavigate()
+  const [tractionUsers, setTractionUsers] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (typeof navigator !== 'undefined' && navigator.userAgent.includes('ReactSnap')) {
+      return () => {
+        cancelled = true
+      }
+    }
+
+    const loadPlatformStats = async () => {
+      try {
+        const { data } = await api.get('/admin/public-platform-stats')
+        if (!cancelled && Number.isFinite(data?.total_users)) {
+          setTractionUsers(data.total_users)
+        }
+      } catch {
+        /* empty */
+      }
+    }
+
+    loadPlatformStats()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
@@ -160,14 +206,39 @@ export default function ForInvestors() {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="rounded-[30px] border border-slate-200 bg-slate-50 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600">Traction signals</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-600">Traction</p>
+          <p className="mt-3 text-sm leading-relaxed text-slate-700">
+            VITALOOP is in early access and already used by real customers in live protocol cycles.
+            {' '}
+            <a
+              href="https://www.linkedin.com/in/aleksey-bombela/"
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-emerald-700 hover:text-emerald-600"
+            >
+              Founder profile
+            </a>
+          </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {TRACTION_METRICS.map((item) => (
-              <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="text-2xl font-bold tracking-tight text-slate-900">{item.value}</div>
-                <div className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-600">{item.label}</div>
-              </div>
-            ))}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Early adopters</div>
+              <div className="mt-1 text-sm font-semibold text-slate-900">{typeof tractionUsers === 'number' ? `${tractionUsers.toLocaleString()} early users` : 'Loading…'}</div>
+              <div className="mt-1 text-[11px] text-emerald-700">Validated in live product usage</div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Lab compatibility</div>
+              <div className="mt-1 text-sm font-semibold text-slate-900">Quest, LabCorp, and 50+ report formats</div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Launch & stack</div>
+              <div className="mt-1 text-sm font-semibold text-slate-900">May 2026 launch · FastAPI + Claude AI + Supabase</div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Founder contact</div>
+              <a href="mailto:bombela@softdab.tech" className="mt-1 inline-flex text-sm font-semibold text-emerald-700 hover:text-emerald-600">
+                bombela@softdab.tech
+              </a>
+            </div>
           </div>
         </motion.div>
       </section>
@@ -326,7 +397,7 @@ export default function ForInvestors() {
               <ul className="mt-4 space-y-2 text-sm text-slate-600">
                 <li className="flex items-start gap-2">
                   <span className="text-emerald-600 font-bold">•</span>
-                  <span><strong>Regulatory:</strong> Proactive HIPAA/state medical licensing compliance</span>
+                  <span><strong>Regulatory:</strong> Counsel-led wellness boundary policy + jurisdiction matrix + dosage safety governance</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-emerald-600 font-bold">•</span>
@@ -337,6 +408,23 @@ export default function ForInvestors() {
                   <span><strong>Competition:</strong> Workflow moat harder to replicate than diagnostics</span>
                 </li>
               </ul>
+            </div>
+          </div>
+          <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-5">
+            <div className="text-sm uppercase tracking-[0.16em] text-emerald-600 font-semibold">Regulatory readiness (priority workstream)</div>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              The highest execution risk is regulatory classification and supplement dosage guidance. We are treating this as a first-order workstream with explicit scope, owners, and public guardrails.
+            </p>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {REGULATORY_WORKSTREAMS.map((item) => (
+                <article key={item.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-slate-900">{item.title}</h3>
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-700">{item.status}</span>
+                  </div>
+                  <p className="mt-2 text-xs leading-6 text-slate-600">{item.detail}</p>
+                </article>
+              ))}
             </div>
           </div>
         </div>

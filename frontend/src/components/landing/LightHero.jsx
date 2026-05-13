@@ -27,7 +27,7 @@ export function LightHero() {
 
             {/* Subheadline */}
             <p className="text-lg text-slate-600 leading-relaxed max-w-xl space-y-3">
-              <span className="block">Upload your PDF. Get a protocol with dosages in 60 seconds.</span>
+              <span className="block">Upload your PDF. Get a ranked protocol with dosage guidance and weekly next steps.</span>
               <span className="block font-semibold text-slate-900">Not interpretation. Execution.</span>
               <span className="block text-base text-slate-500">
                 Stop wasting time decoding lab results. Get a personalized action plan ranked by priority, with exact supplement dosages, meal timing, and weekly milestones to track real progress.

@@ -3,6 +3,10 @@ import { motion } from 'framer-motion'
 import { useState } from 'react'
 import {
   ArrowLeft,
+  BrainCircuit,
+  Clock3,
+  DollarSign,
+  FileText,
   Sparkles,
   TrendingUp,
   Lock,
@@ -11,8 +15,43 @@ import {
   Microscope,
   CheckCircle2,
   ExternalLink,
+  ShieldCheck,
+  Target,
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
+import Footer from '../components/landing/Footer.jsx'
+
+const FOUNDER_IMAGE_SOURCES = [
+  '/images/alex.png',
+  '/images/alex-bombela.jpg',
+  '/images/alex-bombela.jpeg',
+  '/images/alex-bombela.png',
+  '/images/alex-bombela.webp',
+]
+
+const HERO_OBJECTS = [
+  { icon: BrainCircuit, label: '85+ biomarkers analyzed' },
+  { icon: ShieldCheck, label: 'Evidence-based protocol engine' },
+  { icon: Target, label: 'Clear next steps in minutes' },
+]
+
+const PROBLEM_STATS = [
+  {
+    icon: DollarSign,
+    value: '$400 spent on blood tests',
+    text: 'and most people never act on the results',
+  },
+  {
+    icon: Clock3,
+    value: '7 minutes',
+    text: 'average doctor appointment. Not enough to explain 85 biomarkers',
+  },
+  {
+    icon: FileText,
+    value: 'Millions of PDFs',
+    text: 'filed away, ignored, misunderstood every year',
+  },
+]
 
 const VALUES = [
   {
@@ -57,6 +96,7 @@ const ROADMAP = [
 
 export default function About() {
   const navigate = useNavigate()
+  const [imageIndex, setImageIndex] = useState(0)
   const [imageError, setImageError] = useState(false)
 
   const FounderAvatarFallback = () => (
@@ -95,6 +135,24 @@ export default function About() {
               transition={{ duration: 0.5 }}
               className="text-center"
             >
+              <div className="mb-6 flex flex-wrap items-center justify-center gap-3">
+                {HERO_OBJECTS.map((item, idx) => {
+                  const Icon = item.icon
+                  return (
+                    <motion.div
+                      key={item.label}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.35, delay: 0.08 * idx }}
+                      className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800"
+                    >
+                      <Icon size={16} />
+                      <span>{item.label}</span>
+                    </motion.div>
+                  )
+                })}
+              </div>
+
               <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 mb-6 leading-tight">
                 We're on a mission to make your health data work for you
               </h1>
@@ -108,6 +166,26 @@ export default function About() {
                 Upload your labs free
                 <span>→</span>
               </button>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="mt-12 grid gap-4 sm:grid-cols-3"
+            >
+              {PROBLEM_STATS.map((stat) => {
+                const Icon = stat.icon
+                return (
+                  <div key={stat.value} className="rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm">
+                    <div className="mb-3 inline-flex rounded-xl bg-slate-100 p-2 text-slate-600">
+                      <Icon size={18} />
+                    </div>
+                    <p className="text-lg font-bold text-slate-900">{stat.value}</p>
+                    <p className="mt-1 text-sm text-slate-600">{stat.text}</p>
+                  </div>
+                )
+              })}
             </motion.div>
           </div>
         </div>
@@ -133,6 +211,10 @@ export default function About() {
               <p>
                 We built Vitaloop because we believe that having your labs analyzed shouldn't require a medical degree or a large budget. Your health data belongs to you — and it should actually tell you something useful.
               </p>
+            </div>
+
+            <div className="mt-10 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6 text-center">
+              <p className="text-xl font-semibold text-emerald-900">People aren't lazy. They just never got a clear action plan.</p>
             </div>
           </motion.div>
         </div>
@@ -199,10 +281,17 @@ export default function About() {
             <div className="mb-8 flex justify-center">
               {!imageError ? (
                 <img
-                  src="/images/alex-bombela.jpg"
+                  src={FOUNDER_IMAGE_SOURCES[imageIndex]}
                   alt="Alex Bombela"
-                  onError={() => setImageError(true)}
-                  className="h-32 w-32 rounded-full border-4 border-emerald-200 object-cover"
+                  onError={() => {
+                    const nextIndex = imageIndex + 1
+                    if (nextIndex >= FOUNDER_IMAGE_SOURCES.length) {
+                      setImageError(true)
+                      return
+                    }
+                    setImageIndex(nextIndex)
+                  }}
+                  className="h-40 w-40 rounded-full border-4 border-emerald-200 object-cover shadow-lg"
                 />
               ) : (
                 <FounderAvatarFallback />
@@ -233,7 +322,7 @@ export default function About() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50 transition"
             >
-                <ExternalLink size={18} />
+              <ExternalLink size={18} />
               Connect on LinkedIn
             </a>
 
@@ -252,8 +341,23 @@ export default function About() {
           </motion.div>
         </div>
 
-        {/* SECTION 5: VALUES */}
+        {/* SECTION 5: MISSION STATEMENT */}
         <div className="bg-slate-900 text-white">
+          <div className="mx-auto max-w-[1240px] px-4 sm:px-6 py-16 sm:py-24">
+            <motion.blockquote
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+              className="mx-auto max-w-4xl text-center text-3xl font-bold leading-tight sm:text-5xl"
+            >
+              Vitaloop exists to make evidence-based health accessible to everyone — not just those who can afford a functional medicine doctor.
+            </motion.blockquote>
+          </div>
+        </div>
+
+        {/* SECTION 6: VALUES */}
+        <div className="bg-white text-slate-900">
           <div className="mx-auto max-w-[1240px] px-4 sm:px-6 py-16 sm:py-24">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -278,13 +382,13 @@ export default function About() {
                     className="flex gap-4"
                   >
                     <div className="flex-shrink-0">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20">
-                        <Icon size={24} className="text-emerald-400" />
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+                        <Icon size={24} className="text-emerald-600" />
                       </div>
                     </div>
                     <div>
                       <h3 className="text-xl font-bold mb-2">{value.title}</h3>
-                      <p className="text-slate-300">{value.description}</p>
+                      <p className="text-slate-600">{value.description}</p>
                     </div>
                   </motion.div>
                 )
@@ -293,7 +397,7 @@ export default function About() {
           </div>
         </div>
 
-        {/* SECTION 6: CLOSING CTA */}
+        {/* SECTION 7: CLOSING CTA */}
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6 py-16 sm:py-24">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -325,6 +429,8 @@ export default function About() {
             </div>
           </motion.div>
         </div>
+
+        <Footer />
       </div>
     </>
   )
