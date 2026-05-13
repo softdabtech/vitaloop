@@ -1,4 +1,4 @@
-import { Copy, Share2, Zap, Gift } from 'lucide-react'
+import { Copy, Zap, Gift } from 'lucide-react'
 import { useState } from 'react'
 
 export default function ReferralCard({ referralCode, rewards, userName }) {

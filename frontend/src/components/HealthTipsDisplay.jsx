@@ -1,4 +1,4 @@
-import { AlertCircle, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react'
+import { Lightbulb, ChevronDown, ChevronUp } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { generateHealthTips, getHealthTipsJob, filterTipsByCategory, sortTipsByDifficulty } from '../lib/ai-health-tips'
 

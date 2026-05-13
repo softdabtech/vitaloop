@@ -1,4 +1,4 @@
-export default function BiomarkerComparison({ current, previous, trends }) {
+export default function BiomarkerComparison({ _current, _previous, trends }) {
   if (!trends || trends.length === 0) {
     return (
       <div style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>

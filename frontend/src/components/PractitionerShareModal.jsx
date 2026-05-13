@@ -16,7 +16,7 @@ export default function PractitionerShareModal({ uploadId, isOpen, onClose }) {
       setLoading(true)
       const practitionerShares = await getPractitionerShares(uploadId)
       setShares(practitionerShares)
-    } catch (err) {
+    } catch (_err) {
       setMessage('Failed to load shares')
     } finally {
       setLoading(false)
@@ -39,7 +39,7 @@ export default function PractitionerShareModal({ uploadId, isOpen, onClose }) {
       setAccessLevel('view')
       setExpiresInDays(30)
       await loadShares()
-    } catch (err) {
+    } catch (_err) {
       setMessage('Failed to create share link')
     } finally {
       setLoading(false)
@@ -54,7 +54,7 @@ export default function PractitionerShareModal({ uploadId, isOpen, onClose }) {
       await revokePractitionerAccess(shareId)
       setShares(shares.filter(s => s.id !== shareId))
       setMessage('Access revoked')
-    } catch (err) {
+    } catch (_err) {
       setMessage('Failed to revoke access')
     } finally {
       setLoading(false)

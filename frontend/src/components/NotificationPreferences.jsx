@@ -1,4 +1,4 @@
-import { Bell, Mail, Zap, Calendar, AlertCircle } from 'lucide-react'
+import { Mail, Zap, Calendar, AlertCircle } from 'lucide-react'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../lib/api.js'

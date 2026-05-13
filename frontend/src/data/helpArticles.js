@@ -94,7 +94,7 @@ export const HELP_ARTICLES = {
     content: [
       {
         type: 'intro',
-        text: "VITALOOP is an AI-powered health intelligence platform that transforms your blood test results into a clear, personalized action plan — with exact supplement dosages, lifestyle guidance, and a retest schedule.",
+        text: 'VITALOOP is an AI-powered health intelligence platform that transforms your blood test results into a clear, personalized action plan — with exact supplement dosages, lifestyle guidance, and a retest schedule.',
       },
       {
         type: 'heading',
@@ -126,15 +126,15 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'heading',
-        text: "What makes VITALOOP different?",
+        text: 'What makes VITALOOP different?',
       },
       {
         type: 'paragraph',
-        text: "Most tools give you an interpretation — a PDF report with color-coded ranges. VITALOOP gives you an **execution loop**: upload → identify problems → execute protocol → weekly check-in → retest 12 weeks later → see measurable change. Each cycle is smarter than the last.",
+        text: 'Most tools give you an interpretation — a PDF report with color-coded ranges. VITALOOP gives you an **execution loop**: upload → identify problems → execute protocol → weekly check-in → retest 12 weeks later → see measurable change. Each cycle is smarter than the last.',
       },
       {
         type: 'tip',
-        text: "VITALOOP is not a medical device and does not replace your doctor. It helps you arrive at your next appointment with better data and more specific questions.",
+        text: 'VITALOOP is not a medical device and does not replace your doctor. It helps you arrive at your next appointment with better data and more specific questions.',
       },
     ],
   },
@@ -228,7 +228,7 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'paragraph',
-        text: "Reference ranges are extracted directly from your lab report — they vary by lab, age, sex, and methodology. VITALOOP uses the ranges from *your* report, not generic population averages, so values are always interpreted in the correct context.",
+        text: 'Reference ranges are extracted directly from your lab report — they vary by lab, age, sex, and methodology. VITALOOP uses the ranges from *your* report, not generic population averages, so values are always interpreted in the correct context.',
       },
       {
         type: 'heading',

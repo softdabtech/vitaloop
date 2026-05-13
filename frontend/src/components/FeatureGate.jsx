@@ -1,4 +1,3 @@
-import { useSubscription } from '../hooks/useSubscription.js'
 import { useFeature } from '../hooks/useFeature.js'
 import { useEffect } from 'react'
 

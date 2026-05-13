@@ -1,11 +1,11 @@
-import { Download, Share2, Twitter, Linkedin, MessageCircle } from 'lucide-react'
+import { Share2, Twitter, Linkedin, MessageCircle } from 'lucide-react'
 import { useState } from 'react'
 
-export default function SocialShareCard({ metrics, userName = 'You', resultDate }) {
+export default function SocialShareCard({ metrics, _userName = 'You', resultDate }) {
   const [copied, setCopied] = useState(false)
 
   const improving = metrics.improving || 0
-  const declining = metrics.declining || 0
+  const _declining = metrics.declining || 0
   const score = metrics.score || 78
 
   const shareText = `I just tracked my health with @VITALOOP! 💪

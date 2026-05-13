@@ -2,11 +2,6 @@ import { motion } from 'framer-motion'
 import { Heart, CreditCard, Upload, Clock, Target, TrendingUp } from 'lucide-react'
 
 export default function MetricBar({ stats, uploadCount, uploadLimit, subStatus, isPremium, latestCheckin }) {
-  const getPlanColor = (plan) => {
-    if (plan === 'active' || plan === 'personal_pro') return 'bg-emerald-100 text-emerald-700'
-    if (plan === 'enterprise') return 'bg-blue-100 text-blue-700'
-    return 'bg-slate-100 text-slate-700'
-  }
 
   const getPlanName = (plan) => {
     if (plan === 'active' || plan === 'personal_pro') return 'Premium'

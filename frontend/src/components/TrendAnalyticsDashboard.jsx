@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { TrendingUp, TrendingDown, Activity, AlertTriangle, CheckCircle } from 'lucide-react'
-import { analyzeBiomarkerTrends, generateTrendInsights, formatTrendStatus, getTrendColor } from '../lib/trend-analytics'
+import { analyzeBiomarkerTrends, generateTrendInsights } from '../lib/trend-analytics'
 
 export default function TrendAnalyticsDashboard({ biomarkerHistory = [] }) {
   const [selectedBiomarker, setSelectedBiomarker] = useState(null)

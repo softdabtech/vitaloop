@@ -99,9 +99,9 @@ export default function LabResultsList() {
           console.error('LabResultsList fetch error:', result.originalError)
         }
       } finally {
-        if (!active) return
         setLoading(false)
       }
+      if (!active) return
     }
 
     fetchLabResults()

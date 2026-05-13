@@ -1,8 +1,8 @@
 import { AlertCircle, AlertTriangle, Info, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { generateBiomarkerAlerts, getAlertColor, getAlertIcon } from '../lib/biomarker-alerts'
+import { generateBiomarkerAlerts, getAlertColor } from '../lib/biomarker-alerts'
 
-export default function BiomarkerAlertsDisplay({ biomarkers, previousBiomarkers, userPreferences }) {
+export default function BiomarkerAlertsDisplay({ biomarkers, previousBiomarkers, _userPreferences }) {
   const [alerts, setAlerts] = useState([])
   const [dismissedAlerts, setDismissedAlerts] = useState(new Set())
 

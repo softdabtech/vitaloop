@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { Lightbulb, AlertCircle, CheckCircle2, TrendingUp } from 'lucide-react'
-import toast from 'react-hot-toast'
 
 function TipCard({ icon: Icon, title, description, priority = 'normal' }) {
   const priorityColors = {

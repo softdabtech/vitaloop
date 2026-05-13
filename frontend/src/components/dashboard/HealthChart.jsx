@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { TrendingUp, TrendingDown, Minus, CheckCircle, AlertTriangle, XCircle, Calendar } from 'lucide-react'
 import AnimatedCounter from './AnimatedCounter'
