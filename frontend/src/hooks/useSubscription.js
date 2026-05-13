@@ -9,6 +9,7 @@ export function useSubscription() {
   const [uploadCount, setUploadCount] = useState(0)
   const [uploadLimit, setUploadLimit] = useState(null)
   const [uploadsRemaining, setUploadsRemaining] = useState(null)
+  const [planName, setPlanName] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(() => {
@@ -44,6 +45,7 @@ export function useSubscription() {
 
         setSubStatus(subStatusResolved)
         setIsPremium(isPremiumResolved)
+        setPlanName(stripeData?.plan_name ?? null)
         setUploadCount(stripeData?.upload_count ?? 0)
         setUploadLimit(isPremiumResolved ? Infinity : (stripeData?.upload_limit ?? 1))
         setUploadsRemaining(isPremiumResolved ? Infinity : (stripeData?.uploads_remaining ?? 0))
@@ -56,6 +58,7 @@ export function useSubscription() {
 
           setSubStatus(status)
           setIsPremium(premium)
+          setPlanName(data?.plan_name ?? null)
 
           // Conservative defaults when stripe endpoint is unavailable.
           // Do not force free-plan limits for premium users.
@@ -71,6 +74,7 @@ export function useSubscription() {
 
           setSubStatus('free')
           setIsPremium(false)
+          setPlanName(null)
           setUploadCount(0)
           setUploadLimit(1)
           setUploadsRemaining(1)
@@ -90,6 +94,7 @@ export function useSubscription() {
     uploadCount,
     uploadLimit,
     uploadsRemaining,
+    planName,
     loading,
     refresh,
   }

@@ -1,6 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Check } from 'lucide-react'
+import { useAuth } from '../../hooks/useAuth.js'
+import { useSubscription } from '../../hooks/useSubscription.js'
+import { buildSignupPath, buildSignupRedirect, buildSubscriptionPath, SUBSCRIPTION_PLAN_IDS } from '../../lib/subscriptionFlow.js'
 
 const PRICING = {
   monthly: [
@@ -64,8 +68,45 @@ const PRICING = {
 }
 
 export function InteractivePricing() {
+  const navigate = useNavigate()
+  const { user, loading: authLoading } = useAuth()
+  const { planName } = useSubscription()
   const [isAnnual, setIsAnnual] = useState(false)
   const plans = isAnnual ? PRICING.annual : PRICING.monthly
+  const currentPlanName = planName || SUBSCRIPTION_PLAN_IDS.FREE
+  const rank = { free: 0, personal: 1, practitioner: 2 }
+  const currentRank = user ? (rank[currentPlanName] ?? 0) : -1
+
+  function getPlanId(plan) {
+    if (plan.name === 'Premium') return SUBSCRIPTION_PLAN_IDS.PERSONAL
+    if (plan.name === 'Pro Premium') return SUBSCRIPTION_PLAN_IDS.PRACTITIONER
+    return SUBSCRIPTION_PLAN_IDS.FREE
+  }
+
+  function handlePlanClick(plan) {
+    if (authLoading) return
+
+    const planId = getPlanId(plan)
+    const billingCycle = isAnnual ? 'yearly' : 'monthly'
+
+    if (planId === SUBSCRIPTION_PLAN_IDS.FREE) {
+      if (!user) {
+        navigate(buildSignupPath())
+        return
+      }
+
+      navigate('/dashboard')
+      return
+    }
+
+    const targetUrl = buildSubscriptionPath({ planId, billingCycle })
+    if (!user) {
+      navigate(buildSignupRedirect({ planId, billingCycle }))
+      return
+    }
+
+    navigate(targetUrl)
+  }
 
   return (
     <section id="pricing" className="relative py-24 px-4 sm:px-6 lg:px-8">
@@ -126,9 +167,24 @@ export function InteractivePricing() {
             transition={{ duration: 0.4 }}
             className="grid md:grid-cols-3 gap-8"
           >
-            {plans.map((plan, i) => (
-              <PricingCard key={plan.name} plan={plan} index={i} isAnnual={isAnnual} />
-            ))}
+            {plans.map((plan, i) => {
+              const planId = getPlanId(plan)
+              const planRank = rank[planId] ?? 0
+              const isCurrentPlan = user && planId !== SUBSCRIPTION_PLAN_IDS.FREE && planId === currentPlanName
+              const isDisabled = user ? planRank <= currentRank : false
+
+              return (
+                <PricingCard
+                  key={plan.name}
+                  plan={plan}
+                  index={i}
+                  isAnnual={isAnnual}
+                  onClick={() => handlePlanClick(plan)}
+                  isDisabled={isDisabled}
+                  isCurrentPlan={isCurrentPlan}
+                />
+              )
+            })}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -136,7 +192,7 @@ export function InteractivePricing() {
   )
 }
 
-function PricingCard({ plan, index, isAnnual }) {
+function PricingCard({ plan, index, isAnnual, onClick, isDisabled, isCurrentPlan }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -186,15 +242,18 @@ function PricingCard({ plan, index, isAnnual }) {
 
         {/* CTA Button */}
         <motion.button
+          type="button"
+          onClick={onClick}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
+          disabled={isDisabled}
           className={`w-full py-3 rounded-lg font-semibold mb-8 transition-all ${
             plan.featured
               ? 'bg-emerald-500 hover:bg-emerald-400 text-white'
               : 'bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 hover:border-emerald-300'
-          }`}
+          } ${isDisabled ? 'cursor-default opacity-70' : ''}`}
         >
-          {plan.cta}
+          {isCurrentPlan ? 'Current plan' : plan.cta}
         </motion.button>
 
         {/* Features */}

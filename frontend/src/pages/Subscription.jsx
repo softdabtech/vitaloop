@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { CreditCard, CheckCircle2, AlertCircle, ArrowRight, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import api from '../lib/api.js'
+import { SUBSCRIPTION_PLAN_IDS } from '../lib/subscriptionFlow.js'
 import '../styles/dashboard2026.css'
 
 const PLANS = {
@@ -163,10 +164,12 @@ function PlanCard({ plan, planKey, currentPlan, onSelect, isLoading }) {
 export default function Subscription() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [subscription, setSubscription] = useState(null)
   const [loading, setLoading] = useState(true)
   const [upgrading, setUpgrading] = useState(false)
   const [openingPortal, setOpeningPortal] = useState(false)
+  const autoCheckoutKey = useRef(null)
 
   const _planNameToKey = { personal: 'basic', practitioner: 'pro' }
   const currentPlan = subscription
@@ -197,7 +200,7 @@ export default function Subscription() {
     }
   }
 
-  async function handleSelectPlan(planKey) {
+  async function handleSelectPlan(planKey, billingCycle = 'monthly') {
     const action = resolvePlanSelectionAction(planKey, currentPlan)
     if (action === 'noop') return
     if (action === 'enterprise') {
@@ -212,7 +215,7 @@ export default function Subscription() {
     setUpgrading(true)
     try {
       const backendPlanId = PLAN_KEY_TO_BACKEND[planKey] || 'personal'
-      const { data } = await api.post('/stripe/checkout', { plan_id: backendPlanId })
+      const { data } = await api.post('/stripe/checkout', { plan_id: backendPlanId, billing_cycle: billingCycle })
       if (data.checkout_url) {
         navigateToUrl(data.checkout_url)
       }
@@ -223,6 +226,26 @@ export default function Subscription() {
       setUpgrading(false)
     }
   }
+
+  useEffect(() => {
+    if (loading || !user) return
+
+    const requestedPlan = searchParams.get('plan')
+    if (!requestedPlan) return
+
+    const billingCycle = searchParams.get('billing') === 'yearly' ? 'yearly' : 'monthly'
+    const normalizedPlan = requestedPlan === SUBSCRIPTION_PLAN_IDS.PERSONAL
+      ? 'basic'
+      : requestedPlan === SUBSCRIPTION_PLAN_IDS.PRACTITIONER
+        ? 'pro'
+        : requestedPlan
+    const checkoutKey = `${normalizedPlan}:${billingCycle}`
+
+    if (autoCheckoutKey.current === checkoutKey) return
+    autoCheckoutKey.current = checkoutKey
+
+    handleSelectPlan(normalizedPlan, billingCycle)
+  }, [loading, user, searchParams, currentPlan])
 
   async function openBillingPortal() {
     if (!hasStripeCustomer) {

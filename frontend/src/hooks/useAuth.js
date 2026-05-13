@@ -42,12 +42,12 @@ export function useAuth() {
   const signInWithEmail = (email, password) =>
     supabase.auth.signInWithPassword({ email, password })
 
-  const signUpWithEmail = (email, password) =>
+  const signUpWithEmail = (email, password, options = {}) =>
     supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: resolveEmailConfirmationRedirect(),
+        emailRedirectTo: options.emailRedirectTo || resolveEmailConfirmationRedirect(),
       },
     })
 
