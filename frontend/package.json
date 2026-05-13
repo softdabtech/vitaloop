@@ -23,7 +23,8 @@
     "include": [
       "/",
       "/how-it-works",
-      "/example-report"
+      "/example-report",
+      "/about"
     ],
     "puppeteerArgs": [
       "--no-sandbox",
