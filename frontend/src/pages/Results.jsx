@@ -224,7 +224,7 @@ export default function Results() {
         const { data } = await api.get(`/results/${uploadId}`)
         setBiomarkers(data.biomarkers ?? [])
         setProtocol(data.protocol ?? [])
-      } catch (e) {
+      } catch (_e) {
         setBiomarkers([])
         setProtocol([])
       } finally {
@@ -261,7 +261,7 @@ export default function Results() {
         if (active) {
           setMedicalAnalysis(payload)
         }
-      } catch (err) {
+      } catch (_err) {
         if (active) {
           setMedicalAnalysis(null)
           setMedicalAnalysisError('Medical microservice analysis is temporarily unavailable.')

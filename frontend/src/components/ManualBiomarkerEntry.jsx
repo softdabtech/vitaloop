@@ -139,14 +139,14 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
       onAnalyze?.(result.data)
     } catch (err) {
       console.error('Analysis failed:', err)
-      
+
       // Handle specific error codes
       const errorData = err.response?.data || {}
       const errorCode = errorData?.code
       const errorDetail = typeof errorData?.detail === 'string' ? errorData?.detail : null
-      
+
       let message = errorDetail || 'Analysis failed. Please try again.'
-      
+
       if (err.response?.status === 402 && errorCode === 'BIOMARKER_QUOTA_EXCEEDED') {
         const usedBy = errorData?.used_by
         if (usedBy === 'pdf') {
@@ -160,7 +160,7 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
         message = errorDetail || 'Subscription required for this action. Upgrade to Premium.'
         triggerPaywall({ reason: 'SUBSCRIPTION_REQUIRED' })
       }
-      
+
       setGlobalError(message)
     } finally {
       setAnalyzing(false)
@@ -205,7 +205,7 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
           </div>
         )}
 
-        {entries.map((entry, idx) => {
+        {entries.map((entry, _idx) => {
           const selectedBiomarker = biomarkerOptions.find(b => b.id === entry.biomarker_id)
           const units = getUnitsForBiomarker(entry.biomarker_id)
           const entryErrors = errors[entry.id] || []

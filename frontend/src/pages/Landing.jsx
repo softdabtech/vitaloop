@@ -700,6 +700,7 @@ export default function Landing() {
           setTractionUsers(data.total_users)
         }
       } catch {
+        /* empty */
       }
     }
 

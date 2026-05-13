@@ -1,4 +1,4 @@
-import { UserPlus, MoreVertical } from 'lucide-react'
+
 
 export default function FriendComparison({ friend, currentUser }) {
   const friendScore = friend.score || 0

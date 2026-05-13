@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, Zap, Heart, Droplet, Wind, Flame } from 'lucide-react'
+import { ChevronDown, Droplet } from 'lucide-react'
 
 // Enhanced body zones with biomarker mappings and health impacts
 const BODY_ZONES = [

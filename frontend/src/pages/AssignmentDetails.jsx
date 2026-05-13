@@ -67,9 +67,9 @@ export default function AssignmentDetails() {
         if (!active) return
         setError('Could not load assignment details.')
       } finally {
-        if (!active) return
         setLoading(false)
       }
+      if (!active) return
     }
 
     load()

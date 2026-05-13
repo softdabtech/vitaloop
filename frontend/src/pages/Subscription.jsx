@@ -150,8 +150,8 @@ function PlanCard({ plan, planKey, currentPlan, onSelect, isLoading }) {
           isCurrentPlan
             ? 'bg-slate-300 text-slate-600 cursor-default'
             : plan.comingSoon
-            ? 'bg-slate-300 text-slate-600 cursor-default'
-            : `${colors.button} text-white`
+              ? 'bg-slate-300 text-slate-600 cursor-default'
+              : `${colors.button} text-white`
         }`}
       >
         {isCurrentPlan ? 'Current Plan' : plan.comingSoon ? 'Coming Soon' : planKey === 'pro' ? 'Upgrade' : 'Select Plan'}
@@ -174,8 +174,8 @@ export default function Subscription() {
   const _planNameToKey = { personal: 'basic', practitioner: 'pro' }
   const currentPlan = subscription
     ? (subscription.is_premium
-        ? (_planNameToKey[subscription.plan_name] || 'basic')
-        : 'free')
+      ? (_planNameToKey[subscription.plan_name] || 'basic')
+      : 'free')
     : 'free'
   const planStatus = subscription?.sub_status || 'free'
   const daysRemaining = subscription?.current_period_end ? Math.ceil((subscription.current_period_end - Date.now() / 1000) / 86400) : null

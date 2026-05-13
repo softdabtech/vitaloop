@@ -1,5 +1,3 @@
-import { Trophy, Star, Zap, Heart, Target, Flame } from 'lucide-react'
-
 const ACHIEVEMENTS = {
   first_upload: {
     id: 'first_upload',

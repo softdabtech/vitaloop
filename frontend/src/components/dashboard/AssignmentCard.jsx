@@ -1,4 +1,3 @@
-import React from 'react'
 import { motion } from 'framer-motion'
 import { Clock, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react'
 
@@ -40,12 +39,12 @@ export default function AssignmentCard({ assignment, onClick, animated = true, d
 
   const animationProps = animated
     ? {
-        initial: { opacity: 0, x: -20 },
-        whileInView: { opacity: 1, x: 0 },
-        viewport: { once: true, margin: '-100px' },
-        transition: { duration: 0.4, delay, ease: [0.16, 1, 0.3, 1] },
-        whileHover: { x: 4 },
-      }
+      initial: { opacity: 0, x: -20 },
+      whileInView: { opacity: 1, x: 0 },
+      viewport: { once: true, margin: '-100px' },
+      transition: { duration: 0.4, delay, ease: [0.16, 1, 0.3, 1] },
+      whileHover: { x: 4 },
+    }
     : {}
 
   const WrapperComponent = animated ? motion.div : 'div'

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Upload, Camera, Trash2, Plus, Calendar } from 'lucide-react'
+import { Camera, Trash2, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function ProgressPhotoGallery({ photos = [], onUpload, onDelete }) {

@@ -66,11 +66,11 @@ function triggerDashboardUpgradePaywall() {
 function DashboardCard({ title, eyebrow, children, action, animated = true, delay = 0 }) {
   const animationProps = animated
     ? {
-        initial: { opacity: 0, y: 20 },
-        whileInView: { opacity: 1, y: 0 },
-        viewport: { once: true, margin: '-100px' },
-        transition: { duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] },
-      }
+      initial: { opacity: 0, y: 20 },
+      whileInView: { opacity: 1, y: 0 },
+      viewport: { once: true, margin: '-100px' },
+      transition: { duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] },
+    }
     : {}
 
   const WrapperComponent = animated ? motion.section : 'section'
@@ -96,11 +96,11 @@ function DashboardCard({ title, eyebrow, children, action, animated = true, dela
 function EmptyBlock({ title, body, cta, onClick, animated = true, delay = 0 }) {
   const animationProps = animated
     ? {
-        initial: { opacity: 0, y: 20 },
-        whileInView: { opacity: 1, y: 0 },
-        viewport: { once: true, margin: '-100px' },
-        transition: { duration: 0.5, delay },
-      }
+      initial: { opacity: 0, y: 20 },
+      whileInView: { opacity: 1, y: 0 },
+      viewport: { once: true, margin: '-100px' },
+      transition: { duration: 0.5, delay },
+    }
     : {}
 
   const WrapperComponent = animated ? motion.div : 'div'

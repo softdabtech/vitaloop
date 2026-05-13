@@ -52,132 +52,132 @@ function resolveHelpPageMeta(articleId, sectionId) {
 
 function ArticleBlock({ block }) {
   switch (block.type) {
-    case 'intro':
-      return (
-        <p className="text-lg text-slate-600 leading-relaxed mb-6 pb-6 border-b border-slate-100 font-medium">
-          {renderInline(block.text)}
-        </p>
-      )
-    case 'heading':
-      return (
-        <h2 className="text-xl font-bold text-slate-900 mt-8 mb-3">
-          {block.text}
-        </h2>
-      )
-    case 'paragraph':
-      return (
-        <p className="text-slate-600 leading-relaxed mb-4">
-          {renderInline(block.text)}
-        </p>
-      )
-    case 'list':
-      return (
-        <ul className="space-y-2 mb-5 ml-1">
-          {block.items.map((item, i) => (
-            <li key={i} className="flex gap-3 text-slate-600 leading-relaxed">
-              <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
-              <span>{renderInline(item)}</span>
-            </li>
-          ))}
-        </ul>
-      )
-    case 'steps':
-      return (
-        <ol className="space-y-4 mb-6">
-          {block.items.map((step, i) => (
-            <li key={i} className="flex gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-600 text-white text-sm font-bold flex items-center justify-center mt-0.5">
-                {i + 1}
-              </div>
-              <div className="flex-1 pt-0.5">
-                <div className="font-semibold text-slate-900 mb-1">{step.title}</div>
-                <div className="text-slate-600 leading-relaxed text-sm">
-                  {renderMultilineInline(step.body)}
-                </div>
-              </div>
-            </li>
-          ))}
-        </ol>
-      )
-    case 'tip':
-      return (
-        <div className="flex gap-3 bg-emerald-50 border-l-4 border-emerald-500 rounded-r-xl p-4 mb-5">
-          <span className="text-emerald-600 font-bold text-sm flex-shrink-0 mt-0.5">💡 Tip</span>
-          <p className="text-slate-700 text-sm leading-relaxed">{renderInline(block.text)}</p>
-        </div>
-      )
-    case 'status-table':
-      return (
-        <div className="space-y-2 mb-6">
-          {block.items.map((row, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100" style={{ background: row.bg }}>
-              <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: row.color }} />
-              <span className="font-semibold text-sm w-24 flex-shrink-0" style={{ color: row.color }}>{row.label}</span>
-              <span className="text-slate-600 text-sm">{row.desc}</span>
+  case 'intro':
+    return (
+      <p className="text-lg text-slate-600 leading-relaxed mb-6 pb-6 border-b border-slate-100 font-medium">
+        {renderInline(block.text)}
+      </p>
+    )
+  case 'heading':
+    return (
+      <h2 className="text-xl font-bold text-slate-900 mt-8 mb-3">
+        {block.text}
+      </h2>
+    )
+  case 'paragraph':
+    return (
+      <p className="text-slate-600 leading-relaxed mb-4">
+        {renderInline(block.text)}
+      </p>
+    )
+  case 'list':
+    return (
+      <ul className="space-y-2 mb-5 ml-1">
+        {block.items.map((item, i) => (
+          <li key={i} className="flex gap-3 text-slate-600 leading-relaxed">
+            <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+            <span>{renderInline(item)}</span>
+          </li>
+        ))}
+      </ul>
+    )
+  case 'steps':
+    return (
+      <ol className="space-y-4 mb-6">
+        {block.items.map((step, i) => (
+          <li key={i} className="flex gap-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-600 text-white text-sm font-bold flex items-center justify-center mt-0.5">
+              {i + 1}
             </div>
-          ))}
-        </div>
-      )
-    case 'support-table':
-      return (
-        <div className="border border-slate-200 rounded-xl overflow-hidden mb-6">
-          {block.items.map((row, i) => (
-            <div key={i} className={`flex items-center justify-between px-4 py-3 text-sm ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}>
-              <span className="text-slate-700">{row.label}</span>
-              <div className="flex items-center gap-2">
-                {row.note && <span className="text-slate-400 text-xs">{row.note}</span>}
-                <span className={`font-bold text-base ${row.supported ? 'text-emerald-600' : 'text-slate-300'}`}>
-                  {row.supported ? '✓' : '✗'}
-                </span>
+            <div className="flex-1 pt-0.5">
+              <div className="font-semibold text-slate-900 mb-1">{step.title}</div>
+              <div className="text-slate-600 leading-relaxed text-sm">
+                {renderMultilineInline(step.body)}
               </div>
             </div>
-          ))}
-        </div>
-      )
-    case 'feature-grid':
-      return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-          {block.items.map((item, i) => (
-            <div key={i} className="flex gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
-              <span className="text-2xl flex-shrink-0">{item.icon}</span>
-              <div>
-                <div className="font-semibold text-slate-900 text-sm mb-0.5">{item.title}</div>
-                <div className="text-slate-500 text-sm leading-relaxed">{item.desc}</div>
-              </div>
+          </li>
+        ))}
+      </ol>
+    )
+  case 'tip':
+    return (
+      <div className="flex gap-3 bg-emerald-50 border-l-4 border-emerald-500 rounded-r-xl p-4 mb-5">
+        <span className="text-emerald-600 font-bold text-sm flex-shrink-0 mt-0.5">💡 Tip</span>
+        <p className="text-slate-700 text-sm leading-relaxed">{renderInline(block.text)}</p>
+      </div>
+    )
+  case 'status-table':
+    return (
+      <div className="space-y-2 mb-6">
+        {block.items.map((row, i) => (
+          <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100" style={{ background: row.bg }}>
+            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: row.color }} />
+            <span className="font-semibold text-sm w-24 flex-shrink-0" style={{ color: row.color }}>{row.label}</span>
+            <span className="text-slate-600 text-sm">{row.desc}</span>
+          </div>
+        ))}
+      </div>
+    )
+  case 'support-table':
+    return (
+      <div className="border border-slate-200 rounded-xl overflow-hidden mb-6">
+        {block.items.map((row, i) => (
+          <div key={i} className={`flex items-center justify-between px-4 py-3 text-sm ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}>
+            <span className="text-slate-700">{row.label}</span>
+            <div className="flex items-center gap-2">
+              {row.note && <span className="text-slate-400 text-xs">{row.note}</span>}
+              <span className={`font-bold text-base ${row.supported ? 'text-emerald-600' : 'text-slate-300'}`}>
+                {row.supported ? '✓' : '✗'}
+              </span>
             </div>
-          ))}
-        </div>
-      )
-    case 'plan-table':
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {block.plans.map((plan, i) => (
-            <div key={i} className="border-2 rounded-2xl overflow-hidden" style={{ borderColor: plan.color + '40' }}>
-              <div className="px-5 py-4 text-white" style={{ background: plan.color }}>
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-lg">{plan.name}</span>
-                  {plan.badge && (
-                    <span className="bg-white text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: plan.color }}>
-                      {plan.badge}
-                    </span>
-                  )}
-                </div>
-                <div className="text-white/80 font-medium mt-0.5">{plan.price}</div>
-              </div>
-              <ul className="p-4 space-y-2">
-                {plan.features.map((f, j) => (
-                  <li key={j} className="flex gap-2 text-sm text-slate-600">
-                    <span className="text-emerald-500 font-bold flex-shrink-0">✓</span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
+          </div>
+        ))}
+      </div>
+    )
+  case 'feature-grid':
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        {block.items.map((item, i) => (
+          <div key={i} className="flex gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <span className="text-2xl flex-shrink-0">{item.icon}</span>
+            <div>
+              <div className="font-semibold text-slate-900 text-sm mb-0.5">{item.title}</div>
+              <div className="text-slate-500 text-sm leading-relaxed">{item.desc}</div>
             </div>
-          ))}
-        </div>
-      )
-    default:
-      return null
+          </div>
+        ))}
+      </div>
+    )
+  case 'plan-table':
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {block.plans.map((plan, i) => (
+          <div key={i} className="border-2 rounded-2xl overflow-hidden" style={{ borderColor: plan.color + '40' }}>
+            <div className="px-5 py-4 text-white" style={{ background: plan.color }}>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-lg">{plan.name}</span>
+                {plan.badge && (
+                  <span className="bg-white text-xs font-bold px-2 py-0.5 rounded-full" style={{ color: plan.color }}>
+                    {plan.badge}
+                  </span>
+                )}
+              </div>
+              <div className="text-white/80 font-medium mt-0.5">{plan.price}</div>
+            </div>
+            <ul className="p-4 space-y-2">
+              {plan.features.map((f, j) => (
+                <li key={j} className="flex gap-2 text-sm text-slate-600">
+                  <span className="text-emerald-500 font-bold flex-shrink-0">✓</span>
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    )
+  default:
+    return null
   }
 }
 
