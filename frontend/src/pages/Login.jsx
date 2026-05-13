@@ -44,13 +44,25 @@ function writeLocalStorageArray(key, value) {
   window.localStorage.setItem(key, JSON.stringify(value))
 }
 
-function resolveEmailConfirmationRedirect() {
+function resolveEmailConfirmationRedirect(returnUrl = null) {
   const configured = import.meta.env.VITE_EMAIL_CONFIRMATION_PATH
   if (configured && /^https?:\/\//i.test(configured)) {
-    return configured
+    const confirmationUrl = new URL(configured)
+    if (returnUrl) {
+      confirmationUrl.searchParams.set('returnUrl', returnUrl)
+    }
+    return confirmationUrl.toString()
   }
   const origin = getBrowserOrigin()
-  return origin ? `${origin}/auth/confirmation` : '/auth/confirmation'
+  if (!origin) {
+    return '/auth/confirmation'
+  }
+
+  const confirmationUrl = new URL(`${origin}/auth/confirmation`)
+  if (returnUrl) {
+    confirmationUrl.searchParams.set('returnUrl', returnUrl)
+  }
+  return confirmationUrl.toString()
 }
 
 function mapAuthErrorMessage(message) {
@@ -471,17 +483,30 @@ export default function Login() {
       auth_provider: 'email',
     }, { oncePerSession: true })
 
+    const returnUrl = searchParams.get('returnUrl')
+
     if (authData?.session?.access_token) {
       await notifyRegistrationAlert('email_signup')
       await sendWelcomeEmail()
       import('./UserDashboard.jsx').catch(() => {})
+      if (returnUrl) {
+        toast.success('Account created. Redirecting...')
+        const destination = await resolvePostLoginDestination(returnUrl)
+        navigateToResolvedPath(navigate, destination)
+        return
+      }
+
       toast.success('Account created. Continue with onboarding.')
       navigate('/onboarding', { replace: true })
       return
     }
 
     toast.success('Account created. Confirm your email to continue.')
-    navigate(`/auth/confirmation?pending=1&email=${encodeURIComponent(normalizedEmail)}`, { replace: true })
+    const confirmationParams = new URLSearchParams({ pending: '1', email: normalizedEmail })
+    if (returnUrl) {
+      confirmationParams.set('returnUrl', returnUrl)
+    }
+    navigate(`/auth/confirmation?${confirmationParams.toString()}`, { replace: true })
   }
 
   // Handle sign-in completion and navigation
@@ -490,7 +515,6 @@ export default function Login() {
       gaLogin('email')
       import('./UserDashboard.jsx').catch(() => {})
       const returnUrl = searchParams.get('returnUrl')
-      const { data: sessionData } = await supabase.auth.getSession()
       const destination = await resolvePostLoginDestination(returnUrl)
       navigateToResolvedPath(navigate, destination)
     } catch (err) {
@@ -518,8 +542,11 @@ export default function Login() {
       return
     }
 
+    const returnUrl = searchParams.get('returnUrl')
     const fn = isSignUp ? signUpWithEmail : signInWithEmail
-    const { data: authData, error } = await fn(normalizedEmail, password)
+    const { data: authData, error } = await (isSignUp
+      ? fn(normalizedEmail, password, { emailRedirectTo: resolveEmailConfirmationRedirect(returnUrl) })
+      : fn(normalizedEmail, password))
     setLoading(false)
     
     if (error) {

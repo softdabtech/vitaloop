@@ -113,6 +113,34 @@ subscription_service = SubscriptionService()
 audit_log_service = AuditLogService()
 
 
+async def _ensure_practitioner_assigned_to_client_program(
+    client_program_id: UUID,
+    user_context: UserContext,
+) -> None:
+    if user_context.global_role in {"super_admin", "admin"}:
+        return
+
+    client_program = await client_program_service.repo.get_by_id(client_program_id)
+    if not client_program:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_ASSIGNMENT_NOT_FOUND)
+
+    client_id = client_program.get("client_id")
+    if not client_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_ASSIGNMENT_NOT_FOUND)
+
+    client = await client_service.get_client(UUID(client_id))
+    if not client:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_CLIENT_NOT_FOUND)
+
+    practitioner = await practitioner_service.get_practitioner_for_user(user_context.user_id)
+    if not practitioner:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_ACCESS_DENIED)
+
+    assigned_practitioner_id = client.get("assigned_practitioner_id")
+    if not assigned_practitioner_id or str(assigned_practitioner_id) != str(practitioner.get("id")):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_ACCESS_DENIED)
+
+
 # ============================================================
 # CLIENT ENDPOINTS
 # ============================================================
@@ -643,7 +671,7 @@ async def create_intervention(
     Requires practitioner role.
     """
     try:
-        # TODO: Validate practitioner is assigned to client
+        await _ensure_practitioner_assigned_to_client_program(assignment_id, user_context)
         intervention = await intervention_service.create_intervention(
             assignment_id,
             user_context.user_id,

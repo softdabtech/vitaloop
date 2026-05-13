@@ -505,15 +505,61 @@ class QuestionnaireService:
         return result
 
     async def _calculate_score(self, responses: Dict[str, Any], scoring_logic: Dict[str, Any]) -> Optional[float]:
-        """Calculate composite score from responses (mock implementation)."""
-        # TODO: Implement actual scoring logic based on scoring_logic definition
+        """Calculate a weighted questionnaire score when scoring rules are provided."""
         if not responses:
             return 0.0
 
-        # For now, simple average of numeric values
-        numeric_values = [v for v in responses.values() if isinstance(v, (int, float))]
+        weights = scoring_logic.get("weights") if isinstance(scoring_logic, dict) else {}
+        scale_questions = set(scoring_logic.get("scale_questions", [])) if isinstance(scoring_logic, dict) else set()
+
+        def _coerce_numeric(value: Any) -> Optional[float]:
+            if isinstance(value, bool):
+                return None
+            if isinstance(value, (int, float)):
+                return float(value)
+            if isinstance(value, dict):
+                raw_value = value.get("answer_value")
+                if isinstance(raw_value, (int, float)):
+                    return float(raw_value)
+            if isinstance(value, str):
+                try:
+                    return float(value)
+                except ValueError:
+                    return None
+            return None
+
+        scored_values = []
+        for question_id, raw_value in responses.items():
+            numeric_value = _coerce_numeric(raw_value)
+            if numeric_value is None:
+                continue
+
+            if scale_questions or weights:
+                if question_id not in scale_questions and question_id not in weights:
+                    continue
+
+            if 0 <= numeric_value <= 10:
+                normalized = max(0.0, min(100.0, ((numeric_value - 1.0) / 9.0) * 100.0)) if numeric_value > 1 else 0.0
+            else:
+                normalized = max(0.0, min(100.0, numeric_value))
+
+            weight = 1.0
+            if isinstance(weights, dict):
+                try:
+                    weight = float(weights.get(question_id, 1.0))
+                except (TypeError, ValueError):
+                    weight = 1.0
+            scored_values.append((normalized, weight))
+
+        if scored_values:
+            weighted_total = sum(value * weight for value, weight in scored_values)
+            total_weight = sum(weight for _, weight in scored_values)
+            if total_weight > 0:
+                return round(weighted_total / total_weight, 2)
+
+        numeric_values = [value for value in (_coerce_numeric(v) for v in responses.values()) if value is not None]
         if numeric_values:
-            return sum(numeric_values) / len(numeric_values)
+            return round(sum(numeric_values) / len(numeric_values), 2)
 
         return None
 

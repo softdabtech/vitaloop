@@ -12,13 +12,25 @@ function getBrowserOrigin() {
   return window.location.origin
 }
 
-function resolveEmailConfirmationRedirect() {
+function resolveEmailConfirmationRedirect(returnUrl = null) {
   const configured = import.meta.env.VITE_EMAIL_CONFIRMATION_PATH
   if (configured && /^https?:\/\//i.test(configured)) {
-    return configured
+    const confirmationUrl = new URL(configured)
+    if (returnUrl) {
+      confirmationUrl.searchParams.set('returnUrl', returnUrl)
+    }
+    return confirmationUrl.toString()
   }
   const origin = getBrowserOrigin()
-  return origin ? `${origin}/auth/confirmation` : '/auth/confirmation'
+  if (!origin) {
+    return '/auth/confirmation'
+  }
+
+  const confirmationUrl = new URL(`${origin}/auth/confirmation`)
+  if (returnUrl) {
+    confirmationUrl.searchParams.set('returnUrl', returnUrl)
+  }
+  return confirmationUrl.toString()
 }
 
 function getCurrentBrowserUrl() {
@@ -72,13 +84,14 @@ async function applyConfirmationParams(params) {
   }
 }
 
-function waitForSessionThenNavigate(navigate) {
+async function waitForSessionThenNavigate(navigate, returnUrl = null) {
   let attempts = 0
 
   const poll = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.access_token) {
-      navigate('/onboarding', { replace: true })
+      const destination = await resolvePostLoginDestination(returnUrl)
+      navigateToResolvedPath(navigate, destination)
       return
     }
 
@@ -100,6 +113,7 @@ export default function EmailConfirmation() {
   const [errorMsg, setErrorMsg] = useState('')
   const [redirecting, setRedirecting] = useState(false)
   const [resendEmail, setResendEmail] = useState(searchParams.get('email') || '')
+  const returnUrl = searchParams.get('returnUrl')
 
   const isPendingMode = searchParams.get('pending') === '1'
 
@@ -112,10 +126,11 @@ export default function EmailConfirmation() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         await notifyRegistrationAlert('email_confirmation_existing_session')
-        navigate('/onboarding', { replace: true })
+        const destination = await resolvePostLoginDestination(returnUrl)
+        navigateToResolvedPath(navigate, destination)
       }
     })
-  }, [isPendingMode, navigate])
+  }, [isPendingMode, navigate, returnUrl])
 
   useEffect(() => {
     const handleConfirmation = async () => {
@@ -143,7 +158,7 @@ export default function EmailConfirmation() {
           setStatus('success')
           toast.success('✅ Email confirmed! Redirecting...')
           setRedirecting(true)
-          waitForSessionThenNavigate(navigate)
+          waitForSessionThenNavigate(navigate, returnUrl)
         } else {
           setStatus('error')
           setErrorMsg('Email пока не подтвержден. Проверьте, что открыта актуальная ссылка из письма.')
@@ -156,7 +171,7 @@ export default function EmailConfirmation() {
     }
 
     handleConfirmation()
-  }, [isPendingMode, navigate])
+  }, [isPendingMode, navigate, returnUrl])
 
   const handleResend = async () => {
     try {
@@ -176,7 +191,7 @@ export default function EmailConfirmation() {
         type: 'signup',
         email: targetEmail,
         options: {
-          emailRedirectTo: resolveEmailConfirmationRedirect(),
+          emailRedirectTo: resolveEmailConfirmationRedirect(returnUrl),
         },
       })
 

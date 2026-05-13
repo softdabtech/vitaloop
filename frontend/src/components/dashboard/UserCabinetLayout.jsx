@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Crown, LogOut, Menu } from 'lucide-react'
 import UserDashboardSidebar from './UserDashboardSidebar.jsx'
 import MobileBottomBar from './MobileBottomBar.jsx'
 import PWAInstallBanner from './PWAInstallBanner.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
-import { PREMIUM_PRICE_LABEL } from '../../lib/pricing.js'
+import { buildSubscriptionPath, getCabinetUpgradeTarget } from '../../lib/subscriptionFlow.js'
 import '../../styles/dashboard2026.css'
 
 const PAGE_META = {
@@ -31,18 +31,14 @@ function resolvePageMeta(pathname) {
   return { title: 'Vitaloop', subtitle: null }
 }
 
-function triggerPaywall(detail) {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('paywall:trigger', { detail }))
-  }
-}
-
 export default function UserCabinetLayout({ children }) {
   const location = useLocation()
+  const navigate = useNavigate()
   const { user, signOut } = useAuth()
-  const { isActive, loading: subLoading } = useSubscription()
+  const { planName, loading: subLoading } = useSubscription()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const upgradeTarget = getCabinetUpgradeTarget(planName)
 
   const pageMeta = useMemo(() => resolvePageMeta(location.pathname), [location.pathname])
 
@@ -101,13 +97,13 @@ export default function UserCabinetLayout({ children }) {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
-              {!subLoading && !isActive && (
+              {!subLoading && upgradeTarget && (
                 <button
-                  onClick={() => triggerPaywall({ reason: 'SUBSCRIPTION_REQUIRED', source: location.pathname })}
+                  onClick={() => navigate(buildSubscriptionPath({ planId: upgradeTarget.planId, billingCycle: 'monthly' }))}
                   className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 transition hover:border-amber-300 hover:bg-amber-100 sm:text-sm"
                 >
                   <Crown className="h-4 w-4" />
-                  <span className="hidden sm:inline">Upgrade {PREMIUM_PRICE_LABEL}</span>
+                  <span className="hidden sm:inline">{upgradeTarget.label}</span>
                   <span className="sm:hidden">Upgrade</span>
                 </button>
               )}

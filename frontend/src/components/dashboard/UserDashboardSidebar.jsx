@@ -18,7 +18,7 @@ import {
   Upload,
 } from 'lucide-react'
 import { useSubscription } from '../../hooks/useSubscription.js'
-import { PREMIUM_PRICE_LABEL } from '../../lib/pricing.js'
+import { buildSubscriptionPath, getCabinetUpgradeTarget } from '../../lib/subscriptionFlow.js'
 
 const MENU_ITEMS = [
   { icon: Home,       label: 'Dashboard',     path: '/dashboard',   badge: null },
@@ -68,9 +68,10 @@ export default function UserDashboardSidebar({
   onCloseMobile,
 }) {
   const location = useLocation()
-  const { isActive: hasPremium, loading: subscriptionLoading } = useSubscription()
+  const { isActive: hasPremium, loading: subscriptionLoading, planName } = useSubscription()
   const sidebarWidth = collapsed ? 'w-[72px]' : 'w-[280px]'
   const visibleItems = MENU_ITEMS
+  const upgradeTarget = getCabinetUpgradeTarget(planName)
 
   function handleLockedFeature(item) {
     if (!item.premium || subscriptionLoading || hasPremium) return
@@ -174,14 +175,14 @@ export default function UserDashboardSidebar({
       </nav>
 
       <div className="border-t border-slate-100 p-3">
-        {!collapsed && !subscriptionLoading && !hasPremium && (
+        {!collapsed && !subscriptionLoading && upgradeTarget && (
           <button
-            onClick={() => triggerPaywall({ reason: 'SUBSCRIPTION_REQUIRED', source: 'sidebar-upgrade' })}
+            onClick={() => window.location.assign(buildSubscriptionPath({ planId: upgradeTarget.planId, billingCycle: 'monthly' }))}
             className="mb-2 w-full rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-3 py-3 text-left transition hover:border-amber-300 hover:shadow-sm"
           >
             <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">Premium access</div>
-            <div className="mt-1 text-sm font-semibold text-slate-800">Unlock protocols, trends, and check-ins</div>
-            <div className="mt-1 text-xs text-slate-500">{PREMIUM_PRICE_LABEL}</div>
+            <div className="mt-1 text-sm font-semibold text-slate-800">{upgradeTarget.label}</div>
+            <div className="mt-1 text-xs text-slate-500">Continue to Stripe checkout</div>
           </button>
         )}
 

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import * as Tesseract from 'tesseract.js'
 // import * as pdfjsLib from 'pdfjs-dist' // Temporarily disabled to avoid worker issues
 
@@ -53,22 +53,17 @@ export function useOCR() {
   async function processFile(file) {
     setIsProcessing(true)
     setProgress(0)
-    console.log('Starting file processing:', file.name, file.type, file.size)
 
     try {
       let text = ''
       const confidence = null
 
       if (file.type === 'application/pdf') {
-        console.log('Processing as PDF')
         text = await extractFromPDF(file)
       } else {
-        console.log('Processing as image')
         // Enhanced image processing with multiple OCR attempts
         text = await processImageWithOCR(file)
       }
-
-      console.log('Extracted text length:', text.length)
 
       // Validate extracted text
       if (!text || text.trim().length < 10) {
@@ -78,7 +73,6 @@ export function useOCR() {
 
       setExtractedText(text)
       setOcrConfidence(confidence)
-      console.log('File processing completed successfully')
       return { text, confidence }
     } catch (error) {
       console.error('File processing error:', error)
@@ -160,7 +154,7 @@ export function useOCR() {
           const localText = (bestResult.text || '').trim()
           const validText = await validateOCRText(localText, file)
           resolve(validText)
-        } catch (error) {
+        } catch {
           reject(new Error('Failed to process image. Please try a different photo or PDF format.'))
         }
       }
@@ -176,7 +170,6 @@ export function useOCR() {
 
   async function extractFromPDF(file) {
     try {
-      console.log('Starting PDF extraction for file:', file.name, 'size:', file.size)
       return await extractFromAnalysisService(file)
 
     } catch (error) {
@@ -211,7 +204,6 @@ export function useOCR() {
     const rawExtractedText = typeof result?.extracted_text === 'string' ? result.extracted_text.trim() : ''
 
     if (rawExtractedText.length >= 40) {
-      console.log('Analysis-service OCR extracted_text length:', rawExtractedText.length)
       return rawExtractedText
     }
 

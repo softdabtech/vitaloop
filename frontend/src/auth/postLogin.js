@@ -87,7 +87,7 @@ function resolveLocalProductPath(mePayload, normalizedReturnUrl) {
   const role = resolveGlobalRole(mePayload)
   const onboardingCompleted = Boolean(mePayload?.user?.onboarding_completed ?? mePayload?.onboarding_completed)
 
-  if (normalizedReturnUrl && (normalizedReturnUrl.startsWith('/dashboard') || normalizedReturnUrl.startsWith('/onboarding'))) {
+  if (normalizedReturnUrl && (normalizedReturnUrl.startsWith('/dashboard') || normalizedReturnUrl.startsWith('/onboarding') || normalizedReturnUrl.startsWith('/subscription'))) {
     return normalizedReturnUrl
   }
 
@@ -160,7 +160,7 @@ export async function resolvePostLoginDestination(returnUrl = null) {
       }
     }
 
-    const localFallback = normalized && (normalized.startsWith('/dashboard') || normalized.startsWith('/onboarding'))
+    const localFallback = normalized && (normalized.startsWith('/dashboard') || normalized.startsWith('/onboarding') || normalized.startsWith('/subscription'))
       ? normalized
       : '/dashboard'
 
