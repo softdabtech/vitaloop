@@ -25,7 +25,10 @@
       "/how-it-works",
       "/example-report",
       "/about",
-      "/legal-safety"
+      "/legal-safety",
+      "/guides/ferritin-in-context",
+      "/guides/retest-loop",
+      "/guides/biomarkers-to-action"
     ],
     "puppeteerArgs": [
       "--no-sandbox",

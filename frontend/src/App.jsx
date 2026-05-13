@@ -19,6 +19,7 @@ const Investors = lazy(() => import('./pages/Investors.jsx'))
 const FAQ = lazy(() => import('./pages/FAQ.jsx'))
 const About = lazy(() => import('./pages/About.jsx'))
 const LegalSafety = lazy(() => import('./pages/LegalSafety.jsx'))
+const GuideArticle = lazy(() => import('./pages/GuideArticle.jsx'))
 const EmailConfirmation = lazy(() => import('./pages/EmailConfirmation.jsx'))
 const ExampleReport = lazy(() => import('./pages/ExampleReport.jsx'))
 const HowItWorks = lazy(() => import('./pages/HowItWorks.jsx'))
@@ -183,6 +184,7 @@ export default function App() {
           <Route path="/features" element={<Features />} />
             <Route path="/about" element={<About />} />
           <Route path="/legal-safety" element={<LegalSafety />} />
+          <Route path="/guides/:slug" element={<GuideArticle />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/stories" element={<Stories />} />
           <Route path="/investors" element={<Investors />} />

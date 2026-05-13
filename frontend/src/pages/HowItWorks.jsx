@@ -40,19 +40,25 @@ export default function HowItWorks() {
 
   const guideCards = [
     {
-      title: 'Biomarker interpretation',
-      body: 'Learn how ferritin, thyroid, cortisol, lipids, inflammation, and metabolic markers should be read as a system instead of isolated values.',
+      title: 'How to read ferritin in context',
+      body: 'Why ferritin without CRP, iron saturation, symptoms, and trend direction is often misleading — and how to read the full picture.',
       icon: FileText,
+      slug: 'ferritin-in-context',
+      readTime: '7 min read',
     },
     {
-      title: 'Protocol design',
-      body: 'See how VITALOOP converts patterns into supplements, food changes, and adherence tasks that can actually be executed.',
+      title: 'Building a repeatable retest loop',
+      body: 'How to time uploads, check-ins, and protocol changes so progress is measurable rather than anecdotal.',
       icon: Sparkles,
+      slug: 'retest-loop',
+      readTime: '6 min read',
     },
     {
-      title: 'Practitioner collaboration',
-      body: 'Understand how the platform keeps outputs readable when a coach or clinician needs to review your case quickly.',
+      title: 'From biomarkers to action stack',
+      body: 'Translating abnormal markers into prioritized nutrition, supplement, and recovery actions — ranked by leverage, timed for absorption.',
       icon: Stethoscope,
+      slug: 'biomarkers-to-action',
+      readTime: '8 min read',
     },
   ]
 
@@ -239,13 +245,21 @@ export default function HowItWorks() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '-10% 0px -10% 0px' }}
                   transition={{ delay: idx * 0.08 }}
-                  className="rounded-[28px] border border-slate-200 bg-white p-6"
+                  className="flex cursor-pointer flex-col rounded-[28px] border border-slate-200 bg-white p-6 transition hover:border-emerald-300 hover:shadow-sm"
+                  onClick={() => navigate(`/guides/${item.slug}`)}
+                  role="link"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && navigate(`/guides/${item.slug}`)}
                 >
                   <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
                     <Icon className="h-5 w-5" />
                   </span>
                   <h3 className="mt-4 text-xl font-semibold text-slate-900">{item.title}</h3>
-                  <p className="mt-3 text-sm leading-7 text-slate-600">{item.body}</p>
+                  <p className="mt-3 flex-1 text-sm leading-7 text-slate-600">{item.body}</p>
+                  <div className="mt-5 flex items-center justify-between">
+                    <span className="text-xs text-slate-400">{item.readTime}</span>
+                    <span className="text-xs font-semibold text-emerald-600">Read guide →</span>
+                  </div>
                 </motion.article>
               )
             })}

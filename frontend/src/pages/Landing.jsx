@@ -131,16 +131,22 @@ const HUB_GUIDES = [
     title: 'How to read ferritin in context',
     body: 'Why ferritin without CRP, iron saturation, symptoms, and trend direction is often misleading.',
     icon: FileText,
+    slug: 'ferritin-in-context',
+    readTime: '7 min read',
   },
   {
     title: 'Building a repeatable retest loop',
     body: 'How to time uploads, check-ins, and protocol changes so progress is measurable rather than anecdotal.',
     icon: BrainCircuit,
+    slug: 'retest-loop',
+    readTime: '6 min read',
   },
   {
     title: 'From biomarkers to action stack',
     body: 'A guide to translating abnormal markers into nutrition, supplements, and recovery priorities.',
     icon: LayoutDashboard,
+    slug: 'biomarkers-to-action',
+    readTime: '8 min read',
   },
 ]
 
@@ -1228,13 +1234,21 @@ export default function Landing() {
                     <motion.article
                       key={guide.title}
                       {...fadeUp(reduced, idx * 0.05)}
-                      className={`rounded-3xl border p-6 ${'border-slate-200 bg-white/90'}`}
+                      className={`cursor-pointer rounded-3xl border p-6 transition hover:border-emerald-300 hover:shadow-sm ${'border-slate-200 bg-white/90'}`}
+                      onClick={() => navigate(`/guides/${guide.slug}`)}
+                      role="link"
+                      tabIndex={0}
+                      onKeyDown={(e) => e.key === 'Enter' && navigate(`/guides/${guide.slug}`)}
                     >
                       <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${'bg-emerald-50 text-emerald-700'}`}>
                         <Icon className="h-4 w-4" />
                       </span>
                       <h3 className="mt-4 text-base font-semibold">{guide.title}</h3>
                       <p className={`mt-2 text-sm leading-relaxed ${'text-slate-600'}`}>{guide.body}</p>
+                      <div className="mt-4 flex items-center justify-between">
+                        <span className="text-xs text-slate-400">{guide.readTime}</span>
+                        <span className="text-xs font-semibold text-emerald-600">Read →</span>
+                      </div>
                     </motion.article>
                   )
                 })}
