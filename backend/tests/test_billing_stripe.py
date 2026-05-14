@@ -191,6 +191,30 @@ async def test_subscription_status_personal_pro(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_subscription_status_normalizes_plan_name_when_premium(monkeypatch):
+    account_active_no_tier = {
+        "sub_status": "active",
+        "global_role": "end_user",
+        "plan_tier": None,
+    }
+    free_active_sub = {
+        **_ACTIVE_SUBSCRIPTION,
+        "plan_name": "free",
+        "status": "active",
+    }
+
+    monkeypatch.setattr(billing, "get_user_account", lambda _uid: _coro(account_active_no_tier))
+    monkeypatch.setattr(billing, "get_user_upload_count", lambda _uid: _coro(2))
+    monkeypatch.setattr(billing, "get_user_active_subscription", lambda _uid: _coro(free_active_sub))
+
+    result = await billing.get_subscription_status(current_user=CURRENT_USER)
+
+    assert result["is_premium"] is True
+    assert result["sub_status"] == "active"
+    assert result["plan_name"] == "personal"
+
+
+@pytest.mark.asyncio
 async def test_subscription_status_practitioner(monkeypatch):
     prac_sub = {**_ACTIVE_SUBSCRIPTION, "plan_name": "practitioner"}
     prac_account = {**_USER_ACCOUNT_PREMIUM, "plan_tier": "practitioner"}

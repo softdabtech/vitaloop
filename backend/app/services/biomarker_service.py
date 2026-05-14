@@ -22,6 +22,16 @@ from app.services import supabase_service as svc
 logger = logging.getLogger("biomarker.service")
 
 
+def _has_premium_access(account: Dict) -> bool:
+    """Resolve premium access from canonical users fields with backward compatibility."""
+    if not account:
+        return False
+
+    sub_status = str(account.get("sub_status") or account.get("subscription_status") or "").lower()
+    global_role = str(account.get("global_role") or "end_user").lower()
+    return global_role != "end_user" or sub_status == "active"
+
+
 class ManualBiomarkerEntry:
     """Represents a manually entered biomarker value."""
 
@@ -255,7 +265,7 @@ class BiomarkerService:
                 return False, "User account not found"
 
             # Check if user has active subscription
-            is_premium = account.get("subscription_status") == "active"
+            is_premium = _has_premium_access(account)
             if is_premium:
                 return True, "Premium user - unlimited manual entries"
 
@@ -317,7 +327,7 @@ class BiomarkerService:
                 return False, "User account not found", None
 
             # Check if user has active subscription
-            is_premium = account.get("subscription_status") == "active"
+            is_premium = _has_premium_access(account)
             if is_premium:
                 return True, "Premium user - unlimited biomarker entries", None
 

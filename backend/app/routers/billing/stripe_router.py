@@ -39,6 +39,7 @@ _CHECKOUT_UNEXPECTED_ERROR = "An unexpected error occurred while creating checko
 VALID_PLANS = {"personal", "practitioner"}
 _FREE_PLAN_NAMES = {"free"}
 _VALID_BILLING_CYCLES = {"monthly", "yearly"}
+_PAID_PLAN_NAMES = {"personal", "practitioner"}
 
 
 def _normalize_billing_cycle(value: str) -> str:
@@ -75,6 +76,24 @@ def _price_id_for_plan(plan_id: str, billing_cycle: str = "monthly") -> str:
             detail=f"Stripe price not configured for plan '{plan_id}' with '{cycle}' billing cycle",
         )
     return price_id
+
+
+def _normalize_plan_name(*, plan_name: Optional[str], is_premium: bool, global_role: str) -> Optional[str]:
+    """Return a stable plan_name aligned with resolved entitlement."""
+    raw = str(plan_name or "").strip().lower()
+    if raw in _PAID_PLAN_NAMES or raw in _FREE_PLAN_NAMES:
+        normalized = raw
+    else:
+        normalized = None
+
+    if not is_premium:
+        return normalized
+
+    if normalized in _PAID_PLAN_NAMES:
+        return normalized
+
+    # Premium access with missing/legacy plan value should never surface as free.
+    return "personal" if global_role == "end_user" else "practitioner"
 
 
 # ---------------------------------------------------------------------------
@@ -356,22 +375,23 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
         sub_table_status = str((active_sub or {}).get("status") or "free").lower()
         claim_sub_status = "active" if bool(current_user.get("subscription_active")) else str(current_user.get("subscription_status") or "free").lower()
         global_role = str(account.get("global_role") or current_user.get("global_role") or "end_user").lower()
-        plan_name = str((active_sub or {}).get("plan_name") or account.get("plan_tier") or "").strip().lower() or None
+        plan_name_raw = str((active_sub or {}).get("plan_name") or account.get("plan_tier") or "").strip().lower() or None
         paid_from_sub_table = bool(
             active_sub
             and sub_table_status == "active"
-            and plan_name
-            and plan_name not in _FREE_PLAN_NAMES
+            and plan_name_raw
+            and plan_name_raw not in _FREE_PLAN_NAMES
         )
         paid_from_account = account_sub_status == "active"
         is_premium = global_role != "end_user" or paid_from_account or paid_from_sub_table
         sub_status = "active" if is_premium and global_role == "end_user" else account_sub_status
+        plan_name = _normalize_plan_name(plan_name=plan_name_raw, is_premium=is_premium, global_role=global_role)
     except Exception as ex:
         logger.warning("stripe_subscription_status_fallback user_id=%s error=%s", user_id, repr(ex))
         # Degrade gracefully on transient data-layer failures.
         sub_status = "active" if bool(current_user.get("subscription_active")) else str(current_user.get("subscription_status") or "free").lower()
         global_role = str(current_user.get("global_role") or "end_user").lower()
-        plan_name = None
+        plan_name = _normalize_plan_name(plan_name=None, is_premium=(sub_status == "active" or global_role != "end_user"), global_role=global_role)
         upload_count = 0
         is_premium = sub_status == "active" or global_role != "end_user"
 
