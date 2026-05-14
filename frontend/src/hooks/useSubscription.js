@@ -2,6 +2,20 @@ import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from './useAuth.js'
 import api from '../lib/api.js'
 
+function normalizePlanName({ planName, isPremium, globalRole }) {
+  const normalized = String(planName || '').trim().toLowerCase()
+
+  if (normalized === 'personal' || normalized === 'practitioner') {
+    return normalized
+  }
+
+  if (!isPremium) {
+    return 'free'
+  }
+
+  return String(globalRole || '').toLowerCase() === 'end_user' ? 'personal' : 'practitioner'
+}
+
 export function useSubscription() {
   const { user } = useAuth()
   const [subStatus, setSubStatus] = useState('free')
@@ -42,10 +56,21 @@ export function useSubscription() {
         const stripePremium = Boolean(stripeData?.is_premium)
         const isPremiumResolved = authPremium || stripePremium
         const subStatusResolved = isPremiumResolved ? 'active' : stripeStatus
+        const resolvedRole = String(
+          stripeData?.global_role
+          || authMe?.global_role
+          || authMe?.user?.global_role
+          || 'end_user'
+        ).toLowerCase()
+        const resolvedPlanName = normalizePlanName({
+          planName: stripeData?.plan_name,
+          isPremium: isPremiumResolved,
+          globalRole: resolvedRole,
+        })
 
         setSubStatus(subStatusResolved)
         setIsPremium(isPremiumResolved)
-        setPlanName(stripeData?.plan_name ?? null)
+        setPlanName(resolvedPlanName)
         setUploadCount(stripeData?.upload_count ?? 0)
         setUploadLimit(isPremiumResolved ? Infinity : (stripeData?.upload_limit ?? 1))
         setUploadsRemaining(isPremiumResolved ? Infinity : (stripeData?.uploads_remaining ?? 0))
@@ -55,10 +80,16 @@ export function useSubscription() {
           const { data } = await api.get('/auth/me')
           const status = String(data?.subscription_status || (data?.has_active_subscription ? 'active' : 'free')).toLowerCase()
           const premium = Boolean(data?.has_active_subscription || data?.subscription_active || status === 'active' || data?.global_role !== 'end_user')
+          const resolvedRole = String(data?.global_role || data?.user?.global_role || 'end_user').toLowerCase()
+          const resolvedPlanName = normalizePlanName({
+            planName: data?.plan_name,
+            isPremium: premium,
+            globalRole: resolvedRole,
+          })
 
           setSubStatus(status)
           setIsPremium(premium)
-          setPlanName(data?.plan_name ?? null)
+          setPlanName(resolvedPlanName)
 
           // Conservative defaults when stripe endpoint is unavailable.
           // Do not force free-plan limits for premium users.
