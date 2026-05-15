@@ -30,6 +30,20 @@ function getViewportWidth() {
   return window.innerWidth
 }
 
+function isRecentAccount(createdAt, maxHours = 24) {
+  if (!createdAt) return false
+  const createdTs = Date.parse(String(createdAt))
+  if (Number.isNaN(createdTs)) return false
+  return (Date.now() - createdTs) <= (maxHours * 60 * 60 * 1000)
+}
+
+function isGoogleAuthUser(user) {
+  const provider = String(user?.app_metadata?.provider || '').toLowerCase()
+  if (provider === 'google') return true
+  const providers = Array.isArray(user?.app_metadata?.providers) ? user.app_metadata.providers : []
+  return providers.some((p) => String(p || '').toLowerCase() === 'google')
+}
+
 function readLocalStorageArray(key) {
   if (typeof window === 'undefined') return []
   try {
@@ -373,6 +387,11 @@ export default function Login() {
       }
 
       try {
+        if (isGoogleAuthUser(session.user) && isRecentAccount(session.user?.created_at)) {
+          await notifyRegistrationAlert('google_oauth')
+          await sendWelcomeEmail()
+        }
+
         const destination = await resolvePostLoginDestination(searchParams.get('returnUrl'))
         if (!active) return
         navigateToResolvedPath(navigate, destination)
