@@ -120,15 +120,21 @@ export default function Insights() {
                 { label: 'Symptom', value: healthScore.symptom_component },
                 { label: 'Biomarker', value: healthScore.biomarker_component },
                 { label: 'Adherence', value: healthScore.adherence_component },
-              ].map((item) => (
-                <div key={item.label}>
+              ].map((item) => {
+                const safeValue = Number.isFinite(Number(item.value))
+                  ? Math.max(0, Math.min(100, Number(item.value)))
+                  : 0
+
+                return (
+                  <div key={item.label}>
                   <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{item.label}</div>
                   <div className="h-2 overflow-hidden rounded-full bg-white/60">
-                    <div className="h-full rounded-full" style={{ width: `${item.value}%`, background: scoreColor }} />
+                    <div className="h-full rounded-full" style={{ width: `${safeValue}%`, background: scoreColor }} />
                   </div>
-                  <div className="mt-2 text-sm font-semibold" style={{ color: scoreColor }}>{item.value}</div>
+                  <div className="mt-2 text-sm font-semibold" style={{ color: scoreColor }}>{safeValue}</div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </motion.div>

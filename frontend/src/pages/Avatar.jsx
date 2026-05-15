@@ -1,22 +1,30 @@
-import { useEffect, useState } from 'react'
-import { useAuth } from '../hooks/useAuth.js'
-import { supabase } from '../lib/supabase.js'
+import { useMemo } from 'react'
 import BodyAvatar from '../components/BodyAvatar.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { useProgress } from '../hooks/useQueries.js'
 
 export default function Avatar() {
-  const { user } = useAuth()
-  const [biomarkers, setBiomarkers] = useState([])
+  const { data: progressRows = [] } = useProgress()
 
-  useEffect(() => {
-    if (!user) return
-    supabase
-      .from('biomarkers')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => setBiomarkers(data ?? []))
-  }, [user])
+  const biomarkers = useMemo(() => {
+    const rows = Array.isArray(progressRows) ? progressRows : []
+    const withBiomarkers = rows
+      .filter((row) => Array.isArray(row?.biomarkers) && row.biomarkers.length > 0)
+      .sort((a, b) => {
+        const aTime = new Date(a?.created_at || a?.test_date || 0).getTime()
+        const bTime = new Date(b?.created_at || b?.test_date || 0).getTime()
+        return bTime - aTime
+      })
+
+    const latest = withBiomarkers[0]?.biomarkers || []
+    return latest.map((item, index) => ({
+      id: item?.id || `${item?.name || 'biomarker'}-${index}`,
+      name: String(item?.name || ''),
+      status: String(item?.status || '').toUpperCase(),
+      value: item?.value,
+      unit: item?.unit,
+    }))
+  }, [progressRows])
 
   const counts = biomarkers.reduce((acc, item) => {
     const status = String(item?.status || '').toUpperCase()

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion, AnimatePresence } from 'framer-motion'
 import HintBanner from '../components/tour/HintBanner.jsx'
@@ -11,9 +11,9 @@ import {
   FlaskConical,
   Sparkles,
 } from 'lucide-react'
-import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useSubscription } from '../hooks/useSubscription.js'
+import { useDashboardSummary } from '../hooks/useQueries.js'
 import StatCard from '../components/dashboard/StatCard.jsx'
 import HealthChart from '../components/dashboard/HealthChart.jsx'
 import AssignmentCard from '../components/dashboard/AssignmentCard.jsx'
@@ -310,46 +310,22 @@ export default function UserDashboard() {
   const reduced = useReducedMotion()
   const { show: showHints, dismiss: dismissHints } = useTourHints('dashboard')
   const { isPremium, subStatus, uploadCount, uploadLimit, loading: subscriptionLoading } = useSubscription()
-  const [summary, setSummary] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    if (!user) return
-
-    let active = true
-    setLoading(true)
-
-    api.get('/dashboard/summary')
-      .then((response) => {
-        if (!active) return
-        const payload = response?.data || {}
-        const rankedAssignments = enrichAssignments(payload?.blocks?.assignments || [])
+  const { data: dashboardSummary, isLoading: loading, error: dashboardError } = useDashboardSummary()
+  const summary = dashboardSummary
+    ? {
+      ...dashboardSummary,
+      blocks: {
+        ...dashboardSummary.blocks,
+        assignments: enrichAssignments(dashboardSummary?.blocks?.assignments || [])
+          .sort((a, b) => (b?.priority?.score || 0) - (a?.priority?.score || 0)),
+        today_focus: enrichAssignments(dashboardSummary?.blocks?.assignments || [])
           .sort((a, b) => (b?.priority?.score || 0) - (a?.priority?.score || 0))
-
-        setSummary({
-          ...payload,
-          blocks: {
-            ...payload.blocks,
-            assignments: rankedAssignments,
-            today_focus: rankedAssignments.filter((item) => String(item?.status || '').toLowerCase() !== 'completed').slice(0, 3),
-          },
-        })
-        setError(null)
-      })
-      .catch(() => {
-        if (!active) return
-        setError('Could not load current dashboard data.')
-      })
-      .finally(() => {
-        if (!active) return
-        setLoading(false)
-      })
-
-    return () => {
-      active = false
+          .filter((item) => String(item?.status || '').toLowerCase() !== 'completed')
+          .slice(0, 3),
+      },
     }
-  }, [user])
+    : null
+  const error = dashboardError ? 'Could not load current dashboard data.' : null
 
   const profile = summary?.profile || {}
   const stats = summary?.stats || {}
@@ -364,6 +340,9 @@ export default function UserDashboard() {
   const hasUploads = Number(stats.total_uploads || 0) > 0
   const onboardingComplete = computeOnboardingComplete(profile)
   const hasProtocol = computeHasProtocol(stats)
+  const assignmentCount = Array.isArray(assignments) ? assignments.length : 0
+  const completedTasks = Number(stats?.completed_tasks || 0)
+  const adherencePct = Math.max(0, Math.min(100, Math.round((completedTasks / Math.max(assignmentCount, 1)) * 100)))
   const isFirstRun = !loading && !hasUploads
   const showStartHere = Boolean(startHere?.enabled && isFirstRun)
   const journeySteps = buildJourneySteps(hasUploads, onboardingComplete, latestCheckin, hasProtocol)
@@ -449,12 +428,12 @@ export default function UserDashboard() {
                 <div className="pt-2 space-y-2 text-xs text-slate-600 border-t border-slate-100">
                   <div className="flex justify-between">
                     <span>Protocol Adherence</span>
-                    <span className="font-semibold">{Math.round((stats.completed_tasks / Math.max(assignments.length, 1)) * 100)}%</span>
+                    <span className="font-semibold">{adherencePct}%</span>
                   </div>
                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-emerald-500 rounded-full"
-                      style={{ width: `${Math.round((stats.completed_tasks / Math.max(assignments.length, 1)) * 100)}%` }}
+                      style={{ width: `${adherencePct}%` }}
                     />
                   </div>
                 </div>

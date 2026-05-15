@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ChevronRight, ChevronLeft, CheckCircle, User, MapPin, AlertTriangle } from 'lucide-react'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
+import { gaOnboardingComplete } from '../lib/analytics.js'
 import toast from 'react-hot-toast'
 
 const GOAL_OPTIONS = [
@@ -105,8 +107,8 @@ const s = {
   title: { fontSize: 26, fontWeight: 700, color: '#0f172a', marginBottom: 6 },
   sub: { fontSize: 15, color: '#64748b', marginBottom: 32 },
   label: { display: 'block', fontSize: 13, color: '#475569', marginBottom: 8, fontWeight: 500, letterSpacing: '0.03em' },
-  input: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box', minHeight: '44px' },
-  select: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box', minHeight: '44px' },
+  input: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 16, outline: 'none', boxSizing: 'border-box', minHeight: '44px' },
+  select: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 16, outline: 'none', boxSizing: 'border-box', minHeight: '44px' },
   dropdown: { position: 'absolute', top: '100%', left: 0, right: 0, background: '#ffffff', border: '1px solid rgba(15,23,42,0.12)', borderTop: 'none', borderRadius: '0 0 10px 10px', maxHeight: '200px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 4px 6px rgba(15,23,42,0.1)' },
   dropdownItem: { padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid rgba(15,23,42,0.05)', color: '#0f172a', fontSize: 14 },
   dropdownItemHover: { background: 'rgba(16,185,129,0.05)' },
@@ -129,8 +131,15 @@ const s = {
   }),
 }
 
+function toCommaSeparatedString(value) {
+  if (Array.isArray(value)) return value.join(', ')
+  if (typeof value === 'string') return value
+  return ''
+}
+
 export default function Onboarding() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
   const [viewportWidth, setViewportWidth] = useState(getViewportWidth)
@@ -226,8 +235,8 @@ export default function Onboarding() {
         height_cm: p.height_cm || '',
         weight_kg: p.weight_kg || '',
         goals: p.goals || [],
-        current_supplements: (p.current_supplements || []).join(', '),
-        current_medications: (p.current_medications || []).join(', '),
+        current_supplements: toCommaSeparatedString(p.current_supplements),
+        current_medications: toCommaSeparatedString(p.current_medications),
         prior_diagnoses: p.prior_diagnoses || '',
         onboarding_complete: p.onboarding_complete || false,
       }))
@@ -279,10 +288,19 @@ export default function Onboarding() {
       }
 
       await api.post('/auth/onboarding/complete')
+      gaOnboardingComplete()
       trackFunnelEvent('funnel_onboarding_completed', 'User completed onboarding profile flow', {
         goals_count: profile.goals.length,
         complaints_count: validComplaints.length,
       }, { oncePerSession: true })
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+        queryClient.invalidateQueries({ queryKey: ['insights'] }),
+        queryClient.invalidateQueries({ queryKey: ['health-score'] }),
+      ])
 
       toast.success('Profile saved!')
       navigate('/dashboard', { replace: true })

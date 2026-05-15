@@ -18,7 +18,7 @@ const fieldStyle = {
   border: '1px solid rgba(15,23,42,0.12)',
   borderRadius: 14,
   color: '#0f172a',
-  fontSize: 15,
+  fontSize: 16,
   outline: 'none',
   transition: 'border-color 200ms, box-shadow 200ms',
 }

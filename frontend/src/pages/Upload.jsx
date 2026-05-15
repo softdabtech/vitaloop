@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { AlertCircle, Building2, ShieldCheck, Sparkles, UserCircle2 } from 'lucide-react'
 import HintBanner from '../components/tour/HintBanner.jsx'
@@ -113,6 +114,7 @@ async function sendAnalysisMetadata(uploadId, symptoms) {
 
 export default function Upload() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { processFile, progress, isProcessing } = useOCR()
   const { isPremium, uploadCount, uploadLimit, uploadsRemaining, loading: subLoading, refresh: refreshSub } = useSubscription()
   const { show: showHints, dismiss: dismissHints } = useTourHints('upload')
@@ -197,6 +199,15 @@ export default function Upload() {
       }, { oncePerSession: true })
       gaLabUpload()
 
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+        queryClient.invalidateQueries({ queryKey: ['lab-results-list'] }),
+        queryClient.invalidateQueries({ queryKey: ['progress'] }),
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+        queryClient.invalidateQueries({ queryKey: ['insights'] }),
+        queryClient.invalidateQueries({ queryKey: ['health-score'] }),
+      ])
+
       toast.success('Analysis complete!')
       navigate(`/results/${data.upload_id}`)
     } catch (err) {
@@ -223,8 +234,17 @@ export default function Upload() {
       source: 'manual',
     }, { oncePerSession: true })
     gaLabUpload()
-    toast.success('Analysis complete!')
-    navigate(`/results/${result.upload_id}`)
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+      queryClient.invalidateQueries({ queryKey: ['lab-results-list'] }),
+      queryClient.invalidateQueries({ queryKey: ['progress'] }),
+      queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+      queryClient.invalidateQueries({ queryKey: ['insights'] }),
+      queryClient.invalidateQueries({ queryKey: ['health-score'] }),
+    ]).finally(() => {
+      toast.success('Analysis complete!')
+      navigate(`/results/${result.upload_id}`)
+    })
   }
 
   const handleLoadingManual = (isLoading) => {

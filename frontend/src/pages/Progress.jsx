@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import ProgressChart from '../components/ProgressChart.jsx'
 import ProgressPhotoGallery from '../components/ProgressPhotoGallery.jsx'
@@ -41,6 +42,7 @@ async function executePhotoAction(action, onPaywall) {
 
 export default function Progress() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { data = [], isLoading } = useProgress()
   const [photos, setPhotos] = useState([])
 
@@ -57,6 +59,10 @@ export default function Progress() {
         return
       }
       setPhotos((prev) => [...prev, response.data])
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['progress'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+      ])
     } catch (error) {
       console.error('Photo upload failed:', error)
       throw error
@@ -70,6 +76,10 @@ export default function Progress() {
         return
       }
       setPhotos((prev) => prev.filter((p) => p.id !== photoId))
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['progress'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+      ])
     } catch (error) {
       console.error('Photo delete failed:', error)
       throw error

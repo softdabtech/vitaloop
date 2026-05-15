@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Target, User, Activity, TrendingUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import api from '../lib/api.js'
+import { trackFunnelEvent } from '../lib/funnel.js'
+import { gaEvent } from '../lib/analytics.js'
 import '../styles/dashboard2026.css'
 
 const TIMEZONES = [
@@ -33,7 +36,7 @@ const fieldStyle = {
   border: '1px solid rgba(15,23,42,0.12)',
   borderRadius: 14,
   color: '#0f172a',
-  fontSize: 15,
+  fontSize: 16,
   outline: 'none',
   transition: 'border-color 200ms, box-shadow 200ms',
 }
@@ -134,6 +137,7 @@ function buildProfileUpdatePayload(profile) {
 
 export default function HealthProfile() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [profile, setProfile] = useState({
     age: '',
     sex: '',
@@ -193,9 +197,28 @@ export default function HealthProfile() {
   async function saveProfile() {
     setSaving(true)
     try {
-      const response = await api.patch('/profile', buildProfileUpdatePayload(profile))
+      const payload = buildProfileUpdatePayload(profile)
+      const response = await api.patch('/profile', payload)
       const data = response.data?.profile || {}
       setProfile(mapProfileFromApi(data))
+      const changedFieldCount = Object.entries(payload).filter(([, value]) => value !== null && value !== undefined).length
+      trackFunnelEvent(
+        'funnel_profile_updated',
+        'User updated health profile',
+        {
+          fields_changed: changedFieldCount,
+        },
+      )
+      gaEvent('profile_updated', {
+        fields_changed: changedFieldCount,
+      })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+        queryClient.invalidateQueries({ queryKey: ['insights'] }),
+        queryClient.invalidateQueries({ queryKey: ['health-score'] }),
+      ])
       toast.success('Health profile updated!')
     } catch (error) {
       toast.error('Failed to save profile')
