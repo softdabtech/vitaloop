@@ -9,6 +9,10 @@ function storageKey(userId) {
   return `vo:registration-alert:${userId}`
 }
 
+function welcomeStorageKey(userId) {
+  return `vo:welcome-email:${userId}`
+}
+
 export async function notifyRegistrationAlert(flow = 'signup') {
   const { data: { session } } = await supabase.auth.getSession()
   const user = session?.user
@@ -53,6 +57,11 @@ export async function sendWelcomeEmail() {
     return false
   }
 
+  const key = welcomeStorageKey(user.id)
+  if (window.sessionStorage.getItem(key)) {
+    return true
+  }
+
   try {
     const response = await fetch(`${apiBaseUrl}/auth/registration/welcome`, {
       method: 'POST',
@@ -65,6 +74,8 @@ export async function sendWelcomeEmail() {
     if (!response.ok) {
       return false
     }
+
+    window.sessionStorage.setItem(key, new Date().toISOString())
 
     return true
   } catch {
