@@ -710,7 +710,7 @@ export default function Login() {
                   width: '100%', background: 'rgba(255,255,255,0.05)',
                   border: '0.5px solid rgba(255,255,255,0.12)',
                   borderRadius: 12, padding: '13px 16px',
-                  color: 'white', fontSize: 15,
+                  color: 'white', fontSize: 16,
                   outline: 'none', boxSizing: 'border-box',
                   transition: 'border-color 200ms',
                 }}
@@ -738,7 +738,7 @@ export default function Login() {
                       width: '100%', background: 'rgba(255,255,255,0.05)',
                       border: '0.5px solid rgba(255,255,255,0.12)',
                       borderRadius: 12, padding: '13px 44px 13px 16px',
-                      color: 'white', fontSize: 15,
+                      color: 'white', fontSize: 16,
                       outline: 'none', boxSizing: 'border-box',
                       transition: 'border-color 200ms',
                     }}

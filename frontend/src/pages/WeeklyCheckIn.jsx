@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { gaCheckInSubmit } from '../lib/analytics.js'
+import toast from 'react-hot-toast'
 
 const FEELING_OPTIONS = [
   { value: 'drained', label: 'Drained', hint: 'Low energy all week', score: 3 },
@@ -81,6 +83,7 @@ function getStepTitleAndSubtitle(step) {
 
 export default function WeeklyCheckIn() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user } = useAuth()
   const [step, setStep] = useState(1)
   const [feeling, setFeeling] = useState('')
@@ -136,8 +139,18 @@ export default function WeeklyCheckIn() {
     try {
       await api.post('/checkins', payload)
       gaCheckInSubmit()
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+        queryClient.invalidateQueries({ queryKey: ['health-score'] }),
+        queryClient.invalidateQueries({ queryKey: ['insights'] }),
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+      ])
+
       setDone(true)
       setTimeout(() => navigate('/dashboard'), 900)
+    } catch {
+      toast.error('Failed to save check-in. Please try again.')
     } finally {
       setSubmitting(false)
     }

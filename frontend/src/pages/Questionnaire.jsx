@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
@@ -89,6 +90,7 @@ function ScoreBar({ label, value }) {
 
 export default function Questionnaire() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -156,6 +158,15 @@ export default function Questionnaire() {
 
       if (data?.completed) {
         const completeResp = await api.post('/questionnaire/complete', { mark_onboarding_complete: true })
+
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['profile'] }),
+          queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+          queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+          queryClient.invalidateQueries({ queryKey: ['insights'] }),
+          queryClient.invalidateQueries({ queryKey: ['health-score'] }),
+        ])
+
         trackFunnelEvent('funnel_questionnaire_completed', 'User completed adaptive questionnaire', {
           answered_count: Number(data?.answered_count || 0),
         }, { oncePerSession: true })

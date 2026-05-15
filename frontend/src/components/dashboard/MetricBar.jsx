@@ -11,7 +11,11 @@ export default function MetricBar({ stats, uploadCount, uploadLimit, subStatus, 
 
   const getCheckInStatus = (latestCheckin) => {
     if (!latestCheckin) return { label: 'No check-in', color: 'bg-amber-100 text-amber-700' }
+    if (!latestCheckin.week_start) return { label: 'No check-in', color: 'bg-amber-100 text-amber-700' }
+
     const weekStart = new Date(latestCheckin.week_start)
+    if (Number.isNaN(weekStart.getTime())) return { label: 'No check-in', color: 'bg-amber-100 text-amber-700' }
+
     const now = new Date()
     const daysAgo = Math.floor((now - weekStart) / (1000 * 60 * 60 * 24))
     if (daysAgo > 7) return { label: 'Check-in overdue', color: 'bg-red-100 text-red-700' }

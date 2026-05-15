@@ -242,7 +242,7 @@ export default function EmailConfirmation() {
                 padding: '10px 12px',
                 border: '1px solid #ddd',
                 borderRadius: '8px',
-                fontSize: '14px',
+                fontSize: '16px',
                 boxSizing: 'border-box',
               }}
             />
@@ -368,7 +368,7 @@ export default function EmailConfirmation() {
                 padding: '10px 12px',
                 border: '1px solid #ddd',
                 borderRadius: '8px',
-                fontSize: '14px',
+                fontSize: '16px',
                 boxSizing: 'border-box',
               }}
             />

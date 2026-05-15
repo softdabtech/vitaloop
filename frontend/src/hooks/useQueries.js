@@ -4,9 +4,9 @@ import api from '../lib/api.js'
 // Dashboard summary (stats, assignments)
 export const useDashboardSummary = () =>
   useQuery({
-    queryKey: ['dashboard'],
+    queryKey: ['dashboard-summary'],
     queryFn: async () => {
-      const { data } = await api.get('/dashboard')
+      const { data } = await api.get('/dashboard/summary')
       return data
     },
     staleTime: 5 * 60 * 1000, // 5 min
