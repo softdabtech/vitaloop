@@ -33,12 +33,9 @@ import { AnimatedFAQ } from '../components/landing/AnimatedFAQ.jsx'
 import Footer from '../components/landing/Footer.jsx'
 
 const NAV_LINKS = [
-  { id: 'how-it-works', label: 'Product' },
   { id: 'why-vitaloop', label: 'Features' },
   { id: 'pricing', label: 'Pricing' },
-  { id: 'testimonials', label: 'Stories' },
   { id: 'about', label: 'About', route: '/for-investors#about' },
-  { id: 'faq', label: 'FAQ' },
   { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
 ]
 
