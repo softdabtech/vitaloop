@@ -7,6 +7,11 @@ from fastapi import HTTPException
 import httpx
 from supabase import create_client, Client
 from app.config import settings
+from app.utils.retry import (
+    with_retry,
+    SUPABASE_RETRY_CONFIG,
+    supabase_circuit_breaker,
+)
 from typing import List, Dict, Any, Optional
 
 try:
@@ -76,8 +81,9 @@ def _is_valid_uuid(value: str) -> bool:
         return False
 
 
+@with_retry(SUPABASE_RETRY_CONFIG)
 def _rest_select_first_by_id(table: str, columns: str, user_id: str) -> Dict[str, Any]:
-    """Query Supabase REST API with robust error handling"""
+    """Query Supabase REST API with retry logic and robust error handling."""
     base_url = _clean(settings.supabase_url).rstrip("/")
     if not base_url:
         _logger.error("Supabase URL not configured")
