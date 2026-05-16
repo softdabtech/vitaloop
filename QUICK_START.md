@@ -149,7 +149,7 @@ curl -s https://api.vitaloop.today/admin/runtime-readiness | jq .
 ```json
 {
   "status": "ok",
-  "version": "3.2.1"
+  "version": "4.1.1"
 }
 ```
 

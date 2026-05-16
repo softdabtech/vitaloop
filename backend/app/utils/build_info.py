@@ -7,7 +7,7 @@ import shutil
 import subprocess
 
 
-APP_VERSION = "2.1.2"
+APP_VERSION = "4.1.1"
 SERVICE_NAME = "vitaloop-api"
 GIT_CANDIDATES = ("/usr/bin/git", "/usr/local/bin/git")
 

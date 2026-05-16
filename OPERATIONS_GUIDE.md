@@ -168,7 +168,7 @@ curl https://api.vitaloop.today/admin/runtime-readiness
 {
   "status": "ok",
   "timestamp": "2026-04-19T10:56:22Z",
-  "version": "3.2.1"
+   "version": "4.1.1"
 }
 ```
 
