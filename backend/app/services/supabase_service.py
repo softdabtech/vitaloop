@@ -2,12 +2,17 @@ import asyncio
 import logging
 from collections import Counter
 from datetime import datetime, timedelta, timezone
-from uuid import uuid4
+from uuid import uuid4, UUID
 from fastapi import HTTPException
 import httpx
 from supabase import create_client, Client
 from app.config import settings
 from typing import List, Dict, Any, Optional
+
+try:
+    import sentry_sdk
+except ImportError:
+    sentry_sdk = None
 
 _supabase: Optional[Client] = None
 _use_rest_auth_context = False
@@ -62,9 +67,25 @@ def _rest_headers() -> Dict[str, str]:
     }
 
 
+def _is_valid_uuid(value: str) -> bool:
+    """Validate if string is valid UUID format"""
+    try:
+        UUID(value)
+        return True
+    except (ValueError, AttributeError, TypeError):
+        return False
+
+
 def _rest_select_first_by_id(table: str, columns: str, user_id: str) -> Dict[str, Any]:
+    """Query Supabase REST API with robust error handling"""
     base_url = _clean(settings.supabase_url).rstrip("/")
     if not base_url:
+        _logger.error("Supabase URL not configured")
+        return {}
+
+    # Validate UUID format before making request
+    if not _is_valid_uuid(user_id):
+        _logger.error(f"Invalid UUID format for {table}: {user_id}")
         return {}
 
     url = f"{base_url}/rest/v1/{table}"
@@ -74,18 +95,68 @@ def _rest_select_first_by_id(table: str, columns: str, user_id: str) -> Dict[str
         "limit": "1",
     }
 
-    with httpx.Client(timeout=20.0) as client:
-        response = client.get(url, headers=_rest_headers(), params=params)
-        response.raise_for_status()
-        data = response.json()
+    try:
+        with httpx.Client(timeout=20.0) as client:
+            response = client.get(url, headers=_rest_headers(), params=params)
+            response.raise_for_status()
+            data = response.json()
 
-    if isinstance(data, list) and data:
-        return data[0]
-    return {}
+        if isinstance(data, list) and data:
+            return data[0]
+        return {}
+    except httpx.HTTPStatusError as e:
+        # Log detailed error info for debugging
+        _logger.error(
+            f"Supabase REST API error for {table}",
+            extra={
+                "status": e.response.status_code,
+                "url": str(e.request.url),
+                "user_id": user_id,
+                "response_body": e.response.text[:500] if e.response.text else None,
+            }
+        )
+        if sentry_sdk and e.response.status_code >= 500:
+            with sentry_sdk.push_scope() as scope:
+                scope.set_context("supabase_api", {
+                    "table": table,
+                    "status": e.response.status_code,
+                    "url": str(e.request.url),
+                })
+                sentry_sdk.capture_exception(e)
+        return {}
+    except httpx.TimeoutException as e:
+        _logger.error(f"Supabase REST API timeout for {table}: {str(e)}")
+        if sentry_sdk:
+            with sentry_sdk.push_scope() as scope:
+                scope.set_context("supabase_timeout", {
+                    "table": table,
+                    "timeout": "20.0s",
+                })
+                sentry_sdk.capture_exception(e)
+        return {}
+    except Exception as e:
+        _logger.error(
+            f"Unexpected error in _rest_select_first_by_id for {table}",
+            exc_info=True,
+            extra={"user_id": user_id}
+        )
+        if sentry_sdk:
+            with sentry_sdk.push_scope() as scope:
+                scope.set_context("supabase_query", {
+                    "table": table,
+                    "operation": "select_first_by_id",
+                })
+                sentry_sdk.capture_exception(e)
+        return {}
 
 
 async def _select_first_by_id_with_fallback(table: str, columns: str, user_id: str) -> Dict[str, Any]:
     global _use_rest_auth_context
+
+    # Validate UUID format upfront
+    if not _is_valid_uuid(user_id):
+        _logger.error(f"Invalid UUID format for {table}: {user_id}")
+        return {}
 
     if _use_rest_auth_context:
         return await _run(lambda: _rest_select_first_by_id(table, columns, user_id))

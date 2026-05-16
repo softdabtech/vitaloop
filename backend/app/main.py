@@ -25,23 +25,50 @@ try:
     import sentry_sdk
     from sentry_sdk.integrations.fastapi import FastApiIntegration
     from sentry_sdk.integrations.starlette import StarletteIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
 except Exception:  # pragma: no cover - optional dependency in some environments
     sentry_sdk = None
     FastApiIntegration = None
     StarletteIntegration = None
+    LoggingIntegration = None
 
 logger = logging.getLogger("uvicorn.error")
 
 if settings.sentry_dsn and sentry_sdk is not None:
+    logging_integration = LoggingIntegration(
+        level=logging.INFO,
+        event_level=logging.ERROR,
+    ) if LoggingIntegration else None
+
+    integrations = [
+        StarletteIntegration(
+            transaction_style="url",
+            failed_request_status_codes=[400, 401, 402, 403, 404, 405, 422, 500, 502, 503, 504],
+        ),
+        FastApiIntegration(
+            transaction_style="url",
+        ),
+    ]
+
+    if logging_integration:
+        integrations.append(logging_integration)
+
     sentry_sdk.init(
         dsn=settings.sentry_dsn,
-        integrations=[StarletteIntegration(), FastApiIntegration()],
+        integrations=integrations,
         traces_sample_rate=settings.sentry_traces_sample_rate,
+        profiles_sample_rate=0.1,
         environment=settings.app_env,
+        release=APP_VERSION,
         send_default_pii=False,
+        max_request_body_size="medium",
+        attach_stacktrace=True,
     )
+    logger.info("sentry_initialized env=%s", settings.app_env)
 elif settings.sentry_dsn and sentry_sdk is None:
     logger.warning("sentry_dsn_set_but_sdk_missing")
+else:
+    logger.info("sentry_disabled dsn_empty=%s", not settings.sentry_dsn)
 from app.routers import health, llm_consult
 from app.routers.identity import auth, profile, onboarding, settings as settings_router
 from app.routers.analysis import analyze, insights, red_flags, timeline, dashboard, uploads
