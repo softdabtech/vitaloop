@@ -93,6 +93,7 @@ async def get_auth_me(current_user: dict = Depends(get_current_user)):
 
     active_sub = await svc.get_user_active_subscription(user_id)
     subscription_status = account.get("sub_status")
+    account_plan = str(account.get("plan_tier") or "").strip().lower()
     sub_table_status = str((active_sub or {}).get("status") or "free").lower()
     sub_table_plan = str((active_sub or {}).get("plan_name") or "").strip().lower()
     paid_from_sub_table = (
@@ -101,10 +102,22 @@ async def get_auth_me(current_user: dict = Depends(get_current_user)):
         and sub_table_plan != "free"
         and not active_sub.get("cancel_at_period_end", False)
     )
+    paid_from_account = (
+        not active_sub
+        and str(subscription_status or "").lower() == "active"
+        and bool(account_plan)
+        and account_plan != "free"
+    )
     has_active_subscription = (
-        str(subscription_status or "").lower() == "active"
+        paid_from_account
         or paid_from_sub_table
     )
+    if has_active_subscription:
+        resolved_subscription_status = "active"
+    elif active_sub:
+        resolved_subscription_status = "free" if sub_table_status == "active" else sub_table_status
+    else:
+        resolved_subscription_status = "free"
 
     return {
         "user": {
@@ -121,7 +134,7 @@ async def get_auth_me(current_user: dict = Depends(get_current_user)):
         "onboarding_completed": _as_bool(onboarding_completed),
         "global_role": global_role,
         "subscription_active": has_active_subscription,
-        "subscription_status": subscription_status,
+        "subscription_status": resolved_subscription_status,
         "pending_invite": pending_invite,
     }
 
