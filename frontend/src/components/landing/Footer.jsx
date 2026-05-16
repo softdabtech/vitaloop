@@ -15,7 +15,7 @@ const COMPANY_LINKS = [
 ]
 
 const SOCIAL_LINKS = [
-  { label: 'Instagram', href: 'https://www.instagram.com/vitaloop.today/' },
+  { label: 'Instagram', href: 'https://www.instagram.com/vitaloop_today/' },
 ]
 
 function InstagramIcon() {

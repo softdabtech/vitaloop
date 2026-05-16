@@ -415,6 +415,52 @@ export default function ForInvestors() {
         </div>
       </section>
 
+      <section id="about" className="mx-auto w-full max-w-[1240px] px-4 py-2 pb-12 sm:px-6 md:py-4">
+        <div className="rounded-3xl border border-slate-200 bg-white/85 p-6 backdrop-blur md:p-8">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">About</p>
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Why VITALOOP exists</span>
+          </div>
+
+          <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-5 md:p-6">
+            <p className="text-sm leading-relaxed text-slate-700">
+              VITALOOP turns scattered lab PDFs into a structured health operating system: upload, prioritize biomarkers, run a protocol, and adapt weekly.
+              {' '}
+              <a
+                href="https://www.linkedin.com/in/aleksey-bombela/"
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-emerald-700 hover:text-emerald-600"
+              >
+                Meet the founder
+              </a>
+            </p>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Early adopters</div>
+                <div className="mt-1 text-sm font-semibold">17 early users</div>
+                <div className="mt-1 text-[11px] text-emerald-700">Validated in live product usage</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Lab compatibility</div>
+                <div className="mt-1 text-sm font-semibold">Quest, LabCorp, and 50+ report formats</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Launch & stack</div>
+                <div className="mt-1 text-sm font-semibold">May 2026 launch · FastAPI + Advanced AI + Supabase</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Founder contact</div>
+                <a href="mailto:bombela@softdab.tech" className="mt-1 inline-flex text-sm font-semibold text-emerald-700 hover:text-emerald-600">
+                  bombela@softdab.tech
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <Footer />
     </div>
   )
