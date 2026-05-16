@@ -130,6 +130,15 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
             "metadata": metadata or {},
         }
 
+    async def fake_get_user_account(user_id):
+        # Return account data with subscription info for quota check
+        return {
+            "id": user_id,
+            "email": "e2e@vitaloop.test",
+            "sub_status": "free",  # Free user
+            "global_role": "end_user",
+        }
+
     monkeypatch.setattr(analyze_router, "save_lab_upload", fake_save_lab_upload)
     monkeypatch.setattr(analyze_router, "extract_biomarkers", fake_extract_biomarkers)
     monkeypatch.setattr(analyze_router, "save_biomarkers", fake_save_biomarkers)
@@ -141,6 +150,9 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
     monkeypatch.setattr(protocol_router, "save_protocol", fake_save_protocol)
     monkeypatch.setattr(protocol_router, "build_iherb_url", fake_iherb_url)
     monkeypatch.setattr(protocol_router, "assert_upload_belongs_to_user", fake_assert_upload_belongs_to_user)
+
+    from app.services import supabase_service as svc
+    monkeypatch.setattr(svc, "get_user_account", fake_get_user_account)
 
     fake_user = {
         "sub": fake_user_id,
