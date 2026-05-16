@@ -38,7 +38,7 @@ const NAV_LINKS = [
   { id: 'why-vitaloop', label: 'Features' },
   { id: 'pricing', label: 'Pricing' },
   { id: 'testimonials', label: 'Stories' },
-  { id: 'traction', label: 'Investors' },
+  { id: 'about', label: 'About' },
   { id: 'faq', label: 'FAQ' },
   { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
 ]
@@ -286,7 +286,6 @@ const SCHEMA_HOWTO = {
   '@type': 'HowTo',
   name: 'How to Analyze Blood Test Results With AI Using VITALOOP',
   description: 'Upload your lab report and receive comprehensive AI-powered biomarker analysis. Full personalized protocol and weekly adaptive loop are available on paid plans.',
-  totalTime: 'PT1M',
   estimatedCost: { '@type': 'MonetaryAmount', currency: 'USD', value: '0' },
   step: [
     { '@type': 'HowToStep', name: 'Upload your lab report', text: 'Drop a PDF or image of your blood test results into VITALOOP. Supported formats include any standard laboratory PDF or photo.', position: 1 },
@@ -1208,21 +1207,21 @@ export default function Landing() {
 
         <InteractivePricing />
 
-        <section id="traction" className="mx-auto w-full max-w-[1240px] px-4 py-8 sm:px-6 md:py-10">
+        <section id="about" className="mx-auto w-full max-w-[1240px] px-4 py-8 sm:px-6 md:py-10">
           <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}>
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>Traction</p>
+              <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>About</p>
               <button
                 onClick={() => navigate('/for-investors')}
                 className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700 hover:text-emerald-600'}`}
               >
-                Open full investor page
+                Why VITALOOP exists
               </button>
             </div>
 
             <div className={`mt-4 rounded-3xl border p-5 md:p-6 ${'border-slate-200 bg-white'}`}>
               <p className={`text-sm leading-relaxed ${'text-slate-700'}`}>
-                VITALOOP is in early access and already used by real customers in live protocol cycles.
+                VITALOOP turns scattered lab PDFs into a structured health operating system: upload, prioritize biomarkers, run a protocol, and adapt weekly.
                 {' '}
                 <a
                   href="https://www.linkedin.com/in/aleksey-bombela/"
@@ -1230,7 +1229,7 @@ export default function Landing() {
                   rel="noreferrer"
                   className={`${'text-emerald-700 hover:text-emerald-600'} font-semibold`}
                 >
-                  Founder profile
+                  Meet the founder
                 </a>
               </p>
 
