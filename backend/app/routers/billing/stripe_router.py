@@ -362,6 +362,7 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
             and sub_table_status == "active"
             and plan_name
             and plan_name not in _FREE_PLAN_NAMES
+            and not active_sub.get("cancel_at_period_end", False)
         )
         paid_from_account = account_sub_status == "active"
         is_premium = global_role != "end_user" or paid_from_account or paid_from_sub_table
