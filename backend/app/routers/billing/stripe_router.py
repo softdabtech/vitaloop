@@ -357,6 +357,7 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
         claim_sub_status = "active" if bool(current_user.get("subscription_active")) else str(current_user.get("subscription_status") or "free").lower()
         global_role = str(account.get("global_role") or current_user.get("global_role") or "end_user").lower()
         plan_name = str((active_sub or {}).get("plan_name") or account.get("plan_tier") or "").strip().lower() or None
+        account_plan = str(account.get("plan_tier") or "").strip().lower()
         paid_from_sub_table = bool(
             active_sub
             and sub_table_status == "active"
@@ -364,9 +365,26 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
             and plan_name not in _FREE_PLAN_NAMES
             and not active_sub.get("cancel_at_period_end", False)
         )
-        paid_from_account = account_sub_status == "active"
+        # If subscriptions row exists, treat it as source of truth and only use
+        # users.sub_status as a legacy fallback when no subscriptions row is available.
+        paid_from_account = bool(
+            not active_sub
+            and account_sub_status == "active"
+            and account_plan
+            and account_plan not in _FREE_PLAN_NAMES
+        )
         is_premium = global_role != "end_user" or paid_from_account or paid_from_sub_table
-        sub_status = "active" if is_premium and global_role == "end_user" else account_sub_status
+
+        if global_role != "end_user":
+            sub_status = "active"
+        elif is_premium:
+            sub_status = "active"
+        elif active_sub:
+            # For free/cancelled end-users, prefer subscriptions table state over
+            # potentially stale users.sub_status.
+            sub_status = "free" if sub_table_status == "active" else sub_table_status
+        else:
+            sub_status = "free"
     except Exception as ex:
         logger.warning("stripe_subscription_status_fallback user_id=%s error=%s", user_id, repr(ex))
         # Degrade gracefully on transient data-layer failures.

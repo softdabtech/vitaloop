@@ -30,11 +30,9 @@ export function useSubscription() {
         ])
 
         const authMe = authMeResp?.data || null
-        const authStatus = String(authMe?.subscription_status || (authMe?.has_active_subscription ? 'active' : 'free')).toLowerCase()
         const authPremium = Boolean(
           authMe?.has_active_subscription
           || authMe?.subscription_active
-          || authStatus === 'active'
           || authMe?.global_role !== 'end_user'
         )
 
@@ -54,7 +52,7 @@ export function useSubscription() {
         try {
           const { data } = await api.get('/auth/me')
           const status = String(data?.subscription_status || (data?.has_active_subscription ? 'active' : 'free')).toLowerCase()
-          const premium = Boolean(data?.has_active_subscription || data?.subscription_active || status === 'active' || data?.global_role !== 'end_user')
+          const premium = Boolean(data?.has_active_subscription || data?.subscription_active || data?.global_role !== 'end_user')
 
           setSubStatus(status)
           setIsPremium(premium)

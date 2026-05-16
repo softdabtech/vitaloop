@@ -69,11 +69,30 @@ async def require_active_subscription(current_user: dict = Depends(get_current_u
     jwt_role = str(current_user.get("global_role") or current_user.get("role") or "").lower()
 
     account = await svc.get_user_account(user_id)
+    active_sub = await svc.get_user_active_subscription(user_id)
     global_role = str(account.get("global_role") or jwt_role or "end_user").lower()
     sub_status = str(account.get("sub_status") or "").lower()
+    account_plan = str(account.get("plan_tier") or "").strip().lower()
+    sub_table_status = str((active_sub or {}).get("status") or "free").lower()
+    sub_table_plan = str((active_sub or {}).get("plan_name") or "").strip().lower()
+
+    paid_from_sub_table = bool(
+        active_sub
+        and sub_table_status == "active"
+        and sub_table_plan
+        and sub_table_plan != "free"
+        and not active_sub.get("cancel_at_period_end", False)
+    )
+    paid_from_account = bool(
+        not active_sub
+        and sub_status == "active"
+        and account_plan
+        and account_plan != "free"
+    )
+    is_paid = paid_from_sub_table or paid_from_account
 
     # Non-end-user roles (ops/admin/practitioner) bypass B2C subscription gating.
-    if global_role != "end_user" or sub_status == "active":
+    if global_role != "end_user" or is_paid:
         pass
     else:
         raise HTTPException(
@@ -92,11 +111,30 @@ async def require_freemium_analyze(current_user: dict = Depends(get_current_user
     jwt_role = str(current_user.get("global_role") or current_user.get("role") or "").lower()
 
     account = await svc.get_user_account(user_id)
+    active_sub = await svc.get_user_active_subscription(user_id)
     global_role = str(account.get("global_role") or jwt_role or "end_user").lower()
     sub_status = str(account.get("sub_status") or "").lower()
+    account_plan = str(account.get("plan_tier") or "").strip().lower()
+    sub_table_status = str((active_sub or {}).get("status") or "free").lower()
+    sub_table_plan = str((active_sub or {}).get("plan_name") or "").strip().lower()
+
+    paid_from_sub_table = bool(
+        active_sub
+        and sub_table_status == "active"
+        and sub_table_plan
+        and sub_table_plan != "free"
+        and not active_sub.get("cancel_at_period_end", False)
+    )
+    paid_from_account = bool(
+        not active_sub
+        and sub_status == "active"
+        and account_plan
+        and account_plan != "free"
+    )
+    is_paid = paid_from_sub_table or paid_from_account
 
     # Non-end-users and active subscribers pass through unconditionally.
-    if global_role != "end_user" or sub_status == "active":
+    if global_role != "end_user" or is_paid:
         pass
     else:
         # For free users, check the unified biomarker quota

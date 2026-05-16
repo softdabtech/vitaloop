@@ -46,6 +46,12 @@ _USER_ACCOUNT_FREE = {
     "plan_tier": None,
 }
 
+_USER_ACCOUNT_ACTIVE_FREE = {
+    "sub_status": "active",
+    "global_role": "end_user",
+    "plan_tier": "free",
+}
+
 _USER_ACCOUNT_PREMIUM = {
     "sub_status": "active",
     "global_role": "end_user",
@@ -228,6 +234,28 @@ async def test_subscription_status_active_free_plan_is_not_premium(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_subscription_status_stale_account_active_does_not_override_free_sub(monkeypatch):
+    free_active_sub = {
+        **_ACTIVE_SUBSCRIPTION,
+        "plan_name": "free",
+        "status": "active",
+        "stripe_subscription_id": None,
+        "stripe_customer_id": None,
+    }
+
+    monkeypatch.setattr(billing, "get_user_account", lambda _uid: _coro(_USER_ACCOUNT_ACTIVE_FREE))
+    monkeypatch.setattr(billing, "get_user_upload_count", lambda _uid: _coro(1))
+    monkeypatch.setattr(billing, "get_user_active_subscription", lambda _uid: _coro(free_active_sub))
+
+    result = await billing.get_subscription_status(current_user=CURRENT_USER)
+
+    assert result["sub_status"] == "free"
+    assert result["is_premium"] is False
+    assert result["plan_name"] == "free"
+    assert result["upload_limit"] is not None
+
+
+@pytest.mark.asyncio
 async def test_subscription_cancel_at_period_end_reflected(monkeypatch):
     cancelling_sub = {**_ACTIVE_SUBSCRIPTION, "cancel_at_period_end": True}
 
@@ -238,6 +266,7 @@ async def test_subscription_cancel_at_period_end_reflected(monkeypatch):
     result = await billing.get_subscription_status(current_user=CURRENT_USER)
 
     assert result["cancel_at_period_end"] is True
+    assert result["is_premium"] is False
 
 
 # ===========================================================================
