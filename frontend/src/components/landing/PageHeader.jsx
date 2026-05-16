@@ -9,7 +9,7 @@ const NAV_LINKS = [
   { id: 'why-vitaloop', label: 'Features' },
   { id: 'pricing', label: 'Pricing' },
   { id: 'testimonials', label: 'Stories' },
-  { id: 'traction', label: 'Investors' },
+  { id: 'about', label: 'About' },
   { id: 'faq', label: 'FAQ' },
   { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
 ]

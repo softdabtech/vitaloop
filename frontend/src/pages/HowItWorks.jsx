@@ -57,7 +57,7 @@ export default function HowItWorks() {
   ]
 
   const outcomes = [
-    { label: 'Upload to insight', value: '< 60 sec', icon: Upload },
+    { label: 'Upload to insight', value: 'Fast AI flow', icon: Upload },
     { label: 'Biomarkers tracked', value: '85+', icon: TrendingUp },
     { label: 'Weekly loop', value: 'Always on', icon: CheckCircle2 },
   ]
@@ -75,7 +75,6 @@ export default function HowItWorks() {
             name: 'How to Interpret Blood Test Results with AI',
             description:
               'Upload your blood test PDF or image, let VITALOOP AI analyze 85+ biomarkers, and receive a personalized health protocol with ranked recommendations.',
-            totalTime: 'PT1M',
             step: [
               {
                 '@type': 'HowToStep',
