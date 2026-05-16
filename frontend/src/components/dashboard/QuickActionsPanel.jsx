@@ -75,7 +75,7 @@ export default function QuickActionsPanel() {
 
   return (
     <div className="vtl-light-card p-6">
-      <h3 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">Quick Actions</h3>
+      <h3 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">Key Actions</h3>
       <div className="space-y-1.5">
         {actions.map((action) => (
           <Link

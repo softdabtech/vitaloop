@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import { AlertCircle, Building2, ShieldCheck, Sparkles, UserCircle2 } from 'lucide-react'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
-import { useOCR } from '../hooks/useOCR.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import UploadZone from '../components/UploadZone.jsx'
 import SymptomSelector from '../components/SymptomSelector.jsx'
@@ -18,12 +17,20 @@ import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import '../styles/dashboard2026.css'
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
-const SUPPORTED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
+const SUPPORTED_FILE_TYPES = ['application/pdf']
 
 const UPLOAD_HINTS = [
-  '📄 Upload a PDF or a clear photo of your lab report. Your file is read entirely in your browser — only the extracted text is sent to our servers, not the original file.',
+  '📄 Upload your lab report PDF. It is sent directly to our secure AI analysis pipeline for full-report interpretation.',
   '💊 Add current symptoms before uploading. The AI uses them to prioritize which biomarkers are most relevant to your situation.',
   '✅ After upload you\'ll see a color-coded biomarker breakdown and a personalized supplement protocol — all generated automatically.',
+]
+
+const LOADING_MESSAGES = [
+  '📤 Uploading your lab report...',
+  '🧠 AI is analyzing your biomarkers...',
+  '📋 Generating your personalized protocol...',
+  '💊 Finalizing supplement recommendations...',
+  '✅ Almost ready...',
 ]
 
 function triggerPaywall(detail) {
@@ -35,7 +42,7 @@ function triggerPaywall(detail) {
 // Helper functions for Upload component
 function validateFileInput(file) {
   if (!file) return 'No file selected. Please choose a lab report.'
-  if (!SUPPORTED_FILE_TYPES.includes(file.type)) return 'Unsupported file type. Please upload PDF, JPG, or PNG.'
+  if (!SUPPORTED_FILE_TYPES.includes(file.type)) return 'Unsupported file type. Please upload a PDF file.'
   if (file.size > MAX_FILE_SIZE_BYTES) return 'File is too large. Please upload a file under 20MB.'
   return ''
 }
@@ -65,13 +72,14 @@ function resolveAnalysisErrorMessage({ status, errorCode, errorDetail, usedBy })
   }
 
   if (status === 422) {
-    if (errorCode === 'LAB_TEXT_TOO_SHORT') {
-      return 'Not enough readable text found in the report. Please upload a clearer PDF or photo with full biomarker table visible.'
-    }
     if (errorCode === 'BIOMARKERS_NOT_EXTRACTED') {
-      return 'Could not detect biomarkers in this report format. Try a clearer full-page PDF or a sharp photo with names, values, and ranges visible.'
+      return 'Could not detect biomarkers in this report format. Try a clearer full-page PDF with names, values, and ranges visible.'
     }
-    return 'Lab report format not recognized. Please upload a standard lab PDF or clear photo.'
+    return 'Lab report format not recognized. Please upload a standard lab PDF.'
+  }
+
+  if (status === 400 && errorCode === 'INVALID_FILE_TYPE') {
+    return 'Please upload a valid PDF file.'
   }
 
   if (status === 413) {
@@ -96,27 +104,10 @@ function handleAnalysisError(err) {
   return resolveAnalysisErrorMessage({ status, errorCode, errorDetail, usedBy })
 }
 
-async function sendAnalysisMetadata(uploadId, symptoms) {
-  // Generate protocol — non-blocking
-  await api.post('/protocol', {
-    upload_id: uploadId,
-    symptoms,
-  }).catch(() => null)
-
-  // Save symptoms record if any
-  if (symptoms.length > 0) {
-    await api.post('/symptoms', {
-      upload_id: uploadId,
-      tags: symptoms,
-    }).catch(() => null)
-  }
-}
-
 export default function Upload() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { processFile, progress, isProcessing } = useOCR()
-  const { isPremium, uploadCount, uploadLimit, uploadsRemaining, loading: subLoading, refresh: refreshSub } = useSubscription()
+  const { isPremium, uploadsRemaining, loading: subLoading } = useSubscription()
   const { show: showHints, dismiss: dismissHints } = useTourHints('upload')
   const [uploadMode, setUploadMode] = useState('pdf') // 'pdf' | 'manual'
   const [symptoms, setSymptoms] = useState([])
@@ -125,6 +116,8 @@ export default function Upload() {
   const [errorMessage, setErrorMessage] = useState('')
   const [selectedFileName, setSelectedFileName] = useState('')
   const [profileIncomplete, setProfileIncomplete] = useState(false)
+  const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0])
+  const [loadingWarning, setLoadingWarning] = useState('')
 
   useEffect(() => {
     api.get('/auth/onboarding/state').then(r => {
@@ -139,9 +132,27 @@ export default function Upload() {
     })
   }, [])
 
-  const isBusy = isProcessing || analyzing
+  const isBusy = analyzing
   const [retryCount, setRetryCount] = useState(0)
   const [selectedFile, setSelectedFile] = useState(null)
+
+  useEffect(() => {
+    if (!analyzing) {
+      setLoadingWarning('')
+      return
+    }
+
+    setLoadingMessage(LOADING_MESSAGES[0])
+    const timers = [
+      setTimeout(() => setLoadingMessage(LOADING_MESSAGES[1]), 3000),
+      setTimeout(() => setLoadingMessage(LOADING_MESSAGES[2]), 15000),
+      setTimeout(() => setLoadingMessage(LOADING_MESSAGES[3]), 25000),
+      setTimeout(() => setLoadingMessage(LOADING_MESSAGES[4]), 35000),
+      setTimeout(() => setLoadingWarning('This is taking longer than usual. Large PDFs may take 1-2 minutes.'), 60000),
+    ]
+
+    return () => timers.forEach(clearTimeout)
+  }, [analyzing])
 
   async function handleFile(file) {
     if (isBusy) return
@@ -158,39 +169,18 @@ export default function Upload() {
     setSelectedFile(file)
     setRetryCount(0)
 
-    toast(`Extracting text from ${file.name}… (${(file.size / 1024).toFixed(0)}KB)`, { icon: '🔍' })
-    let text = ''
-    let confidence = null
-
-    try {
-      const result = await processFile(file)
-      text = result.text
-      confidence = result.confidence
-    } catch (err) {
-      console.error('File processing error:', err)
-      const errorMsg = err.message || 'Could not read this file. Please try another clear PDF or image.'
-      setErrorMessage(errorMsg)
-      toast.error(errorMsg)
-      return
-    }
-
-    if (!text || text.trim().length < 20) {
-      setErrorMessage('Not enough readable text found. Please upload a clearer document.')
-      toast.error('Could not read the document. Try a clearer image or PDF.')
-      return
-    }
+    toast(`Uploading ${file.name}… (${(file.size / 1024).toFixed(0)}KB)`, { icon: '📄' })
 
     setAnalyzing(true)
     try {
-      const { data } = await api.post('/analyze', {
-        extracted_text: text,
-        lab_name: labName || undefined,
-        ocr_confidence: confidence,
-        symptoms,
-      })
+      const formData = new FormData()
+      formData.append('file', file)
+      if (labName) {
+        formData.append('lab_name', labName)
+      }
+      symptoms.forEach((symptom) => formData.append('symptoms', symptom))
 
-      // Send metadata and protocol generation non-blocking
-      await sendAnalysisMetadata(data.upload_id, symptoms)
+      const { data } = await api.post('/analyze/pdf', formData)
 
       trackFunnelEvent('funnel_first_upload_completed', 'User completed first lab upload analysis', {
         upload_id: data.upload_id,
@@ -261,7 +251,7 @@ export default function Upload() {
       <div className="mx-auto w-full max-w-6xl">
         <CabinetPageHeader
           title="Upload Lab Results"
-          subtitle="Your file is processed locally first. Only extracted text is sent for analysis."
+          subtitle="Your file is processed locally first. Only analysis-ready values are sent for analysis."
           helper="Upload report -> add optional symptoms -> open biomarkers and generated protocol."
         />
 
@@ -334,7 +324,7 @@ export default function Upload() {
             <div className="mb-6 grid gap-3 lg:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Private first</div>
-                <p className="text-sm text-slate-500">Your file is read in the browser first. Only extracted text continues into the analysis workflow.</p>
+                <p className="text-sm text-slate-500">Your PDF goes through secure AI analysis for full-report interpretation and structured recommendations.</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" /> What unlocks next</div>
@@ -347,11 +337,11 @@ export default function Upload() {
             </div>
 
             <div className="mb-6 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
-              <div className={`rounded-xl border px-3 py-2 ${isProcessing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
-                1. Read document
+              <div className={`rounded-xl border px-3 py-2 ${analyzing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
+                1. Upload PDF
               </div>
               <div className={`rounded-xl border px-3 py-2 ${analyzing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
-                2. Analyze biomarkers
+                2. AI analysis
               </div>
               <div className={`rounded-xl border px-3 py-2 ${!isBusy && selectedFileName ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
                 3. Open results
@@ -365,7 +355,7 @@ export default function Upload() {
             )}
 
             <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-              Tip: upload a clear full-page PDF or a sharp photo in good lighting.
+              Tip: upload a clear full-page PDF from your lab portal for best accuracy.
             </div>
 
             <div className="mb-6">
@@ -386,20 +376,17 @@ export default function Upload() {
             <SymptomSelector selected={symptoms} onChange={setSymptoms} />
 
             <div className="mt-6">
-              {isProcessing && (
-                <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                  <div className="mb-2 text-sm text-emerald-700">Reading document... {progress}%</div>
-                  <div className="h-2.5 w-full rounded-full bg-emerald-100">
-                    <div className="h-2.5 rounded-full bg-emerald-500 transition-all" style={{ width: `${progress}%` }} />
-                  </div>
-                  {selectedFileName && <div className="mt-2 truncate text-xs text-emerald-600">{selectedFileName}</div>}
-                </div>
-              )}
-
               {analyzing && (
-                <div className="mb-4 animate-pulse rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                  Extracting biomarkers... This usually takes under a minute.
-                </div>
+                <>
+                  <div className="mb-4 animate-pulse rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    {loadingMessage}
+                  </div>
+                  {loadingWarning && (
+                    <div className="mb-4 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+                      {loadingWarning}
+                    </div>
+                  )}
+                </>
               )}
 
               {errorMessage && (
@@ -408,7 +395,7 @@ export default function Upload() {
                     <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-rose-900">{errorMessage}</p>
-                      <p className="mt-1 text-xs text-rose-700">Try uploading a clearer PDF or sharp photo of your full lab report.</p>
+                      <p className="mt-1 text-xs text-rose-700">Try uploading a clearer full-page PDF from your lab portal.</p>
                       {retryCount < 3 && selectedFile && (
                         <button
                           onClick={handleRetry}
@@ -423,7 +410,7 @@ export default function Upload() {
                 </div>
               )}
 
-              {!isProcessing && !analyzing && <UploadZone onFile={handleFile} disabled={isBusy} />}
+              {!analyzing && <UploadZone onFile={handleFile} disabled={isBusy} />}
             </div>
           </>
         ) : (

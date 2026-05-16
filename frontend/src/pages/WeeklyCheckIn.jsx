@@ -256,7 +256,7 @@ export default function WeeklyCheckIn() {
       <div className="mx-auto max-w-3xl space-y-6">
         <CabinetPageHeader
           title="Weekly Check-in"
-          subtitle="A quick 4-step reflection to keep your protocol adaptive and accurate."
+          subtitle="A focused 4-step reflection to keep your protocol adaptive and accurate."
         />
 
         <section className="rounded-3xl border border-slate-200 bg-white shadow-sm" style={{ padding: isMobile ? '20px 16px' : '24px' }}>

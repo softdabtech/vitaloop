@@ -40,7 +40,7 @@ export function AnimatedHero() {
             </h1>
 
             <p className="text-xl text-slate-300 mb-10 leading-relaxed max-w-lg">
-              Upload your PDF. Get a protocol with dosages in 60 seconds. Not interpretation. Execution.
+              Upload your PDF. Get a comprehensive protocol with dosages. Not interpretation. Execution.
             </p>
 
             {/* CTA buttons */}
@@ -177,8 +177,8 @@ function StageUpload() {
   )
 }
 
-// Stage 2: AI Extraction
-function StageExtract() {
+// Stage 2: AI Analysis
+function StageAnalyze() {
   return (
     <motion.div
       className="absolute inset-0 flex items-center justify-center"
@@ -289,7 +289,7 @@ function StageExtract() {
         >
           85+
         </motion.div>
-        <div className="text-sm text-slate-400 mb-4">Biomarkers extracted</div>
+        <div className="text-sm text-slate-400 mb-4">Biomarkers analyzed</div>
 
         <div className="space-y-2">
           {['Vitamin D', 'Ferritin', 'TSH', 'CRP'].map((marker, i) => (

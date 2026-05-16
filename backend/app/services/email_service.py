@@ -295,7 +295,7 @@ async def send_welcome_email(
                   <td style="vertical-align:top;">
                     <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px;">Upload your lab report</div>
                     <div style="font-size:13px;color:#475569;line-height:1.6;">
-                      Drop any PDF or image with blood/urine test results in <strong style="color:#0f6e56;">Dashboard → Upload Lab Report</strong>. AI extracts 85+ biomarkers automatically in under 60 seconds.
+                      Drop any PDF or image with blood/urine test results in <strong style="color:#0f6e56;">Dashboard → Upload Lab Report</strong>. AI analyzes 85+ biomarkers automatically with comprehensive review and validation.
                     </div>
                   </td>
                 </tr>

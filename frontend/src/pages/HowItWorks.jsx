@@ -11,7 +11,7 @@ export default function HowItWorks() {
     {
       icon: Upload,
       title: 'Upload a real lab report',
-      description: 'Bring any PDF or lab image from your provider. VITALOOP handles OCR, unit cleanup, and biomarker normalization before analysis begins.',
+      description: 'Bring any PDF or lab image from your provider. VITALOOP handles document reading, unit cleanup, and biomarker normalization before analysis begins.',
       code: '01',
       color: 'from-emerald-500/25 to-cyan-500/15',
     },
@@ -51,7 +51,7 @@ export default function HowItWorks() {
     },
     {
       title: 'Practitioner collaboration',
-      body: 'Understand how the platform keeps outputs readable when a coach or clinician needs to review your case quickly.',
+      body: 'Understand how the platform keeps outputs readable when a coach or clinician needs to review your case clearly.',
       icon: Stethoscope,
     },
   ]
@@ -74,13 +74,13 @@ export default function HowItWorks() {
             '@type': 'HowTo',
             name: 'How to Interpret Blood Test Results with AI',
             description:
-              'Upload your blood test PDF or image, let VITALOOP AI extract and analyze 85+ biomarkers, and receive a personalized health protocol with ranked recommendations.',
+              'Upload your blood test PDF or image, let VITALOOP AI analyze 85+ biomarkers, and receive a personalized health protocol with ranked recommendations.',
             totalTime: 'PT1M',
             step: [
               {
                 '@type': 'HowToStep',
                 name: 'Upload your lab report',
-                text: 'Upload a blood test PDF or photo of your lab results. VITALOOP\'s OCR engine extracts all biomarkers automatically.',
+                text: 'Upload a blood test PDF or photo of your lab results. VITALOOP\'s AI analysis engine identifies all biomarkers automatically.',
                 position: 1,
               },
               {

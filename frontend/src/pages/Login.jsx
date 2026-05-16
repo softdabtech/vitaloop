@@ -327,8 +327,8 @@ function MedicalPanel({ side, signup = false }) {
         </div>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.18)', lineHeight: 1.5 }}>
           {isLeft
-            ? 'Upload any lab result — AI extracts every biomarker in 60 seconds.'
-            : 'Your PDF never leaves your device. OCR runs 100% client-side.'}
+            ? 'Upload any lab result — AI analyzes every biomarker with comprehensive review.'
+            : 'Your PDF never leaves your device. Analysis runs with privacy-first processing.'}
         </div>
       </div>
     </div>

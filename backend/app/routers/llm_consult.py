@@ -245,7 +245,7 @@ def _job_view(job: Dict[str, Any]) -> Dict[str, Any]:
 @router.post("/consult", response_model=LLMConsultResponse)
 async def llm_consult(body: LLMConsultRequest, current_user: dict = Depends(get_current_user)):
     """
-    Позволяет пользователю задать вопрос LLM (Claude/GPT) с медицинским контекстом.
+    Позволяет пользователю задать вопрос LLM (AI/LLM) с медицинским контекстом.
     """
     prompt = f"User question: {body.question}\nContext: {body.context}\nGive a clear, actionable answer."
     try:

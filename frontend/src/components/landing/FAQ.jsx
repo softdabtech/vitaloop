@@ -32,7 +32,7 @@ const ITEMS = [
     a: 'Not necessarily. Recommendations may include nutrition, lifestyle adjustments, and supplements when relevant.',
   },
   {
-    q: 'How quickly will I see results?',
+    q: 'When will I see results?',
     a: 'It depends on the issue, but many users start noticing improvements within a few weeks when following the protocol consistently.',
   },
 ]

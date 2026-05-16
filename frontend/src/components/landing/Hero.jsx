@@ -7,7 +7,7 @@ import { stagger, staggerChild, buttonHoverProps, EASE } from '../../lib/motion.
 const CABINET_STEPS = [
   {
     title: 'Upload a new lab report',
-    body: 'A user drops in a PDF and VITALOOP starts extracting biomarkers immediately.',
+    body: 'A user drops in a PDF and VITALOOP starts analyzing biomarkers immediately.',
     accent: '#1d9e75',
     status: 'Upload recognized',
     metrics: [
@@ -226,7 +226,7 @@ export function CabinetPreviewModal({ open, onClose, reduced }) {
                                     {row === 0 ? 'Upload labs' : row === 1 ? 'Lab results interpretation' : row === 2 ? 'Assignments and check-ins' : 'Progress and timeline'}
                                   </div>
                                   <div style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: 4 }}>
-                                    {row === 0 ? 'PDF upload and biomarker extraction' : row === 1 ? 'Ranges, red flags, and result context' : row === 2 ? 'Protocol tasks, adherence, and follow-up' : 'Score movement and historical events'}
+                                    {row === 0 ? 'PDF upload and biomarker analysis' : row === 1 ? 'Ranges, red flags, and result context' : row === 2 ? 'Protocol tasks, adherence, and follow-up' : 'Score movement and historical events'}
                                   </div>
                                 </div>
                                 {row === stepIndex ? <CheckCircle2 size={18} color={activeStep.accent} /> : <div style={{ width: 18, height: 18, borderRadius: 999, border: '1px solid rgba(148,163,184,0.25)' }} />}
@@ -251,7 +251,7 @@ export function CabinetPreviewModal({ open, onClose, reduced }) {
                     <div className="flex flex-col sm:flex-row" style={{ borderRadius: 18, padding: '16px 18px', background: 'linear-gradient(135deg, rgba(29,158,117,0.12), rgba(255,255,255,0.86))', border: '1px solid rgba(29,158,117,0.18)', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-900)' }}>Your cabinet — live in seconds after your first upload</div>
-                        <div style={{ fontSize: 13, color: 'var(--gray-500)', marginTop: 4 }}>Every biomarker extracted, ranked, and explained — no manual entry needed.</div>
+                        <div style={{ fontSize: 13, color: 'var(--gray-500)', marginTop: 4 }}>Every biomarker analyzed, ranked, and explained — no manual entry needed.</div>
                       </div>
                       <button
                         onClick={onClose}

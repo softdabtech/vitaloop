@@ -337,9 +337,9 @@ export default function ClientAdmin() {
               </button>
             </motion.div>
 
-            {/* Quick Actions */}
+            {/* Key Actions */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50 backdrop-blur-sm">
-              <h3 className="font-semibold text-white mb-4">Quick Actions</h3>
+              <h3 className="font-semibold text-white mb-4">Key Actions</h3>
               <div className="space-y-2">
                 <button className="w-full px-3 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded text-sm font-medium transition">
                   📊 Upload New Test

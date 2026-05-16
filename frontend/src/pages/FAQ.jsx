@@ -10,11 +10,11 @@ const FAQ_ITEMS = [
     questions: [
       {
         q: 'What file formats do you accept?',
-        a: 'We accept PDF lab reports, PNG/JPG images of lab results, and HL7/FHIR data from EMR systems. Our OCR engine handles most standard lab formats automatically.',
+        a: 'We accept PDF lab reports, PNG/JPG images of lab results, and HL7/FHIR data from EMR systems. Our AI analysis engine handles most standard lab formats automatically.',
       },
       {
         q: 'How do I upload my first lab report?',
-        a: 'After signing up, click "Upload" in your dashboard. Select your lab PDF or image, and our AI will automatically extract biomarkers. You\'ll see results in seconds.',
+        a: 'After signing up, click "Upload" in your dashboard. Select your lab PDF or image, and our AI will analyze biomarkers and return a thorough review.',
       },
       {
         q: 'Do I need a credit card to start?',
@@ -22,7 +22,7 @@ const FAQ_ITEMS = [
       },
       {
         q: 'How long does analysis take?',
-        a: 'Usually 5-15 seconds. Our AI processes OCR, biomarker extraction, normalization, and protocol ranking in real-time. Complex uploads may take up to 1 minute.',
+        a: 'Our AI performs a comprehensive review of your PDF, including biomarker analysis, normalization, and protocol ranking.',
       },
     ],
   },

@@ -209,7 +209,7 @@ function FirstRunDashboard({ startHere, steps, completedCount, onboardingComplet
         <DashboardCard title="What unlocks after the first upload" eyebrow="Immediate value" animated delay={0.2}>
           <div className="space-y-3">
             {[
-              'Structured biomarker extraction from your report',
+              'Structured biomarker analysis from your report',
               'A readable results screen instead of raw PDF numbers',
               'Insight cards and your next best action',
             ].map((item) => (

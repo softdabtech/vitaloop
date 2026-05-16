@@ -10,7 +10,7 @@ const TOUR_STEPS = [
   {
     target: 'body',
     title: '📤 Upload your lab results',
-    description: 'Drop any PDF or photo of your blood test. We handle OCR automatically.',
+    description: 'Drop any PDF or photo of your blood test. We handle document reading automatically.',
   },
   {
     target: 'body',

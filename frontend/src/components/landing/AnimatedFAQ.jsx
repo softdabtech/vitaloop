@@ -5,11 +5,11 @@ import { Search, ChevronDown } from 'lucide-react'
 const FAQ_ITEMS = [
   {
     question: 'What is AI lab analysis and how does VITALOOP use it?',
-    answer: 'AI lab analysis uses machine learning to extract, normalize, and interpret biomarker data from blood test PDFs. VITALOOP applies Claude AI to identify deficiencies, flag out-of-range values, and map patterns across multiple test cycles — turning raw numbers into actionable health priorities.',
+    answer: 'AI lab analysis uses machine learning to analyze, normalize, and interpret biomarker data from blood test PDFs. VITALOOP applies our AI analysis engine to identify deficiencies, flag out-of-range values, and map patterns across multiple test cycles — turning raw numbers into actionable health priorities.',
   },
   {
     question: 'Which blood test formats does VITALOOP support?',
-    answer: 'VITALOOP supports PDF and image uploads from any laboratory. Our OCR engine normalizes units and reference ranges across 85+ biomarkers including CBC, metabolic panels, thyroid, hormones, vitamins, and inflammation markers.',
+    answer: 'VITALOOP supports PDF and image uploads from any laboratory. Our AI analysis engine normalizes units and reference ranges across 85+ biomarkers including CBC, metabolic panels, thyroid, hormones, vitamins, and inflammation markers.',
   },
   {
     question: 'How accurate is AI blood test interpretation?',

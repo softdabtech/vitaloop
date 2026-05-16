@@ -27,7 +27,7 @@ export function LightHero() {
 
             {/* Subheadline */}
             <p className="text-lg text-slate-600 leading-relaxed max-w-xl space-y-3">
-              <span className="block">Upload your PDF. Get a protocol with dosages in 60 seconds.</span>
+              <span className="block">Upload your PDF. Get a comprehensive protocol with dosages.</span>
               <span className="block font-semibold text-slate-900">Not interpretation. Execution.</span>
               <span className="block text-base text-slate-500">
                 Stop wasting time decoding lab results. Get a personalized action plan ranked by priority, with exact supplement dosages, meal timing, and weekly milestones to track real progress.
@@ -52,7 +52,7 @@ export function LightHero() {
               </button>
             </div>
 
-            {/* Quick stats */}
+            {/* Key stats */}
             <div className="grid grid-cols-2 gap-6 pt-8 border-t border-slate-200">
               <div>
                 <div className="text-2xl font-bold text-slate-900">$19.99/mo</div>

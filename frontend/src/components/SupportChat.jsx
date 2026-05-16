@@ -15,11 +15,11 @@ const QUICK_QUESTIONS = [
 
 const AUTO_ANSWERS = {
   'How does the AI analysis work?':
-    'You upload a PDF or photo of your blood test. Our browser-based OCR extracts all biomarkers, then Claude AI classifies each one and generates a personalized supplement protocol. Takes about 60 seconds.',
+    'You upload a PDF or photo of your blood test. Our AI analyzes all biomarkers, then generates a personalized supplement protocol with contextual recommendations.',
   'Which labs are supported?':
     'Any lab worldwide - Quest, LabCorp, SonoHealth in the US, Synlab and Eurofins in Europe, and any private lab PDF in any language.',
   'Is my data secure?':
-    'Your PDF never leaves your device - OCR runs 100% in your browser. Only the extracted text values are stored, encrypted in our database. You can delete your data anytime.',
+    'Your PDF is processed through a privacy-first analysis pipeline. Only required analysis values are stored, encrypted in our database. You can delete your data anytime.',
   'How much does it cost?':
     `Free plan to try: upload 1 lab and see basic results. Premium is ${PERSONAL_PLAN.monthly}${PERSONAL_PLAN.period}, and Practitioner Premium is ${PRACTITIONER_PLAN.monthly}${PRACTITIONER_PLAN.period}. Cancel anytime.`,
   'Can I cancel anytime?':

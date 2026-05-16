@@ -117,7 +117,7 @@ export const HELP_ARTICLES = {
         type: 'feature-grid',
         items: [
           { icon: '📤', title: 'Upload any lab PDF', desc: 'Quest, LabCorp, or any other format — 50+ lab providers supported.' },
-          { icon: '🧠', title: 'AI extracts 85+ biomarkers', desc: 'In under 60 seconds. Values, units, and reference ranges.' },
+          { icon: '🧠', title: 'AI analyzes 85+ biomarkers', desc: 'With comprehensive analysis of values, units, and reference ranges.' },
           { icon: '⚠️', title: 'Ranked by severity', desc: 'Top 3 problems highlighted. You know what to fix first.' },
           { icon: '💊', title: 'Exact protocols', desc: 'Not "take iron" — Ferrous Bisglycinate 25mg, morning, 8 weeks.' },
           { icon: '📈', title: 'Longitudinal tracking', desc: 'Compare multiple tests over time. See what\'s improving.' },
@@ -148,7 +148,7 @@ export const HELP_ARTICLES = {
     content: [
       {
         type: 'intro',
-        text: 'Getting your blood test results into VITALOOP takes about 60 seconds. Here\'s the full step-by-step.',
+        text: 'Getting your blood test results into VITALOOP takes just a few guided steps. Here\'s the full step-by-step.',
       },
       {
         type: 'steps',
@@ -162,8 +162,8 @@ export const HELP_ARTICLES = {
             body: 'Drag and drop your lab PDF into the upload area, or click **"Choose File"** to browse. Supported formats: **PDF, JPG, PNG**.\n\nFor best results, use the PDF downloaded directly from your lab\'s patient portal (Quest MyQuest, LabCorp Patient, etc.).',
           },
           {
-            title: 'Wait for extraction',
-            body: 'VITALOOP\'s AI reads your file and extracts every biomarker — values, units, and reference ranges. This takes **30–60 seconds** depending on file size and number of markers.',
+            title: 'Wait for analysis',
+            body: 'VITALOOP\'s AI reads your file and analyzes every biomarker — values, units, and reference ranges. Processing time varies depending on file size and number of markers.',
           },
           {
             title: 'Review your results',
@@ -177,7 +177,7 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'tip',
-        text: 'For the most accurate extraction, upload a high-quality PDF directly from your lab portal — not a phone photo of a printout. If you only have a photo, make sure it\'s well-lit, flat, and all text is legible.',
+        text: 'For the most accurate analysis, upload a high-quality PDF directly from your lab portal — not a phone photo of a printout. If you only have a photo, make sure it\'s well-lit, flat, and all text is legible.',
       },
       {
         type: 'heading',
@@ -185,7 +185,7 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'paragraph',
-        text: 'If extraction fails or returns no results, see **Upload Troubleshooting** for common causes and fixes.',
+        text: 'If analysis fails or returns no results, see **Upload Troubleshooting** for common causes and fixes.',
       },
     ],
   },
@@ -199,7 +199,7 @@ export const HELP_ARTICLES = {
     content: [
       {
         type: 'intro',
-        text: 'The Results page shows every biomarker extracted from your lab report, with status, value, and context.',
+        text: 'The Results page shows every biomarker analyzed from your lab report, with status, value, and context.',
       },
       {
         type: 'heading',
@@ -228,7 +228,7 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'paragraph',
-        text: 'Reference ranges are extracted directly from your lab report — they vary by lab, age, sex, and methodology. VITALOOP uses the ranges from *your* report, not generic population averages, so values are always interpreted in the correct context.',
+        text: 'Reference ranges are captured directly from your lab report — they vary by lab, age, sex, and methodology. VITALOOP uses the ranges from *your* report, not generic population averages, so values are always interpreted in the correct context.',
       },
       {
         type: 'heading',
@@ -263,7 +263,7 @@ export const HELP_ARTICLES = {
       {
         type: 'list',
         items: [
-          '**Total Biomarkers** — how many markers were extracted across all uploaded tests.',
+          '**Total Biomarkers** — how many markers were analyzed across all uploaded tests.',
           '**Deficient** — markers currently below the optimal range.',
           '**Optimal** — markers within the healthy range.',
           '**Last Upload** — date of your most recent lab report.',
@@ -271,7 +271,7 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'heading',
-        text: 'Quick actions',
+        text: 'Key actions',
       },
       {
         type: 'paragraph',
@@ -305,7 +305,7 @@ export const HELP_ARTICLES = {
     content: [
       {
         type: 'intro',
-        text: 'The Upload page is where you submit new lab reports for AI extraction.',
+        text: 'The Upload page is where you submit new lab reports for AI analysis.',
       },
       {
         type: 'heading',
@@ -328,16 +328,16 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'heading',
-        text: 'What happens during extraction',
+        text: 'What happens during analysis',
       },
       {
         type: 'steps',
         items: [
-          { title: 'File received', body: 'Your file is encrypted and securely passed to the AI extraction engine.' },
-          { title: 'OCR & parsing', body: 'The AI reads the document, identifies biomarker rows, values, units, and reference ranges.' },
+          { title: 'File received', body: 'Your file is encrypted and securely passed to the AI analysis engine.' },
+          { title: 'Document reading & parsing', body: 'The AI reads the document, identifies biomarker rows, values, units, and reference ranges.' },
           { title: 'Normalization', body: 'Units are standardized (e.g., mg/dL → mmol/L where needed). Markers are mapped to a universal taxonomy.' },
           { title: 'Analysis', body: 'Each marker is scored against clinical norms. Priority ranking is calculated.' },
-          { title: 'Results ready', body: 'You\'re redirected to the Results page. Full extraction typically takes 30–60 seconds.' },
+          { title: 'Results ready', body: 'You\'re redirected to the Results page. Processing time depends on report complexity.' },
         ],
       },
       {
@@ -356,7 +356,7 @@ export const HELP_ARTICLES = {
     content: [
       {
         type: 'intro',
-        text: 'The Results page lists every biomarker extracted from a specific lab report, with filtering, sorting, and drill-down details.',
+        text: 'The Results page lists every biomarker analyzed from a specific lab report, with filtering, sorting, and drill-down details.',
       },
       {
         type: 'heading',
@@ -419,7 +419,7 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'paragraph',
-        text: 'Each recommendation is generated by Claude AI using your specific biomarker values, their relationships to each other, and clinical evidence. For example: low ferritin + low vitamin C → ferrous bisglycinate + ascorbic acid co-supplementation, because vitamin C increases iron absorption.',
+        text: 'Each recommendation is generated by our AI analysis engine using your specific biomarker values, their relationships to each other, and clinical evidence. For example: low ferritin + low vitamin C → ferrous bisglycinate + ascorbic acid co-supplementation, because vitamin C increases iron absorption.',
       },
       {
         type: 'heading',
@@ -550,7 +550,7 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'paragraph',
-        text: 'Claude AI analyzes your complete biomarker profile — not just individual flags — and identifies clinically meaningful patterns using established relationships between markers. Insights are re-generated each time you upload a new lab report.',
+        text: 'our AI analysis engine analyzes your complete biomarker profile — not just individual flags — and identifies clinically meaningful patterns using established relationships between markers. Insights are re-generated each time you upload a new lab report.',
       },
     ],
   },
@@ -672,7 +672,7 @@ export const HELP_ARTICLES = {
         type: 'list',
         items: [
           'Uploaded lab files (encrypted at rest)',
-          'Extracted biomarker values and analysis results',
+          'Analyzed biomarker values and analysis results',
           'Health Profile information you provide',
           'Weekly check-in responses',
           'Account credentials (password hashed, never stored in plain text)',
@@ -785,7 +785,7 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'paragraph',
-        text: 'All plans include the same AI extraction quality. Premium unlocks longitudinal tracking, full protocols, and weekly check-ins.',
+        text: 'All plans include the same AI analysis quality. Premium unlocks longitudinal tracking, full protocols, and weekly check-ins.',
       },
     ],
   },
@@ -1017,7 +1017,7 @@ export const HELP_ARTICLES = {
     content: [
       {
         type: 'intro',
-        text: 'VITALOOP can extract biomarkers from a wide range of lab report formats.',
+        text: 'VITALOOP can analyze biomarkers from a wide range of lab report formats.',
       },
       {
         type: 'support-table',
@@ -1052,7 +1052,7 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'heading',
-        text: '"Extraction failed" error',
+        text: '"Analysis failed" error',
       },
       {
         type: 'list',
@@ -1187,21 +1187,21 @@ export const HELP_ARTICLES = {
   'faq-accuracy': {
     id: 'faq-accuracy',
     section: 'faq',
-    title: 'How accurate is VITALOOP\'s biomarker extraction?',
+    title: 'How accurate is VITALOOP\'s biomarker analysis?',
     readTime: '2 min',
     related: ['supported-lab-formats', 'upload-troubleshooting'],
     content: [
       {
         type: 'intro',
-        text: 'VITALOOP uses Claude AI (Anthropic) for lab report reading and biomarker extraction — one of the most capable AI models for structured document understanding.',
+        text: 'VITALOOP uses our clinical AI analysis stack for lab report reading and biomarker analysis — one of the most capable AI models for structured document understanding.',
       },
       {
         type: 'paragraph',
-        text: 'Extraction accuracy depends primarily on **file quality**. A clear, machine-generated PDF from a lab portal typically achieves >95% extraction accuracy. A low-resolution phone photo may miss some values.',
+        text: 'Analysis accuracy depends primarily on **file quality**. A clear, machine-generated PDF from a lab portal typically achieves >95% analysis accuracy. A low-resolution phone photo may miss some values.',
       },
       {
         type: 'tip',
-        text: 'Always cross-check extracted values against the original PDF, especially before making health decisions. If you spot an error, you can edit values manually in the Results page.',
+        text: 'Always cross-check analyzed values against the original PDF, especially before making health decisions. If you spot an error, you can edit values manually in the Results page.',
       },
     ],
   },

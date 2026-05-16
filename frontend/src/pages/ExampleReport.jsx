@@ -110,7 +110,7 @@ export default function ExampleReport() {
           <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
             <div className="text-4xl mb-3">📊</div>
             <h3 className="font-semibold text-white mb-2">Real-Time Data</h3>
-            <p className="text-gray-400 text-sm">Your avatar updates instantly when you upload new tests. Watch your health progress over months and years.</p>
+            <p className="text-gray-400 text-sm">Your avatar updates automatically when you upload new tests. Watch your health progress over months and years.</p>
           </div>
 
           <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
@@ -184,7 +184,7 @@ export default function ExampleReport() {
           <div className="grid md:grid-cols-2 gap-8">
             <div>
               <h3 className="font-semibold mb-2" style={{ color: 'var(--teal-400)' }}>How accurate is the analysis?</h3>
-              <p className="text-gray-400 text-sm">Our analysis is powered by Claude AI trained on 15+ years of clinical nutrition research. Protocols are recommendations only — always consult your healthcare provider.</p>
+              <p className="text-gray-400 text-sm">Our analysis is powered by our AI analysis engine trained on 15+ years of clinical nutrition research. Protocols are recommendations only — always consult your healthcare provider.</p>
             </div>
             <div>
               <h3 className="font-semibold mb-2" style={{ color: 'var(--teal-400)' }}>Where do I get lab tests?</h3>
