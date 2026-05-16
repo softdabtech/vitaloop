@@ -23,7 +23,7 @@ const TESTIMONIALS = [
     initials: 'MA',
   },
   {
-    quote: 'I had recurring afternoon crashes. The analysis identified a B12 pattern quickly.',
+    quote: 'I had recurring afternoon crashes. The analysis identified a B12 pattern clearly.',
     name: 'Tom', age: 27, tag: 'Energy · B12',
     initials: 'TO',
   },

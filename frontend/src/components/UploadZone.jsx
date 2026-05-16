@@ -10,7 +10,7 @@ export default function UploadZone({ onFile, disabled = false }) {
     onDrop,
     disabled,
     noClick: true,
-    accept: { 'application/pdf': ['.pdf'], 'image/*': ['.jpg', '.jpeg', '.png'] },
+    accept: { 'application/pdf': ['.pdf'] },
     maxFiles: 1,
   })
 
@@ -28,9 +28,9 @@ export default function UploadZone({ onFile, disabled = false }) {
       <input {...getInputProps()} />
       <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-100 text-4xl ring-1 ring-emerald-300">📄</div>
       <p className="text-xl font-semibold text-slate-800 sm:text-2xl">
-        {isDragActive ? 'Drop your file here' : 'Drag and drop your lab PDF or photo'}
+        {isDragActive ? 'Drop your PDF here' : 'Drag and drop your lab PDF'}
       </p>
-      <p className="mt-2 text-sm text-slate-500">PDF, JPG, PNG supported. Max 20MB.</p>
+      <p className="mt-2 text-sm text-slate-500">PDF only. Max 20MB.</p>
 
       <button
         type="button"
@@ -41,7 +41,7 @@ export default function UploadZone({ onFile, disabled = false }) {
         Choose File
       </button>
 
-      <p className="mt-3 text-xs text-emerald-700">Local-first OCR. Raw file does not leave your device.</p>
+      <p className="mt-3 text-xs text-emerald-700">Secure direct PDF analysis for comprehensive biomarker review.</p>
     </div>
   )
 }

@@ -21,9 +21,9 @@ import Seo from '../components/Seo.jsx'
 const FEATURES = [
   {
     icon: BrainCircuit,
-    title: 'AI Biomarker Extraction',
-    description: 'Automatically extract 85+ biomarkers from any lab report. Our AI normalizes units, validates ranges, and flags anomalies in seconds.',
-    details: ['PDF & image OCR', 'Automatic unit normalization', '85+ biomarker support', 'Reference range validation'],
+    title: 'AI Biomarker Analysis',
+    description: 'Comprehensively analyze 85+ biomarkers from any lab report. Our AI normalizes units, validates ranges, and flags anomalies with full context.',
+    details: ['PDF & image analysis', 'Automatic unit normalization', '85+ biomarker support', 'Reference range validation'],
   },
   {
     icon: TrendingUp,
@@ -100,7 +100,7 @@ export default function Features() {
     <>
       <Seo
         title="Features - VITALOOP"
-        description="Explore VITALOOP's powerful features: AI biomarker extraction, longitudinal tracking, smart protocols, and AI health coaching."
+        description="Explore VITALOOP's powerful features: AI biomarker analysis, longitudinal tracking, smart protocols, and AI health coaching."
       />
 
       <div className="min-h-screen bg-white">

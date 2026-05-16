@@ -9,7 +9,7 @@ const ITEMS = [
   'HIPAA-ready',
   '50+ biomarkers tracked',
   'iHerb · Amazon · Thorne · Solgar',
-  'Results in under 60 seconds',
+  'Results with comprehensive AI analysis',
 ]
 
 export default function SocialProofTicker() {

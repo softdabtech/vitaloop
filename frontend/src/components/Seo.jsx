@@ -2,7 +2,7 @@ import { Helmet } from 'react-helmet-async'
 
 const BASE_URL = 'https://vitaloop.today'
 const DEFAULT_TITLE = 'Interpret Blood Test Results with AI | VITALOOP'
-const DEFAULT_DESCRIPTION = 'Upload your blood test PDF, get AI biomarker analysis in under 60 seconds, and follow a personalized weekly protocol. Start free with no credit card.'
+const DEFAULT_DESCRIPTION = 'Upload your blood test PDF, get thorough AI-powered biomarker analysis, and follow a personalized weekly protocol. Start free with no credit card.'
 
 /**
  * Per-page SEO head manager.

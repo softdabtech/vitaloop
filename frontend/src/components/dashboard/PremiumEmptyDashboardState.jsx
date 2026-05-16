@@ -49,12 +49,12 @@ const PREVIEW_CARDS = [
 const ONBOARDING_STEPS = [
   {
     title: 'Upload any lab report',
-    body: 'Drop a PDF or clear photo. VITALOOP extracts biomarkers and normalizes ranges automatically.',
+    body: 'Drop a PDF or clear photo. VITALOOP analyzes biomarkers and normalizes ranges automatically.',
     icon: FileScan,
   },
   {
-    title: 'Get instant AI analysis',
-    body: 'Claude-powered interpretation flags deficiencies, elevations, and hidden biomarker patterns.',
+    title: 'Get comprehensive AI analysis',
+    body: 'AI-powered interpretation flags deficiencies, elevations, and hidden biomarker patterns.',
     icon: BrainCircuit,
   },
   {
@@ -206,7 +206,7 @@ export default function PremiumEmptyDashboardState({ userName, onUploadClick }) 
       <section>
         <motion.div {...motionPreset(reduced, 0.03)} className="mb-4">
           <h3 className="text-xl font-semibold tracking-tight text-slate-100">What You'll Discover</h3>
-          <p className="mt-1 text-sm text-slate-400">A preview of what activates instantly after your first upload.</p>
+          <p className="mt-1 text-sm text-slate-400">A preview of what activates after your first upload.</p>
         </motion.div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {PREVIEW_CARDS.map((item, index) => (

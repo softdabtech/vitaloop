@@ -34,7 +34,6 @@ const PAIN_POINTS = [
     body: 'Google Docs, PDFs, and chat threads make patient data hard to track. There is no single system for execution and follow-through.',
   },
   {
-    icon: FlaskConical,
     title: 'Lab reports come in mixed formats',
     body: 'Every lab uses different layouts and units. Manual interpretation takes an hour when it should take a minute.',
   },
@@ -57,7 +56,7 @@ const WORKFLOW_STEPS = [
     icon: Upload,
     step: '02',
     title: 'Lab reports are interpreted in minutes',
-    body: 'Patients upload a PDF. VITALOOP extracts 85+ biomarkers, normalizes units, and highlights abnormalities.',
+    body: 'Patients upload a PDF. VITALOOP analyzes 85+ biomarkers, normalizes units, and highlights abnormalities.',
     accent: '#0ea5e9',
   },
   {
@@ -144,8 +143,8 @@ const USE_CASES = [
 ]
 
 const METRICS = [
-  { value: '85+', label: 'Biomarkers extracted from a single report' },
-  { value: '<60s', label: 'From upload to protocol draft' },
+  { value: '85+', label: 'Biomarkers analyzed from a single report' },
+  { value: 'End-to-end', label: 'Complete biomarker analysis draft' },
   { value: '100%', label: 'Patient history in one place' },
   { value: '1:N', label: 'One practitioner, many active patients' },
 ]

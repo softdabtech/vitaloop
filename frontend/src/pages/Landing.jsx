@@ -65,7 +65,7 @@ function clearWindowInterval(id) {
 
 const STEPS = [
   { icon: Upload, title: 'Upload', body: 'Drop your lab PDF' },
-  { icon: BrainCircuit, title: 'AI Analysis', body: '85+ biomarkers extracted' },
+  { icon: BrainCircuit, title: 'AI Analysis', body: '85+ biomarkers analyzed' },
   { icon: Sparkles, title: 'Get Protocol', body: 'Personalized action plan' },
   { icon: HeartPulse, title: 'Track Progress', body: 'Weekly check-ins' },
 ]
@@ -89,8 +89,8 @@ const BENEFITS = [
     title: 'AI Powered',
     body: 'Smart recommendations',
     icon: BrainCircuit,
-    stat: '<60s',
-    label: 'Analysis'
+    stat: 'Deep AI',
+    label: 'Comprehensive analysis'
   },
   {
     title: 'Secure',
@@ -132,7 +132,7 @@ const PLAN_DETAILS = {
   },
   'Premium': {
     eyebrow: 'Most chosen plan',
-    description: 'For users actively running a health protocol who need unlimited uploads, longitudinal tracking, weekly adaptation, and fast feedback between lab cycles.',
+    description: 'For users actively running a health protocol who need unlimited uploads, longitudinal tracking, weekly adaptation, and comprehensive feedback between lab cycles.',
     idealFor: 'Best for: people serious about biohacking, recovery, hormone optimization, or deficiency correction.',
   },
   Enterprise: {
@@ -168,7 +168,7 @@ const LOOP_FLOW = [
     icon: Upload,
   },
   {
-    title: 'Extract signals',
+    title: 'Analyze signals',
     body: 'AI normalizes biomarkers and flags patterns.',
     detail: 'Outliers, trend breaks, and related marker clusters are prioritized for action.',
     icon: BrainCircuit,
@@ -207,7 +207,7 @@ const TESTIMONIALS = [
     result: 'CRP: 5.2 to 1.8 mg/L in 8 weeks',
   },
   {
-    quote: 'As a clinician, I value how quickly I can see risk patterns and adherence context in one place.',
+    quote: 'As a clinician, I value how clearly I can see risk patterns and adherence context in one place.',
     author: 'Dr. Sam R.',
     role: 'Functional medicine practitioner',
     result: 'Client review prep: 45 min to 12 min',
@@ -216,7 +216,7 @@ const TESTIMONIALS = [
 
 const MOCKUPS = [
   { title: 'Dashboard', alt: 'Health Score 78/100 with biomarker priority flags and weekly adherence trend.', device: 'desktop' },
-  { title: 'Lab Upload', alt: 'Upload workspace with PDF intake, OCR progress, and 54 biomarkers extracted.', device: 'desktop' },
+  { title: 'Lab Upload', alt: 'Upload workspace with PDF intake, AI analysis progress, and 54 biomarkers analyzed.', device: 'desktop' },
   { title: 'Lab Results', alt: 'Structured biomarker table with severity chips, reference ranges, and trend arrows.', device: 'desktop' },
   { title: 'Personalized Protocol', alt: 'AI protocol plan with ranked supplements, nutrition targets, and weekly tasks.', device: 'desktop' },
   { title: 'Timeline', alt: 'Longitudinal trend chart showing ferritin, CRP, and vitamin D across 5 test cycles.', device: 'desktop' },
@@ -236,7 +236,7 @@ const HERO_TRUST_SIGNALS = [
     icon: Lock,
   },
   {
-    title: 'Action in under 60 seconds',
+    title: 'Comprehensive evidence review',
     body: 'From upload to personalized protocol with weekly adaptation loop.',
     icon: Clock3,
   },
@@ -245,11 +245,11 @@ const HERO_TRUST_SIGNALS = [
 const FAQ_ITEMS = [
   {
     question: 'What is AI lab analysis and how does VITALOOP use it?',
-    answer: 'AI lab analysis uses machine learning to extract, normalize, and interpret biomarker data from blood test PDFs. VITALOOP applies Claude AI to identify deficiencies, flag out-of-range values, and map patterns across multiple test cycles — turning raw numbers into actionable health priorities.',
+    answer: 'AI lab analysis uses machine learning to analyze, normalize, and interpret biomarker data from blood test PDFs. VITALOOP identifies deficiencies, flags out-of-range values, and maps patterns across multiple test cycles — turning raw numbers into actionable health priorities.',
   },
   {
     question: 'Which blood test formats does VITALOOP support?',
-    answer: 'VITALOOP supports PDF and image uploads from any laboratory. Our OCR engine normalizes units and reference ranges across 85+ biomarkers including CBC, metabolic panels, thyroid, hormones, vitamins, and inflammation markers.',
+    answer: 'VITALOOP supports PDF and image uploads from any laboratory. Our AI engine normalizes units and reference ranges across 85+ biomarkers including CBC, metabolic panels, thyroid, hormones, vitamins, and inflammation markers.',
   },
   {
     question: 'How accurate is AI blood test interpretation?',
@@ -285,12 +285,12 @@ const SCHEMA_HOWTO = {
   '@context': 'https://schema.org',
   '@type': 'HowTo',
   name: 'How to Analyze Blood Test Results With AI Using VITALOOP',
-  description: 'Upload your lab report and receive AI-powered biomarker analysis in under 60 seconds. Full personalized protocol and weekly adaptive loop are available on paid plans.',
+  description: 'Upload your lab report and receive comprehensive AI-powered biomarker analysis. Full personalized protocol and weekly adaptive loop are available on paid plans.',
   totalTime: 'PT1M',
   estimatedCost: { '@type': 'MonetaryAmount', currency: 'USD', value: '0' },
   step: [
     { '@type': 'HowToStep', name: 'Upload your lab report', text: 'Drop a PDF or image of your blood test results into VITALOOP. Supported formats include any standard laboratory PDF or photo.', position: 1 },
-    { '@type': 'HowToStep', name: 'AI extracts and normalizes biomarkers', text: 'Our AI engine uses OCR to extract all biomarker values and normalizes them across units and reference ranges automatically.', position: 2 },
+    { '@type': 'HowToStep', name: 'AI analyzes and validates biomarkers', text: 'Our AI engine analyzes all biomarker values and normalizes them across units and reference ranges automatically.', position: 2 },
     { '@type': 'HowToStep', name: 'Signal mapping and pattern detection', text: 'Deficiencies, elevations, and cross-biomarker correlations are surfaced and ranked by clinical significance.', position: 3 },
     { '@type': 'HowToStep', name: 'Unlock your personalized protocol', text: 'Paid plans unlock a targeted protocol with supplement recommendations, nutrition actions, and weekly assignments tied to your biomarkers.', position: 4 },
     { '@type': 'HowToStep', name: 'Track progress with adaptive check-ins', text: 'Paid plans include weekly AI check-ins and adaptation between lab cycles based on adherence and biomarker trends.', position: 5 },
@@ -434,11 +434,11 @@ function MockupScreenContent({ title }) {
           </div>
           <div>
             <div className="text-[10px] font-semibold text-emerald-300">bloodtest_2024.pdf</div>
-            <div className="text-[9px] text-slate-500">Extracting biomarkers…</div>
+            <div className="text-[9px] text-slate-500">Analyzing biomarkers…</div>
           </div>
         </div>
       </div>
-      {/* OCR progress */}
+      {/* Analysis progress */}
       <div>
         <div className="mb-1 flex items-center justify-between">
           <span className="text-[9px] text-slate-500">Biomarkers found</span>
@@ -737,7 +737,7 @@ export default function Landing() {
     <div className={rootClasses}>
       <Seo
         title="Interpret Blood Test Results with AI | VITALOOP"
-        description="Analyze blood test results with AI in under 60 seconds. Upload your lab PDF, see prioritized biomarkers, and start a personalized weekly protocol for free."
+        description="Analyze blood test results with comprehensive AI review. Upload your lab PDF, see prioritized biomarkers, and start a personalized weekly protocol for free."
         path="/"
         schemas={[SCHEMA_HOWTO, SCHEMA_FAQ]}
       />
@@ -1246,7 +1246,7 @@ export default function Landing() {
                 </div>
                 <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
                   <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Launch & stack</div>
-                  <div className="mt-1 text-sm font-semibold">May 2026 launch · FastAPI + Claude AI + Supabase</div>
+                  <div className="mt-1 text-sm font-semibold">May 2026 launch · FastAPI + Advanced AI + Supabase</div>
                 </div>
                 <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
                   <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Founder contact</div>

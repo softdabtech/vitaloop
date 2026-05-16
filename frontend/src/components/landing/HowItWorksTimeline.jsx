@@ -12,7 +12,7 @@ const STEPS = [
   {
     icon: '🧠',
     title: 'AI Analysis',
-    body: '85+ biomarkers extracted and prioritized.',
+    body: '85+ biomarkers analyzed and prioritized.',
     detail: 'You get high-impact signals first, not a flat list of disconnected numbers.',
   },
   {

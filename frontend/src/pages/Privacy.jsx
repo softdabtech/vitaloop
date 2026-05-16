@@ -41,7 +41,7 @@ export default function Privacy() {
       <section style={{ display: 'grid', gap: 24, fontSize: 15, lineHeight: 1.7, color: 'var(--gray-700, #424245)' }}>
         <div>
           <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>1. What we collect</h2>
-          <p>We collect your email address (for authentication) and the <strong>extracted text</strong> from lab results you upload. We do <strong>not</strong> store original PDF files or images.</p>
+          <p>We collect your email address (for authentication) and the <strong>analysis values</strong> from lab results you upload. We do <strong>not</strong> store original PDF files or images.</p>
         </div>
         <div>
           <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>2. How we use your data</h2>
@@ -53,7 +53,7 @@ export default function Privacy() {
         </div>
         <div>
           <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>4. AI processing</h2>
-          <p>Lab text is sent to Anthropic's Claude API for analysis. Prompts are designed to minimize personal identifiers. We do not use your data to train AI models.</p>
+          <p>Lab text is sent to our secure AI analysis stack for analysis. Prompts are designed to minimize personal identifiers. We do not use your data to train AI models.</p>
         </div>
         <div>
           <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>5. Payments</h2>

@@ -26,7 +26,7 @@ const TESTIMONIALS = [
     result: 'B12 normalized in 6 weeks with structured protocol',
   },
   {
-    quote: 'As a clinician, I value how quickly I can see risk patterns and adherence context in one place.',
+    quote: 'As a clinician, I value how clearly I can see risk patterns and adherence context in one place.',
     author: 'Dr. Sam R.',
     role: 'Functional medicine practitioner',
     result: 'Client review prep: 45 min to 12 min',

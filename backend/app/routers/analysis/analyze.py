@@ -1,27 +1,32 @@
 import asyncio
 import hashlib
 import json
+import os
+import tempfile
 from collections import deque
 from datetime import date
 from time import monotonic
 
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Header, File, UploadFile, Form
 from pydantic import BaseModel, Field
 from typing import Optional, List
 import logging
 
 from app.dependencies import require_freemium_analyze, get_current_user
 from app.services.claude_service import extract_biomarkers, EXTRACT_PROMPT_VERSION, is_llm_configured
+from app.services.claude_pdf_analyzer import ClaudePDFAnalyzer
 from app.services.supabase_service import (
     assert_upload_belongs_to_user,
     get_biomarkers_by_upload,
     get_protocol_by_upload,
     save_biomarkers,
     save_lab_upload,
+    save_protocol,
     save_timeline_event,
     update_lab_upload_status,
     write_audit_log,
 )
+from app.config import settings
 from app.constants import (
     ANALYZE_EXTRACT_TIMEOUT_SECONDS,
     ANALYZE_IDEMPOTENCY_TTL_SECONDS,
@@ -39,6 +44,7 @@ from app.services.biomarker_reference import get_all_biomarkers
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
 biomarker_service = BiomarkerService()
+pdf_analyzer = ClaudePDFAnalyzer(api_key=settings.anthropic_api_key, model=settings.anthropic_model)
 
 # Error message constants (S1192 - reduce string duplication)
 _TEXT_TOO_SHORT_DETAIL = {"detail": "Extracted text is too short", "code": "LAB_TEXT_TOO_SHORT"}
@@ -62,6 +68,127 @@ class AnalyzeRequest(BaseModel):
 class AnalyzeResponse(BaseModel):
     upload_id: str
     biomarkers: List[dict]
+
+
+@router.post("/pdf")
+async def analyze_lab_pdf(
+    file: UploadFile = File(...),
+    lab_name: Optional[str] = Form(default=None),
+    symptoms: List[str] = Form(default_factory=list),
+    current_user: dict = Depends(get_current_user),
+    _freemium_check: None = Depends(require_freemium_analyze),
+):
+    user_id: str = current_user["sub"]
+
+    quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "pdf")
+    if not quota_ok:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "detail": quota_msg,
+                "code": "BIOMARKER_QUOTA_EXCEEDED",
+                "used_by": used_by,
+            },
+        )
+
+    temp_path: Optional[str] = None
+    upload_id: Optional[str] = None
+
+    try:
+        content_type = (file.content_type or "").lower()
+        if content_type != "application/pdf" and not (file.filename or "").lower().endswith(".pdf"):
+            raise HTTPException(status_code=400, detail={"detail": "Please upload a valid PDF file", "code": "INVALID_FILE_TYPE"})
+
+        upload_bytes = await file.read()
+        if not upload_bytes:
+            raise HTTPException(status_code=400, detail={"detail": "Uploaded file is empty", "code": "EMPTY_FILE"})
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            tmp.write(upload_bytes)
+            temp_path = tmp.name
+
+        analysis = await pdf_analyzer.analyze_lab_pdf(temp_path, symptoms=symptoms)
+        if not analysis.get("success"):
+            error_code = analysis.get("error_code")
+            error_text = analysis.get("error") or "Unable to analyze PDF"
+
+            if error_code == "TIMEOUT":
+                raise HTTPException(status_code=408, detail={"detail": error_text, "code": "ANALYSIS_TIMEOUT"})
+            if error_code == "VALIDATION_ERROR":
+                raise HTTPException(status_code=400, detail={"detail": error_text, "code": "PDF_VALIDATION_FAILED"})
+            if error_code == "CONNECTION_ERROR":
+                raise HTTPException(status_code=503, detail={"detail": error_text, "code": "ANALYSIS_SERVICE_UNAVAILABLE"})
+
+            raise HTTPException(status_code=500, detail={"detail": error_text, "code": "ANALYSIS_UNKNOWN_ERROR"})
+
+        biomarkers = analysis.get("biomarkers", [])
+        if not biomarkers:
+            raise HTTPException(
+                status_code=422,
+                detail={"detail": "Could not analyze biomarkers from this PDF", "code": "BIOMARKERS_NOT_EXTRACTED"},
+            )
+
+        upload_payload = {
+            "analysis_method": analysis.get("analysis_method"),
+            "analysis_time": analysis.get("analysis_time"),
+            "summary": analysis.get("summary", {}),
+            "top_priority": analysis.get("top_priority", []),
+            "retest_schedule": analysis.get("retest_schedule", []),
+            "biomarker_count": len(biomarkers),
+        }
+
+        upload = await save_lab_upload(
+            user_id=user_id,
+            extracted_text=json.dumps(upload_payload, ensure_ascii=True),
+            lab_name=lab_name or file.filename,
+            analyze_prompt_version="claude_pdf_v1",
+        )
+        upload_id = upload["id"]
+
+        saved_biomarkers = await save_biomarkers(upload_id=upload_id, user_id=user_id, biomarkers=biomarkers)
+
+        protocol = analysis.get("protocol", [])
+        if protocol:
+            await save_protocol(
+                user_id=user_id,
+                upload_id=upload_id,
+                recommendations=protocol,
+                prompt_version="claude_pdf_v1",
+            )
+
+        await save_timeline_event(
+            user_id=user_id,
+            event_type="lab_analyzed",
+            summary=f"Lab report analyzed: {len(saved_biomarkers)} biomarkers found",
+            metadata={
+                "upload_id": upload_id,
+                "biomarker_count": len(saved_biomarkers),
+                "analysis_method": analysis.get("analysis_method", "claude_pdf"),
+            },
+        )
+
+        return {
+            "upload_id": upload_id,
+            "biomarkers": saved_biomarkers,
+            "top_priority": analysis.get("top_priority", []),
+            "protocol": protocol,
+            "retest_schedule": analysis.get("retest_schedule", []),
+            "summary": analysis.get("summary", {}),
+            "analysis_time": analysis.get("analysis_time", 0),
+            "analysis_method": analysis.get("analysis_method", "claude_pdf"),
+        }
+    except HTTPException:
+        if upload_id:
+            await update_lab_upload_status(upload_id, "failed")
+        raise
+    except Exception as exc:
+        logger.error("analyze_pdf_failed user_id=%s error=%s", user_id, repr(exc), exc_info=True)
+        if upload_id:
+            await update_lab_upload_status(upload_id, "failed")
+        raise HTTPException(status_code=500, detail={"detail": "Error analyzing lab report", "code": "ANALYZE_FAILED"})
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
 
 
 def _normalize_lab_text(text: str) -> str:

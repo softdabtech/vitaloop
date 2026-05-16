@@ -25,7 +25,7 @@ const COMPARISON_ROWS = [
   {
     feature: 'Speed',
     doctor: 'Appointment wait: 2 months. Visit time: 5 minutes. Answers: unclear.',
-    vitaloop: 'Upload PDF today. Full protocol in 60 seconds. Instant answers, no waiting.',
+    vitaloop: 'Upload your PDF today. Receive a full protocol with prioritized guidance and clear next actions.',
   },
   {
     feature: 'Cost',

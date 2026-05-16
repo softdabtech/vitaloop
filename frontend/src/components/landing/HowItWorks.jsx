@@ -8,7 +8,7 @@ const USER_FLOW = [
     icon: FileUp,
     step: '1 min',
     title: 'Upload labs',
-    text: 'Drop PDF/JPG/PNG and get biomarkers extracted automatically.',
+    text: 'Drop PDF/JPG/PNG and get biomarkers analyzed automatically.',
   },
   {
     icon: Sparkles,
@@ -71,7 +71,7 @@ export default function HowItWorksSection() {
             Less noise. Faster decisions. Better weekly results.
           </motion.h2>
           <motion.p variants={reduced ? {} : fadeUp} className="mx-auto max-w-2xl text-sm leading-7 text-slate-600 md:text-base">
-            A compact workflow built for real users: upload once, see priorities instantly, and follow a plan you can actually stick to.
+            A compact workflow built for real users: upload once, see priorities clearly, and follow a plan you can actually stick to.
           </motion.p>
         </motion.div>
 

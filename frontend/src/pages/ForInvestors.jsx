@@ -7,7 +7,7 @@ import { PageHeader } from '../components/landing/PageHeader.jsx'
 
 const TRACTION_METRICS = [
   { value: '85+', label: 'Biomarkers normalized per upload' },
-  { value: '<60s', label: 'Upload to first protocol draft' },
+  { value: 'End-to-end', label: 'Complete biomarker analysis' },
   { value: '3', label: 'Monetization layers (Free, Premium, Enterprise)' },
   { value: 'Weekly', label: 'Retention loop via check-ins' },
 ]
@@ -22,7 +22,7 @@ const TEAM = [
   {
     name: 'AI and Data Infrastructure',
     role: 'Founding team',
-    detail: 'Builds OCR, biomarker normalization, and protocol generation infrastructure.',
+    detail: 'Builds AI analysis, biomarker normalization, and protocol generation infrastructure.',
     linkedin: 'https://www.linkedin.com/company/softdab/',
   },
   {
@@ -117,7 +117,7 @@ export default function ForInvestors() {
             url: 'https://vitaloop.today',
             logo: 'https://vitaloop.today/og-cover-2026-05.jpg',
             description:
-              'VITALOOP is an AI-powered blood test analysis and biohacking platform that turns lab reports into personalized health protocols in under 60 seconds.',
+              'VITALOOP is an AI-powered blood test analysis and biohacking platform that turns lab reports into personalized health protocols with comprehensive AI analysis.',
             sameAs: [
               'https://twitter.com/vitaloop',
             ],

@@ -29,7 +29,7 @@ const TRACKING_MOCKUPS = [
   },
   {
     title: 'Lab Upload',
-    alt: 'Upload workspace with PDF intake, OCR status, and validation checks.',
+    alt: 'Upload workspace with PDF intake, analysis status, and validation checks.',
     image: '/mockups/upload.png',
     device: 'desktop',
   },
