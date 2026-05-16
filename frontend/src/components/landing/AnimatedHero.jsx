@@ -64,7 +64,7 @@ export function AnimatedHero() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => navigate('/#about')}
+                onClick={() => navigate('/for-investors#about')}
                 className="px-8 py-3 border-2 border-slate-600 hover:border-emerald-400 text-slate-100 hover:text-white rounded-full font-semibold transition-all whitespace-nowrap"
               >
                 About VITALOOP

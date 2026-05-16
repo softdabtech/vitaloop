@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.js'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import api from '../api/client.ts'
 import {
   ArrowRight,
   BrainCircuit,
@@ -38,7 +37,7 @@ const NAV_LINKS = [
   { id: 'why-vitaloop', label: 'Features' },
   { id: 'pricing', label: 'Pricing' },
   { id: 'testimonials', label: 'Stories' },
-  { id: 'about', label: 'About' },
+  { id: 'about', label: 'About', route: '/for-investors#about' },
   { id: 'faq', label: 'FAQ' },
   { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
 ]
@@ -47,19 +46,6 @@ const NAV_LINKS = [
 function scrollToTop() {
   if (typeof window !== 'undefined') {
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-}
-
-function setWindowInterval(fn, delay) {
-  if (typeof window !== 'undefined') {
-    return window.setInterval(fn, delay)
-  }
-  return null
-}
-
-function clearWindowInterval(id) {
-  if (typeof window !== 'undefined' && id !== null) {
-    window.clearInterval(id)
   }
 }
 
@@ -680,37 +666,7 @@ export default function Landing() {
   const reduced = useReducedMotion()
   const [loopActive, setLoopActive] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [tractionUsers, setTractionUsers] = useState(null)
   const { user, loading: authLoading } = useAuth()
-
-  useEffect(() => {
-    let cancelled = false
-
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      return () => {
-        cancelled = true
-      }
-    }
-
-    const loadPlatformStats = async () => {
-      try {
-        const { data } = await api.get('/admin/public-platform-stats')
-        if (!cancelled && Number.isFinite(data?.total_users)) {
-          setTractionUsers(data.total_users)
-        }
-      } catch {
-        /* empty */
-      }
-    }
-
-    loadPlatformStats()
-    const intervalId = setWindowInterval(loadPlatformStats, 60000)
-
-    return () => {
-      cancelled = true
-      clearWindowInterval(intervalId)
-    }
-  }, [])
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
   const navAction = (item) => {
@@ -1206,57 +1162,6 @@ export default function Landing() {
         </section>
 
         <InteractivePricing />
-
-        <section id="about" className="mx-auto w-full max-w-[1240px] px-4 py-8 sm:px-6 md:py-10">
-          <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-8 ${sectionCard}`}>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>About</p>
-              <button
-                onClick={() => navigate('/for-investors')}
-                className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700 hover:text-emerald-600'}`}
-              >
-                Why VITALOOP exists
-              </button>
-            </div>
-
-            <div className={`mt-4 rounded-3xl border p-5 md:p-6 ${'border-slate-200 bg-white'}`}>
-              <p className={`text-sm leading-relaxed ${'text-slate-700'}`}>
-                VITALOOP turns scattered lab PDFs into a structured health operating system: upload, prioritize biomarkers, run a protocol, and adapt weekly.
-                {' '}
-                <a
-                  href="https://www.linkedin.com/in/aleksey-bombela/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`${'text-emerald-700 hover:text-emerald-600'} font-semibold`}
-                >
-                  Meet the founder
-                </a>
-              </p>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Early adopters</div>
-                  <div className="mt-1 text-sm font-semibold">{typeof tractionUsers === 'number' ? `${tractionUsers.toLocaleString()} early users` : 'Loading…'}</div>
-                  <div className={`mt-1 text-[11px] ${'text-emerald-700'}`}>Validated in live product usage</div>
-                </div>
-                <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Lab compatibility</div>
-                  <div className="mt-1 text-sm font-semibold">Quest, LabCorp, and 50+ report formats</div>
-                </div>
-                <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Launch & stack</div>
-                  <div className="mt-1 text-sm font-semibold">May 2026 launch · FastAPI + Advanced AI + Supabase</div>
-                </div>
-                <div className={`rounded-2xl border px-4 py-3 ${'border-slate-200 bg-slate-50'}`}>
-                  <div className={`text-[11px] uppercase tracking-[0.16em] ${'text-slate-500'}`}>Founder contact</div>
-                  <a href="mailto:bombela@softdab.tech" className={`mt-1 inline-flex text-sm font-semibold ${'text-emerald-700 hover:text-emerald-600'}`}>
-                    bombela@softdab.tech
-                  </a>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </section>
 
         <TestimonialsCarousel />
 
