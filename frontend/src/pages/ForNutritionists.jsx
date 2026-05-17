@@ -34,6 +34,7 @@ const PAIN_POINTS = [
     body: 'Google Docs, PDFs, and chat threads make patient data hard to track. There is no single system for execution and follow-through.',
   },
   {
+    icon: FlaskConical,
     title: 'Lab reports come in mixed formats',
     body: 'Every lab uses different layouts and units. Manual interpretation takes an hour when it should take a minute.',
   },

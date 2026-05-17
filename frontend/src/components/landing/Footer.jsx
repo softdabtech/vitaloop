@@ -7,6 +7,7 @@ const PRODUCT_LINKS = [
 ]
 
 const COMPANY_LINKS = [
+  { label: 'About', href: '/about' },
   { label: 'For Nutritionists', href: '/for-nutritionists' },
   { label: 'Help Center', href: '/help' },
   { label: 'Terms', href: '/terms' },
