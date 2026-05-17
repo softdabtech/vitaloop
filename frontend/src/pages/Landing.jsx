@@ -35,7 +35,7 @@ import Footer from '../components/landing/Footer.jsx'
 const NAV_LINKS = [
   { id: 'why-vitaloop', label: 'Features' },
   { id: 'pricing', label: 'Pricing' },
-  { id: 'about', label: 'About', route: '/for-investors#about' },
+  { id: 'about', label: 'About', route: '/about' },
   { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
 ]
 

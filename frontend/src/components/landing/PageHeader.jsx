@@ -5,9 +5,9 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { HeartPulse, Menu, X } from 'lucide-react'
 
 const NAV_LINKS = [
-  { id: 'why-vitaloop', label: 'Features' },
-  { id: 'pricing', label: 'Pricing' },
-  { id: 'about', label: 'About' },
+  { id: 'why-vitaloop', label: 'Features', route: '/#why-vitaloop' },
+  { id: 'pricing', label: 'Pricing', route: '/#pricing' },
+  { id: 'about', label: 'About', route: '/about' },
   { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
 ]
 

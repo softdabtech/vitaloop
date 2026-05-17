@@ -20,6 +20,7 @@ const FAQ = lazy(() => import('./pages/FAQ.jsx'))
 const EmailConfirmation = lazy(() => import('./pages/EmailConfirmation.jsx'))
 const ExampleReport = lazy(() => import('./pages/ExampleReport.jsx'))
 const HowItWorks = lazy(() => import('./pages/HowItWorks.jsx'))
+const About = lazy(() => import('./pages/About.jsx'))
 const ForInvestors = lazy(() => import('./pages/ForInvestors.jsx'))
 const ForNutritionists = lazy(() => import('./pages/ForNutritionists.jsx'))
 const Privacy = lazy(() => import('./pages/Privacy.jsx'))
@@ -59,8 +60,40 @@ const CRMPractitioners = lazy(() => import('./pages/crm/Practitioners.jsx'))
 const CRMAuditLog = lazy(() => import('./pages/crm/AuditLog.jsx'))
 
 function ScrollToTop() {
-  const { pathname } = useLocation()
-  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  const { pathname, hash } = useLocation()
+
+  useEffect(() => {
+    if (hash) {
+      // Support deep links like /for-investors#about and /#pricing.
+      const targetId = decodeURIComponent(hash.replace('#', ''))
+      const maxWaitMs = 2500
+      const pollMs = 50
+      const scrollToHashTarget = () => {
+        const element = document.getElementById(targetId)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          return true
+        }
+        return false
+      }
+
+      // Lazy routes/components can render after this effect; poll briefly for target presence.
+      let elapsedMs = 0
+      const intervalId = window.setInterval(() => {
+        const found = scrollToHashTarget()
+        if (found || elapsedMs >= maxWaitMs) {
+          window.clearInterval(intervalId)
+          if (!found) window.scrollTo(0, 0)
+        }
+        elapsedMs += pollMs
+      }, pollMs)
+
+      return () => window.clearInterval(intervalId)
+    }
+
+    window.scrollTo(0, 0)
+  }, [pathname, hash])
+
   return null
 }
 
@@ -185,6 +218,7 @@ export default function App() {
           <Route path="/faq" element={<FAQ />} />
           <Route path="/example-report" element={<ExampleReport />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/about" element={<About />} />
           <Route path="/for-investors" element={<ForInvestors />} />
           <Route path="/for-nutritionists" element={<ForNutritionists />} />
           <Route path="/privacy" element={<Privacy />} />
