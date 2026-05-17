@@ -364,6 +364,27 @@ async def get_protocol_by_upload(user_id: str, upload_id: str) -> Optional[Dict]
     return resp.data[0] if resp.data else None
 
 
+async def get_protocols_by_uploads(user_id: str, upload_ids: List[str]) -> Dict[str, Dict]:
+    """Batch load protocols for multiple uploads. Returns dict mapping upload_id to protocol."""
+    if not upload_ids:
+        return {}
+
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("protocols")
+        .select("*")
+        .eq("user_id", user_id)
+        .in_("upload_id", upload_ids)
+        .execute()
+    )
+
+    # Group by upload_id for easy lookup
+    result = {}
+    for protocol in resp.data or []:
+        result[protocol.get("upload_id")] = protocol
+    return result
+
+
 async def save_protocol(
     user_id: str,
     upload_id: str,
