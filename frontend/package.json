@@ -13,8 +13,9 @@
     "postbuild:prod": "react-snap",
     "preview": "vite preview",
     "qa:routes": "node ./scripts/qa-routes-links.mjs",
+    "qa:links:strict": "node ./scripts/qa-links-strict.mjs",
     "qa:endpoints": "node ./scripts/qa-endpoints.mjs",
-    "qa": "npm run qa:routes && npm run qa:endpoints",
+    "qa": "npm run qa:routes && npm run qa:links:strict && npm run qa:endpoints",
     "lint": "eslint src --ext .js,.jsx",
     "lint:fix": "eslint src --ext .js,.jsx --fix"
   },
@@ -22,12 +23,14 @@
     "source": "dist",
     "include": [
       "/",
-      "/how-it-works",
-      "/example-report"
+      "/how-it-works"
     ],
     "puppeteerArgs": [
       "--no-sandbox",
-      "--disable-setuid-sandbox"
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--no-zygote",
+      "--disable-gpu"
     ]
   },
   "dependencies": {
