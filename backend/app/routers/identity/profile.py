@@ -10,6 +10,7 @@ _INVALID_SEX_DETAIL = "sex must be one of: male, female, other"
 
 
 class ProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
     age: Optional[int] = None
     sex: Optional[str] = None
     height_cm: Optional[float] = None
@@ -44,6 +45,14 @@ async def get_profile(current_user: dict = Depends(get_current_user)):
 async def update_profile(body: ProfileUpdate, current_user: dict = Depends(get_current_user)):
     user_id = current_user["sub"]
     data = {k: v for k, v in body.model_dump().items() if v is not None}
+    normalized_full_name: Optional[str] = None
+
+    if "full_name" in data:
+        raw_full_name = str(data.pop("full_name") or "")
+        normalized_full_name = " ".join(raw_full_name.split()).strip()
+        if normalized_full_name:
+            await svc.update_admin_user_fields(user_id, full_name=normalized_full_name)
+
     if "sex" in data:
         raw_sex = str(data.get("sex") or "").strip().lower()
         sex_aliases = {

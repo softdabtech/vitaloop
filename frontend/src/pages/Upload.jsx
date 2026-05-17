@@ -51,11 +51,14 @@ function validateFileInput(file) {
 function build402ErrorMessage({ errorCode, errorDetail, usedBy }) {
   if (errorCode === 'BIOMARKER_QUOTA_EXCEEDED') {
     if (usedBy === 'manual') {
-      return 'You\'ve already entered biomarkers manually. Free plan allows 1 entry via PDF OR manual. Upgrade to Premium for unlimited entries.'
+      return 'You\'ve already entered biomarkers manually. Free plan includes 1 lab analysis (either PDF upload or manual entry). Upgrade to Premium for unlimited analyses, advanced protocols, and health tracking.'
     }
-    return errorDetail || 'Your free biomarker entry quota is full. Upgrade to Premium for unlimited entries.'
+    return errorDetail || 'You\'ve reached your free analysis limit (1 per month). Upgrade to Premium for unlimited lab uploads, AI-generated protocols, and personalized health insights.'
   }
-  return errorDetail || 'Subscription required for this action. Upgrade to Premium.'
+  if (errorCode === 'UPLOAD_LIMIT_REACHED') {
+    return 'You\'ve reached your free analysis limit. Upgrade to Premium for unlimited lab uploads and advanced health tracking.'
+  }
+  return errorDetail || 'Premium required for this feature. Upgrade to unlock unlimited analyses and personalized protocols.'
 }
 
 function maybeTriggerPaywall({ status, errorCode, usedBy }) {
@@ -97,9 +100,12 @@ function resolveAnalysisErrorMessage({ status, errorCode, errorDetail, usedBy })
 function handleAnalysisError(err) {
   const errorData = err.response?.data || {}
   const status = err.response?.status
-  const errorCode = errorData?.code
-  const errorDetail = typeof errorData?.detail === 'string' ? errorData.detail : null
-  const usedBy = errorData?.used_by
+
+  // Handle nested error structure: detail contains {detail, code, used_by}
+  const innerError = typeof errorData?.detail === 'object' ? errorData.detail : errorData
+  const errorCode = innerError?.code || errorData?.code
+  const errorDetail = typeof innerError?.detail === 'string' ? innerError.detail : typeof errorData?.detail === 'string' ? errorData.detail : null
+  const usedBy = innerError?.used_by || errorData?.used_by
 
   maybeTriggerPaywall({ status, errorCode, usedBy })
   return resolveAnalysisErrorMessage({ status, errorCode, errorDetail, usedBy })

@@ -702,11 +702,19 @@ async def record_health_failure(
 
 
 async def get_user_account(user_id: str) -> Dict[str, Any]:
-    return await _select_first_by_id_with_fallback(
-        "users",
-        "id, email, full_name, sub_status, plan_tier, global_role, created_at",
-        user_id,
-    )
+    primary_columns = "id, email, full_name, sub_status, plan_tier, global_role, created_at"
+    fallback_columns = "id, email, full_name, sub_status, subscription_status, global_role, created_at"
+
+    account = await _select_first_by_id_with_fallback("users", primary_columns, user_id)
+    if not account:
+        account = await _select_first_by_id_with_fallback("users", fallback_columns, user_id)
+
+    # Keep downstream code stable when legacy schemas expose subscription_status
+    # instead of sub_status and/or omit plan_tier.
+    if account and not account.get("sub_status") and account.get("subscription_status"):
+        account["sub_status"] = account.get("subscription_status")
+
+    return account
 
 
 async def get_user_subscription_history(user_id: str) -> List[Dict]:

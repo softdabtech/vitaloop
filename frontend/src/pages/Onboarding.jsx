@@ -70,8 +70,22 @@ function parseCsvList(value) {
     .filter(Boolean)
 }
 
+function splitFullName(fullName) {
+  const normalized = String(fullName || '').trim().replace(/\s+/g, ' ')
+  if (!normalized) return { first_name: '', last_name: '' }
+  const parts = normalized.split(' ')
+  if (parts.length === 1) return { first_name: parts[0], last_name: '' }
+  return { first_name: parts[0], last_name: parts.slice(1).join(' ') }
+}
+
 function buildProfilePayload(profile) {
+  const fullName = [profile.first_name, profile.last_name]
+    .map((part) => String(part || '').trim())
+    .filter(Boolean)
+    .join(' ')
+
   return {
+    full_name: fullName || undefined,
     height_cm: Number(profile.height_cm),
     weight_kg: Number(profile.weight_kg),
     goals: profile.goals,
@@ -150,7 +164,7 @@ export default function Onboarding() {
   const [orgName, setOrgName] = useState('')
   const [orgSaving, setOrgSaving] = useState(false)
 
-  const [profile, setProfile] = useState({ height_cm: '', weight_kg: '', goals: [], current_supplements: '', current_medications: '', prior_diagnoses: '' })
+  const [profile, setProfile] = useState({ first_name: '', last_name: '', height_cm: '', weight_kg: '', goals: [], current_supplements: '', current_medications: '', prior_diagnoses: '' })
   const [location, setLocation] = useState({ city: '', state: '', country: '', district: '' })
   const [complaints, setComplaints] = useState([{ complaint: '', duration_description: '', tried_interventions: '' }])
 
@@ -200,6 +214,15 @@ export default function Onboarding() {
     api.get('/auth/me').then(r => {
       const memberships = r.data?.memberships
       const globalRole = String(r.data?.user?.global_role || r.data?.global_role || '').toLowerCase()
+      const fullName = r.data?.user?.full_name || ''
+      const nameParts = splitFullName(fullName)
+
+      setProfile(prev => ({
+        ...prev,
+        first_name: prev.first_name || nameParts.first_name,
+        last_name: prev.last_name || nameParts.last_name,
+      }))
+
       const requiresOrg = globalRole === 'org_admin' || globalRole === 'super_admin'
       const hasMembership = Array.isArray(memberships) && memberships.length > 0
       setNeedsOrg(requiresOrg && !hasMembership)
@@ -274,6 +297,14 @@ export default function Onboarding() {
       toast.error('Please fill in valid height and weight for accurate analysis.')
       return
     }
+
+    const firstName = String(profile.first_name || '').trim()
+    const lastName = String(profile.last_name || '').trim()
+    if (!firstName || !lastName) {
+      toast.error('Please enter your first and last name.')
+      return
+    }
+
     setSaving(true)
     try {
       await api.patch('/profile', buildProfilePayload(profile))
@@ -387,6 +418,32 @@ export default function Onboarding() {
                 <motion.div key="basics" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   <div style={s.title}><User size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />Your basics</div>
                   <div style={s.sub}>Help us personalize your health guidance.</div>
+                  <div style={rowStyle}>
+                    <div>
+                      <label>
+                        <span style={{ ...s.label, color: '#ef4444' }}>* First name (required)</span>
+                        <input
+                          style={s.input}
+                          placeholder="John"
+                          value={profile.first_name}
+                          onChange={(e) => setProfile(p => ({ ...p, first_name: e.target.value }))}
+                          required
+                        />
+                      </label>
+                    </div>
+                    <div>
+                      <label>
+                        <span style={{ ...s.label, color: '#ef4444' }}>* Last name (required)</span>
+                        <input
+                          style={s.input}
+                          placeholder="Doe"
+                          value={profile.last_name}
+                          onChange={(e) => setProfile(p => ({ ...p, last_name: e.target.value }))}
+                          required
+                        />
+                      </label>
+                    </div>
+                  </div>
                   <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
               💡 Height and weight help calculate healthy ranges for your biomarkers. List supplements and medications so the AI can flag interactions and avoid duplicating what you already take.
                   </div>

@@ -52,8 +52,11 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const status = error.response?.status
-    const code = error.response?.data?.code
-    const detail = error.response?.data?.detail
+    const errorData = error.response?.data || {}
+    // Handle nested error structure: detail contains {detail, code, used_by}
+    const innerError = typeof errorData?.detail === 'object' ? errorData.detail : errorData
+    const code = innerError?.code || errorData?.code
+    const detail = innerError?.detail || errorData?.detail
     const validationErrors = error.response?.data?.errors || []
     const requestUrl = String(error?.config?.url || '')
     const method = String(error?.config?.method || '').toUpperCase()
