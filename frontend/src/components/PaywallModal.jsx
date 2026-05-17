@@ -13,16 +13,17 @@ import toast from 'react-hot-toast'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 
 const FEATURES = [
-  'Unlimited lab uploads & analyses',
-  'AI-generated supplement protocols',
+  'Unlimited lab uploads and manual entries',
+  'AI supplement protocol with priority actions',
   'Personalized iHerb supplement links',
-  'Full progress charts & trend tracking',
-  'Smart health insights & red-flag alerts',
-  'Adaptive questionnaire with LLM coaching',
+  'Biomarker trend tracking and progress charts',
+  'Smart insights and red-flag alerts',
+  'Weekly adaptive check-ins with AI coaching',
 ]
 
 const REASON_MESSAGES = {
-  UPLOAD_LIMIT_REACHED: "You've used your free lab upload. Upgrade to analyze more.",
+  UPLOAD_LIMIT_REACHED: "Free plan includes 1 analysis total (PDF upload or manual entry). Upgrade for unlimited analyses.",
+  BIOMARKER_QUOTA_EXCEEDED: 'Free plan includes 1 analysis total (PDF upload or manual entry). Upgrade to continue.',
   SUBSCRIPTION_REQUIRED: 'This feature is available with Vitaloop Premium.',
 }
 
@@ -66,7 +67,7 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
 
   if (!isVisible) return null
 
-  const message = REASON_MESSAGES[reason] ?? 'Unlock unlimited access to all Vitaloop features.'
+  const message = REASON_MESSAGES[reason] ?? 'Unlock unlimited analyses, full protocols, and longitudinal tracking.'
 
   return (
     <div

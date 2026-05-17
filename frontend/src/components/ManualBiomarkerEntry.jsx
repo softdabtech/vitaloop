@@ -142,13 +142,21 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
 
       // Handle specific error codes
       const errorData = err.response?.data || {}
-      const errorCode = errorData?.code
-      const errorDetail = typeof errorData?.detail === 'string' ? errorData?.detail : null
+      const innerError = typeof errorData?.detail === 'object' ? errorData.detail : errorData
+      const errorCode = innerError?.code || errorData?.code
+      const errorDetail = typeof innerError?.detail === 'string'
+        ? innerError.detail
+        : typeof errorData?.detail === 'string'
+          ? errorData.detail
+          : null
+      const firstValidationMessage = Array.isArray(errorData?.errors) && errorData.errors.length > 0
+        ? errorData.errors[0]?.msg
+        : null
 
-      let message = errorDetail || 'Analysis failed. Please try again.'
+      let message = firstValidationMessage || errorDetail || 'Analysis failed. Please try again.'
 
       if (err.response?.status === 402 && errorCode === 'BIOMARKER_QUOTA_EXCEEDED') {
-        const usedBy = errorData?.used_by
+        const usedBy = innerError?.used_by || errorData?.used_by
         if (usedBy === 'pdf') {
           message = 'You\'ve already uploaded a lab PDF. Free plan allows 1 entry via PDF OR manual. Upgrade to Premium for unlimited entries.'
         } else {
@@ -159,6 +167,8 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
       } else if (err.response?.status === 402) {
         message = errorDetail || 'Subscription required for this action. Upgrade to Premium.'
         triggerPaywall({ reason: 'SUBSCRIPTION_REQUIRED' })
+      } else if (err.response?.status === 422 && !errorDetail && firstValidationMessage) {
+        message = `Validation error: ${firstValidationMessage}`
       }
 
       setGlobalError(message)

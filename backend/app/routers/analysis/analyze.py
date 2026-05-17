@@ -7,7 +7,7 @@ from collections import deque
 from datetime import date
 from time import monotonic
 
-from fastapi import APIRouter, HTTPException, Depends, Header, File, UploadFile, Form
+from fastapi import APIRouter, HTTPException, Depends, Header, File, UploadFile, Form, Request
 from pydantic import BaseModel, Field
 from typing import Optional, List
 import logging
@@ -285,11 +285,54 @@ async def _drop_idempotency(*, user_id: str, idempotency_key: str) -> None:
 
 @router.post("", response_model=AnalyzeResponse)
 async def analyze_lab(
-    request: AnalyzeRequest,
+    request: Request,
     current_user: dict = Depends(get_current_user),
     _freemium_check: None = Depends(require_freemium_analyze),
     idempotency_key: Optional[str] = Header(default=None, alias="X-Idempotency-Key"),
 ):
+    content_type = (request.headers.get("content-type") or "").lower()
+
+    # Backward compatibility: older frontend bundles sent multipart payloads to
+    # POST /analyze instead of POST /analyze/pdf.
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        file = form.get("file")
+        lab_name_form = form.get("lab_name")
+        symptoms_form = form.getlist("symptoms")
+
+        if file is None:
+            raise HTTPException(
+                status_code=422,
+                detail={"detail": "Field required: file", "code": "VALIDATION_ERROR"},
+            )
+
+        return await analyze_lab_pdf(
+            file=file,
+            lab_name=lab_name_form,
+            symptoms=symptoms_form,
+            current_user=current_user,
+            _freemium_check=None,
+        )
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = None
+
+    if payload is None:
+        raise HTTPException(
+            status_code=422,
+            detail={"detail": "Field required: extracted_text", "code": "VALIDATION_ERROR"},
+        )
+
+    try:
+        request_data = AnalyzeRequest.model_validate(payload)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"detail": "Validation failed", "code": "VALIDATION_ERROR"},
+        ) from exc
+
     user_id: str = current_user["sub"]
 
     # Check unified freemium biomarker quota (1 total entry for free users)
@@ -304,11 +347,11 @@ async def analyze_lab(
             },
         )
 
-    normalized_text = _normalize_lab_text(request.extracted_text)
-    normalized_symptoms = _normalize_symptoms(request.symptoms or [])
-    normalized_lab_name = request.lab_name.strip() if request.lab_name else None
+    normalized_text = _normalize_lab_text(request_data.extracted_text)
+    normalized_symptoms = _normalize_symptoms(request_data.symptoms or [])
+    normalized_lab_name = request_data.lab_name.strip() if request_data.lab_name else None
 
-    if request.ocr_confidence is not None and not (0 <= request.ocr_confidence <= 100):
+    if request_data.ocr_confidence is not None and not (0 <= request_data.ocr_confidence <= 100):
         raise HTTPException(
             status_code=422,
             detail={"detail": "ocr_confidence must be between 0 and 100", "code": "OCR_CONFIDENCE_OUT_OF_RANGE"},
@@ -335,8 +378,8 @@ async def analyze_lab(
         fingerprint = _request_fingerprint(
             normalized_text=normalized_text,
             normalized_lab_name=normalized_lab_name,
-            test_date=request.test_date,
-            ocr_confidence=request.ocr_confidence,
+            test_date=request_data.test_date,
+            ocr_confidence=request_data.ocr_confidence,
             normalized_symptoms=normalized_symptoms,
         )
         cached = await _get_idempotency_cached_response(
@@ -355,8 +398,8 @@ async def analyze_lab(
                 user_id=user_id,
                 extracted_text=normalized_text,
                 lab_name=normalized_lab_name,
-                test_date=request.test_date.isoformat() if request.test_date else None,
-                ocr_confidence=request.ocr_confidence,
+                test_date=request_data.test_date.isoformat() if request_data.test_date else None,
+                ocr_confidence=request_data.ocr_confidence,
                 analyze_prompt_version=EXTRACT_PROMPT_VERSION,
             )
         except Exception as exc:
@@ -375,7 +418,7 @@ async def analyze_lab(
             entity_id=str(upload_id),
             new_value={
                 "lab_name": normalized_lab_name,
-                "has_test_date": bool(request.test_date),
+                "has_test_date": bool(request_data.test_date),
                 "has_symptoms": bool(normalized_symptoms),
             },
         )
