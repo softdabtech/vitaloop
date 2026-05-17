@@ -512,12 +512,6 @@ async def get_biomarker_options(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=_FAILED_LOAD_BIOMARKERS)
 
 
-@router.post(
-    "/manual",
-    response_model=AnalyzeResponse,
-    status_code=201,
-    summary="Analyze manually entered biomarkers"
-)
 async def _check_and_validate_manual_entries(user_id: str, request: ManualAnalysisRequest):
     """Check quota and validate biomarker entries"""
     # Check unified freemium biomarker quota (1 total entry for free users)
@@ -567,6 +561,12 @@ async def _generate_protocol_for_manual_entries(request: ManualAnalysisRequest, 
         return []
 
 
+@router.post(
+    "/manual",
+    response_model=AnalyzeResponse,
+    status_code=201,
+    summary="Analyze manually entered biomarkers"
+)
 async def analyze_manual_biomarkers(
     request: ManualAnalysisRequest,
     current_user: dict = Depends(get_current_user),
@@ -574,7 +574,7 @@ async def analyze_manual_biomarkers(
     """
     Accept manually entered biomarker values and generate protocol.
 
-    Checks freemium limits (3 manual entries/month for free users).
+    Checks freemium limits (1 manual entry for free users).
     Converts all values to standard units.
     Generates personalized protocol via Claude.
 
