@@ -21,14 +21,6 @@ import {
 import Seo from '../components/Seo.jsx'
 import Footer from '../components/landing/Footer.jsx'
 
-const FOUNDER_IMAGE_SOURCES = [
-  '/images/alex.png',
-  '/images/alex-bombela.jpg',
-  '/images/alex-bombela.jpeg',
-  '/images/alex-bombela.png',
-  '/images/alex-bombela.webp',
-]
-
 const HERO_OBJECTS = [
   { icon: BrainCircuit, label: '85+ biomarkers analyzed' },
   { icon: ShieldCheck, label: 'Evidence-based protocol engine' },
@@ -96,7 +88,6 @@ const ROADMAP = [
 
 export default function About() {
   const navigate = useNavigate()
-  const [imageIndex, setImageIndex] = useState(0)
   const [imageError, setImageError] = useState(false)
 
   const FounderAvatarFallback = () => (
@@ -281,16 +272,9 @@ export default function About() {
             <div className="mb-8 flex justify-center">
               {!imageError ? (
                 <img
-                  src={FOUNDER_IMAGE_SOURCES[imageIndex]}
+                  src="/images/alex.png"
                   alt="Alex Bombela"
-                  onError={() => {
-                    const nextIndex = imageIndex + 1
-                    if (nextIndex >= FOUNDER_IMAGE_SOURCES.length) {
-                      setImageError(true)
-                      return
-                    }
-                    setImageIndex(nextIndex)
-                  }}
+                  onError={() => setImageError(true)}
                   className="h-40 w-40 rounded-full border-4 border-emerald-200 object-cover shadow-lg"
                 />
               ) : (
