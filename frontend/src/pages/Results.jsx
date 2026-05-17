@@ -8,6 +8,7 @@ import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
 import BiomarkerAlertsDisplay from '../components/BiomarkerAlertsDisplay.jsx'
 import HealthTipsDisplay from '../components/HealthTipsDisplay.jsx'
+import BiomarkerContextTooltip from '../components/BiomarkerContextTooltip.jsx'
 import { ArrowLeft, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Info, Activity } from 'lucide-react'
 
 const STATUS_META = {
@@ -439,12 +440,15 @@ export default function Results() {
               </thead>
               <tbody>
                 {rankedBiomarkers.map((b, idx) => (
-                  <tr key={b.id || `${b.name}-${idx}`} className="border-t border-slate-100">
-                    <td className="px-4 py-3 text-slate-900">{b.name_en || '—'}</td>
+                  <tr key={b.id || `${b.name}-${idx}`} className="border-t border-slate-100 hover:bg-slate-50 transition">
+                    <td className="px-4 py-3 text-slate-900 flex items-center gap-2">
+                      {b.name_en || '—'}
+                      <BiomarkerContextTooltip biomarkerName={b.name_en || b.name} value={b.value} status={b.status_normalized} size="sm" />
+                    </td>
                     <td className="px-4 py-3 text-slate-700">{b.value ?? '—'}</td>
                     <td className="px-4 py-3 text-slate-700">{b.unit || '—'}</td>
                     <td className="px-4 py-3 text-slate-700">{b.ref_low != null && b.ref_high != null ? `${b.ref_low} - ${b.ref_high}` : '—'}</td>
-                    <td className="px-4 py-3 text-slate-700">{b.status_normalized}</td>
+                    <td className={`px-4 py-3 font-semibold ${STATUS_META[b.status_normalized || '']?.text || 'text-slate-700'}`}>{b.status_normalized}</td>
                   </tr>
                 ))}
               </tbody>

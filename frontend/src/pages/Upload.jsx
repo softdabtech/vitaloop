@@ -9,6 +9,7 @@ import UploadZone from '../components/UploadZone.jsx'
 import SymptomSelector from '../components/SymptomSelector.jsx'
 import ManualBiomarkerEntry from '../components/ManualBiomarkerEntry.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import AnalysisProgressIndicator from '../components/AnalysisProgressIndicator.jsx'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
 import { gaLabUpload } from '../lib/analytics.js'
@@ -118,6 +119,7 @@ export default function Upload() {
   const [profileIncomplete, setProfileIncomplete] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0])
   const [loadingWarning, setLoadingWarning] = useState('')
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   useEffect(() => {
     api.get('/auth/onboarding/state').then(r => {
@@ -139,10 +141,18 @@ export default function Upload() {
   useEffect(() => {
     if (!analyzing) {
       setLoadingWarning('')
+      setElapsedSeconds(0)
       return
     }
 
     setLoadingMessage(LOADING_MESSAGES[0])
+    setElapsedSeconds(0)
+
+    // Timer for elapsed seconds
+    const elapsedTimer = setInterval(() => {
+      setElapsedSeconds(prev => prev + 1)
+    }, 1000)
+
     const timers = [
       setTimeout(() => setLoadingMessage(LOADING_MESSAGES[1]), 3000),
       setTimeout(() => setLoadingMessage(LOADING_MESSAGES[2]), 15000),
@@ -151,7 +161,10 @@ export default function Upload() {
       setTimeout(() => setLoadingWarning('This is taking longer than usual. Large PDFs may take 1-2 minutes.'), 60000),
     ]
 
-    return () => timers.forEach(clearTimeout)
+    return () => {
+      clearInterval(elapsedTimer)
+      timers.forEach(clearTimeout)
+    }
   }, [analyzing])
 
   async function handleFile(file) {
@@ -377,16 +390,14 @@ export default function Upload() {
 
             <div className="mt-6">
               {analyzing && (
-                <>
-                  <div className="mb-4 animate-pulse rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                    {loadingMessage}
-                  </div>
+                <div className="mb-6">
+                  <AnalysisProgressIndicator analyzing={analyzing} elapsedSeconds={elapsedSeconds} />
                   {loadingWarning && (
-                    <div className="mb-4 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+                    <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
                       {loadingWarning}
                     </div>
                   )}
-                </>
+                </div>
               )}
 
               {errorMessage && (
