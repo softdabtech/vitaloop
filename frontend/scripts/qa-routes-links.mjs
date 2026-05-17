@@ -4,6 +4,7 @@ import path from 'node:path'
 const root = path.resolve(process.cwd())
 const appPath = path.join(root, 'src', 'App.jsx')
 const settingsPath = path.join(root, 'src', 'pages', 'Settings.jsx')
+const notificationPreferencesPath = path.join(root, 'src', 'components', 'NotificationPreferences.jsx')
 const adminShellPath = path.join(root, 'src', 'components', 'admin', 'AdminShell.jsx')
 const landingPath = path.join(root, 'src', 'pages', 'Landing.jsx')
 
@@ -23,6 +24,7 @@ function assert(condition, message) {
 
 const app = read(appPath)
 const settings = read(settingsPath)
+const notificationPreferences = read(notificationPreferencesPath)
 const adminShell = read(adminShellPath)
 const landing = read(landingPath)
 
@@ -57,10 +59,11 @@ for (const route of requiredRoutes) {
 assert(app.includes('path="/checkin" element={<Navigate to="/check-ins" replace />}'), 'Legacy redirect /checkin -> /check-ins missing')
 assert(app.includes('path="/timeline" element={<Navigate to="/insights" replace />}'), 'Legacy redirect /timeline -> /insights missing')
 
-const hasReminderCheckboxes = (settings.match(/type="checkbox"/g) || []).length
-assert(hasReminderCheckboxes >= 1, 'Expected checkbox input in Settings reminders section')
-assert(settings.includes("weekly_digest") && settings.includes("checkin_reminders") && settings.includes("product_updates"), 'Missing reminder keys in Settings')
-assert(settings.includes('Weekly digest') && settings.includes('Check-in email') && settings.includes('Product updates'), 'Missing reminder labels in Settings')
+assert(settings.includes('<NotificationPreferences'), 'Settings page must render notification preferences block')
+const hasReminderCheckboxes = (notificationPreferences.match(/type="checkbox"/g) || []).length
+assert(hasReminderCheckboxes >= 1, 'Expected checkbox input in notification preferences section')
+assert(notificationPreferences.includes('weekly_checkin') && notificationPreferences.includes('weekly_digest') && notificationPreferences.includes('biomarker_alert'), 'Missing required notification keys')
+assert(notificationPreferences.includes('Weekly Check-in Reminder') && notificationPreferences.includes('Weekly Digest') && notificationPreferences.includes('Biomarker Alerts'), 'Missing required notification labels')
 
 const navToRegex = /to:\s*'([^']+)'/g
 const adminTargets = [...adminShell.matchAll(navToRegex)].map((m) => m[1])
