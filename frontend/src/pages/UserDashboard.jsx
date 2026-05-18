@@ -485,10 +485,10 @@ export default function UserDashboard() {
                 ) : !latestCheckin || (new Date() - new Date(latestCheckin?.created_at || 0)) > 7 * 24 * 60 * 60 * 1000 ? (
                   <div className="rounded-2xl border border-purple-200 bg-purple-50 p-4">
                     <p className="text-sm font-semibold text-purple-900 mb-2">✅ Weekly check-in</p>
-                    <p className="text-xs text-purple-700 mb-3">Update us on how you're feeling and your progress</p>
+                    <p className="text-xs text-purple-700 mb-3 leading-snug">Update us on how you're feeling and progress</p>
                     <button
                       onClick={() => navigate('/check-ins')}
-                      className="inline-flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg transition"
+                      className="inline-flex items-center gap-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg transition whitespace-nowrap"
                     >
                       Start check-in
                       <ArrowRight className="h-3 w-3" />
