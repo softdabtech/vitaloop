@@ -111,7 +111,7 @@ export default function UserCabinetLayout({ children }) {
                 href="https://vitaloop.today"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="vtl-button-secondary inline-flex shrink-0 items-center gap-2 px-3 text-sm hover:bg-slate-100"
+                className="vtl-button-secondary inline-flex shrink-0 items-center gap-2 px-3 py-2 text-sm transition hover:bg-slate-200 hover:border-slate-400"
               >
                 <span className="hidden sm:inline">Website</span>
                 <span className="sm:hidden">↗</span>

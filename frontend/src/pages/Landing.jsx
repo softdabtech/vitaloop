@@ -808,6 +808,39 @@ export default function Landing() {
         <LightHero />
         <StatsBar />
 
+        <section className="mx-auto w-full max-w-[990px] px-4 pb-4 pt-10 sm:px-6 md:pt-14">
+          <motion.div
+            {...fadeUp(reduced)}
+            className="rounded-3xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white p-6 md:p-8"
+          >
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+              <Shield className="h-3.5 w-3.5" />
+              Data safety
+            </div>
+            <h2 className="text-[26px] font-semibold tracking-tight text-slate-900 md:text-[32px]">
+              How we store your data
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700 md:text-base">
+              Your health data is never sold. VITALOOP uses strict access controls and secure-by-default processing so every lab record stays protected and visible only to you.
+            </p>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              {[
+                'Encrypted data transfer',
+                'Row-level access controls (RLS)',
+                'You can request account and data deletion',
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-medium text-slate-700"
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </section>
+
         <section id="problem" className="mx-auto w-full max-w-[990px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-12 text-center">
             <motion.h2
