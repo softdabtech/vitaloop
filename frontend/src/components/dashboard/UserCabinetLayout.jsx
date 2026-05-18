@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Crown, LogOut, Menu } from 'lucide-react'
+import toast from 'react-hot-toast'
 import UserDashboardSidebar from './UserDashboardSidebar.jsx'
 import MobileBottomBar from './MobileBottomBar.jsx'
 import PWAInstallBanner from './PWAInstallBanner.jsx'
@@ -56,9 +57,19 @@ export default function UserCabinetLayout({ children }) {
 
   // CRM-role users (super_admin, practitioner, etc.) should not access the user cabinet
   useEffect(() => {
-    if (user && isCrmRole(user)) {
-      window.location.assign(CRM_BASE_URL)
+    if (!user || !isCrmRole(user)) {
+      return undefined
     }
+
+    toast.loading('Redirecting to CRM dashboard...', {
+      duration: 1200,
+    })
+
+    const redirectTimer = window.setTimeout(() => {
+      window.location.assign(CRM_BASE_URL)
+    }, 350)
+
+    return () => window.clearTimeout(redirectTimer)
   }, [user])
 
   async function handleLogout() {
