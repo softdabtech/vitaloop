@@ -41,9 +41,13 @@ export function useSubscription() {
         const isPremiumResolved = authPremium || stripePremium
         const subStatusResolved = isPremiumResolved ? 'active' : stripeStatus
 
+        const normalizedPlanName = stripeData?.plan_id
+          || stripeData?.plan_name
+          || (isPremiumResolved ? 'personal' : 'free')
+
         setSubStatus(subStatusResolved)
         setIsPremium(isPremiumResolved)
-        setPlanName(stripeData?.plan_name ?? null)
+        setPlanName(normalizedPlanName)
         setUploadCount(stripeData?.upload_count ?? 0)
         setUploadLimit(isPremiumResolved ? Infinity : (stripeData?.upload_limit ?? 1))
         setUploadsRemaining(isPremiumResolved ? Infinity : (stripeData?.uploads_remaining ?? 0))
