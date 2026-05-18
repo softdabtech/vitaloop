@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from datetime import datetime, timezone
+import logging
 from app.dependencies import get_current_user
 from app.services import supabase_service as svc
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 _UNAUTHORIZED_DETAIL = "Unauthorized"
 
@@ -11,10 +14,13 @@ _UNAUTHORIZED_DETAIL = "Unauthorized"
 class NotificationPreferencesUpdate(BaseModel):
     weekly_checkin: bool = None
     assignment_due: bool = None
+    retest_reminder: bool = None
     streak_reminder: bool = None
+    insight_published: bool = None
     weekly_digest: bool = None
     achievement_unlock: bool = None
     biomarker_alert: bool = None
+    push_enabled: bool = None
 
 
 @router.patch("/notifications")
@@ -49,5 +55,21 @@ async def update_notification_preferences(
             },
         )
     )
+
+    try:
+        await svc._run(
+            lambda: supabase.table("user_notification_preferences")
+            .upsert(
+                {
+                    "user_id": user_id,
+                    **update_data,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                },
+                on_conflict="user_id",
+            )
+            .execute()
+        )
+    except Exception as exc:
+        logger.warning("notification_preferences_table_unavailable user_id=%s error=%s", user_id, repr(exc))
 
     return {"ok": True, "preferences": update_data}
