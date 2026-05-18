@@ -27,6 +27,7 @@ export default function BillingHistory() {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const nextBillingDate = rows[0]?.current_period_end || rows[0]?.period_end || null
 
   useEffect(() => {
     if (!user) return
@@ -75,7 +76,15 @@ export default function BillingHistory() {
         )}
 
         {!loading && !error && rows.length > 0 && (
-          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+          <div className="grid gap-4">
+            {nextBillingDate && (
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-blue-900">
+                <p className="text-sm font-medium">Next billing date</p>
+                <p className="mt-1 text-base font-semibold">{fmt(nextBillingDate)}</p>
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
@@ -109,6 +118,7 @@ export default function BillingHistory() {
                 })}
               </tbody>
             </table>
+          </div>
           </div>
         )}
       </div>

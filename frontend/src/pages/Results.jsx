@@ -288,6 +288,7 @@ export default function Results() {
     const status = b.status_normalized
     return status === 'DEFICIENT' || status === 'ELEVATED'
   })
+  const foundCount = normalizedBiomarkers.length
   const optimal = normalizedBiomarkers.filter((b) => b.status_normalized === 'OPTIMAL').length
   const borderline = normalizedBiomarkers.filter((b) => b.status_normalized === 'BORDERLINE').length
   const topPriority = rankedBiomarkers.find((b) => b.status_normalized !== 'OPTIMAL') || rankedBiomarkers[0] || null
@@ -346,6 +347,15 @@ export default function Results() {
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Lab Results Analysis</h1>
           <p className="text-slate-600">Detailed breakdown of your biomarkers with personalized insights</p>
+        </div>
+
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+          <p className="text-sm text-slate-600">
+            Found <span className="font-semibold text-slate-900">{foundCount}</span> biomarkers in this report.
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Higher counts usually indicate a more complete lab panel and richer protocol guidance.
+          </p>
         </div>
 
         {showHints && (
