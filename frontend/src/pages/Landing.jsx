@@ -825,11 +825,7 @@ export default function Landing() {
             </p>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              {[
-                'Encrypted data transfer',
-                'Row-level access controls (RLS)',
-                'You can request account and data deletion',
-              ].map((item) => (
+              {["Encrypted data transfer", "Row-level access controls (RLS)", "You can request account and data deletion", "GDPR and HIPAA compliance", "Regular security audits", "Multi-factor authentication (MFA)"].map((item) => (
                 <div
                   key={item}
                   className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-medium text-slate-700"
@@ -952,7 +948,7 @@ export default function Landing() {
                       >
                         <motion.div
                           className="absolute inset-0 rounded-lg bg-emerald-400/20 blur-xl"
-                          animate={reduced ? {} : { scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+                          animate={reduced ? {} : { scale: [1, 1.15, 1], opacity: [0.5, 0.7, 0.5] }}
                           transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
                         />
                         <Icon className="relative h-6 w-6 text-emerald-600" />
@@ -1088,7 +1084,7 @@ export default function Landing() {
                 >
                   {/* Animated gradient background */}
                   <motion.div
-                    className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-sky-500/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                    className="absolute inset-0 bg-gradient-to-br from-emerald-500/8 via-sky-500/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
                   />
 
                   {/* Premium badge */}
