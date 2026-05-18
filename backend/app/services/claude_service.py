@@ -362,7 +362,52 @@ def _strip_code_block(raw: str) -> str:
     return raw.strip()
 
 
-async def _chat_completion(prompt: str, *, task_name: str) -> str:
+async def _persist_usage_event(
+    *,
+    task_name: str,
+    payload: Dict[str, Any],
+    user_id: str | None,
+    upload_id: str | None,
+) -> None:
+    try:
+        usage = payload.get("usage") or {}
+        prompt_tokens = int(usage.get("prompt_tokens") or usage.get("input_tokens") or 0)
+        completion_tokens = int(usage.get("completion_tokens") or usage.get("output_tokens") or 0)
+        total_tokens = int(usage.get("total_tokens") or (prompt_tokens + completion_tokens))
+        if prompt_tokens <= 0 and completion_tokens <= 0 and total_tokens <= 0:
+            return
+
+        provider = "anthropic"
+        model = str(payload.get("model") or settings.active_llm_model or "unknown")
+
+        from app.services import supabase_service as svc
+
+        sb = svc._get_supabase()
+        row = {
+            "task_name": task_name,
+            "provider": provider,
+            "model": model,
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+            "meta": {
+                "response_id": payload.get("id"),
+            },
+        }
+        await svc._run(lambda: sb.table("llm_usage_events").insert(row).execute())
+    except Exception as ex:
+        logger.warning("llm_usage_event_failed task=%s reason=%s", task_name, ex)
+
+
+async def _chat_completion(
+    prompt: str,
+    *,
+    task_name: str,
+    user_id: str | None = None,
+    upload_id: str | None = None,
+) -> str:
     client = _get_client()
     model = settings.active_llm_model
     base_url = settings.active_llm_base_url.rstrip("/")
@@ -387,6 +432,12 @@ async def _chat_completion(prompt: str, *, task_name: str) -> str:
     )
     response.raise_for_status()
     payload = response.json()
+    await _persist_usage_event(
+        task_name=task_name,
+        payload=payload,
+        user_id=user_id,
+        upload_id=upload_id,
+    )
     response_id = payload.get("id")
     choices = payload.get("choices") or []
     if not choices:
@@ -429,7 +480,13 @@ def _validate_protocol_payload(payload: Any) -> List[Dict[str, Any]]:
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-async def extract_biomarkers(text: str, symptoms: List[str]) -> List[Dict[str, Any]]:
+async def extract_biomarkers(
+    text: str,
+    symptoms: List[str],
+    *,
+    user_id: str | None = None,
+    upload_id: str | None = None,
+) -> List[Dict[str, Any]]:
     if not is_llm_configured():
         logger.warning("abacus_extract_fallback reason=llm_not_configured")
         return _fallback_extract_biomarkers(text)
@@ -438,7 +495,14 @@ async def extract_biomarkers(text: str, symptoms: List[str]) -> List[Dict[str, A
     symptoms_str = ", ".join(symptoms) if symptoms else "none reported"
     prompt = EXTRACT_PROMPT.replace("{lab_text}", text).replace("{symptoms}", symptoms_str)
     try:
-        raw = _strip_code_block(await _chat_completion(prompt, task_name="extract_biomarkers"))
+        raw = _strip_code_block(
+            await _chat_completion(
+                prompt,
+                task_name="extract_biomarkers",
+                user_id=user_id,
+                upload_id=upload_id,
+            )
+        )
         parsed = _validate_biomarker_payload(json.loads(raw))
         parsed = [normalized for normalized in (_normalize_biomarker_item(item) for item in parsed) if normalized]
         if not parsed:
@@ -469,7 +533,13 @@ async def extract_biomarkers(text: str, symptoms: List[str]) -> List[Dict[str, A
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-async def generate_protocol(biomarkers: List[Dict], symptoms: List[str]) -> List[Dict[str, Any]]:
+async def generate_protocol(
+    biomarkers: List[Dict],
+    symptoms: List[str],
+    *,
+    user_id: str | None = None,
+    upload_id: str | None = None,
+) -> List[Dict[str, Any]]:
     if not is_llm_configured():
         logger.warning("abacus_protocol_fallback reason=llm_not_configured")
         return _fallback_generate_protocol(biomarkers, symptoms)
@@ -479,7 +549,14 @@ async def generate_protocol(biomarkers: List[Dict], symptoms: List[str]) -> List
     biomarkers_str = json.dumps(biomarkers, indent=2)
     prompt = PROTOCOL_PROMPT.replace("{biomarkers}", biomarkers_str).replace("{symptoms}", symptoms_str)
     try:
-        raw = _strip_code_block(await _chat_completion(prompt, task_name="generate_protocol"))
+        raw = _strip_code_block(
+            await _chat_completion(
+                prompt,
+                task_name="generate_protocol",
+                user_id=user_id,
+                upload_id=upload_id,
+            )
+        )
         parsed = _validate_protocol_payload(json.loads(raw))
         if not parsed:
             logger.warning("abacus_protocol_fallback reason=empty_payload")
@@ -568,7 +645,14 @@ async def generate_questionnaire_followup(
             timeout=8.0,
         )
         raw.raise_for_status()
-        choices = raw.json().get("choices") or []
+        payload = raw.json()
+        await _persist_usage_event(
+            task_name="questionnaire_followup",
+            payload=payload,
+            user_id=None,
+            upload_id=None,
+        )
+        choices = payload.get("choices") or []
         content = ((choices[0] or {}).get("message") or {}).get("content", "")
         parsed = json.loads(_strip_code_block(content))
         text = (parsed.get("text") or "").strip()
@@ -613,7 +697,14 @@ async def generate_questionnaire_summary(
             timeout=18.0,
         )
         raw.raise_for_status()
-        choices = raw.json().get("choices") or []
+        payload = raw.json()
+        await _persist_usage_event(
+            task_name="questionnaire_summary",
+            payload=payload,
+            user_id=None,
+            upload_id=None,
+        )
+        choices = payload.get("choices") or []
         content = ((choices[0] or {}).get("message") or {}).get("content", "")
         parsed = json.loads(_strip_code_block(content))
         summary = (parsed.get("summary") or "").strip()

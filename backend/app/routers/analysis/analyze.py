@@ -429,6 +429,8 @@ async def analyze_lab(
                 extract_biomarkers(
                     text=normalized_text,
                     symptoms=normalized_symptoms,
+                    user_id=user_id,
+                    upload_id=upload_id,
                 ),
                 timeout=ANALYZE_EXTRACT_TIMEOUT_SECONDS,
             )
