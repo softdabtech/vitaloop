@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, useReducedMotion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
 import {
@@ -64,7 +64,7 @@ function triggerDashboardUpgradePaywall() {
 }
 
 function DashboardCard({ title, eyebrow, children, action, animated = true, delay = 0 }) {
-  const animationProps = animated
+  const animationProps = false
     ? {
       initial: { opacity: 0, y: 20 },
       whileInView: { opacity: 1, y: 0 },
@@ -94,7 +94,7 @@ function DashboardCard({ title, eyebrow, children, action, animated = true, dela
 }
 
 function EmptyBlock({ title, body, cta, onClick, animated = true, delay = 0 }) {
-  const animationProps = animated
+  const animationProps = false
     ? {
       initial: { opacity: 0, y: 20 },
       whileInView: { opacity: 1, y: 0 },
@@ -307,8 +307,7 @@ const DASHBOARD_HINTS = [
 export default function UserDashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const reduced = useReducedMotion()
-  const { show: showHints, dismiss: dismissHints } = useTourHints('dashboard')
+  const { show: showHints, dismiss: dismissHints } = useTourHints(`dashboard:${user?.id || 'anonymous'}`)
   const { isPremium, subStatus, uploadCount, uploadLimit, loading: subscriptionLoading } = useSubscription()
   const { data: dashboardSummary, isLoading: loading, error: dashboardError } = useDashboardSummary()
   const summary = dashboardSummary
@@ -351,14 +350,7 @@ export default function UserDashboard() {
   const greeting = useMemo(() => getGreeting(profile, user?.email), [profile?.first_name, user?.email])
   const latestUploadId = getLatestUploadId(latestUpload)
 
-  const fadeUp = (delay = 0) => reduced
-    ? {}
-    : {
-      initial: { opacity: 0, y: 18 },
-      whileInView: { opacity: 1, y: 0 },
-      transition: { duration: 0.55, delay, ease: [0.2, 0.65, 0.3, 1] },
-      viewport: { once: true, margin: '-10% 0px -10% 0px' },
-    }
+  const fadeUp = () => ({})
 
   return (
     <div className="space-y-6">
@@ -406,6 +398,29 @@ export default function UserDashboard() {
             isPremium={isPremium}
             latestCheckin={latestCheckin}
           />
+
+          <div className="grid gap-6 xl:grid-cols-2">
+            <DashboardCard title="Achievements" eyebrow="Unlock badges">
+              <AchievementBadges
+                stats={{
+                  total_uploads: stats.total_uploads || 0,
+                  profile_complete: onboardingComplete,
+                  adherence_streak: summary?.adherence_streak || 0,
+                  checkins_completed: summary?.checkins_completed || 0,
+                  health_score: stats.health_score || 0,
+                  perfect_weeks: summary?.perfect_weeks || 0,
+                }}
+              />
+            </DashboardCard>
+
+            <DashboardCard title="Your Streaks" eyebrow="Motivation">
+              <StreakCounter
+                checkInStreak={summary?.checkin_streak || 0}
+                adherenceStreak={summary?.adherence_streak || 0}
+                uploadStreak={summary?.upload_streak || 0}
+              />
+            </DashboardCard>
+          </div>
 
           {/* Health Score + Next Action Block */}
           <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
@@ -523,9 +538,7 @@ export default function UserDashboard() {
             </DashboardCard>
           </div>
 
-          {/* Celebration Features */}
           <div className="space-y-4">
-            {/* Achievement Milestone */}
             {stats.completed_tasks > 0 && stats.completed_tasks % 5 === 0 && (
               <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-5">
                 <div className="flex items-center gap-4">
@@ -543,57 +556,58 @@ export default function UserDashboard() {
               </div>
             )}
 
-            {/* Recent Wins */}
-            {(stats.health_score > 70 || stats.completed_tasks > 0 || latestCheckin) && (
+            <div className="grid gap-4 xl:grid-cols-2">
               <div className="rounded-2xl border border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 p-5">
-                <h3 className="font-semibold text-purple-900 mb-3">⭐ Your Recent Wins</h3>
-                <div className="space-y-2">
-                  {stats.health_score > 70 && (
-                    <p className="text-sm text-purple-700 flex items-center gap-2">
-                      <span>🏆</span> Health Score is {stats.health_score} — keep up the great work!
-                    </p>
-                  )}
-                  {stats.completed_tasks > 0 && (
-                    <p className="text-sm text-purple-700 flex items-center gap-2">
-                      <span>✅</span> {stats.completed_tasks} task{stats.completed_tasks > 1 ? 's' : ''} completed this cycle
-                    </p>
-                  )}
-                  {latestCheckin && (
-                    <p className="text-sm text-purple-700 flex items-center gap-2">
-                      <span>📝</span> Consistent with your weekly check-ins — great habit!
-                    </p>
-                  )}
-                  {stats.total_uploads > 1 && (
-                    <p className="text-sm text-purple-700 flex items-center gap-2">
-                      <span>📊</span> {stats.total_uploads} lab uploads tracked — you're serious about your health!
-                    </p>
-                  )}
+                <h3 className="mb-3 font-semibold text-purple-900">⭐ Your Recent Wins</h3>
+                {(stats.health_score > 70 || stats.completed_tasks > 0 || latestCheckin || stats.total_uploads > 1) ? (
+                  <div className="space-y-2">
+                    {stats.health_score > 70 && (
+                      <p className="flex items-center gap-2 text-sm text-purple-700">
+                        <span>🏆</span> Health Score is {stats.health_score} — keep up the great work!
+                      </p>
+                    )}
+                    {stats.completed_tasks > 0 && (
+                      <p className="flex items-center gap-2 text-sm text-purple-700">
+                        <span>✅</span> {stats.completed_tasks} task{stats.completed_tasks > 1 ? 's' : ''} completed this cycle
+                      </p>
+                    )}
+                    {latestCheckin && (
+                      <p className="flex items-center gap-2 text-sm text-purple-700">
+                        <span>📝</span> Consistent with your weekly check-ins — great habit!
+                      </p>
+                    )}
+                    {stats.total_uploads > 1 && (
+                      <p className="flex items-center gap-2 text-sm text-purple-700">
+                        <span>📊</span> {stats.total_uploads} lab uploads tracked — you're serious about your health!
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-purple-700">Complete your first upload and check-in to start building wins.</p>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                <div className="flex h-full flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                  <div>
+                    <h3 className="font-semibold text-slate-900">Share Your Progress</h3>
+                    <p className="mt-1 text-sm text-slate-600">Inspire others on their health journey</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const shareText = `Just improved my health score to ${stats.health_score || 0} on Vitaloop! 🚀 #HealthJourney #Vitaloop`
+                      if (navigator.share) {
+                        navigator.share({ text: shareText })
+                      } else {
+                        navigator.clipboard.writeText(shareText)
+                      }
+                    }}
+                    className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+                  >
+                    Share Progress
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* Share Progress */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-slate-900">Share Your Progress</h3>
-                <p className="text-sm text-slate-600 mt-1">Inspire others on their health journey</p>
-              </div>
-              <button
-                onClick={() => {
-                  const shareText = `Just improved my health score to ${stats.health_score || 0} on Vitaloop! 🚀 #HealthJourney #Vitaloop`
-                  if (navigator.share) {
-                    navigator.share({ text: shareText })
-                  } else {
-                    navigator.clipboard.writeText(shareText)
-                    // Show toast notification
-                  }
-                }}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg transition"
-              >
-                Share Progress
-              </button>
             </div>
           </div>
 
@@ -812,33 +826,6 @@ export default function UserDashboard() {
             </div>
           </motion.div>
 
-          {/* Gamification Section - Streaks & Achievements */}
-          <motion.div {...fadeUp(0.08)} className="mt-8 space-y-6">
-            <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-              {/* Streaks */}
-              <DashboardCard title="Your Streaks" eyebrow="Motivation">
-                <StreakCounter
-                  checkInStreak={summary?.checkin_streak || 0}
-                  adherenceStreak={summary?.adherence_streak || 0}
-                  uploadStreak={summary?.upload_streak || 0}
-                />
-              </DashboardCard>
-
-              {/* Achievements */}
-              <DashboardCard title="Achievements" eyebrow="Unlock badges">
-                <AchievementBadges
-                  stats={{
-                    total_uploads: stats.total_uploads || 0,
-                    profile_complete: onboardingComplete,
-                    adherence_streak: summary?.adherence_streak || 0,
-                    checkins_completed: summary?.checkins_completed || 0,
-                    health_score: stats.health_score || 0,
-                    perfect_weeks: summary?.perfect_weeks || 0,
-                  }}
-                />
-              </DashboardCard>
-            </div>
-          </motion.div>
         </>
       )}
     </div>

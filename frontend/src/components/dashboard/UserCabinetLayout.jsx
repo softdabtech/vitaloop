@@ -48,10 +48,10 @@ export default function UserCabinetLayout({ children }) {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, signOut } = useAuth()
-  const { planName, loading: subLoading } = useSubscription()
+  const { planName, isPremium, loading: subLoading } = useSubscription()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const upgradeTarget = getCabinetUpgradeTarget(planName)
+  const upgradeTarget = getCabinetUpgradeTarget(planName, isPremium)
 
   const pageMeta = useMemo(() => resolvePageMeta(location.pathname), [location.pathname])
 
@@ -141,7 +141,7 @@ export default function UserCabinetLayout({ children }) {
                 href="https://vitaloop.today"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="vtl-button-secondary inline-flex shrink-0 items-center gap-2 px-3 py-2 text-sm transition hover:bg-slate-200 hover:border-slate-400"
+                className="vtl-button-secondary inline-flex shrink-0 items-center gap-2 px-3 py-2 text-sm transition hover:bg-slate-700 hover:border-slate-500 hover:text-white"
               >
                 <span className="hidden sm:inline">Website</span>
                 <span className="sm:hidden">↗</span>

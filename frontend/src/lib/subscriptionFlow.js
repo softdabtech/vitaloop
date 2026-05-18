@@ -4,6 +4,20 @@ export const SUBSCRIPTION_PLAN_IDS = {
   PRACTITIONER: 'practitioner',
 }
 
+function normalizePlanName(planName) {
+  const raw = String(planName || '').toLowerCase().trim()
+
+  if (!raw) return SUBSCRIPTION_PLAN_IDS.FREE
+  if (['practitioner', 'practitioner_premium', 'enterprise', 'pro', 'pro_premium'].includes(raw)) {
+    return SUBSCRIPTION_PLAN_IDS.PRACTITIONER
+  }
+  if (['personal', 'personal_pro', 'premium', 'active', 'trialing'].includes(raw)) {
+    return SUBSCRIPTION_PLAN_IDS.PERSONAL
+  }
+
+  return SUBSCRIPTION_PLAN_IDS.FREE
+}
+
 export function buildSubscriptionPath({ planId = null, billingCycle = 'monthly' } = {}) {
   const params = new URLSearchParams()
 
@@ -33,12 +47,14 @@ export function buildSignupRedirect({ planId = null, billingCycle = 'monthly' } 
   return buildSignupPath({ returnUrl: buildSubscriptionPath({ planId, billingCycle }) })
 }
 
-export function getCabinetUpgradeTarget(planName) {
-  if (planName === SUBSCRIPTION_PLAN_IDS.PRACTITIONER) {
+export function getCabinetUpgradeTarget(planName, isPremium = false) {
+  const normalizedPlan = normalizePlanName(planName)
+
+  if (normalizedPlan === SUBSCRIPTION_PLAN_IDS.PRACTITIONER) {
     return null
   }
 
-  if (planName === SUBSCRIPTION_PLAN_IDS.PERSONAL) {
+  if (normalizedPlan === SUBSCRIPTION_PLAN_IDS.PERSONAL || isPremium) {
     return {
       planId: SUBSCRIPTION_PLAN_IDS.PRACTITIONER,
       label: 'Upgrade to Pro Premium',
