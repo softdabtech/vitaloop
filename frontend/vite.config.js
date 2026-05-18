@@ -42,51 +42,21 @@ export default defineConfig({
     react(),
     buildInfoPlugin(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png', 'favicon.svg'],
       manifest: false, // we use our own /public/manifest.json
-      workbox: {
-        // App shell caching strategy
+      injectManifest: {
+        // App shell precache strategy
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // build-info.json must never be precached — it is fetched fresh on every deploy
         // verification check. nginx serves it with no-cache headers.
         globIgnores: ['mockups/**', 'build-info.json'],
         // Keep default limit high enough to prevent build-time hard failures.
         maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
-        cleanupOutdatedCaches: true,
-        skipWaiting: true,
-        clientsClaim: true,
-        // Don't cache API calls or Supabase auth
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [
-          /^\/api\//,
-          /^\/auth\//,
-          /^\/admin/,
-          /^\/__/,
-        ],
-        runtimeCaching: [
-          {
-            // Cache Google Fonts
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            // Cache static assets from CDN
-            urlPattern: /^https:\/\/.*\.(?:png|jpg|jpeg|svg|gif|webp)/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'image-cache',
-              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
       },
       devOptions: {
         enabled: false,

@@ -59,10 +59,13 @@ export default function Settings() {
   const [notifications, setNotifications] = useState({
     weekly_checkin: user?.user_metadata?.weekly_checkin !== false,
     assignment_due: user?.user_metadata?.assignment_due !== false,
+    retest_reminder: user?.user_metadata?.retest_reminder !== false,
     streak_reminder: user?.user_metadata?.streak_reminder !== false,
+    insight_published: user?.user_metadata?.insight_published !== false,
     weekly_digest: user?.user_metadata?.weekly_digest !== false,
     achievement_unlock: user?.user_metadata?.achievement_unlock !== false,
     biomarker_alert: user?.user_metadata?.biomarker_alert !== false,
+    push_enabled: user?.user_metadata?.push_enabled !== false,
   })
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')

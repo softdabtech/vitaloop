@@ -1,7 +1,14 @@
 import { Mail, Zap, Calendar, AlertCircle } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../lib/api.js'
+import {
+  getPushStatus,
+  isPushSupported,
+  sendTestPush,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from '../lib/notifications.ts'
 
 const NOTIFICATION_TYPES = {
   weekly_checkin: {
@@ -13,9 +20,16 @@ const NOTIFICATION_TYPES = {
   },
   assignment_due: {
     label: 'Upcoming Assignment',
-    description: 'Notify when assignments are due today',
+    description: 'Nudge when active tasks stay pending',
     icon: AlertCircle,
     color: 'orange',
+    default: true,
+  },
+  retest_reminder: {
+    label: 'Re-test Reminder',
+    description: 'After ~10 weeks from last lab upload',
+    icon: Calendar,
+    color: 'blue',
     default: true,
   },
   streak_reminder: {
@@ -46,11 +60,51 @@ const NOTIFICATION_TYPES = {
     color: 'red',
     default: true,
   },
+  insight_published: {
+    label: 'New Insight Published',
+    description: 'Notify when a fresh AI recommendation appears',
+    icon: Zap,
+    color: 'purple',
+    default: true,
+  },
 }
 
 export default function NotificationPreferences({ currentPreferences = {}, onSave }) {
   const [preferences, setPreferences] = useState(currentPreferences)
   const [saving, setSaving] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushCount, setPushCount] = useState(0)
+
+  useEffect(() => {
+    let mounted = true
+
+    async function loadPushStatus() {
+      if (!isPushSupported()) {
+        if (mounted) {
+          setPushEnabled(false)
+          setPushCount(0)
+        }
+        return
+      }
+
+      try {
+        const status = await getPushStatus()
+        if (mounted) {
+          setPushEnabled(Boolean(status.enabled))
+          setPushCount(Number(status.count || 0))
+        }
+      } catch {
+        if (mounted) {
+          setPushEnabled(false)
+          setPushCount(0)
+        }
+      }
+    }
+
+    loadPushStatus()
+    return () => { mounted = false }
+  }, [])
 
   const handleToggle = (type) => {
     setPreferences({
@@ -73,6 +127,60 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
     }
   }
 
+  const enablePush = async () => {
+    setPushBusy(true)
+    try {
+      const ok = await subscribeToPush()
+      if (!ok) {
+        toast.error('Push permission not granted or VAPID key is missing')
+        return
+      }
+
+      setPushEnabled(true)
+      const status = await getPushStatus()
+      setPushCount(Number(status.count || 0))
+      await sendTestPush()
+      toast.success('Push notifications enabled for this device')
+    } catch (error) {
+      toast.error('Failed to enable push notifications')
+      console.error(error)
+    } finally {
+      setPushBusy(false)
+    }
+  }
+
+  const disablePush = async () => {
+    setPushBusy(true)
+    try {
+      await unsubscribeFromPush()
+      setPushEnabled(false)
+      setPushCount(0)
+      toast.success('Push notifications disabled on this device')
+    } catch (error) {
+      toast.error('Failed to disable push notifications')
+      console.error(error)
+    } finally {
+      setPushBusy(false)
+    }
+  }
+
+  const triggerTestPush = async () => {
+    setPushBusy(true)
+    try {
+      const sent = await sendTestPush()
+      if (sent > 0) {
+        toast.success('Test push sent')
+      } else {
+        toast.error('No active push subscription for this device')
+      }
+    } catch (error) {
+      toast.error('Failed to send test push')
+      console.error(error)
+    } finally {
+      setPushBusy(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -80,6 +188,47 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
         <p className="text-sm text-slate-600">
           Choose which notifications keep you engaged and motivated
         </p>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Browser & Mobile Push</p>
+            <p className="text-xs text-slate-600 mt-1">
+              {isPushSupported()
+                ? (pushEnabled ? `Enabled on ${pushCount} device(s)` : 'Disabled on this device')
+                : 'Push is not supported in this browser'}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {!pushEnabled ? (
+              <button
+                onClick={enablePush}
+                disabled={pushBusy || !isPushSupported()}
+                className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              >
+                Enable Push
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={triggerTestPush}
+                  disabled={pushBusy}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
+                >
+                  Send Test
+                </button>
+                <button
+                  onClick={disablePush}
+                  disabled={pushBusy}
+                  className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                >
+                  Disable Push
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Notifications List */}
@@ -148,6 +297,7 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
         <p className="text-xs font-semibold text-slate-600 mb-2">💡 HOW WE NOTIFY:</p>
         <ul className="text-xs text-slate-600 space-y-1">
           <li>✓ In-app notifications appear while you use the app</li>
+          <li>✓ Browser/mobile push works after you enable permission on this device</li>
           <li>✓ Email reminders sent to your registered email</li>
           <li>✓ No spam - we respect your time</li>
           <li>✓ You control everything here</li>

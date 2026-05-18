@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     sentry_traces_sample_rate: float = 0.1
     frontend_base_url: str = "https://vitaloop.today"
     crm_base_url: str = "https://crm.vitaloop.today"
+    webpush_vapid_public_key: str = ""
+    webpush_vapid_private_key: str = ""
+    webpush_vapid_subject: str = "mailto:support@vitaloop.today"
+    webpush_dispatch_secret: str = ""
 
     @property
     def origins_list(self) -> List[str]:
