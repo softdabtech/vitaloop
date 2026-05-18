@@ -811,7 +811,7 @@ export default function Landing() {
         <section className="mx-auto w-full max-w-[990px] px-4 pb-4 pt-10 sm:px-6 md:pt-14">
           <motion.div
             {...fadeUp(reduced)}
-            className="rounded-3xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white p-6 md:p-8"
+            className="overflow-hidden rounded-3xl border border-emerald-200 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.16),transparent_34%),linear-gradient(135deg,#ecfdf5,#ffffff_50%,#f8fafc)] p-6 md:p-8"
           >
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
               <Shield className="h-3.5 w-3.5" />
@@ -821,18 +821,76 @@ export default function Landing() {
               How we store your data
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700 md:text-base">
-              Your health data is never sold. VITALOOP uses strict access controls and secure-by-default processing so every lab record stays protected and visible only to you.
+              VITALOOP is built around privacy-by-design. We follow modern healthcare data protection standards, use strict access controls, and keep your records encrypted in transit and at rest.
             </p>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              {["Encrypted data transfer", "Row-level access controls (RLS)", "You can request account and data deletion", "GDPR and HIPAA compliance", "Regular security audits", "Multi-factor authentication (MFA)"].map((item) => (
-                <div
-                  key={item}
-                  className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-medium text-slate-700"
-                >
-                  {item}
-                </div>
-              ))}
+            <div className="mt-4 inline-flex items-start gap-2 rounded-2xl border border-emerald-200/80 bg-white/90 px-4 py-3 text-sm text-slate-700">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+              <span>
+                We do not sell or share your personal health data with third parties for advertising or data brokerage.
+              </span>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                {
+                  title: 'Encryption by default',
+                  body: 'TLS in transit and encrypted storage at rest for sensitive records.',
+                  icon: Lock,
+                  tone: 'from-emerald-500/20 to-teal-500/10 text-emerald-700',
+                },
+                {
+                  title: 'Strict access control',
+                  body: 'Row-level policies and role-based permissions isolate every user workspace.',
+                  icon: ShieldCheck,
+                  tone: 'from-cyan-500/20 to-sky-500/10 text-cyan-700',
+                },
+                {
+                  title: 'Security standards',
+                  body: 'Aligned with industry-standard safeguards (GDPR principles and HIPAA-style controls).',
+                  icon: FileText,
+                  tone: 'from-indigo-500/20 to-blue-500/10 text-indigo-700',
+                },
+                {
+                  title: 'Security monitoring',
+                  body: 'Ongoing monitoring, audit trails, and regular security hardening reviews.',
+                  icon: Clock3,
+                  tone: 'from-amber-500/20 to-orange-500/10 text-amber-700',
+                },
+                {
+                  title: 'User data rights',
+                  body: 'You can request export or deletion of your account data at any time.',
+                  icon: CheckCircle2,
+                  tone: 'from-violet-500/20 to-fuchsia-500/10 text-violet-700',
+                },
+                {
+                  title: 'No third-party resale',
+                  body: 'Your health data is never sold and never shared with ad networks.',
+                  icon: Shield,
+                  tone: 'from-rose-500/20 to-pink-500/10 text-rose-700',
+                },
+              ].map((item) => {
+                const Icon = item.icon
+                return (
+                  <motion.div
+                    key={item.title}
+                    whileHover={reduced ? undefined : { y: -3, scale: 1.01 }}
+                    transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                    className="group relative overflow-hidden rounded-2xl border border-emerald-200 bg-white/95 p-4 shadow-[0_1px_0_rgba(16,185,129,0.08)]"
+                  >
+                    <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_45%)]" />
+                    <div className="flex items-start gap-3">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${item.tone} ring-1 ring-black/5`}>
+                        <Icon className="h-4.5 w-4.5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900 tracking-tight">{item.title}</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-600">{item.body}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )
+              })}
             </div>
           </motion.div>
         </section>
