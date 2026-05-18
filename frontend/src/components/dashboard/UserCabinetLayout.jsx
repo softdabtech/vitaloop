@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Crown, LogOut, Menu } from 'lucide-react'
 import UserDashboardSidebar from './UserDashboardSidebar.jsx'
@@ -8,6 +8,18 @@ import { useAuth } from '../../hooks/useAuth.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { buildSubscriptionPath, getCabinetUpgradeTarget } from '../../lib/subscriptionFlow.js'
 import '../../styles/dashboard2026.css'
+
+const CRM_BASE_URL = (import.meta.env.VITE_CRM_BASE_URL || 'https://crm.vitaloop.today').replace(/\/$/, '')
+const CRM_ROLES = new Set(['super_admin', 'admin', 'org_admin', 'org_owner', 'client_admin', 'manager', 'practitioner'])
+
+function isCrmRole(user) {
+  if (!user) return false
+  const meta = user.user_metadata || {}
+  const app = user.app_metadata || {}
+  if (meta.is_super_admin || app.is_super_admin) return true
+  const role = String(meta.global_role || app.global_role || meta.role || app.role || '').toLowerCase()
+  return CRM_ROLES.has(role)
+}
 
 const PAGE_META = {
   '/dashboard': { title: 'Dashboard', subtitle: null },
@@ -41,6 +53,13 @@ export default function UserCabinetLayout({ children }) {
   const upgradeTarget = getCabinetUpgradeTarget(planName)
 
   const pageMeta = useMemo(() => resolvePageMeta(location.pathname), [location.pathname])
+
+  // CRM-role users (super_admin, practitioner, etc.) should not access the user cabinet
+  useEffect(() => {
+    if (user && isCrmRole(user)) {
+      window.location.assign(CRM_BASE_URL)
+    }
+  }, [user])
 
   async function handleLogout() {
     try {
