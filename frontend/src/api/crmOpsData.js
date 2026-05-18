@@ -11,3 +11,25 @@ export function syncUsersToOps() {
 export function ensureTrigger() {
   return crmClient.post('/crm/ops/ensure-trigger', {})
 }
+
+export function getClaudeUsage(params = {}) {
+  const query = new URLSearchParams()
+  if (params.days) query.set('days', String(params.days))
+  const suffix = query.toString() ? `?${query.toString()}` : ''
+  return crmClient.get(`/crm/ops/claude-usage${suffix}`)
+}
+
+export function getActiveClientActivity(params = {}) {
+  const query = new URLSearchParams()
+  if (params.days) query.set('days', String(params.days))
+  if (params.limit) query.set('limit', String(params.limit))
+  const suffix = query.toString() ? `?${query.toString()}` : ''
+  return crmClient.get(`/crm/ops/active-client-activity${suffix}`)
+}
+
+export function getUserActivityDetail(userId, params = {}) {
+  const query = new URLSearchParams()
+  if (params.days) query.set('days', String(params.days))
+  const suffix = query.toString() ? `?${query.toString()}` : ''
+  return crmClient.get(`/crm/ops/users/${userId}/activity${suffix}`)
+}
