@@ -1,0 +1,437 @@
+{
+  "timestamp": "2026-05-18T07:10:45.329Z",
+  "structure": {},
+  "pages": [
+    {
+      "file": "About.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 17588
+    },
+    {
+      "file": "AssignmentDetails.jsx",
+      "hasAuth": true,
+      "hasNavigation": true,
+      "hasAPI": true,
+      "hasState": true,
+      "size": 5620
+    },
+    {
+      "file": "Assignments.jsx",
+      "hasAuth": true,
+      "hasNavigation": true,
+      "hasAPI": true,
+      "hasState": true,
+      "size": 13821
+    },
+    {
+      "file": "Avatar.jsx",
+      "hasAuth": false,
+      "hasNavigation": false,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 2825
+    },
+    {
+      "file": "BillingHistory.jsx",
+      "hasAuth": true,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 5141
+    },
+    {
+      "file": "ClientAdmin.jsx",
+      "hasAuth": true,
+      "hasNavigation": false,
+      "hasAPI": true,
+      "hasState": true,
+      "size": 16384
+    },
+    {
+      "file": "EmailConfirmation.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 12916
+    },
+    {
+      "file": "ExampleReport.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 12959
+    },
+    {
+      "file": "FAQ.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 13339
+    },
+    {
+      "file": "Features.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 8644
+    },
+    {
+      "file": "ForInvestors.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 26197
+    },
+    {
+      "file": "ForNutritionists.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 33492
+    },
+    {
+      "file": "HealthProfile.jsx",
+      "hasAuth": true,
+      "hasNavigation": false,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 19366
+    },
+    {
+      "file": "Help.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 26986
+    },
+    {
+      "file": "HowItWorks.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 14456
+    },
+    {
+      "file": "Insights.jsx",
+      "hasAuth": false,
+      "hasNavigation": false,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 15976
+    },
+    {
+      "file": "Investors.jsx",
+      "hasAuth": false,
+      "hasNavigation": false,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 219
+    },
+    {
+      "file": "LabResultsList.jsx",
+      "hasAuth": true,
+      "hasNavigation": true,
+      "hasAPI": true,
+      "hasState": true,
+      "size": 12840
+    },
+    {
+      "file": "Landing.jsx",
+      "hasAuth": true,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 68216
+    },
+    {
+      "file": "Login.jsx",
+      "hasAuth": true,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 35529
+    },
+    {
+      "file": "NotFound.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 2359
+    },
+    {
+      "file": "Onboarding.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 37702
+    },
+    {
+      "file": "Pricing.jsx",
+      "hasAuth": false,
+      "hasNavigation": false,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 213
+    },
+    {
+      "file": "Privacy.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 4016
+    },
+    {
+      "file": "Product.jsx",
+      "hasAuth": false,
+      "hasNavigation": false,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 214
+    },
+    {
+      "file": "Progress.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 11366
+    },
+    {
+      "file": "ProtocolPage.jsx",
+      "hasAuth": true,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 32982
+    },
+    {
+      "file": "Questionnaire.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 14438
+    },
+    {
+      "file": "Results.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": true,
+      "hasState": true,
+      "size": 35003
+    },
+    {
+      "file": "Settings.jsx",
+      "hasAuth": true,
+      "hasNavigation": false,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 14081
+    },
+    {
+      "file": "Stories.jsx",
+      "hasAuth": false,
+      "hasNavigation": false,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 223
+    },
+    {
+      "file": "Subscription.jsx",
+      "hasAuth": true,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 21030
+    },
+    {
+      "file": "Terms.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 4168
+    },
+    {
+      "file": "Upload.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 19409
+    },
+    {
+      "file": "UserDashboard.jsx",
+      "hasAuth": true,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 43705
+    },
+    {
+      "file": "WeeklyCheckIn.jsx",
+      "hasAuth": true,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 11883
+    }
+  ],
+  "routes": [],
+  "components": [
+    "AchievementBadge.jsx",
+    "AchievementBadges.jsx",
+    "AchievementShareModal.jsx",
+    "AnalysisProgressIndicator.jsx",
+    "AnimatedSection.jsx",
+    "AppLoadingScreen.jsx",
+    "BiomarkerAlertsDisplay.jsx",
+    "BiomarkerCard.jsx",
+    "BiomarkerComparison.jsx",
+    "BiomarkerContextTooltip.jsx",
+    "BiomarkerMap.jsx",
+    "BiomarkerRangeBars.jsx",
+    "BodyAvatar.jsx",
+    "Breadcrumb.jsx",
+    "DisclaimerModal.jsx",
+    "EmptyState.jsx",
+    "ErrorBoundary.jsx",
+    "FeatureGate.jsx",
+    "FriendComparison.jsx",
+    "HealthTipsDisplay.jsx",
+    "InstallPrompt.jsx",
+    "Leaderboard.jsx",
+    "LockedFeatureOverlay.jsx",
+    "ManualBiomarkerEntry.jsx",
+    "NotificationPreferences.jsx",
+    "OnboardingTour.jsx",
+    "Paywall.jsx",
+    "PaywallModal.jsx",
+    "PersonalizedHealthTips.jsx",
+    "PractitionerShareModal.jsx",
+    "ProgressChart.jsx",
+    "ProgressPhotoGallery.jsx",
+    "ProtocolCard.jsx",
+    "RedFlagBanner.jsx",
+    "ReferralCard.jsx",
+    "Seo.jsx",
+    "Skeletons.jsx",
+    "SocialShareCard.jsx",
+    "StreakCalendar.jsx",
+    "StreakCounter.jsx",
+    "SupportChat.jsx",
+    "SymptomSelector.jsx",
+    "TrendAnalyticsDashboard.jsx",
+    "UploadZone.jsx",
+    "WeeklyProgressReport.jsx",
+    "admin/AdminShell.jsx",
+    "dashboard/AnimatedCounter.jsx",
+    "dashboard/AssignmentCard.jsx",
+    "dashboard/CabinetPageHeader.jsx",
+    "dashboard/GradientSection.jsx",
+    "dashboard/HealthChart.jsx",
+    "dashboard/MetricBar.jsx",
+    "dashboard/MobileBottomBar.jsx",
+    "dashboard/PWAInstallBanner.jsx",
+    "dashboard/PremiumCard.jsx",
+    "dashboard/PremiumEmptyDashboardState.jsx",
+    "dashboard/ProgressTimeline.jsx",
+    "dashboard/QuickActionsPanel.jsx",
+    "dashboard/RecommendationsPanel.jsx",
+    "dashboard/StatCard.jsx",
+    "dashboard/StatusBadge.jsx",
+    "dashboard/UserCabinetLayout.jsx",
+    "dashboard/UserDashboardSidebar.jsx",
+    "landing/AnimatedFAQ.jsx",
+    "landing/AnimatedHero.jsx",
+    "landing/AvatarExamples.jsx",
+    "landing/AvatarSection.jsx",
+    "landing/BodyAvatar.jsx",
+    "landing/ComparisonTable.jsx",
+    "landing/FAQ.jsx",
+    "landing/FinalCTA.jsx",
+    "landing/Footer.jsx",
+    "landing/Hero.jsx",
+    "landing/HowItWorks.jsx",
+    "landing/HowItWorksTimeline.jsx",
+    "landing/InteractivePricing.jsx",
+    "landing/LightHero.jsx",
+    "landing/LongevitySection.jsx",
+    "landing/Navbar.jsx",
+    "landing/NeonBody.jsx",
+    "landing/PageHeader.jsx",
+    "landing/PartnersSection.jsx",
+    "landing/PricingSection.jsx",
+    "landing/ProblemSection.jsx",
+    "landing/ProtocolFeatureSection.jsx",
+    "landing/ScienceSection.jsx",
+    "landing/SocialProofTicker.jsx",
+    "landing/StatsBar.jsx",
+    "landing/Testimonials.jsx",
+    "landing/TestimonialsCarousel.jsx",
+    "landing/TrustedServicesSection.jsx",
+    "landing/ValueBlock.jsx",
+    "tour/HintBanner.jsx"
+  ],
+  "features": [
+    {
+      "name": "Authentication",
+      "implemented": true
+    },
+    {
+      "name": "Dashboard",
+      "implemented": true
+    },
+    {
+      "name": "File Upload",
+      "implemented": true
+    },
+    {
+      "name": "Results Display",
+      "implemented": true
+    },
+    {
+      "name": "Protocol Generation",
+      "implemented": true
+    },
+    {
+      "name": "User Profile",
+      "implemented": true
+    },
+    {
+      "name": "Payments",
+      "implemented": false
+    },
+    {
+      "name": "Notifications",
+      "implemented": false
+    }
+  ],
+  "issues": [
+    "Potential missing key prop in /pages/Avatar.jsx"
+  ],
+  "missing": [
+    "Cabinet page not found"
+  ],
+  "recommendations": [
+    "Clean up debug code and fix deprecated patterns",
+    "Ensure all routes have proper authentication guards",
+    "Add loading states to all async operations",
+    "Implement error boundaries for crash handling",
+    "Add proper logging for analytics"
+  ]
+}
