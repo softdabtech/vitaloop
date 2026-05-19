@@ -847,7 +847,7 @@ export default function Landing() {
                 },
                 {
                   title: 'Security standards',
-                  body: 'Aligned with industry-standard safeguards (GDPR principles and HIPAA-style controls).',
+                  body: 'Aligned with industry-standard safeguards (GDPR principles and healthcare-grade security practices).',
                   icon: FileText,
                   tone: 'from-indigo-500/20 to-blue-500/10 text-indigo-700',
                 },
@@ -891,6 +891,23 @@ export default function Landing() {
                   </motion.div>
                 )
               })}
+            </div>
+
+            <div className="mt-5 inline-flex items-start gap-2 rounded-2xl border border-emerald-200/80 bg-white/90 px-4 py-3 text-sm text-slate-700">
+              <FileText className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+              <span>
+                Read our full Privacy Policy{' '}
+                <a href="/privacy-policy" className="font-semibold text-emerald-700 underline-offset-2 hover:text-emerald-600 hover:underline">
+                  here
+                </a>
+                .
+              </span>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm leading-6 text-amber-900">
+              <p>VITALOOP is a wellness tool, not a medical device.</p>
+              <p>We follow healthcare-grade security practices but are not subject to HIPAA.</p>
+              <p>Always consult qualified healthcare providers for medical decisions.</p>
             </div>
           </motion.div>
         </section>

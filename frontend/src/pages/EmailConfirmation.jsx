@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import { resolvePostLoginDestination, navigateToResolvedPath } from '../auth/postLogin'
 import { notifyRegistrationAlert } from '../auth/registrationAlert'
+import Seo from '../components/Seo.jsx'
 
 function getBrowserOrigin() {
   if (typeof window === 'undefined') {
@@ -203,16 +204,23 @@ export default function EmailConfirmation() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100svh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Premium Display", sans-serif',
-        backgroundColor: '#f5f5f5',
-      }}
-    >
+    <>
+      <Seo
+        title="Email Confirmation | VITALOOP"
+        description="Email confirmation flow for your VITALOOP account."
+        path="/auth/confirmation"
+        noindex
+      />
+      <div
+        style={{
+          minHeight: '100svh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Premium Display", sans-serif',
+          backgroundColor: '#f5f5f5',
+        }}
+      >
       <div
         style={{
           padding: '40px',
@@ -411,6 +419,7 @@ export default function EmailConfirmation() {
 
         {/* expired state is folded into generic error flow */}
       </div>
-    </div>
+      </div>
+    </>
   )
 }

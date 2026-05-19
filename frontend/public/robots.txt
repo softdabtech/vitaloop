@@ -23,5 +23,8 @@ Disallow: /onboarding
 Disallow: /questionnaire
 Disallow: /admin
 Disallow: /ops
+Disallow: /login
+Disallow: /auth/confirmation
+Disallow: /privacy
 
 Sitemap: https://vitaloop.today/sitemap.xml
