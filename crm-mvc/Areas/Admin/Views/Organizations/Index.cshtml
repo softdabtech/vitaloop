@@ -79,6 +79,7 @@
             .ToList();
     }
 
+    <div id="orgs-table-wrap">
     @await Html.PartialAsync("~/Views/Shared/Ui/_EditableTable.cshtml", new EditableTableViewModel
     {
         Title = "Organizations",
@@ -86,6 +87,7 @@
         EmptyMessage = "You don't have access to any organizations yet.",
         Rows = rows,
     })
+    </div>
 
     @if ((Model?.Organizations.Count ?? 0) == 0 && Model?.IsSuperAdmin == true)
     {
@@ -94,6 +96,10 @@
         </div>
     }
 </div>
+
+<script>
+  voInitTable({ wrapId: 'orgs-table-wrap', pageSize: 20, searchPlaceholder: 'Search organizations…' });
+</script>
 
 <style>
     .btn {

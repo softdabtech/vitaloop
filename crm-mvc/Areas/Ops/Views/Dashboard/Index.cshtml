@@ -32,7 +32,10 @@
       <h3 style="margin:0;">Rate Limiter Runtime</h3>
       <p id="ops-last-updated" style="margin:6px 0 0 0; opacity:.7; font-size:.85rem;">Last updated: @Model.LastUpdatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</p>
     </div>
-    <button id="ops-refresh-button" type="button" class="vo-btn vo-btn-secondary">Refresh now</button>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span id="ops-api-latency" style="font-size:.82rem;"></span>
+      <button id="ops-refresh-button" type="button" class="vo-btn vo-btn-secondary">Refresh now</button>
+    </div>
   </div>
   @if (!Model.RuntimeReadiness.Available)
   {
@@ -135,6 +138,7 @@
   }).ToList();
 }
 
+<div id="global-users-wrap">
 @await Html.PartialAsync("~/Views/Shared/Ui/_EditableTable.cshtml", new EditableTableViewModel
 {
   Title = "Global Users",
@@ -142,7 +146,9 @@
   EmptyMessage = "No global users found.",
   Rows = globalUserRows,
 })
+</div>
 
+<div id="ops-audit-wrap">
 @await Html.PartialAsync("~/Views/Shared/Ui/_DataTableShell.cshtml", new DataTableShellViewModel {
   Title = "Recent Activity Log",
   Columns = new[] { "When", "Action", "Entity", "Entity Id", "User", "Org" },
@@ -158,6 +164,7 @@
     })
     .ToList()
 })
+</div>
 
 <script>
   (function () {
@@ -210,7 +217,31 @@
     };
 
     document.getElementById('ops-refresh-button')?.addEventListener('click', refreshSnapshot);
-    window.setInterval(refreshSnapshot, 30000);
+    window.setInterval(refreshSnapshot, 60000);
+  })();
+
+  // ── Global Users: search + pagination + copy UUID ──────────────────────────
+  voInitTable({ wrapId: 'global-users-wrap', pageSize: 25, searchPlaceholder: 'Search by name, email, role…' });
+  voInitCopyUuid('global-users-wrap');
+
+  // ── Audit log: search + pagination ────────────────────────────────────────
+  voInitTable({ wrapId: 'ops-audit-wrap', pageSize: 30, searchPlaceholder: 'Search audit events…' });
+
+  // ── Service API latency indicator ─────────────────────────────────────────
+  (async function checkApiLatency() {
+    const el = document.getElementById('ops-api-latency');
+    if (!el) return;
+    const t0 = performance.now();
+    try {
+      const r = await fetch('/ops/live-snapshot', { credentials: 'same-origin' });
+      const ms = Math.round(performance.now() - t0);
+      const tone = ms < 400 ? '#86efac' : ms < 1200 ? '#fde68a' : '#fca5a5';
+      el.innerHTML = r.ok
+        ? `<span style="color:${tone}">✓ API OK</span> <span style="opacity:.6;">${ms} ms</span>`
+        : `<span style="color:#fca5a5;">✗ API ${r.status}</span>`;
+    } catch {
+      el.innerHTML = '<span style="color:#fca5a5;">✗ API unreachable</span>';
+    }
   })();
 </script>
 

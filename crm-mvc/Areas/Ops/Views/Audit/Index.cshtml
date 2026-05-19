@@ -22,6 +22,7 @@
   <button type="submit" class="vo-btn vo-btn-primary">Apply</button>
 </form>
 
+<div id="audit-log-wrap">
 @await Html.PartialAsync("~/Views/Shared/Ui/_DataTableShell.cshtml", new DataTableShellViewModel {
   Title = "Audit Events",
   Columns = new[] { "When", "Action", "Entity", "Entity Id", "User", "Org" },
@@ -37,9 +38,26 @@
     })
     .ToList()
 })
+</div>
+
+<div style="display:flex; align-items:center; gap:12px; margin-top:4px; font-size:.82rem; opacity:.7;">
+  <span>Auto-refresh: <span id="audit-countdown">60</span>s</span>
+  <button type="button" class="vo-btn vo-btn-secondary" id="audit-refresh-now" style="padding:3px 10px; font-size:.8rem;">Refresh now</button>
+</div>
 
 <script>
-  setTimeout(function () {
+  voInitTable({ wrapId: 'audit-log-wrap', pageSize: 50, searchPlaceholder: 'Search events, users, actions…' });
+  voInitCopyUuid('audit-log-wrap');
+
+  let countdown = 60;
+  const countEl = document.getElementById('audit-countdown');
+  const interval = setInterval(() => {
+    countdown--;
+    if (countEl) countEl.textContent = countdown;
+    if (countdown <= 0) { clearInterval(interval); window.location.reload(); }
+  }, 1000);
+  document.getElementById('audit-refresh-now')?.addEventListener('click', () => {
+    clearInterval(interval);
     window.location.reload();
-  }, 15000);
+  });
 </script>

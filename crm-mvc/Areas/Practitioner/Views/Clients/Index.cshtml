@@ -11,6 +11,7 @@
   Eyebrow = "Practitioner"
 })
 
+<div id="practitioner-clients-wrap">
 @await Html.PartialAsync("~/Views/Shared/Ui/_DataTableShell.cshtml", new DataTableShellViewModel {
   Title = "Assigned Clients",
   Columns = new[] { "Client", "Status", "Last Updated", "Profile" },
@@ -24,21 +25,8 @@
     })
     .ToList()
 })
+</div>
 
-@if (Model.Clients.Any())
-{
-  <div style="margin-top:var(--vo-space-4)">
-    <ul style="list-style:none;padding:0;margin:0;display:grid;gap:12px;">
-      @foreach (var client in Model.Clients)
-      {
-        <li style="display:flex;justify-content:space-between;align-items:center;border:1px solid var(--vo-gray-200);border-radius:12px;padding:12px 14px;background:#fff;">
-          <div>
-            <div style="font-weight:600">@client.ClientName</div>
-            <div style="font-size:12px;color:var(--vo-gray-500)">Status: @client.Status</div>
-          </div>
-          <a class="vo-btn vo-btn-primary" href="/practitioner/clients/@client.Id">Open Profile</a>
-        </li>
-      }
-    </ul>
-  </div>
-}
+<script>
+  voInitTable({ wrapId: 'practitioner-clients-wrap', pageSize: 20, searchPlaceholder: 'Search clients…' });
+</script>

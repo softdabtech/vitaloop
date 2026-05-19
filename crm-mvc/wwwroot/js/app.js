@@ -186,3 +186,101 @@
   });
 
 })();
+
+// ─── Table: live search + pagination (global utility) ──────────────────────
+window.voInitTable = function ({ wrapId, pageSize = 25, searchPlaceholder = 'Search…' }) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  const table = wrap.querySelector('table.vo-table');
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+
+  // Inject search bar before table section
+  const section = wrap.querySelector('section.vo-card') || wrap;
+  const cardHead = section.querySelector('.vo-card-head');
+
+  const searchWrap = document.createElement('div');
+  searchWrap.style.cssText = 'padding:8px 0 4px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;';
+  searchWrap.innerHTML = `
+    <input id="vosearch-${wrapId}" type="search" placeholder="${searchPlaceholder}"
+      style="flex:1; min-width:180px; max-width:340px; padding:6px 10px; border:1px solid rgba(148,163,184,.35); border-radius:6px; background:transparent; color:inherit; font-size:.85rem;"
+      aria-label="Filter table rows" />
+    <span id="vosearch-count-${wrapId}" style="font-size:.8rem; opacity:.65;"></span>`;
+  if (cardHead) {
+    cardHead.after(searchWrap);
+  } else {
+    section.prepend(searchWrap);
+  }
+
+  const input = document.getElementById(`vosearch-${wrapId}`);
+  const countEl = document.getElementById(`vosearch-count-${wrapId}`);
+
+  let allRows = Array.from(tbody.querySelectorAll('tr'));
+  let filtered = allRows.slice();
+  let page = 1;
+
+  function render() {
+    const total = filtered.length;
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    const start = (page - 1) * pageSize;
+    allRows.forEach(r => { r.style.display = 'none'; });
+    filtered.slice(start, start + pageSize).forEach(r => { r.style.display = ''; });
+    if (countEl) countEl.textContent = total !== allRows.length ? `${total} / ${allRows.length} rows` : `${total} rows`;
+
+    let pager = wrap.querySelector('.vo-table-pager');
+    if (!pager) {
+      pager = document.createElement('div');
+      pager.className = 'vo-table-pager';
+      pager.style.cssText = 'display:flex;gap:8px;align-items:center;padding:6px 0;font-size:.82rem;flex-wrap:wrap;';
+      const tableWrap = section.querySelector('.vo-table-wrap');
+      if (tableWrap) tableWrap.after(pager);
+    }
+    if (pages <= 1 && total <= pageSize) {
+      pager.innerHTML = '';
+      pager.style.display = 'none';
+    } else {
+      pager.style.display = 'flex';
+      pager.innerHTML = `
+        <button class="vo-btn vo-btn-secondary" ${page <= 1 ? 'disabled' : ''} data-dir="-1" style="padding:3px 10px;">‹ Prev</button>
+        <span style="opacity:.7;">Page ${page} / ${pages} · ${total} rows</span>
+        <button class="vo-btn vo-btn-secondary" ${page >= pages ? 'disabled' : ''} data-dir="1" style="padding:3px 10px;">Next ›</button>`;
+      pager.querySelectorAll('button[data-dir]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          page = Math.max(1, Math.min(pages, page + parseInt(btn.dataset.dir)));
+          render();
+        });
+      });
+    }
+  }
+
+  function applyFilter() {
+    const q = (input?.value ?? '').trim().toLowerCase();
+    filtered = q ? allRows.filter(r => r.textContent.toLowerCase().includes(q)) : allRows.slice();
+    page = 1;
+    render();
+  }
+
+  input?.addEventListener('input', applyFilter);
+  applyFilter();
+};
+
+// ─── Copy to clipboard (UUID cells) ────────────────────────────────────────
+window.voInitCopyUuid = function (wrapId) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  wrap.querySelectorAll('td').forEach(td => {
+    const txt = td.textContent?.trim() ?? '';
+    if (!UUID_RE.test(txt)) return;
+    td.style.cursor = 'pointer';
+    td.title = 'Click to copy UUID';
+    td.addEventListener('click', () => {
+      navigator.clipboard?.writeText(txt).then(() => {
+        const orig = td.textContent;
+        td.textContent = '✓ copied';
+        setTimeout(() => { td.textContent = orig; }, 1200);
+      });
+    });
+  });
+};

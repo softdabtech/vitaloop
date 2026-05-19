@@ -110,6 +110,7 @@
             }
         }).ToList();
 
+        <div id="team-members-wrap">
         @await Html.PartialAsync("~/Views/Shared/Ui/_EditableTable.cshtml", new EditableTableViewModel
         {
             Title = "Team Members",
@@ -117,6 +118,7 @@
             EmptyMessage = "No team members found.",
             Rows = rows,
         })
+        </div>
     }
     else
     {
@@ -128,6 +130,10 @@
         </div>
     }
 </div>
+
+<script>
+  voInitTable({ wrapId: 'team-members-wrap', pageSize: 25, searchPlaceholder: 'Search by name, email, role…' });
+</script>
 
 <style>
     .page-header {
