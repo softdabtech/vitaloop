@@ -141,4 +141,13 @@ public sealed class MembershipService
 
         return await _gateway.GetRuntimeReadiness(ct);
     }
+
+    public async Task<System.Text.Json.JsonDocument?> GetClaudeUsage(int days = 30, CancellationToken ct = default)
+        => await _gateway.GetClaudeUsage(days, ct);
+
+    public async Task<System.Text.Json.JsonDocument?> GetClientActivity(int days = 30, int limit = 200, CancellationToken ct = default)
+        => await _gateway.GetClientActivity(days, limit, ct);
+
+    public async Task<System.Text.Json.JsonDocument?> GetUserActivityDetail(Guid userId, int days = 90, CancellationToken ct = default)
+        => await _gateway.GetUserActivityDetail(userId, days, ct);
 }

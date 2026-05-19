@@ -85,6 +85,61 @@ public class DashboardController : Controller
         return View(model);
     }
 
+    [HttpGet("claude-usage-data")]
+    public async Task<IActionResult> ClaudeUsageData([FromQuery] int days = 30, CancellationToken ct = default)
+    {
+        await _userContextAccessor.GetOrThrow(ct);
+        try
+        {
+            var doc = await _membershipService.GetClaudeUsage(days, ct);
+            if (doc is null)
+                return Json(new { tracked = false, note = "Backend returned no data." });
+            var raw = doc.RootElement.GetRawText();
+            return Content(raw, "application/json");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch Claude usage");
+            return Json(new { tracked = false, note = "Failed to load Claude usage metrics." });
+        }
+    }
+
+    [HttpGet("client-activity-data")]
+    public async Task<IActionResult> ClientActivityData([FromQuery] int days = 30, [FromQuery] int limit = 200, CancellationToken ct = default)
+    {
+        await _userContextAccessor.GetOrThrow(ct);
+        try
+        {
+            var doc = await _membershipService.GetClientActivity(days, limit, ct);
+            if (doc is null)
+                return Json(new { summary = new { }, items = Array.Empty<object>() });
+            return Content(doc.RootElement.GetRawText(), "application/json");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch client activity");
+            return Json(new { summary = new { }, items = Array.Empty<object>() });
+        }
+    }
+
+    [HttpGet("users/{userId}/activity-data")]
+    public async Task<IActionResult> UserActivityData(Guid userId, [FromQuery] int days = 90, CancellationToken ct = default)
+    {
+        await _userContextAccessor.GetOrThrow(ct);
+        try
+        {
+            var doc = await _membershipService.GetUserActivityDetail(userId, days, ct);
+            if (doc is null)
+                return Json(new { error = "Not found" });
+            return Content(doc.RootElement.GetRawText(), "application/json");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch user activity for {UserId}", userId);
+            return Json(new { error = "Failed to load user activity." });
+        }
+    }
+
     [HttpGet("live-snapshot")]
     public async Task<IActionResult> LiveSnapshot(CancellationToken ct)
     {
