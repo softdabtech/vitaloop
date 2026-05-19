@@ -31,4 +31,8 @@ public interface ICrmDataGateway
     Task<PlatformOverview?> GetPlatformOverview(CancellationToken ct = default);
     Task<IReadOnlyList<AuditLogEntry>> GetAuditLogs(Guid? organizationId = null, int limit = 200, CancellationToken ct = default);
     Task<RuntimeReadinessSnapshot?> GetRuntimeReadiness(CancellationToken ct = default);
+
+    Task<System.Text.Json.JsonDocument?> GetClaudeUsage(int days = 30, CancellationToken ct = default);
+    Task<System.Text.Json.JsonDocument?> GetClientActivity(int days = 30, int limit = 200, CancellationToken ct = default);
+    Task<System.Text.Json.JsonDocument?> GetUserActivityDetail(Guid userId, int days = 90, CancellationToken ct = default);
 }

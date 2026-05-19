@@ -148,6 +148,31 @@ public sealed class HttpCrmDataGateway : ICrmDataGateway
     public Task<RuntimeReadinessSnapshot?> GetRuntimeReadiness(CancellationToken ct = default)
         => GetSingle<RuntimeReadinessSnapshot>(_options.RuntimeReadinessPath, ct);
 
+    public async Task<System.Text.Json.JsonDocument?> GetClaudeUsage(int days = 30, CancellationToken ct = default)
+    {
+        var safeDays = Math.Clamp(days, 1, 365);
+        var response = await Send(HttpMethod.Get, $"/crm/ops/claude-usage?days={safeDays}", null, ct);
+        if (!response.IsSuccessStatusCode) return null;
+        return await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+    }
+
+    public async Task<System.Text.Json.JsonDocument?> GetClientActivity(int days = 30, int limit = 200, CancellationToken ct = default)
+    {
+        var safeDays = Math.Clamp(days, 1, 365);
+        var safeLimit = Math.Clamp(limit, 10, 500);
+        var response = await Send(HttpMethod.Get, $"/crm/ops/active-client-activity?days={safeDays}&limit={safeLimit}", null, ct);
+        if (!response.IsSuccessStatusCode) return null;
+        return await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+    }
+
+    public async Task<System.Text.Json.JsonDocument?> GetUserActivityDetail(Guid userId, int days = 90, CancellationToken ct = default)
+    {
+        var safeDays = Math.Clamp(days, 1, 365);
+        var response = await Send(HttpMethod.Get, $"/crm/ops/users/{userId}/activity?days={safeDays}", null, ct);
+        if (!response.IsSuccessStatusCode) return null;
+        return await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+    }
+
     public Task<IReadOnlyList<AuditLogEntry>> GetAuditLogs(Guid? organizationId = null, int limit = 200, CancellationToken ct = default)
     {
         var safeLimit = Math.Clamp(limit, 1, 1000);

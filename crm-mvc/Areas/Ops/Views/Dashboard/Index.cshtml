@@ -213,3 +213,210 @@
     window.setInterval(refreshSnapshot, 30000);
   })();
 </script>
+
+<!-- ============================================================
+     CLAUDE TOKEN SPEND
+     ============================================================ -->
+<section class="vo-panel" style="margin-top:var(--vo-space-6);" id="claude-spend-section">
+  <h3 style="margin:0 0 8px;">Claude API Spend <span id="claude-spend-window" style="font-weight:400; font-size:.85rem; opacity:.7;">(last 30 days)</span></h3>
+  <div class="vo-grid two-up" style="margin-bottom:12px;" id="claude-spend-cards">
+    <div id="claude-card-requests" class="vo-stat-card tone-default"><div class="vo-stat-card-label">LLM Requests</div><div class="vo-stat-card-value">—</div></div>
+    <div id="claude-card-prompt" class="vo-stat-card tone-default"><div class="vo-stat-card-label">Prompt Tokens</div><div class="vo-stat-card-value">—</div></div>
+    <div id="claude-card-completion" class="vo-stat-card tone-default"><div class="vo-stat-card-label">Completion Tokens</div><div class="vo-stat-card-value">—</div></div>
+    <div id="claude-card-total" class="vo-stat-card tone-teal"><div class="vo-stat-card-label">Total Tokens</div><div class="vo-stat-card-value">—</div></div>
+  </div>
+  <div id="claude-by-task" style="margin-top:8px;"></div>
+</section>
+
+<!-- ============================================================
+     CLIENT ACTIVITY
+     ============================================================ -->
+<section class="vo-panel" style="margin-top:var(--vo-space-6);" id="client-activity-section">
+  <h3 style="margin:0 0 8px;">Client Activity <span id="client-activity-window" style="font-weight:400; font-size:.85rem; opacity:.7;">(last 30 days)</span></h3>
+  <div class="vo-grid two-up" style="margin-bottom:12px;">
+    <div id="ca-card-users" class="vo-stat-card tone-default"><div class="vo-stat-card-label">Tracked Users</div><div class="vo-stat-card-value">—</div></div>
+    <div id="ca-card-active" class="vo-stat-card tone-teal"><div class="vo-stat-card-label">Active Users</div><div class="vo-stat-card-value">—</div></div>
+    <div id="ca-card-uploads" class="vo-stat-card tone-default"><div class="vo-stat-card-label">Uploads + Check-ins</div><div class="vo-stat-card-value">—</div></div>
+    <div id="ca-card-tokens" class="vo-stat-card tone-default"><div class="vo-stat-card-label">User Claude Tokens</div><div class="vo-stat-card-value">—</div></div>
+  </div>
+  <div id="client-activity-table" style="overflow-x:auto;"></div>
+</section>
+
+<!-- ============================================================
+     USER ACTIVITY MODAL
+     ============================================================ -->
+<div id="user-activity-modal" role="dialog" aria-modal="true" aria-labelledby="user-modal-title"
+  style="display:none; position:fixed; inset:0; z-index:300; background:rgba(2,6,23,.82); backdrop-filter:blur(3px); padding:16px; overflow-y:auto;">
+  <div style="max-width:900px; margin:auto; background:var(--vo-bg-elevated,#101827); border:1px solid rgba(148,163,184,.3); border-radius:12px; padding:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
+      <h3 id="user-modal-title" style="margin:0;">Client activity profile</h3>
+      <button type="button" id="user-modal-close" class="vo-btn vo-btn-secondary" style="flex-shrink:0;">Close</button>
+    </div>
+    <div id="user-modal-body">Loading…</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const fmt = (n) => Number(n || 0).toLocaleString('en-US');
+
+  // ── Claude Spend ──────────────────────────────────────────────────────────
+  async function loadClaudeSpend() {
+    try {
+      const r = await fetch('/ops/claude-usage-data?days=30', { credentials: 'same-origin' });
+      if (!r.ok) return;
+      const d = await r.json();
+      const t = d.totals || {};
+      const setCard = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.querySelector('.vo-stat-card-value').textContent = fmt(value);
+      };
+      setCard('claude-card-requests', t.requests);
+      setCard('claude-card-prompt', t.prompt_tokens);
+      setCard('claude-card-completion', t.completion_tokens);
+      setCard('claude-card-total', t.total_tokens);
+      if (!d.tracked) {
+        const note = document.createElement('p');
+        note.style.cssText = 'margin:4px 0; opacity:.7; font-size:.85rem;';
+        note.textContent = d.note || 'Token tracking migration pending. Apply stage-13 SQL first.';
+        document.getElementById('claude-by-task')?.appendChild(note);
+        return;
+      }
+      const tasks = Array.isArray(d.by_task) ? d.by_task : [];
+      if (tasks.length === 0) return;
+      const table = `<table style="width:100%; border-collapse:collapse; font-size:.85rem;">
+        <thead><tr style="opacity:.6;"><th style="text-align:left; padding:4px 8px;">Task</th><th style="text-align:right; padding:4px 8px;">Requests</th><th style="text-align:right; padding:4px 8px;">Total tokens</th></tr></thead>
+        <tbody>${tasks.slice(0, 10).map(row =>
+          `<tr><td style="padding:4px 8px;">${row.task_name || '—'}</td><td style="text-align:right; padding:4px 8px;">${fmt(row.requests)}</td><td style="text-align:right; padding:4px 8px; color:#fde68a;">${fmt(row.total_tokens)}</td></tr>`
+        ).join('')}</tbody></table>`;
+      document.getElementById('claude-by-task').innerHTML = table;
+    } catch {}
+  }
+
+  // ── Client Activity ───────────────────────────────────────────────────────
+  async function loadClientActivity() {
+    try {
+      const r = await fetch('/ops/client-activity-data?days=30&limit=200', { credentials: 'same-origin' });
+      if (!r.ok) return;
+      const d = await r.json();
+      const s = d.summary || {};
+      const setCard = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.querySelector('.vo-stat-card-value').textContent = fmt(value);
+      };
+      setCard('ca-card-users', s.users);
+      setCard('ca-card-active', s.active_users);
+      setCard('ca-card-uploads', (s.uploads || 0) + (s.checkins || 0));
+      setCard('ca-card-tokens', s.llm_total_tokens);
+
+      const items = Array.isArray(d.items) ? d.items : [];
+      if (items.length === 0) {
+        document.getElementById('client-activity-table').innerHTML = '<p style="opacity:.7; font-size:.9rem; margin:4px 0;">No user activity data yet.</p>';
+        return;
+      }
+      const rows = items.slice(0, 30).map(item => `
+        <tr>
+          <td style="padding:6px 8px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            <strong style="display:block;">${item.full_name || '—'}</strong>
+            <span style="opacity:.65; font-size:.8rem;">${item.email || ''}</span>
+          </td>
+          <td style="padding:6px 8px; text-align:right; color:#93c5fd;">${fmt(item.metrics?.uploads)}</td>
+          <td style="padding:6px 8px; text-align:right; color:#86efac;">${fmt(item.metrics?.checkins)}</td>
+          <td style="padding:6px 8px; text-align:right; color:#fde68a;">${fmt(item.metrics?.llm_total_tokens)}</td>
+          <td style="padding:6px 8px; text-align:right;">
+            <button type="button" class="vo-btn vo-btn-secondary vo-btn-sm open-user-activity"
+              data-user-id="${item.user_id}"
+              data-user-name="${(item.full_name || 'User').replace(/"/g, '&quot;')}"
+              style="font-size:.78rem; padding:4px 8px;">Details</button>
+          </td>
+        </tr>`).join('');
+
+      document.getElementById('client-activity-table').innerHTML = `
+        <table style="width:100%; border-collapse:collapse; font-size:.85rem;">
+          <thead><tr style="opacity:.6;">
+            <th style="text-align:left; padding:6px 8px;">User</th>
+            <th style="text-align:right; padding:6px 8px;">Uploads</th>
+            <th style="text-align:right; padding:6px 8px;">Check-ins</th>
+            <th style="text-align:right; padding:6px 8px;">Claude tokens</th>
+            <th style="padding:6px 8px;"></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+
+      document.querySelectorAll('.open-user-activity').forEach(btn => {
+        btn.addEventListener('click', () => openUserModal(btn.dataset.userId, btn.dataset.userName));
+      });
+    } catch {}
+  }
+
+  // ── User activity modal ───────────────────────────────────────────────────
+  const modal = document.getElementById('user-activity-modal');
+  const modalBody = document.getElementById('user-modal-body');
+  document.getElementById('user-modal-close')?.addEventListener('click', () => {
+    modal.style.display = 'none';
+    modalBody.innerHTML = 'Loading…';
+  });
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.style.display = 'none';
+      modalBody.innerHTML = 'Loading…';
+    }
+  });
+
+  async function openUserModal(userId, userName) {
+    document.getElementById('user-modal-title').textContent = `Activity: ${userName}`;
+    modalBody.innerHTML = '<p style="opacity:.7;">Loading user activity…</p>';
+    modal.style.display = 'block';
+    modal.scrollTop = 0;
+    try {
+      const r = await fetch(`/ops/users/${userId}/activity-data?days=90`, { credentials: 'same-origin' });
+      if (!r.ok) { modalBody.innerHTML = '<p>Failed to load activity data.</p>'; return; }
+      const d = await r.json();
+      const user = d.user || {};
+      const s = d.summary || {};
+      const llm = d.llm_usage || {};
+
+      const metricCards = [
+        ['Uploads', s.uploads, '#93c5fd'],
+        ['Check-ins', s.checkins, '#86efac'],
+        ['Insights', s.insights, '#fde68a'],
+        ['Notifications', s.notifications, '#c4b5fd'],
+        ['Timeline events', s.timeline_events, '#67e8f9'],
+        ['Claude tokens', llm.total_tokens, '#fca5a5'],
+      ].map(([label, value, color]) =>
+        `<div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:10px 12px; text-align:center;">
+          <div style="font-size:.78rem; opacity:.65; margin-bottom:4px;">${label}</div>
+          <div style="font-size:1.35rem; font-weight:700; color:${color};">${fmt(value)}</div>
+        </div>`
+      ).join('');
+
+      const uploadRows = (Array.isArray(d.uploads) ? d.uploads : []).slice(0, 10)
+        .map(u => `<tr><td style="padding:4px 8px;">${(u.created_at || '').slice(0, 10)}</td><td style="padding:4px 8px;">${u.lab_name || '—'}</td><td style="padding:4px 8px;">${u.status || '—'}</td></tr>`).join('');
+      const checkinRows = (Array.isArray(d.checkins) ? d.checkins : []).slice(0, 8)
+        .map(c => `<tr><td style="padding:4px 8px;">${(c.created_at || '').slice(0, 10)}</td><td style="padding:4px 8px;">${c.protocol_adherence ?? '—'}%</td><td style="padding:4px 8px;">energy ${c.energy_score ?? '—'}/10</td></tr>`).join('');
+      const timelineRows = (Array.isArray(d.timeline) ? d.timeline : []).slice(0, 15)
+        .map(e => `<tr><td style="padding:4px 8px;">${(e.occurred_at || '').slice(0, 16).replace('T', ' ')}</td><td style="padding:4px 8px;">${e.event_type || '—'}</td><td style="padding:4px 8px; opacity:.75;">${e.summary || ''}</td></tr>`).join('');
+
+      const tableStyle = 'width:100%; border-collapse:collapse; font-size:.82rem; margin-top:4px;';
+      const headStyle = 'opacity:.6; text-align:left; padding:4px 8px;';
+
+      modalBody.innerHTML = `
+        <p style="margin:0 0 12px; opacity:.7; font-size:.87rem;">${user.email || ''} · ${user.sub_status || '—'} · window: 90 days</p>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:8px; margin-bottom:16px;">${metricCards}</div>
+        <details open style="margin-bottom:10px;"><summary style="cursor:pointer; font-weight:600; padding:4px 0;">Labs (${fmt(s.uploads)})</summary>
+          ${uploadRows ? `<table style="${tableStyle}"><thead><tr><th style="${headStyle}">Date</th><th style="${headStyle}">Lab</th><th style="${headStyle}">Status</th></tr></thead><tbody>${uploadRows}</tbody></table>` : '<p style="opacity:.65; font-size:.85rem; margin:4px 0;">No uploads in window.</p>'}</details>
+        <details open style="margin-bottom:10px;"><summary style="cursor:pointer; font-weight:600; padding:4px 0;">Check-ins (${fmt(s.checkins)})</summary>
+          ${checkinRows ? `<table style="${tableStyle}"><thead><tr><th style="${headStyle}">Date</th><th style="${headStyle}">Adherence</th><th style="${headStyle}">Energy</th></tr></thead><tbody>${checkinRows}</tbody></table>` : '<p style="opacity:.65; font-size:.85rem; margin:4px 0;">No check-ins in window.</p>'}</details>
+        <details style="margin-bottom:10px;"><summary style="cursor:pointer; font-weight:600; padding:4px 0;">Timeline (${fmt(s.timeline_events)})</summary>
+          ${timelineRows ? `<table style="${tableStyle}"><thead><tr><th style="${headStyle}">Time</th><th style="${headStyle}">Type</th><th style="${headStyle}">Summary</th></tr></thead><tbody>${timelineRows}</tbody></table>` : '<p style="opacity:.65; font-size:.85rem; margin:4px 0;">No timeline events in window.</p>'}</details>
+      `;
+    } catch (err) {
+      modalBody.innerHTML = `<p style="color:#fca5a5;">Error loading user activity: ${err.message}</p>`;
+    }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  loadClaudeSpend();
+  loadClientActivity();
+})();
+</script>
