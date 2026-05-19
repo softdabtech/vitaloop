@@ -221,7 +221,8 @@ export default function App() {
           <Route path="/about" element={<About />} />
           <Route path="/for-investors" element={<ForInvestors />} />
           <Route path="/for-nutritionists" element={<ForNutritionists />} />
-          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/privacy" element={<Navigate to="/privacy-policy" replace />} />
+          <Route path="/privacy-policy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/help" element={<Help />} />
           <Route path="/help/section/:sectionId" element={<Help />} />

@@ -11,7 +11,7 @@ const COMPANY_LINKS = [
   { label: 'For Nutritionists', href: '/for-nutritionists' },
   { label: 'Help Center', href: '/help' },
   { label: 'Terms', href: '/terms' },
-  { label: 'Privacy', href: '/privacy' },
+  { label: 'Privacy Policy', href: '/privacy-policy' },
   { label: 'For Investors', href: '/for-investors' },
 ]
 

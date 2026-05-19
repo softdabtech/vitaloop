@@ -587,6 +587,7 @@ export default function Login() {
         title="Log In or Sign Up | VITALOOP"
         description="Sign in to your VITALOOP account or create a free account to start interpreting blood test results with AI. No credit card required."
         path="/login"
+        noindex
       />
       <div style={{
         minHeight: '100svh', display: 'flex',

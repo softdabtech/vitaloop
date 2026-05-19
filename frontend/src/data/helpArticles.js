@@ -697,7 +697,7 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'paragraph',
-        text: 'You can export all your data at any time (Settings → Export Data) or delete your account and all associated data permanently. Read the full Privacy Policy at vitaloop.today/privacy.',
+        text: 'You can export all your data at any time (Settings → Export Data) or delete your account and all associated data permanently. Read the full Privacy Policy at vitaloop.today/privacy-policy.',
       },
     ],
   },
@@ -1289,7 +1289,7 @@ export const HELP_ARTICLES = {
           '**Row-level security** — database queries are isolated per user. Even if someone had database access, they couldn\'t read your records.',
           '**HTTPS everywhere** — all data in transit is encrypted.',
           '**No advertising** — your health data is never used for advertising or sold to third parties.',
-          'Read the full **Privacy Policy** at vitaloop.today/privacy.',
+          'Read the full **Privacy Policy** at vitaloop.today/privacy-policy.',
         ],
       },
     ],

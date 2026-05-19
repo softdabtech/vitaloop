@@ -32,7 +32,7 @@ export default function DisclaimerModal() {
           By continuing, you agree to our{' '}
           <a href="/terms" className="text-green-400 hover:underline" target="_blank" rel="noreferrer">Terms of Service</a>
           {' '}and{' '}
-          <a href="/privacy" className="text-green-400 hover:underline" target="_blank" rel="noreferrer">Privacy Policy</a>.
+          <a href="/privacy-policy" className="text-green-400 hover:underline" target="_blank" rel="noreferrer">Privacy Policy</a>.
         </p>
         <button
           onClick={acceptDisclaimer}
