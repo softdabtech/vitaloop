@@ -821,51 +821,51 @@ export default function Landing() {
               How we store your data
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700 md:text-base">
-              VITALOOP is built around privacy-by-design. We follow modern healthcare data protection standards, use strict access controls, and keep your records encrypted in transit and at rest.
+              VITALOOP applies HIPAA Security Rule-aligned safeguards across data storage, transmission, and access management. Controls are organized to mirror administrative, technical, and operational best practices used in healthcare workflows.
             </p>
 
             <div className="mt-4 inline-flex items-start gap-2 rounded-2xl border border-emerald-200/80 bg-white/90 px-4 py-3 text-sm text-slate-700">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
               <span>
-                We do not sell or share your personal health data with third parties for advertising or data brokerage.
+                We do not sell, rent, or broker personal health data to advertisers or data marketplaces.
               </span>
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {[
                 {
-                  title: 'Encryption by default',
-                  body: 'TLS in transit and encrypted storage at rest for sensitive records.',
+                  title: 'Technical safeguards',
+                  body: 'Encryption in transit (TLS) and encrypted storage at rest for sensitive health records.',
                   icon: Lock,
                   tone: 'from-emerald-500/20 to-teal-500/10 text-emerald-700',
                 },
                 {
-                  title: 'Strict access control',
-                  body: 'Row-level policies and role-based permissions isolate every user workspace.',
+                  title: 'Access controls',
+                  body: 'Role-based access and workspace isolation limit data visibility to authorized users only.',
                   icon: ShieldCheck,
                   tone: 'from-cyan-500/20 to-sky-500/10 text-cyan-700',
                 },
                 {
-                  title: 'Security standards',
-                  body: 'Aligned with industry-standard safeguards (GDPR principles and healthcare-grade security practices).',
+                  title: 'Audit controls',
+                  body: 'System events are logged for traceability, review, and security investigations.',
                   icon: FileText,
                   tone: 'from-indigo-500/20 to-blue-500/10 text-indigo-700',
                 },
                 {
-                  title: 'Security monitoring',
-                  body: 'Ongoing monitoring, audit trails, and regular security hardening reviews.',
+                  title: 'Administrative safeguards',
+                  body: 'Documented security procedures, access governance, and periodic control reviews.',
                   icon: Clock3,
                   tone: 'from-amber-500/20 to-orange-500/10 text-amber-700',
                 },
                 {
-                  title: 'User data rights',
-                  body: 'You can request export or deletion of your account data at any time.',
+                  title: 'Integrity and recovery',
+                  body: 'Backups, reliability controls, and incident-response processes protect data continuity.',
                   icon: CheckCircle2,
                   tone: 'from-violet-500/20 to-fuchsia-500/10 text-violet-700',
                 },
                 {
-                  title: 'No third-party resale',
-                  body: 'Your health data is never sold and never shared with ad networks.',
+                  title: 'Data subject rights',
+                  body: 'Users can request data export or deletion and review policy terms at any time.',
                   icon: Shield,
                   tone: 'from-rose-500/20 to-pink-500/10 text-rose-700',
                 },
@@ -906,7 +906,7 @@ export default function Landing() {
 
             <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm leading-6 text-amber-900">
               <p>VITALOOP is a wellness tool, not a medical device.</p>
-              <p>We follow healthcare-grade security practices but are not subject to HIPAA.</p>
+              <p>We implement HIPAA-aligned safeguards; formal HIPAA obligations apply when required by customer context and agreements.</p>
               <p>Always consult qualified healthcare providers for medical decisions.</p>
             </div>
           </motion.div>
