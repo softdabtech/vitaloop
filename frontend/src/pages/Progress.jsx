@@ -114,6 +114,20 @@ export default function Progress() {
   const { isActive: hasPremium, loading: subscriptionLoading, refresh: refreshSubscription } = useSubscription()
   const [photos, setPhotos] = useState([])
 
+  const uploadsWithBiomarkers = data.filter((upload) => Array.isArray(upload?.biomarkers) && upload.biomarkers.length > 0)
+  const biomarkerTrends = useMemo(
+    () => buildBiomarkerTrends(uploadsWithBiomarkers),
+    [uploadsWithBiomarkers]
+  )
+  const improving = biomarkerTrends.filter((item) => item.pct > 0).slice(0, 6)
+  const worsening = biomarkerTrends.filter((item) => item.pct < 0).slice(0, 6)
+  const topMovement = biomarkerTrends.slice(0, 6)
+  const latestUpload = uploadsWithBiomarkers[uploadsWithBiomarkers.length - 1] || null
+  const latestMarkers = latestUpload?.biomarkers?.length || 0
+  const momentumScore = biomarkerTrends.length
+    ? Math.round((improving.length / biomarkerTrends.length) * 100)
+    : 0
+
   const handlePaywall = useCallback(() => {
     triggerSubscriptionRequiredPaywall()
   }, [])
@@ -213,22 +227,6 @@ export default function Progress() {
       </div>
     )
   }
-
-  const uploadsWithBiomarkers = data.filter((upload) => Array.isArray(upload?.biomarkers) && upload.biomarkers.length > 0)
-  const biomarkerTrends = useMemo(
-    () => buildBiomarkerTrends(uploadsWithBiomarkers),
-    [uploadsWithBiomarkers]
-  )
-
-  const improving = biomarkerTrends.filter((item) => item.pct > 0).slice(0, 6)
-  const worsening = biomarkerTrends.filter((item) => item.pct < 0).slice(0, 6)
-  const topMovement = biomarkerTrends.slice(0, 6)
-
-  const latestUpload = uploadsWithBiomarkers[uploadsWithBiomarkers.length - 1] || null
-  const latestMarkers = latestUpload?.biomarkers?.length || 0
-  const momentumScore = biomarkerTrends.length
-    ? Math.round((improving.length / biomarkerTrends.length) * 100)
-    : 0
 
   return (
     <div className="mx-auto w-full max-w-6xl">
