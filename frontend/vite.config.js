@@ -55,8 +55,8 @@ export default defineConfig({
         // build-info.json must never be precached — it is fetched fresh on every deploy
         // verification check. nginx serves it with no-cache headers.
         globIgnores: ['mockups/**', 'build-info.json'],
-        // Keep default limit high enough to prevent build-time hard failures.
-        maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
+        // Allow larger favicon assets without build-time failures.
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       devOptions: {
         enabled: false,
