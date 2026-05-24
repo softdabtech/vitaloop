@@ -38,7 +38,7 @@ export function PageHeader() {
           className="flex items-center gap-2 transition hover:opacity-80"
         >
           <span className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-emerald-500/90 text-white">
-            <img src="/favicon.svg" alt="VITALOOP" className="h-5 w-5 object-contain" />
+            <img src="/images/logo_2.jpg" alt="VITALOOP" className="h-5 w-5 object-contain" />
           </span>
           <span className="text-base font-semibold tracking-tight">VITALOOP</span>
         </button>
