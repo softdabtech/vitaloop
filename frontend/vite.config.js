@@ -47,14 +47,14 @@ export default defineConfig({
       filename: 'sw.js',
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['icons/icon-192.png', 'icons/icon-512.png', 'favicon.svg'],
+      includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
       manifest: false, // we use our own /public/manifest.json
       injectManifest: {
         // App shell precache strategy
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // build-info.json must never be precached — it is fetched fresh on every deploy
         // verification check. nginx serves it with no-cache headers.
-        globIgnores: ['mockups/**', 'build-info.json'],
+        globIgnores: ['mockups/**', 'build-info.json', 'images/favicon.png'],
         // Keep default limit high enough to prevent build-time hard failures.
         maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
       },

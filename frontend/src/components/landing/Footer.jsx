@@ -1,5 +1,3 @@
-import { HeartPulse } from 'lucide-react'
-
 const PRODUCT_LINKS = [
   { label: 'How it works', href: '/#how-it-works' },
   { label: 'Pricing', href: '/#pricing' },
@@ -35,8 +33,8 @@ export default function Footer() {
       <div className="mx-auto grid w-full max-w-[1240px] gap-8 px-4 text-sm sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
         <div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/90 text-white">
-              <HeartPulse className="h-5 w-5" />
+            <span className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-emerald-500/90 text-white">
+              <img src="/images/favicon.png" alt="VITALOOP" className="h-5 w-5 object-contain" />
             </span>
             <span className="text-base font-semibold tracking-tight">VITALOOP</span>
           </div>
@@ -84,6 +82,20 @@ export default function Footer() {
                 {link.label}
               </a>
             ))}
+            <a
+              href="https://www.producthunt.com/products/softdab-custom-data-encryption-solution?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-vitaloop-ai-health-protocol-platform"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pt-1"
+            >
+              <img
+                alt="VITALOOP - AI Health Protocol Platform - Turn lab results into personalized health action | Product Hunt"
+                width="250"
+                height="54"
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1154180&theme=light&t=1779636101269"
+                loading="lazy"
+              />
+            </a>
           </div>
         </div>
 
