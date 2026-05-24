@@ -1,6 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
-  Activity,
   BarChart3,
   ChevronLeft,
   Clock,
@@ -87,8 +86,8 @@ export default function UserDashboardSidebar({
     <aside className={`${sidebarWidth} flex h-screen flex-col border-r border-slate-200 bg-white transition-[width] duration-300`}>
       <div className="flex h-[72px] items-center justify-between border-b border-slate-100 px-4">
         <div className={`flex items-center gap-3 ${collapsed ? 'justify-center w-full' : ''}`}>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-500/25">
-            <Activity className="h-5 w-5" />
+          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-500/25">
+            <img src="/images/favicon.png" alt="VITALOOP" className="h-5 w-5 object-contain" />
           </div>
           {!collapsed && (
             <div>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.js'
 import { AnimatePresence, motion } from 'framer-motion'
-import { HeartPulse, Menu, X } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 
 const NAV_LINKS = [
   { id: 'why-vitaloop', label: 'Features', route: '/#why-vitaloop' },
@@ -37,8 +37,8 @@ export function PageHeader() {
           onClick={() => navigate('/')}
           className="flex items-center gap-2 transition hover:opacity-80"
         >
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/90 text-white">
-            <HeartPulse className="h-5 w-5" />
+          <span className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-emerald-500/90 text-white">
+            <img src="/images/favicon.png" alt="VITALOOP" className="h-5 w-5 object-contain" />
           </span>
           <span className="text-base font-semibold tracking-tight">VITALOOP</span>
         </button>

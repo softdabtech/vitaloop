@@ -703,8 +703,8 @@ export default function Landing() {
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/85 backdrop-blur">
         <div className="mx-auto flex h-[72px] w-full max-w-[1240px] items-center justify-between px-4 sm:px-6">
           <button onClick={() => scrollToTop()} className="flex items-center gap-2">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/90 text-white">
-              <HeartPulse className="h-5 w-5" />
+            <span className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-emerald-500/90 text-white">
+              <img src="/images/favicon.png" alt="VITALOOP" className="h-5 w-5 object-contain" />
             </span>
             <span className="text-base font-semibold tracking-tight">VITALOOP</span>
           </button>
