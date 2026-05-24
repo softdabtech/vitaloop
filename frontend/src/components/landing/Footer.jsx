@@ -34,7 +34,7 @@ export default function Footer() {
         <div>
           <div className="flex items-center gap-2">
             <span className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-emerald-500/90 text-white">
-              <img src="/images/logo_2.jpg" alt="VITALOOP" className="h-5 w-5 object-contain" />
+              <img src="/images/logo_2_clean.png" alt="VITALOOP" className="h-5 w-5 object-contain" />
             </span>
             <span className="text-base font-semibold tracking-tight">VITALOOP</span>
           </div>
