@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Sparkles } from 'lucide-react'
+import { CheckCircle2, Droplets, Moon, Pill, Sparkles, Sun, Waves } from 'lucide-react'
 import ProgressChart from '../components/ProgressChart.jsx'
 import ProgressPhotoGallery from '../components/ProgressPhotoGallery.jsx'
 import EmptyState from '../components/EmptyState.jsx'
@@ -24,11 +24,6 @@ function toNumber(value) {
   return null
 }
 
-function getBiomarkerValue(upload, name) {
-  if (!upload || !Array.isArray(upload.biomarkers)) return null
-  const marker = upload.biomarkers.find((b) => String(b?.name || '').toLowerCase().includes(name.toLowerCase()))
-  return toNumber(marker?.value)
-}
 
 function deltaPct(first, last) {
   if (first == null || last == null || first === 0) return null
@@ -50,46 +45,71 @@ function shortMetricValue(value) {
   return value.toFixed(2)
 }
 
-function buildBiomarkerTrends(uploads) {
-  const map = new Map()
+function normalizeBiomarkerName(name) {
+  return String(name || '').replace(/\s+/g, ' ').trim()
+}
+
+function hasReadableBiomarkerName(name) {
+  const normalized = normalizeBiomarkerName(name)
+  if (!normalized) return false
+  if (normalized.length < 2 || normalized.length > 60) return false
+
+  const letters = (normalized.match(/[a-zA-Z]/g) || []).length
+  const spaces = (normalized.match(/\s/g) || []).length
+  return letters >= 2 && spaces <= 6
+}
+
+function buildBiomarkerSeries(uploads) {
+  const seriesMap = new Map()
 
   uploads.forEach((upload, uploadIndex) => {
-    const uploadLabel = upload.test_date || upload.created_at?.slice(0, 10) || `Upload ${uploadIndex + 1}`
-    ;(upload.biomarkers || []).forEach((marker) => {
-      const name = String(marker?.name || '').trim()
-      const value = toNumber(marker?.value)
-      if (!name || value == null) return
+    const markers = Array.isArray(upload?.biomarkers) ? upload.biomarkers : []
 
-      if (!map.has(name)) {
-        map.set(name, {
+    markers.forEach((marker) => {
+      const name = normalizeBiomarkerName(marker?.name)
+      const value = toNumber(marker?.value)
+      if (!name || value == null || !hasReadableBiomarkerName(name)) return
+
+      if (!seriesMap.has(name)) {
+        seriesMap.set(name, {
           name,
           unit: marker?.unit || '',
           points: [],
+          latestMarker: marker,
+          latestUploadIndex: uploadIndex,
         })
       }
 
-      const entry = map.get(name)
+      const entry = seriesMap.get(name)
+      entry.points.push(value)
+      entry.latestUploadIndex = uploadIndex
+      entry.latestMarker = marker
       if (!entry.unit && marker?.unit) {
         entry.unit = marker.unit
       }
-      entry.points.push({ value, uploadLabel })
     })
   })
 
+  return [...seriesMap.values()]
+}
+
+function buildBiomarkerTrends(uploads) {
+  const series = buildBiomarkerSeries(uploads)
+
   const trends = []
-  map.forEach((entry) => {
+  series.forEach((entry) => {
     if (!entry.points || entry.points.length < 2) return
 
     const firstPoint = entry.points[0]
     const lastPoint = entry.points[entry.points.length - 1]
-    const pct = deltaPct(firstPoint.value, lastPoint.value)
+    const pct = deltaPct(firstPoint, lastPoint)
     if (pct == null) return
 
     trends.push({
       name: entry.name,
       unit: entry.unit,
-      start: firstPoint.value,
-      end: lastPoint.value,
+      start: firstPoint,
+      end: lastPoint,
       pct,
       direction: pct >= 0 ? 'up' : 'down',
     })
@@ -98,111 +118,81 @@ function buildBiomarkerTrends(uploads) {
   return trends.sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))
 }
 
-const CORE_MARKERS = [
-  {
-    key: 'ferritin',
-    name: 'Ferritin',
-    subtitle: 'Iron Storage',
-    defaultUnit: 'ng/mL',
-    keywords: ['ferritin', 'iron storage'],
-  },
-  {
-    key: 'vitamin-d',
-    name: 'Vitamin D',
-    subtitle: 'Immune and Bone Health',
-    defaultUnit: 'ng/mL',
-    keywords: ['vitamin d', '25-oh', 'd3'],
-  },
-  {
-    key: 'omega-3',
-    name: 'Omega-3 Index',
-    subtitle: 'Heart and Brain Health',
-    defaultUnit: '%',
-    keywords: ['omega-3', 'omega 3', 'epa', 'dha'],
-  },
-  {
-    key: 'magnesium',
-    name: 'Magnesium',
-    subtitle: 'Muscle and Nerve Health',
-    defaultUnit: 'mg/dL',
-    keywords: ['magnesium'],
-  },
-]
-
-const PROTOCOL_LIBRARY = {
-  ferritin: {
-    supplement: 'Iron (Bisglycinate)',
-    dose: '25 mg',
-    schedule: 'Every other day',
-  },
-  'vitamin-d': {
-    supplement: 'Vitamin D3 + K2',
-    dose: '5000 IU + 100 mcg',
-    schedule: 'Daily with meal',
-  },
-  'omega-3': {
-    supplement: 'Omega-3 (EPA/DHA)',
-    dose: '2000 mg',
-    schedule: 'Daily with meal',
-  },
-  magnesium: {
-    supplement: 'Magnesium Glycinate',
-    dose: '300 mg',
-    schedule: 'Before bed',
-  },
-  support: {
-    supplement: 'Vitamin B Complex',
-    dose: '1 capsule',
-    schedule: 'Daily with meal',
-  },
-}
-
-function markerMatch(name, keywords) {
-  const normalized = String(name || '').toLowerCase()
-  return keywords.some((keyword) => normalized.includes(keyword.toLowerCase()))
-}
-
 function buildMarkerOverview(uploads, trends) {
-  return CORE_MARKERS.map((config) => {
-    const points = []
-    let latestMarker = null
+  const series = buildBiomarkerSeries(uploads)
+  const trendMap = new Map(trends.map((trend) => [trend.name, trend]))
 
-    uploads.forEach((upload) => {
-      const markers = Array.isArray(upload?.biomarkers) ? upload.biomarkers : []
-      const marker = markers.find((entry) => markerMatch(entry?.name, config.keywords))
-      const value = toNumber(marker?.value)
-      if (value == null) return
-
-      points.push(value)
-      latestMarker = marker
+  const sortedByTrend = series
+    .filter((item) => item.points.length >= 2)
+    .sort((a, b) => {
+      const pctA = Math.abs(trendMap.get(a.name)?.pct || 0)
+      const pctB = Math.abs(trendMap.get(b.name)?.pct || 0)
+      if (pctA !== pctB) return pctB - pctA
+      return b.latestUploadIndex - a.latestUploadIndex
     })
 
-    const latestValue = points.length ? points[points.length - 1] : null
-    const firstValue = points.length ? points[0] : null
+  const latestUpload = uploads[uploads.length - 1] || null
+  const latestUnique = (latestUpload?.biomarkers || [])
+    .map((item) => ({
+      name: normalizeBiomarkerName(item?.name),
+      value: toNumber(item?.value),
+      unit: item?.unit || '',
+      marker: item,
+    }))
+    .filter((item) => item.name && item.value != null && hasReadableBiomarkerName(item.name))
+    .filter((item, index, arr) => arr.findIndex((candidate) => candidate.name === item.name) === index)
+
+  const selectedNames = new Set()
+  const selected = []
+
+  sortedByTrend.forEach((item) => {
+    if (selected.length >= 4) return
+    if (selectedNames.has(item.name)) return
+    selected.push(item)
+    selectedNames.add(item.name)
+  })
+
+  latestUnique.forEach((item) => {
+    if (selected.length >= 4) return
+    if (selectedNames.has(item.name)) return
+
+    selected.push({
+      name: item.name,
+      unit: item.unit,
+      points: [item.value],
+      latestMarker: item.marker,
+      latestUploadIndex: uploads.length - 1,
+    })
+    selectedNames.add(item.name)
+  })
+
+  return selected.map((item) => {
+    const firstValue = item.points[0] ?? null
+    const latestValue = item.points[item.points.length - 1] ?? null
     const delta = firstValue != null && latestValue != null ? latestValue - firstValue : null
-    const trend = trends.find((entry) => markerMatch(entry.name, config.keywords))
+    const trend = trendMap.get(item.name)
     const inRange =
-      latestMarker
-      && Number.isFinite(Number(latestMarker.ref_low))
-      && Number.isFinite(Number(latestMarker.ref_high))
+      item.latestMarker
+      && Number.isFinite(Number(item.latestMarker.ref_low))
+      && Number.isFinite(Number(item.latestMarker.ref_high))
       && latestValue != null
-        ? latestValue >= Number(latestMarker.ref_low) && latestValue <= Number(latestMarker.ref_high)
+        ? latestValue >= Number(item.latestMarker.ref_low) && latestValue <= Number(item.latestMarker.ref_high)
         : null
 
     const statusLabel =
-      latestValue == null
-        ? 'No data'
-        : inRange == null
-          ? (delta == null || delta >= 0 ? 'Improving' : 'Review')
-          : inRange
-            ? 'Optimal'
-            : 'Needs focus'
+      inRange == null
+        ? (item.points.length >= 2 ? (delta == null || delta >= 0 ? 'Improving' : 'Review') : 'Latest')
+        : inRange
+          ? 'Optimal'
+          : 'Needs focus'
 
     return {
-      ...config,
-      markerName: latestMarker?.name || config.name,
-      unit: latestMarker?.unit || trend?.unit || config.defaultUnit || '',
-      points,
+      key: item.name.toLowerCase(),
+      name: item.name,
+      subtitle: 'Biomarker Trend',
+      markerName: item.name,
+      unit: item.unit || '',
+      points: item.points,
       latestValue,
       firstValue,
       delta,
@@ -210,33 +200,6 @@ function buildMarkerOverview(uploads, trends) {
       trendPct: trend?.pct ?? null,
     }
   })
-}
-
-function buildProtocolRows(overviewCards) {
-  const rows = []
-  const included = new Set()
-
-  overviewCards
-    .slice()
-    .sort((a, b) => {
-      const scoreA = a.statusLabel === 'Needs focus' ? 0 : a.statusLabel === 'Review' ? 1 : 2
-      const scoreB = b.statusLabel === 'Needs focus' ? 0 : b.statusLabel === 'Review' ? 1 : 2
-      if (scoreA !== scoreB) return scoreA - scoreB
-      return Math.abs(b.trendPct || 0) - Math.abs(a.trendPct || 0)
-    })
-    .forEach((card) => {
-      if (included.has(card.key)) return
-      const item = PROTOCOL_LIBRARY[card.key]
-      if (!item) return
-      rows.push(item)
-      included.add(card.key)
-    })
-
-  if (!included.has('support')) {
-    rows.push(PROTOCOL_LIBRARY.support)
-  }
-
-  return rows.slice(0, 5)
 }
 
 const TIMING_TO_LABEL = {
@@ -269,9 +232,14 @@ function normalizeProtocolRow(item) {
   return { supplement, dose, schedule }
 }
 
-function isGenericProtocolRow(row) {
-  const text = `${row?.supplement || ''} ${row?.dose || ''} ${row?.schedule || ''}`.toLowerCase()
-  return ['re-test', 'retest', 'follow up', 'follow-up', 'comprehensive'].some((token) => text.includes(token))
+function supplementIcon(name) {
+  const normalized = String(name || '').toLowerCase()
+  if (normalized.includes('vitamin d') || normalized.includes('k2')) return Sun
+  if (normalized.includes('omega')) return Waves
+  if (normalized.includes('magnesium')) return Moon
+  if (normalized.includes('iron')) return Pill
+  if (normalized.includes('b complex') || normalized.includes('vitamin b')) return Droplets
+  return Pill
 }
 
 function sortProtocolRecommendations(rows) {
@@ -365,10 +333,6 @@ export default function Progress() {
     () => buildMarkerOverview(chronologicalUploads, biomarkerTrends),
     [chronologicalUploads, biomarkerTrends]
   )
-  const fallbackProtocolRows = useMemo(
-    () => buildProtocolRows(overviewCards),
-    [overviewCards]
-  )
   const latestUpload = chronologicalUploads[chronologicalUploads.length - 1] || null
   const latestUploadId = latestUpload?.id
   const latestMarkers = latestUpload?.biomarkers?.length || 0
@@ -420,8 +384,7 @@ export default function Progress() {
     }
   }, [latestUploadId])
 
-  const shouldUseDbProtocol = protocolRowsFromDb.length >= 3 && !protocolRowsFromDb.every(isGenericProtocolRow)
-  const protocolRows = shouldUseDbProtocol ? protocolRowsFromDb : fallbackProtocolRows
+  const protocolRows = protocolRowsFromDb
 
   const handlePaywall = useCallback(() => {
     triggerSubscriptionRequiredPaywall()
@@ -559,43 +522,43 @@ export default function Progress() {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45 }}
-            className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6"
+            className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 sm:p-7"
           >
-            <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+            <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h3 className="text-2xl font-bold text-slate-900">Biomarker Overview</h3>
-                <p className="mt-1 text-sm text-slate-500">Track what matters. Optimize your health.</p>
+                <h3 className="text-[32px] font-bold leading-tight tracking-tight text-slate-900 sm:text-[40px]">Biomarker Overview</h3>
+                <p className="mt-1 text-lg leading-relaxed text-slate-500">Track what matters. Optimize your health.</p>
               </div>
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-teal-100 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-700">
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-teal-100 bg-teal-50 px-4 py-2.5 text-base font-semibold text-teal-700">
                 <Sparkles className="h-4 w-4" />
                 <div>
                   <p>AI Analysis</p>
-                  <p className="text-xs font-medium text-teal-600">Updated today</p>
+                  <p className="text-sm font-medium text-teal-600">Updated today</p>
                 </div>
               </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {overviewCards.map((card) => {
                 const isGood = card.statusLabel === 'Optimal' || card.statusLabel === 'Improving'
                 const isNoData = card.statusLabel === 'No data'
                 return (
-                  <div key={card.key} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <p className="text-xl font-semibold text-slate-900">{card.name}</p>
-                    <p className="text-sm text-slate-500">{card.subtitle}</p>
-                    <p className="mt-4 text-5xl font-bold leading-none text-slate-900">{shortMetricValue(card.latestValue)}</p>
-                    <p className="mt-1 text-sm font-medium text-slate-600">{card.unit || 'value'}</p>
+                  <div key={card.key} className="flex min-h-[318px] flex-col rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+                    <p className="text-[34px] font-semibold leading-tight text-slate-900">{card.name}</p>
+                    <p className="text-[20px] text-slate-500">{card.subtitle}</p>
+                    <p className="mt-5 text-6xl font-bold leading-none tracking-tight text-slate-900">{shortMetricValue(card.latestValue)}</p>
+                    <p className="mt-2 text-lg font-medium text-slate-600">{card.unit || 'value'}</p>
                     <div className="mt-3">
                       <Sparkline points={card.points} color={isNoData ? '#94a3b8' : isGood ? '#14b8a6' : '#f59e0b'} />
                     </div>
-                    <p className={`mt-3 text-sm font-semibold ${isNoData ? 'text-slate-500' : isGood ? 'text-teal-700' : 'text-amber-700'}`}>
+                    <p className={`mt-3 text-lg font-semibold ${isNoData ? 'text-slate-500' : isGood ? 'text-teal-700' : 'text-amber-700'}`}>
                       {card.latestValue == null
                         ? 'Add more uploads to unlock trend'
                         : card.delta == null
                         ? 'No historical delta yet'
                         : `${card.delta >= 0 ? '↑' : '↓'} ${shortMetricValue(Math.abs(card.delta))} from ${shortMetricValue(card.firstValue)}`}
                     </p>
-                    <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${isNoData ? 'bg-slate-100 text-slate-600' : isGood ? 'bg-teal-50 text-teal-700' : 'bg-amber-50 text-amber-700'}`}>
+                    <span className={`mt-3 inline-flex w-fit rounded-full px-4 py-1.5 text-base font-semibold ${isNoData ? 'bg-slate-100 text-slate-600' : isGood ? 'bg-teal-50 text-teal-700' : 'bg-amber-50 text-amber-700'}`}>
                       {card.statusLabel}
                     </span>
                   </div>
@@ -608,46 +571,56 @@ export default function Progress() {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.05 }}
-            className="mb-8 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6"
+            className="mb-8 rounded-3xl border border-slate-200 bg-white p-5 sm:p-7"
           >
-            <h3 className="text-2xl font-bold text-slate-900">Your Personalized Protocol</h3>
-            <p className="mt-1 text-sm text-slate-500">AI-designed based on your labs, goals and health data.</p>
+            <h3 className="text-[32px] font-bold leading-tight tracking-tight text-slate-900 sm:text-[40px]">Your Personalized Protocol</h3>
+            <p className="mt-1 text-lg leading-relaxed text-slate-500">AI-designed based on your labs, goals and health data.</p>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+            <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
               <div className="overflow-hidden rounded-2xl border border-slate-200">
-                <div className="hidden grid-cols-[minmax(0,1fr)_140px_160px] bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 sm:grid">
+                <div className="hidden grid-cols-[minmax(0,1fr)_160px_180px] bg-slate-50 px-5 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 sm:grid">
                   <span>Supplement</span>
                   <span>Dose</span>
                   <span>Timing</span>
                 </div>
                 <div className="divide-y divide-slate-100">
-                  {protocolRows.map((row) => (
-                    <div key={row.supplement} className="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_140px_160px] sm:items-center">
-                      <p className="font-semibold text-slate-900">{row.supplement}</p>
-                      <p className="text-sm text-slate-600">{row.dose}</p>
-                      <p className="text-sm text-slate-600">{row.schedule}</p>
+                  {protocolRows.length > 0 ? protocolRows.map((row) => {
+                    const Icon = supplementIcon(row.supplement)
+                    return (
+                      <div key={row.supplement} className="grid gap-2 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_160px_180px] sm:items-center">
+                        <p className="flex items-center gap-2 text-[22px] font-semibold text-slate-900">
+                          <Icon className="h-5 w-5 text-teal-500" />
+                          <span>{row.supplement}</span>
+                        </p>
+                        <p className="text-lg font-medium text-slate-600">{row.dose}</p>
+                        <p className="text-lg font-medium text-slate-600">{row.schedule}</p>
+                      </div>
+                    )
+                  }) : (
+                    <div className="px-5 py-6 text-sm text-slate-500">
+                      No protocol recommendations generated yet for your latest uploaded labs.
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-teal-100 bg-teal-50 p-4">
-                <p className="text-lg font-semibold text-slate-900">Why these?</p>
-                <ul className="mt-3 space-y-3 text-sm text-slate-700">
+              <div className="rounded-2xl border border-teal-100 bg-teal-50 p-5">
+                <p className="text-[30px] font-semibold leading-tight text-slate-900">Why these?</p>
+                <ul className="mt-3 space-y-3 text-lg text-slate-700">
                   <li className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                    <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-teal-600" />
                     Targets your lowest biomarkers first
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                    <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-teal-600" />
                     Supports your energy, recovery and focus goals
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                    <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-teal-600" />
                     Aligned with biomarker trends and reference ranges
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                    <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-teal-600" />
                     Safe and practical dosage cadence
                   </li>
                 </ul>
