@@ -103,24 +103,28 @@ const CORE_MARKERS = [
     key: 'ferritin',
     name: 'Ferritin',
     subtitle: 'Iron Storage',
+    defaultUnit: 'ng/mL',
     keywords: ['ferritin', 'iron storage'],
   },
   {
     key: 'vitamin-d',
     name: 'Vitamin D',
     subtitle: 'Immune and Bone Health',
+    defaultUnit: 'ng/mL',
     keywords: ['vitamin d', '25-oh', 'd3'],
   },
   {
     key: 'omega-3',
     name: 'Omega-3 Index',
     subtitle: 'Heart and Brain Health',
+    defaultUnit: '%',
     keywords: ['omega-3', 'omega 3', 'epa', 'dha'],
   },
   {
     key: 'magnesium',
     name: 'Magnesium',
     subtitle: 'Muscle and Nerve Health',
+    defaultUnit: 'mg/dL',
     keywords: ['magnesium'],
   },
 ]
@@ -159,7 +163,7 @@ function markerMatch(name, keywords) {
 }
 
 function buildMarkerOverview(uploads, trends) {
-  const cards = CORE_MARKERS.map((config) => {
+  return CORE_MARKERS.map((config) => {
     const points = []
     let latestMarker = null
 
@@ -185,12 +189,19 @@ function buildMarkerOverview(uploads, trends) {
         ? latestValue >= Number(latestMarker.ref_low) && latestValue <= Number(latestMarker.ref_high)
         : null
 
-    const statusLabel = inRange == null ? (delta == null || delta >= 0 ? 'Improving' : 'Review') : inRange ? 'Optimal' : 'Needs focus'
+    const statusLabel =
+      latestValue == null
+        ? 'No data'
+        : inRange == null
+          ? (delta == null || delta >= 0 ? 'Improving' : 'Review')
+          : inRange
+            ? 'Optimal'
+            : 'Needs focus'
 
     return {
       ...config,
       markerName: latestMarker?.name || config.name,
-      unit: latestMarker?.unit || trend?.unit || '',
+      unit: latestMarker?.unit || trend?.unit || config.defaultUnit || '',
       points,
       latestValue,
       firstValue,
@@ -199,33 +210,6 @@ function buildMarkerOverview(uploads, trends) {
       trendPct: trend?.pct ?? null,
     }
   })
-
-  const filtered = cards.filter((card) => card.latestValue != null)
-  if (filtered.length >= 4) return filtered.slice(0, 4)
-
-  const extra = []
-  const used = new Set(filtered.map((card) => card.markerName.toLowerCase()))
-  trends.forEach((entry) => {
-    if (extra.length >= 4 - filtered.length) return
-    const key = entry.name.toLowerCase()
-    if (used.has(key)) return
-    extra.push({
-      key,
-      name: entry.name,
-      subtitle: 'Biomarker Trend',
-      markerName: entry.name,
-      unit: entry.unit || '',
-      points: [entry.start, entry.end],
-      latestValue: entry.end,
-      firstValue: entry.start,
-      delta: entry.end - entry.start,
-      statusLabel: entry.pct >= 0 ? 'Improving' : 'Review',
-      trendPct: entry.pct,
-    })
-    used.add(key)
-  })
-
-  return [...filtered, ...extra].slice(0, 4)
 }
 
 function buildProtocolRows(overviewCards) {
@@ -283,6 +267,11 @@ function normalizeProtocolRow(item) {
   const schedule = TIMING_TO_LABEL[timingRaw] || timingRaw.replaceAll('_', ' ') || '-'
 
   return { supplement, dose, schedule }
+}
+
+function isGenericProtocolRow(row) {
+  const text = `${row?.supplement || ''} ${row?.dose || ''} ${row?.schedule || ''}`.toLowerCase()
+  return ['re-test', 'retest', 'follow up', 'follow-up', 'comprehensive'].some((token) => text.includes(token))
 }
 
 function sortProtocolRecommendations(rows) {
@@ -431,7 +420,8 @@ export default function Progress() {
     }
   }, [latestUploadId])
 
-  const protocolRows = protocolRowsFromDb.length > 0 ? protocolRowsFromDb : fallbackProtocolRows
+  const shouldUseDbProtocol = protocolRowsFromDb.length >= 3 && !protocolRowsFromDb.every(isGenericProtocolRow)
+  const protocolRows = shouldUseDbProtocol ? protocolRowsFromDb : fallbackProtocolRows
 
   const handlePaywall = useCallback(() => {
     triggerSubscriptionRequiredPaywall()
@@ -588,21 +578,24 @@ export default function Progress() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {overviewCards.map((card) => {
                 const isGood = card.statusLabel === 'Optimal' || card.statusLabel === 'Improving'
+                const isNoData = card.statusLabel === 'No data'
                 return (
-                  <div key={card.markerName} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div key={card.key} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                     <p className="text-xl font-semibold text-slate-900">{card.name}</p>
                     <p className="text-sm text-slate-500">{card.subtitle}</p>
                     <p className="mt-4 text-5xl font-bold leading-none text-slate-900">{shortMetricValue(card.latestValue)}</p>
                     <p className="mt-1 text-sm font-medium text-slate-600">{card.unit || 'value'}</p>
                     <div className="mt-3">
-                      <Sparkline points={card.points} color={isGood ? '#14b8a6' : '#f59e0b'} />
+                      <Sparkline points={card.points} color={isNoData ? '#94a3b8' : isGood ? '#14b8a6' : '#f59e0b'} />
                     </div>
-                    <p className={`mt-3 text-sm font-semibold ${isGood ? 'text-teal-700' : 'text-amber-700'}`}>
-                      {card.delta == null
+                    <p className={`mt-3 text-sm font-semibold ${isNoData ? 'text-slate-500' : isGood ? 'text-teal-700' : 'text-amber-700'}`}>
+                      {card.latestValue == null
+                        ? 'Add more uploads to unlock trend'
+                        : card.delta == null
                         ? 'No historical delta yet'
                         : `${card.delta >= 0 ? '↑' : '↓'} ${shortMetricValue(Math.abs(card.delta))} from ${shortMetricValue(card.firstValue)}`}
                     </p>
-                    <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${isGood ? 'bg-teal-50 text-teal-700' : 'bg-amber-50 text-amber-700'}`}>
+                    <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${isNoData ? 'bg-slate-100 text-slate-600' : isGood ? 'bg-teal-50 text-teal-700' : 'bg-amber-50 text-amber-700'}`}>
                       {card.statusLabel}
                     </span>
                   </div>
