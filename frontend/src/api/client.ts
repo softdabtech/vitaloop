@@ -60,9 +60,14 @@ api.interceptors.response.use(
     const validationErrors = error.response?.data?.errors || []
     const requestUrl = String(error?.config?.url || '')
     const method = String(error?.config?.method || '').toUpperCase()
+    const isAuthMeRequest = requestUrl.includes('/auth/me')
+
+    const shouldLogServerError =
+      status >= 500
+      && !isAuthMeRequest
 
     // Log errors for debugging
-    if (status >= 500) {
+    if (shouldLogServerError) {
       console.error(`[API ${status}] ${method} ${requestUrl}`, { code, detail })
     }
 
@@ -104,7 +109,7 @@ api.interceptors.response.use(
     }
 
     if (status === 401) {
-      const authBoundary = requestUrl.includes('/auth/me')
+      const authBoundary = isAuthMeRequest
 
       // Retry once for non-auth-boundary requests. This covers session-hydration races
       // right after login when the first request may miss the Authorization header.
