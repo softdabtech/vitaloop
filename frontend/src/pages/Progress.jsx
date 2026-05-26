@@ -49,14 +49,61 @@ function normalizeBiomarkerName(name) {
   return String(name || '').replace(/\s+/g, ' ').trim()
 }
 
-function hasReadableBiomarkerName(name) {
-  const normalized = normalizeBiomarkerName(name)
-  if (!normalized) return false
-  if (normalized.length < 2 || normalized.length > 60) return false
+const BIOMARKER_NAME_TRANSLATIONS = [
+  [/^Глюкоза/i, 'Glucose'],
+  [/^Гемоглобін|^Гемоглобин/i, 'Hemoglobin'],
+  [/^Гематокрит/i, 'Hematocrit'],
+  [/^Креатинін/i, 'Creatinine'],
+  [/^Сечовина/i, 'Blood Urea Nitrogen'],
+  [/^Магній/i, 'Magnesium'],
+  [/^Кальцій/i, 'Calcium'],
+  [/^Натрій/i, 'Sodium'],
+  [/^Калій/i, 'Potassium'],
+  [/^Хлор/i, 'Chloride'],
+  [/^Лейкоцити/i, 'White Blood Cells'],
+  [/^Тромбоцити/i, 'Platelets'],
+  [/^Еритроцити/i, 'Red Blood Cells'],
+  [/^Тригліцериди/i, 'Triglycerides'],
+  [/^Холестерин/i, 'Total Cholesterol'],
+  [/^ЛПНЩ/i, 'LDL Cholesterol'],
+  [/^ЛПВЩ/i, 'HDL Cholesterol'],
+  [/^Вітамін D|^Витамин D/i, 'Vitamin D'],
+]
 
-  const letters = (normalized.match(/[a-zA-Z]/g) || []).length
-  const spaces = (normalized.match(/\s/g) || []).length
-  return letters >= 2 && spaces <= 6
+const KNOWN_BIOMARKER_TOKENS = [
+  'glucose', 'hemoglobin', 'hematocrit', 'ferritin', 'vitamin', 'magnesium', 'omega',
+  'cholesterol', 'triglycerides', 'ldl', 'hdl', 'creatinine', 'urea', 'bun', 'sodium',
+  'potassium', 'chloride', 'calcium', 'platelets', 'white blood cells', 'red blood cells',
+  'wbc', 'rbc', 'hba1c', 'insulin', 'crp', 'esr', 'alt', 'ast', 'ggt', 'albumin', 'protein',
+]
+
+function toEnglishBiomarkerName(rawName) {
+  const raw = normalizeBiomarkerName(rawName)
+  if (!raw) return ''
+
+  for (const [pattern, translated] of BIOMARKER_NAME_TRANSLATIONS) {
+    if (pattern.test(raw)) return translated
+  }
+
+  return raw
+}
+
+function hasReadableBiomarkerName(name) {
+  const english = toEnglishBiomarkerName(name)
+  if (!english) return false
+  if (english.length < 2 || english.length > 60) return false
+
+  // English-only rendering rule for Progress cards.
+  if (!/^[A-Za-z0-9()/%+\-.,\s]+$/.test(english)) return false
+
+  const words = english.split(/\s+/).filter(Boolean)
+  if (words.length > 6) return false
+
+  const letters = (english.match(/[A-Za-z]/g) || []).length
+  if (letters < 3) return false
+
+  const hasKnownToken = KNOWN_BIOMARKER_TOKENS.some((token) => english.toLowerCase().includes(token))
+  return hasKnownToken
 }
 
 function buildBiomarkerSeries(uploads) {
@@ -66,7 +113,7 @@ function buildBiomarkerSeries(uploads) {
     const markers = Array.isArray(upload?.biomarkers) ? upload.biomarkers : []
 
     markers.forEach((marker) => {
-      const name = normalizeBiomarkerName(marker?.name)
+      const name = toEnglishBiomarkerName(marker?.name)
       const value = toNumber(marker?.value)
       if (!name || value == null || !hasReadableBiomarkerName(name)) return
 
@@ -526,14 +573,14 @@ export default function Progress() {
           >
             <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h3 className="text-[32px] font-bold leading-tight tracking-tight text-slate-900 sm:text-[40px]">Biomarker Overview</h3>
-                <p className="mt-1 text-lg leading-relaxed text-slate-500">Track what matters. Optimize your health.</p>
+                <h3 className="text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl">Biomarker Overview</h3>
+                <p className="mt-1 text-base leading-relaxed text-slate-500">Track what matters. Optimize your health.</p>
               </div>
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-teal-100 bg-teal-50 px-4 py-2.5 text-base font-semibold text-teal-700">
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-teal-100 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-700">
                 <Sparkles className="h-4 w-4" />
                 <div>
                   <p>AI Analysis</p>
-                  <p className="text-sm font-medium text-teal-600">Updated today</p>
+                  <p className="text-xs font-medium text-teal-600">Updated today</p>
                 </div>
               </div>
             </div>
@@ -543,22 +590,22 @@ export default function Progress() {
                 const isGood = card.statusLabel === 'Optimal' || card.statusLabel === 'Improving'
                 const isNoData = card.statusLabel === 'No data'
                 return (
-                  <div key={card.key} className="flex min-h-[318px] flex-col rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-                    <p className="text-[34px] font-semibold leading-tight text-slate-900">{card.name}</p>
-                    <p className="text-[20px] text-slate-500">{card.subtitle}</p>
-                    <p className="mt-5 text-6xl font-bold leading-none tracking-tight text-slate-900">{shortMetricValue(card.latestValue)}</p>
-                    <p className="mt-2 text-lg font-medium text-slate-600">{card.unit || 'value'}</p>
+                  <div key={card.key} className="flex min-h-[272px] flex-col rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+                    <p className="line-clamp-2 text-[26px] font-semibold leading-tight text-slate-900">{card.name}</p>
+                    <p className="text-sm text-slate-500">{card.subtitle}</p>
+                    <p className="mt-4 text-6xl font-bold leading-none tracking-tight text-slate-900">{shortMetricValue(card.latestValue)}</p>
+                    <p className="mt-2 text-base font-medium text-slate-600">{card.unit || 'value'}</p>
                     <div className="mt-3">
                       <Sparkline points={card.points} color={isNoData ? '#94a3b8' : isGood ? '#14b8a6' : '#f59e0b'} />
                     </div>
-                    <p className={`mt-3 text-lg font-semibold ${isNoData ? 'text-slate-500' : isGood ? 'text-teal-700' : 'text-amber-700'}`}>
+                    <p className={`mt-3 text-sm font-semibold ${isNoData ? 'text-slate-500' : isGood ? 'text-teal-700' : 'text-amber-700'}`}>
                       {card.latestValue == null
                         ? 'Add more uploads to unlock trend'
                         : card.delta == null
                         ? 'No historical delta yet'
                         : `${card.delta >= 0 ? '↑' : '↓'} ${shortMetricValue(Math.abs(card.delta))} from ${shortMetricValue(card.firstValue)}`}
                     </p>
-                    <span className={`mt-3 inline-flex w-fit rounded-full px-4 py-1.5 text-base font-semibold ${isNoData ? 'bg-slate-100 text-slate-600' : isGood ? 'bg-teal-50 text-teal-700' : 'bg-amber-50 text-amber-700'}`}>
+                    <span className={`mt-3 inline-flex w-fit rounded-full px-4 py-1.5 text-sm font-semibold ${isNoData ? 'bg-slate-100 text-slate-600' : isGood ? 'bg-teal-50 text-teal-700' : 'bg-amber-50 text-amber-700'}`}>
                       {card.statusLabel}
                     </span>
                   </div>
@@ -573,8 +620,8 @@ export default function Progress() {
             transition={{ duration: 0.45, delay: 0.05 }}
             className="mb-8 rounded-3xl border border-slate-200 bg-white p-5 sm:p-7"
           >
-            <h3 className="text-[32px] font-bold leading-tight tracking-tight text-slate-900 sm:text-[40px]">Your Personalized Protocol</h3>
-            <p className="mt-1 text-lg leading-relaxed text-slate-500">AI-designed based on your labs, goals and health data.</p>
+            <h3 className="text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl">Your Personalized Protocol</h3>
+            <p className="mt-1 text-base leading-relaxed text-slate-500">AI-designed based on your labs, goals and health data.</p>
 
             <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
               <div className="overflow-hidden rounded-2xl border border-slate-200">
@@ -588,12 +635,12 @@ export default function Progress() {
                     const Icon = supplementIcon(row.supplement)
                     return (
                       <div key={row.supplement} className="grid gap-2 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_160px_180px] sm:items-center">
-                        <p className="flex items-center gap-2 text-[22px] font-semibold text-slate-900">
+                        <p className="flex items-center gap-2 text-lg font-semibold text-slate-900">
                           <Icon className="h-5 w-5 text-teal-500" />
                           <span>{row.supplement}</span>
                         </p>
-                        <p className="text-lg font-medium text-slate-600">{row.dose}</p>
-                        <p className="text-lg font-medium text-slate-600">{row.schedule}</p>
+                        <p className="text-sm font-medium text-slate-600">{row.dose}</p>
+                        <p className="text-sm font-medium text-slate-600">{row.schedule}</p>
                       </div>
                     )
                   }) : (
@@ -605,8 +652,8 @@ export default function Progress() {
               </div>
 
               <div className="rounded-2xl border border-teal-100 bg-teal-50 p-5">
-                <p className="text-[30px] font-semibold leading-tight text-slate-900">Why these?</p>
-                <ul className="mt-3 space-y-3 text-lg text-slate-700">
+                <p className="text-2xl font-semibold leading-tight text-slate-900">Why these?</p>
+                <ul className="mt-3 space-y-3 text-sm text-slate-700">
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-teal-600" />
                     Targets your lowest biomarkers first
