@@ -24,22 +24,12 @@ export function useSubscription() {
 
     const fetchSubscription = async (attempt = 0) => {
       try {
-        const [{ data: stripeData }, authMeResp] = await Promise.all([
-          api.get('/stripe/subscription'),
-          api.get('/auth/me').catch(() => null),
-        ])
-
-        const authMe = authMeResp?.data || null
-        const authPremium = Boolean(
-          authMe?.has_active_subscription
-          || authMe?.subscription_active
-          || authMe?.global_role !== 'end_user'
-        )
+        const { data: stripeData } = await api.get('/stripe/subscription')
 
         const stripeStatus = String(stripeData?.sub_status ?? 'free').toLowerCase()
         const stripePremium = Boolean(stripeData?.is_premium)
-        const isPremiumResolved = authPremium || stripePremium
-        const subStatusResolved = isPremiumResolved ? 'active' : stripeStatus
+        const isPremiumResolved = stripePremium
+        const subStatusResolved = stripePremium ? 'active' : stripeStatus
 
         const normalizedPlanName = stripeData?.plan_id
           || stripeData?.plan_name
