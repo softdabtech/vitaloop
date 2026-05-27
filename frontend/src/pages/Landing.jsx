@@ -1049,13 +1049,13 @@ export default function Landing() {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              From symptoms to personalized protocol in{' '}
+              From symptoms to labs to a protocol in{' '}
               <span className="relative">
                 <span className="bg-gradient-to-r from-emerald-600 to-sky-600 bg-clip-text text-transparent">5 steps</span>
               </span>
             </motion.h2>
             <p className={`mx-auto mt-4 max-w-2xl text-lg ${'text-slate-600'}`}>
-              Start with your symptoms, organize follow-ups, upload labs, then run and refine a weekly protocol loop
+              Start with how you feel, get a practical lab direction plan, upload results, and improve through weekly feedback.
             </p>
           </motion.div>
 
