@@ -14,7 +14,7 @@ import logging
 
 from app.dependencies import require_freemium_analyze, get_current_user
 from app.services.claude_service import extract_biomarkers, EXTRACT_PROMPT_VERSION, is_llm_configured, get_analysis_source
-from app.services.claude_pdf_analyzer import OpenAIPDFAnalyzer
+from app.services.claude_pdf_analyzer import OpenAIPDFAnalyzer, create_file_analyzer
 from app.services.supabase_service import (
     assert_upload_belongs_to_user,
     get_biomarkers_by_upload,
@@ -71,16 +71,27 @@ class AnalyzeResponse(BaseModel):
 
 
 @router.post("/pdf")
-async def analyze_lab_pdf(
+@router.post("/upload")  # New universal endpoint
+async def analyze_lab_file(
     file: UploadFile = File(...),
     lab_name: Optional[str] = Form(default=None),
     symptoms: List[str] = Form(default_factory=list),
     current_user: dict = Depends(get_current_user),
     _freemium_check: None = Depends(require_freemium_analyze),
 ):
+    """
+    Universal file analyzer for all lab report formats.
+
+    Supported formats:
+    - PDF (text and scanned)
+    - Images: PNG, JPG, JPEG, GIF, BMP, WEBP
+    - Tables: XLSX, CSV
+    - Multi-page: TIFF
+    """
     user_id: str = current_user["sub"]
 
-    quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "pdf")
+    # Check quota (unified biomarker quota)
+    quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "file")
     if not quota_ok:
         raise HTTPException(
             status_code=402,
@@ -95,29 +106,53 @@ async def analyze_lab_pdf(
     upload_id: Optional[str] = None
 
     try:
-        content_type = (file.content_type or "").lower()
-        if content_type != "application/pdf" and not (file.filename or "").lower().endswith(".pdf"):
-            raise HTTPException(status_code=400, detail={"detail": "Please upload a valid PDF file", "code": "INVALID_FILE_TYPE"})
+        # Validate file extension
+        filename = (file.filename or "").lower()
+        valid_extensions = {
+            '.pdf', '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.tiff', '.tif',
+            '.xlsx', '.xls', '.csv'
+        }
+
+        file_ext = None
+        for ext in valid_extensions:
+            if filename.endswith(ext):
+                file_ext = ext
+                break
+
+        if not file_ext:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "detail": "Please upload a valid file (PDF, image, or table)",
+                    "code": "INVALID_FILE_TYPE"
+                }
+            )
 
         upload_bytes = await file.read()
         if not upload_bytes:
             raise HTTPException(status_code=400, detail={"detail": "Uploaded file is empty", "code": "EMPTY_FILE"})
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        # Save file temporarily with correct extension
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
             tmp.write(upload_bytes)
             temp_path = tmp.name
 
-        analysis = await pdf_analyzer.analyze_lab_pdf(temp_path, symptoms=symptoms)
+        # Create appropriate analyzer based on file type
+        file_analyzer = await create_file_analyzer(temp_path)
+        analysis = await file_analyzer.analyze(temp_path, symptoms=symptoms)
+
         if not analysis.get("success"):
             error_code = analysis.get("error_code")
-            error_text = analysis.get("error") or "Unable to analyze PDF"
+            error_text = analysis.get("error") or "Unable to analyze file"
 
             if error_code == "TIMEOUT":
                 raise HTTPException(status_code=408, detail={"detail": error_text, "code": "ANALYSIS_TIMEOUT"})
             if error_code == "VALIDATION_ERROR":
-                raise HTTPException(status_code=400, detail={"detail": error_text, "code": "PDF_VALIDATION_FAILED"})
+                raise HTTPException(status_code=400, detail={"detail": error_text, "code": "FILE_VALIDATION_FAILED"})
             if error_code == "CONNECTION_ERROR":
                 raise HTTPException(status_code=503, detail={"detail": error_text, "code": "ANALYSIS_SERVICE_UNAVAILABLE"})
+            if error_code == "VISION_API_DISABLED":
+                raise HTTPException(status_code=503, detail={"detail": "Vision API is not available for image analysis", "code": "VISION_API_DISABLED"})
 
             raise HTTPException(status_code=500, detail={"detail": error_text, "code": "ANALYSIS_UNKNOWN_ERROR"})
 
@@ -125,7 +160,7 @@ async def analyze_lab_pdf(
         if not biomarkers:
             raise HTTPException(
                 status_code=422,
-                detail={"detail": "Could not analyze biomarkers from this PDF", "code": "BIOMARKERS_NOT_EXTRACTED"},
+                detail={"detail": "Could not extract biomarkers from the uploaded file", "code": "BIOMARKERS_NOT_EXTRACTED"},
             )
 
         upload_payload = {
@@ -137,11 +172,22 @@ async def analyze_lab_pdf(
             "biomarker_count": len(biomarkers),
         }
 
+        # Determine prompt version based on analysis method
+        analysis_method = analysis.get("analysis_method", "unknown")
+        if "vision" in analysis_method:
+            prompt_version = "openai_vision_v1"
+        elif "table" in analysis_method:
+            prompt_version = "openai_table_v1"
+        elif "pdf_text" in analysis_method:
+            prompt_version = "openai_pdf_text_v1"
+        else:
+            prompt_version = "openai_v1"
+
         upload = await save_lab_upload(
             user_id=user_id,
             extracted_text=json.dumps(upload_payload, ensure_ascii=True),
             lab_name=lab_name or file.filename,
-            analyze_prompt_version="openai_pdf_v1",
+            analyze_prompt_version=prompt_version,
         )
         upload_id = upload["id"]
 
@@ -153,7 +199,7 @@ async def analyze_lab_pdf(
                 user_id=user_id,
                 upload_id=upload_id,
                 recommendations=protocol,
-                prompt_version="openai_pdf_v1",
+                prompt_version=prompt_version,
             )
 
         await save_timeline_event(
@@ -163,7 +209,8 @@ async def analyze_lab_pdf(
             metadata={
                 "upload_id": upload_id,
                 "biomarker_count": len(saved_biomarkers),
-                "analysis_method": analysis.get("analysis_method", "openai_pdf"),
+                "analysis_method": analysis.get("analysis_method", "unknown"),
+                "file_type": file_ext,
             },
         )
 

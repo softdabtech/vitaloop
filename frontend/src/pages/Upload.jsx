@@ -18,7 +18,20 @@ import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import '../styles/dashboard2026.css'
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
-const SUPPORTED_FILE_TYPES = ['application/pdf']
+
+// Support all file formats: PDF, images, and tables
+const SUPPORTED_FILE_TYPES = {
+  'application/pdf': ['.pdf'],
+  'image/png': ['.png'],
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/gif': ['.gif'],
+  'image/bmp': ['.bmp'],
+  'image/webp': ['.webp'],
+  'image/tiff': ['.tiff', '.tif'],
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+  'application/vnd.ms-excel': ['.xls'],
+  'text/csv': ['.csv'],
+}
 
 const UPLOAD_HINTS = [
   '📄 Upload your lab report PDF. It is sent directly to our secure AI analysis pipeline for full-report interpretation.',
@@ -43,8 +56,25 @@ function triggerPaywall(detail) {
 // Helper functions for Upload component
 function validateFileInput(file) {
   if (!file) return 'No file selected. Please choose a lab report.'
-  if (!SUPPORTED_FILE_TYPES.includes(file.type)) return 'Unsupported file type. Please upload a PDF file.'
-  if (file.size > MAX_FILE_SIZE_BYTES) return 'File is too large. Please upload a file under 20MB.'
+
+  // Check if file type is supported
+  const filename = (file.name || '').toLowerCase()
+  const supportedExtensions = new Set()
+
+  Object.values(SUPPORTED_FILE_TYPES).forEach(exts => {
+    exts.forEach(ext => supportedExtensions.add(ext))
+  })
+
+  const hasValidExtension = Array.from(supportedExtensions).some(ext => filename.endsWith(ext))
+
+  if (!hasValidExtension && !Object.keys(SUPPORTED_FILE_TYPES).includes(file.type)) {
+    return 'Unsupported file type. Please upload PDF, image (PNG, JPG, GIF), or spreadsheet (XLSX, CSV).'
+  }
+
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return 'File is too large. Please upload a file under 20MB.'
+  }
+
   return ''
 }
 
@@ -284,7 +314,7 @@ export default function Upload() {
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            📄 Upload PDF / Photo
+            📄 Upload Lab Report
           </button>
           <button
             onClick={() => setUploadMode('manual')}
@@ -374,7 +404,7 @@ export default function Upload() {
             )}
 
             <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-              Tip: upload a clear full-page PDF from your lab portal for best accuracy.
+              Tip: upload a clear full-page PDF from your lab portal, a high-quality photo, or a spreadsheet with results for best accuracy.
             </div>
 
             <div className="mb-6">

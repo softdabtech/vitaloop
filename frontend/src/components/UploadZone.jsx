@@ -10,8 +10,20 @@ export default function UploadZone({ onFile, disabled = false }) {
     onDrop,
     disabled,
     noClick: true,
-    accept: { 'application/pdf': ['.pdf'] },
+    accept: {
+      'application/pdf': ['.pdf'],
+      'image/png': ['.png'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/gif': ['.gif'],
+      'image/bmp': ['.bmp'],
+      'image/webp': ['.webp'],
+      'image/tiff': ['.tiff', '.tif'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'text/csv': ['.csv'],
+    },
     maxFiles: 1,
+    maxSize: 20 * 1024 * 1024, // 20MB
   })
 
   return (
@@ -28,9 +40,9 @@ export default function UploadZone({ onFile, disabled = false }) {
       <input {...getInputProps()} />
       <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-100 text-4xl ring-1 ring-emerald-300">📄</div>
       <p className="text-xl font-semibold text-slate-800 sm:text-2xl">
-        {isDragActive ? 'Drop your PDF here' : 'Drag and drop your lab PDF'}
+        {isDragActive ? 'Drop your lab report here' : 'Drag and drop your lab report'}
       </p>
-      <p className="mt-2 text-sm text-slate-500">PDF only. Max 20MB.</p>
+      <p className="mt-2 text-sm text-slate-500">PDF, image, or spreadsheet. Max 20MB.</p>
 
       <button
         type="button"

@@ -9,6 +9,16 @@ supabase==2.4.2
 # PDF text extraction for OpenAI PDF analysis path
 pypdf==4.2.0
 
+# PDF to image conversion for Vision API
+pdf2image==1.17.0
+pillow==11.2.0
+
+# File type detection
+python-magic==0.4.27
+
+# Excel/table parsing
+openpyxl==3.11.5
+
 # Data validation
 pydantic==2.11.3
 pydantic-settings==2.8.1
