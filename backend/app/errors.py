@@ -8,6 +8,14 @@ except ImportError:
     sentry_sdk = None
 
 
+def _sentry_scope():
+    if sentry_sdk is None:
+        return None
+    if hasattr(sentry_sdk, "new_scope"):
+        return sentry_sdk.new_scope()
+    return sentry_sdk.push_scope()
+
+
 def _error_payload(detail, code: str):
     if isinstance(detail, dict):
         return {
@@ -21,7 +29,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     status_code = exc.status_code
 
     if sentry_sdk and status_code >= 500:
-        with sentry_sdk.push_scope() as scope:
+        with _sentry_scope() as scope:
             scope.set_context("http", {
                 "method": request.method,
                 "url": str(request.url),
@@ -40,7 +48,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     first_message = errors[0].get("msg", "Validation failed") if errors else "Validation failed"
 
     if sentry_sdk:
-        with sentry_sdk.push_scope() as scope:
+        with _sentry_scope() as scope:
             scope.set_context("validation", {
                 "error_count": len(errors),
                 "first_error": first_message,

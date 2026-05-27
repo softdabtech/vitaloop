@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
@@ -27,8 +27,7 @@ class OrganizationMember(OrganizationMemberBase):
     joined_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PractitionerAssignmentBase(BaseModel):
@@ -53,8 +52,7 @@ class PractitionerAssignment(PractitionerAssignmentBase):
     assigned_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InvitationBase(BaseModel):
@@ -77,5 +75,4 @@ class Invitation(InvitationBase):
     expires_at: datetime
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
