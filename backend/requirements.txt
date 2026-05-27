@@ -6,8 +6,8 @@ python-multipart==0.0.9
 # Supabase
 supabase==2.4.2
 
-# Anthropic Claude
-anthropic==0.28.0
+# PDF text extraction for OpenAI PDF analysis path
+pypdf==4.2.0
 
 # Data validation
 pydantic==2.11.3

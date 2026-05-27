@@ -1,21 +1,22 @@
-import base64
 import json
 import logging
 import time
 from pathlib import Path
 from typing import Any, Optional
 
-from anthropic import APIConnectionError, APITimeoutError, AsyncAnthropic
+import httpx
+from pypdf import PdfReader
 
 from app.config import settings
 
 logger = logging.getLogger("uvicorn.error")
 
 
-class ClaudePDFAnalyzer:
+class OpenAIPDFAnalyzer:
     def __init__(self, api_key: str, model: Optional[str] = None):
-        self.client = AsyncAnthropic(api_key=api_key)
-        self.model = model or settings.anthropic_model
+        self.api_key = api_key
+        self.base_url = (settings.active_llm_base_url or "https://api.openai.com/v1").rstrip("/")
+        self.model = model or settings.active_llm_model
         self.max_tokens = settings.claude_max_tokens
         self.timeout = settings.claude_analysis_timeout
         self.max_pdf_size_bytes = settings.claude_pdf_max_size_mb * 1024 * 1024
@@ -27,11 +28,14 @@ class ClaudePDFAnalyzer:
             if not self._validate_pdf(pdf_path):
                 raise ValueError("Invalid PDF format or file too large")
 
-            pdf_data = self._read_pdf_as_base64(pdf_path)
+            extracted_text = self._extract_pdf_text(pdf_path)
+            if len(extracted_text.strip()) < 50:
+                raise ValueError("Could not extract readable text from PDF")
+
             symptoms = symptoms or []
             symptoms_text = f"\n\nUser-reported symptoms: {', '.join(symptoms)}" if symptoms else ""
 
-            prompt = f"""You are an expert medical lab analyst. Analyze this complete lab report thoroughly and provide structured recommendations.
+            prompt = f"""You are an expert medical lab analyst. Analyze this lab report text and provide structured recommendations.
 
 ANALYSIS REQUIREMENTS:
 1. Extract ALL biomarkers with values and reference ranges
@@ -49,6 +53,9 @@ PROTOCOL REQUIREMENTS:
 - Reference the biomarker value that supports each recommendation
 
 {symptoms_text}
+
+LAB REPORT TEXT:
+{extracted_text[:80000]}
 
 RESPONSE FORMAT: Return ONLY valid JSON (no markdown):
 {{
@@ -97,32 +104,7 @@ RESPONSE FORMAT: Return ONLY valid JSON (no markdown):
   }}
 }}"""
 
-            response = await self.client.messages.create(
-                model=self.model,
-                max_tokens=self.max_tokens,
-                timeout=self.timeout,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "document",
-                                "source": {
-                                    "type": "base64",
-                                    "media_type": "application/pdf",
-                                    "data": pdf_data,
-                                },
-                            },
-                            {
-                                "type": "text",
-                                "text": prompt,
-                            },
-                        ],
-                    }
-                ],
-            )
-
-            analysis_text = self._extract_text_content(response)
+            analysis_text = await self._chat_completion(prompt)
             payload = self._parse_json(analysis_text)
 
             required_fields = ["biomarkers", "protocol", "retest_schedule"]
@@ -149,19 +131,19 @@ RESPONSE FORMAT: Return ONLY valid JSON (no markdown):
                 "summary": payload.get("summary", {}),
                 "analysis_time": analysis_time,
                 "biomarker_count": len(biomarkers),
-                "analysis_method": "claude_pdf",
+                "analysis_method": "openai_pdf",
             }
 
-        except APITimeoutError:
+        except httpx.TimeoutException:
             return {
                 "success": False,
-                "error": "Analysis timeout - PDF may be too large or complex.",
+                "error": "Analysis timeout - OpenAI request took too long.",
                 "error_code": "TIMEOUT",
             }
-        except APIConnectionError:
+        except httpx.ConnectError:
             return {
                 "success": False,
-                "error": "Connection error - unable to reach Claude API.",
+                "error": "Connection error - unable to reach OpenAI API.",
                 "error_code": "CONNECTION_ERROR",
             }
         except ValueError as exc:
@@ -184,17 +166,42 @@ RESPONSE FORMAT: Return ONLY valid JSON (no markdown):
             return False
         return path.stat().st_size <= self.max_pdf_size_bytes
 
-    def _read_pdf_as_base64(self, pdf_path: str) -> str:
-        with open(pdf_path, "rb") as file:
-            return base64.standard_b64encode(file.read()).decode("utf-8")
-
-    def _extract_text_content(self, response: Any) -> str:
+    def _extract_pdf_text(self, pdf_path: str) -> str:
+        reader = PdfReader(pdf_path)
         chunks: list[str] = []
-        for item in getattr(response, "content", []) or []:
-            text = getattr(item, "text", None)
-            if text:
+        for page in reader.pages:
+            text = page.extract_text() or ""
+            if text.strip():
                 chunks.append(text)
         return "\n".join(chunks).strip()
+
+    async def _chat_completion(self, prompt: str) -> str:
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": "You are a precise clinical lab report parser."},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0,
+            "max_tokens": min(self.max_tokens, 4096),
+        }
+
+        async with httpx.AsyncClient(base_url=self.base_url, headers=headers, timeout=self.timeout) as client:
+            resp = await client.post("chat/completions", json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+
+        choices = data.get("choices") or []
+        if not choices:
+            raise ValueError("OpenAI API returned no choices")
+        content = ((choices[0] or {}).get("message") or {}).get("content")
+        if not isinstance(content, str) or not content.strip():
+            raise ValueError("OpenAI API returned empty content")
+        return content
 
     def _parse_json(self, raw_text: str) -> dict[str, Any]:
         text = raw_text.strip()
@@ -202,3 +209,8 @@ RESPONSE FORMAT: Return ONLY valid JSON (no markdown):
             text = text.strip("`")
             text = text.replace("json", "", 1).strip()
         return json.loads(text)
+
+
+# Backward-compatible alias for existing imports.
+class ClaudePDFAnalyzer(OpenAIPDFAnalyzer):
+    pass

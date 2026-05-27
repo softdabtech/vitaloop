@@ -14,7 +14,7 @@ import logging
 
 from app.dependencies import require_freemium_analyze, get_current_user
 from app.services.claude_service import extract_biomarkers, EXTRACT_PROMPT_VERSION, is_llm_configured, get_analysis_source
-from app.services.claude_pdf_analyzer import ClaudePDFAnalyzer
+from app.services.claude_pdf_analyzer import OpenAIPDFAnalyzer
 from app.services.supabase_service import (
     assert_upload_belongs_to_user,
     get_biomarkers_by_upload,
@@ -44,7 +44,7 @@ from app.services.biomarker_reference import get_all_biomarkers
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
 biomarker_service = BiomarkerService()
-pdf_analyzer = ClaudePDFAnalyzer(api_key=settings.anthropic_api_key, model=settings.anthropic_model)
+pdf_analyzer = OpenAIPDFAnalyzer(api_key=settings.active_llm_api_key, model=settings.active_llm_model)
 
 # Error message constants (S1192 - reduce string duplication)
 _TEXT_TOO_SHORT_DETAIL = {"detail": "Extracted text is too short", "code": "LAB_TEXT_TOO_SHORT"}
@@ -141,7 +141,7 @@ async def analyze_lab_pdf(
             user_id=user_id,
             extracted_text=json.dumps(upload_payload, ensure_ascii=True),
             lab_name=lab_name or file.filename,
-            analyze_prompt_version="claude_pdf_v1",
+            analyze_prompt_version="openai_pdf_v1",
         )
         upload_id = upload["id"]
 
@@ -153,7 +153,7 @@ async def analyze_lab_pdf(
                 user_id=user_id,
                 upload_id=upload_id,
                 recommendations=protocol,
-                prompt_version="claude_pdf_v1",
+                prompt_version="openai_pdf_v1",
             )
 
         await save_timeline_event(
@@ -163,7 +163,7 @@ async def analyze_lab_pdf(
             metadata={
                 "upload_id": upload_id,
                 "biomarker_count": len(saved_biomarkers),
-                "analysis_method": analysis.get("analysis_method", "claude_pdf"),
+                "analysis_method": analysis.get("analysis_method", "openai_pdf"),
             },
         )
 
@@ -175,7 +175,7 @@ async def analyze_lab_pdf(
             "retest_schedule": analysis.get("retest_schedule", []),
             "summary": analysis.get("summary", {}),
             "analysis_time": analysis.get("analysis_time", 0),
-            "analysis_method": analysis.get("analysis_method", "claude_pdf"),
+            "analysis_method": analysis.get("analysis_method", "openai_pdf"),
         }
     except HTTPException:
         if upload_id:
