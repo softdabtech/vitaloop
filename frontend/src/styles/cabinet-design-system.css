@@ -408,6 +408,18 @@
   padding: 24px;
   box-shadow: var(--cabinet-shadow-md);
   transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Mobile: increased padding for better touch targets */
+@media (max-width: 640px) {
+  .cabinet-stat-card {
+    padding: 20px 16px;
+    min-height: 120px;
+  }
 }
 
 .cabinet-stat-card:hover {

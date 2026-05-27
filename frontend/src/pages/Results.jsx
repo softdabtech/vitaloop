@@ -9,6 +9,7 @@ import { useTourHints } from '../hooks/useTourHints.js'
 import BiomarkerAlertsDisplay from '../components/BiomarkerAlertsDisplay.jsx'
 import HealthTipsDisplay from '../components/HealthTipsDisplay.jsx'
 import BiomarkerContextTooltip from '../components/BiomarkerContextTooltip.jsx'
+import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
 import { ArrowLeft, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Info, Activity } from 'lucide-react'
 
 const STATUS_META = {
@@ -282,6 +283,25 @@ export default function Results() {
   }, [biomarkers, normalizedBiomarkers])
 
   if (loading) return <div className="flex items-center justify-center h-screen text-slate-500">Loading…</div>
+
+  if (normalizedBiomarkers.length === 0) {
+    return (
+      <div className="min-h-screen p-6">
+        <div className="max-w-4xl mx-auto">
+          <button
+            onClick={() => navigate('/lab-results')}
+            className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-800 transition-colors mb-8"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Lab Results
+          </button>
+          <div className="py-12">
+            <EmptyStateIllustration type="results" size="lg" />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const rankedBiomarkers = [...normalizedBiomarkers].sort((a, b) => scoreStatus(a.status_normalized) - scoreStatus(b.status_normalized))
   const deficient = normalizedBiomarkers.filter((b) => {
