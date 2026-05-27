@@ -147,7 +147,7 @@ const LOOP_FLOW = [
   {
     title: 'Upload data',
     body: 'Bring in a new lab report or retest.',
-    detail: 'PDF and image uploads are normalized automatically across lab formats.',
+    detail: 'PDF uploads are normalized automatically across lab formats.',
     icon: Upload,
   },
   {
@@ -228,15 +228,15 @@ const HERO_TRUST_SIGNALS = [
 const FAQ_ITEMS = [
   {
     question: 'What is AI lab analysis and how does VITALOOP use it?',
-    answer: 'AI lab analysis uses machine learning to analyze, normalize, and interpret biomarker data from blood test PDFs. VITALOOP identifies deficiencies, flags out-of-range values, and maps patterns across multiple test cycles — turning raw numbers into actionable health priorities.',
+    answer: 'AI lab analysis in VITALOOP means structured interpretation of blood test PDFs: marker normalization, priority ranking, and trend context across cycles. The output is an execution-ready plan rather than raw values.',
   },
   {
     question: 'Which blood test formats does VITALOOP support?',
-    answer: 'VITALOOP supports PDF and image uploads from any laboratory. Our AI engine normalizes units and reference ranges across 85+ biomarkers including CBC, metabolic panels, thyroid, hormones, vitamins, and inflammation markers.',
+    answer: 'VITALOOP currently supports PDF uploads from major laboratories. Our AI engine normalizes units and reference ranges across 85+ biomarkers including CBC, metabolic panels, thyroid, hormones, vitamins, and inflammation markers.',
   },
   {
     question: 'How accurate is AI blood test interpretation?',
-    answer: 'VITALOOP cross-references each biomarker against clinical reference ranges and your historical trends. The AI surfaces correlations a manual review might miss — like ferritin, transferrin saturation, and CRP together indicating iron metabolism issues — with confidence scores and source context.',
+    answer: 'VITALOOP compares biomarkers against reference ranges and your historical trends. It also highlights relevant marker combinations (for example ferritin with CRP and transferrin saturation) to support clearer prioritization.',
   },
   {
     question: 'Is VITALOOP a medical device or replacement for a doctor?',
@@ -248,7 +248,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'How is VITALOOP different from asking ChatGPT about my labs?',
-    answer: 'ChatGPT has no memory of your history, cannot parse lab PDFs reliably, and generates generic advice. VITALOOP maintains your longitudinal data, normalizes units, applies clinical reference logic, integrates weekly check-in feedback, and generates structured protocols tied to your specific biomarker patterns.',
+    answer: 'Chat tools are session-based and usually provide generic guidance. VITALOOP keeps your longitudinal lab history, applies a consistent normalization flow, and ties protocol recommendations to your specific biomarker patterns.',
   },
   {
     question: 'How does VITALOOP compare with LabCorp MyChart, Everlywell, Levels, and Function Health?',
@@ -271,7 +271,7 @@ const SCHEMA_HOWTO = {
   description: 'Upload your lab report and receive comprehensive AI-powered biomarker analysis. Full personalized protocol and weekly adaptive loop are available on paid plans.',
   estimatedCost: { '@type': 'MonetaryAmount', currency: 'USD', value: '0' },
   step: [
-    { '@type': 'HowToStep', name: 'Upload your lab report', text: 'Drop a PDF or image of your blood test results into VITALOOP. Supported formats include any standard laboratory PDF or photo.', position: 1 },
+    { '@type': 'HowToStep', name: 'Upload your lab report', text: 'Drop a blood test PDF into VITALOOP. The current upload flow is optimized for standard laboratory PDF reports.', position: 1 },
     { '@type': 'HowToStep', name: 'AI analyzes and validates biomarkers', text: 'Our AI engine analyzes all biomarker values and normalizes them across units and reference ranges automatically.', position: 2 },
     { '@type': 'HowToStep', name: 'Signal mapping and pattern detection', text: 'Deficiencies, elevations, and cross-biomarker correlations are surfaced and ranked by clinical significance.', position: 3 },
     { '@type': 'HowToStep', name: 'Unlock your personalized protocol', text: 'Paid plans unlock a targeted protocol with supplement recommendations, nutrition actions, and weekly assignments tied to your biomarkers.', position: 4 },

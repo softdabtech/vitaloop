@@ -3,18 +3,18 @@ import { DollarSign, Calendar, TrendingUp } from 'lucide-react'
 const STATS = [
   {
     icon: DollarSign,
-    number: '$400 → $10/mo',
-    label: 'Lab cost vs protocol'
+    number: '$19.99/mo',
+    label: 'Premium plan'
   },
   {
     icon: Calendar,
-    number: '12 weeks',
-    label: 'See real results'
+    number: '85+',
+    label: 'Biomarkers analyzed'
   },
   {
     icon: TrendingUp,
-    number: '25%',
-    label: 'Free-to-paid conversion'
+    number: '1 free upload',
+    label: 'Before upgrade'
   },
 ]
 
