@@ -105,31 +105,18 @@ class Settings(BaseSettings):
 
     @property
     def active_llm_api_key(self) -> str:
-        """Active LLM API key. Priority: OpenAI > DigitalOcean > RouteLLM/Abacus."""
-        return (
-            self.openai_api_key
-            or self.digitalocean_claude_api_key
-            or self.routellm_api_key
-            or self.abacus_ai_api_key
-        )
+        """Active LLM API key (OpenAI-only mode)."""
+        return self.openai_api_key
 
     @property
     def active_llm_base_url(self) -> str:
-        """Active LLM base URL. Priority follows active_llm_api_key."""
-        if self.openai_api_key:
-            return self.openai_base_url
-        if self.digitalocean_claude_api_key:
-            return self.digitalocean_claude_base_url
-        return self.routellm_base_url or self.abacus_ai_base_url or "https://routellm.abacus.ai/v1"
+        """Active LLM base URL (OpenAI-only mode)."""
+        return self.openai_base_url or "https://api.openai.com/v1"
 
     @property
     def active_llm_model(self) -> str:
-        """Active LLM model. Priority follows active_llm_api_key."""
-        if self.openai_api_key:
-            return self.openai_model
-        if self.digitalocean_claude_api_key:
-            return self.digitalocean_claude_model
-        return self.routellm_model or self.abacus_ai_model or "route-llm"
+        """Active LLM model (OpenAI-only mode)."""
+        return self.openai_model or "gpt-4o-mini"
 
     # Backward-compatible aliases (deprecated — use active_llm_* instead)
     @property
