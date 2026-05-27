@@ -26,7 +26,6 @@ import Seo from '../components/Seo.jsx'
 import { LightHero } from '../components/landing/LightHero.jsx'
 import { StatsBar } from '../components/landing/StatsBar.jsx'
 import { TrustedServicesSection } from '../components/landing/TrustedServicesSection.jsx'
-import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx'
 import { TestimonialsCarousel } from '../components/landing/TestimonialsCarousel.jsx'
 import { InteractivePricing } from '../components/landing/InteractivePricing.jsx'
 import { AnimatedFAQ } from '../components/landing/AnimatedFAQ.jsx'
@@ -1190,8 +1189,6 @@ export default function Landing() {
 
 
         </section>
-
-        <HowItWorksTimeline />
 
         <section id="why-vitaloop" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7 text-center">
