@@ -1,6 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import analyze
+import os
+
+
+def _origins() -> list[str]:
+    raw = os.getenv(
+        "ANALYSIS_ALLOWED_ORIGINS",
+        "https://vitaloop.today,https://www.vitaloop.today,https://crm.vitaloop.today,http://localhost:5173",
+    )
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 app = FastAPI(
     title="Analysis Service",
@@ -11,10 +20,10 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=_origins(),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 @app.get("/health")

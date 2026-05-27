@@ -37,8 +37,8 @@ export function PageHeader() {
           onClick={() => navigate('/')}
           className="flex items-center gap-2 transition hover:opacity-80"
         >
-          <span className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-emerald-500/90 text-white">
-            <img src="/favicon.png" alt="VITALOOP" className="h-5 w-5 object-contain" />
+          <span className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl">
+            <img src="/images/favicon_1.png" alt="VITALOOP" className="h-8 w-8 object-contain" />
           </span>
           <span className="text-base font-semibold tracking-tight">VITALOOP</span>
         </button>

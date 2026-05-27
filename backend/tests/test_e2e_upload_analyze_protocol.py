@@ -39,7 +39,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
         }
         return {"id": upload_id}
 
-    async def fake_extract_biomarkers(text, symptoms):
+    async def fake_extract_biomarkers(text, symptoms, **_kwargs):
         return [
             {
                 "name": "Vitamin D (25-OH)",
@@ -83,7 +83,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
                 return protocol
         return None
 
-    async def fake_generate_protocol(biomarkers, symptoms):
+    async def fake_generate_protocol(biomarkers, symptoms, **_kwargs):
         state["protocol_calls"] += 1
         assert len(biomarkers) > 0
         return [

@@ -48,26 +48,26 @@ async def get_user_context(jwt_payload: dict = Depends(get_current_user)) -> Use
     """
     user_id = UUID(jwt_payload.get("sub"))
 
-    # Get global_role from JWT or fetch from DB
-    global_role = jwt_payload.get("global_role")
+    # Resolve authorization roles from server-controlled data. Do not trust
+    # user_metadata or top-level JWT custom claims for CRM access decisions.
+    global_role = None
+    try:
+        sb = svc._get_supabase()
+        resp = await svc._run(
+            lambda: sb.table("users")
+            .select("global_role")
+            .eq("id", str(user_id))
+            .limit(1)
+            .execute()
+        )
+        if resp.data:
+            global_role = normalize_global_role(resp.data[0].get("global_role"))
+    except Exception as e:
+        logger.warning("Failed to fetch global_role for %s: %s", user_id, e, exc_info=True)
+
     if not global_role:
-        # Fallback to DB lookup
-        try:
-            sb = svc._get_supabase()
-            resp = await svc._run(
-                lambda: sb.table("users")
-                .select("global_role")
-                .eq("id", str(user_id))
-                .limit(1)
-                .execute()
-            )
-            if resp.data:
-                global_role = normalize_global_role(resp.data[0].get("global_role"))
-            else:
-                global_role = "end_user"
-        except Exception as e:
-            logger.warning("Failed to fetch global_role for %s: %s", user_id, e, exc_info=True)
-            global_role = "end_user"
+        app_meta = jwt_payload.get("app_metadata") if isinstance(jwt_payload.get("app_metadata"), dict) else {}
+        global_role = normalize_global_role(app_meta.get("global_role") or app_meta.get("role") or "end_user")
 
     return UserContext(user_id, global_role, jwt_payload)
 

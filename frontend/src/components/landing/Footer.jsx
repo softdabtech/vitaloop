@@ -33,8 +33,8 @@ export default function Footer() {
       <div className="mx-auto grid w-full max-w-[1240px] gap-8 px-4 text-sm sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
         <div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-emerald-500/90 text-white">
-              <img src="/favicon.png" alt="VITALOOP" className="h-5 w-5 object-contain" />
+            <span className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl">
+              <img src="/images/favicon_1.png" alt="VITALOOP" className="h-8 w-8 object-contain" />
             </span>
             <span className="text-base font-semibold tracking-tight">VITALOOP</span>
           </div>

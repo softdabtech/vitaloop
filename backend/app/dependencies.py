@@ -63,7 +63,7 @@ def require_same_user(user_id: str, current_user: dict) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
 
-async def require_active_subscription(current_user: dict = Depends(get_current_user)) -> None:
+async def require_active_subscription(current_user: dict = Depends(get_current_user)) -> dict:
     """Require active paid subscription for end-user premium routes."""
     user_id = current_user.get("sub")
     jwt_role = str(current_user.get("global_role") or current_user.get("role") or "").lower()
@@ -93,7 +93,7 @@ async def require_active_subscription(current_user: dict = Depends(get_current_u
 
     # Non-end-user roles (ops/admin/practitioner) bypass B2C subscription gating.
     if global_role != "end_user" or is_paid:
-        pass
+        return current_user
     else:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,

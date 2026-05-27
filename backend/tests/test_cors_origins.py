@@ -8,6 +8,7 @@ from app.config import settings
 
 def test_origins_list_includes_production_fallbacks_when_env_empty(monkeypatch):
     monkeypatch.setattr(settings, "allowed_origins", "")
+    monkeypatch.setattr(settings, "app_env", "development")
 
     origins = settings.origins_list
 
@@ -16,6 +17,19 @@ def test_origins_list_includes_production_fallbacks_when_env_empty(monkeypatch):
     assert "https://crm.vitaloop.today" in origins
     assert "http://localhost:5173" in origins
     assert "http://127.0.0.1:5173" in origins
+
+
+def test_origins_list_excludes_localhost_in_production_when_env_empty(monkeypatch):
+    monkeypatch.setattr(settings, "allowed_origins", "")
+    monkeypatch.setattr(settings, "app_env", "production")
+
+    origins = settings.origins_list
+
+    assert "https://vitaloop.today" in origins
+    assert "https://www.vitaloop.today" in origins
+    assert "https://crm.vitaloop.today" in origins
+    assert "http://localhost:5173" not in origins
+    assert "http://127.0.0.1:5173" not in origins
 
 
 def test_origins_list_deduplicates_and_keeps_custom_origins(monkeypatch):
@@ -43,6 +57,7 @@ def test_origins_list_deduplicates_and_keeps_custom_origins(monkeypatch):
 )
 async def test_cors_preflight_allows_production_origins_even_when_env_missing(monkeypatch, origin):
     monkeypatch.setattr(settings, "allowed_origins", "")
+    monkeypatch.setattr(settings, "app_env", "production")
 
     app = FastAPI()
 

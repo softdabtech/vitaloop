@@ -13,7 +13,7 @@ from typing import Optional, List
 import logging
 
 from app.dependencies import require_freemium_analyze, get_current_user
-from app.services.claude_service import extract_biomarkers, EXTRACT_PROMPT_VERSION, is_llm_configured
+from app.services.claude_service import extract_biomarkers, EXTRACT_PROMPT_VERSION, is_llm_configured, get_analysis_source
 from app.services.claude_pdf_analyzer import ClaudePDFAnalyzer
 from app.services.supabase_service import (
     assert_upload_belongs_to_user,
@@ -491,6 +491,7 @@ async def analyze_lab(
         result = {
             "upload_id": upload_id,
             "biomarkers": saved,
+            "analysis_source": get_analysis_source(),  # 'llm' | 'fallback' | 'unknown'
         }
         if normalized_key:
             await _complete_idempotency(user_id=user_id, idempotency_key=normalized_key, response=result)

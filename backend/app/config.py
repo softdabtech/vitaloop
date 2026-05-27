@@ -21,9 +21,12 @@ class Settings(BaseSettings):
     routellm_api_key: str = ""
     routellm_base_url: str = "https://routellm.abacus.ai/v1"
     routellm_model: str = "route-llm"
-    # DigitalOcean AI endpoint (via Agents endpoint)
+    # DigitalOcean AI endpoint.
+    # For Agent Inference (customer-specific):    https://{your-agent}.agents.do-ai.run
+    # For Serverless Inference:                  https://inference.do-ai.run/v1
+    # The generic https://agents.do-ai.run without a subdomain returns 404 and is NOT valid.
     digitalocean_claude_api_key: str = ""
-    digitalocean_claude_base_url: str = "https://agents.do-ai.run"
+    digitalocean_claude_base_url: str = ""
     digitalocean_claude_model: str = "claude-3-5-sonnet"
     app_env: str = "development"
     allowed_origins: str = "http://localhost:5173"
@@ -67,6 +70,8 @@ class Settings(BaseSettings):
     webpush_vapid_private_key: str = ""
     webpush_vapid_subject: str = "mailto:support@vitaloop.today"
     webpush_dispatch_secret: str = ""
+    emergency_fixes_enabled: bool = False
+    analysis_service_url: str = "http://127.0.0.1:8006"
 
     @property
     def origins_list(self) -> List[str]:

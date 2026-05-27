@@ -15,10 +15,18 @@ router = APIRouter(prefix="/emergency", tags=["emergency-fixes"])
 
 async def require_super_admin(current_user: dict = Depends(get_current_user)) -> dict:
     """Verify super admin access"""
-    is_super_admin = bool(
-        current_user.get("app_metadata", {}).get("is_super_admin")
-        or current_user.get("user_metadata", {}).get("is_super_admin")
-    )
+    if not svc.settings.emergency_fixes_enabled:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    app_meta = current_user.get("app_metadata") or {}
+    is_super_admin = bool(app_meta.get("is_super_admin") or app_meta.get("global_role") == "super_admin")
+    if not is_super_admin:
+        try:
+            account = await svc.get_user_account(current_user.get("sub"))
+            is_super_admin = bool(account and account.get("global_role") == "super_admin")
+        except Exception:
+            is_super_admin = False
+
     if not is_super_admin:
         raise HTTPException(status_code=403, detail="Super admin access required")
     return current_user
