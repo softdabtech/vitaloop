@@ -33,9 +33,10 @@ function urgencyGuidance(redFlags) {
 }
 
 function saveConcernContext(payload) {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem('symptom-check-active-concern', payload.concern)
-  window.localStorage.setItem('symptom-check-summary', JSON.stringify(payload))
+  return api.patch('/questionnaire/session/context', {
+    active_concern: payload.concern,
+    summary: payload,
+  })
 }
 
 export default function Questionnaire() {
@@ -87,6 +88,21 @@ export default function Questionnaire() {
       setNextQuestion(data?.next_question || null)
       setAnsweredCount(Number(data?.answered_count || 0))
       setRemainingCount(Number(data?.remaining_count || 0))
+      const sessionContext = data?.session_context || data?.session?.session_metadata || {}
+      if (sessionContext?.active_concern) {
+        setConcern(sessionContext.active_concern)
+      }
+      if (sessionContext?.summary) {
+        const summary = sessionContext.summary || {}
+        setDuration(summary.duration || '')
+        setSeverity(Number(summary.severity || 5))
+        setBodySystem(summary.bodySystem || summary.body_system || '')
+        setRelatedSymptoms(summary.relatedSymptoms || summary.related_symptoms || '')
+        setMedications(summary.medications || '')
+        setSupplements(summary.supplements || '')
+        setWhatTried(summary.whatTried || summary.what_tried || '')
+        setRedFlags((prev) => ({ ...prev, ...(summary.redFlags || summary.red_flags || {}) }))
+      }
     } catch (err) {
       setError(parseApiError(err, 'Failed to load symptom check.'))
     } finally {

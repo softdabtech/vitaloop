@@ -15,6 +15,7 @@ import { trackFunnelEvent } from '../lib/funnel.js'
 import { gaLabUpload } from '../lib/analytics.js'
 import toast from 'react-hot-toast'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
+import { useQuestionnaireSession } from '../hooks/useQueries.js'
 import '../styles/dashboard2026.css'
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
@@ -148,9 +149,9 @@ export default function Upload() {
   const [loadingWarning, setLoadingWarning] = useState('')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
-  const activeConcern = typeof window !== 'undefined'
-    ? window.localStorage.getItem('symptom-check-active-concern') || ''
-    : ''
+  const { data: questionnaireSession } = useQuestionnaireSession()
+  const sessionContext = questionnaireSession?.session_context || questionnaireSession?.session?.session_metadata || {}
+  const activeConcern = sessionContext?.active_concern || ''
 
   useEffect(() => {
     api.get('/auth/onboarding/state').then(r => {

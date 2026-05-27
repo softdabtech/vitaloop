@@ -12,7 +12,7 @@ import {
 
 const NOTIFICATION_TYPES = {
   weekly_checkin: {
-    label: 'Symptom Check-in Reminder',
+    label: 'Weekly Check-in Reminder',
     description: 'Friday 6pm - Remind me to complete weekly symptom check-in',
     icon: Calendar,
     color: 'purple',
@@ -54,7 +54,7 @@ const NOTIFICATION_TYPES = {
     default: true,
   },
   biomarker_alert: {
-    label: 'Biomarker / Safety Alerts',
+    label: 'Biomarker Alerts',
     description: 'Important marker shifts or safety-related context changes',
     icon: AlertCircle,
     color: 'red',

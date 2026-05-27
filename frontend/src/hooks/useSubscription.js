@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from './useAuth.js'
 import api from '../lib/api.js'
+import { useUserEntitlements } from './useQueries.js'
 
 export function useSubscription() {
   const { user } = useAuth()
+  const { data: entitlements, loading: entitlementLoading, refetch: refetchEntitlements } = useUserEntitlements()
   const [subStatus, setSubStatus] = useState('free')
   const [isPremium, setIsPremium] = useState(false)
   const [uploadCount, setUploadCount] = useState(0)
@@ -21,60 +23,36 @@ export function useSubscription() {
     }
 
     setLoading(true)
-
-    const fetchSubscription = async (attempt = 0) => {
+    const resolve = async () => {
       try {
-        const { data: stripeData } = await api.get('/stripe/subscription')
-
-        const stripeStatus = String(stripeData?.sub_status ?? 'free').toLowerCase()
-        const stripePremium = Boolean(stripeData?.is_premium)
-        const isPremiumResolved = stripePremium
-        const subStatusResolved = stripePremium ? 'active' : stripeStatus
-
-        const normalizedPlanName = stripeData?.plan_id
-          || stripeData?.plan_name
-          || (isPremiumResolved ? 'personal' : 'free')
-
-        setSubStatus(subStatusResolved)
-        setIsPremium(isPremiumResolved)
-        setPlanName(normalizedPlanName)
-        setUploadCount(stripeData?.upload_count ?? 0)
-        setUploadLimit(isPremiumResolved ? Infinity : (stripeData?.upload_limit ?? 1))
-        setUploadsRemaining(isPremiumResolved ? Infinity : (stripeData?.uploads_remaining ?? 0))
-        return
-      } catch {
-        try {
-          const { data } = await api.get('/auth/me')
-          const status = String(data?.subscription_status || (data?.has_active_subscription ? 'active' : 'free')).toLowerCase()
-          const premium = Boolean(data?.has_active_subscription || data?.subscription_active || data?.global_role !== 'end_user')
-
-          setSubStatus(status)
-          setIsPremium(premium)
-          setPlanName(data?.plan_name ?? null)
-
-          // Conservative defaults when stripe endpoint is unavailable.
-          // Do not force free-plan limits for premium users.
-          setUploadCount(0)
-          setUploadLimit(premium ? Infinity : 1)
-          setUploadsRemaining(premium ? Infinity : 1)
-          return
-        } catch {
-          if (attempt < 1) {
-            await new Promise((resolve) => setTimeout(resolve, 900))
-            return fetchSubscription(attempt + 1)
-          }
-
-          setSubStatus('free')
-          setIsPremium(false)
-          setPlanName(null)
-          setUploadCount(0)
-          setUploadLimit(1)
-          setUploadsRemaining(1)
-        }
+        await refetchEntitlements()
+      } finally {
+        const resolved = entitlements || {}
+        const premium = Boolean(resolved.is_premium)
+        setSubStatus(String(resolved.billing_status || 'free').toLowerCase())
+        setIsPremium(premium)
+        setPlanName(resolved.plan_key || null)
+        setUploadCount(0)
+        setUploadLimit(premium ? Infinity : (resolved.features?.upload_limit ?? 1))
+        setUploadsRemaining(premium ? Infinity : (resolved.features?.upload_limit ?? 1))
+        setLoading(false)
       }
     }
 
-    fetchSubscription().finally(() => setLoading(false))
+    resolve().catch(async () => {
+      try {
+        const { data } = await api.get('/auth/me')
+        const premium = Boolean(data?.has_active_subscription || data?.subscription_active || data?.global_role !== 'end_user')
+        setSubStatus(String(data?.subscription_status || 'free').toLowerCase())
+        setIsPremium(premium)
+        setPlanName(data?.plan_name ?? null)
+        setUploadCount(0)
+        setUploadLimit(premium ? Infinity : 1)
+        setUploadsRemaining(premium ? Infinity : 1)
+      } finally {
+        setLoading(false)
+      }
+    })
   }, [user])
 
   useEffect(() => { refresh() }, [refresh])

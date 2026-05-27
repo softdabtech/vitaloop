@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends
 
 from app.dependencies import get_current_user
 from app.services import supabase_service as svc
+from app.services.entitlements import resolve_user_entitlements
 from app.services.assignment_service import AssignmentService
 from app.utils.roles import normalize_global_role as _normalize_role, as_bool as _as_bool
 
@@ -135,6 +136,8 @@ async def _resolve_onboarding_state(user_id: str, current_user: dict) -> Dict[st
             "questionnaire_completed": has_questionnaire,
         },
     ))
+
+    entitlements = await resolve_user_entitlements(user_id, current_user)
 
     if not requires_onboarding:
         stage = "complete"
@@ -489,7 +492,7 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
             "full_name": account.get("full_name"),
             "first_name": _first_name(account.get("full_name"), account.get("email")),
             "global_role": global_role,
-            "subscription_status": account.get("sub_status") or "free",
+            "subscription_status": entitlements.get("billing_status") or "free",
             "onboarding": onboarding,
         },
         "stats": {
@@ -501,7 +504,7 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
             "total_uploads": upload_count,
             "insights_count": len(insights),
             "questionnaire_score": questionnaire_latest.get("completion_score") if isinstance(questionnaire_latest, dict) else None,
-            "subscription": account.get("sub_status") or "free",
+            "subscription": entitlements.get("billing_status") or "free",
             "streak_days": streak_days,
             "goals_achieved": goals_achieved,
         },

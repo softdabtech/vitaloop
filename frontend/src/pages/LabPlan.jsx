@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, Circle, ClipboardCheck, FlaskConical, Route, Upload } from 'lucide-react'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { useQuestionnaireSession } from '../hooks/useQueries.js'
 
 const CORE_LABS = [
   { name: 'CBC', why: 'Baseline inflammation and blood pattern context', related: 'Fatigue, recovery, dizziness', priority: 'Core' },
@@ -15,22 +16,6 @@ const OPTIONAL_LABS = [
   { name: 'B12 + Folate', why: 'Nervous system and red blood cell support', related: 'Fatigue, numbness, cognitive fog', priority: 'Optional' },
 ]
 
-function getConcernLabel() {
-  if (typeof window === 'undefined') return 'your active concern'
-  return window.localStorage.getItem('symptom-check-active-concern') || 'your active concern'
-}
-
-function getConcernSummary() {
-  if (typeof window === 'undefined') return null
-  const raw = window.localStorage.getItem('symptom-check-summary')
-  if (!raw) return null
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return null
-  }
-}
-
 function statusBadge(status) {
   if (status === 'uploaded') return 'border-emerald-200 bg-emerald-50 text-emerald-700'
   if (status === 'ordered') return 'border-blue-200 bg-blue-50 text-blue-700'
@@ -39,8 +24,10 @@ function statusBadge(status) {
 
 export default function LabPlan() {
   const navigate = useNavigate()
-  const concern = getConcernLabel()
-  const concernSummary = getConcernSummary()
+  const { data: questionnaireSession } = useQuestionnaireSession()
+  const sessionContext = questionnaireSession?.session_context || questionnaireSession?.session?.session_metadata || {}
+  const concern = sessionContext?.active_concern || 'your active concern'
+  const concernSummary = sessionContext?.summary || null
 
   const readiness = useMemo(() => {
     const base = Number(concernSummary?.readiness || 42)

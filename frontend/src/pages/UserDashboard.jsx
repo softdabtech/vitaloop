@@ -4,24 +4,9 @@ import { AlertTriangle, ArrowRight, CheckCircle2, Circle, ClipboardCheck, Route,
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useDashboardSummary } from '../hooks/useQueries.js'
+import { useQuestionnaireSession } from '../hooks/useQueries.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import { HEALTH_LOOP_STAGES, getHealthLoopStageIndex } from '../lib/cabinetV511.js'
-
-function getConcern() {
-  if (typeof window === 'undefined') return ''
-  return window.localStorage.getItem('symptom-check-active-concern') || ''
-}
-
-function getConcernSummary() {
-  if (typeof window === 'undefined') return null
-  const raw = window.localStorage.getItem('symptom-check-summary')
-  if (!raw) return null
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return null
-  }
-}
 
 function Stepper({ stageIndex }) {
   return (
@@ -60,8 +45,10 @@ export default function UserDashboard() {
   const latestCheckin = summary?.blocks?.latest_checkin || null
   const latestUpload = summary?.blocks?.latest_upload || null
   const assignments = Array.isArray(summary?.blocks?.assignments) ? summary.blocks.assignments : []
-  const concern = getConcern()
-  const concernSummary = getConcernSummary()
+  const { data: questionnaireSession } = useQuestionnaireSession()
+  const sessionContext = questionnaireSession?.session_context || questionnaireSession?.session?.session_metadata || {}
+  const concern = sessionContext?.active_concern || ''
+  const concernSummary = sessionContext?.summary || null
 
   const hasConcern = Boolean(concern)
   const hasQuestions = Boolean(concernSummary?.readiness)

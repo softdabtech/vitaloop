@@ -91,11 +91,29 @@ export const useUserEntitlements = () =>
   useQuery({
     queryKey: ['user-entitlements'],
     queryFn: async () => {
-      const { data } = await api.get('/user/entitlements')
-      return data || {}
+      const { data } = await api.get('/auth/me')
+      return data?.entitlements || {
+        is_premium: Boolean(data?.has_active_subscription || data?.subscription_active),
+        billing_status: String(data?.subscription_status || 'free').toLowerCase(),
+        plan_key: data?.plan_name || 'free',
+        has_active_subscription: Boolean(data?.has_active_subscription || data?.subscription_active),
+        features: { upload_limit: 1, lab_history: true, trend_analysis: false, advanced_protocol: false, symptom_lab_plan: true, checkins: false },
+      }
     },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
+  })
+
+// Symptom check session/context
+export const useQuestionnaireSession = () =>
+  useQuery({
+    queryKey: ['questionnaire-session'],
+    queryFn: async () => {
+      const { data } = await api.get('/questionnaire/session')
+      return data || {}
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   })
 
 // Biomarker normalization for a specific lab

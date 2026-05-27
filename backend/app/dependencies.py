@@ -12,6 +12,7 @@ from jwt import PyJWKClient
 
 from app.config import settings
 from app.services import supabase_service as svc
+from app.services.entitlements import resolve_user_entitlements
 
 _bearer = HTTPBearer(auto_error=False)
 logger = logging.getLogger("auth.jwt")
@@ -66,30 +67,9 @@ def require_same_user(user_id: str, current_user: dict) -> None:
 async def require_active_subscription(current_user: dict = Depends(get_current_user)) -> dict:
     """Require active paid subscription for end-user premium routes."""
     user_id = current_user.get("sub")
-    jwt_role = str(current_user.get("global_role") or current_user.get("role") or "").lower()
-
-    account = await svc.get_user_account(user_id)
-    active_sub = await svc.get_user_active_subscription(user_id)
-    global_role = str(account.get("global_role") or jwt_role or "end_user").lower()
-    sub_status = str(account.get("sub_status") or "").lower()
-    account_plan = str(account.get("plan_tier") or "").strip().lower()
-    sub_table_status = str((active_sub or {}).get("status") or "free").lower()
-    sub_table_plan = str((active_sub or {}).get("plan_name") or "").strip().lower()
-
-    paid_from_sub_table = bool(
-        active_sub
-        and sub_table_status == "active"
-        and sub_table_plan
-        and sub_table_plan != "free"
-        and not active_sub.get("cancel_at_period_end", False)
-    )
-    paid_from_account = bool(
-        not active_sub
-        and sub_status == "active"
-        and account_plan
-        and account_plan != "free"
-    )
-    is_paid = paid_from_sub_table or paid_from_account
+    entitlements = await resolve_user_entitlements(user_id, current_user)
+    global_role = str(entitlements.get("role") or "end_user").lower()
+    is_paid = bool(entitlements.get("is_premium"))
 
     # Non-end-user roles (ops/admin/practitioner) bypass B2C subscription gating.
     if global_role != "end_user" or is_paid:
@@ -108,30 +88,9 @@ async def require_freemium_analyze(current_user: dict = Depends(get_current_user
     Free users who have reached the limit receive 402 with code BIOMARKER_QUOTA_EXCEEDED.
     """
     user_id = current_user.get("sub")
-    jwt_role = str(current_user.get("global_role") or current_user.get("role") or "").lower()
-
-    account = await svc.get_user_account(user_id)
-    active_sub = await svc.get_user_active_subscription(user_id)
-    global_role = str(account.get("global_role") or jwt_role or "end_user").lower()
-    sub_status = str(account.get("sub_status") or "").lower()
-    account_plan = str(account.get("plan_tier") or "").strip().lower()
-    sub_table_status = str((active_sub or {}).get("status") or "free").lower()
-    sub_table_plan = str((active_sub or {}).get("plan_name") or "").strip().lower()
-
-    paid_from_sub_table = bool(
-        active_sub
-        and sub_table_status == "active"
-        and sub_table_plan
-        and sub_table_plan != "free"
-        and not active_sub.get("cancel_at_period_end", False)
-    )
-    paid_from_account = bool(
-        not active_sub
-        and sub_status == "active"
-        and account_plan
-        and account_plan != "free"
-    )
-    is_paid = paid_from_sub_table or paid_from_account
+    entitlements = await resolve_user_entitlements(user_id, current_user)
+    global_role = str(entitlements.get("role") or "end_user").lower()
+    is_paid = bool(entitlements.get("is_premium"))
 
     # Non-end-users and active subscribers pass through unconditionally.
     if global_role != "end_user" or is_paid:
