@@ -1,135 +1,94 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, ClipboardList, Route, ShieldAlert, Stethoscope } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import api from '../lib/api.js'
-import toast from 'react-hot-toast'
-import { trackFunnelEvent } from '../lib/funnel.js'
-import { gaQuestionnaireComplete } from '../lib/analytics.js'
 
-const DIMENSION_LABELS = {
-  energy: 'Daytime Energy',
-  sleep: 'Sleep Quality',
-  stress: 'Stress Level',
-  digestion: 'Digestion',
-  cognition: 'Focus & Clarity',
-  recovery: 'Recovery',
-  mood: 'Mood Stability',
-  metabolic: 'Metabolic Health',
-  inflammation: 'Inflammation',
-  behavior: 'Healthy Habits',
-}
-
-function getViewportWidth() {
-  if (typeof window === 'undefined') return 1024
-  return window.innerWidth
-}
-
-function getQuestionnaireStyles(viewportWidth) {
-  const isMobile = viewportWidth < 500
-  return {
-    wrap: {
-      minHeight: '100vh',
-      background: '#f8fafc',
-      color: '#0f172a',
-      fontFamily: 'system-ui, sans-serif',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'flex-start',
-      padding: isMobile ? '24px 16px' : '24px 16px',
-    },
-    card: {
-      width: '100%',
-      maxWidth: 720,
-      background: '#ffffff',
-      border: '1px solid rgba(15,23,42,0.08)',
-      borderRadius: 24,
-      padding: isMobile ? '24px 16px' : '34px 30px',
-      boxShadow: '0 1px 3px rgba(15,23,42,0.06)',
-    },
-  }
-}
+const BODY_SYSTEMS = ['General', 'Neurological', 'Cardiometabolic', 'Hormonal', 'Digestive', 'Musculoskeletal', 'Recovery']
+const DURATION_OPTIONS = ['< 1 week', '1-4 weeks', '1-3 months', '3-6 months', '6+ months']
 
 function parseApiError(err, fallback) {
   const detail = err?.response?.data?.detail
   return typeof detail === 'string' ? detail : fallback
 }
 
-function normalizeSessionData(data) {
-  return {
-    session: data?.session || null,
-    nextQuestion: data?.next_question || null,
-    answeredCount: Number(data?.answered_count || 0),
-    remainingCount: Number(data?.remaining_count || 0),
-  }
+function scoreReadiness({ concern, duration, severity, bodySystem, related, meds }) {
+  let score = 20
+  if (concern.trim().length >= 6) score += 20
+  if (duration) score += 12
+  if (severity >= 4) score += 12
+  if (bodySystem) score += 10
+  if (related.trim().length >= 4) score += 10
+  if (meds.trim().length >= 3) score += 8
+  return Math.max(20, Math.min(98, score))
 }
 
-function normalizeCompletedResults(completedSession) {
-  return {
-    completion_score: completedSession?.completion_score ?? null,
-    dimension_scores: completedSession?.dimension_scores ?? {},
-    llm_summary: completedSession?.llm_summary ?? null,
-  }
+function urgencyGuidance(redFlags) {
+  const activeCount = Object.values(redFlags).filter(Boolean).length
+  if (activeCount === 0) return 'No urgent red flags reported.'
+  if (activeCount <= 2) return 'Some answers suggest timely clinician review is important.'
+  return 'Multiple red flags detected. Do not delay medical review.'
 }
 
-function ScoreBar({ label, value }) {
-  const color = value >= 70 ? '#10b981' : value >= 45 ? '#f59e0b' : '#ef4444'
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13, color: '#475569' }}>
-        <span>{label}</span>
-        <span style={{ fontWeight: 700, color }}>{value?.toFixed(0) ?? '—'}</span>
-      </div>
-      <div style={{ height: 6, borderRadius: 10, background: 'rgba(15,23,42,0.08)', overflow: 'hidden' }}>
-        <div style={{ width: `${Math.min(value ?? 0, 100)}%`, height: '100%', background: color, transition: 'width 0.8s ease' }} />
-      </div>
-    </div>
-  )
+function saveConcernContext(payload) {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem('symptom-check-active-concern', payload.concern)
+  window.localStorage.setItem('symptom-check-summary', JSON.stringify(payload))
 }
 
 export default function Questionnaire() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [session, setSession] = useState(null)
   const [nextQuestion, setNextQuestion] = useState(null)
   const [answeredCount, setAnsweredCount] = useState(0)
   const [remainingCount, setRemainingCount] = useState(0)
+  const [results, setResults] = useState(null)
+
+  const [concern, setConcern] = useState('')
+  const [duration, setDuration] = useState('')
+  const [severity, setSeverity] = useState(5)
+  const [bodySystem, setBodySystem] = useState('')
+  const [relatedSymptoms, setRelatedSymptoms] = useState('')
+  const [medications, setMedications] = useState('')
+  const [supplements, setSupplements] = useState('')
+  const [whatTried, setWhatTried] = useState('')
   const [answerValue, setAnswerValue] = useState(5)
   const [answerText, setAnswerText] = useState('')
-  const [results, setResults] = useState(null)  // { completion_score, dimension_scores, llm_summary }
-  const [viewportWidth, setViewportWidth] = useState(getViewportWidth)
+  const [phase, setPhase] = useState('intake')
+  const [redFlags, setRedFlags] = useState({
+    severeOnset: false,
+    fever: false,
+    swelling: false,
+    numbnessWeakness: false,
+    chestBreath: false,
+    trauma: false,
+    pregnancyContext: false,
+  })
 
-  const styles = useMemo(() => getQuestionnaireStyles(viewportWidth), [viewportWidth])
-
-  const totalCount = useMemo(() => answeredCount + remainingCount, [answeredCount, remainingCount])
-  const progressPct = useMemo(() => {
-    if (!totalCount) return 0
-    return Math.round((answeredCount / totalCount) * 100)
-  }, [answeredCount, totalCount])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined
-    const onResize = () => setViewportWidth(window.innerWidth)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
+  const totalCount = answeredCount + remainingCount
+  const progressPct = totalCount > 0 ? Math.round((answeredCount / totalCount) * 100) : 0
+  const readiness = useMemo(
+    () => scoreReadiness({ concern, duration, severity, bodySystem, related: relatedSymptoms, meds: medications }),
+    [concern, duration, severity, bodySystem, relatedSymptoms, medications]
+  )
+  const urgency = useMemo(() => urgencyGuidance(redFlags), [redFlags])
 
   async function loadSession() {
     setLoading(true)
     setError('')
     try {
       const { data } = await api.get('/questionnaire/session')
-      const normalized = normalizeSessionData(data)
-      setSession(normalized.session)
-      setNextQuestion(normalized.nextQuestion)
-      setAnsweredCount(normalized.answeredCount)
-      setRemainingCount(normalized.remainingCount)
+      setNextQuestion(data?.next_question || null)
+      setAnsweredCount(Number(data?.answered_count || 0))
+      setRemainingCount(Number(data?.remaining_count || 0))
     } catch (err) {
-      setError(parseApiError(err, 'Failed to load questionnaire.'))
+      setError(parseApiError(err, 'Failed to load symptom check.'))
     } finally {
       setLoading(false)
     }
@@ -141,7 +100,6 @@ export default function Questionnaire() {
 
   async function submitAnswer() {
     if (!nextQuestion?.id) return
-
     setSaving(true)
     try {
       const { data } = await api.post('/questionnaire/answer', {
@@ -149,7 +107,6 @@ export default function Questionnaire() {
         answer_value: Number(answerValue),
         answer_text: answerText || null,
       })
-
       setNextQuestion(data?.next_question || null)
       setAnsweredCount(Number(data?.answered_count || answeredCount))
       setRemainingCount(Number(data?.remaining_count || remainingCount))
@@ -158,7 +115,6 @@ export default function Questionnaire() {
 
       if (data?.completed) {
         const completeResp = await api.post('/questionnaire/complete', { mark_onboarding_complete: true })
-
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['profile'] }),
           queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
@@ -166,14 +122,9 @@ export default function Questionnaire() {
           queryClient.invalidateQueries({ queryKey: ['insights'] }),
           queryClient.invalidateQueries({ queryKey: ['health-score'] }),
         ])
-
-        trackFunnelEvent('funnel_questionnaire_completed', 'User completed adaptive questionnaire', {
-          answered_count: Number(data?.answered_count || 0),
-        }, { oncePerSession: true })
         const completedSession = completeResp?.data?.session || {}
-        gaQuestionnaireComplete(completedSession.completion_score ?? undefined)
-        setResults(normalizeCompletedResults(completedSession))
-        toast.success('Questionnaire completed!')
+        setResults(completedSession)
+        toast.success('Symptom check completed')
       }
     } catch (err) {
       toast.error(parseApiError(err, 'Failed to save answer.'))
@@ -182,191 +133,170 @@ export default function Questionnaire() {
     }
   }
 
+  function continueToQuestions() {
+    if (!concern.trim() || !duration || !bodySystem) {
+      toast.error('Please complete concern, duration, and body system before continuing.')
+      return
+    }
+    saveConcernContext({
+      concern,
+      duration,
+      severity,
+      bodySystem,
+      relatedSymptoms,
+      medications,
+      supplements,
+      whatTried,
+      readiness,
+      urgency,
+      linkedLabs: [],
+    })
+    setPhase('questions')
+  }
+
   if (loading) {
-    return (
-      <div style={styles.wrap}>
-        <div style={styles.card}>Loading questionnaire...</div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div style={styles.wrap}>
-        <div style={styles.card}>
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#0f172a' }}>Questionnaire unavailable</div>
-          <div style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>{error}</div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={loadSession} style={{ background: '#10b981', border: 'none', color: '#fff', borderRadius: 10, padding: '10px 16px', cursor: 'pointer' }}>Retry</button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!nextQuestion && !results) {
-    return (
-      <div style={styles.wrap}>
-        <div style={styles.card}>
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#0f172a' }}>No pending questions</div>
-          <div style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>You are all set for now.</div>
-          <button onClick={() => navigate('/dashboard')} style={{ background: '#10b981', border: 'none', color: '#fff', borderRadius: 10, padding: '10px 16px', cursor: 'pointer' }}>Continue to dashboard</button>
-        </div>
-      </div>
-    )
-  }
-
-  if (results) {
-    const score = results.completion_score
-    const scoreColor = score >= 70 ? '#10b981' : score >= 45 ? '#f59e0b' : '#ef4444'
-    const dims = results.dimension_scores || {}
-    return (
-      <div style={styles.wrap}>
-        <motion.div style={styles.card} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 6 }}>Assessment Complete</div>
-            <div style={{ fontSize: 28, fontWeight: 900, color: scoreColor, marginBottom: 2 }}>
-              {score != null ? `${score.toFixed(0)}/100` : '—'}
-            </div>
-            <div style={{ fontSize: 13, color: '#94a3b8' }}>Overall Health Score</div>
-          </div>
-
-          {results.llm_summary && (
-            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '14px 16px', marginBottom: 20, fontSize: 14, color: '#166534', lineHeight: 1.6 }}>
-              {results.llm_summary}
-            </div>
-          )}
-
-          {Object.keys(dims).length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 12 }}>Dimension Breakdown</div>
-              {Object.entries(dims)
-                .sort(([, a], [, b]) => b - a)
-                .map(([dim, val]) => (
-                  <ScoreBar key={dim} label={DIMENSION_LABELS[dim] || dim} value={val} />
-                ))}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              onClick={() => navigate('/dashboard', { replace: true })}
-              style={{ flex: 1, background: '#10b981', border: 'none', color: '#fff', borderRadius: 10, padding: '12px 18px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
-            >
-              View My Dashboard
-            </button>
-            <button
-              onClick={() => navigate('/insights')}
-              style={{ flex: 1, background: '#f1f5f9', border: '1px solid rgba(15,23,42,0.1)', color: '#475569', borderRadius: 10, padding: '12px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
-            >
-              See Insights
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    )
+    return <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">Loading symptom check...</div>
   }
 
   return (
-    <div style={styles.wrap}>
-      <div style={{ width: '100%', maxWidth: 760 }}>
-        <CabinetPageHeader
-          title="Adaptive Questionnaire"
-          subtitle="Capture weekly health signals across energy, sleep, stress, digestion and recovery."
-          helper="Your answers update scorecards by dimension and improve protocol personalization."
-        />
+    <div className="space-y-6">
+      <CabinetPageHeader
+        title="Symptom Check"
+        subtitle="Start with what you feel, then get structured context and next testing direction."
+        helper="Goal: turn a concern into a safer, clearer lab and protocol path."
+      />
 
-        <motion.div style={styles.card} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 14, alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>Adaptive Questionnaire</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a' }}>Question {answeredCount + 1} of {totalCount || '?'}</div>
-              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>Concrete weekly signal check for energy, sleep, stress and recovery.</div>
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+          {phase === 'intake' && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">What is the main thing you want to understand or improve?</p>
+                <textarea value={concern} onChange={(e) => setConcern(e.target.value)} rows={3} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Example: Leg pain and fatigue for 6 weeks" />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="text-sm text-slate-700">Duration
+                  <select value={duration} onChange={(e) => setDuration(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                    <option value="">Select duration</option>
+                    {DURATION_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+                  </select>
+                </label>
+
+                <label className="text-sm text-slate-700">Body system / area
+                  <select value={bodySystem} onChange={(e) => setBodySystem(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                    <option value="">Select area</option>
+                    {BODY_SYSTEMS.map((item) => <option key={item} value={item}>{item}</option>)}
+                  </select>
+                </label>
+              </div>
+
+              <label className="block text-sm text-slate-700">Severity: {severity}/10
+                <input type="range" min={1} max={10} value={severity} onChange={(e) => setSeverity(Number(e.target.value))} className="mt-2 w-full" />
+              </label>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <textarea value={relatedSymptoms} onChange={(e) => setRelatedSymptoms(e.target.value)} rows={3} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Related symptoms" />
+                <textarea value={whatTried} onChange={(e) => setWhatTried(e.target.value)} rows={3} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="What you already tried" />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <textarea value={medications} onChange={(e) => setMedications(e.target.value)} rows={2} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Current medications" />
+                <textarea value={supplements} onChange={(e) => setSupplements(e.target.value)} rows={2} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Current supplements" />
+              </div>
+
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-900"><ShieldAlert className="h-4 w-4" /> Safety screen</div>
+                <div className="grid gap-2 sm:grid-cols-2 text-sm text-amber-900">
+                  {Object.entries({
+                    severeOnset: 'Sudden severe onset',
+                    fever: 'Fever',
+                    swelling: 'Swelling',
+                    numbnessWeakness: 'Numbness or weakness',
+                    chestBreath: 'Chest pain or shortness of breath',
+                    trauma: 'Recent trauma',
+                    pregnancyContext: 'Pregnancy context',
+                  }).map(([key, label]) => (
+                    <label key={key} className="inline-flex items-center gap-2">
+                      <input type="checkbox" checked={Boolean(redFlags[key])} onChange={(e) => setRedFlags((prev) => ({ ...prev, [key]: e.target.checked }))} />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={continueToQuestions} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Continue symptom check</button>
             </div>
-            <div style={{ minWidth: 120, textAlign: 'right', fontSize: 13, color: '#1d9e75', fontWeight: 700 }}>{progressPct}% complete</div>
-          </div>
+          )}
 
-          <div style={{ height: 6, borderRadius: 10, background: 'rgba(15,23,42,0.08)', overflow: 'hidden', marginBottom: 22 }}>
-            <div style={{ width: `${progressPct}%`, height: '100%', background: '#10b981' }} />
-          </div>
+          {phase === 'questions' && !results && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                <p className="font-semibold">Smart questions</p>
+                <p className="text-xs text-slate-500">Question {answeredCount + 1} of {totalCount || '?'}. {progressPct}% complete.</p>
+              </div>
 
-          <div style={{ fontSize: 21, lineHeight: 1.4, fontWeight: 700, marginBottom: 22, color: '#0f172a' }}>
-            {nextQuestion.text}
-          </div>
-
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 6 }}>Rate from 1 (very poor) to 10 (excellent)</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <input
-                type="range"
-                min={1}
-                max={10}
-                value={answerValue}
-                onChange={(e) => setAnswerValue(Number(e.target.value))}
-                style={{ flex: 1, accentColor: '#1d9e75' }}
-              />
-              <div style={{ width: 46, textAlign: 'right', fontSize: 18, fontWeight: 700, color: '#10b981' }}>{answerValue}/10</div>
+              {nextQuestion ? (
+                <>
+                  <p className="text-base font-semibold text-slate-900">{nextQuestion.text}</p>
+                  <label className="block text-sm text-slate-700">Answer value: {answerValue}/10
+                    <input type="range" min={1} max={10} value={answerValue} onChange={(e) => setAnswerValue(Number(e.target.value))} className="mt-2 w-full" />
+                  </label>
+                  <textarea value={answerText} onChange={(e) => setAnswerText(e.target.value)} rows={3} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Optional context" />
+                  <button onClick={submitAnswer} disabled={saving} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">{saving ? 'Saving...' : 'Next question'}</button>
+                </>
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">No pending smart questions right now.</div>
+              )}
             </div>
-          </div>
+          )}
 
-          <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 6 }}>Optional context</div>
-            <textarea
-              value={answerText}
-              onChange={(e) => setAnswerText(e.target.value)}
-              placeholder="Add details that can help personalize your plan"
-              style={{
-                width: '100%',
-                minHeight: 88,
-                resize: 'vertical',
-                background: '#f8fafc',
-                border: '1px solid rgba(15,23,42,0.12)',
-                borderRadius: 10,
-                padding: '10px 12px',
-                color: '#0f172a',
-                fontSize: 14,
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
+          {results && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-slate-900">Symptom Check Output</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><p className="font-semibold">Possible contributing areas</p><p className="mt-1 text-slate-600">{bodySystem || 'General system imbalance'} and related recovery factors.</p></div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><p className="font-semibold">What to check next</p><p className="mt-1 text-slate-600">Open Lab Plan for core tests and discussion priorities.</p></div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><p className="font-semibold">Doctor direction</p><p className="mt-1 text-slate-600">Bring symptom timeline, severity trend, and current meds/supplements.</p></div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><p className="font-semibold">Urgency guidance</p><p className="mt-1 text-slate-600">{urgency}</p></div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => navigate('/lab-plan')} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">Open lab plan</button>
+                <button onClick={() => navigate('/upload')} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Upload results</button>
+              </div>
+            </div>
+          )}
+        </section>
 
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              onClick={submitAnswer}
-              disabled={saving}
-              style={{
-                background: '#10b981',
-                border: 'none',
-                color: '#fff',
-                borderRadius: 10,
-                padding: '11px 18px',
-                fontWeight: 700,
-                fontSize: 14,
-                cursor: 'pointer',
-                opacity: saving ? 0.65 : 1,
-              }}
-            >
-              {saving ? 'Saving...' : 'Next Question'}
-            </button>
-            <button
-              onClick={() => navigate('/dashboard')}
-              style={{
-                background: '#f1f5f9',
-                border: '1px solid rgba(15,23,42,0.1)',
-                color: '#475569',
-                borderRadius: 10,
-                padding: '11px 18px',
-                fontWeight: 600,
-                fontSize: 14,
-                cursor: 'pointer',
-              }}
-            >
-              Pause for now
-            </button>
-          </div>
-        </motion.div>
+        <aside className="space-y-4">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Stethoscope className="h-4 w-4 text-emerald-600" /> Active concern</div>
+            <p className="text-sm text-slate-700">{concern || 'No concern entered yet'}</p>
+            <p className="mt-2 text-xs text-slate-500">Duration: {duration || 'Not set'} | Severity: {severity}/10</p>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Route className="h-4 w-4 text-emerald-600" /> Lab plan readiness</div>
+            <p className="text-2xl font-bold text-emerald-700">{readiness}%</p>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${readiness}%` }} /></div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><AlertTriangle className="h-4 w-4 text-amber-500" /> Safety context</div>
+            <p className="text-sm text-slate-700">{urgency}</p>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><ClipboardList className="h-4 w-4 text-slate-600" /> What to track this week</div>
+            <ul className="list-disc pl-5 text-sm text-slate-600 space-y-1">
+              <li>Severity trend of main concern</li>
+              <li>Sleep, energy, mood, recovery</li>
+              <li>Adherence and side effects</li>
+            </ul>
+          </section>
+        </aside>
       </div>
     </div>
   )

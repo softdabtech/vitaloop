@@ -12,8 +12,8 @@ import {
 
 const NOTIFICATION_TYPES = {
   weekly_checkin: {
-    label: 'Weekly Check-in Reminder',
-    description: 'Friday 6pm - Remind me to complete my weekly check-in',
+    label: 'Symptom Check-in Reminder',
+    description: 'Friday 6pm - Remind me to complete weekly symptom check-in',
     icon: Calendar,
     color: 'purple',
     default: true,
@@ -26,7 +26,7 @@ const NOTIFICATION_TYPES = {
     default: true,
   },
   retest_reminder: {
-    label: 'Re-test Reminder',
+    label: 'Lab Retest Reminder',
     description: 'After ~10 weeks from last lab upload',
     icon: Calendar,
     color: 'blue',
@@ -54,15 +54,15 @@ const NOTIFICATION_TYPES = {
     default: true,
   },
   biomarker_alert: {
-    label: 'Biomarker Alerts',
-    description: 'Important changes in your biomarkers',
+    label: 'Biomarker / Safety Alerts',
+    description: 'Important marker shifts or safety-related context changes',
     icon: AlertCircle,
     color: 'red',
     default: true,
   },
   insight_published: {
-    label: 'New Insight Published',
-    description: 'Notify when a fresh AI recommendation appears',
+    label: 'New Next-step Insight',
+    description: 'Notify when a new next-step recommendation appears',
     icon: Zap,
     color: 'purple',
     default: true,

@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   BarChart3,
+  ClipboardList,
   ChevronLeft,
   Clock,
   CreditCard,
@@ -9,33 +10,40 @@ import {
   Flame,
   HelpCircle,
   Home,
+  Route,
   Lock,
   LogOut,
   Settings,
   Target,
-  TrendingUp,
   Upload,
 } from 'lucide-react'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { buildSubscriptionPath, getCabinetUpgradeTarget } from '../../lib/subscriptionFlow.js'
+import { CABINET_VERSION } from '../../lib/cabinetV511.js'
 
 const MENU_ITEMS = [
-  { icon: Home,       label: 'Dashboard',     path: '/dashboard',   badge: null },
-  { icon: Upload,     label: 'Upload Labs',   path: '/upload',      badge: null },
-  { icon: FileText,   label: 'Lab Results',   path: '/lab-results', badge: null },
-  { icon: Target,     label: 'Assignments',   path: '/assignments', badgeKey: 'pending_assignments', premium: true },
-  { icon: TrendingUp, label: 'Progress',      path: '/progress',    badge: null, premium: true },
-  { icon: BarChart3,  label: 'Health Insights', path: '/insights',  badge: null, premium: true },
-  { icon: Clock,      label: 'Weekly Check-in', path: '/check-ins', badge: null, premium: true },
-  { icon: Flame,      label: 'Health Profile',  path: '/health-profile', badge: null },
-  { icon: CreditCard, label: 'Subscription',    path: '/subscription', badge: null },
-  { icon: Settings,   label: 'Account',        path: '/settings',    badge: null },
-  { icon: HelpCircle, label: 'Help Center',     path: '/help',         badge: null },
+  { icon: Home, label: 'Today', path: '/dashboard', badge: null },
+  { icon: Target, label: 'Symptom Check', path: '/questionnaire', badge: null },
+  { icon: Route, label: 'Lab Plan', path: '/lab-plan', badge: null },
+  { icon: Upload, label: 'Upload Results', path: '/upload', badge: null },
+  { icon: FileText, label: 'Results & Trends', path: '/lab-results', badge: null },
+  { icon: ClipboardList, label: 'Protocol', path: '/assignments', badgeKey: 'pending_assignments', premium: true },
+  { icon: Clock, label: 'Check-in', path: '/check-ins', badge: null, premium: true },
+  { icon: Flame, label: 'Profile & Safety', path: '/health-profile', badge: null },
+  { icon: CreditCard, label: 'Billing', path: '/subscription', badge: null },
+  { icon: Settings, label: 'Account', path: '/settings', badge: null },
+  { icon: HelpCircle, label: 'Help Center', path: '/help', badge: null },
 ]
 
 function isItemActive(currentPath, itemPath) {
   if (itemPath === '/lab-results') {
-    return currentPath === '/lab-results' || currentPath.startsWith('/results/') || currentPath.startsWith('/protocol/')
+    return currentPath === '/lab-results' || currentPath === '/progress' || currentPath.startsWith('/results/') || currentPath.startsWith('/protocol/')
+  }
+  if (itemPath === '/questionnaire') {
+    return currentPath === '/questionnaire'
+  }
+  if (itemPath === '/lab-plan') {
+    return currentPath === '/lab-plan'
   }
   if (itemPath === '/assignments') {
     return currentPath === '/assignments' || currentPath.startsWith('/assignments/')
@@ -43,7 +51,7 @@ function isItemActive(currentPath, itemPath) {
   if (itemPath === '/check-ins') {
     return currentPath === '/check-ins' || currentPath === '/checkin'
   }
-  if (itemPath === '/settings' || itemPath === '/health-profile' || itemPath === '/subscription') {
+  if (itemPath === '/settings' || itemPath === '/health-profile' || itemPath === '/subscription' || itemPath === '/upload') {
     return currentPath === itemPath
   }
   if (itemPath === '/dashboard') {
@@ -70,7 +78,7 @@ export default function UserDashboardSidebar({
   const { isActive: hasPremium, loading: subscriptionLoading, planName } = useSubscription()
   const sidebarWidth = collapsed ? 'w-[72px]' : 'w-[280px]'
   const visibleItems = MENU_ITEMS
-  const upgradeTarget = getCabinetUpgradeTarget(planName, hasPremium)
+  const upgradeTarget = hasPremium ? null : getCabinetUpgradeTarget(planName, hasPremium)
 
   function handleLockedFeature(item) {
     if (!item.premium || subscriptionLoading || hasPremium) return
@@ -92,7 +100,7 @@ export default function UserDashboardSidebar({
           {!collapsed && (
             <div>
               <div className="text-sm font-semibold tracking-tight text-slate-800">VITALOOP</div>
-              <div className="text-xs text-slate-400">Health+</div>
+              <div className="text-xs text-slate-400">Cabinet {CABINET_VERSION}</div>
             </div>
           )}
         </div>

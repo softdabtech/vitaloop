@@ -1,154 +1,93 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import api from '../lib/api.js'
+import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.js'
+import api from '../lib/api.js'
 import { gaCheckInSubmit } from '../lib/analytics.js'
-import toast from 'react-hot-toast'
 
-const FEELING_OPTIONS = [
-  { value: 'drained', label: 'Drained', hint: 'Low energy all week', score: 3 },
-  { value: 'off', label: 'Off-balance', hint: 'Mixed mood and focus', score: 5 },
-  { value: 'steady', label: 'Steady', hint: 'Mostly stable and productive', score: 7 },
-  { value: 'great', label: 'Great', hint: 'Clear, energized, and focused', score: 9 },
-]
+const CONCERN_STATUS = ['better', 'same', 'worse']
+const ADHERENCE = ['high', 'medium', 'low']
 
-const ADHERENCE_OPTIONS = [
-  { value: 'yes', label: 'Yes, daily', hint: 'I followed the protocol consistently', score: 5 },
-  { value: 'partial', label: 'Partially', hint: 'I missed some doses or days', score: 3 },
-  { value: 'no', label: 'Not this week', hint: 'I could not follow the plan yet', score: 1 },
-]
-
-function buildCheckinPayload({ userId, selectedFeeling, sleepStars, selectedAdherence, changes }) {
-  const now = new Date()
-  return {
-    user_id: userId,
-    week_start: now.toISOString().slice(0, 10),
-    energy_score: selectedFeeling?.score ?? 5,
-    mood_score: selectedFeeling?.score ?? 5,
-    sleep_quality: Math.max(1, Math.min(10, sleepStars * 2)),
-    protocol_adherence: selectedAdherence?.score ?? 3,
-    symptom_changes: changes.trim(),
-    new_complaints: '',
-    notes: [
-      selectedFeeling ? `Weekly feeling: ${selectedFeeling.label}` : '',
-      `Sleep rating: ${sleepStars}/5`,
-      selectedAdherence ? `Protocol adherence: ${selectedAdherence.label}` : '',
-    ]
-      .filter(Boolean)
-      .join(' | '),
-  }
+function getConcern() {
+  if (typeof window === 'undefined') return 'your active concern'
+  return window.localStorage.getItem('symptom-check-active-concern') || 'your active concern'
 }
 
-function getViewportWidth() {
-  if (typeof window === 'undefined') return 1024
-  return window.innerWidth
+function scoreFromStatus(value) {
+  if (value === 'better') return 8
+  if (value === 'same') return 5
+  return 3
 }
 
-function canContinueAtStep({ step, feeling, sleepStars, adherence }) {
-  if (step === 1) return Boolean(feeling)
-  if (step === 2) return sleepStars >= 1
-  if (step === 3) return Boolean(adherence)
-  return true
-}
-
-function getStepTitleAndSubtitle(step) {
-  if (step === 1) {
-    return {
-      title: 'How are you feeling this week?',
-      subtitle: 'Choose the option that best matches your overall state.',
-    }
-  }
-
-  if (step === 2) {
-    return {
-      title: 'How was your sleep quality?',
-      subtitle: 'Rate your average sleep for the week.',
-    }
-  }
-
-  if (step === 3) {
-    return {
-      title: 'Did you follow your protocol?',
-      subtitle: 'Honest tracking helps personalize your next recommendations.',
-    }
-  }
-
-  return {
-    title: 'Any notable changes this week?',
-    subtitle: 'Optional: symptoms, side effects, wins, or challenges.',
-  }
+function scoreFromAdherence(value) {
+  if (value === 'high') return 5
+  if (value === 'medium') return 3
+  return 1
 }
 
 export default function WeeklyCheckIn() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const concern = getConcern()
+
   const [step, setStep] = useState(1)
-  const [feeling, setFeeling] = useState('')
-  const [sleepStars, setSleepStars] = useState(3)
-  const [adherence, setAdherence] = useState('')
-  const [changes, setChanges] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
-  const [viewportWidth, setViewportWidth] = useState(getViewportWidth)
 
-  const totalSteps = 4
+  const [concernStatus, setConcernStatus] = useState('same')
+  const [symptomSeverity, setSymptomSeverity] = useState(5)
+  const [sleep, setSleep] = useState(5)
+  const [energy, setEnergy] = useState(5)
+  const [mood, setMood] = useState(5)
+  const [digestion, setDigestion] = useState(5)
+  const [recovery, setRecovery] = useState(5)
+  const [adherence, setAdherence] = useState('medium')
+  const [sideEffects, setSideEffects] = useState('')
+  const [newSymptoms, setNewSymptoms] = useState('')
+  const [redFlags, setRedFlags] = useState('')
+
+  const totalSteps = 7
   const progress = Math.round((step / totalSteps) * 100)
-  const isMobile = viewportWidth < 500
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined
-    const onResize = () => setViewportWidth(window.innerWidth)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
+  const canContinue = useMemo(() => {
+    if (step === 1) return Boolean(concernStatus)
+    if (step === 2) return true
+    if (step === 3) return true
+    if (step === 4) return Boolean(adherence)
+    return true
+  }, [step, concernStatus, adherence])
 
-  const selectedFeeling = useMemo(() => FEELING_OPTIONS.find((opt) => opt.value === feeling) || null, [feeling])
-  const selectedAdherence = useMemo(() => ADHERENCE_OPTIONS.find((opt) => opt.value === adherence) || null, [adherence])
-  const stepInfo = useMemo(() => getStepTitleAndSubtitle(step), [step])
-
-  const canContinue = useMemo(
-    () => canContinueAtStep({ step, feeling, sleepStars, adherence }),
-    [step, feeling, sleepStars, adherence]
-  )
-
-  const nextStep = () => {
-    if (!canContinue || step >= totalSteps) return
-    setStep((prev) => prev + 1)
-  }
-
-  const prevStep = () => {
-    if (step <= 1) return
-    setStep((prev) => prev - 1)
-  }
-
-  const submit = async () => {
+  async function submit() {
     if (!user?.id || submitting) return
-
     setSubmitting(true)
-    const payload = buildCheckinPayload({
-      userId: user.id,
-      selectedFeeling,
-      sleepStars,
-      selectedAdherence,
-      changes,
-    })
+
+    const now = new Date()
+    const payload = {
+      user_id: user.id,
+      week_start: now.toISOString().slice(0, 10),
+      energy_score: energy,
+      mood_score: mood,
+      sleep_quality: sleep,
+      protocol_adherence: scoreFromAdherence(adherence),
+      symptom_changes: `Concern status: ${concernStatus}; Severity: ${symptomSeverity}/10; Digestion: ${digestion}/10; Recovery: ${recovery}/10`,
+      new_complaints: `${newSymptoms}${redFlags ? ` | Red flags: ${redFlags}` : ''}`,
+      notes: `Concern: ${concern}; Side effects: ${sideEffects || 'none'}; Adherence: ${adherence}; Check-in matrix generated.`,
+    }
 
     try {
       await api.post('/checkins', payload)
       gaCheckInSubmit()
-
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
         queryClient.invalidateQueries({ queryKey: ['health-score'] }),
         queryClient.invalidateQueries({ queryKey: ['insights'] }),
         queryClient.invalidateQueries({ queryKey: ['timeline'] }),
       ])
-
       setDone(true)
-      setTimeout(() => navigate('/dashboard'), 900)
+      setTimeout(() => navigate('/dashboard'), 1000)
     } catch {
       toast.error('Failed to save check-in. Please try again.')
     } finally {
@@ -156,163 +95,118 @@ export default function WeeklyCheckIn() {
     }
   }
 
-  const renderStep = () => {
-    if (step === 1) {
-      return (
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">{stepInfo.title}</h2>
-          <p className="mt-1 text-sm text-slate-600">{stepInfo.subtitle}</p>
-          <div className="mt-4 grid gap-3">
-            {FEELING_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setFeeling(opt.value)}
-                className={`rounded-2xl border p-4 text-left transition ${
-                  feeling === opt.value
-                    ? 'border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200'
-                    : 'border-slate-200 bg-white hover:border-emerald-200'
-                }`}
-              >
-                <div className="text-sm font-semibold text-slate-900">{opt.label}</div>
-                <div className="mt-1 text-xs text-slate-500">{opt.hint}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )
-    }
-
-    if (step === 2) {
-      return (
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">{stepInfo.title}</h2>
-          <p className="mt-1 text-sm text-slate-600">{stepInfo.subtitle}</p>
-          <div className="mt-6 flex items-center gap-2">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setSleepStars(n)}
-                className={`h-11 w-11 rounded-xl border text-lg font-semibold transition ${
-                  n <= sleepStars
-                    ? 'border-amber-300 bg-amber-100 text-amber-800'
-                    : 'border-slate-200 bg-white text-slate-400 hover:border-amber-200'
-                }`}
-                aria-label={`Rate sleep ${n} out of 5`}
-              >
-                {n <= sleepStars ? '*' : '+'}
-              </button>
-            ))}
-          </div>
-          <p className="mt-3 text-sm text-slate-600">Selected: {sleepStars}/5</p>
-        </div>
-      )
-    }
-
-    if (step === 3) {
-      return (
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">{stepInfo.title}</h2>
-          <p className="mt-1 text-sm text-slate-600">{stepInfo.subtitle}</p>
-          <div className="mt-4 grid gap-3">
-            {ADHERENCE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setAdherence(opt.value)}
-                className={`rounded-2xl border p-4 text-left transition ${
-                  adherence === opt.value
-                    ? 'border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200'
-                    : 'border-slate-200 bg-white hover:border-emerald-200'
-                }`}
-              >
-                <div className="text-sm font-semibold text-slate-900">{opt.label}</div>
-                <div className="mt-1 text-xs text-slate-500">{opt.hint}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )
-    }
-
-    return (
-      <div>
-        <h2 className="text-xl font-semibold text-slate-900">{stepInfo.title}</h2>
-        <p className="mt-1 text-sm text-slate-600">{stepInfo.subtitle}</p>
-        <textarea
-          rows={6}
-          className="mt-4 w-full rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
-          placeholder="Example: Better morning energy, less bloating, mild headaches on day 2..."
-          value={changes}
-          onChange={(e) => setChanges(e.target.value)}
-        />
-      </div>
-    )
-  }
-
   return (
-    <main className="min-h-screen bg-slate-50 py-8" style={{ paddingLeft: isMobile ? '16px' : '24px', paddingRight: isMobile ? '16px' : '24px' }}>
-      <div className="mx-auto max-w-3xl space-y-6">
-        <CabinetPageHeader
-          title="Weekly Check-in"
-          subtitle="A focused 4-step reflection to keep your protocol adaptive and accurate."
-        />
+    <div className="space-y-6">
+      <CabinetPageHeader
+        title="Check-in"
+        subtitle={`Track whether protocol is working for: ${concern}`}
+        helper="Symptom severity + adherence + side effects + red flags -> next weekly adjustment."
+      />
 
-        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm" style={{ padding: isMobile ? '20px 16px' : '24px' }}>
-          {!done ? (
-            <>
-              <div className="mb-6">
-                <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  <span>Step {step} of {totalSteps}</span>
-                  <span>{progress}% complete</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${progress}%` }} />
-                </div>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+        {!done ? (
+          <>
+            <div className="mb-5">
+              <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <span>Step {step} of {totalSteps}</span>
+                <span>{progress}% complete</span>
               </div>
-
-              {renderStep()}
-
-              <div className="mt-8 flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={prevStep}
-                  disabled={step === 1 || submitting}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Back
-                </button>
-
-                {step < totalSteps ? (
-                  <button
-                    type="button"
-                    onClick={nextStep}
-                    disabled={!canContinue || submitting}
-                    className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Next
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={submit}
-                    disabled={submitting}
-                    className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {submitting ? 'Saving...' : 'Complete check-in'}
-                  </button>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
-              <h3 className="text-lg font-semibold text-emerald-900">Check-in saved</h3>
-              <p className="mt-1 text-sm text-emerald-700">Thanks. Redirecting to your dashboard...</p>
+              <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${progress}%` }} /></div>
             </div>
-          )}
-        </section>
-      </div>
-    </main>
+
+            {step === 1 && (
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold text-slate-900">1. Active concern status</h3>
+                <p className="text-sm text-slate-600">Compared with last week, is {concern} better, same, or worse?</p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {CONCERN_STATUS.map((item) => (
+                    <button key={item} onClick={() => setConcernStatus(item)} className={`rounded-xl border px-3 py-2 text-sm font-semibold ${concernStatus === item ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-700'}`}>
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold text-slate-900">2. Symptom severity</h3>
+                <p className="text-sm text-slate-600">How intense is your active concern now?</p>
+                <label className="text-sm text-slate-700">Severity: {symptomSeverity}/10
+                  <input type="range" min={1} max={10} value={symptomSeverity} onChange={(e) => setSymptomSeverity(Number(e.target.value))} className="mt-2 w-full" />
+                </label>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold text-slate-900">3. Sleep, energy, mood, digestion, recovery</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    ['Sleep', sleep, setSleep],
+                    ['Energy', energy, setEnergy],
+                    ['Mood', mood, setMood],
+                    ['Digestion', digestion, setDigestion],
+                    ['Recovery', recovery, setRecovery],
+                  ].map(([label, value, setter]) => (
+                    <label key={label} className="text-sm text-slate-700">{label}: {value}/10
+                      <input type="range" min={1} max={10} value={value} onChange={(e) => setter(Number(e.target.value))} className="mt-1 w-full" />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {step === 4 && (
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold text-slate-900">4. Protocol adherence</h3>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {ADHERENCE.map((item) => (
+                    <button key={item} onClick={() => setAdherence(item)} className={`rounded-xl border px-3 py-2 text-sm font-semibold ${adherence === item ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-700'}`}>
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {step === 5 && (
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold text-slate-900">5. Side effects</h3>
+                <textarea value={sideEffects} onChange={(e) => setSideEffects(e.target.value)} rows={4} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Any side effects or tolerance issues" />
+              </div>
+            )}
+
+            {step === 6 && (
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold text-slate-900">6. New symptoms and red flags</h3>
+                <textarea value={newSymptoms} onChange={(e) => setNewSymptoms(e.target.value)} rows={3} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="New symptoms" />
+                <textarea value={redFlags} onChange={(e) => setRedFlags(e.target.value)} rows={3} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Any urgent signs to discuss quickly" />
+              </div>
+            )}
+
+            {step === 7 && (
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold text-slate-900">7. Next adjustment preview</h3>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                  {concernStatus === 'better' ? 'Continue current plan and verify with retest timing.' : concernStatus === 'same' ? 'Consider protocol adjustment and prioritize unresolved markers.' : 'Escalate review with clinician and reassess safety context promptly.'}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 flex items-center justify-between">
+              <button onClick={() => setStep((s) => Math.max(1, s - 1))} disabled={step === 1 || submitting} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Back</button>
+              {step < totalSteps ? (
+                <button onClick={() => canContinue && setStep((s) => Math.min(totalSteps, s + 1))} disabled={!canContinue || submitting} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Next</button>
+              ) : (
+                <button onClick={submit} disabled={submitting} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">{submitting ? 'Saving...' : 'Complete check-in'}</button>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center text-emerald-800">Check-in saved. Redirecting to Today...</div>
+        )}
+      </section>
+    </div>
   )
 }

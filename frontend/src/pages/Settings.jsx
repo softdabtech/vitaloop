@@ -149,9 +149,9 @@ export default function Settings() {
   return (
     <>
       <CabinetPageHeader
-        title="Account Settings"
-        subtitle="Manage your account, password, and notification preferences"
-        helper="These settings are technical and personal to your account."
+        title="Account"
+        subtitle="Manage credentials, notifications, and account-level controls."
+        helper="Notification labels are aligned with symptom-first workflow."
       />
 
       <div className="grid gap-6 max-w-2xl">

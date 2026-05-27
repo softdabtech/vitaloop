@@ -887,9 +887,9 @@ export default function Login() {
             Your data security
             </div>
             <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', lineHeight: 1.6, margin: 0 }}>
-            Your lab PDFs are processed entirely in your browser - never uploaded to our servers.
-            All stored data is encrypted at rest in SOC2-compliant infrastructure.
-            Row-level security ensures only you can access your records.
+            Uploaded health data is handled through our secure analysis pipeline.
+            Stored data is encrypted at rest in SOC2-compliant infrastructure.
+            Access controls and row-level security restrict record access to authorized users.
             </p>
           </div>
         </div>

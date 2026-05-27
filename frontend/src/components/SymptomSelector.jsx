@@ -7,7 +7,7 @@ export default function SymptomSelector({ selected, onChange }) {
 
   return (
     <div>
-      <p className="mb-3 text-sm font-medium text-slate-600">Select your symptoms <span className="font-normal text-slate-400">(optional — improves accuracy)</span></p>
+      <p className="mb-3 text-sm font-medium text-slate-600">Link this upload to current symptoms</p>
       <div className="flex flex-wrap gap-2">
         {SYMPTOM_OPTIONS.map(({ id, label }) => (
           <button

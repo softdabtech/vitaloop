@@ -34,9 +34,9 @@ const PaywallModal = lazy(() => import('./components/PaywallModal.jsx'))
 // Cabinet pages — lazy
 const UserDashboard = lazy(() => import('./pages/UserDashboard.jsx'))
 const Upload = lazy(() => import('./pages/Upload.jsx'))
+const LabPlan = lazy(() => import('./pages/LabPlan.jsx'))
 const Results = lazy(() => import('./pages/Results.jsx'))
 const ProtocolPage = lazy(() => import('./pages/ProtocolPage.jsx'))
-const Progress = lazy(() => import('./pages/Progress.jsx'))
 const Insights = lazy(() => import('./pages/Insights.jsx'))
 const LabResultsList = lazy(() => import('./pages/LabResultsList.jsx'))
 const Assignments = lazy(() => import('./pages/Assignments.jsx'))
@@ -149,6 +149,7 @@ function FloatingSupportChat() {
   const isCabinetRoute = [
     '/dashboard',
     '/upload',
+    '/lab-plan',
     '/results/',
     '/protocol/',
     '/avatar',
@@ -230,11 +231,15 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/auth/confirmation" element={<EmailConfirmation />} />
           <Route path="/dashboard" element={renderCabinetRoute(<UserDashboard />, { allowBeforeOnboarding: true })} />
+          <Route path="/today" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/symptom-check" element={<Navigate to="/questionnaire" replace />} />
+          <Route path="/results-trends" element={<Navigate to="/lab-results" replace />} />
           <Route path="/upload" element={renderCabinetRoute(<Upload />, { allowBeforeOnboarding: true })} />
+          <Route path="/lab-plan" element={renderCabinetRoute(<LabPlan />, { allowBeforeOnboarding: true })} />
           <Route path="/results/:uploadId" element={renderCabinetRoute(<Results />)} />
           <Route path="/protocol/:uploadId" element={renderCabinetRoute(<ProtocolPage />)} />
           <Route path="/avatar" element={renderCabinetRoute(<Avatar />)} />
-          <Route path="/progress" element={renderCabinetRoute(<Progress />)} />
+          <Route path="/progress" element={<Navigate to="/lab-results" replace />} />
           <Route path="/assignments" element={renderCabinetRoute(<Assignments />, { allowBeforeOnboarding: true })} />
           <Route path="/assignments/:assignmentId" element={renderCabinetRoute(<AssignmentDetails />, { allowBeforeOnboarding: true })} />
           <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />, { allowBeforeOnboarding: true })} />

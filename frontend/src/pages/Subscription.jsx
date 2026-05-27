@@ -16,10 +16,10 @@ const PLANS = {
     period: '/month',
     description: 'Get started',
     features: [
-      'Health score & index',
-      '2–3 key insights',
-      '1 basic recommendation',
-      'Limited tracking access'
+      'Basic symptom intake',
+      'Single upload analysis access',
+      'Starter protocol visibility',
+      'Limited tracking access',
     ],
     color: 'slate',
   },
@@ -29,13 +29,13 @@ const PLANS = {
     period: '/month',
     description: 'Most popular',
     features: [
-      'Full analysis of blood tests',
-      'Prioritized problem list (top 3)',
-      'Personalized action protocol',
-      'Weekly AI check-ins',
-      'Basic symptom tracking',
-      'Updated recommendations',
-      'Progress tracking'
+      'Symptom intake and smart question depth',
+      'Lab direction plan with priorities',
+      'Upload analysis linked to concerns',
+      'Protocol loop with weekly adaptation',
+      'Results & trends with retest tracking',
+      'Clinician discussion-ready context',
+      'Practitioner sharing readiness',
     ],
     color: 'emerald',
     yearly: '$199/year (save 17%)',
@@ -48,10 +48,10 @@ const PLANS = {
     description: 'Coming soon',
     features: [
       'Everything in Premium',
-      'Deeper health insights',
-      'Long-term trend analysis',
-      'Advanced tracking',
-      'Priority updates',
+      'Deeper loop intelligence',
+      'Long-term trend and retest optimization',
+      'Advanced adherence-response tracking',
+      'Priority updates and support',
       'Early access to new features'
     ],
     color: 'blue',
@@ -275,9 +275,9 @@ export default function Subscription() {
     return (
       <>
         <CabinetPageHeader
-          title="Subscription & Billing"
-          subtitle="Manage your subscription plan and billing details"
-          helper="View your current plan, usage, and payment history."
+          title="Billing"
+          subtitle="Manage plan access across health loop stages."
+          helper="See which loop stages are unlocked and manage billing details."
         />
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
@@ -289,9 +289,9 @@ export default function Subscription() {
   return (
     <>
       <CabinetPageHeader
-        title="Subscription & Billing"
-        subtitle="Manage your subscription plan and billing details"
-        helper="View your current plan, usage, and payment history."
+        title="Billing"
+        subtitle="Manage plan access across health loop stages."
+        helper="See which loop stages are unlocked and manage billing details."
       />
 
       <div className="grid gap-8">

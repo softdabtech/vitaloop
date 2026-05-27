@@ -219,7 +219,7 @@ export default function HealthProfile() {
         queryClient.invalidateQueries({ queryKey: ['insights'] }),
         queryClient.invalidateQueries({ queryKey: ['health-score'] }),
       ])
-      toast.success('Health profile updated!')
+      toast.success('Profile & Safety updated!')
     } catch (error) {
       toast.error('Failed to save profile')
       console.error(error)
@@ -231,9 +231,9 @@ export default function HealthProfile() {
   return (
     <>
       <CabinetPageHeader
-        title="Health Profile"
-        subtitle="Your personal health information and biometric data"
-        helper="Keep this information up to date so recommendations are tailored to you."
+        title="Profile & Safety"
+        subtitle="Medical context, goals, and constraints that improve personalization quality."
+        helper="Completing safety and context sections improves recommendation quality and reduces unsafe suggestions."
       />
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -242,7 +242,7 @@ export default function HealthProfile() {
           <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
             {/* Biometrics Section - Left Column */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-              <h3 className="mb-6 text-lg font-bold text-slate-900">Personal Information</h3>
+              <h3 className="mb-6 text-lg font-bold text-slate-900">Basics</h3>
 
               <div className="space-y-5">
                 <Field label="Age">
@@ -312,7 +312,7 @@ export default function HealthProfile() {
 
             {/* Health Goals - Right Column */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-              <h3 className="mb-6 text-lg font-bold text-slate-900">Health Goals</h3>
+              <h3 className="mb-6 text-lg font-bold text-slate-900">Goals</h3>
               <p style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>
                 Select goals to personalize your protocol recommendations.
               </p>
@@ -351,7 +351,7 @@ export default function HealthProfile() {
 
           {/* Medical Flags - Important Context */}
           <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 sm:p-8">
-            <h3 className="mb-6 text-lg font-bold text-rose-900">⚠️ Important Medical Information</h3>
+            <h3 className="mb-6 text-lg font-bold text-rose-900">⚠️ Conditions & Contraindications</h3>
             <p style={{ fontSize: 14, color: '#b91c1c', marginBottom: 20 }}>
               This information helps us interpret biomarkers safely and avoid dangerous recommendations.
             </p>
@@ -453,7 +453,7 @@ export default function HealthProfile() {
             disabled={saving}
             className="rounded-2xl bg-emerald-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
           >
-            {saving ? 'Saving...' : 'Save Health Profile'}
+            {saving ? 'Saving...' : 'Save Profile & Safety'}
           </button>
         </div>
 
