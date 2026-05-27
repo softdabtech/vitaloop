@@ -7,6 +7,7 @@ import { useFeature } from '../hooks/useFeature.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
+import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
 import '../styles/dashboard2026.css'
 
 function normalizeStatus(status) {
@@ -169,16 +170,8 @@ export default function LabResultsList() {
         )}
 
         {sortedItems.length === 0 ? (
-          <div className="vtl-light-card p-10 text-center">
-            <FlaskConical className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-            <p className="mb-1 font-semibold text-slate-800">No lab uploads yet</p>
-            <p className="mb-4 text-sm text-slate-500">Upload your first document to generate biomarkers and see your results.</p>
-            <button
-              onClick={() => navigate('/upload')}
-              className="vtl-button-primary px-5 text-sm"
-            >
-              Upload Lab Results
-            </button>
+          <div className="py-12">
+            <EmptyStateIllustration type="upload" size="lg" />
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_340px]">

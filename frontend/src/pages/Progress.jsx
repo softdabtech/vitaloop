@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { CheckCircle2, Droplets, Moon, Pill, Sparkles, Sun, Waves } from 'lucide-react'
 import ProgressChart from '../components/ProgressChart.jsx'
 import ProgressPhotoGallery from '../components/ProgressPhotoGallery.jsx'
-import EmptyState from '../components/EmptyState.jsx'
+import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useProgress } from '../hooks/useQueries.js'
 import { useSubscription } from '../hooks/useSubscription.js'
@@ -540,28 +540,8 @@ export default function Progress() {
         subtitle="Your main health momentum view: trends, biggest changes, and what to retest next."
       />
       {data.length === 0 ? (
-        <div className="space-y-6 py-8">
-          <div className="grid gap-4 md:grid-cols-3">
-            {[
-              { title: '📊 Track Changes', desc: 'See which biomarkers improved or need attention' },
-              { title: '🎯 Measure Impact', desc: 'Know if your protocol is actually working' },
-              { title: '📈 Plan Next Steps', desc: 'Decide when to retest and what to adjust' },
-            ].map((item) => (
-              <div key={item.title} className="vtl-light-card p-5 rounded-2xl">
-                <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                <p className="mt-1 text-xs text-slate-600">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-          <div className="py-10 text-center">
-            <EmptyState
-              icon="📈"
-              title="No lab results yet"
-              subtitle="Upload your first blood test to start tracking biomarker progress."
-              action="Upload First Test"
-              onAction={() => navigate('/upload')}
-            />
-          </div>
+        <div className="py-8">
+          <EmptyStateIllustration type="results" size="lg" />
         </div>
       ) : (
         <>
