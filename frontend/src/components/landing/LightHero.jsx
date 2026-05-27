@@ -27,10 +27,10 @@ export function LightHero() {
 
             {/* Subheadline */}
             <p className="text-lg text-slate-600 leading-relaxed max-w-xl space-y-3">
-              <span className="block">Upload your PDF. Get a comprehensive protocol with dosages.</span>
-              <span className="block font-semibold text-slate-900">Not interpretation. Execution.</span>
+              <span className="block">Upload your lab PDF and get a clear, prioritized action plan.</span>
+              <span className="block font-semibold text-slate-900">From lab values to weekly execution.</span>
               <span className="block text-base text-slate-500">
-                Stop wasting time decoding lab results. Get a personalized action plan ranked by priority, with exact supplement dosages, meal timing, and weekly milestones to track real progress.
+                VITALOOP structures your next steps: what to address first, how to run the protocol, and what to review before your next retest.
               </span>
             </p>
 
@@ -56,15 +56,15 @@ export function LightHero() {
             <div className="grid grid-cols-2 gap-6 pt-8 border-t border-slate-200">
               <div>
                 <div className="text-2xl font-bold text-slate-900">$19.99/mo</div>
-                <div className="text-sm text-slate-600">vs $400 spent</div>
+                <div className="text-sm text-slate-600">Premium plan</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-slate-900">12 weeks</div>
-                <div className="text-sm text-slate-600">See real results</div>
+                <div className="text-2xl font-bold text-slate-900">85+</div>
+                <div className="text-sm text-slate-600">Biomarkers analyzed</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-emerald-600">68 ng/mL</div>
-                <div className="text-sm text-slate-600">Ferritin: 14 → 68 in 12 weeks</div>
+                <div className="text-2xl font-bold text-emerald-600">1 upload</div>
+                <div className="text-sm text-slate-600">Free plan includes one lab upload</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-slate-900">100%</div>

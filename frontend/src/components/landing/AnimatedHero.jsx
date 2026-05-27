@@ -40,7 +40,7 @@ export function AnimatedHero() {
             </h1>
 
             <p className="text-xl text-slate-300 mb-10 leading-relaxed max-w-lg">
-              Upload your PDF. Get a comprehensive protocol with dosages. Not interpretation. Execution.
+              Upload your lab PDF and get a prioritized action plan you can execute week by week.
             </p>
 
             {/* CTA buttons */}
@@ -72,10 +72,10 @@ export function AnimatedHero() {
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-8 border-t border-slate-700">
-              <StatBox value="Ferritin" label="14 → 68 in 12 weeks" delay={0.5} />
-              <StatBox value="$19.99" label="/mo vs $400 spent" delay={0.6} />
-              <StatBox value="7 days" label="until first check-in" delay={0.7} />
-              <StatBox value="Free" label="first result analysis" delay={0.8} />
+              <StatBox value="$19.99" label="Premium plan /month" delay={0.5} />
+              <StatBox value="85+" label="Biomarkers analyzed" delay={0.6} />
+              <StatBox value="1 upload" label="Included in Free plan" delay={0.7} />
+              <StatBox value="Weekly" label="Check-ins on paid plans" delay={0.8} />
             </div>
           </motion.div>
 

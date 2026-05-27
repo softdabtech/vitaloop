@@ -6,14 +6,14 @@ const STEPS = [
   {
     icon: '📤',
     title: 'Upload',
-    body: 'Drop your lab PDF or image report.',
+    body: 'Drop your lab PDF report.',
     detail: 'VITALOOP auto-detects markers and normalizes units from different lab formats.',
   },
   {
     icon: '🧠',
     title: 'AI Analysis',
-    body: '85+ biomarkers analyzed and prioritized.',
-    detail: 'You get high-impact signals first, not a flat list of disconnected numbers.',
+    body: 'Signals are ranked by priority.',
+    detail: 'You see what matters first instead of a flat list of disconnected values.',
   },
   {
     icon: '✨',
@@ -24,8 +24,8 @@ const STEPS = [
   {
     icon: '❤️',
     title: 'Track Progress',
-    body: 'Log weekly check-ins and symptom response.',
-    detail: 'Your next cycle gets adjusted based on adherence, side effects, and retest trends.',
+    body: 'Track adherence and symptom response.',
+    detail: 'Each cycle is adjusted using check-ins, side effects, and retest trends.',
   },
 ]
 
@@ -49,7 +49,7 @@ export function HowItWorksTimeline() {
           className="text-center mb-14 md:mb-20"
         >
           <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-3">The Feedback Loop: One Test is a Snapshot. Three is a System.</h2>
-          <p className="text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">Upload PDF → identify problems → execute protocol → weekly check-in → retest 12 weeks later → see measurable change. Each cycle is smarter than the last.</p>
+          <p className="text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">Upload PDF → prioritize issues → execute protocol → review response → retest. Each cycle becomes more precise than the previous one.</p>
         </motion.div>
 
         <div className="relative">
