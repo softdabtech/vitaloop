@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     routellm_api_key: str = ""
     routellm_base_url: str = "https://routellm.abacus.ai/v1"
     routellm_model: str = "route-llm"
+    openai_api_key: str = ""
+    openai_base_url: str = "https://api.openai.com/v1"
+    openai_model: str = "gpt-4o-mini"
     # DigitalOcean AI endpoint.
     # For Agent Inference (customer-specific):    https://{your-agent}.agents.do-ai.run
     # For Serverless Inference:                  https://inference.do-ai.run/v1
@@ -102,19 +105,28 @@ class Settings(BaseSettings):
 
     @property
     def active_llm_api_key(self) -> str:
-        """Active LLM API key. Priority: DigitalOcean AI endpoint > RouteLLM > Anthropic"""
-        return self.digitalocean_claude_api_key or self.routellm_api_key or self.abacus_ai_api_key
+        """Active LLM API key. Priority: OpenAI > DigitalOcean > RouteLLM/Abacus."""
+        return (
+            self.openai_api_key
+            or self.digitalocean_claude_api_key
+            or self.routellm_api_key
+            or self.abacus_ai_api_key
+        )
 
     @property
     def active_llm_base_url(self) -> str:
-        """Active LLM base URL. Priority: DigitalOcean AI endpoint > RouteLLM > Anthropic"""
+        """Active LLM base URL. Priority follows active_llm_api_key."""
+        if self.openai_api_key:
+            return self.openai_base_url
         if self.digitalocean_claude_api_key:
             return self.digitalocean_claude_base_url
         return self.routellm_base_url or self.abacus_ai_base_url or "https://routellm.abacus.ai/v1"
 
     @property
     def active_llm_model(self) -> str:
-        """Active LLM model. Priority: DigitalOcean AI endpoint > RouteLLM > Anthropic"""
+        """Active LLM model. Priority follows active_llm_api_key."""
+        if self.openai_api_key:
+            return self.openai_model
         if self.digitalocean_claude_api_key:
             return self.digitalocean_claude_model
         return self.routellm_model or self.abacus_ai_model or "route-llm"

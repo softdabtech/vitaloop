@@ -323,7 +323,7 @@ def _get_client() -> httpx.AsyncClient:
         base_url = settings.active_llm_base_url.rstrip("/")
         api_key = settings.active_llm_api_key
         if not api_key:
-            raise RuntimeError("ROUTELLM_API_KEY is not configured.")
+            raise RuntimeError("LLM API key is not configured.")
         _client = httpx.AsyncClient(
             base_url=base_url,
             headers={
@@ -408,7 +408,15 @@ async def _persist_usage_event(
         if prompt_tokens <= 0 and completion_tokens <= 0 and total_tokens <= 0:
             return
 
-        provider = "anthropic"
+        base = str(settings.active_llm_base_url or "").lower()
+        if "api.openai.com" in base:
+            provider = "openai"
+        elif "agents.do-ai.run" in base or "inference.do-ai.run" in base:
+            provider = "digitalocean"
+        elif "routellm.abacus.ai" in base:
+            provider = "routellm"
+        else:
+            provider = "openai_compatible"
         model = str(payload.get("model") or settings.active_llm_model or "unknown")
 
         from app.services import supabase_service as svc
