@@ -6,7 +6,7 @@ from ..config import settings
 class AnalysisServiceClient:
     def __init__(self):
         # Get URL with fallback for development
-        self.base_url = getattr(settings, 'analysis_service_url', 'http://159.65.252.227:8006').rstrip('/')
+        self.base_url = getattr(settings, 'analysis_service_url', 'http://127.0.0.1:8006').rstrip('/')
         self.client = httpx.AsyncClient(timeout=30.0)
 
     async def analyze_text(self, text: str) -> Dict[str, Any]:

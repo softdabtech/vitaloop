@@ -81,7 +81,7 @@ async def test_free_user_complete_flow(monkeypatch):
         }
         return {"id": upload_id}
 
-    async def fake_extract_biomarkers(text, symptoms):
+    async def fake_extract_biomarkers(text, symptoms, **_kwargs):
         """Simulate biomarker extraction from lab report"""
         return [
             {
@@ -126,7 +126,7 @@ async def test_free_user_complete_flow(monkeypatch):
         biomarkers_db[upload_id] = rows
         return rows
 
-    async def fake_generate_protocol(biomarkers, symptoms):
+    async def fake_generate_protocol(biomarkers, symptoms, **_kwargs):
         """Simulate Claude AI protocol generation"""
         return [
             {

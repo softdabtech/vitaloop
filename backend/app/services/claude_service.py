@@ -3,6 +3,7 @@ import json
 import logging
 import re
 import time
+from contextvars import ContextVar
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -12,6 +13,15 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from app.config import settings
 
 _client: httpx.AsyncClient | None = None
+
+# Tracks whether the last extract/protocol call used real LLM or local fallback.
+# Scoped per async-task so concurrent requests don't interfere.
+_analysis_source_cv: ContextVar[str] = ContextVar("_analysis_source", default="unknown")
+
+
+def get_analysis_source() -> str:
+    """Return 'llm', 'fallback', or 'unknown' for the current request context."""
+    return _analysis_source_cv.get()
 
 _PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 EXTRACT_PROMPT = (_PROMPTS_DIR / "extract_biomarkers.txt").read_text()
@@ -330,15 +340,36 @@ def _chat_completions_path() -> str:
 
     We intentionally return a relative path (no leading slash) so a base URL
     with a path segment (for example `/v1`) keeps its prefix.
+
+    DO Agent Inference:      base_url = https://<agent>.agents.do-ai.run
+                             path     = api/v1/chat/completions
+    DO Serverless Inference: base_url = https://inference.do-ai.run/v1
+                             path     = chat/completions
+    OpenAI-compatible:       base_url = https://host/v1
+                             path     = chat/completions
     """
     base_url = settings.active_llm_base_url.rstrip("/").lower()
+    # Customer-specific DO Agent endpoint (subdomain of agents.do-ai.run)
+    # The generic https://agents.do-ai.run (no subdomain) is invalid — guard against it.
     if "agents.do-ai.run" in base_url:
+        netloc = base_url.split("//", 1)[-1].split("/")[0]
+        if netloc == "agents.do-ai.run":
+            logger.error(
+                "do_agent_invalid_url url=%s "
+                "hint='Set DIGITALOCEAN_CLAUDE_BASE_URL to your agent URL: "
+                "https://{your-agent}.agents.do-ai.run'",
+                settings.active_llm_base_url,
+            )
         return "api/v1/chat/completions"
+    # DO Serverless Inference endpoint (base URL already includes /v1)
+    if "inference.do-ai.run" in base_url:
+        return "chat/completions"
     return "chat/completions"
 
 
 def _is_do_agent_endpoint() -> bool:
-    return "agents.do-ai.run" in settings.active_llm_base_url.rstrip("/").lower()
+    base = settings.active_llm_base_url.rstrip("/").lower()
+    return "agents.do-ai.run" in base and base.split("//", 1)[-1].split("/")[0] != "agents.do-ai.run"
 
 
 def _chat_payload(messages: List[Dict[str, Any]], temperature: float) -> Dict[str, Any]:
@@ -488,7 +519,13 @@ async def extract_biomarkers(
     upload_id: str | None = None,
 ) -> List[Dict[str, Any]]:
     if not is_llm_configured():
-        logger.warning("abacus_extract_fallback reason=llm_not_configured")
+        logger.error(
+            "llm_fallback_used task=extract_biomarkers reason=llm_not_configured "
+            "user_id=%s upload_id=%s hint='Analysis used local regex, NOT Claude'",
+            user_id,
+            upload_id,
+        )
+        _analysis_source_cv.set("fallback")
         return _fallback_extract_biomarkers(text)
 
     started = time.perf_counter()
@@ -506,7 +543,13 @@ async def extract_biomarkers(
         parsed = _validate_biomarker_payload(json.loads(raw))
         parsed = [normalized for normalized in (_normalize_biomarker_item(item) for item in parsed) if normalized]
         if not parsed:
-            logger.warning("abacus_extract_fallback reason=empty_payload")
+            logger.error(
+                "llm_fallback_used task=extract_biomarkers reason=empty_payload "
+                "user_id=%s upload_id=%s hint='LLM returned empty list, switched to regex'",
+                user_id,
+                upload_id,
+            )
+            _analysis_source_cv.set("fallback")
             return _fallback_extract_biomarkers(text)
 
         # Hybrid: supplement LLM results with regex extraction for any biomarkers the LLM missed.
@@ -526,9 +569,17 @@ async def extract_biomarkers(
             int((time.perf_counter() - started) * 1000),
             len(parsed),
         )
+        _analysis_source_cv.set("llm")
         return parsed
     except Exception as ex:
-        logger.warning("abacus_extract_fallback reason=%s", ex)
+        logger.error(
+            "llm_fallback_used task=extract_biomarkers reason=%s "
+            "user_id=%s upload_id=%s hint='LLM call failed, switched to regex'",
+            ex,
+            user_id,
+            upload_id,
+        )
+        _analysis_source_cv.set("fallback")
         return _fallback_extract_biomarkers(text)
 
 
@@ -541,7 +592,13 @@ async def generate_protocol(
     upload_id: str | None = None,
 ) -> List[Dict[str, Any]]:
     if not is_llm_configured():
-        logger.warning("abacus_protocol_fallback reason=llm_not_configured")
+        logger.error(
+            "llm_fallback_used task=generate_protocol reason=llm_not_configured "
+            "user_id=%s upload_id=%s hint='Protocol used local templates, NOT Claude'",
+            user_id,
+            upload_id,
+        )
+        _analysis_source_cv.set("fallback")
         return _fallback_generate_protocol(biomarkers, symptoms)
 
     started = time.perf_counter()
@@ -559,7 +616,13 @@ async def generate_protocol(
         )
         parsed = _validate_protocol_payload(json.loads(raw))
         if not parsed:
-            logger.warning("abacus_protocol_fallback reason=empty_payload")
+            logger.error(
+                "llm_fallback_used task=generate_protocol reason=empty_payload "
+                "user_id=%s upload_id=%s hint='LLM returned empty list, switched to templates'",
+                user_id,
+                upload_id,
+            )
+            _analysis_source_cv.set("fallback")
             return _fallback_generate_protocol(biomarkers, symptoms)
         logger.info(
             "abacus_protocol_ok biomarker_count=%s symptom_count=%s prompt_version=%s duration_ms=%s",
@@ -568,9 +631,17 @@ async def generate_protocol(
             PROTOCOL_PROMPT_VERSION,
             int((time.perf_counter() - started) * 1000),
         )
+        _analysis_source_cv.set("llm")
         return parsed
     except Exception as ex:
-        logger.warning("abacus_protocol_fallback reason=%s", ex)
+        logger.error(
+            "llm_fallback_used task=generate_protocol reason=%s "
+            "user_id=%s upload_id=%s hint='LLM call failed, switched to templates'",
+            ex,
+            user_id,
+            upload_id,
+        )
+        _analysis_source_cv.set("fallback")
         return _fallback_generate_protocol(biomarkers, symptoms)
 
 

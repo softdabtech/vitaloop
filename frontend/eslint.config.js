@@ -48,6 +48,8 @@ export default [
         Image: 'readonly',
         Blob: 'readonly',
         FileReader: 'readonly',
+        self: 'readonly',
+        clients: 'readonly',
       },
     },
     rules: {

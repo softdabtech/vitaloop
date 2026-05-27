@@ -168,7 +168,8 @@ app.add_middleware(
 )
 
 app.include_router(health.router, tags=["health"])
-app.include_router(emergency_fixes.router, tags=["emergency-fixes"])
+if settings.emergency_fixes_enabled:
+    app.include_router(emergency_fixes.router, tags=["emergency-fixes"])
 app.include_router(analyze.router, prefix="/analyze", tags=["analyze"])
 app.include_router(protocol.router, prefix="/protocol", tags=["protocol"])
 app.include_router(progress.router, prefix="/progress", tags=["progress"])

@@ -41,26 +41,24 @@ async def get_auth_me(current_user: dict = Depends(get_current_user)):
     app_metadata = current_user.get("app_metadata") if isinstance(current_user.get("app_metadata"), dict) else {}
     user_metadata = current_user.get("user_metadata") if isinstance(current_user.get("user_metadata"), dict) else {}
 
+    db_global_role = str(account.get("global_role") or "").lower()
     is_super_admin = bool(
-        user_metadata.get("is_super_admin")
-        or app_metadata.get("is_super_admin")
+        app_metadata.get("is_super_admin")
+        or app_metadata.get("global_role") == "super_admin"
+        or db_global_role == "super_admin"
     )
 
     if is_super_admin:
         global_role = "super_admin"
     else:
         global_role = _normalize_global_role(
-            current_user.get("global_role"),
             account.get("global_role"),
             app_metadata.get("global_role"),
-            user_metadata.get("role"),
             app_metadata.get("role"),
-            current_user.get("role"),
         )
 
         org_role = str(
-            user_metadata.get("org_role")
-            or app_metadata.get("org_role")
+            app_metadata.get("org_role")
             or ""
         ).strip().lower()
         if global_role == "end_user" and org_role == "admin":
@@ -73,7 +71,6 @@ async def get_auth_me(current_user: dict = Depends(get_current_user)):
         and global_role == "end_user"
         and not account.get("global_role")
         and not app_metadata.get("global_role")
-        and not current_user.get("global_role")
     ):
         global_role = "end_user"
         supabase = svc._get_supabase()

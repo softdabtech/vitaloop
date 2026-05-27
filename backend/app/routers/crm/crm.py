@@ -102,12 +102,10 @@ async def _run_invitations_query(query_fn):
 
 
 async def _is_super_admin(current_user: dict) -> bool:
-    user_meta = current_user.get("user_metadata") or {}
     app_meta = current_user.get("app_metadata") or {}
-    global_role = current_user.get("global_role") or app_meta.get("global_role") or user_meta.get("global_role")
+    global_role = app_meta.get("global_role")
     is_super_admin = bool(
-        user_meta.get("is_super_admin")
-        or app_meta.get("is_super_admin")
+        app_meta.get("is_super_admin")
         or str(global_role or "").lower() == "super_admin"
     )
     if is_super_admin:

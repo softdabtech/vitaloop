@@ -10,6 +10,7 @@ from app.services.supabase_service import (
     get_user_symptom_summary,
     get_platform_symptom_summary,
 )
+from app.services import supabase_service as svc
 
 router = APIRouter()
 
@@ -55,9 +56,15 @@ async def platform_symptom_summary(
     days: int = 30,
     current_user: dict = Depends(get_current_user),
 ):
-    user_meta = current_user.get("user_metadata") or {}
     app_meta = current_user.get("app_metadata") or {}
-    is_super_admin = user_meta.get("is_super_admin") or app_meta.get("is_super_admin")
+    is_super_admin = bool(app_meta.get("is_super_admin") or app_meta.get("global_role") == "super_admin")
+
+    if not is_super_admin:
+        try:
+            account = await svc.get_user_account(current_user.get("sub"))
+            is_super_admin = bool(account and account.get("global_role") == "super_admin")
+        except Exception:
+            is_super_admin = False
 
     if not is_super_admin:
         raise HTTPException(status_code=403, detail={"detail": "Access denied", "code": "ACCESS_DENIED"})

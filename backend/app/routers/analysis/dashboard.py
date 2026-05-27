@@ -1,6 +1,7 @@
 import asyncio
+import time
 from datetime import datetime, timezone, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -16,6 +17,35 @@ def _get_assignment_service() -> AssignmentService:
     return AssignmentService()
 
 _assignment_service = AssignmentService()
+
+# ---------------------------------------------------------------------------
+# Simple in-memory TTL cache for /dashboard/summary (per-user, 45s TTL).
+# Prevents thundering-herd on rapid refreshes without Redis dependency.
+# ---------------------------------------------------------------------------
+_SUMMARY_CACHE_TTL_SECONDS = 45
+_summary_cache: Dict[str, Tuple[float, Any]] = {}
+
+
+def _cache_get(user_id: str) -> Any | None:
+    entry = _summary_cache.get(user_id)
+    if entry and (time.monotonic() - entry[0]) < _SUMMARY_CACHE_TTL_SECONDS:
+        return entry[1]
+    return None
+
+
+def _cache_set(user_id: str, value: Any) -> None:
+    _summary_cache[user_id] = (time.monotonic(), value)
+    # Evict oldest entries when cache grows large (simple GC).
+    if len(_summary_cache) > 2000:
+        cutoff = time.monotonic() - _SUMMARY_CACHE_TTL_SECONDS
+        stale = [k for k, v in _summary_cache.items() if v[0] < cutoff]
+        for k in stale:
+            _summary_cache.pop(k, None)
+
+
+def _fire_and_forget(coro) -> None:
+    """Schedule a coroutine without blocking the hot path."""
+    asyncio.ensure_future(coro)
 
 
 def _first_name(full_name: Optional[str], fallback_email: Optional[str]) -> str:
@@ -91,7 +121,7 @@ async def _resolve_onboarding_state(user_id: str, current_user: dict) -> Dict[st
     has_upload = bool(uploads_resp.data)
     has_questionnaire = bool(questionnaire_resp.data)
 
-    await svc.write_audit_log(
+    _fire_and_forget(svc.write_audit_log(
         user_id=user_id,
         action="read",
         entity_type="onboarding_state",
@@ -104,7 +134,7 @@ async def _resolve_onboarding_state(user_id: str, current_user: dict) -> Dict[st
             "first_upload": has_upload,
             "questionnaire_completed": has_questionnaire,
         },
-    )
+    ))
 
     if not requires_onboarding:
         stage = "complete"
@@ -258,13 +288,13 @@ async def _fetch_health_and_streak(user_id: str) -> tuple[Optional[dict], float,
             .execute()
         )
         rows = health_resp.data or []
-        await svc.write_audit_log(
+        _fire_and_forget(svc.write_audit_log(
             user_id=user_id,
             action="read",
             entity_type="health_scores",
             entity_id=user_id,
             new_value={"scope": "medical", "rows": len(rows)},
-        )
+        ))
         if rows:
             health_latest = rows[0]
             health_delta = round(float(rows[0].get("score") or 0) - float(rows[1].get("score") or 0), 1) if len(rows) > 1 else 0
@@ -368,16 +398,26 @@ async def _fetch_latest_activity(user_id: str) -> tuple[Optional[dict], Optional
 async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     user_id = current_user.get("sub")
 
-    account_task = svc.get_user_account(user_id)
-    onboarding_task = _resolve_onboarding_state(user_id, current_user)
-    progress_task = svc.get_user_progress(user_id)
-    insights_task = svc.get_user_insights(user_id)
+    cached = _cache_get(user_id)
+    if cached is not None:
+        return cached
 
-    account, onboarding, progress_result, insights_result = await asyncio.gather(
-        account_task,
-        onboarding_task,
-        progress_task,
-        insights_task,
+    (
+        account,
+        onboarding,
+        progress_result,
+        insights_result,
+        health_tuple,
+        goals_achieved,
+        activity_tuple,
+    ) = await asyncio.gather(
+        svc.get_user_account(user_id),
+        _resolve_onboarding_state(user_id, current_user),
+        svc.get_user_progress(user_id),
+        svc.get_user_insights(user_id),
+        _fetch_health_and_streak(user_id),
+        _fetch_user_goals(user_id),
+        _fetch_latest_activity(user_id),
         return_exceptions=True,
     )
 
@@ -392,21 +432,32 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     progress = progress_result if isinstance(progress_result, list) else []
     insights = insights_result if isinstance(insights_result, list) else []
 
+    if isinstance(health_tuple, tuple):
+        health_latest, health_delta, streak_days = health_tuple
+    else:
+        health_latest, health_delta, streak_days = {"score": None, "calculated_at": None}, 0, 0
+
+    if isinstance(goals_achieved, int):
+        pass
+    else:
+        goals_achieved = 0
+
+    if isinstance(activity_tuple, tuple):
+        weekly_checkin, questionnaire_latest = activity_tuple
+    else:
+        weekly_checkin, questionnaire_latest = None, None
+
     global_role = _normalize_role(account.get("global_role"), current_user.get("global_role"), current_user.get("role"))
 
-    try:
-        assignments = await _fetch_assignments(user_id, global_role)
-    except Exception:
+    assignments, upload_count = await asyncio.gather(
+        _fetch_assignments(user_id, global_role),
+        svc.get_user_upload_count(user_id),
+        return_exceptions=True,
+    )
+    if not isinstance(assignments, list):
         assignments = []
-
-    try:
-        upload_count = await svc.get_user_upload_count(user_id)
-    except Exception:
+    if not isinstance(upload_count, int):
         upload_count = len(progress)
-
-    health_latest, health_delta, streak_days = await _fetch_health_and_streak(user_id)
-    goals_achieved = await _fetch_user_goals(user_id)
-    weekly_checkin, questionnaire_latest = await _fetch_latest_activity(user_id)
 
     active_assignments = [
         item
@@ -431,7 +482,7 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     except Exception:
         start_here = {"enabled": False}
 
-    return {
+    response = {
         "profile": {
             "user_id": user_id,
             "email": account.get("email"),
@@ -467,3 +518,5 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
         },
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
+    _cache_set(user_id, response)
+    return response

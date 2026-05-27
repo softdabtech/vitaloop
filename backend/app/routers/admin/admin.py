@@ -103,6 +103,7 @@ async def _get_rate_limiter_runtime_status() -> dict:
 async def _build_runtime_readiness_payload() -> dict:
     rate_limiter = await _get_rate_limiter_runtime_status()
     requires_redis_url = rate_limiter["backend"] == "redis"
+    redis_url_configured = bool((rate_limiter.get("redis") or {}).get("configured"))
 
     # Required: app cannot function without these
     required_checks = {
@@ -123,7 +124,7 @@ async def _build_runtime_readiness_payload() -> dict:
             settings.stripe_price_id_practitioner_yearly,
         ),
         "rate_limit_backend": _is_set(settings.rate_limit_backend),
-        "rate_limit_redis_url": (not requires_redis_url) or _is_set(settings.rate_limit_redis_url),
+        "rate_limit_redis_url": (not requires_redis_url) or redis_url_configured,
     }
     # Optional: desirable but not blocking
     optional_checks = {
@@ -143,31 +144,19 @@ async def _build_runtime_readiness_payload() -> dict:
 
 
 async def _require_super_admin(current_user: dict = Depends(get_current_user)) -> dict:
-    user_meta = current_user.get("user_metadata") or {}
     app_meta = current_user.get("app_metadata") or {}
-    
-    # First check JWT metadata (fast path)
-    is_super_admin = user_meta.get("is_super_admin") or app_meta.get("is_super_admin")
-    
-    # If not in JWT, check the database (for users with global_role set but not is_super_admin flag)
+
+    # Never trust user_metadata for authorization: Supabase users can edit it.
+    is_super_admin = bool(app_meta.get("is_super_admin") or app_meta.get("global_role") == "super_admin")
+
     if not is_super_admin:
-        # Check if user has super_admin global_role in their account/metadata
-        global_role_jwt = (
-            current_user.get("global_role")
-            or app_meta.get("global_role") 
-            or user_meta.get("global_role")
-        )
-        if global_role_jwt == "super_admin":
-            is_super_admin = True
-        else:
-            # Check database as last resort
-            user_id = current_user.get("sub")
-            try:
-                account = await svc.get_user_account(user_id)
-                if account and account.get("global_role") == "super_admin":
-                    is_super_admin = True
-            except Exception:
-                pass
+        user_id = current_user.get("sub")
+        try:
+            account = await svc.get_user_account(user_id)
+            if account and account.get("global_role") == "super_admin":
+                is_super_admin = True
+        except Exception:
+            pass
     
     if not is_super_admin:
         raise HTTPException(

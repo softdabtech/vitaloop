@@ -64,7 +64,7 @@ function triggerDashboardUpgradePaywall() {
 }
 
 function DashboardCard({ title, eyebrow, children, action, animated = true, delay = 0 }) {
-  const animationProps = false
+  const animationProps = animated
     ? {
       initial: { opacity: 0, y: 20 },
       whileInView: { opacity: 1, y: 0 },
@@ -94,7 +94,7 @@ function DashboardCard({ title, eyebrow, children, action, animated = true, dela
 }
 
 function EmptyBlock({ title, body, cta, onClick, animated = true, delay = 0 }) {
-  const animationProps = false
+  const animationProps = animated
     ? {
       initial: { opacity: 0, y: 20 },
       whileInView: { opacity: 1, y: 0 },

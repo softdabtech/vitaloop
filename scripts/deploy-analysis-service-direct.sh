@@ -89,7 +89,7 @@ Environment=OCR_MAX_PDF_PAGES=2
 Environment=OCR_PDF_DPI=180
 Environment=OCR_PDF_THREAD_COUNT=1
 Environment=OMP_THREAD_LIMIT=1
-ExecStart=$REMOTE_PATH/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8006
+ExecStart=$REMOTE_PATH/venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8006
 Restart=always
 RestartSec=5
 
@@ -114,9 +114,6 @@ SERVICE_EOF
     echo "Testing health endpoint..."
     curl -f http://localhost:8006/health || exit 1
     
-    echo "Opening firewall port..."
-    ufw allow 8006/tcp
-    
     echo "✅ Deployment completed successfully!"
 EOF
 
@@ -124,5 +121,5 @@ EOF
 rm -f "$ARCHIVE_PATH"
 
 echo -e "${GREEN}🎉 Analysis service deployed successfully!${NC}"
-echo -e "${GREEN}🌐 Service URL: http://159.65.252.227:8006${NC}"
-echo -e "${GREEN}💚 Health check: http://159.65.252.227:8006/health${NC}"
+echo -e "${GREEN}🌐 Service URL: http://127.0.0.1:8006 (proxied by nginx)${NC}"
+echo -e "${GREEN}💚 Health check: http://127.0.0.1:8006/health${NC}"

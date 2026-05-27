@@ -20,6 +20,7 @@ def _llm_chat_completions_path() -> str:
     base_url = settings.active_llm_base_url.rstrip("/").lower()
     if "agents.do-ai.run" in base_url:
         return "api/v1/chat/completions"
+    # DO Serverless or standard OpenAI-compatible base URLs already include /v1
     return "chat/completions"
 
 
@@ -278,5 +279,139 @@ async def llm_health_check():
             "ok": payload["ok"],
             "probe": payload["probe"],
         },
+    )
+    return payload
+
+
+async def _synthetic_llm_call(timeout_seconds: float = 15.0) -> dict:
+    """Perform a real minimal LLM completion call and return detailed diagnostics.
+
+    This goes beyond connectivity probing — it verifies that the provider
+    actually returns a usable response to a simple 'ping' prompt.
+    """
+    base_url = (settings.active_llm_base_url or "").rstrip("/")
+    api_key = settings.active_llm_api_key or ""
+    model = settings.active_llm_model or ""
+
+    result = {
+        "configured": bool(base_url and api_key and model),
+        "base_url": base_url,
+        "model": model,
+        "ok": False,
+        "response_text": None,
+        "status_code": None,
+        "reason": None,
+    }
+
+    if not result["configured"]:
+        result["reason"] = "missing_llm_configuration"
+        return result
+
+    # Guard against the generic DO agents URL (not a valid agent endpoint)
+    if base_url.lower().rstrip("/") == "https://agents.do-ai.run":
+        result["reason"] = (
+            "invalid_do_agent_url: DIGITALOCEAN_CLAUDE_BASE_URL must be a "
+            "customer-specific URL like https://{your-agent}.agents.do-ai.run"
+        )
+        return result
+
+    from app.services.claude_service import _chat_completions_path as _svc_path
+
+    path = _svc_path()
+    # DO Agent endpoint does not accept a model field; others do.
+    is_do_agent = "agents.do-ai.run" in base_url.lower()
+    payload: dict = {
+        "messages": [
+            {"role": "user", "content": "Reply with the single word: pong"},
+        ],
+        "temperature": 0,
+        "max_tokens": 8,
+    }
+    if not is_do_agent:
+        payload["model"] = model
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    started = time.perf_counter()
+    try:
+        async with httpx.AsyncClient(
+            base_url=base_url,
+            headers=headers,
+            timeout=timeout_seconds,
+        ) as client:
+            resp = await client.post(path, json=payload)
+            result["status_code"] = resp.status_code
+            result["duration_ms"] = int((time.perf_counter() - started) * 1000)
+            if not resp.is_success:
+                result["reason"] = f"http_{resp.status_code}"
+                try:
+                    body = resp.json()
+                    result["reason"] += f": {str(body.get('error') or body)[:120]}"
+                except Exception:
+                    result["reason"] += f": {resp.text[:120]}"
+                return result
+
+            data = resp.json()
+            choices = data.get("choices") or []
+            content = ((choices[0] or {}).get("message") or {}).get("content", "")
+            result["response_text"] = content.strip()[:200]
+            result["ok"] = bool(result["response_text"])
+            if not result["ok"]:
+                result["reason"] = "empty_response_content"
+    except httpx.TimeoutException:
+        result["reason"] = f"timeout_after_{timeout_seconds}s"
+        result["duration_ms"] = int((time.perf_counter() - started) * 1000)
+    except Exception as ex:
+        result["reason"] = f"exception: {str(ex)[:120]}"
+        result["duration_ms"] = int((time.perf_counter() - started) * 1000)
+
+    return result
+
+
+@router.get("/ops/llm/synthetic-check")
+async def llm_synthetic_check():
+    """Synthetic LLM health check — makes a REAL minimal completion call.
+
+    Unlike /ops/llm/health (which only probes connectivity), this endpoint
+    actually sends a prompt and validates the response. Use it to confirm
+    the LLM is not silently falling back to regex/local mode.
+
+    Returns:
+        ok=true  → real LLM responded with content
+        ok=false → misconfigured, wrong URL, auth failure, or empty response
+    """
+    started = time.perf_counter()
+    result = await _synthetic_llm_call(timeout_seconds=15.0)
+    total_ms = int((time.perf_counter() - started) * 1000)
+
+    ok = bool(result.get("ok"))
+    payload = {
+        "service": "vitaloop-api",
+        "component": "llm_synthetic",
+        "ok": ok,
+        "status": "ok" if ok else "degraded",
+        "total_duration_ms": total_ms,
+        "llm_duration_ms": result.get("duration_ms"),
+        "provider": {
+            "base_url": result.get("base_url"),
+            "model": result.get("model"),
+        },
+        "check": {
+            "configured": result.get("configured"),
+            "status_code": result.get("status_code"),
+            "response_text": result.get("response_text"),
+            "reason": result.get("reason"),
+        },
+        "timestamp": time.time(),
+    }
+    log_level = "info" if ok else "error"
+    getattr(logger, log_level)(
+        "llm_synthetic_check completed ok=%s reason=%s duration_ms=%s",
+        ok,
+        result.get("reason"),
+        total_ms,
     )
     return payload

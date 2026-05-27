@@ -253,7 +253,8 @@ class TestAuthRoles:
         fake_user_id = str(uuid.uuid4())
         fake_user = {
             "sub": fake_user_id,
-            "user_metadata": {"is_super_admin": True},
+            "app_metadata": {"is_super_admin": True},
+            "user_metadata": {"is_super_admin": False},
         }
 
         app.dependency_overrides[get_current_user] = lambda: fake_user
