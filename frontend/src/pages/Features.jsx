@@ -21,15 +21,15 @@ import Seo from '../components/Seo.jsx'
 const FEATURES = [
   {
     icon: BrainCircuit,
-    title: 'AI Biomarker Analysis',
-    description: 'Comprehensively analyze 85+ biomarkers from any lab report. Our AI normalizes units, validates ranges, and flags anomalies with full context.',
-    details: ['PDF & image analysis', 'Automatic unit normalization', '85+ biomarker support', 'Reference range validation'],
+    title: 'Symptom-First Intake',
+    description: 'Begin with symptoms, timing, and context before reviewing labs so your plan starts from what you actually feel.',
+    details: ['Guided symptom intake', 'Focused follow-up questions', 'Context-first workflow', 'Structured case notes'],
   },
   {
     icon: TrendingUp,
-    title: 'Longitudinal Tracking',
-    description: 'See your health trends over weeks, months, and years. Track improvements and identify patterns that single snapshots miss.',
-    details: ['Historical timeline', 'Trend prediction', 'Decline detection', 'Improvement analytics'],
+    title: 'Lab Direction Framework',
+    description: 'Get a practical map of what may be useful to check next and why it matters before your next discussion with a clinician.',
+    details: ['Biomarker category guidance', 'Priority ordering', 'Question prep for appointments', 'Action-ready summaries'],
   },
   {
     icon: Sparkles,
@@ -63,7 +63,7 @@ const FEATURES = [
   },
   {
     icon: Lock,
-    title: 'Doctor Sharing',
+    title: 'Clinician Sharing',
     description: 'Securely share your results with practitioners. They can add annotations and collaborate on protocol adjustments.',
     details: ['Token-based access', 'Expiring links', 'Comment threads', 'Audit logs'],
   },
@@ -99,8 +99,8 @@ export default function Features() {
   return (
     <>
       <Seo
-        title="Features - VITALOOP"
-        description="Explore VITALOOP's powerful features: AI biomarker analysis, longitudinal tracking, smart protocols, and AI health coaching."
+        title="Features - Symptom-First Health Workflow | VITALOOP"
+        description="Explore how VITALOOP connects symptom intake, lab interpretation, protocol execution, and weekly adaptation in one continuous workflow."
       />
 
       <div className="min-h-screen bg-white">
@@ -130,10 +130,10 @@ export default function Features() {
               <span className="text-sm font-semibold text-slate-900">12 Powerful Features</span>
             </div>
             <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 mb-6 leading-tight">
-              Everything You Need to Master Your Health
+              Everything You Need for a Symptom-First Health Loop
             </h1>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              From automated lab analysis to AI coaching and doctor collaboration. All the tools to understand and optimize your biomarkers.
+              From guided symptom intake to lab interpretation and adaptive protocol execution, VITALOOP keeps your health workflow structured and consistent.
             </p>
           </motion.div>
         </div>

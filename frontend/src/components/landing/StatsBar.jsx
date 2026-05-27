@@ -3,18 +3,18 @@ import { DollarSign, Calendar, TrendingUp } from 'lucide-react'
 const STATS = [
   {
     icon: DollarSign,
-    number: '$19.99/mo',
-    label: 'Premium plan'
+    number: 'Symptoms -> labs',
+    label: 'Smart intake before testing'
   },
   {
     icon: Calendar,
     number: '85+',
-    label: 'Biomarkers analyzed'
+    label: 'Biomarkers normalized after upload'
   },
   {
     icon: TrendingUp,
-    number: '1 free upload',
-    label: 'Before upgrade'
+    number: 'Weekly loop',
+    label: 'Check-ins connect symptoms to progress'
   },
 ]
 

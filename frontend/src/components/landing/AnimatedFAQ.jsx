@@ -4,40 +4,36 @@ import { Search, ChevronDown } from 'lucide-react'
 
 const FAQ_ITEMS = [
   {
-    question: 'What is AI lab analysis and how does VITALOOP use it?',
-    answer: 'AI lab analysis in VITALOOP means structured interpretation of blood test PDFs: marker normalization, priority ranking, and trend context across cycles. The output is an execution-ready plan rather than raw values.',
+    question: 'Can I start with symptoms even without lab results?',
+    answer: 'Yes. You can begin with symptom intake and guided follow-up questions. VITALOOP helps organize context and identify what may be useful to discuss and test next.',
   },
   {
-    question: 'Which blood test formats does VITALOOP support?',
-    answer: 'VITALOOP currently supports PDF uploads from major laboratories. Our AI analysis engine normalizes units and reference ranges across 85+ biomarkers including CBC, metabolic panels, thyroid, hormones, vitamins, and inflammation markers.',
+    question: 'Which lab report formats does VITALOOP support?',
+    answer: 'VITALOOP currently supports PDF uploads from major laboratories. The analysis engine normalizes units and reference ranges across 85+ biomarkers.',
   },
   {
-    question: 'How accurate is AI blood test interpretation?',
-    answer: 'VITALOOP compares biomarkers against reference ranges and your historical trends. It also highlights relevant marker combinations (for example ferritin with CRP and transferrin saturation) to support clearer prioritization.',
+    question: 'Does VITALOOP diagnose conditions?',
+    answer: 'No. VITALOOP is a wellness support platform for organizing context, interpreting lab patterns, and guiding execution. It does not provide medical diagnosis or treatment.',
   },
   {
-    question: 'Is VITALOOP a medical device or replacement for a doctor?',
-    answer: 'No. VITALOOP is a health intelligence platform, not a licensed medical device. It provides educational insights and protocol suggestions based on your lab data. Always consult a qualified healthcare professional for medical decisions.',
+    question: 'Will this replace my doctor?',
+    answer: 'No. It is designed to improve collaboration with qualified clinicians by making your symptoms, labs, and next-step questions easier to review.',
   },
   {
     question: 'What is longitudinal biomarker tracking?',
-    answer: 'Longitudinal biomarker tracking means analyzing the same health markers across multiple lab draws over time — weeks, months, or years. VITALOOP visualizes trend lines, detects recovery patterns, and alerts you when trajectories worsen, giving you a health timeline instead of a one-off snapshot.',
+    answer: 'Longitudinal tracking means reviewing the same biomarkers over repeated cycles so you can see trajectory, not just one snapshot.',
   },
   {
-    question: 'How is VITALOOP different from asking ChatGPT about my labs?',
-    answer: 'Chat tools are session-based and usually provide generic guidance. VITALOOP keeps your longitudinal lab history, applies a consistent normalization flow, and ties protocol recommendations to your specific biomarker patterns.',
-  },
-  {
-    question: 'How does VITALOOP compare with LabCorp MyChart, Everlywell, Levels, and Function Health?',
-    answer: 'Those platforms focus on record delivery, diagnostics access, or single-domain tracking. VITALOOP focuses on longitudinal decision-making and execution: prioritized protocol actions, weekly adherence loops, and practitioner workflows in one operating system.',
+    question: 'How is VITALOOP different from generic AI chat?',
+    answer: 'VITALOOP keeps structured health context over time and connects symptom intake, lab normalization, and weekly feedback in one continuous workflow.',
   },
   {
     question: 'Can practitioners use VITALOOP for client management?',
-    answer: 'Yes. The Enterprise plan includes a full Practitioner CRM with multi-client dashboards, assignment workflows, protocol templates, and trend visibility — enabling functional medicine practitioners and health coaches to manage dozens of clients efficiently.',
+    answer: 'Yes. Practitioner workflows support client context review, progress monitoring, and clearer protocol communication.',
   },
   {
     question: 'How much does VITALOOP cost?',
-    answer: 'VITALOOP offers a free plan with 1 active upload and a core dashboard. Premium is $19.99/month (or $199/year) and includes unlimited uploads, personalized AI protocols, and weekly check-ins. Enterprise plans start at $99/month for practitioner teams.',
+    answer: 'VITALOOP includes a free plan and paid plans for ongoing tracking and practitioner workflows. See the Pricing section for current details.',
   },
 ]
 

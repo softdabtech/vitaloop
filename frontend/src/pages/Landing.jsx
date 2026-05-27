@@ -33,10 +33,10 @@ import { AnimatedFAQ } from '../components/landing/AnimatedFAQ.jsx'
 import Footer from '../components/landing/Footer.jsx'
 
 const NAV_LINKS = [
-  { id: 'why-vitaloop', label: 'Features' },
+  { id: 'why-vitaloop', label: 'How it helps' },
   { id: 'pricing', label: 'Pricing' },
   { id: 'about', label: 'About', route: '/about' },
-  { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
+  { id: 'for-nutritionists', label: 'For Practitioners', route: '/for-nutritionists' },
 ]
 
 // S7764 helper functions for safe window access
@@ -47,10 +47,11 @@ function scrollToTop() {
 }
 
 const STEPS = [
-  { icon: Upload, title: 'Upload', body: 'Drop your lab PDF' },
-  { icon: BrainCircuit, title: 'AI Analysis', body: '85+ biomarkers analyzed' },
-  { icon: Sparkles, title: 'Get Protocol', body: 'Personalized action plan' },
-  { icon: HeartPulse, title: 'Track Progress', body: 'Weekly check-ins' },
+  { icon: HeartPulse, title: 'Start with symptoms', body: 'Describe what you feel and for how long' },
+  { icon: BrainCircuit, title: 'Answer follow-ups', body: 'Smart questions organize your context' },
+  { icon: FlaskConical, title: 'Get lab direction', body: 'See what may be useful to check next' },
+  { icon: Upload, title: 'Upload results', body: 'Analyze 85+ biomarkers after testing' },
+  { icon: Sparkles, title: 'Run and refine', body: 'Weekly check-ins adapt your protocol' },
 ]
 
 const BENEFITS = [
@@ -86,23 +87,23 @@ const BENEFITS = [
 
 const PREMIUM_FEATURES = [
   {
-    title: 'Biomarker Timeline',
-    body: 'Track biomarker trends over time to see what improves after each protocol update.',
-    icon: TrendingUp,
-  },
-  {
-    title: 'AI Protocol',
-    body: 'Receive a structured plan with dosage, timing, and follow-up actions tailored to your labs.',
-    icon: Sparkles,
-  },
-  {
-    title: 'Weekly Check-ins',
-    body: 'Report symptoms weekly and get adaptive protocol adjustments between lab cycles.',
+    title: 'Symptom check-ins and trend overlays',
+    body: 'Track weekly symptom changes next to biomarker movement to understand what is actually improving.',
     icon: HeartPulse,
   },
   {
-    title: 'Unlimited Uploads & Retests',
-    body: 'Upload new reports anytime and compare retests across cycles without feature limits.',
+    title: 'Priority ranking by impact',
+    body: 'See the highest-leverage issues first with a clear order of execution instead of scattered suggestions.',
+    icon: TrendingUp,
+  },
+  {
+    title: 'Lab discussion prep',
+    body: 'Bring structured notes and focused questions to your clinician conversations.',
+    icon: Stethoscope,
+  },
+  {
+    title: 'Protocol adaptation across cycles',
+    body: 'Move from one-off interpretation to an iterative loop with retests and weekly adjustments.',
     icon: Upload,
   },
 ]
@@ -127,33 +128,39 @@ const PLAN_DETAILS = {
 
 const HUB_GUIDES = [
   {
-    title: 'How to read ferritin in context',
-    body: 'Why ferritin without CRP, iron saturation, symptoms, and trend direction is often misleading.',
+    title: 'How symptoms can map to systems',
+    body: 'A practical guide to connecting fatigue, mood, sleep, and recovery signals to biomarker categories.',
     icon: FileText,
   },
   {
-    title: 'Building a repeatable retest loop',
-    body: 'How to time uploads, check-ins, and protocol changes so progress is measurable rather than anecdotal.',
+    title: 'How to prepare for lab discussions',
+    body: 'Use structured context and focused questions to make clinician conversations more productive.',
     icon: BrainCircuit,
   },
   {
-    title: 'From biomarkers to action stack',
-    body: 'A guide to translating abnormal markers into nutrition, supplements, and recovery priorities.',
+    title: 'Building a repeatable feedback loop',
+    body: 'How to combine symptoms, labs, and weekly adherence into a system that improves over time.',
     icon: LayoutDashboard,
   },
 ]
 
 const LOOP_FLOW = [
   {
-    title: 'Upload data',
-    body: 'Bring in a new lab report or retest.',
-    detail: 'PDF uploads are normalized automatically across lab formats.',
-    icon: Upload,
+    title: 'Capture symptoms',
+    body: 'Start with what you feel and what changed.',
+    detail: 'Context includes symptom duration, severity, and relevant lifestyle factors.',
+    icon: HeartPulse,
   },
   {
-    title: 'Analyze signals',
-    body: 'AI normalizes biomarkers and flags patterns.',
-    detail: 'Outliers, trend breaks, and related marker clusters are prioritized for action.',
+    title: 'Set direction',
+    body: 'Use follow-ups to shape what to check next.',
+    detail: 'You get a structured list of biomarker categories and discussion points for clinical review.',
+    icon: FlaskConical,
+  },
+  {
+    title: 'Upload lab data',
+    body: 'Map test results to your context.',
+    detail: 'VITALOOP normalizes markers and links patterns to symptoms and goals.',
     icon: BrainCircuit,
   },
   {
@@ -209,8 +216,8 @@ const MOCKUPS = [
 
 const HERO_TRUST_SIGNALS = [
   {
-    title: 'Clinical-grade interpretation',
-    body: '85+ biomarkers normalized by range, unit, and trend context.',
+    title: 'Symptom-first workflow',
+    body: 'Start with how you feel before deciding what to test next.',
     icon: FileText,
   },
   {
@@ -219,63 +226,55 @@ const HERO_TRUST_SIGNALS = [
     icon: Lock,
   },
   {
-    title: 'Comprehensive evidence review',
-    body: 'From upload to personalized protocol with weekly adaptation loop.',
+    title: 'Continuous adaptation',
+    body: 'From symptom intake to protocol refinement through weekly feedback.',
     icon: Clock3,
   },
 ]
 
 const FAQ_ITEMS = [
   {
-    question: 'What is AI lab analysis and how does VITALOOP use it?',
-    answer: 'AI lab analysis in VITALOOP means structured interpretation of blood test PDFs: marker normalization, priority ranking, and trend context across cycles. The output is an execution-ready plan rather than raw values.',
+    question: 'Can I start with symptoms even without lab results?',
+    answer: 'Yes. You can begin with symptom intake and guided follow-up questions. VITALOOP helps you organize context and identify what may be useful to discuss and test next.',
   },
   {
-    question: 'Which blood test formats does VITALOOP support?',
-    answer: 'VITALOOP currently supports PDF uploads from major laboratories. Our AI engine normalizes units and reference ranges across 85+ biomarkers including CBC, metabolic panels, thyroid, hormones, vitamins, and inflammation markers.',
+    question: 'Does VITALOOP diagnose conditions?',
+    answer: 'No. VITALOOP is a wellness support and organization platform. It provides educational insights and protocol suggestions, not medical diagnosis or treatment.',
   },
   {
-    question: 'How accurate is AI blood test interpretation?',
-    answer: 'VITALOOP compares biomarkers against reference ranges and your historical trends. It also highlights relevant marker combinations (for example ferritin with CRP and transferrin saturation) to support clearer prioritization.',
+    question: 'Will this replace my doctor?',
+    answer: 'No. It is designed to make your discussions with a qualified clinician more focused by organizing symptoms, lab context, and next-step questions.',
   },
   {
-    question: 'Is VITALOOP a medical device or replacement for a doctor?',
-    answer: 'No. VITALOOP is a health intelligence platform, not a licensed medical device. It provides educational insights and protocol suggestions based on your lab data. Always consult a qualified healthcare professional for medical decisions.',
+    question: 'What do I get after uploading lab results?',
+    answer: 'You receive normalized biomarker interpretation, prioritized issues, and a structured protocol you can follow and refine over time.',
   },
   {
-    question: 'What is longitudinal biomarker tracking?',
-    answer: 'Longitudinal biomarker tracking means analyzing the same health markers across multiple lab draws over time — weeks, months, or years. VITALOOP visualizes trend lines, detects recovery patterns, and alerts you when trajectories worsen, giving you a health timeline instead of a one-off snapshot.',
+    question: 'Can practitioners use VITALOOP with clients?',
+    answer: 'Yes. Practitioner workflows support client context review, progress monitoring, and clearer communication around protocol execution.',
   },
   {
-    question: 'How is VITALOOP different from asking ChatGPT about my labs?',
-    answer: 'Chat tools are session-based and usually provide generic guidance. VITALOOP keeps your longitudinal lab history, applies a consistent normalization flow, and ties protocol recommendations to your specific biomarker patterns.',
-  },
-  {
-    question: 'How does VITALOOP compare with LabCorp MyChart, Everlywell, Levels, and Function Health?',
-    answer: 'Those platforms focus on record delivery, diagnostics access, or single-domain tracking. VITALOOP focuses on longitudinal decision-making and execution: prioritized protocol actions, weekly adherence loops, and practitioner workflows in one operating system.',
-  },
-  {
-    question: 'Can practitioners use VITALOOP for client management?',
-    answer: 'Yes. The Enterprise plan includes a full Practitioner CRM with multi-client dashboards, assignment workflows, protocol templates, and trend visibility — enabling functional medicine practitioners and health coaches to manage dozens of clients efficiently.',
+    question: 'How is this different from generic AI chat?',
+    answer: 'VITALOOP keeps your structured health context over time and connects symptom intake, lab normalization, and weekly feedback into one continuous workflow.',
   },
   {
     question: 'How much does VITALOOP cost?',
-    answer: 'VITALOOP offers a free plan with 1 active upload and a core dashboard. Premium is $19.99/month (or $199/year) and includes unlimited uploads, personalized AI protocols, and weekly check-ins. Enterprise plans start at $99/month for practitioner teams.',
+    answer: 'VITALOOP offers a free plan and paid plans for continuous tracking and practitioner workflows. Pricing details are available in the Pricing section.',
   },
 ]
 
 const SCHEMA_HOWTO = {
   '@context': 'https://schema.org',
   '@type': 'HowTo',
-  name: 'How to Analyze Blood Test Results With AI Using VITALOOP',
-  description: 'Upload your lab report and receive comprehensive AI-powered biomarker analysis. Full personalized protocol and weekly adaptive loop are available on paid plans.',
+  name: 'How to Use VITALOOP From Symptoms to Action',
+  description: 'Start with symptom intake, organize follow-up context, upload labs, and run a structured weekly protocol loop.',
   estimatedCost: { '@type': 'MonetaryAmount', currency: 'USD', value: '0' },
   step: [
-    { '@type': 'HowToStep', name: 'Upload your lab report', text: 'Drop a blood test PDF into VITALOOP. The current upload flow is optimized for standard laboratory PDF reports.', position: 1 },
-    { '@type': 'HowToStep', name: 'AI analyzes and validates biomarkers', text: 'Our AI engine analyzes all biomarker values and normalizes them across units and reference ranges automatically.', position: 2 },
-    { '@type': 'HowToStep', name: 'Signal mapping and pattern detection', text: 'Deficiencies, elevations, and cross-biomarker correlations are surfaced and ranked by clinical significance.', position: 3 },
-    { '@type': 'HowToStep', name: 'Unlock your personalized protocol', text: 'Paid plans unlock a targeted protocol with supplement recommendations, nutrition actions, and weekly assignments tied to your biomarkers.', position: 4 },
-    { '@type': 'HowToStep', name: 'Track progress with adaptive check-ins', text: 'Paid plans include weekly AI check-ins and adaptation between lab cycles based on adherence and biomarker trends.', position: 5 },
+    { '@type': 'HowToStep', name: 'Start with symptoms', text: 'Document symptoms, timing, and context so your case starts from what you actually feel.', position: 1 },
+    { '@type': 'HowToStep', name: 'Answer targeted follow-up questions', text: 'Use guided intake to organize factors that may influence your health patterns.', position: 2 },
+    { '@type': 'HowToStep', name: 'Get lab direction and upload results', text: 'Review suggested biomarker categories, then upload your lab report for structured interpretation.', position: 3 },
+    { '@type': 'HowToStep', name: 'Receive prioritized protocol actions', text: 'Get a ranked action plan mapped to your context and biomarker patterns.', position: 4 },
+    { '@type': 'HowToStep', name: 'Track weekly and adapt', text: 'Use weekly check-ins and retests to refine your protocol over time.', position: 5 },
   ],
 }
 
@@ -688,8 +687,8 @@ export default function Landing() {
   return (
     <div className={rootClasses}>
       <Seo
-        title="Interpret Blood Test Results with AI | VITALOOP"
-        description="Analyze blood test results with comprehensive AI review. Upload your lab PDF, see prioritized biomarkers, and start a personalized weekly protocol for free."
+        title="Start with Symptoms, Then Understand Your Labs | VITALOOP"
+        description="VITALOOP starts with symptom intake, guides what to check next, and connects lab results to a practical weekly protocol and feedback loop."
         path="/"
         schemas={[SCHEMA_HOWTO, SCHEMA_FAQ]}
       />
@@ -928,10 +927,10 @@ export default function Landing() {
               VITALOOP
             </motion.h2>
             <p className={`mx-auto mt-4 max-w-2xl text-lg ${'text-slate-600'}`}>
-              What they say vs what you actually need
+              Why this complements, not replaces, medical care
             </p>
             <p className={`mx-auto mt-6 max-w-3xl text-base ${'text-slate-600'}`}>
-              We're not against doctors. We offer a different approach to your health — one that helps you catch patterns your annual checkup might miss, track trends over time, and avoid unnecessary risks. The goal: work alongside your healthcare provider with better data.
+              VITALOOP is built to help you prepare better context, ask better questions, and follow a clearer execution loop between appointments. The goal is informed collaboration with your healthcare team.
             </p>
           </motion.div>
 
@@ -948,9 +947,9 @@ export default function Landing() {
               </motion.div>
 
               {[
-                { icon: X, title: 'Numbers only', stat: '•', label: 'Values + reference ranges' },
-                { icon: X, title: 'One-time view', stat: '•', label: 'Single snapshot, no trends' },
-                { icon: X, title: 'No next steps', stat: '•', label: 'You figure out what to do' },
+                { icon: X, title: 'Time-limited context', stat: '•', label: 'Short visits can miss longitudinal patterns' },
+                { icon: X, title: 'Fragmented information', stat: '•', label: 'Symptoms, labs, and habits often stay disconnected' },
+                { icon: X, title: 'Unstructured follow-through', stat: '•', label: 'It is easy to leave without a clear weekly plan' },
               ].map((item, idx) => {
                 const Icon = item.icon
                 return (
@@ -998,9 +997,9 @@ export default function Landing() {
               </motion.div>
 
               {[
-                { icon: TrendingUp, title: 'Prioritized', stat: '✓', label: 'Top 3 problems ranked by severity' },
-                { icon: Clock3, title: 'Track trends', stat: '✓', label: 'Biomarkers compared over time' },
-                { icon: Sparkles, title: 'Actionable', stat: '✓', label: 'Exact dosages, timing, duration' },
+                { icon: TrendingUp, title: 'Structured intake', stat: '✓', label: 'Symptoms and context captured before analysis' },
+                { icon: Clock3, title: 'Connected tracking', stat: '✓', label: 'Labs and weekly response stay in one timeline' },
+                { icon: Sparkles, title: 'Execution clarity', stat: '✓', label: 'Prioritized actions you can actually follow' },
               ].map((item, idx) => {
                 const Icon = item.icon
                 return (
@@ -1051,13 +1050,13 @@ export default function Landing() {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              From PDF to personalized protocol in{' '}
+              From symptoms to personalized protocol in{' '}
               <span className="relative">
-                <span className="bg-gradient-to-r from-emerald-600 to-sky-600 bg-clip-text text-transparent">4 steps</span>
+                <span className="bg-gradient-to-r from-emerald-600 to-sky-600 bg-clip-text text-transparent">5 steps</span>
               </span>
             </motion.h2>
             <p className={`mx-auto mt-4 max-w-2xl text-lg ${'text-slate-600'}`}>
-              Upload your lab report, get AI analysis, execute protocol, track weekly progress
+              Start with your symptoms, organize follow-ups, upload labs, then run and refine a weekly protocol loop
             </p>
           </motion.div>
 
@@ -1272,9 +1271,9 @@ export default function Landing() {
             <div className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
               <div>
                 <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${'text-emerald-700'}`}>Health Intelligence Hub</p>
-                <h2 className="mt-2 text-[22px] font-semibold tracking-tight">Guides on Biomarker Interpretation & Biohacking</h2>
+                <h2 className="mt-2 text-[22px] font-semibold tracking-tight">Guides for symptom-first health decisions</h2>
                 <p className={`mt-2 max-w-xl text-sm leading-relaxed ${'text-slate-600'}`}>
-                  Deep dives on reading blood test results, optimizing ferritin, testosterone, cortisol, and building a sustainable biohacking protocol. The guides page now acts like an extension of the product, not a disconnected document dump.
+                  Learn how to frame symptoms, prepare for lab discussions, and turn results into a repeatable protocol loop. The hub extends product logic into practical education.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-3">
                   <button
@@ -1322,9 +1321,9 @@ export default function Landing() {
             onMouseLeave={() => setLoopActive(false)}
             className={`rounded-3xl border p-6 text-center md:p-10 ${sectionCard}`}
           >
-            <h2 className="text-[28px] font-semibold tracking-tight">The Biohacking Feedback Loop: How Longitudinal Lab Tracking Works</h2>
+            <h2 className="text-[28px] font-semibold tracking-tight">The Adaptive Health Loop</h2>
             <p className={`mx-auto mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
-              Biohacking is not a one-time blood test — it is a continuous feedback cycle. VITALOOP makes that loop automatic: data → AI insight → action protocol → weekly check-in → next lab upload. Each cycle makes the next one smarter.
+              Health optimization is a continuous cycle, not a one-time interpretation. VITALOOP connects symptoms, labs, protocol actions, and weekly feedback so each cycle becomes more informed than the previous one.
             </p>
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-[repeat(5,minmax(0,1fr))]">
               {LOOP_FLOW.map((item, idx) => {
@@ -1363,16 +1362,16 @@ export default function Landing() {
 
         <section className="mx-auto w-full max-w-[1240px] px-4 pb-24 pt-10 sm:px-6 md:pb-28 md:pt-16">
           <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 text-center md:p-10 ${sectionCard}`}>
-            <h2 className="text-[28px] font-semibold tracking-tight">Start Interpreting Your Blood Tests With AI Today</h2>
+            <h2 className="text-[28px] font-semibold tracking-tight">Start with symptoms. Build your personalized loop.</h2>
             <p className={`mx-auto mt-3 max-w-2xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
-              Replace guesswork with AI-powered biomarker analysis and personalized protocols. Free to start, no credit card required.
+              Move from uncertainty to a clear plan with symptom intake, lab interpretation, and adaptive weekly execution.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
               <button onClick={() => navigate('/login?signup=true')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
-                Create free account
+                Start with symptoms
               </button>
-              <button onClick={() => navigate('/how-it-works')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
-                Explore product
+              <button onClick={() => navigate('/upload')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+                Upload lab results
               </button>
               <a href="/help" className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                 Help Center
