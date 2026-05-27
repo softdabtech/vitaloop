@@ -50,14 +50,14 @@ const WORKFLOW_STEPS = [
     icon: Users,
     step: '01',
     title: 'Invite patients',
-    body: 'Add clients by email. Each patient gets a personal workspace to upload labs and track progress.',
+    body: 'Add clients by email. Each patient gets a personal workspace to capture symptoms, upload labs, and track progress.',
     accent: '#10b981',
   },
   {
     icon: Upload,
     step: '02',
-    title: 'Lab reports are interpreted in minutes',
-    body: 'Patients upload a PDF. VITALOOP analyzes 85+ biomarkers, normalizes units, and highlights abnormalities.',
+    title: 'Symptoms and labs are structured together',
+    body: 'Patients start with symptom context and upload a PDF. VITALOOP analyzes 85+ biomarkers, normalizes units, and highlights priorities.',
     accent: '#0ea5e9',
   },
   {
@@ -272,7 +272,7 @@ export default function ForNutritionists() {
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
         title="AI Lab Analysis for Nutritionists | VITALOOP"
-        description="Manage clients, interpret blood test labs in minutes, and run personalized nutrition protocols in one practitioner workspace. Start free with VITALOOP."
+        description="Manage clients with a symptom-first workflow, interpret lab reports, and run adaptive nutrition protocols in one practitioner workspace."
         path="/for-nutritionists"
         schemas={[
           {
@@ -280,7 +280,7 @@ export default function ForNutritionists() {
             '@type': 'Service',
             name: 'AI Lab Analysis for Nutritionists',
             description:
-              'VITALOOP provides nutritionists and dietitians with AI-powered blood test analysis, client management, personalized protocol generation, and longitudinal biomarker tracking.',
+              'VITALOOP provides nutritionists and dietitians with symptom-first client intake, AI-powered lab interpretation, protocol generation, and longitudinal tracking.',
             provider: {
               '@type': 'Organization',
               name: 'VITALOOP',
@@ -326,8 +326,8 @@ export default function ForNutritionists() {
               animate="visible"
               className="mt-5 max-w-xl text-lg leading-8 text-slate-600"
             >
-                VITALOOP turns blood test data into personalized nutrition and recovery protocols.
-                Bring patients, monitor progress, and adjust programs from one practitioner-focused workspace.
+                VITALOOP turns symptom and lab context into personalized nutrition and recovery protocols.
+                Bring patients, monitor progress, and adapt programs from one practitioner-focused workspace.
             </motion.p>
             <motion.div
               variants={fadeUp}
@@ -363,7 +363,7 @@ export default function ForNutritionists() {
               animate="visible"
               className="mt-6 flex flex-wrap gap-4"
             >
-              {['Free starter plan', 'No EMR integration required', 'Works with any lab PDF'].map((t) => (
+              {['Free starter plan', 'No EMR integration required', 'Symptoms + lab PDF workflow'].map((t) => (
                 <span key={t} className="inline-flex items-center gap-1.5 text-xs text-slate-400">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                   {t}
@@ -407,7 +407,7 @@ export default function ForNutritionists() {
                   AI protocol draft
               </div>
               <p className="text-xs leading-relaxed text-slate-600">
-                  Priority: restore iron and vitamin D. Suggested: iron bisglycinate 25 mg/day with vitamin C, vitamin D3 5000 IU/day. Retest ferritin in 8 weeks.
+                  Priority: restore iron and vitamin D while monitoring symptom response. Suggested plan and timing are reviewed by practitioner before patient execution.
               </p>
             </div>
           </motion.div>
@@ -480,7 +480,7 @@ export default function ForNutritionists() {
               viewport={{ once: true }}
               className="mt-3 text-slate-600"
             >
-                Run the full patient cycle in one platform without EMR integrations or setup overhead.
+                Run the full patient cycle from symptom intake to lab-informed protocol updates in one platform.
             </motion.p>
           </div>
           <div className="max-w-2xl">

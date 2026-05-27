@@ -9,12 +9,12 @@ const FAQ_ITEMS = [
     category: 'Getting Started',
     questions: [
       {
-        q: 'What file formats do you accept?',
-        a: 'We accept PDF lab reports, PNG/JPG images of lab results, and HL7/FHIR data from EMR systems. Our AI analysis engine handles most standard lab formats automatically.',
+        q: 'Can I start without lab results?',
+        a: 'Yes. You can begin with symptom intake and guided follow-up questions, then decide what to discuss and test next with your clinician.',
       },
       {
         q: 'How do I upload my first lab report?',
-        a: 'After signing up, click "Upload" in your dashboard. Select your lab PDF or image, and our AI will analyze biomarkers and return a thorough review.',
+        a: 'After signing up, click "Upload" in your dashboard and select your lab PDF. VITALOOP then normalizes biomarkers and maps findings into a structured plan.',
       },
       {
         q: 'Do I need a credit card to start?',
@@ -22,7 +22,7 @@ const FAQ_ITEMS = [
       },
       {
         q: 'How long does analysis take?',
-        a: 'Our AI performs a comprehensive review of your PDF, including biomarker analysis, normalization, and protocol ranking.',
+        a: 'Most analyses complete quickly after upload. Timing depends on report complexity and current processing load.',
       },
     ],
   },
@@ -31,7 +31,7 @@ const FAQ_ITEMS = [
     questions: [
       {
         q: 'Is my health data secure?',
-        a: 'Yes. All data is encrypted end-to-end with AES-256. We\'re HIPAA-compliant and SOC 2 certified. Your data is never sold or shared without explicit consent.',
+        a: 'Yes. We use encryption, access controls, and privacy-focused processing practices. Your data is not sold to advertisers or data marketplaces.',
       },
       {
         q: 'Can I delete my account and data?',
@@ -43,7 +43,7 @@ const FAQ_ITEMS = [
       },
       {
         q: 'Do you comply with regulations?',
-        a: 'Yes. We comply with HIPAA (US), GDPR (EU), and LGPD (Brazil). Enterprise plans include BAA agreements and additional compliance certifications.',
+        a: 'We apply healthcare-aligned data protection practices and continue evolving our compliance posture based on customer and regional requirements.',
       },
     ],
   },
@@ -165,8 +165,8 @@ export default function FAQ() {
   return (
     <>
       <Seo
-        title="Blood Test Analysis FAQ | VITALOOP"
-        description="Answers to common questions about VITALOOP: AI lab analysis, blood test uploads, biomarker protocols, privacy, plans, and practitioner collaboration."
+        title="FAQ - Symptom-First Health Workflow | VITALOOP"
+        description="Answers about symptom-first intake, lab uploads, privacy, plans, and how VITALOOP supports clinician conversations and weekly protocol tracking."
         path="/faq"
         schemas={[
           {

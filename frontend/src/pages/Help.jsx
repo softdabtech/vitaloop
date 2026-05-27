@@ -533,7 +533,7 @@ export default function Help() {
     <>
       <Seo
         title={pageTitle ? `${pageTitle} — VITALOOP Help` : 'Help Center — VITALOOP'}
-        description="Everything you need to know about using VITALOOP — uploads, results, protocols, billing, and more."
+        description="Everything you need to know about using VITALOOP — symptom intake, lab uploads, protocols, billing, and more."
         path={canonicalPath}
       />
       <div className="min-h-screen bg-slate-50">
@@ -570,7 +570,7 @@ export default function Help() {
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search articles… (e.g. upload, protocol, billing)"
+                placeholder="Search articles… (e.g. symptoms, labs, protocol, billing)"
                 className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-12 text-base text-slate-900 placeholder-slate-400 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               {searchQuery && (

@@ -5,27 +5,33 @@ import { useRef } from 'react'
 const STEPS = [
   {
     icon: '📤',
-    title: 'Upload',
-    body: 'Drop your lab PDF report.',
-    detail: 'VITALOOP auto-detects markers and normalizes units from different lab formats.',
+    title: 'Describe what you feel',
+    body: 'Start with symptoms, goals, and context.',
+    detail: 'Capture duration, severity, medications, supplements, and what you already tried.',
   },
   {
-    icon: '🧠',
-    title: 'AI Analysis',
-    body: 'Signals are ranked by priority.',
-    detail: 'You see what matters first instead of a flat list of disconnected values.',
+    icon: '❓',
+    title: 'Answer smart follow-ups',
+    body: 'Focused questions organize your case.',
+    detail: 'VITALOOP flags when qualified medical review may be important.',
   },
   {
-    icon: '✨',
-    title: 'Get Protocol',
-    body: 'Receive a personalized action protocol.',
-    detail: 'Exact dosage, timing, and duration are mapped into a practical weekly plan.',
+    icon: '🧪',
+    title: 'Get a lab direction plan',
+    body: 'See what may be useful to check next.',
+    detail: 'Suggested biomarker categories include why they matter and what to discuss with a clinician.',
   },
   {
-    icon: '❤️',
-    title: 'Track Progress',
-    body: 'Track adherence and symptom response.',
-    detail: 'Each cycle is adjusted using check-ins, side effects, and retest trends.',
+    icon: '📄',
+    title: 'Upload lab results',
+    body: 'Analyze 85+ biomarkers after upload.',
+    detail: 'Results are connected back to your symptoms, goals, and previous context.',
+  },
+  {
+    icon: '🔁',
+    title: 'Follow and adapt',
+    body: 'Run protocol, check in weekly, and retest.',
+    detail: 'Each cycle uses feedback to refine actions and timing.',
   },
 ]
 
@@ -48,8 +54,8 @@ export function HowItWorksTimeline() {
           viewport={{ once: true }}
           className="text-center mb-14 md:mb-20"
         >
-          <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-3">The Feedback Loop: One Test is a Snapshot. Three is a System.</h2>
-          <p className="text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">Upload PDF → prioritize issues → execute protocol → review response → retest. Each cycle becomes more precise than the previous one.</p>
+          <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-3">From symptoms to labs to a protocol in 5 steps</h2>
+          <p className="text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">Start with how you feel, get a practical lab direction plan, upload results, and improve through weekly feedback.</p>
         </motion.div>
 
         <div className="relative">

@@ -107,7 +107,7 @@ export default function ForInvestors() {
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
         title="Investor Overview | VITALOOP AI Health Platform"
-        description="Investor overview of VITALOOP: AI blood test platform traction, product moat, enterprise practitioner workflows, and growth narrative."
+        description="Investor overview of VITALOOP: symptom-first health workflow, lab intelligence platform, and practitioner operations roadmap."
         path="/for-investors"
         schemas={[
           {
@@ -117,7 +117,7 @@ export default function ForInvestors() {
             url: 'https://vitaloop.today',
             logo: 'https://vitaloop.today/og-cover-2026-05.jpg',
             description:
-              'VITALOOP is an AI-powered blood test analysis and biohacking platform that turns lab reports into personalized health protocols with comprehensive AI analysis.',
+              'VITALOOP is an AI-powered health workflow platform that connects symptom intake, lab interpretation, and longitudinal protocol execution.',
             sameAs: [
               'https://twitter.com/vitaloop',
             ],
@@ -143,10 +143,10 @@ export default function ForInvestors() {
             For Investors
           </motion.p>
           <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 text-5xl font-bold tracking-[-0.03em] text-slate-900 md:text-6xl">
-            AI infrastructure for longitudinal lab intelligence
+            AI infrastructure for symptom-first health workflows
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-            VITALOOP is building the execution layer between lab data and repeated health outcomes. The product blends consumer habit loops with practitioner operations, creating a wedge from individual self-optimization into clinic workflows.
+            VITALOOP is building the execution layer between symptom context, lab data, and repeated health outcomes. The product blends consumer habit loops with practitioner operations into one longitudinal system.
           </motion.p>
           <div className="mt-8 flex flex-wrap gap-3">
             <button onClick={() => navigate('/login?signup=true')} className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600">
@@ -203,7 +203,7 @@ export default function ForInvestors() {
             <h2 className="text-3xl font-bold text-slate-900">Market opportunity: $190B+ in personalized medicine</h2>
           </div>
           <p className="max-w-3xl text-sm leading-7 text-slate-600">
-            The shift from reactive medicine to preventive health optimization is unlocking a massive market. VITALOOP captures the intersection of personalized AI, biomarker intelligence, and consumer wellness spending.
+            The shift from reactive care to continuous preventive workflows is expanding demand for structured health platforms. VITALOOP sits at the intersection of AI assistance, biomarker interpretation, and recurring execution loops.
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {MARKET_METRICS.map((item) => (
@@ -224,7 +224,7 @@ export default function ForInvestors() {
             <h2 className="text-3xl font-bold text-slate-900">Unit economics: proven path to profitability</h2>
           </div>
           <p className="max-w-3xl text-sm leading-7 text-slate-600">
-            The dual-sided model (consumer + enterprise) enables leverage. Low CAC via freemium funnel, high LTV via weekly engagement loops and sticky practitioner workflows.
+            The dual-sided model (consumer + enterprise) enables leverage. The focus is recurring engagement through weekly loops and sticky practitioner workflows.
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {UNIT_ECONOMICS.map((item) => (
@@ -236,7 +236,7 @@ export default function ForInvestors() {
             ))}
           </div>
           <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-7 text-slate-600">
-            <strong className="text-slate-900">Path to revenue per user &gt;$15/month:</strong> Free tier funnel → $19.99/mo Premium → enterprise upsell at $1.2-5K/month across practitioner bases scales unit economics.
+            <strong className="text-slate-900">Revenue strategy:</strong> Free tier funnel, paid consumer plans, and enterprise practitioner expansion designed to improve blended unit economics over time.
           </div>
         </div>
       </section>
@@ -276,7 +276,7 @@ export default function ForInvestors() {
             <h2 className="text-3xl font-bold text-slate-900">Investment ask: accelerating to product-market fit</h2>
           </div>
           <p className="max-w-3xl text-sm leading-7 text-slate-600">
-            This round funds the transition from early access to scaled product. Focus: clinical validation, enterprise onboarding, and consumer acquisition to hit 1000+ paid users.
+            This round funds the transition from early access to scaled product. Focus: workflow quality, enterprise onboarding, and sustainable consumer growth.
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             <div className="rounded-3xl border border-slate-200 bg-white p-5">

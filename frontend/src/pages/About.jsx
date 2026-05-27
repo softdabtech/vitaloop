@@ -22,26 +22,26 @@ import Seo from '../components/Seo.jsx'
 import Footer from '../components/landing/Footer.jsx'
 
 const HERO_OBJECTS = [
-  { icon: BrainCircuit, label: '85+ biomarkers analyzed' },
-  { icon: ShieldCheck, label: 'Evidence-based protocol engine' },
-  { icon: Target, label: 'Clear next steps in minutes' },
+  { icon: BrainCircuit, label: 'Symptom-first intake flow' },
+  { icon: ShieldCheck, label: 'Structured protocol guidance' },
+  { icon: Target, label: 'Clear next steps over time' },
 ]
 
 const PROBLEM_STATS = [
   {
     icon: DollarSign,
-    value: '$400 spent on blood tests',
-    text: 'and most people never act on the results',
+    value: 'Costly testing cycles',
+    text: 'without a structured execution workflow',
   },
   {
     icon: Clock3,
-    value: '7 minutes',
-    text: 'average doctor appointment. Not enough to explain 85 biomarkers',
+    value: 'Short consultations',
+    text: 'often leave symptoms, labs, and action steps disconnected',
   },
   {
     icon: FileText,
-    value: 'Millions of PDFs',
-    text: 'filed away, ignored, misunderstood every year',
+    value: 'Scattered lab reports',
+    text: 'that rarely become a repeatable long-term plan',
   },
 ]
 
@@ -49,7 +49,7 @@ const VALUES = [
   {
     icon: Microscope,
     title: 'Evidence-first',
-    description: 'Every recommendation is grounded in published research and lab data — never guesswork.',
+    description: 'Recommendations are built from structured context and biomarker interpretation, not generic one-off advice.',
   },
   {
     icon: Lock,
@@ -64,7 +64,7 @@ const VALUES = [
   {
     icon: Zap,
     title: 'Built with urgency',
-    description: 'Health problems compound over time. We move fast because waiting has real consequences.',
+    description: 'Health plans should adapt continuously. We focus on turning insight into consistent weekly execution.',
   },
 ]
 
@@ -72,12 +72,12 @@ const ROADMAP = [
   {
     icon: CheckCircle2,
     title: 'Today',
-    subtitle: 'An AI-powered platform that reads your lab results, identifies imbalances across 85+ biomarkers, and delivers a personalized protocol: exact supplements, dosages, dietary shifts, and lifestyle recommendations.',
+    subtitle: 'A platform that starts with symptom context, structures lab interpretation, and delivers a practical protocol users can follow week by week.',
   },
   {
     icon: TrendingUp,
     title: 'Next 6 months',
-    subtitle: 'Longitudinal tracking — upload labs over time and watch your biomarkers move. Integration with nutritionists and functional medicine practitioners who use Vitaloop as their clinical tool.',
+    subtitle: 'Deeper longitudinal tracking, clearer practitioner collaboration, and stronger workflow support between appointments.',
   },
   {
     icon: Sparkles,
@@ -100,7 +100,7 @@ export default function About() {
     <>
       <Seo
         title="About VITALOOP - Our Mission & Team"
-        description="Learn about VITALOOP's mission to make evidence-based health accessible to everyone, and meet the team behind the platform."
+        description="Learn how VITALOOP uses a symptom-first workflow to connect context, labs, and weekly protocol execution."
       />
 
       <div className="min-h-screen bg-white">
@@ -148,13 +148,13 @@ export default function About() {
                 We're on a mission to make your health data work for you
               </h1>
               <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-8">
-                Vitaloop was built by people who were tired of spending hundreds on lab tests — and getting nothing actionable in return.
+                VITALOOP was built to turn scattered symptoms and lab reports into a clear, repeatable health execution loop.
               </p>
               <button
                 onClick={() => navigate('/login?signup=true')}
                 className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-8 py-4 text-lg font-bold text-white hover:bg-emerald-700 transition shadow-lg"
               >
-                Upload your labs free
+                Start with symptoms
                 <span>→</span>
               </button>
             </motion.div>
@@ -194,18 +194,18 @@ export default function About() {
 
             <div className="prose prose-lg max-w-none text-slate-700 space-y-6">
               <p>
-                Every year, millions of people invest in blood tests hoping to take control of their health. They get a PDF. They get reference ranges. They get told "everything looks normal" — even when it doesn't.
+                Many people invest in blood tests hoping to take control of their health, then end up with static PDFs and little clarity on what to do next.
               </p>
               <p>
-                Doctors have 7 minutes per visit. Nutritionists cost $150/hour. And Google gives you anxiety, not answers.
+                Consultations are time-limited, context is fragmented, and generic internet advice rarely translates into a reliable plan.
               </p>
               <p>
-                We built Vitaloop because we believe that having your labs analyzed shouldn't require a medical degree or a large budget. Your health data belongs to you — and it should actually tell you something useful.
+                We built VITALOOP because health data should become useful action: symptom-first intake, structured interpretation, and an adaptive weekly protocol.
               </p>
             </div>
 
             <div className="mt-10 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6 text-center">
-              <p className="text-xl font-semibold text-emerald-900">People aren't lazy. They just never got a clear action plan.</p>
+              <p className="text-xl font-semibold text-emerald-900">Most people do not need more data. They need a clearer loop.</p>
             </div>
           </motion.div>
         </div>
@@ -394,14 +394,14 @@ export default function About() {
               Join us on this mission
             </h2>
             <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
-              Start with your own labs — free, no credit card required. See what Vitaloop finds in under 2 minutes.
+              Start with your symptoms, then connect your lab context to a structured weekly plan.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
                 onClick={() => navigate('/login?signup=true')}
                 className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-8 py-4 text-lg font-bold text-white hover:bg-emerald-700 transition shadow-lg"
               >
-                Upload your labs free
+                Start with symptoms
                 <span>→</span>
               </button>
               <a

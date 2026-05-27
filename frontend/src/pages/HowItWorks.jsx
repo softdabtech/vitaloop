@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, BrainCircuit, CheckCircle2, FileText, HeartPulse, LayoutDashboard, Sparkles, Stethoscope, TrendingUp, Upload } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BrainCircuit, CheckCircle2, FileText, FlaskConical, HeartPulse, LayoutDashboard, Sparkles, Stethoscope, TrendingUp, Upload } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
 import Footer from '../components/landing/Footer.jsx'
 import { PageHeader } from '../components/landing/PageHeader.jsx'
@@ -9,32 +9,39 @@ export default function HowItWorks() {
   const navigate = useNavigate()
   const steps = [
     {
-      icon: Upload,
-      title: 'Upload a real lab report',
-      description: 'Bring any PDF or lab image from your provider. VITALOOP handles document reading, unit cleanup, and biomarker normalization before analysis begins.',
+      icon: HeartPulse,
+      title: 'Start with symptoms',
+      description: 'Capture what you feel, how long it has been happening, and what has changed recently so your workflow starts with real context.',
       code: '01',
       color: 'from-emerald-500/25 to-cyan-500/15',
     },
     {
       icon: BrainCircuit,
-      title: 'Map the signal structure',
-      description: 'The engine compares your biomarkers across ranges, patterns, and historical context so you can see what is noisy, what is meaningful, and what deserves attention first.',
+      title: 'Answer guided follow-ups',
+      description: 'Smart follow-up questions help organize factors that may influence your patterns and highlight when clinical review is important.',
       code: '02',
       color: 'from-cyan-500/20 to-emerald-500/10',
     },
     {
-      icon: LayoutDashboard,
-      title: 'Turn analysis into execution',
-      description: 'Your dashboard becomes a command center: priorities, protocol tasks, trend visibility, and next best action instead of an inert report archive.',
+      icon: FlaskConical,
+      title: 'Get lab direction',
+      description: 'See which biomarker categories may be useful to check and why, so you can discuss focused next steps with a clinician.',
       code: '03',
       color: 'from-emerald-500/20 to-sky-500/15',
     },
     {
-      icon: HeartPulse,
-      title: 'Close the feedback loop',
-      description: 'Weekly check-ins and fresh uploads make the next protocol cycle sharper than the last one, so the system compounds over time.',
+      icon: Upload,
+      title: 'Upload lab results',
+      description: 'Upload your PDF lab report and get normalized biomarker interpretation connected to your symptoms and previous context.',
       code: '04',
       color: 'from-emerald-500/20 to-violet-500/15',
+    },
+    {
+      icon: LayoutDashboard,
+      title: 'Run and adapt your protocol',
+      description: 'Weekly check-ins and retest cycles help refine your plan over time instead of restarting from scratch.',
+      code: '05',
+      color: 'from-emerald-500/20 to-cyan-500/15',
     },
   ]
 
@@ -57,48 +64,54 @@ export default function HowItWorks() {
   ]
 
   const outcomes = [
-    { label: 'Upload to insight', value: 'Fast AI flow', icon: Upload },
+    { label: 'Starting point', value: 'Symptom-first', icon: HeartPulse },
     { label: 'Biomarkers tracked', value: '85+', icon: TrendingUp },
-    { label: 'Weekly loop', value: 'Always on', icon: CheckCircle2 },
+    { label: 'Execution model', value: 'Weekly loop', icon: CheckCircle2 },
   ]
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
-        title="How AI Blood Test Analysis Works | VITALOOP"
-        description="See how VITALOOP turns blood test uploads into prioritized biomarker insights and step-by-step weekly protocols. Start free and test your first report."
+        title="How VITALOOP Works: Symptoms -> Labs -> Action"
+        description="See how VITALOOP starts with symptoms, guides lab direction, analyzes uploaded results, and adapts your protocol through weekly feedback."
         path="/how-it-works"
         schemas={[
           {
             '@context': 'https://schema.org',
             '@type': 'HowTo',
-            name: 'How to Interpret Blood Test Results with AI',
+            name: 'How to Use VITALOOP From Symptoms to Protocol',
             description:
-              'Upload your blood test PDF or image, let VITALOOP AI analyze 85+ biomarkers, and receive a personalized health protocol with ranked recommendations.',
+              'Start with symptom intake, answer guided follow-ups, upload lab results, and run a weekly adaptive protocol loop.',
             step: [
               {
                 '@type': 'HowToStep',
-                name: 'Upload your lab report',
-                text: 'Upload a blood test PDF or photo of your lab results. VITALOOP\'s AI analysis engine identifies all biomarkers automatically.',
+                name: 'Start with symptoms',
+                text: 'Capture your symptoms, timing, and context as the first step.',
                 position: 1,
               },
               {
                 '@type': 'HowToStep',
-                name: 'AI analyzes your biomarkers',
-                text: 'Our AI maps your results against 85+ markers, flags abnormal values, and identifies cross-biomarker patterns.',
+                name: 'Answer guided follow-ups',
+                text: 'Use focused prompts to organize relevant context and next-step questions.',
                 position: 2,
               },
               {
                 '@type': 'HowToStep',
-                name: 'Get your personalized protocol',
-                text: 'Receive ranked supplement, nutrition, and lifestyle recommendations tailored to your unique lab data.',
+                name: 'Get lab direction and upload results',
+                text: 'Review suggested biomarker categories, then upload your PDF lab report for structured interpretation.',
                 position: 3,
               },
               {
                 '@type': 'HowToStep',
-                name: 'Track progress over time',
-                text: 'Re-upload labs every 8–12 weeks. VITALOOP\'s longitudinal engine shows trends and adapts your protocol.',
+                name: 'Run and adapt your protocol',
+                text: 'Track weekly response and refine actions over retest cycles.',
                 position: 4,
+              },
+              {
+                '@type': 'HowToStep',
+                name: 'Repeat with better context',
+                text: 'Use each new cycle to improve prioritization and execution quality.',
+                position: 5,
               },
             ],
           },
@@ -117,10 +130,10 @@ export default function HowItWorks() {
             Health Intelligence Hub
           </motion.p>
           <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 text-5xl font-bold tracking-[-0.03em] text-slate-900 md:text-6xl">
-            Explore how the system actually works
+            See the full symptom-first workflow
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-            This page is the bridge between marketing and product reality: how uploads become insight, how insight becomes action, and how repeated lab cycles create a smarter protocol over time.
+            This page shows how VITALOOP moves from symptom intake to lab interpretation and then into a practical protocol loop that improves over time.
           </motion.p>
 
           <div className="mt-8 flex flex-wrap gap-3">

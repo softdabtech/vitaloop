@@ -18,19 +18,19 @@ export function LightHero() {
 
             {/* Headline */}
             <h1 className="text-5xl lg:text-6xl font-bold text-slate-900 leading-tight">
-              Spent $400 on blood tests.
+              Feel off, but don't know
               <br />
               <span className="bg-gradient-to-r from-teal-600 to-teal-500 bg-clip-text text-transparent">
-                Don't know what to do?
+                what to check?
               </span>
             </h1>
 
             {/* Subheadline */}
             <p className="text-lg text-slate-600 leading-relaxed max-w-xl space-y-3">
-              <span className="block">Upload your lab PDF and get a clear, prioritized action plan.</span>
-              <span className="block font-semibold text-slate-900">From lab values to weekly execution.</span>
+              <span className="block">Start with your symptoms and answer focused follow-up questions.</span>
+              <span className="block font-semibold text-slate-900">From symptoms to labs to weekly execution.</span>
               <span className="block text-base text-slate-500">
-                VITALOOP structures your next steps: what to address first, how to run the protocol, and what to review before your next retest.
+                VITALOOP helps you identify possible contributing factors, choose useful labs to discuss, and turn results into a structured protocol you can follow.
               </span>
             </p>
 
@@ -40,7 +40,7 @@ export function LightHero() {
                 onClick={() => navigate('/upload')}
                 className="group px-8 py-4 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
               >
-                Upload Lab PDF (Free)
+                Start with symptoms
                 <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
 
@@ -48,7 +48,7 @@ export function LightHero() {
                 onClick={() => navigate('/for-nutritionists')}
                 className="px-8 py-4 border-2 border-teal-500 text-teal-600 hover:bg-teal-50 rounded-lg font-semibold transition-all"
               >
-                For Nutritionists
+                Upload lab results
               </button>
             </div>
 
