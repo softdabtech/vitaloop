@@ -13,14 +13,7 @@ router = APIRouter()
 
 
 def _llm_chat_completions_path() -> str:
-    """Return provider-specific chat completions path.
-
-    Keep path relative to preserve any base URL suffix like `/v1`.
-    """
-    base_url = settings.active_llm_base_url.rstrip("/").lower()
-    if "agents.do-ai.run" in base_url:
-        return "api/v1/chat/completions"
-    # DO Serverless or standard OpenAI-compatible base URLs already include /v1
+    """Return OpenAI chat completions path relative to base_url."""
     return "chat/completions"
 
 
@@ -307,28 +300,17 @@ async def _synthetic_llm_call(timeout_seconds: float = 15.0) -> dict:
         result["reason"] = "missing_llm_configuration"
         return result
 
-    # Guard against the generic DO agents URL (not a valid agent endpoint)
-    if base_url.lower().rstrip("/") == "https://agents.do-ai.run":
-        result["reason"] = (
-            "invalid_do_agent_url: DIGITALOCEAN_CLAUDE_BASE_URL must be a "
-            "customer-specific URL like https://{your-agent}.agents.do-ai.run"
-        )
-        return result
-
     from app.services.claude_service import _chat_completions_path as _svc_path
 
     path = _svc_path()
-    # DO Agent endpoint does not accept a model field; others do.
-    is_do_agent = "agents.do-ai.run" in base_url.lower()
     payload: dict = {
         "messages": [
             {"role": "user", "content": "Reply with the single word: pong"},
         ],
         "temperature": 0,
         "max_tokens": 8,
+        "model": model,
     }
-    if not is_do_agent:
-        payload["model"] = model
 
     headers = {
         "Authorization": f"Bearer {api_key}",

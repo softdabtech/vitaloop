@@ -323,7 +323,7 @@ def _get_client() -> httpx.AsyncClient:
         base_url = settings.active_llm_base_url.rstrip("/")
         api_key = settings.active_llm_api_key
         if not api_key:
-            raise RuntimeError("LLM API key is not configured.")
+            raise RuntimeError("OPENAI_API_KEY is not configured.")
         _client = httpx.AsyncClient(
             base_url=base_url,
             headers={
@@ -336,51 +336,16 @@ def _get_client() -> httpx.AsyncClient:
 
 
 def _chat_completions_path() -> str:
-    """Return provider-specific chat completions path relative to base_url.
-
-    We intentionally return a relative path (no leading slash) so a base URL
-    with a path segment (for example `/v1`) keeps its prefix.
-
-    DO Agent Inference:      base_url = https://<agent>.agents.do-ai.run
-                             path     = api/v1/chat/completions
-    DO Serverless Inference: base_url = https://inference.do-ai.run/v1
-                             path     = chat/completions
-    OpenAI-compatible:       base_url = https://host/v1
-                             path     = chat/completions
-    """
-    base_url = settings.active_llm_base_url.rstrip("/").lower()
-    # Customer-specific DO Agent endpoint (subdomain of agents.do-ai.run)
-    # The generic https://agents.do-ai.run (no subdomain) is invalid — guard against it.
-    if "agents.do-ai.run" in base_url:
-        netloc = base_url.split("//", 1)[-1].split("/")[0]
-        if netloc == "agents.do-ai.run":
-            logger.error(
-                "do_agent_invalid_url url=%s "
-                "hint='Set DIGITALOCEAN_CLAUDE_BASE_URL to your agent URL: "
-                "https://{your-agent}.agents.do-ai.run'",
-                settings.active_llm_base_url,
-            )
-        return "api/v1/chat/completions"
-    # DO Serverless Inference endpoint (base URL already includes /v1)
-    if "inference.do-ai.run" in base_url:
-        return "chat/completions"
+    """Return OpenAI chat completions path relative to base_url."""
     return "chat/completions"
 
 
-def _is_do_agent_endpoint() -> bool:
-    base = settings.active_llm_base_url.rstrip("/").lower()
-    return "agents.do-ai.run" in base and base.split("//", 1)[-1].split("/")[0] != "agents.do-ai.run"
-
-
 def _chat_payload(messages: List[Dict[str, Any]], temperature: float) -> Dict[str, Any]:
-    payload: Dict[str, Any] = {
+    return {
         "temperature": temperature,
         "messages": messages,
+        "model": settings.active_llm_model,
     }
-    # DigitalOcean Agent endpoint selects its configured model internally.
-    if not _is_do_agent_endpoint():
-        payload["model"] = settings.active_llm_model
-    return payload
 
 
 def _strip_code_block(raw: str) -> str:
@@ -408,15 +373,7 @@ async def _persist_usage_event(
         if prompt_tokens <= 0 and completion_tokens <= 0 and total_tokens <= 0:
             return
 
-        base = str(settings.active_llm_base_url or "").lower()
-        if "api.openai.com" in base:
-            provider = "openai"
-        elif "agents.do-ai.run" in base or "inference.do-ai.run" in base:
-            provider = "digitalocean"
-        elif "routellm.abacus.ai" in base:
-            provider = "routellm"
-        else:
-            provider = "openai_compatible"
+        provider = "openai"
         model = str(payload.get("model") or settings.active_llm_model or "unknown")
 
         from app.services import supabase_service as svc
