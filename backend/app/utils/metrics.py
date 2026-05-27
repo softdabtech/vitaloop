@@ -4,7 +4,7 @@ Performance metrics and monitoring utilities.
 
 import logging
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Any, Callable
 from functools import wraps
 from collections import defaultdict, deque
@@ -95,7 +95,7 @@ class QueryProfiler:
             with self.lock:
                 self.slow_queries.append(
                     {
-                        "timestamp": datetime.now(UTC).isoformat(),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                         "type": query_type,
                         "operation": operation,
                         "table": table,
@@ -196,7 +196,7 @@ class HealthCheck:
         """Update service health status."""
         with self.lock:
             self.status[service] = status
-            self.last_updated = datetime.now(UTC)
+            self.last_updated = datetime.now(timezone.utc)
 
     def get_status(self) -> Dict[str, Any]:
         """Get current health status."""
@@ -214,7 +214,7 @@ health_check = HealthCheck()
 def get_performance_report() -> Dict[str, Any]:
     """Generate performance report for monitoring."""
     return {
-        "timestamp": datetime.now(UTC).isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "slow_queries": query_profiler.get_slow_queries(10),
         "error_rate": metrics_collector.get_metric_stats("error_rate"),
         "endpoint_latencies": {
