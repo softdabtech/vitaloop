@@ -288,11 +288,18 @@ RESPONSE FORMAT: Return ONLY valid JSON (no markdown):
 
             # Send to API
             analysis_text = await self._send_text_completion(prompt)
-            payload = self._parse_json(analysis_text)
+            logger.debug(f"OpenAI response (first 500 chars): {analysis_text[:500]}")
+
+            try:
+                payload = self._parse_json(analysis_text)
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON parsing failed: {e}, response: {analysis_text[:1000]}")
+                raise ValueError(f"API returned invalid JSON: {str(e)}")
 
             # Validate required fields
             required_fields = ["biomarkers", "protocol", "retest_schedule"]
             if not all(field in payload for field in required_fields):
+                logger.error(f"Missing fields in response. Got: {list(payload.keys())}")
                 raise ValueError("Response missing required fields")
 
             analysis_time = time.time() - start_time

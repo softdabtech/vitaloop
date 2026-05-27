@@ -138,12 +138,29 @@ async def analyze_lab_file(
             temp_path = tmp.name
 
         # Create appropriate analyzer based on file type
-        file_analyzer = await create_file_analyzer(temp_path)
-        analysis = await file_analyzer.analyze(temp_path, symptoms=symptoms)
+        try:
+            file_analyzer = await create_file_analyzer(temp_path)
+        except Exception as e:
+            logger.error(f"Failed to create analyzer for file {file.filename}: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=400,
+                detail={"detail": f"Unable to process file format: {str(e)}", "code": "ANALYZER_CREATION_FAILED"}
+            )
+
+        try:
+            analysis = await file_analyzer.analyze(temp_path, symptoms=symptoms)
+        except Exception as e:
+            logger.error(f"Analysis failed for file {file.filename}: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail={"detail": f"Analysis failed: {str(e)}", "code": "ANALYZE_EXECUTION_FAILED"}
+            )
 
         if not analysis.get("success"):
             error_code = analysis.get("error_code")
             error_text = analysis.get("error") or "Unable to analyze file"
+
+            logger.warning(f"Analysis returned failure: code={error_code}, error={error_text}")
 
             if error_code == "TIMEOUT":
                 raise HTTPException(status_code=408, detail={"detail": error_text, "code": "ANALYSIS_TIMEOUT"})
@@ -158,9 +175,10 @@ async def analyze_lab_file(
 
         biomarkers = analysis.get("biomarkers", [])
         if not biomarkers:
+            logger.warning(f"No biomarkers extracted from file {file.filename}. Full analysis response: {json.dumps(analysis, default=str)}")
             raise HTTPException(
                 status_code=422,
-                detail={"detail": "Could not extract biomarkers from the uploaded file", "code": "BIOMARKERS_NOT_EXTRACTED"},
+                detail={"detail": "Could not extract biomarkers from the uploaded file. Try uploading a clearer lab report with visible biomarker values and reference ranges.", "code": "BIOMARKERS_NOT_EXTRACTED"},
             )
 
         upload_payload = {
