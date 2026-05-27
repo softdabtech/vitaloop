@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-4o-mini"
+    openai_vision_model: str = "gpt-4o"  # Vision API model for images
+    enable_vision_api: bool = True  # Feature flag for Vision API
+    image_max_size_mb: int = 20  # Vision API supports up to 20MB
+    tiff_max_pages: int = 10  # Max pages in multi-page TIFF
+    table_analysis_max_rows: int = 1000  # Max rows when parsing tables
+    table_analysis_max_columns: int = 50  # Max columns when parsing tables
     # DigitalOcean AI endpoint.
     # For Agent Inference (customer-specific):    https://{your-agent}.agents.do-ai.run
     # For Serverless Inference:                  https://inference.do-ai.run/v1
