@@ -63,10 +63,14 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
     role = _normalize_role(account.get("global_role"), current_user.get("global_role"), current_user.get("role"))
     onboarding_completed = _as_bool(profile.get("onboarding_complete") or current_user.get("onboarding_completed"))
 
-    # Only end-user role is constrained by B2C onboarding steps.
-    requires_onboarding = role == "end_user" and not onboarding_completed
+    # Treat onboarding_complete as account-setup completion. Health-loop milestones
+    # are tracked separately in checklist fields below.
+    account_setup_complete = onboarding_completed
 
-    if not requires_onboarding:
+    # Only end-user role is constrained by account setup.
+    requires_onboarding = role == "end_user" and not account_setup_complete
+
+    if role != "end_user":
         return {
             "role": role,
             "requires_onboarding": False,
@@ -79,7 +83,13 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
                 "first_upload": True,
                 "questionnaire_completed": True,
                 "onboarding_complete": True,
+                "account_setup_complete": True,
+                "first_health_loop_started": True,
+                "first_health_loop_complete": True,
             },
+            "account_setup_complete": True,
+            "first_health_loop_started": True,
+            "first_health_loop_complete": True,
         }
 
     sb = svc._get_supabase()
@@ -111,6 +121,8 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
     has_complaints = bool(complaints_resp.data)
     has_uploads = bool(uploads_resp.data)
     has_questionnaire = bool(questionnaire_resp.data)
+    first_health_loop_started = bool(has_complaints or has_uploads or has_questionnaire)
+    first_health_loop_complete = bool(has_uploads and has_questionnaire)
 
     await svc.write_audit_log(
         user_id=user_id,
@@ -142,9 +154,9 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
 
     return {
         "role": role,
-        "requires_onboarding": True,
-        "current_stage": current_stage,
-        "completed": False,
+        "requires_onboarding": requires_onboarding,
+        "current_stage": "complete" if not requires_onboarding else current_stage,
+        "completed": not requires_onboarding,
         "checklist": {
             "profile_basics": has_profile_basics,
             "location": has_location,
@@ -152,7 +164,13 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
             "first_upload": has_uploads,
             "questionnaire_completed": has_questionnaire,
             "onboarding_complete": onboarding_completed,
+            "account_setup_complete": account_setup_complete,
+            "first_health_loop_started": first_health_loop_started,
+            "first_health_loop_complete": first_health_loop_complete,
         },
+        "account_setup_complete": account_setup_complete,
+        "first_health_loop_started": first_health_loop_started,
+        "first_health_loop_complete": first_health_loop_complete,
     }
 
 

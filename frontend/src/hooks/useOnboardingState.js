@@ -21,7 +21,13 @@ const FALLBACK_STATE = {
     first_upload: false,
     questionnaire_completed: false,
     onboarding_complete: false,
+    account_setup_complete: false,
+    first_health_loop_started: false,
+    first_health_loop_complete: false,
   },
+  account_setup_complete: false,
+  first_health_loop_started: false,
+  first_health_loop_complete: false,
 }
 
 export function useOnboardingState() {

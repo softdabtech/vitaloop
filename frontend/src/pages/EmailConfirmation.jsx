@@ -62,7 +62,7 @@ function getConfirmationParams() {
 
 async function applyConfirmationParams(params) {
   if (!params) {
-    throw new Error('Не удалось прочитать параметры подтверждения.')
+    throw new Error('Unable to read confirmation parameters.')
   }
 
   if (params.code) {
@@ -150,7 +150,7 @@ export default function EmailConfirmation() {
 
         if (!user) {
           setStatus('error')
-          setErrorMsg('Не удалось подтвердить email. Ссылка может быть недействительна или истекла.')
+          setErrorMsg('Unable to confirm your email. This link may be invalid or expired.')
           return
         }
 
@@ -162,12 +162,12 @@ export default function EmailConfirmation() {
           waitForSessionThenNavigate(navigate, returnUrl)
         } else {
           setStatus('error')
-          setErrorMsg('Email пока не подтвержден. Проверьте, что открыта актуальная ссылка из письма.')
+          setErrorMsg('Email is not confirmed yet. Please open the latest link from your inbox.')
         }
       } catch (err) {
         console.error('Email confirmation error:', err)
         setStatus('error')
-        setErrorMsg(err.message || 'Произошла ошибка при подтверждении email.')
+        setErrorMsg(err.message || 'Something went wrong while confirming your email.')
       }
     }
 
@@ -235,9 +235,9 @@ export default function EmailConfirmation() {
         {status === 'pending' && (
           <>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📧</div>
-            <h1 style={{ fontSize: '22px', marginBottom: '8px' }}>Confirm Your Email</h1>
+            <h1 style={{ fontSize: '22px', marginBottom: '8px' }}>Confirm Your Email To Start Your Health Plan</h1>
             <p style={{ color: '#666', marginBottom: '16px' }}>
-              Мы отправили письмо для подтверждения. Откройте ссылку из письма, затем вернитесь сюда.
+              We sent a confirmation link. After you confirm, VITALOOP will help you describe your main concern, choose useful labs to consider, and start your first health loop.
             </p>
             <input
               type="email"
@@ -326,7 +326,7 @@ export default function EmailConfirmation() {
             <p style={{ color: '#666', marginBottom: '24px' }}>
               {redirecting
                 ? 'Redirecting to dashboard...'
-                : 'Your email has been verified successfully.'}
+                : 'Your email is verified. You can continue to your account.'}
             </p>
             {!redirecting && (
               <button

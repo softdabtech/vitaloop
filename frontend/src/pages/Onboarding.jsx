@@ -1,62 +1,32 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ChevronRight, ChevronLeft, CheckCircle, User, MapPin, AlertTriangle } from 'lucide-react'
+import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Shield, Sparkles, User } from 'lucide-react'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
 import { gaOnboardingComplete } from '../lib/analytics.js'
 import toast from 'react-hot-toast'
 
+const INTENT_OPTIONS = [
+  { id: 'symptoms', label: 'I have symptoms and want to know what to check' },
+  { id: 'labs', label: 'I already have lab results' },
+  { id: 'baseline', label: 'I want a long-term health baseline' },
+  { id: 'practitioner', label: 'My practitioner invited me' },
+]
+
 const GOAL_OPTIONS = [
-  { id: 'energy', label: 'Improve energy' },
-  { id: 'sleep', label: 'Better sleep' },
-  { id: 'weight', label: 'Weight management' },
-  { id: 'immunity', label: 'Boost immunity' },
-  { id: 'hormones', label: 'Hormonal balance' },
-  { id: 'gut', label: 'Gut health' },
-  { id: 'mental', label: 'Mental clarity' },
-  { id: 'longevity', label: 'Longevity & prevention' },
+  { id: 'energy', label: 'Energy and focus' },
+  { id: 'sleep', label: 'Sleep quality' },
+  { id: 'recovery', label: 'Recovery and resilience' },
+  { id: 'metabolic', label: 'Metabolic health' },
+  { id: 'hormonal', label: 'Hormonal balance' },
+  { id: 'prevention', label: 'Prevention and longevity' },
 ]
 
-const COUNTRIES = [
-  'United States', 'Canada', 'United Kingdom', 'Germany', 'France', 'Italy', 'Spain',
-  'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Sweden', 'Norway', 'Denmark',
-  'Finland', 'Poland', 'Czech Republic', 'Hungary', 'Slovakia', 'Slovenia', 'Croatia',
-  'Russia', 'Ukraine', 'Belarus', 'Kazakhstan', 'Uzbekistan', 'Azerbaijan', 'Georgia',
-  'Armenia', 'Moldova', 'Lithuania', 'Latvia', 'Estonia', 'Australia', 'New Zealand',
-  'Japan', 'South Korea', 'China', 'India', 'Brazil', 'Mexico', 'Argentina', 'Chile',
-  'Colombia', 'Peru', 'Venezuela', 'Ecuador', 'Uruguay', 'Paraguay', 'Bolivia'
-]
-
-const CITIES_BY_COUNTRY = {
-  'United States': ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Jacksonville', 'Fort Worth', 'Columbus', 'Charlotte', 'San Francisco', 'Indianapolis', 'Seattle', 'Denver', 'Boston', 'El Paso', 'Nashville', 'Detroit', 'Oklahoma City', 'Portland', 'Las Vegas', 'Memphis', 'Louisville', 'Baltimore', 'Milwaukee', 'Albuquerque', 'Tucson', 'Fresno', 'Sacramento', 'Mesa', 'Kansas City', 'Atlanta', 'Long Beach', 'Colorado Springs', 'Raleigh', 'Miami', 'Virginia Beach', 'Omaha', 'Oakland', 'Minneapolis', 'Tulsa', 'Arlington', 'Tampa', 'New Orleans', 'Wichita'],
-  'Canada': ['Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Edmonton', 'Ottawa', 'Winnipeg', 'Quebec City', 'Hamilton', 'Kitchener', 'London', 'Victoria', 'Halifax', 'Oshawa', 'Windsor', 'Saskatoon', 'Regina', 'St. John\'s', 'Kelowna', 'Barrie'],
-  'United Kingdom': ['London', 'Birmingham', 'Manchester', 'Liverpool', 'Leeds', 'Sheffield', 'Bristol', 'Newcastle', 'Sunderland', 'Brighton', 'Cardiff', 'Edinburgh', 'Glasgow', 'Belfast', 'Leicester', 'Coventry', 'Bradford', 'Nottingham', 'Plymouth', 'Stoke-on-Trent'],
-  'Ukraine': ['Kyiv', 'Kharkiv', 'Odesa', 'Dnipro', 'Donetsk', 'Zaporizhzhia', 'Lviv', 'Kryvyi Rih', 'Mykolaiv', 'Mariupol', 'Luhansk', 'Vinnytsia', 'Kherson', 'Poltava', 'Chernihiv', 'Cherkasy', 'Sumy', 'Zhytomyr', 'Khmelnytskyi', 'Rivne', 'Ivano-Frankivsk', 'Ternopil', 'Lutsk', 'Uzhhorod'],
-  'Russia': ['Moscow', 'Saint Petersburg', 'Novosibirsk', 'Yekaterinburg', 'Nizhny Novgorod', 'Kazan', 'Chelyabinsk', 'Omsk', 'Samara', 'Rostov-on-Don', 'Ufa', 'Krasnoyarsk', 'Voronezh', 'Perm', 'Volgograd', 'Krasnodar', 'Saratov', 'Tyumen', 'Tolyatti', 'Izhevsk'],
-  'Germany': ['Berlin', 'Hamburg', 'Munich', 'Cologne', 'Frankfurt', 'Stuttgart', 'Düsseldorf', 'Dortmund', 'Essen', 'Leipzig', 'Bremen', 'Dresden', 'Hanover', 'Nuremberg', 'Duisburg', 'Bochum', 'Wuppertal', 'Bielefeld', 'Bonn', 'Münster'],
-  'France': ['Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier', 'Bordeaux', 'Lille', 'Rennes', 'Reims', 'Le Havre', 'Saint-Étienne', 'Toulon', 'Grenoble', 'Dijon', 'Angers', 'Nîmes', 'Villeurbanne'],
-  'Italy': ['Rome', 'Milan', 'Naples', 'Turin', 'Palermo', 'Genoa', 'Bologna', 'Florence', 'Bari', 'Catania', 'Venice', 'Verona', 'Messina', 'Padua', 'Trieste', 'Brescia', 'Parma', 'Prato', 'Modena', 'Reggio Calabria'],
-  'Spain': ['Madrid', 'Barcelona', 'Valencia', 'Seville', 'Zaragoza', 'Málaga', 'Murcia', 'Palma', 'Las Palmas de Gran Canaria', 'Bilbao', 'Alicante', 'Córdoba', 'Valladolid', 'Vigo', 'Gijón', 'L\'Hospitalet de Llobregat', 'La Coruña', 'Granada', 'Elche', 'Oviedo'],
-  'Netherlands': ['Amsterdam', 'Rotterdam', 'The Hague', 'Utrecht', 'Eindhoven', 'Tilburg', 'Groningen', 'Almere', 'Breda', 'Nijmegen', 'Enschede', 'Haarlem', 'Arnhem', 'Zaanstad', 'Amersfoort', 'Apeldoorn', 'Den Haag', 'Haarlemmermeer', 'Zoetermeer', 'Leiden'],
-  'Australia': ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Canberra', 'Newcastle', 'Central Coast', 'Wollongong', 'Hobart', 'Geelong', 'Townsville', 'Cairns', 'Darwin', 'Toowoomba', 'Ballarat', 'Bendigo', 'Albury', 'Launceston'],
-  'Japan': ['Tokyo', 'Yokohama', 'Osaka', 'Nagoya', 'Sapporo', 'Fukuoka', 'Kobe', 'Kawasaki', 'Saitama', 'Hiroshima', 'Sendai', 'Kitakyushu', 'Chiba', 'Sakai', 'Niigata', 'Hamamatsu', 'Okayama', 'Kumamoto', 'Sagamihara', 'Shizuoka'],
-  'China': ['Shanghai', 'Beijing', 'Guangzhou', 'Shenzhen', 'Tianjin', 'Wuhan', 'Dongguan', 'Chengdu', 'Nanjing', 'Hangzhou', 'Foshan', 'Shenyang', 'Harbin', 'Qingdao', 'Dalian', 'Jinan', 'Zhengzhou', 'Changsha', 'Xiamen', 'Wuxi'],
-  'India': ['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Ahmedabad', 'Chennai', 'Kolkata', 'Surat', 'Pune', 'Jaipur', 'Lucknow', 'Kanpur', 'Nagpur', 'Indore', 'Thane', 'Bhopal', 'Visakhapatnam', 'Pimpri-Chinchwad', 'Patna', 'Vadodara'],
-  'Brazil': ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador', 'Fortaleza', 'Belo Horizonte', 'Manaus', 'Curitiba', 'Recife', 'Porto Alegre', 'Belém', 'Goiânia', 'Guarulhos', 'Campinas', 'São Luís', 'São Gonçalo', 'Maceió', 'Duque de Caxias', 'Natal', 'Campo Grande'],
-  'Mexico': ['Mexico City', 'Guadalajara', 'Monterrey', 'Puebla', 'Tijuana', 'León', 'Juárez', 'Torreón', 'Querétaro', 'Mérida', 'Mexicali', 'Aguascalientes', 'Hermosillo', 'Saltillo', 'Chihuahua', 'Culiacán', 'Morelia', 'Durango', 'Veracruz', 'Reynosa']
-}
-
-const COMMON_SYMPTOMS = [
-  'Fatigue', 'Headache', 'Insomnia', 'Joint pain', 'Muscle pain', 'Digestive issues',
-  'Brain fog', 'Anxiety', 'Depression', 'Hair loss', 'Skin issues', 'Weight gain',
-  'Weight loss', 'Low energy', 'Mood swings', 'Memory problems', 'Concentration issues',
-  'Sleep problems', 'Digestive discomfort', 'Allergies', 'Frequent illness', 'Chronic pain',
-  'Hormonal imbalance', 'Thyroid issues', 'Blood sugar issues', 'Cholesterol concerns',
-  'Blood pressure issues', 'Heart palpitations', 'Shortness of breath', 'Dizziness'
-]
+const BODY_AREAS = ['General', 'Head', 'Chest', 'Abdomen', 'Back', 'Arms', 'Legs', 'Skin', 'Mood/Cognition']
+const DURATION_OPTIONS = ['A few days', '1-2 weeks', '2-6 weeks', '2-6 months', 'More than 6 months']
 
 function getViewportWidth() {
   if (typeof window === 'undefined') return 1024
@@ -70,6 +40,12 @@ function parseCsvList(value) {
     .filter(Boolean)
 }
 
+function toCommaSeparatedString(value) {
+  if (Array.isArray(value)) return value.join(', ')
+  if (typeof value === 'string') return value
+  return ''
+}
+
 function splitFullName(fullName) {
   const normalized = String(fullName || '').trim().replace(/\s+/g, ' ')
   if (!normalized) return { first_name: '', last_name: '' }
@@ -78,77 +54,50 @@ function splitFullName(fullName) {
   return { first_name: parts[0], last_name: parts.slice(1).join(' ') }
 }
 
-function buildProfilePayload(profile) {
-  const fullName = [profile.first_name, profile.last_name]
-    .map((part) => String(part || '').trim())
-    .filter(Boolean)
-    .join(' ')
-
-  return {
-    full_name: fullName || undefined,
-    height_cm: Number(profile.height_cm),
-    weight_kg: Number(profile.weight_kg),
-    goals: profile.goals,
-    current_supplements: parseCsvList(profile.current_supplements),
-    current_medications: parseCsvList(profile.current_medications),
-    prior_diagnoses: profile.prior_diagnoses || undefined,
-    onboarding_complete: true,
-  }
-}
-
-function getCountrySuggestions(query) {
-  return COUNTRIES
-    .filter((country) => country.toLowerCase().includes(String(query || '').toLowerCase()))
-    .slice(0, 10)
-}
-
-function getCitySuggestions(country, query) {
-  const cities = CITIES_BY_COUNTRY[country] || []
-  return cities
-    .filter((city) => city.toLowerCase().includes(String(query || '').toLowerCase()))
-    .slice(0, 10)
-}
-
-function getComplaintSuggestions(query) {
-  return COMMON_SYMPTOMS
-    .filter((symptom) => symptom.toLowerCase().includes(String(query || '').toLowerCase()))
-    .slice(0, 8)
+function buildSafetySummary(safety) {
+  const notes = []
+  if (safety.allergies) notes.push(`Allergies: ${safety.allergies}`)
+  if (safety.pregnancy) notes.push(`Pregnancy/Breastfeeding: ${safety.pregnancy}`)
+  if (safety.redFlags.length > 0) notes.push(`Red flags selected: ${safety.redFlags.join(', ')}`)
+  return notes.join(' | ')
 }
 
 const s = {
-  wrap: { minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '24px 16px' },
-  card: { width: '100%', maxWidth: 560, background: '#ffffff', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 24, padding: '40px 36px', boxShadow: '0 1px 3px rgba(15,23,42,0.06)' },
+  wrap: {
+    minHeight: '100vh',
+    background: '#f8fafc',
+    color: '#0f172a',
+    fontFamily: 'system-ui, sans-serif',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    padding: '24px 16px',
+  },
+  card: {
+    width: '100%',
+    maxWidth: 640,
+    background: '#ffffff',
+    border: '1px solid rgba(15,23,42,0.08)',
+    borderRadius: 24,
+    padding: '36px 30px',
+    boxShadow: '0 1px 3px rgba(15,23,42,0.06)',
+  },
   title: { fontSize: 26, fontWeight: 700, color: '#0f172a', marginBottom: 6 },
-  sub: { fontSize: 15, color: '#64748b', marginBottom: 32 },
-  label: { display: 'block', fontSize: 13, color: '#475569', marginBottom: 8, fontWeight: 500, letterSpacing: '0.03em' },
-  input: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 16, outline: 'none', boxSizing: 'border-box', minHeight: '44px' },
-  select: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 16, outline: 'none', boxSizing: 'border-box', minHeight: '44px' },
-  dropdown: { position: 'absolute', top: '100%', left: 0, right: 0, background: '#ffffff', border: '1px solid rgba(15,23,42,0.12)', borderTop: 'none', borderRadius: '0 0 10px 10px', maxHeight: '200px', overflowY: 'auto', zIndex: 1000, boxShadow: '0 4px 6px rgba(15,23,42,0.1)' },
-  dropdownItem: { padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid rgba(15,23,42,0.05)', color: '#0f172a', fontSize: 14 },
-  dropdownItemHover: { background: 'rgba(16,185,129,0.05)' },
-  error: { color: '#ef4444', fontSize: 12, marginTop: 4 },
-  inputContainer: { position: 'relative' },
-  btnPrimary: { width: '100%', padding: '14px', background: '#10b981', borderRadius: 12, color: '#ffffff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', marginTop: 24, minHeight: '44px' },
+  sub: { fontSize: 15, color: '#64748b', marginBottom: 22, lineHeight: 1.55 },
+  label: { display: 'block', fontSize: 12, color: '#475569', marginBottom: 8, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' },
+  input: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box', minHeight: '44px' },
+  textarea: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box', minHeight: '98px', resize: 'vertical' },
+  btnPrimary: { width: '100%', padding: '14px', background: '#10b981', borderRadius: 12, color: '#ffffff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', minHeight: '44px' },
   btnSec: { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: 14, marginTop: 12, textDecoration: 'underline', padding: 0 },
-  row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
-  goalChip: (active) => ({
-    padding: '10px 14px', borderRadius: 10, border: `1px solid ${active ? '#10b981' : 'rgba(15,23,42,0.1)'}`,
-    background: active ? 'rgba(16,185,129,0.08)' : '#f8fafc',
-    color: active ? '#059669' : '#475569', cursor: 'pointer', fontSize: 14, fontWeight: 500, transition: 'all 0.15s',
-    minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-  }),
-  progress: { display: 'flex', gap: 6, marginBottom: 32 },
+  progress: { display: 'flex', gap: 6, marginBottom: 28 },
   dot: (active, done) => ({
-    height: 4, flex: 1, borderRadius: 2,
+    height: 4,
+    flex: 1,
+    borderRadius: 2,
     background: done ? '#10b981' : active ? 'rgba(16,185,129,0.5)' : 'rgba(15,23,42,0.1)',
     transition: 'background 0.3s',
   }),
-}
-
-function toCommaSeparatedString(value) {
-  if (Array.isArray(value)) return value.join(', ')
-  if (typeof value === 'string') return value
-  return ''
 }
 
 export default function Onboarding() {
@@ -158,66 +107,65 @@ export default function Onboarding() {
   const [saving, setSaving] = useState(false)
   const [viewportWidth, setViewportWidth] = useState(getViewportWidth)
 
-  // Org-setup state (shown before health-profile steps when user has no org)
   const [orgCheckDone, setOrgCheckDone] = useState(false)
   const [needsOrg, setNeedsOrg] = useState(false)
   const [orgName, setOrgName] = useState('')
   const [orgSaving, setOrgSaving] = useState(false)
 
-  const [profile, setProfile] = useState({ first_name: '', last_name: '', height_cm: '', weight_kg: '', goals: [], current_supplements: '', current_medications: '', prior_diagnoses: '' })
-  const [location, setLocation] = useState({ city: '', state: '', country: '', district: '' })
-  const [complaints, setComplaints] = useState([{ complaint: '', duration_description: '', tried_interventions: '' }])
+  const [intent, setIntent] = useState('')
+  const [hasLabsNow, setHasLabsNow] = useState(null)
+  const [practitionerConfirmed, setPractitionerConfirmed] = useState(false)
+  const [baselineFocus, setBaselineFocus] = useState('')
 
-  // Validation states
-  const [validationErrors, setValidationErrors] = useState({})
-  const [showSuggestions, setShowSuggestions] = useState({ country: false, city: false, complaint: false })
+  const [concern, setConcern] = useState({
+    summary: '',
+    duration: '',
+    severity: 5,
+    body_area: 'General',
+    triggers: '',
+    related_symptoms: '',
+    tried: '',
+  })
 
-  // Validate numeric inputs
-  const validateNumericField = (field, value, min, max, fieldName) => {
-    const num = parseFloat(value)
-    if (value && (isNaN(num) || num < min || num > max)) {
-      setValidationErrors(prev => ({ ...prev, [field]: `${fieldName} must be between ${min} and ${max}` }))
-      return false
-    } else {
-      setValidationErrors(prev => ({ ...prev, [field]: null }))
-      return true
-    }
-  }
+  const [safety, setSafety] = useState({
+    medications: '',
+    supplements: '',
+    allergies: '',
+    pregnancy: '',
+    redFlags: [],
+  })
 
-  const handleHeightChange = (e) => {
-    const value = e.target.value
-    setProfile(p => ({ ...p, height_cm: value }))
-    validateNumericField('height_cm', value, 50, 250, 'Height')
-  }
+  const [profile, setProfile] = useState({
+    first_name: '',
+    last_name: '',
+    height_cm: '',
+    weight_kg: '',
+    goals: [],
+    country: '',
+  })
 
-  const handleWeightChange = (e) => {
-    const value = e.target.value
-    setProfile(p => ({ ...p, weight_kg: value }))
-    validateNumericField('weight_kg', value, 20, 300, 'Weight')
-  }
+  const redFlagOptions = useMemo(() => [
+    'Sudden severe symptom change',
+    'New chest pain or shortness of breath',
+    'Fainting, numbness, or weakness',
+    'High fever with rapid worsening',
+    'Recent injury with persistent pain',
+  ], [])
 
-  const handleSkipOnboarding = async () => {
-    try {
-      await api.post('/auth/onboarding/skip')
-      trackFunnelEvent('funnel_onboarding_skipped', 'User skipped onboarding and entered dashboard', {
-        stage: steps[step] || 'unknown',
-      }, { oncePerSession: true })
-      toast('Вы пропустили заполнение профиля. Его можно завершить позже в настройках.', { icon: 'ℹ️', style: { background: '#fef9c3', color: '#92400e', fontSize: 15 } })
-    } catch {
-      // Fail-open: user explicitly chose to continue without onboarding.
-    }
-    navigate('/dashboard', { replace: true })
-  }
+  const steps = useMemo(() => {
+    return ['Intent', 'Main context', 'Smart follow-ups', 'Safety context', 'Profile basics', 'First action']
+  }, [])
 
-  // On mount: org setup is only required for CRM roles with no org membership.
+  const TOTAL = steps.length
+
   useEffect(() => {
-    api.get('/auth/me').then(r => {
+    api.get('/auth/me').then((r) => {
       const memberships = r.data?.memberships
       const globalRole = String(r.data?.user?.global_role || r.data?.global_role || '').toLowerCase()
       const fullName = r.data?.user?.full_name || ''
       const nameParts = splitFullName(fullName)
 
-      setProfile(prev => ({
+      setProfile((prev) => ({
         ...prev,
         first_name: prev.first_name || nameParts.first_name,
         last_name: prev.last_name || nameParts.last_name,
@@ -228,45 +176,27 @@ export default function Onboarding() {
       setNeedsOrg(requiresOrg && !hasMembership)
       setOrgCheckDone(true)
     }).catch(() => {
-      // Fail open for normal users: show personal onboarding, not org setup.
       setNeedsOrg(false)
       setOrgCheckDone(true)
     })
   }, [])
 
-  const handleCreateOrg = async (e) => {
-    e.preventDefault()
-    const name = orgName.trim()
-    if (!name) { toast.error('Введите название организации.'); return }
-    setOrgSaving(true)
-    try {
-      await api.post('/auth/onboarding/organization', { name })
-      toast.success('Организация создана!')
-      navigate('/admin/dashboard', { replace: true })
-    } catch (err) {
-      toast.error(err?.response?.data?.detail || 'Не удалось создать организацию.')
-    } finally {
-      setOrgSaving(false)
-    }
-  }
-
   useEffect(() => {
-    api.get('/profile').then(r => {
+    api.get('/profile').then((r) => {
       const p = r.data?.profile || {}
-      setProfile(prev => ({
+      const loc = r.data?.location || {}
+      setProfile((prev) => ({
         ...prev,
         height_cm: p.height_cm || '',
         weight_kg: p.weight_kg || '',
-        goals: p.goals || [],
-        current_supplements: toCommaSeparatedString(p.current_supplements),
-        current_medications: toCommaSeparatedString(p.current_medications),
-        prior_diagnoses: p.prior_diagnoses || '',
-        onboarding_complete: p.onboarding_complete || false,
+        goals: Array.isArray(p.goals) ? p.goals.filter((goal) => !String(goal).startsWith('intent:')) : [],
+        country: loc.country || '',
       }))
-      const loc = r.data?.location || {}
-      setLocation({ city: loc.city || '', state: loc.state || '', country: loc.country || '', district: loc.district || '' })
-
-      // If onboarding is already complete, redirect to dashboard
+      setSafety((prev) => ({
+        ...prev,
+        supplements: toCommaSeparatedString(p.current_supplements),
+        medications: toCommaSeparatedString(p.current_medications),
+      }))
       if (p.onboarding_complete) {
         navigate('/dashboard', { replace: true })
       }
@@ -280,49 +210,131 @@ export default function Onboarding() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  const toggleGoal = (id) => setProfile(prev => ({
-    ...prev,
-    goals: prev.goals.includes(id) ? prev.goals.filter(g => g !== id) : [...prev.goals, id],
-  }))
+  const toggleGoal = (id) => {
+    setProfile((prev) => ({
+      ...prev,
+      goals: prev.goals.includes(id) ? prev.goals.filter((goal) => goal !== id) : [...prev.goals, id],
+    }))
+  }
 
-  const updateComplaint = (i, field, val) => setComplaints(prev => prev.map((c, idx) => idx === i ? { ...c, [field]: val } : c))
-  const addComplaint = () => setComplaints(prev => [...prev, { complaint: '', duration_description: '', tried_interventions: '' }])
+  const toggleRedFlag = (label) => {
+    setSafety((prev) => ({
+      ...prev,
+      redFlags: prev.redFlags.includes(label)
+        ? prev.redFlags.filter((item) => item !== label)
+        : [...prev.redFlags, label],
+    }))
+  }
+
+  const validateCurrentStep = () => {
+    if (step === 0 && !intent) {
+      toast.error('Select what brought you to VITALOOP today.')
+      return false
+    }
+
+    if (step === 1) {
+      if (intent === 'symptoms' && !concern.summary.trim()) {
+        toast.error('Describe your main concern to continue.')
+        return false
+      }
+      if (intent === 'labs' && hasLabsNow === null) {
+        toast.error('Tell us whether you already have labs to upload.')
+        return false
+      }
+      if (intent === 'practitioner' && !practitionerConfirmed) {
+        toast.error('Please confirm practitioner relationship to continue.')
+        return false
+      }
+      if (intent === 'baseline' && !baselineFocus.trim()) {
+        toast.error('Choose what you want to improve first.')
+        return false
+      }
+    }
+
+    if (step === 2 && intent === 'symptoms') {
+      if (!concern.duration || !concern.severity) {
+        toast.error('Add duration and severity so we can prioritize safely.')
+        return false
+      }
+    }
+
+    return true
+  }
+
+  const goNext = () => {
+    if (!validateCurrentStep()) return
+    setStep((prev) => Math.min(prev + 1, TOTAL - 1))
+  }
+
+  const buildConcernPayload = () => {
+    if (intent === 'symptoms' && concern.summary.trim()) {
+      return {
+        complaint: concern.summary.trim(),
+        duration_description: `${concern.duration || 'Not specified'} | Severity ${concern.severity}/10 | Area: ${concern.body_area}`,
+        tried_interventions: [
+          concern.tried ? `Tried: ${concern.tried}` : null,
+          concern.triggers ? `Triggers: ${concern.triggers}` : null,
+          concern.related_symptoms ? `Related: ${concern.related_symptoms}` : null,
+        ].filter(Boolean).join(' | '),
+      }
+    }
+
+    if (intent === 'labs') {
+      return {
+        complaint: hasLabsNow ? 'User has existing labs and wants interpretation context' : 'User needs lab direction before upload',
+        duration_description: 'Lab-first path',
+        tried_interventions: concern.summary ? `Focus: ${concern.summary}` : undefined,
+      }
+    }
+
+    if (intent === 'baseline' && baselineFocus.trim()) {
+      return {
+        complaint: `Baseline focus: ${baselineFocus.trim()}`,
+        duration_description: 'Long-term baseline path',
+        tried_interventions: undefined,
+      }
+    }
+
+    return null
+  }
 
   const saveAll = async () => {
-    // Validate required fields
-    const heightValid = validateNumericField('height_cm', profile.height_cm, 50, 250, 'Height')
-    const weightValid = validateNumericField('weight_kg', profile.weight_kg, 20, 300, 'Weight')
-
-    if (!profile.height_cm || !profile.weight_kg || !heightValid || !weightValid) {
-      toast.error('Please fill in valid height and weight for accurate analysis.')
-      return
-    }
-
-    const firstName = String(profile.first_name || '').trim()
-    const lastName = String(profile.last_name || '').trim()
-    if (!firstName || !lastName) {
-      toast.error('Please enter your first and last name.')
-      return
-    }
-
     setSaving(true)
     try {
-      await api.patch('/profile', buildProfilePayload(profile))
+      const fullName = [profile.first_name, profile.last_name]
+        .map((part) => String(part || '').trim())
+        .filter(Boolean)
+        .join(' ')
 
-      if (location.city || location.country) {
-        await api.patch('/profile/location', location)
+      const derivedGoals = [...profile.goals, `intent:${intent}`]
+      const profilePayload = {
+        full_name: fullName || undefined,
+        height_cm: profile.height_cm ? Number(profile.height_cm) : undefined,
+        weight_kg: profile.weight_kg ? Number(profile.weight_kg) : undefined,
+        goals: derivedGoals,
+        current_supplements: parseCsvList(safety.supplements),
+        current_medications: parseCsvList(safety.medications),
+        prior_diagnoses: buildSafetySummary(safety) || undefined,
+        onboarding_complete: true,
       }
 
-      const validComplaints = complaints.filter((complaint) => complaint.complaint.trim())
-      for (const complaint of validComplaints) {
-        await api.post('/complaints', complaint)
+      await api.patch('/profile', profilePayload)
+
+      if (profile.country.trim()) {
+        await api.patch('/profile/location', { country: profile.country.trim() })
+      }
+
+      const complaintPayload = buildConcernPayload()
+      if (complaintPayload?.complaint) {
+        await api.post('/complaints', complaintPayload)
       }
 
       await api.post('/auth/onboarding/complete')
+
       gaOnboardingComplete()
-      trackFunnelEvent('funnel_onboarding_completed', 'User completed onboarding profile flow', {
-        goals_count: profile.goals.length,
-        complaints_count: validComplaints.length,
+      trackFunnelEvent('funnel_onboarding_completed', 'User completed symptom-first onboarding', {
+        intent,
+        red_flags_count: safety.redFlags.length,
       }, { oncePerSession: true })
 
       await Promise.all([
@@ -333,24 +345,53 @@ export default function Onboarding() {
         queryClient.invalidateQueries({ queryKey: ['health-score'] }),
       ])
 
-      toast.success('Profile saved!')
+      toast.success('Your first health loop is ready. Continue in Today.')
       navigate('/dashboard', { replace: true })
-    } catch (e) {
-      toast.error('Failed to save profile')
+    } catch {
+      toast.error('Failed to save onboarding details. Please try again.')
     } finally {
       setSaving(false)
     }
   }
 
-  const steps = ['Basics', 'Goals', 'Location', 'Complaints']
-  const TOTAL = steps.length
+  const handleSkipOnboarding = async () => {
+    try {
+      await api.post('/auth/onboarding/skip')
+      trackFunnelEvent('funnel_onboarding_skipped', 'User skipped onboarding and entered dashboard', {
+        stage: steps[step] || 'unknown',
+      }, { oncePerSession: true })
+      toast('Setup skipped. You can complete it later from Profile & Safety.', {
+        icon: 'ℹ️',
+        style: { background: '#fef9c3', color: '#92400e', fontSize: 14 },
+      })
+    } catch {
+      // Fail-open.
+    }
+    navigate('/dashboard', { replace: true })
+  }
+
+  const handleCreateOrg = async (e) => {
+    e.preventDefault()
+    const name = orgName.trim()
+    if (!name) {
+      toast.error('Enter organization name.')
+      return
+    }
+    setOrgSaving(true)
+    try {
+      await api.post('/auth/onboarding/organization', { name })
+      toast.success('Organization created.')
+      navigate('/admin/dashboard', { replace: true })
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || 'Unable to create organization.')
+    } finally {
+      setOrgSaving(false)
+    }
+  }
+
   const cardStyle = {
     ...s.card,
-    padding: viewportWidth < 500 ? '24px 16px' : '40px 36px',
-  }
-  const rowStyle = {
-    ...s.row,
-    gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr',
+    padding: viewportWidth < 500 ? '24px 16px' : '36px 30px',
   }
 
   return (
@@ -358,304 +399,422 @@ export default function Onboarding() {
       <div style={{ width: '100%', maxWidth: 760 }}>
         <CabinetPageHeader
           title="Onboarding"
-          subtitle="Set baseline profile and goals for personalized protocol generation."
-          helper="Concrete profile data here influences your assignments, insights and recommendations."
+          subtitle="Let's understand what brought you here."
+          helper="Your answers help VITALOOP suggest useful labs, connect results to symptoms, and build safer recommendations."
         />
 
         <motion.div style={cardStyle} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
-
-          {/* ── Org-setup screen (shown only before health profile, when user has no org) ── */}
           {!orgCheckDone && (
             <div style={{ textAlign: 'center', padding: '40px 0' }}>
               <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid #10b981', borderTopColor: 'transparent', margin: '0 auto', animation: 'spin 0.7s linear infinite' }} />
-              <div style={{ marginTop: 16, color: '#64748b', fontSize: 14 }}>Загружаем данные...</div>
+              <div style={{ marginTop: 16, color: '#64748b', fontSize: 14 }}>Loading...</div>
             </div>
           )}
 
           {orgCheckDone && needsOrg && (
             <motion.div key="org-setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <div style={{ textAlign: 'center', marginBottom: 8 }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>👋</div>
-                <div style={s.title}>Добро пожаловать!</div>
-                <div style={s.sub}>Как назовём вашу организацию?</div>
+              <div style={{ textAlign: 'center', marginBottom: 10 }}>
+                <div style={{ fontSize: 30, marginBottom: 10 }}>👋</div>
+                <div style={s.title}>Welcome</div>
+                <div style={s.sub}>Name your organization to continue to CRM.</div>
               </div>
               <form onSubmit={handleCreateOrg}>
                 <label>
-                  <span style={s.label}>Название организации</span>
+                  <span style={s.label}>Organization Name</span>
                   <input
                     style={s.input}
                     type="text"
-                    placeholder="Например: HealthFirst Clinic"
+                    placeholder="HealthFirst Clinic"
                     value={orgName}
-                    onChange={e => setOrgName(e.target.value)}
+                    onChange={(e) => setOrgName(e.target.value)}
                     autoFocus
                     maxLength={120}
                   />
                 </label>
-                <button type="submit" style={{ ...s.btnPrimary, opacity: orgSaving ? 0.6 : 1 }} disabled={orgSaving}>
-                  {orgSaving ? 'Создаём...' : 'Создать и войти в CRM →'}
+                <button type="submit" style={{ ...s.btnPrimary, marginTop: 16, opacity: orgSaving ? 0.6 : 1 }} disabled={orgSaving}>
+                  {orgSaving ? 'Creating...' : 'Create Organization'}
                 </button>
               </form>
             </motion.div>
           )}
 
-          {/* ── Health-profile steps (default path for regular users) ── */}
           {orgCheckDone && !needsOrg && (
             <>
-              {/* Progress bar */}
               <div style={s.progress}>
                 {steps.map((_, i) => <div key={i} style={s.dot(i === step, i < step)} />)}
               </div>
-              <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 10 }}>
-          This onboarding captures practical baseline data for personalized tasks and protocol adjustments.
-              </div>
+
               <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 24, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-          Step {step + 1} of {TOTAL} — {steps[step]}
+                Step {step + 1} of {TOTAL} - {steps[step]}
               </div>
 
-              {/* Step 0: Basics */}
               {step === 0 && (
-                <motion.div key="basics" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}><User size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />Your basics</div>
-                  <div style={s.sub}>Help us personalize your health guidance.</div>
-                  <div style={rowStyle}>
-                    <div>
-                      <label>
-                        <span style={{ ...s.label, color: '#ef4444' }}>* First name (required)</span>
-                        <input
-                          style={s.input}
-                          placeholder="John"
-                          value={profile.first_name}
-                          onChange={(e) => setProfile(p => ({ ...p, first_name: e.target.value }))}
-                          required
-                        />
-                      </label>
-                    </div>
-                    <div>
-                      <label>
-                        <span style={{ ...s.label, color: '#ef4444' }}>* Last name (required)</span>
-                        <input
-                          style={s.input}
-                          placeholder="Doe"
-                          value={profile.last_name}
-                          onChange={(e) => setProfile(p => ({ ...p, last_name: e.target.value }))}
-                          required
-                        />
-                      </label>
-                    </div>
-                  </div>
-                  <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
-              💡 Height and weight help calculate healthy ranges for your biomarkers. List supplements and medications so the AI can flag interactions and avoid duplicating what you already take.
-                  </div>
-                  <div style={rowStyle}>
-                    <div style={s.inputContainer}>
-                      <label>
-                        <span style={{...s.label, color: '#ef4444'}}>* Height (cm) (required)</span>
-                        <input
-                          style={{...s.input, borderColor: validationErrors.height_cm ? '#ef4444' : 'rgba(15,23,42,0.12)'}}
-                          type="number"
-                          placeholder="175"
-                          value={profile.height_cm}
-                          onChange={handleHeightChange}
-                          min="50"
-                          max="250"
-                          required
-                        />
-                        {validationErrors.height_cm && <div style={s.error}>{validationErrors.height_cm}</div>}
-                      </label>
-                    </div>
-                    <div style={s.inputContainer}>
-                      <label>
-                        <span style={{...s.label, color: '#ef4444'}}>* Weight (kg) (required)</span>
-                        <input
-                          style={{...s.input, borderColor: validationErrors.weight_kg ? '#ef4444' : 'rgba(15,23,42,0.12)'}}
-                          type="number"
-                          placeholder="72"
-                          value={profile.weight_kg}
-                          onChange={handleWeightChange}
-                          min="20"
-                          max="300"
-                          required
-                        />
-                        {validationErrors.weight_kg && <div style={s.error}>{validationErrors.weight_kg}</div>}
-                      </label>
-                    </div>
-                  </div>
-                  <div style={{ marginTop: 16 }}>
-                    <span style={s.label}>Current supplements (comma-separated)</span>
-                    <input style={s.input} placeholder="Vitamin D3, Magnesium, Omega-3" value={profile.current_supplements} onChange={e => setProfile(p => ({ ...p, current_supplements: e.target.value }))} />
-                  </div>
-                  <div style={{ marginTop: 16 }}>
-                    <span style={s.label}>Current medications (comma-separated, optional)</span>
-                    <input style={s.input} placeholder="Leave blank if none" value={profile.current_medications} onChange={e => setProfile(p => ({ ...p, current_medications: e.target.value }))} />
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Step 1: Goals */}
-              {step === 1 && (
-                <motion.div key="goals" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}>Your health goals</div>
-                  <div style={s.sub}>Select everything that applies. We'll personalize your guidance around these.</div>
-                  <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
-              💡 Pick all goals that feel relevant — you can select more than one. Your goals influence which biomarkers get flagged first and what supplements are included in your protocol.
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    {GOAL_OPTIONS.map(g => (
-                      <button key={g.id} style={s.goalChip(profile.goals.includes(g.id))} onClick={() => toggleGoal(g.id)}>
-                        {profile.goals.includes(g.id) && '✓ '}{g.label}
+                <motion.div key="intent" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div style={s.title}><Sparkles size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />What brought you to VITALOOP today?</div>
+                  <div style={s.sub}>Choose one starting path. You can refine it anytime in Today.</div>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    {INTENT_OPTIONS.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => setIntent(option.id)}
+                        style={{
+                          textAlign: 'left',
+                          padding: '12px 14px',
+                          borderRadius: 12,
+                          border: `1px solid ${intent === option.id ? '#10b981' : 'rgba(15,23,42,0.15)'}`,
+                          background: intent === option.id ? 'rgba(16,185,129,0.08)' : '#f8fafc',
+                          color: '#0f172a',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {option.label}
                       </button>
                     ))}
                   </div>
                 </motion.div>
               )}
 
-              {/* Step 2: Location */}
-              {step === 2 && (
-                <motion.div key="location" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}><MapPin size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />Your location</div>
-                  <div style={s.sub}>Used for future physician referral support and local care assistance.</div>
-                  <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
-              💡 Location is optional. It helps us suggest nearby labs and practitioners when you're ready for in-person consultations. It is not shared with third parties.
-                  </div>
-                  <div style={s.inputContainer}>
-                    <span style={s.label}>Country</span>
-                    <input
-                      style={s.input}
-                      placeholder="Start typing to search countries..."
-                      value={location.country}
-                      onChange={(e) => {
-                        setLocation(l => ({ ...l, country: e.target.value, city: '' }))
-                        setShowSuggestions(prev => ({ ...prev, country: true }))
-                      }}
-                      onFocus={() => setShowSuggestions(prev => ({ ...prev, country: true }))}
-                      onBlur={() => setTimeout(() => setShowSuggestions(prev => ({ ...prev, country: false })), 200)}
-                    />
-                    {showSuggestions.country && location.country && (
-                      <div style={s.dropdown}>
-                        {getCountrySuggestions(location.country).map(country => (
-                          <div
-                            key={country}
-                            style={s.dropdownItem}
-                            onMouseDown={() => setLocation(l => ({ ...l, country, city: '' }))}
-                            onMouseEnter={(e) => e.target.style.background = s.dropdownItemHover.background}
-                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                          >
-                            {country}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ marginTop: 16, ...s.inputContainer }}>
-                    <span style={s.label}>City</span>
-                    <input
-                      style={s.input}
-                      placeholder={location.country ? `Start typing ${location.country} cities...` : 'Select country first'}
-                      value={location.city}
-                      onChange={(e) => {
-                        setLocation(l => ({ ...l, city: e.target.value }))
-                        setShowSuggestions(prev => ({ ...prev, city: true }))
-                      }}
-                      onFocus={() => setShowSuggestions(prev => ({ ...prev, city: true }))}
-                      onBlur={() => setTimeout(() => setShowSuggestions(prev => ({ ...prev, city: false })), 200)}
-                      disabled={!location.country}
-                    />
-                    {showSuggestions.city && location.city && location.country && CITIES_BY_COUNTRY[location.country] && (
-                      <div style={s.dropdown}>
-                        {getCitySuggestions(location.country, location.city).map(city => (
-                          <div
-                            key={city}
-                            style={s.dropdownItem}
-                            onMouseDown={() => setLocation(l => ({ ...l, city }))}
-                            onMouseEnter={(e) => e.target.style.background = s.dropdownItemHover.background}
-                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                          >
-                            {city}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ marginTop: 16 }}>
-                    <span style={s.label}>State / Region (optional)</span>
-                    <input style={s.input} placeholder="e.g. California, Ontario" value={location.state} onChange={e => setLocation(l => ({ ...l, state: e.target.value }))} />
-                  </div>
-                  <div style={{ marginTop: 16 }}>
-                    <span style={s.label}>District / Area (optional)</span>
-                    <input style={s.input} placeholder="e.g. Downtown, Central" value={location.district} onChange={e => setLocation(l => ({ ...l, district: e.target.value }))} />
-                  </div>
-                </motion.div>
-              )}
+              {step === 1 && (
+                <motion.div key="main-context" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div style={s.title}><AlertTriangle size={22} style={{ display: 'inline', marginRight: 10, color: '#f59e0b' }} />Main context</div>
 
-              {/* Step 3: Complaints */}
-              {step === 3 && (
-                <motion.div key="complaints" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}><AlertTriangle size={22} style={{ display: 'inline', marginRight: 10, color: '#f5a623' }} />Recurring complaints</div>
-                  <div style={s.sub}>What has been bothering you? We'll factor this into your analysis.</div>
-                  <div style={{ marginBottom: 20, padding: '12px 14px', background: 'rgba(245,166,35,0.07)', border: '1px solid rgba(245,166,35,0.25)', borderRadius: 12, fontSize: 13, color: '#1e293b', lineHeight: 1.55 }}>
-              💡 Even vague symptoms like "fatigue" or "brain fog" are valuable — the AI connects them to your biomarker patterns. You can add multiple complaints. Skip this step if you have no current symptoms.
-                  </div>
-                  {complaints.map((c, i) => (
-                    <div key={i} style={{ marginBottom: 20, padding: 16, background: '#f8fafc', borderRadius: 12, border: '1px solid rgba(15,23,42,0.07)' }}>
-                      <div style={s.inputContainer}>
-                        <span style={s.label}>Complaint {i + 1}</span>
-                        <input
-                          style={{ ...s.input, marginBottom: 10 }}
-                          placeholder="Start typing symptoms..."
-                          value={c.complaint}
-                          onChange={(e) => {
-                            updateComplaint(i, 'complaint', e.target.value)
-                            setShowSuggestions(prev => ({ ...prev, complaint: true }))
-                          }}
-                          onFocus={() => setShowSuggestions(prev => ({ ...prev, complaint: true }))}
-                          onBlur={() => setTimeout(() => setShowSuggestions(prev => ({ ...prev, complaint: false })), 200)}
+                  {intent === 'symptoms' && (
+                    <>
+                      <div style={s.sub}>What do you want to understand first?</div>
+                      <label>
+                        <span style={s.label}>Main Concern</span>
+                        <textarea
+                          style={s.textarea}
+                          placeholder="Examples: low energy, poor sleep, recurring headaches, brain fog"
+                          value={concern.summary}
+                          onChange={(e) => setConcern((prev) => ({ ...prev, summary: e.target.value }))}
                         />
-                        {showSuggestions.complaint && c.complaint && (
-                          <div style={s.dropdown}>
-                            {getComplaintSuggestions(c.complaint).map(symptom => (
-                              <div
-                                key={symptom}
-                                style={s.dropdownItem}
-                                onMouseDown={() => updateComplaint(i, 'complaint', symptom)}
-                                onMouseEnter={(e) => e.target.style.background = s.dropdownItemHover.background}
-                                onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                              >
-                                {symptom}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                      </label>
+                    </>
+                  )}
+
+                  {intent === 'labs' && (
+                    <>
+                      <div style={s.sub}>Do you already have lab files to upload now?</div>
+                      <div style={{ display: 'grid', gap: 10 }}>
+                        <button
+                          onClick={() => setHasLabsNow(true)}
+                          style={{ ...s.input, cursor: 'pointer', textAlign: 'left', borderColor: hasLabsNow === true ? '#10b981' : 'rgba(15,23,42,0.12)' }}
+                        >Yes, I have lab results</button>
+                        <button
+                          onClick={() => setHasLabsNow(false)}
+                          style={{ ...s.input, cursor: 'pointer', textAlign: 'left', borderColor: hasLabsNow === false ? '#10b981' : 'rgba(15,23,42,0.12)' }}
+                        >No, I need lab direction first</button>
                       </div>
-                      <span style={s.label}>How long has this been present?</span>
-                      <input style={{ ...s.input, marginBottom: 10 }} placeholder="e.g. 3 months, 1 year" value={c.duration_description} onChange={e => updateComplaint(i, 'duration_description', e.target.value)} />
-                      <span style={s.label}>What have you tried so far?</span>
-                      <input style={s.input} placeholder="e.g. Magnesium, better sleep schedule, diet changes" value={c.tried_interventions} onChange={e => updateComplaint(i, 'tried_interventions', e.target.value)} />
-                    </div>
-                  ))}
-                  <button style={{ ...s.btnSec, marginTop: 4 }} onClick={addComplaint}>+ Add another complaint</button>
+                      <div style={{ marginTop: 16 }}>
+                        <span style={s.label}>What are you trying to improve?</span>
+                        <input
+                          style={s.input}
+                          placeholder="Optional context for interpretation"
+                          value={concern.summary}
+                          onChange={(e) => setConcern((prev) => ({ ...prev, summary: e.target.value }))}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {intent === 'baseline' && (
+                    <>
+                      <div style={s.sub}>Set your first baseline focus area.</div>
+                      <label>
+                        <span style={s.label}>Baseline Focus</span>
+                        <input
+                          style={s.input}
+                          placeholder="Energy, sleep, recovery, prevention..."
+                          value={baselineFocus}
+                          onChange={(e) => setBaselineFocus(e.target.value)}
+                        />
+                      </label>
+                    </>
+                  )}
+
+                  {intent === 'practitioner' && (
+                    <>
+                      <div style={s.sub}>Confirm practitioner context to align assignments safely.</div>
+                      <button
+                        onClick={() => setPractitionerConfirmed((prev) => !prev)}
+                        style={{
+                          ...s.input,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          borderColor: practitionerConfirmed ? '#10b981' : 'rgba(15,23,42,0.12)',
+                        }}
+                      >
+                        {practitionerConfirmed ? 'Confirmed: my practitioner invited me' : 'Click to confirm practitioner invitation'}
+                      </button>
+                    </>
+                  )}
                 </motion.div>
               )}
 
-              {/* Navigation */}
+              {step === 2 && (
+                <motion.div key="followups" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div style={s.title}>Smart follow-ups</div>
+                  <div style={s.sub}>These details help prioritize what to check first.</div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 14 }}>
+                    <div>
+                      <span style={s.label}>Duration</span>
+                      <select
+                        style={s.input}
+                        value={concern.duration}
+                        onChange={(e) => setConcern((prev) => ({ ...prev, duration: e.target.value }))}
+                      >
+                        <option value="">Select duration</option>
+                        {DURATION_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <span style={s.label}>Severity (1-10)</span>
+                      <input
+                        style={s.input}
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={concern.severity}
+                        onChange={(e) => setConcern((prev) => ({ ...prev, severity: Number(e.target.value) || 1 }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 14 }}>
+                    <div>
+                      <span style={s.label}>Body area / system</span>
+                      <select
+                        style={s.input}
+                        value={concern.body_area}
+                        onChange={(e) => setConcern((prev) => ({ ...prev, body_area: e.target.value }))}
+                      >
+                        {BODY_AREAS.map((item) => <option key={item} value={item}>{item}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <span style={s.label}>Better/worse triggers</span>
+                      <input
+                        style={s.input}
+                        value={concern.triggers}
+                        onChange={(e) => setConcern((prev) => ({ ...prev, triggers: e.target.value }))}
+                        placeholder="Sleep loss, stress, meals, exercise..."
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 14 }}>
+                    <span style={s.label}>Related symptoms</span>
+                    <input
+                      style={s.input}
+                      value={concern.related_symptoms}
+                      onChange={(e) => setConcern((prev) => ({ ...prev, related_symptoms: e.target.value }))}
+                      placeholder="Brain fog, palpitations, GI discomfort..."
+                    />
+                  </div>
+
+                  <div style={{ marginTop: 14 }}>
+                    <span style={s.label}>What have you tried so far?</span>
+                    <input
+                      style={s.input}
+                      value={concern.tried}
+                      onChange={(e) => setConcern((prev) => ({ ...prev, tried: e.target.value }))}
+                      placeholder="Supplements, schedule changes, diet, therapy..."
+                    />
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 3 && (
+                <motion.div key="safety" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div style={s.title}><Shield size={22} style={{ display: 'inline', marginRight: 10, color: '#2563eb' }} />Safety context</div>
+                  <div style={s.sub}>This does not diagnose. It helps route you toward safer next steps.</div>
+
+                  <div style={{ marginBottom: 12 }}>
+                    <span style={s.label}>Red-flag check (select any that apply)</span>
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      {redFlagOptions.map((option) => (
+                        <button
+                          key={option}
+                          onClick={() => toggleRedFlag(option)}
+                          style={{
+                            ...s.input,
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            borderColor: safety.redFlags.includes(option) ? '#ef4444' : 'rgba(15,23,42,0.12)',
+                            background: safety.redFlags.includes(option) ? 'rgba(239,68,68,0.06)' : '#f8fafc',
+                          }}
+                        >
+                          {safety.redFlags.includes(option) ? '✓ ' : ''}{option}
+                        </button>
+                      ))}
+                    </div>
+                    {safety.redFlags.length > 0 && (
+                      <div style={{ marginTop: 10, fontSize: 13, color: '#b91c1c' }}>
+                        Urgent symptoms may require immediate qualified medical review.
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ marginTop: 12 }}>
+                    <span style={s.label}>Current medications</span>
+                    <input
+                      style={s.input}
+                      placeholder="Comma-separated"
+                      value={safety.medications}
+                      onChange={(e) => setSafety((prev) => ({ ...prev, medications: e.target.value }))}
+                    />
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <span style={s.label}>Current supplements</span>
+                    <input
+                      style={s.input}
+                      placeholder="Comma-separated"
+                      value={safety.supplements}
+                      onChange={(e) => setSafety((prev) => ({ ...prev, supplements: e.target.value }))}
+                    />
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <span style={s.label}>Allergies (optional)</span>
+                    <input
+                      style={s.input}
+                      value={safety.allergies}
+                      onChange={(e) => setSafety((prev) => ({ ...prev, allergies: e.target.value }))}
+                    />
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <span style={s.label}>Pregnancy/Breastfeeding (optional)</span>
+                    <input
+                      style={s.input}
+                      value={safety.pregnancy}
+                      onChange={(e) => setSafety((prev) => ({ ...prev, pregnancy: e.target.value }))}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 4 && (
+                <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div style={s.title}><User size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />Profile basics</div>
+                  <div style={s.sub}>Optional now, useful later for deeper personalization.</div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 14 }}>
+                    <div>
+                      <span style={s.label}>First Name</span>
+                      <input
+                        style={s.input}
+                        value={profile.first_name}
+                        onChange={(e) => setProfile((prev) => ({ ...prev, first_name: e.target.value }))}
+                        placeholder="John"
+                      />
+                    </div>
+                    <div>
+                      <span style={s.label}>Last Name</span>
+                      <input
+                        style={s.input}
+                        value={profile.last_name}
+                        onChange={(e) => setProfile((prev) => ({ ...prev, last_name: e.target.value }))}
+                        placeholder="Doe"
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 14 }}>
+                    <div>
+                      <span style={s.label}>Height (cm) - optional</span>
+                      <input
+                        style={s.input}
+                        type="number"
+                        min="50"
+                        max="250"
+                        value={profile.height_cm}
+                        onChange={(e) => setProfile((prev) => ({ ...prev, height_cm: e.target.value }))}
+                        placeholder="175"
+                      />
+                    </div>
+                    <div>
+                      <span style={s.label}>Weight (kg) - optional</span>
+                      <input
+                        style={s.input}
+                        type="number"
+                        min="20"
+                        max="300"
+                        value={profile.weight_kg}
+                        onChange={(e) => setProfile((prev) => ({ ...prev, weight_kg: e.target.value }))}
+                        placeholder="72"
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 14 }}>
+                    <span style={s.label}>Country / Region (optional)</span>
+                    <input
+                      style={s.input}
+                      value={profile.country}
+                      onChange={(e) => setProfile((prev) => ({ ...prev, country: e.target.value }))}
+                      placeholder="United States"
+                    />
+                  </div>
+
+                  <div style={{ marginTop: 14 }}>
+                    <span style={s.label}>Secondary goals</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 10 }}>
+                      {GOAL_OPTIONS.map((goal) => (
+                        <button
+                          key={goal.id}
+                          onClick={() => toggleGoal(goal.id)}
+                          style={{
+                            ...s.input,
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            borderColor: profile.goals.includes(goal.id) ? '#10b981' : 'rgba(15,23,42,0.12)',
+                            background: profile.goals.includes(goal.id) ? 'rgba(16,185,129,0.08)' : '#f8fafc',
+                          }}
+                        >
+                          {profile.goals.includes(goal.id) ? '✓ ' : ''}{goal.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 5 && (
+                <motion.div key="action" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <div style={s.title}>Your first action</div>
+                  <div style={s.sub}>
+                    {intent === 'symptoms' && 'Your concern is saved. Next, continue Symptom Check and finalize lab direction.'}
+                    {intent === 'labs' && (hasLabsNow ? 'Great. Continue to Upload Results and connect your symptoms for a precise protocol.' : 'We will guide you through a practical lab direction before upload.')}
+                    {intent === 'baseline' && 'Your baseline path is set. Continue to Lab Plan to build your first tracking panel.'}
+                    {intent === 'practitioner' && 'Practitioner path confirmed. Continue to assigned intake and upload flow.'}
+                  </div>
+                  <div style={{ padding: '14px 16px', borderRadius: 12, border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.06)', fontSize: 14, color: '#1e293b' }}>
+                    VITALOOP is a decision-support tool and does not provide diagnosis.
+                    Share urgent symptoms with a qualified medical professional.
+                  </div>
+                </motion.div>
+              )}
+
               <div style={{ display: 'flex', gap: 12, marginTop: 28, alignItems: 'center' }}>
                 {step > 0 && (
-                  <button style={{ ...s.btnPrimary, flex: 0.4, background: '#e2e8f0', color: '#475569', marginTop: 0 }} onClick={() => setStep(s => s - 1)}>
+                  <button style={{ ...s.btnPrimary, flex: 0.4, background: '#e2e8f0', color: '#475569' }} onClick={() => setStep((prev) => prev - 1)}>
                     <ChevronLeft size={18} style={{ display: 'inline' }} /> Back
                   </button>
                 )}
                 {step < TOTAL - 1 ? (
-                  <button style={{ ...s.btnPrimary, flex: 1, marginTop: 0 }} onClick={() => setStep(s => s + 1)}>
-              Next <ChevronRight size={18} style={{ display: 'inline' }} />
+                  <button style={{ ...s.btnPrimary, flex: 1 }} onClick={goNext}>
+                    Next <ChevronRight size={18} style={{ display: 'inline' }} />
                   </button>
                 ) : (
-                  <button style={{ ...s.btnPrimary, flex: 1, marginTop: 0, opacity: saving ? 0.6 : 1 }} onClick={saveAll} disabled={saving}>
-                    {saving ? 'Saving…' : <><CheckCircle size={18} style={{ display: 'inline', marginRight: 6 }} />Complete Profile</>}
+                  <button style={{ ...s.btnPrimary, flex: 1, opacity: saving ? 0.6 : 1 }} onClick={saveAll} disabled={saving}>
+                    {saving ? 'Saving...' : <><CheckCircle size={18} style={{ display: 'inline', marginRight: 6 }} />Start my health loop</>}
                   </button>
                 )}
               </div>
+
               <div style={{ textAlign: 'center', marginTop: 16 }}>
-                <button style={s.btnSec} onClick={handleSkipOnboarding}>Skip for now</button>
+                <button style={s.btnSec} onClick={handleSkipOnboarding}>Skip setup for now</button>
               </div>
             </>
           )}
