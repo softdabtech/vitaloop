@@ -17,7 +17,9 @@ function isValidEmail(value) {
 }
 
 function hasAnyPasswordSymbol(value) {
-  return String(value || '').trim().length >= 1
+  const password = String(value || '')
+  // Require minimum baseline for account security in health-data context.
+  return password.length >= 8 && /[a-zA-Z]/.test(password) && /\d/.test(password)
 }
 
 function getBrowserOrigin() {
@@ -327,8 +329,8 @@ function MedicalPanel({ side, signup = false }) {
         </div>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.18)', lineHeight: 1.5 }}>
           {isLeft
-            ? 'Upload any lab result — AI analyzes every biomarker with comprehensive review.'
-            : 'Your PDF never leaves your device. Analysis runs with privacy-first processing.'}
+            ? 'Tell VITALOOP what you feel. Get smart follow-up questions and a practical lab direction plan.'
+            : 'Start with symptoms or existing labs, then follow a clear health loop from concern to action.'}
         </div>
       </div>
     </div>
@@ -477,7 +479,7 @@ export default function Login() {
     }
 
     if (!isForgot && !hasAnyPasswordSymbol(password)) {
-      toast.error('Пароль должен содержать минимум 1 символ.')
+      toast.error('Password must be at least 8 characters and include letters and numbers.')
       return null
     }
 
@@ -648,7 +650,7 @@ export default function Login() {
               {isForgot
                 ? 'Enter your email to receive a reset link.'
                 : isSignUp
-                  ? 'Start your health optimization journey.'
+                  ? 'Start with symptoms, labs, or a health goal.'
                   : 'Sign in to your VITALOOP account.'}
             </p>
           </div>
@@ -750,7 +752,7 @@ export default function Login() {
                   <input
                     type={showPass ? 'text' : 'password'}
                     required
-                    minLength={1}
+                    minLength={8}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -887,9 +889,8 @@ export default function Login() {
             Your data security
             </div>
             <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', lineHeight: 1.6, margin: 0 }}>
-            Uploaded health data is handled through our secure analysis pipeline.
-            Stored data is encrypted at rest in SOC2-compliant infrastructure.
-            Access controls and row-level security restrict record access to authorized users.
+            Your health data is protected with privacy-first safeguards and account-level access controls.
+            VITALOOP does not sell your health data.
             </p>
           </div>
         </div>
