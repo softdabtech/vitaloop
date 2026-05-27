@@ -138,29 +138,29 @@ export default function Assignments() {
       <div className="mx-auto max-w-6xl">
         <CabinetPageHeader
           icon={ClipboardList}
-          eyebrow="Care Workflow"
-          title="Assignments"
-          subtitle="Track active tasks from your care protocol and coaching workflow."
-          helper="Concrete next actions with due dates, urgency and health-impact scoring."
+          eyebrow="Action Plan"
+          title="Protocol"
+          subtitle="Actions grouped by stage: before labs, after labs, and follow-up."
+          helper="Use this page as your execution layer for the current protocol cycle."
           action={(
             <>
               <button
                 onClick={() => navigate('/questionnaire')}
                 className="vtl-button-primary px-4 text-sm"
               >
-                Open Questionnaire
+                Open Symptom Check
               </button>
               <button
                 onClick={() => navigate('/check-ins')}
                 className="vtl-button-secondary px-4 text-sm"
               >
-                Weekly Check-in
+                Check-in
               </button>
             </>
           )}
         />
 
-        <div className="-mt-2 mb-6 text-xs text-emerald-600">Sorted by Health Impact Score to surface the most important actions first.</div>
+        <div className="-mt-2 mb-6 text-xs text-emerald-600">Sorted by Health Impact Score and mapped to protocol stage.</div>
 
         {/* Today's Checklist */}
         {todayItems.length > 0 && (
@@ -323,7 +323,7 @@ export default function Assignments() {
               <Clock3 className="mx-auto mb-3 h-10 w-10 text-slate-300" />
             )}
             <p className="mb-1 font-semibold text-slate-800">No assignments in this filter</p>
-            <p className="text-sm text-slate-500">Try another filter or complete the questionnaire for new tasks.</p>
+            <p className="text-sm text-slate-500">Try another filter or complete Symptom Check to refresh your action plan.</p>
           </div>
         ) : (
           <motion.div

@@ -12,15 +12,6 @@ export default function UploadZone({ onFile, disabled = false }) {
     noClick: true,
     accept: {
       'application/pdf': ['.pdf'],
-      'image/png': ['.png'],
-      'image/jpeg': ['.jpg', '.jpeg'],
-      'image/gif': ['.gif'],
-      'image/bmp': ['.bmp'],
-      'image/webp': ['.webp'],
-      'image/tiff': ['.tiff', '.tif'],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-      'application/vnd.ms-excel': ['.xls'],
-      'text/csv': ['.csv'],
     },
     maxFiles: 1,
     maxSize: 20 * 1024 * 1024, // 20MB
@@ -42,7 +33,7 @@ export default function UploadZone({ onFile, disabled = false }) {
       <p className="text-xl font-semibold text-slate-800 sm:text-2xl">
         {isDragActive ? 'Drop your lab report here' : 'Drag and drop your lab report'}
       </p>
-      <p className="mt-2 text-sm text-slate-500">PDF, image, or spreadsheet. Max 20MB.</p>
+      <p className="mt-2 text-sm text-slate-500">PDF only. Max 20MB.</p>
 
       <button
         type="button"
@@ -53,7 +44,7 @@ export default function UploadZone({ onFile, disabled = false }) {
         Choose File
       </button>
 
-      <p className="mt-3 text-xs text-emerald-700">Secure direct PDF analysis for comprehensive biomarker review.</p>
+      <p className="mt-3 text-xs text-emerald-700">Your PDF is securely uploaded for structured biomarker analysis.</p>
     </div>
   )
 }

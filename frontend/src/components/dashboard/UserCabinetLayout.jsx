@@ -8,6 +8,7 @@ import PWAInstallBanner from './PWAInstallBanner.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { buildSubscriptionPath, getCabinetUpgradeTarget } from '../../lib/subscriptionFlow.js'
+import { CABINET_VERSION } from '../../lib/cabinetV511.js'
 import '../../styles/dashboard2026.css'
 
 const CRM_BASE_URL = (import.meta.env.VITE_CRM_BASE_URL || 'https://crm.vitaloop.today').replace(/\/$/, '')
@@ -23,16 +24,17 @@ function isCrmRole(user) {
 }
 
 const PAGE_META = {
-  '/dashboard': { title: 'Dashboard', subtitle: null },
-  '/upload': { title: 'Upload Labs', subtitle: null },
-  '/lab-results': { title: 'Lab Results', subtitle: null },
-  '/assignments': { title: 'Assignments', subtitle: null },
-  '/progress': { title: 'Progress', subtitle: null },
-  '/insights': { title: 'Insights', subtitle: null },
-  '/check-ins': { title: 'Check-ins', subtitle: null },
+  '/dashboard': { title: 'Today', subtitle: null },
+  '/upload': { title: 'Upload Results', subtitle: null },
+  '/lab-plan': { title: 'Lab Plan', subtitle: null },
+  '/lab-results': { title: 'Results & Trends', subtitle: null },
+  '/assignments': { title: 'Protocol', subtitle: null },
+  '/progress': { title: 'Results & Trends', subtitle: null },
+  '/insights': { title: 'Review', subtitle: null },
+  '/check-ins': { title: 'Check-in', subtitle: null },
   '/onboarding': { title: 'Onboarding', subtitle: null },
-  '/questionnaire': { title: 'Questionnaire', subtitle: null },
-  '/settings': { title: 'Settings', subtitle: null },
+  '/questionnaire': { title: 'Symptom Check', subtitle: null },
+  '/settings': { title: 'Account', subtitle: null },
 }
 
 function resolvePageMeta(pathname) {
@@ -51,7 +53,7 @@ export default function UserCabinetLayout({ children }) {
   const { planName, isPremium, loading: subLoading } = useSubscription()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const upgradeTarget = getCabinetUpgradeTarget(planName, isPremium)
+  const upgradeTarget = isPremium ? null : getCabinetUpgradeTarget(planName, isPremium)
 
   const pageMeta = useMemo(() => resolvePageMeta(location.pathname), [location.pathname])
 
@@ -123,6 +125,7 @@ export default function UserCabinetLayout({ children }) {
               </button>
               <div className="min-w-0">
                 <h1 className="truncate text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">{pageMeta.title}</h1>
+                <p className="text-xs text-slate-400">Cabinet {CABINET_VERSION}</p>
               </div>
             </div>
 

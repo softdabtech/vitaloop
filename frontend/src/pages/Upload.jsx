@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle, Building2, ShieldCheck, Sparkles, UserCircle2 } from 'lucide-react'
+import { AlertCircle, Building2, CheckCircle2, Route, Sparkles, UserCircle2 } from 'lucide-react'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
 import { useSubscription } from '../hooks/useSubscription.js'
@@ -19,24 +19,15 @@ import '../styles/dashboard2026.css'
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
 
-// Support all file formats: PDF, images, and tables
+// Canonical support claim: PDF only
 const SUPPORTED_FILE_TYPES = {
   'application/pdf': ['.pdf'],
-  'image/png': ['.png'],
-  'image/jpeg': ['.jpg', '.jpeg'],
-  'image/gif': ['.gif'],
-  'image/bmp': ['.bmp'],
-  'image/webp': ['.webp'],
-  'image/tiff': ['.tiff', '.tif'],
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-  'application/vnd.ms-excel': ['.xls'],
-  'text/csv': ['.csv'],
 }
 
 const UPLOAD_HINTS = [
-  '📄 Upload your lab report PDF. It is sent directly to our secure AI analysis pipeline for full-report interpretation.',
-  '💊 Add current symptoms before uploading. The AI uses them to prioritize which biomarkers are most relevant to your situation.',
-  '✅ After upload you\'ll see a color-coded biomarker breakdown and a personalized supplement protocol — all generated automatically.',
+  '📄 Upload your lab report PDF in the context of an active concern.',
+  '🧭 Link symptoms and concern context so the upload answers a specific question.',
+  '✅ After upload, open Results & Trends to see what changed and what to do next.',
 ]
 
 const LOADING_MESSAGES = [
@@ -68,7 +59,7 @@ function validateFileInput(file) {
   const hasValidExtension = Array.from(supportedExtensions).some(ext => filename.endsWith(ext))
 
   if (!hasValidExtension && !Object.keys(SUPPORTED_FILE_TYPES).includes(file.type)) {
-    return 'Unsupported file type. Please upload PDF, image (PNG, JPG, GIF), or spreadsheet (XLSX, CSV).'
+    return 'Unsupported file type. Please upload a PDF file.'
   }
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -156,6 +147,10 @@ export default function Upload() {
   const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0])
   const [loadingWarning, setLoadingWarning] = useState('')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+
+  const activeConcern = typeof window !== 'undefined'
+    ? window.localStorage.getItem('symptom-check-active-concern') || ''
+    : ''
 
   useEffect(() => {
     api.get('/auth/onboarding/state').then(r => {
@@ -299,10 +294,37 @@ export default function Upload() {
     <div className="space-y-6">
       <div className="mx-auto w-full max-w-6xl">
         <CabinetPageHeader
-          title="Upload Lab Results"
-          subtitle="Your file is processed locally first. Only analysis-ready values are sent for analysis."
-          helper="Upload report -> add optional symptoms -> open biomarkers and generated protocol."
+          title="Upload Results"
+          subtitle={activeConcern ? `Upload results for: ${activeConcern}` : 'Upload results in context of a symptom check and lab plan.'}
+          helper="This upload helps answer your active concern and improves protocol decisions."
         />
+
+        <div className="mb-6 grid gap-3 lg:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Route className="h-4 w-4 text-emerald-600" /> Concern linkage</div>
+            <p className="text-sm text-slate-500">{activeConcern ? `Active concern: ${activeConcern}` : 'No active concern found. Start Symptom Check first for better context.'}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> This upload will help answer</div>
+            <p className="text-sm text-slate-500">What biomarkers currently support or contradict your symptom hypothesis.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" /> Next step clarity</div>
+            <p className="text-sm text-slate-500">After analysis, open Results & Trends to prioritize markers and retest plan.</p>
+          </div>
+        </div>
+
+        {!activeConcern && (
+          <div className="mb-6 flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+            <span>Symptom-first path works best: start with a concern, then upload results.</span>
+            <button
+              onClick={() => navigate('/questionnaire')}
+              className="ml-4 rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-700"
+            >
+              Start symptom check
+            </button>
+          </div>
+        )}
 
         {/* Tab Switcher */}
         <div className="mb-6 flex gap-3 border-b border-slate-200">
@@ -372,16 +394,16 @@ export default function Upload() {
           <>
             <div className="mb-6 grid gap-3 lg:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Private first</div>
-                <p className="text-sm text-slate-500">Your PDF goes through secure AI analysis for full-report interpretation and structured recommendations.</p>
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Secure upload</div>
+                <p className="text-sm text-slate-500">Your PDF is securely uploaded and analyzed to extract biomarker context.</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" /> What unlocks next</div>
-                <p className="text-sm text-slate-500">One upload should open biomarkers, protocol, trends, and clearer assignments instead of a dead-end result page.</p>
+                <p className="text-sm text-slate-500">Priority markers, symptom-linked interpretation, protocol updates, and retest direction.</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><AlertCircle className="h-4 w-4 text-amber-500" /> Best results</div>
-                <p className="text-sm text-slate-500">Use a full-page PDF or a sharp photo where marker names, values, ranges, and units are clearly visible.</p>
+                <p className="text-sm text-slate-500">Use a clear full-page PDF where marker names, values, units, and ranges are readable.</p>
               </div>
             </div>
 
@@ -404,7 +426,7 @@ export default function Upload() {
             )}
 
             <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-              Tip: upload a clear full-page PDF from your lab portal, a high-quality photo, or a spreadsheet with results for best accuracy.
+              Tip: upload a clear full-page PDF exported from your lab portal for best extraction quality.
             </div>
 
             <div className="mb-6">

@@ -1,13 +1,13 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { BarChart3, ClipboardList, Home, Settings, Upload } from 'lucide-react'
+import { ActivitySquare, Home, Settings, Stethoscope, Upload } from 'lucide-react'
 
 const TAB_ITEMS = [
-  { path: '/dashboard', label: 'Home', icon: Home },
+  { path: '/dashboard', label: 'Today', icon: Home },
+  { path: '/questionnaire', label: 'Symptom', icon: Stethoscope },
   { path: '/upload', label: 'Upload', icon: Upload, accent: true },
-  { path: '/assignments', label: 'Tasks', icon: ClipboardList },
-  { path: '/insights', label: 'Insights', icon: BarChart3 },
-  { path: '/settings', label: 'More', icon: Settings },
+  { path: '/lab-results', label: 'Results', icon: ActivitySquare },
+  { path: '/settings', label: 'Account', icon: Settings },
 ]
 
 function isActive(current, item) {

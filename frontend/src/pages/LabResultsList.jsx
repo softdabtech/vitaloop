@@ -138,16 +138,16 @@ export default function LabResultsList() {
     <div className="vtl-page px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <CabinetPageHeader
-          title="Lab Results"
-          subtitle="History of uploaded tests and biomarker quality snapshot."
-          helper="Open any upload to see biomarkers, results and jump directly to protocol."
+          title="Results & Trends"
+          subtitle="Interpret uploads, track marker movement, and connect findings to your active concern."
+          helper="Top cards explain what changed, what needs attention, and what to retest next."
           action={(
             <button
               onClick={() => navigate('/upload')}
               className="vtl-button-primary inline-flex items-center justify-center gap-2 px-5 text-sm"
             >
               <Upload className="h-4 w-4" />
-              Upload New Test
+              Upload Results
             </button>
           )}
         />
@@ -170,8 +170,17 @@ export default function LabResultsList() {
         )}
 
         {sortedItems.length === 0 ? (
-          <div className="py-12">
-            <EmptyStateIllustration type="upload" size="lg" />
+          <div className="space-y-4 py-8">
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+              No results yet. Start symptom-first flow to build context, then upload labs linked to your concern.
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => navigate('/questionnaire')} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">Start symptom check</button>
+              <button onClick={() => navigate('/lab-plan')} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700">Open lab plan</button>
+            </div>
+            <div className="py-6">
+              <EmptyStateIllustration type="upload" size="lg" />
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_340px]">
@@ -186,8 +195,8 @@ export default function LabResultsList() {
                   <p className="mt-1 text-sm font-semibold text-slate-900">{sortedItems[0]?.lab_name || 'Upload history'}</p>
                 </div>
                 <div className="vtl-light-card p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Latest test</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{sortedItems[0]?.test_date || sortedItems[0]?.created_at?.slice(0, 10) || '—'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Retest plan</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">Review in 8-12 weeks</p>
                 </div>
               </div>
 
@@ -258,24 +267,24 @@ export default function LabResultsList() {
             </div>
 
             <aside className="vtl-light-card h-fit p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Results Insight</h3>
-              <p className="mt-3 text-sm text-slate-500">Most recent trend snapshot from all uploaded biomarkers.</p>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">What changed</h3>
+              <p className="mt-3 text-sm text-slate-500">Contextual review of priority markers and next retest direction.</p>
               <div className="mt-4 space-y-3">
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
                   <p className="text-xs uppercase tracking-wide text-emerald-700 font-semibold">Stable zone</p>
-                  <p className="mt-1 text-sm text-slate-700">Focus on maintaining optimal markers with current protocol.</p>
+                  <p className="mt-1 text-sm text-slate-700">Maintain current protocol elements supporting these markers.</p>
                 </div>
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
                   <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">Needs attention</p>
-                  <p className="mt-1 text-sm text-slate-700">Watch warning markers and repeat test in 8-12 weeks.</p>
+                  <p className="mt-1 text-sm text-slate-700">Link these markers to symptoms and adjust protocol targets.</p>
                 </div>
                 <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-rose-700 font-semibold">Red flags</p>
-                  <p className="mt-1 text-sm text-slate-700">Discuss critical markers with your practitioner promptly.</p>
+                  <p className="text-xs uppercase tracking-wide text-rose-700 font-semibold">Safety context</p>
+                  <p className="mt-1 text-sm text-slate-700">Discuss critical markers with your clinician without delay.</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                   <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Next step</p>
-                  <p className="mt-1 text-sm text-slate-700">Repeat your test in 8–12 weeks to track changes and refine your protocol over time.</p>
+                  <p className="mt-1 text-sm text-slate-700">Open Protocol and Check-in to confirm whether changes improve symptoms.</p>
                 </div>
               </div>
             </aside>
