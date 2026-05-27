@@ -116,6 +116,11 @@ class QuestionnaireCreateRequest(BaseModel):
     questions: Optional[List[Dict[str, Any]]] = None
 
 
+class QuestionnaireContextRequest(BaseModel):
+    active_concern: Optional[str] = None
+    summary: Optional[Dict[str, Any]] = None
+
+
 def _is_missing_questionnaire_tables(ex: Exception) -> bool:
     msg = str(ex)
     return "PGRST205" in msg and (
@@ -159,6 +164,14 @@ async def _update_session(session_id: str, fields: Dict[str, Any]) -> None:
     await svc._run(lambda: sb.table("questionnaire_sessions").update(fields).eq("id", session_id).execute())
 
 
+def _session_context(session: Dict[str, Any]) -> Dict[str, Any]:
+    metadata = session.get("session_metadata") or {}
+    return {
+        "active_concern": metadata.get("active_concern") or "",
+        "summary": metadata.get("summary") or {},
+    }
+
+
 @router.get("")
 async def list_questionnaires(current_user: dict = Depends(get_current_user)):
     """Backward-compatible list endpoint returning the user's questionnaire sessions."""
@@ -194,6 +207,7 @@ async def create_questionnaire(
             "id": session.get("id"),
             "status": session.get("status"),
             "session": session,
+            "session_context": _session_context(session),
         }
     except Exception as ex:
         if _is_missing_questionnaire_tables(ex):
@@ -220,6 +234,7 @@ async def get_questionnaire_session(current_user: dict = Depends(get_current_use
         )
         return {
             "session": session,
+            "session_context": _session_context(session),
             "answered_count": answered_count,
             "remaining_count": max(0, total - answered_count),
             "next_question": next_question,
@@ -231,6 +246,29 @@ async def get_questionnaire_session(current_user: dict = Depends(get_current_use
         if _is_missing_questionnaire_tables(ex):
             raise HTTPException(status_code=503, detail=_STORAGE_MIGRATION_NEEDED)
         raise
+
+
+@router.patch("/session/context")
+async def update_questionnaire_context(
+    body: QuestionnaireContextRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    user_id = current_user.get("sub")
+    session = await _get_or_create_active_session(user_id)
+    session_metadata = dict(session.get("session_metadata") or {})
+
+    if body.active_concern is not None:
+        session_metadata["active_concern"] = body.active_concern.strip()
+    if body.summary is not None:
+        session_metadata["summary"] = body.summary
+
+    await _update_session(session["id"], {"session_metadata": session_metadata})
+    updated_session = {**session, "session_metadata": session_metadata}
+    return {
+        "ok": True,
+        "session": updated_session,
+        "session_context": _session_context(updated_session),
+    }
 
 
 @router.post("/answer")

@@ -1,4 +1,4 @@
-import { useSubscription } from './useSubscription.js'
+import { useUserEntitlements } from './useQueries.js'
 
 /**
  * Feature access hook
@@ -9,7 +9,7 @@ import { useSubscription } from './useSubscription.js'
  * if (!hasAccess) return <PaywallModal />
  */
 export const useFeature = (featureName) => {
-  const { isActive, loading } = useSubscription()
+  const { data: entitlements, isLoading: loading } = useUserEntitlements()
 
   // Define which features require premium
   const PREMIUM_FEATURES = {
@@ -33,7 +33,7 @@ export const useFeature = (featureName) => {
 
   // Determine if feature requires premium
   const requiresPremium = PREMIUM_FEATURES[featureName] || false
-  const hasAccess = !requiresPremium || isActive
+  const hasAccess = !requiresPremium || Boolean(entitlements?.is_premium)
 
   return {
     hasAccess,

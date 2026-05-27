@@ -4,22 +4,12 @@ import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.js'
+import { useQuestionnaireSession } from '../hooks/useQueries.js'
 import api from '../lib/api.js'
 import { gaCheckInSubmit } from '../lib/analytics.js'
 
 const CONCERN_STATUS = ['better', 'same', 'worse']
 const ADHERENCE = ['high', 'medium', 'low']
-
-function getConcern() {
-  if (typeof window === 'undefined') return 'your active concern'
-  return window.localStorage.getItem('symptom-check-active-concern') || 'your active concern'
-}
-
-function scoreFromStatus(value) {
-  if (value === 'better') return 8
-  if (value === 'same') return 5
-  return 3
-}
 
 function scoreFromAdherence(value) {
   if (value === 'high') return 5
@@ -31,12 +21,13 @@ export default function WeeklyCheckIn() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuth()
-  const concern = getConcern()
+  const { data: questionnaireSession } = useQuestionnaireSession()
+  const sessionContext = questionnaireSession?.session_context || questionnaireSession?.session?.session_metadata || {}
+  const concern = sessionContext?.active_concern || 'your active concern'
 
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
-
   const [concernStatus, setConcernStatus] = useState('same')
   const [symptomSeverity, setSymptomSeverity] = useState(5)
   const [sleep, setSleep] = useState(5)

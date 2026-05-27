@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react'
 import api from '../lib/api.js'
 import toast from 'react-hot-toast'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
+import { useUserEntitlements } from '../hooks/useQueries.js'
 
 const FEATURES = [
   'Unlimited lab uploads and manual entries',
@@ -31,23 +32,29 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState(null)
   const [loading, setLoading] = useState(false)
+  const { data: entitlements, isLoading: entitlementsLoading } = useUserEntitlements()
 
   // Listen for global paywall events
   useEffect(() => {
     function handleEvent(e) {
+      if (entitlements?.is_premium) return
       setReason(e.detail?.reason ?? null)
       setOpen(true)
     }
     window.addEventListener('paywall:trigger', handleEvent)
     return () => window.removeEventListener('paywall:trigger', handleEvent)
-  }, [])
+  }, [entitlements?.is_premium])
 
   // Also support controlled usage via `open` prop
   useEffect(() => {
+    if (entitlements?.is_premium) {
+      setOpen(false)
+      return
+    }
     if (controlledOpen !== undefined) setOpen(controlledOpen)
-  }, [controlledOpen])
+  }, [controlledOpen, entitlements?.is_premium])
 
-  const isVisible = open || controlledOpen
+  const isVisible = (open || controlledOpen) && !entitlements?.is_premium
 
   function handleClose() {
     setOpen(false)

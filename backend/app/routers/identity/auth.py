@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from app.dependencies import get_current_user
 from app.config import settings
 from app.services import supabase_service as svc
+from app.services.entitlements import resolve_user_entitlements
 from app.services.email_service import send_registration_alert_email, send_welcome_email
 from app.utils.roles import normalize_global_role as _normalize_global_role, as_bool as _as_bool
 
@@ -25,6 +26,7 @@ async def get_auth_me(current_user: dict = Depends(get_current_user)):
 
     account = await svc.get_user_account(user_id)
     profile = await svc.get_user_profile(user_id)
+    entitlements = await resolve_user_entitlements(user_id, current_user)
 
     memberships = current_user.get("memberships")
     if not isinstance(memberships, list):
@@ -88,34 +90,6 @@ async def get_auth_me(current_user: dict = Depends(get_current_user)):
             .execute()
         )
 
-    active_sub = await svc.get_user_active_subscription(user_id)
-    subscription_status = account.get("sub_status")
-    account_plan = str(account.get("plan_tier") or "").strip().lower()
-    sub_table_status = str((active_sub or {}).get("status") or "free").lower()
-    sub_table_plan = str((active_sub or {}).get("plan_name") or "").strip().lower()
-    paid_from_sub_table = (
-        sub_table_status == "active"
-        and bool(sub_table_plan)
-        and sub_table_plan != "free"
-        and not active_sub.get("cancel_at_period_end", False)
-    )
-    paid_from_account = (
-        not active_sub
-        and str(subscription_status or "").lower() == "active"
-        and bool(account_plan)
-        and account_plan != "free"
-    )
-    has_active_subscription = (
-        paid_from_account
-        or paid_from_sub_table
-    )
-    if has_active_subscription:
-        resolved_subscription_status = "active"
-    elif active_sub:
-        resolved_subscription_status = "free" if sub_table_status == "active" else sub_table_status
-    else:
-        resolved_subscription_status = "free"
-
     return {
         "user": {
             "id": user_id,
@@ -125,25 +99,34 @@ async def get_auth_me(current_user: dict = Depends(get_current_user)):
             "onboarding_completed": _as_bool(onboarding_completed),
         },
         "memberships": memberships,
-        "has_active_subscription": has_active_subscription,
+        "has_active_subscription": entitlements.get("has_active_subscription", False),
         "pending_invitation": pending_invite,
         # Backward-compatible fields expected by CRM user-context parser.
         "onboarding_completed": _as_bool(onboarding_completed),
         "global_role": global_role,
-        "subscription_active": has_active_subscription,
-        "subscription_status": resolved_subscription_status,
+        "subscription_active": entitlements.get("has_active_subscription", False),
+        "subscription_status": entitlements.get("billing_status", "free"),
         "pending_invite": pending_invite,
+        "entitlements": entitlements,
     }
+
+
+@router.get("/entitlements")
+async def get_entitlements(current_user: dict = Depends(get_current_user)):
+    user_id = current_user.get("sub")
+    return await resolve_user_entitlements(user_id, current_user)
 
 
 @router.get("/subscription")
 async def get_subscription(current_user: dict = Depends(get_current_user)):
     user_id = current_user.get("sub")
-    account = await svc.get_user_account(user_id)
-    subscription_status = str(account.get("sub_status") or "free").lower()
+    entitlements = await resolve_user_entitlements(user_id, current_user)
     return {
-        "status": subscription_status,
-        "is_active": subscription_status == "active",
+        "status": entitlements.get("billing_status", "free"),
+        "is_active": bool(entitlements.get("is_premium")),
+        "is_premium": bool(entitlements.get("is_premium")),
+        "plan_name": entitlements.get("plan_key"),
+        "has_active_subscription": bool(entitlements.get("has_active_subscription")),
     }
 
 
