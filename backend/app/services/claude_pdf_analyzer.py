@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 
 import httpx
 from pypdf import PdfReader
-from pillow import Image
+from PIL import Image
 from pdf2image import convert_from_path
 
 from app.config import settings
