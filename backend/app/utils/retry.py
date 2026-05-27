@@ -3,7 +3,7 @@ Retry logic and circuit breaker utilities for resilient API calls.
 """
 
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Callable, TypeVar, Optional, Any
 from functools import wraps
 import asyncio
@@ -44,7 +44,7 @@ class CircuitBreaker:
     def record_failure(self) -> None:
         """Record a failed call."""
         self.failure_count += 1
-        self.last_failure_time = datetime.now(UTC)
+        self.last_failure_time = datetime.now(timezone.utc)
         if self.failure_count >= self.failure_threshold:
             self.is_open = True
             logger.warning(f"Circuit breaker {self.name} opened after {self.failure_count} failures")
@@ -58,7 +58,7 @@ class CircuitBreaker:
             return True
 
         recovery_time = self.last_failure_time + timedelta(seconds=self.recovery_timeout)
-        if datetime.now(UTC) >= recovery_time:
+        if datetime.now(timezone.utc) >= recovery_time:
             self.is_open = False
             self.failure_count = 0
             logger.info(f"Circuit breaker {self.name} closed, attempting recovery")
