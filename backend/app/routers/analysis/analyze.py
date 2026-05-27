@@ -187,6 +187,10 @@ async def analyze_lab_pdf(
             await update_lab_upload_status(upload_id, "failed")
         raise HTTPException(status_code=500, detail={"detail": "Error analyzing lab report", "code": "ANALYZE_FAILED"})
     finally:
+        try:
+            await file.close()
+        except Exception:
+            logger.debug("analyze_pdf_file_close_failed filename=%s", getattr(file, "filename", None))
         if temp_path and os.path.exists(temp_path):
             os.remove(temp_path)
 
@@ -573,7 +577,7 @@ async def _check_and_validate_manual_entries(user_id: str, request: ManualAnalys
         )
 
     # Convert to ManualBiomarkerEntry objects
-    entry_dicts = [entry.dict() for entry in request.biomarkers]
+    entry_dicts = [entry.model_dump() for entry in request.biomarkers]
 
     # Validate all entries
     valid_entries, errors = biomarker_service.validate_entries(entry_dicts)
@@ -599,7 +603,7 @@ async def _generate_protocol_for_manual_entries(request: ManualAnalysisRequest, 
         protocol_result = await extract_biomarkers(
             extracted_text=formatted_text,
             lab_name=request.lab_name or "Manual Entry",
-            symptoms=request.biomarkers[0].dict() if request.biomarkers else {},
+            symptoms=request.biomarkers[0].model_dump() if request.biomarkers else {},
         )
         return protocol_result.get("recommendations", []) if protocol_result else []
     except Exception as e:

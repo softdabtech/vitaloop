@@ -3,7 +3,7 @@ CRM Clients Domain Models (Pydantic Schemas)
 Represents client, practitioner, program and related business entities.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from uuid import UUID
@@ -172,8 +172,7 @@ class PractitionerResponse(BaseModel):
     current_clients: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProgramResponse(BaseModel):
@@ -189,8 +188,7 @@ class ProgramResponse(BaseModel):
     status: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ClientResponse(BaseModel):
@@ -207,8 +205,7 @@ class ClientResponse(BaseModel):
     last_check_in_at: Optional[datetime]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ClientDetailResponse(ClientResponse):
@@ -231,8 +228,7 @@ class ClientProgramResponse(BaseModel):
     notes: Optional[str]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class QuestionnaireResponse(BaseModel):
@@ -246,8 +242,7 @@ class QuestionnaireResponse(BaseModel):
     status: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class QuestionnaireResultResponse(BaseModel):
@@ -260,8 +255,7 @@ class QuestionnaireResultResponse(BaseModel):
     result_notes: Optional[str]
     completed_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InterventionResponse(BaseModel):
@@ -274,8 +268,7 @@ class InterventionResponse(BaseModel):
     changes: Dict[str, Any]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SubscriptionResponse(BaseModel):
@@ -290,8 +283,7 @@ class SubscriptionResponse(BaseModel):
     started_at: datetime
     cancelled_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============================================================
@@ -383,5 +375,4 @@ class AuditLogEntry(BaseModel):
     changes: Optional[Dict[str, Any]]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
