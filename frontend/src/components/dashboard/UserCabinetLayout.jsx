@@ -58,6 +58,10 @@ export default function UserCabinetLayout({ children }) {
 
   const pageMeta = useMemo(() => resolvePageMeta(location.pathname), [location.pathname])
 
+  useEffect(() => {
+    document.title = `${pageMeta.title} | VITALOOP`
+  }, [pageMeta.title])
+
   // CRM-role users (super_admin, practitioner, etc.) should not access the user cabinet
   useEffect(() => {
     if (!user || !isCrmRole(user)) {

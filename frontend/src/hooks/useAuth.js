@@ -17,26 +17,46 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!hasSupabaseConfig) {
-      setUser(null)
+    let active = true
+
+    const finishHydration = (nextUser) => {
+      if (!active) return
+      setUser(nextUser ?? null)
       setLoading(false)
+    }
+
+    if (!hasSupabaseConfig) {
+      finishHydration(null)
       return () => {}
     }
 
+    // Supabase session bootstrap can occasionally stall on initial load.
+    // Fail closed so protected routes resolve to /login instead of hanging forever.
+    const hydrationTimeoutId = window.setTimeout(() => {
+      finishHydration(null)
+    }, 4000)
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
+      window.clearTimeout(hydrationTimeoutId)
+      finishHydration(session?.user ?? null)
     }).catch((err) => {
+      window.clearTimeout(hydrationTimeoutId)
       console.error('Failed to get Supabase session:', err)
-      setUser(null)
-      setLoading(false)
+      finishHydration(null)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      window.clearTimeout(hydrationTimeoutId)
+      if (!active) return
       setUser(session?.user ?? null)
+      setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      active = false
+      window.clearTimeout(hydrationTimeoutId)
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signInWithEmail = (email, password) =>
