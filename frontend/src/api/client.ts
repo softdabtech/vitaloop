@@ -123,13 +123,37 @@ api.interceptors.response.use(
         }
       }
 
+      // For auth-boundary calls, retry once with a freshly resolved token.
+      // This avoids false sign-outs during session hydration races on hard refresh.
+      if (authBoundary && !error.config?._retryAuthBoundary) {
+        error.config._retryAuthBoundary = true
+        const token = await resolveAccessToken()
+        if (token) {
+          error.config.headers = error.config.headers || {}
+          error.config.headers.Authorization = `Bearer ${token}`
+          return api.request(error.config)
+        }
+      }
+
       // Only force global sign-out on auth boundary calls.
       // For other endpoints we propagate the error so screens can degrade gracefully.
       if (authBoundary) {
+        const token = await resolveAccessToken()
+
+        // Public pages can call /auth/me for optional UI state.
+        // Guests have no token, so do not force navigation to /login.
+        if (!token) {
+          return Promise.reject(error)
+        }
+
         if (hasSupabaseConfig) {
           await supabase.auth.signOut()
         }
-        window.location.href = '/login'
+
+        // Avoid hard-navigation loops and visible screen flicker when already on login.
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.href = '/login'
+        }
       }
       return Promise.reject(error)
     }
