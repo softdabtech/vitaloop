@@ -4,34 +4,34 @@ import { useRef } from 'react'
 
 const STEPS = [
   {
-    icon: '📄',
-    title: 'Upload PDF',
-    body: 'Start by uploading your lab report.',
-    detail: 'VITALOOP extracts biomarkers, ranges, flags, and baseline context from the report.',
+    icon: '🩺',
+    title: 'Describe symptoms',
+    body: 'Start with what you feel right now.',
+    detail: 'VITALOOP captures symptom patterns, context, and goals to build a structured baseline before labs.',
   },
   {
     icon: '🔎',
-    title: 'Identify problems',
-    body: 'See what needs attention first.',
-    detail: 'Priority issues are ranked so you can understand what matters most before taking action.',
+    title: 'Choose useful markers',
+    body: 'Focus on what is worth testing first.',
+    detail: 'Get a prioritized lab direction plan tied to your symptoms instead of broad, unfocused testing.',
+  },
+  {
+    icon: '📄',
+    title: 'Upload lab results',
+    body: 'Turn raw numbers into clear priorities.',
+    detail: 'VITALOOP maps biomarkers back to your symptom context and highlights where action matters most.',
   },
   {
     icon: '⚙️',
     title: 'Execute protocol',
-    body: 'Turn analysis into structured action.',
-    detail: 'Use personalized supplement, nutrition, and lifestyle steps instead of generic advice.',
-  },
-  {
-    icon: '📅',
-    title: 'Weekly check-in',
-    body: 'Track how you respond week by week.',
-    detail: 'Log symptoms, adherence, and feedback so execution quality is visible between lab cycles.',
+    body: 'Apply a targeted plan and track response.',
+    detail: 'Follow personalized supplement, nutrition, and lifestyle actions with weekly check-ins to monitor adherence and effects.',
   },
   {
     icon: '🔁',
-    title: 'Retest 12 weeks later',
-    body: 'Measure what changed and refine the next cycle.',
-    detail: 'See measurable change and make each cycle smarter than the last.',
+    title: 'Retest with context',
+    body: 'Measure change and refine the next cycle.',
+    detail: 'Compare symptom trends and biomarkers together to make each cycle more precise than the last.',
   },
 ]
 
@@ -54,8 +54,8 @@ export function HowItWorksTimeline() {
           viewport={{ once: true }}
           className="text-center mb-14 md:mb-20"
         >
-          <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-3">The Feedback Loop: One Test is a Snapshot. Three is a System.</h2>
-          <p className="text-base text-slate-600 max-w-3xl mx-auto leading-relaxed">Upload PDF -&gt; identify problems -&gt; execute protocol -&gt; weekly check-in -&gt; retest 12 weeks later -&gt; see measurable change. Each cycle is smarter than the last.</p>
+          <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-3">The Health Loop: Symptoms explain the labs. Labs guide the plan.</h2>
+          <p className="text-base text-slate-600 max-w-3xl mx-auto leading-relaxed">Describe symptoms -&gt; choose useful markers -&gt; upload lab results -&gt; execute protocol -&gt; weekly check-in -&gt; retest with context. Each cycle gets more precise.</p>
         </motion.div>
 
         <div className="relative">
