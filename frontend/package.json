@@ -11,7 +11,6 @@
     "build:snap": "react-snap",
     "build:prod": "npm run build && npm run build:snap",
     "build:bundle:prod": "npm run validate:env && NODE_OPTIONS=--max-old-space-size=2048 vite build --mode production",
-    "postbuild:prod": "react-snap",
     "preview": "vite preview",
     "qa:routes": "node ./scripts/qa-routes-links.mjs",
     "qa:links:strict": "node ./scripts/qa-links-strict.mjs",

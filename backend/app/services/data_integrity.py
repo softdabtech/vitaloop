@@ -27,7 +27,7 @@ async def get_data_integrity_report() -> Dict[str, Any]:
     users_resp, profiles_resp, clients_resp, subs_resp, active_sessions_resp = await asyncio.gather(
         svc._run(lambda: sb.table("users").select("id,created_at,sub_status").execute()),
         svc._run(lambda: sb.table("user_profile").select("user_id,onboarding_complete,updated_at").execute()),
-        svc._run(lambda: sb.table("clients").select("id").execute()),
+        svc._run(lambda: sb.table("clients").select("user_id").execute()),
         svc._run(
             lambda: sb.table("subscriptions")
             .select("user_id,status,plan_name,cancel_at_period_end,stripe_customer_id,stripe_subscription_id")
@@ -49,10 +49,10 @@ async def get_data_integrity_report() -> Dict[str, Any]:
 
     user_ids = {str(u.get("id")) for u in users if u.get("id")}
     profile_user_ids = {str(p.get("user_id")) for p in profiles if p.get("user_id")}
-    client_ids = {str(c.get("id")) for c in clients if c.get("id")}
+    client_user_ids = {str(c.get("user_id")) for c in clients if c.get("user_id")}
 
     missing_profile = sorted(user_ids - profile_user_ids)
-    missing_client = sorted(user_ids - client_ids)
+    missing_client = sorted(user_ids - client_user_ids)
 
     active_paid = [
         row for row in subs
