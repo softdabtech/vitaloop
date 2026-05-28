@@ -91,13 +91,28 @@ export const useUserEntitlements = () =>
   useQuery({
     queryKey: ['user-entitlements'],
     queryFn: async () => {
-      const { data } = await api.get('/auth/me')
-      return data?.entitlements || {
-        is_premium: Boolean(data?.has_active_subscription || data?.subscription_active),
-        billing_status: String(data?.subscription_status || 'free').toLowerCase(),
-        plan_key: data?.plan_name || 'free',
-        has_active_subscription: Boolean(data?.has_active_subscription || data?.subscription_active),
+      const freeEntitlements = {
+        is_premium: false,
+        billing_status: 'free',
+        plan_key: 'free',
+        has_active_subscription: false,
         features: { upload_limit: 1, lab_history: true, trend_analysis: false, advanced_protocol: false, symptom_lab_plan: true, checkins: false },
+      }
+
+      try {
+        const { data } = await api.get('/auth/me')
+        return data?.entitlements || {
+          is_premium: Boolean(data?.has_active_subscription || data?.subscription_active),
+          billing_status: String(data?.subscription_status || 'free').toLowerCase(),
+          plan_key: data?.plan_name || 'free',
+          has_active_subscription: Boolean(data?.has_active_subscription || data?.subscription_active),
+          features: freeEntitlements.features,
+        }
+      } catch (error) {
+        if (error?.response?.status === 401) {
+          return freeEntitlements
+        }
+        throw error
       }
     },
     staleTime: 30 * 60 * 1000,
