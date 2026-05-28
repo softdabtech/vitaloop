@@ -44,6 +44,30 @@ CREATE TABLE IF NOT EXISTS public.health_concern_answers (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE public.health_concern_answers ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'health_concern_answers'
+      AND policyname = 'Health concern answers: users see own'
+  ) THEN
+    CREATE POLICY "Health concern answers: users see own"
+    ON public.health_concern_answers
+    FOR SELECT
+    USING (
+      EXISTS (
+        SELECT 1
+        FROM public.health_concerns hc
+        WHERE hc.id = concern_id
+          AND hc.user_id = auth.uid()
+      )
+    );
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS public.lab_plan_recommendations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   concern_id UUID NOT NULL REFERENCES public.health_concerns(id) ON DELETE CASCADE,
@@ -52,6 +76,30 @@ CREATE TABLE IF NOT EXISTS public.lab_plan_recommendations (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE public.lab_plan_recommendations ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'lab_plan_recommendations'
+      AND policyname = 'Lab plan recommendations: users see own'
+  ) THEN
+    CREATE POLICY "Lab plan recommendations: users see own"
+    ON public.lab_plan_recommendations
+    FOR SELECT
+    USING (
+      EXISTS (
+        SELECT 1
+        FROM public.health_concerns hc
+        WHERE hc.id = concern_id
+          AND hc.user_id = auth.uid()
+      )
+    );
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS public.concern_upload_links (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   concern_id UUID NOT NULL REFERENCES public.health_concerns(id) ON DELETE CASCADE,
@@ -59,6 +107,30 @@ CREATE TABLE IF NOT EXISTS public.concern_upload_links (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (concern_id, upload_id)
 );
+
+ALTER TABLE public.concern_upload_links ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'concern_upload_links'
+      AND policyname = 'Concern upload links: users see own'
+  ) THEN
+    CREATE POLICY "Concern upload links: users see own"
+    ON public.concern_upload_links
+    FOR SELECT
+    USING (
+      EXISTS (
+        SELECT 1
+        FROM public.health_concerns hc
+        WHERE hc.id = concern_id
+          AND hc.user_id = auth.uid()
+      )
+    );
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS public.symptom_checkins (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -69,3 +141,27 @@ CREATE TABLE IF NOT EXISTS public.symptom_checkins (
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.symptom_checkins ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'symptom_checkins'
+      AND policyname = 'Symptom checkins: users see own'
+  ) THEN
+    CREATE POLICY "Symptom checkins: users see own"
+    ON public.symptom_checkins
+    FOR SELECT
+    USING (
+      EXISTS (
+        SELECT 1
+        FROM public.health_concerns hc
+        WHERE hc.id = concern_id
+          AND hc.user_id = auth.uid()
+      )
+    );
+  END IF;
+END $$;
