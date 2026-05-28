@@ -1,3 +1,4 @@
+import asyncio
 import stripe
 import json
 import logging
@@ -8,6 +9,7 @@ from typing import Optional
 
 from app.config import settings
 from app.dependencies import get_current_user
+from app.services.entitlements import resolve_user_entitlements
 from app.services.supabase_service import (
     update_user_subscription,
     get_user_by_stripe_sub,
@@ -37,7 +39,6 @@ _CHECKOUT_UNEXPECTED_ERROR = "An unexpected error occurred while creating checko
 # ---------------------------------------------------------------------------
 
 VALID_PLANS = {"personal", "practitioner"}
-_FREE_PLAN_NAMES = {"free"}
 _VALID_BILLING_CYCLES = {"monthly", "yearly"}
 
 
@@ -345,67 +346,76 @@ async def _handle_payment_failed(data: dict):
 async def get_subscription_status(current_user: dict = Depends(get_current_user)):
     """Return current subscription status + plan + freemium upload usage for the authenticated user."""
     user_id: str = current_user["sub"]
-    active_sub = None
     try:
-        account = await get_user_account(user_id)
-        upload_count = await get_user_upload_count(user_id)
-        active_sub = await get_user_active_subscription(user_id)
-        account_sub_status = str(account.get("sub_status") or "free").lower()
-        # Subscriptions table can be newer than users.sub_status, but an active
-        # free plan must not be interpreted as paid premium access.
-        sub_table_status = str((active_sub or {}).get("status") or "free").lower()
-        claim_sub_status = "active" if bool(current_user.get("subscription_active")) else str(current_user.get("subscription_status") or "free").lower()
-        global_role = str(account.get("global_role") or current_user.get("global_role") or "end_user").lower()
-        plan_name = str((active_sub or {}).get("plan_name") or account.get("plan_tier") or "").strip().lower() or None
-        account_plan = str(account.get("plan_tier") or "").strip().lower()
-        paid_from_sub_table = bool(
-            active_sub
-            and sub_table_status == "active"
-            and plan_name
-            and plan_name not in _FREE_PLAN_NAMES
-            and not active_sub.get("cancel_at_period_end", False)
+        entitlements = await resolve_user_entitlements(user_id, current_user)
+        upload_count, active_sub = await asyncio.gather(
+            get_user_upload_count(user_id),
+            get_user_active_subscription(user_id),
         )
-        # If subscriptions row exists, treat it as source of truth and only use
-        # users.sub_status as a legacy fallback when no subscriptions row is available.
-        paid_from_account = bool(
-            not active_sub
-            and account_sub_status == "active"
-            and account_plan
-            and account_plan not in _FREE_PLAN_NAMES
-        )
-        is_premium = global_role != "end_user" or paid_from_account or paid_from_sub_table
-
-        if global_role != "end_user":
-            sub_status = "active"
-        elif is_premium:
-            sub_status = "active"
-        elif active_sub:
-            # For free/cancelled end-users, prefer subscriptions table state over
-            # potentially stale users.sub_status.
-            sub_status = "free" if sub_table_status == "active" else sub_table_status
-        else:
-            sub_status = "free"
+        sub_status = str(entitlements.get("billing_status") or "free").lower()
+        global_role = str(entitlements.get("role") or "end_user").lower()
+        plan_name = entitlements.get("plan_key")
+        is_premium = bool(entitlements.get("is_premium"))
+        has_active_subscription = bool(entitlements.get("has_active_subscription"))
+        cancel_at_period_end = bool(entitlements.get("cancel_at_period_end", False))
+        has_stripe_customer = bool((active_sub or {}).get("stripe_customer_id"))
+        current_period_end = (active_sub or {}).get("current_period_end")
     except Exception as ex:
         logger.warning("stripe_subscription_status_fallback user_id=%s error=%s", user_id, repr(ex))
-        # Degrade gracefully on transient data-layer failures.
-        sub_status = "active" if bool(current_user.get("subscription_active")) else str(current_user.get("subscription_status") or "free").lower()
-        global_role = str(current_user.get("global_role") or "end_user").lower()
-        plan_name = None
-        upload_count = 0
-        is_premium = sub_status == "active" or global_role != "end_user"
+        # Degrade gracefully on transient data-layer failures while preserving
+        # legacy behavior expected by subscription screens and tests.
+        try:
+            account, active_sub = await asyncio.gather(
+                get_user_account(user_id),
+                get_user_active_subscription(user_id),
+            )
+            upload_count = await get_user_upload_count(user_id)
+            global_role = str((account or {}).get("global_role") or current_user.get("global_role") or "end_user").lower()
+            plan_name = str((active_sub or {}).get("plan_name") or (account or {}).get("plan_tier") or "").strip().lower() or None
+            cancel_at_period_end = bool((active_sub or {}).get("cancel_at_period_end", False))
+            current_period_end = (active_sub or {}).get("current_period_end")
+            has_stripe_customer = bool((active_sub or {}).get("stripe_customer_id"))
+
+            if global_role != "end_user":
+                is_premium = True
+            else:
+                is_premium = bool(
+                    (active_sub and str((active_sub or {}).get("status") or "free").lower() == "active" and plan_name and plan_name != "free" and not cancel_at_period_end)
+                    or (not active_sub and str((account or {}).get("sub_status") or "free").lower() == "active" and plan_name and plan_name != "free")
+                )
+
+            if is_premium:
+                sub_status = "active"
+            elif active_sub:
+                raw_status = str((active_sub or {}).get("status") or "free").lower()
+                sub_status = "free" if raw_status == "active" else raw_status
+            else:
+                sub_status = str((account or {}).get("sub_status") or current_user.get("subscription_status") or "free").lower()
+
+            has_active_subscription = is_premium
+        except Exception:
+            sub_status = "active" if bool(current_user.get("subscription_active")) else str(current_user.get("subscription_status") or "free").lower()
+            global_role = str(current_user.get("global_role") or "end_user").lower()
+            plan_name = None
+            upload_count = 0
+            is_premium = sub_status == "active" or global_role != "end_user"
+            has_active_subscription = bool(current_user.get("subscription_active")) or is_premium
+            cancel_at_period_end = False
+            has_stripe_customer = False
+            current_period_end = None
 
     limit = settings.freemium_upload_limit
     is_free = not is_premium and global_role == "end_user"
-    customer_id = (active_sub or {}).get("stripe_customer_id")
 
     return {
         "sub_status": sub_status,
         "plan_name": plan_name,  # "personal" | "practitioner" | None
         "global_role": global_role,
         "is_premium": is_premium,
-        "has_stripe_customer": bool(customer_id),
-        "cancel_at_period_end": (active_sub or {}).get("cancel_at_period_end", False),
-        "current_period_end": (active_sub or {}).get("current_period_end"),
+        "has_active_subscription": has_active_subscription,
+        "has_stripe_customer": has_stripe_customer,
+        "cancel_at_period_end": cancel_at_period_end,
+        "current_period_end": current_period_end,
         "upload_count": upload_count,
         "upload_limit": limit if is_free else None,
         "uploads_remaining": max(0, limit - upload_count) if is_free else None,

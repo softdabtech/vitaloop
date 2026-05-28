@@ -79,4 +79,12 @@ export default [
       }],
     },
   },
+  {
+    files: ['src/__tests__/**/*.{js,jsx}', 'src/**/*.test.{js,jsx}'],
+    languageOptions: {
+      globals: {
+        File: 'readonly',
+      },
+    },
+  },
 ];

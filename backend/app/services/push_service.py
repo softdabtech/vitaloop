@@ -2,7 +2,11 @@ import json
 import logging
 from typing import Any, Dict
 
-from pywebpush import WebPushException, webpush
+try:
+    from pywebpush import WebPushException, webpush
+except ImportError:  # pragma: no cover - depends on runtime env
+    WebPushException = Exception
+    webpush = None
 
 from app.config import settings
 
@@ -26,6 +30,10 @@ def build_subscription_payload(row: Dict[str, Any]) -> Dict[str, Any]:
 def send_web_push(subscription_row: Dict[str, Any], payload: Dict[str, Any]) -> bool:
     if not is_push_configured():
         logger.warning("webpush_not_configured")
+        return False
+
+    if webpush is None:
+        logger.warning("webpush_library_missing")
         return False
 
     subscription_info = build_subscription_payload(subscription_row)
