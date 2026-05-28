@@ -1041,7 +1041,26 @@ export default function Landing() {
             </div>
           </div>
 
-          <motion.div {...fadeUp(reduced)} className="mb-12 text-center">
+          <motion.div
+            {...fadeUp(reduced)}
+            className="mb-12 rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-6 text-center md:p-8"
+          >
+            <h3 className="text-[26px] font-semibold tracking-tight text-slate-900 md:text-[30px]">
+              The Feedback Loop: One Test is a Snapshot. Three is a System.
+            </h3>
+            <p className="mx-auto mt-4 max-w-3xl text-[16px] leading-[1.75] text-slate-700 md:text-[17px]">
+              Upload PDF -&gt; identify problems -&gt; execute protocol -&gt; weekly check-in -&gt; retest 12 weeks later -&gt; see measurable change. Each cycle is smarter than the last.
+            </p>
+          </motion.div>
+
+          <motion.div
+            aria-hidden="true"
+            className="hidden"
+            variants={staggerParent}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: '-10% 0px -10% 0px' }}
+          >
             <motion.h2
               className="text-[32px] font-bold tracking-tight md:text-[40px]"
               initial={reduced ? false : { opacity: 0, scale: 0.9 }}
@@ -1057,9 +1076,8 @@ export default function Landing() {
             <p className={`mx-auto mt-4 max-w-2xl text-lg ${'text-slate-600'}`}>
               Start with how you feel, get a practical lab direction plan, upload results, and improve through weekly feedback.
             </p>
-          </motion.div>
 
-          <motion.div variants={staggerParent} initial="hidden" whileInView="show" viewport={{ once: true, margin: '-10% 0px -10% 0px' }} className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* LEFT: 4-step grid */}
             <div className="grid grid-cols-2 gap-4 md:gap-6">
               {STEPS.map((step, idx) => {
@@ -1125,6 +1143,7 @@ export default function Landing() {
                 />
               </div>
             </motion.div>
+            </div>
           </motion.div>
         </section>
 
