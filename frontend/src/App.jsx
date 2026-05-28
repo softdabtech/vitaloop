@@ -247,6 +247,7 @@ export default function App() {
           <Route path="/health-profile" element={renderCabinetRoute(<HealthProfile />, { allowBeforeOnboarding: true })} />
           <Route path="/subscription" element={renderCabinetRoute(<Subscription />, { allowBeforeOnboarding: true })} />
           <Route path="/billing-history" element={renderCabinetRoute(<BillingHistory />, { allowBeforeOnboarding: true })} />
+          <Route path="/help-center" element={renderCabinetRoute(<Help embedded basePath="/help-center" />, { allowBeforeOnboarding: true })} />
           <Route path="/admin" element={<ProtectedRoute><CRMRoute needsOps><Navigate to="/ops" replace /></CRMRoute></ProtectedRoute>} />
           <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<ProtectedRoute><CRMRoute><OpsDashboard /></CRMRoute></ProtectedRoute>} />
