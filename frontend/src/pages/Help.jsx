@@ -29,24 +29,30 @@ function renderMultilineInline(text) {
   ))
 }
 
-function resolveHelpPageMeta(articleId, sectionId) {
+function buildHelpPath(basePath, suffix = '') {
+  const normalizedBase = String(basePath || '/help').replace(/\/$/, '')
+  const normalizedSuffix = String(suffix || '').replace(/^\//, '')
+  return normalizedSuffix ? `${normalizedBase}/${normalizedSuffix}` : normalizedBase
+}
+
+function resolveHelpPageMeta(articleId, sectionId, basePath = '/help') {
   if (articleId) {
     return {
       pageTitle: getArticle(articleId)?.title || 'Help Center',
-      canonicalPath: `/help/${articleId}`,
+      canonicalPath: buildHelpPath(basePath, articleId),
     }
   }
 
   if (sectionId) {
     return {
       pageTitle: HELP_SECTIONS.find((s) => s.id === sectionId)?.title || 'Help Center',
-      canonicalPath: `/help/section/${sectionId}`,
+      canonicalPath: buildHelpPath(basePath, `section/${sectionId}`),
     }
   }
 
   return {
     pageTitle: 'Help Center',
-    canonicalPath: '/help',
+    canonicalPath: buildHelpPath(basePath),
   }
 }
 
@@ -183,7 +189,7 @@ function ArticleBlock({ block }) {
 
 // ─── Article view ─────────────────────────────────────────────────────────────
 
-function ArticleView({ articleId, onBack }) {
+function ArticleView({ articleId, onBack, helpBasePath }) {
   const navigate = useNavigate()
   const article = getArticle(articleId)
   const section = article ? HELP_SECTIONS.find(s => s.id === article.section) : null
@@ -242,7 +248,7 @@ function ArticleView({ articleId, onBack }) {
               return (
                 <button
                   key={relId}
-                  onClick={() => navigate(`/help/${relId}`)}
+                  onClick={() => navigate(buildHelpPath(helpBasePath, relId))}
                   className="text-left p-4 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all group"
                 >
                   <div className="text-xs text-slate-400 mb-1">{relSection?.icon} {relSection?.title}</div>
@@ -261,7 +267,7 @@ function ArticleView({ articleId, onBack }) {
 
 // ─── Home view (section grid) ─────────────────────────────────────────────────
 
-function HelpHome({ onSelectArticle }) {
+function HelpHome({ onSelectArticle, helpBasePath }) {
   const navigate = useNavigate()
   const popularArticles = [
     'how-to-upload-first-lab',
@@ -285,7 +291,7 @@ function HelpHome({ onSelectArticle }) {
             return (
               <button
                 key={id}
-                onClick={() => navigate(`/help/${id}`)}
+                onClick={() => navigate(buildHelpPath(helpBasePath, id))}
                 className="text-left p-4 bg-white rounded-xl border border-slate-200 hover:border-emerald-300 hover:shadow-sm transition-all group"
               >
                 <div className="text-xs text-slate-400 mb-1">{section?.icon} {section?.title}</div>
@@ -327,7 +333,7 @@ function HelpHome({ onSelectArticle }) {
               {section.articles.length > 4 && (
                 <li>
                   <button
-                    onClick={() => navigate(`/help/section/${section.id}`)}
+                    onClick={() => navigate(buildHelpPath(helpBasePath, `section/${section.id}`))}
                     className="w-full text-left px-3 py-2 text-xs text-emerald-600 font-semibold hover:bg-emerald-50 rounded-lg transition-colors"
                   >
                     +{section.articles.length - 4} more →
@@ -344,7 +350,7 @@ function HelpHome({ onSelectArticle }) {
 
 // ─── Section view ─────────────────────────────────────────────────────────────
 
-function SectionView({ sectionId, onBack }) {
+function SectionView({ sectionId, onBack, helpBasePath }) {
   const navigate = useNavigate()
   const section = HELP_SECTIONS.find(s => s.id === sectionId)
 
@@ -375,7 +381,7 @@ function SectionView({ sectionId, onBack }) {
           return (
             <button
               key={articleId}
-              onClick={() => navigate(`/help/${articleId}`)}
+              onClick={() => navigate(buildHelpPath(helpBasePath, articleId))}
               className="w-full text-left p-4 bg-white rounded-xl border border-slate-200 hover:border-emerald-300 hover:shadow-sm transition-all group flex items-center justify-between"
             >
               <div>
@@ -397,7 +403,7 @@ function SectionView({ sectionId, onBack }) {
 
 // ─── Search results ───────────────────────────────────────────────────────────
 
-function SearchResults({ query, onClear }) {
+function SearchResults({ query, onClear, helpBasePath }) {
   const navigate = useNavigate()
   const results = useMemo(() => searchArticles(query), [query])
 
@@ -430,7 +436,7 @@ function SearchResults({ query, onClear }) {
             return (
               <button
                 key={article.id}
-                onClick={() => { onClear(); navigate(`/help/${article.id}`) }}
+                onClick={() => { onClear(); navigate(buildHelpPath(helpBasePath, article.id)) }}
                 className="w-full text-left p-4 bg-white rounded-xl border border-slate-200 hover:border-emerald-300 transition-all group flex items-center justify-between"
               >
                 <div>
@@ -454,13 +460,13 @@ function SearchResults({ query, onClear }) {
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-function Sidebar({ activeSection, activeArticle }) {
+function Sidebar({ activeSection, activeArticle, helpBasePath }) {
   const navigate = useNavigate()
 
   return (
     <nav className="space-y-1">
       <button
-        onClick={() => navigate('/help')}
+        onClick={() => navigate(buildHelpPath(helpBasePath))}
         className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
           !activeSection && !activeArticle ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
         }`}
@@ -474,7 +480,7 @@ function Sidebar({ activeSection, activeArticle }) {
           return (
             <div key={section.id} className="mb-1">
               <button
-                onClick={() => navigate(`/help/section/${section.id}`)}
+                onClick={() => navigate(buildHelpPath(helpBasePath, `section/${section.id}`))}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
                   isSectionActive ? 'text-emerald-700' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
@@ -489,7 +495,7 @@ function Sidebar({ activeSection, activeArticle }) {
                     return (
                       <button
                         key={articleId}
-                        onClick={() => navigate(`/help/${articleId}`)}
+                        onClick={() => navigate(buildHelpPath(helpBasePath, articleId))}
                         className={`w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors ${
                           activeArticle === articleId
                             ? 'text-emerald-700 font-semibold bg-emerald-50'
@@ -512,7 +518,7 @@ function Sidebar({ activeSection, activeArticle }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function Help() {
+export default function Help({ embedded = false, basePath = '/help' }) {
   const { articleId, sectionId } = useParams()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
@@ -523,10 +529,11 @@ export default function Help() {
     setMobileMenuOpen(false)
   }, [articleId, sectionId])
 
-  const handleBack = () => navigate('/help')
+  const helpBasePath = embedded ? '/help-center' : basePath
+  const handleBack = () => navigate(helpBasePath)
   const { pageTitle, canonicalPath } = useMemo(
-    () => resolveHelpPageMeta(articleId, sectionId),
-    [articleId, sectionId]
+    () => resolveHelpPageMeta(articleId, sectionId, helpBasePath),
+    [articleId, sectionId, helpBasePath]
   )
 
   return (
@@ -536,63 +543,64 @@ export default function Help() {
         description="Everything you need to know about using VITALOOP — symptom intake, lab uploads, protocols, billing, and more."
         path={canonicalPath}
       />
-      <div className="min-h-screen bg-slate-50">
-        <Navbar />
+      <div className={embedded ? 'min-h-full bg-transparent' : 'min-h-screen bg-slate-50'}>
+        {!embedded && <Navbar />}
 
-        {/* Hero */}
-        <div className="border-b border-slate-200 bg-white">
-          <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10 md:py-14">
-            <div className="mx-auto mb-6 max-w-2xl text-center sm:mb-8">
-              <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
-                </svg>
-                Help Center
+        {!embedded && (
+          <div className="border-b border-slate-200 bg-white">
+            <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10 md:py-14">
+              <div className="mx-auto mb-6 max-w-2xl text-center sm:mb-8">
+                <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
+                  </svg>
+                  Help Center
+                </div>
+                <h1 className="mb-3 text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl">
+                  How can we help you?
+                </h1>
+                <p className="text-base text-slate-500 sm:text-lg">
+                  Find answers to common questions about VITALOOP.
+                </p>
               </div>
-              <h1 className="mb-3 text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl">
-                How can we help you?
-              </h1>
-              <p className="text-base text-slate-500 sm:text-lg">
-                Find answers to common questions about VITALOOP.
-              </p>
-            </div>
 
-            {/* Search bar */}
-            <div className="relative mx-auto max-w-xl">
-              <svg
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none"
-                fill="none" viewBox="0 0 24 24" stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                ref={searchRef}
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search articles… (e.g. symptoms, labs, protocol, billing)"
-                className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-12 text-base text-slate-900 placeholder-slate-400 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              {/* Search bar */}
+              <div className="relative mx-auto max-w-xl">
+                <svg
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none"
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
                 >
-                  ✕
-                </button>
-              )}
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search articles… (e.g. symptoms, labs, protocol, billing)"
+                  className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-12 text-base text-slate-900 placeholder-slate-400 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Main layout */}
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8 md:py-12">
+        <div className={embedded ? 'mx-0 px-0 py-0' : 'mx-auto max-w-6xl px-4 py-6 sm:py-8 md:py-12'}>
           <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-8">
 
             {/* Sidebar — desktop */}
             <aside className="hidden lg:block w-64 flex-shrink-0">
-              <div className="sticky top-24 bg-white rounded-2xl border border-slate-200 p-4">
+              <div className={`${embedded ? 'sticky top-0 bg-transparent border-0 p-0' : 'sticky top-24 bg-white rounded-2xl border border-slate-200 p-4'}`}>
                 <Sidebar
+                  helpBasePath={helpBasePath}
                   activeSection={sectionId}
                   activeArticle={articleId}
                 />
@@ -613,6 +621,7 @@ export default function Help() {
               {mobileMenuOpen && (
                 <div className="mt-2 max-h-[60svh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-lg">
                   <Sidebar
+                    helpBasePath={helpBasePath}
                     activeSection={sectionId}
                     activeArticle={articleId}
                   />
@@ -622,20 +631,20 @@ export default function Help() {
 
             {/* Main content */}
             <main className="min-w-0">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 sm:rounded-2xl sm:p-6 md:p-8">
+              <div className={`${embedded ? '' : 'rounded-xl border border-slate-200 bg-white p-4 sm:rounded-2xl sm:p-6 md:p-8'}`}>
                 {searchQuery.length >= 2 ? (
-                  <SearchResults query={searchQuery} onClear={() => setSearchQuery('')} />
+                  <SearchResults query={searchQuery} onClear={() => setSearchQuery('')} helpBasePath={helpBasePath} />
                 ) : articleId ? (
-                  <ArticleView articleId={articleId} onBack={handleBack} />
+                  <ArticleView articleId={articleId} onBack={handleBack} helpBasePath={helpBasePath} />
                 ) : sectionId ? (
-                  <SectionView sectionId={sectionId} onBack={handleBack} />
+                  <SectionView sectionId={sectionId} onBack={handleBack} helpBasePath={helpBasePath} />
                 ) : (
-                  <HelpHome onSelectArticle={id => navigate(`/help/${id}`)} />
+                  <HelpHome helpBasePath={helpBasePath} onSelectArticle={id => navigate(buildHelpPath(helpBasePath, id))} />
                 )}
               </div>
 
               {/* Contact block */}
-              <div className="mt-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-center text-white sm:mt-6 sm:rounded-2xl sm:p-6">
+              <div className={`${embedded ? 'mt-4 rounded-2xl' : 'mt-4 rounded-xl sm:mt-6 sm:rounded-2xl'} bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-center text-white sm:p-6`}>
                 <h3 className="text-lg font-bold mb-1">Still need help?</h3>
                 <p className="text-emerald-100 text-sm mb-4">
                   Our team usually replies within one business day.
@@ -655,7 +664,7 @@ export default function Help() {
           </div>
         </div>
 
-        <Footer />
+        {!embedded && <Footer />}
       </div>
     </>
   )

@@ -32,7 +32,7 @@ const MENU_ITEMS = [
   { icon: Flame, label: 'Profile & Safety', path: '/health-profile', badge: null },
   { icon: CreditCard, label: 'Billing', path: '/subscription', badge: null },
   { icon: Settings, label: 'Account', path: '/settings', badge: null },
-  { icon: HelpCircle, label: 'Help Center', path: '/help', badge: null },
+  { icon: HelpCircle, label: 'Help Center', path: '/help-center', badge: null },
 ]
 
 function isItemActive(currentPath, itemPath) {
