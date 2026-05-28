@@ -29,6 +29,7 @@ import { TrustedServicesSection } from '../components/landing/TrustedServicesSec
 import { TestimonialsCarousel } from '../components/landing/TestimonialsCarousel.jsx'
 import { InteractivePricing } from '../components/landing/InteractivePricing.jsx'
 import { AnimatedFAQ } from '../components/landing/AnimatedFAQ.jsx'
+import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx'
 import Footer from '../components/landing/Footer.jsx'
 
 const NAV_LINKS = [
@@ -1041,110 +1042,7 @@ export default function Landing() {
             </div>
           </div>
 
-          <motion.div
-            {...fadeUp(reduced)}
-            className="mb-12 rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-6 text-center md:p-8"
-          >
-            <h3 className="text-[26px] font-semibold tracking-tight text-slate-900 md:text-[30px]">
-              The Feedback Loop: One Test is a Snapshot. Three is a System.
-            </h3>
-            <p className="mx-auto mt-4 max-w-3xl text-[16px] leading-[1.75] text-slate-700 md:text-[17px]">
-              Upload PDF -&gt; identify problems -&gt; execute protocol -&gt; weekly check-in -&gt; retest 12 weeks later -&gt; see measurable change. Each cycle is smarter than the last.
-            </p>
-          </motion.div>
-
-          <motion.div
-            aria-hidden="true"
-            className="hidden"
-            variants={staggerParent}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: '-10% 0px -10% 0px' }}
-          >
-            <motion.h2
-              className="text-[32px] font-bold tracking-tight md:text-[40px]"
-              initial={reduced ? false : { opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              From symptoms to labs to a protocol in{' '}
-              <span className="relative">
-                <span className="bg-gradient-to-r from-emerald-600 to-sky-600 bg-clip-text text-transparent">5 steps</span>
-              </span>
-            </motion.h2>
-            <p className={`mx-auto mt-4 max-w-2xl text-lg ${'text-slate-600'}`}>
-              Start with how you feel, get a practical lab direction plan, upload results, and improve through weekly feedback.
-            </p>
-
-            <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* LEFT: 4-step grid */}
-            <div className="grid grid-cols-2 gap-4 md:gap-6">
-              {STEPS.map((step, idx) => {
-                const Icon = step.icon
-                return (
-                  <motion.article
-                    key={step.title}
-                    variants={fadeUp(reduced, idx * 0.04)}
-                    whileHover={reduced ? undefined : { y: -6, scale: 1.03 }}
-                    className={`group relative overflow-hidden rounded-2xl border p-6 text-center transition ${'border-slate-200 bg-white'}`}
-                    style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08), inset 0 1px 0 rgba(16,185,129,0.08)' }}
-                  >
-                    {/* Step number badge */}
-                    <motion.div
-                      className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-sky-400 text-[10px] font-bold text-white shadow-lg"
-                      whileHover={reduced ? {} : { rotate: 360 }}
-                      transition={{ duration: 0.5 }}
-                    >
-                      {idx + 1}
-                    </motion.div>
-
-                    {/* Animated gradient background on hover */}
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-sky-500/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                    />
-
-                    {/* Icon with pulse effect */}
-                    <motion.div
-                      className="relative mx-auto mb-3 flex h-14 w-14 items-center justify-center"
-                      whileHover={reduced ? {} : { scale: 1.1 }}
-                      transition={{ duration: 0.4 }}
-                    >
-                      <motion.div
-                        className="absolute inset-0 rounded-full bg-emerald-400/20 blur-xl"
-                        animate={reduced ? {} : { scale: [1, 1.15, 1], opacity: [0.5, 0.7, 0.5] }}
-                        transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
-                      />
-                      <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-50 to-sky-50">
-                        <Icon className="h-5 w-5 text-emerald-600" />
-                      </div>
-                    </motion.div>
-
-                    <h3 className="relative text-sm font-bold">{step.title}</h3>
-                    <p className={`relative mt-1 text-xs ${'text-slate-600'}`}>{step.body}</p>
-                  </motion.article>
-                )
-              })}
-            </div>
-
-            {/* RIGHT: Biohacking Illustration */}
-            <motion.div
-              initial={{ opacity: 0, y: 40, x: 40 }}
-              whileInView={{ opacity: 1, y: 0, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              viewport={{ once: true }}
-              className="flex justify-center lg:justify-end"
-            >
-              <div className="relative w-full max-w-lg lg:max-w-xl">
-                <img
-                  src="/images/biohacking-arms-open.png"
-                  alt="Your complete health optimization system with biohacking technology"
-                  className="w-full h-auto rounded-2xl shadow-lg"
-                />
-              </div>
-            </motion.div>
-            </div>
-          </motion.div>
+          <HowItWorksTimeline />
         </section>
 
         <section className="mx-auto w-full max-w-[990px] px-4 py-14 sm:px-6 md:py-20">
