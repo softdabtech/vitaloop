@@ -1239,38 +1239,35 @@ export default function Landing() {
             <p className={`mx-auto mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
               Health optimization is a continuous cycle, not a one-time interpretation. VITALOOP connects symptoms, labs, protocol actions, and weekly feedback so each cycle becomes more informed than the previous one.
             </p>
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-[repeat(5,minmax(0,1fr))]">
+            <ol className="mx-auto mt-7 max-w-5xl space-y-3 text-left">
               {LOOP_FLOW.map((item, idx) => {
                 const Icon = item.icon
                 return (
-                  <div key={item.title} className="relative">
-                    {idx < LOOP_FLOW.length - 1 && (
-                      <motion.div
-                        aria-hidden="true"
-                        animate={loopActive && !reduced ? { opacity: [0.25, 1, 0.4], scaleX: [0.92, 1, 0.96] } : { opacity: 0.28, scaleX: 1 }}
-                        transition={{ duration: 0.8, delay: idx * 0.14, ease: 'easeInOut' }}
-                        className={`absolute left-[calc(50%+36px)] top-9 hidden h-px w-[calc(100%-12px)] origin-left xl:block ${'bg-gradient-to-r from-emerald-500/80 to-slate-300/20'}`}
-                      />
-                    )}
-                    <motion.article
-                      animate={loopActive && !reduced ? { y: [0, -8, 0], scale: [1, 1.02, 1] } : { y: 0, scale: 1 }}
-                      transition={{ duration: 0.75, delay: idx * 0.14, ease: 'easeInOut' }}
-                      className={`relative h-full rounded-[28px] border px-4 py-5 ${'border-slate-200 bg-white'}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${'bg-emerald-50 text-emerald-700'}`}>
-                          <Icon className="h-5 w-5" />
-                        </span>
-                        <span className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full border px-2 text-xs font-semibold ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{idx + 1}</span>
+                  <motion.li
+                    key={item.title}
+                    animate={loopActive && !reduced ? { x: [0, 6, 0] } : { x: 0 }}
+                    transition={{ duration: 0.55, delay: idx * 0.08, ease: 'easeInOut' }}
+                    className={`rounded-2xl border px-4 py-4 sm:px-5 ${'border-slate-200 bg-white'}`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <span className={`mt-0.5 inline-flex h-9 min-w-9 items-center justify-center rounded-full border text-sm font-semibold ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                        {idx + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-3">
+                          <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${'bg-emerald-50 text-emerald-700'}`}>
+                            <Icon className="h-5 w-5" />
+                          </span>
+                          <h3 className="text-base font-semibold leading-tight sm:text-lg">{item.title}</h3>
+                        </div>
+                        <p className={`mt-2 text-sm leading-relaxed ${'text-slate-600'}`}>{item.body}</p>
+                        <p className={`mt-1 text-xs leading-relaxed ${'text-slate-500'}`}>{item.detail}</p>
                       </div>
-                      <h3 className="mt-4 text-base font-semibold">{item.title}</h3>
-                      <p className={`mt-2 text-sm leading-relaxed ${'text-slate-600'}`}>{item.body}</p>
-                      <p className={`mt-2 text-xs leading-relaxed ${'text-slate-500'}`}>{item.detail}</p>
-                    </motion.article>
-                  </div>
+                    </div>
+                  </motion.li>
                 )
               })}
-            </div>
+            </ol>
           </motion.div>
         </section>
 
