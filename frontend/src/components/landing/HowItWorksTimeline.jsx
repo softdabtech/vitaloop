@@ -4,34 +4,34 @@ import { useRef } from 'react'
 
 const STEPS = [
   {
-    icon: '📤',
-    title: 'Describe what you feel',
-    body: 'Start with symptoms, goals, and context.',
-    detail: 'Capture duration, severity, medications, supplements, and what you already tried.',
-  },
-  {
-    icon: '❓',
-    title: 'Answer smart follow-ups',
-    body: 'Focused questions organize your case.',
-    detail: 'VITALOOP flags when qualified medical review may be important.',
-  },
-  {
-    icon: '🧪',
-    title: 'Get a lab direction plan',
-    body: 'See what may be useful to check next.',
-    detail: 'Suggested biomarker categories include why they matter and what to discuss with a clinician.',
-  },
-  {
     icon: '📄',
-    title: 'Upload lab results',
-    body: 'Analyze 85+ biomarkers after upload.',
-    detail: 'Results are connected back to your symptoms, goals, and previous context.',
+    title: 'Upload PDF',
+    body: 'Start by uploading your lab report.',
+    detail: 'VITALOOP extracts biomarkers, ranges, flags, and baseline context from the report.',
+  },
+  {
+    icon: '🔎',
+    title: 'Identify problems',
+    body: 'See what needs attention first.',
+    detail: 'Priority issues are ranked so you can understand what matters most before taking action.',
+  },
+  {
+    icon: '⚙️',
+    title: 'Execute protocol',
+    body: 'Turn analysis into structured action.',
+    detail: 'Use personalized supplement, nutrition, and lifestyle steps instead of generic advice.',
+  },
+  {
+    icon: '📅',
+    title: 'Weekly check-in',
+    body: 'Track how you respond week by week.',
+    detail: 'Log symptoms, adherence, and feedback so execution quality is visible between lab cycles.',
   },
   {
     icon: '🔁',
-    title: 'Follow and adapt',
-    body: 'Run protocol, check in weekly, and retest.',
-    detail: 'Each cycle uses feedback to refine actions and timing.',
+    title: 'Retest 12 weeks later',
+    body: 'Measure what changed and refine the next cycle.',
+    detail: 'See measurable change and make each cycle smarter than the last.',
   },
 ]
 
@@ -54,8 +54,8 @@ export function HowItWorksTimeline() {
           viewport={{ once: true }}
           className="text-center mb-14 md:mb-20"
         >
-          <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-3">From symptoms to labs to a protocol in 5 steps</h2>
-          <p className="text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">Start with how you feel, get a practical lab direction plan, upload results, and improve through weekly feedback.</p>
+          <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-3">The Feedback Loop: One Test is a Snapshot. Three is a System.</h2>
+          <p className="text-base text-slate-600 max-w-3xl mx-auto leading-relaxed">Upload PDF -&gt; identify problems -&gt; execute protocol -&gt; weekly check-in -&gt; retest 12 weeks later -&gt; see measurable change. Each cycle is smarter than the last.</p>
         </motion.div>
 
         <div className="relative">
