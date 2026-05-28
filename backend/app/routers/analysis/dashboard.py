@@ -407,6 +407,7 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
 
     (
         account,
+        entitlements,
         onboarding,
         progress_result,
         insights_result,
@@ -415,6 +416,7 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
         activity_tuple,
     ) = await asyncio.gather(
         svc.get_user_account(user_id),
+        resolve_user_entitlements(user_id, current_user),
         _resolve_onboarding_state(user_id, current_user),
         svc.get_user_progress(user_id),
         svc.get_user_insights(user_id),
@@ -425,6 +427,7 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     )
 
     account = account if isinstance(account, dict) else {}
+    entitlements = entitlements if isinstance(entitlements, dict) else {"billing_status": "free"}
     onboarding = onboarding if isinstance(onboarding, dict) else {
         "requires_onboarding": False,
         "current_stage": "complete",

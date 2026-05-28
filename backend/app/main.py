@@ -77,6 +77,7 @@ from app.routers.notifications import notifications, complaints
 from app.routers.billing import stripe_router
 from app.routers.crm import crm, crm_clients, crm_ops
 from app.routers.admin import admin
+from app.routers.admin import data_integrity
 
 
 def _check_runtime_readiness() -> None:
@@ -176,6 +177,7 @@ app.include_router(progress.router, prefix="/progress", tags=["progress"])
 app.include_router(symptoms.router, prefix="/symptoms", tags=["symptoms"])
 app.include_router(stripe_router.router, prefix="/stripe", tags=["stripe"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
+app.include_router(data_integrity.router, prefix="/admin", tags=["admin"])
 app.include_router(crm_clients.router, tags=["crm"])
 app.include_router(crm_ops.router, tags=["crm"])
 app.include_router(assignments.router, tags=["crm-assignments"])

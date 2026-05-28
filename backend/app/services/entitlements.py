@@ -7,6 +7,7 @@ from app.utils.roles import normalize_global_role, as_bool
 
 
 def _is_paid_subscription(active_sub: Optional[Dict[str, Any]], account: Dict[str, Any]) -> tuple[bool, str, str, str, bool]:
+    # Deprecated compatibility source; prefer canonical subscriptions rows.
     subscription_status = str(account.get('sub_status') or account.get('subscription_status') or '').strip().lower()
     account_plan = str(account.get('plan_tier') or '').strip().lower()
 
