@@ -24,6 +24,7 @@ create_test_pdf.js
 # Backend environment files (NEVER COMMIT)
 backend/.env
 backend/.env.local
+backend/.env.staging.local
 backend/.env.production
 backend/app/.env*
 
