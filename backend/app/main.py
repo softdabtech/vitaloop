@@ -78,6 +78,13 @@ from app.routers.billing import stripe_router
 from app.routers.crm import crm, crm_clients, crm_ops
 from app.routers.admin import admin
 from app.routers.admin import data_integrity
+from app.routers.partners import (
+    partners_embedded_router,
+    partners_events_router,
+    partners_gateway_router,
+    partners_insights_router,
+    partners_results_router,
+)
 
 
 def _check_runtime_readiness() -> None:
@@ -163,6 +170,9 @@ app.add_middleware(
         "Content-Type",
         "X-Idempotency-Key",
         "X-Request-ID",
+        "X-Partner-Api-Key",
+        "X-Embedded-Token",
+        "X-Partner-Context",
         "stripe-signature",
     ],
     expose_headers=["X-Request-ID"],
@@ -200,3 +210,8 @@ app.include_router(dashboard.router)
 app.include_router(compatibility.router)
 app.include_router(uploads.router, tags=["uploads"])
 app.include_router(llm_consult.router, prefix="/llm", tags=["llm"])
+app.include_router(partners_gateway_router)
+app.include_router(partners_results_router)
+app.include_router(partners_embedded_router)
+app.include_router(partners_events_router)
+app.include_router(partners_insights_router)
