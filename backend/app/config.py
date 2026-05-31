@@ -111,17 +111,35 @@ class Settings(BaseSettings):
 
     @property
     def active_llm_api_key(self) -> str:
-        """Active LLM API key (OpenAI-only mode)."""
+        """Active LLM API key with provider priority."""
+        if (self.digitalocean_claude_api_key or "").strip():
+            return self.digitalocean_claude_api_key
+        if (self.routellm_api_key or "").strip():
+            return self.routellm_api_key
+        if (self.abacus_ai_api_key or "").strip():
+            return self.abacus_ai_api_key
         return self.openai_api_key
 
     @property
     def active_llm_base_url(self) -> str:
-        """Active LLM base URL (OpenAI-only mode)."""
+        """Active LLM base URL with provider priority."""
+        if (self.digitalocean_claude_api_key or "").strip():
+            return self.digitalocean_claude_base_url
+        if (self.routellm_api_key or "").strip():
+            return self.routellm_base_url
+        if (self.abacus_ai_api_key or "").strip():
+            return self.abacus_ai_base_url
         return self.openai_base_url or "https://api.openai.com/v1"
 
     @property
     def active_llm_model(self) -> str:
-        """Active LLM model (OpenAI-only mode)."""
+        """Active LLM model with provider priority."""
+        if (self.digitalocean_claude_api_key or "").strip():
+            return self.digitalocean_claude_model
+        if (self.routellm_api_key or "").strip():
+            return self.routellm_model
+        if (self.abacus_ai_api_key or "").strip():
+            return self.abacus_ai_model
         return self.openai_model or "gpt-4o-mini"
 
     # Backward-compatible aliases (deprecated — use active_llm_* instead)
