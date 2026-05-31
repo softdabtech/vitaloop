@@ -375,7 +375,67 @@ async def analyze_lab(
                 detail={"detail": "Field required: file", "code": "VALIDATION_ERROR"},
             )
 
-        return await analyze_lab_pdf(
+        filename = (getattr(file, "filename", "") or "").lower()
+        if filename.endswith(".pdf"):
+            user_id: str = current_user["sub"]
+            quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "pdf")
+            if not quota_ok:
+                raise HTTPException(
+                    status_code=402,
+                    detail={
+                        "detail": quota_msg,
+                        "code": "BIOMARKER_QUOTA_EXCEEDED",
+                        "used_by": used_by,
+                    },
+                )
+
+            temp_path: Optional[str] = None
+            try:
+                upload_bytes = await file.read()
+                if not upload_bytes:
+                    raise HTTPException(
+                        status_code=400,
+                        detail={"detail": "Uploaded file is empty", "code": "EMPTY_FILE"},
+                    )
+
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                    tmp.write(upload_bytes)
+                    temp_path = tmp.name
+
+                analysis = await pdf_analyzer.analyze_lab_pdf(temp_path, symptoms=symptoms_form)
+                biomarkers = analysis.get("biomarkers", [])
+                if not biomarkers:
+                    raise HTTPException(
+                        status_code=422,
+                        detail={"detail": "Could not extract biomarkers from PDF", "code": "BIOMARKERS_NOT_EXTRACTED"},
+                    )
+
+                upload = await save_lab_upload(
+                    user_id=user_id,
+                    extracted_text="legacy_multipart_pdf",
+                    lab_name=lab_name_form or getattr(file, "filename", None),
+                    analyze_prompt_version="legacy_pdf_v1",
+                )
+                upload_id = upload["id"]
+
+                saved_biomarkers = await save_biomarkers(upload_id=upload_id, user_id=user_id, biomarkers=biomarkers)
+                await save_timeline_event(
+                    user_id=user_id,
+                    event_type="lab_analyzed",
+                    summary=f"Lab report analyzed: {len(saved_biomarkers)} biomarkers found",
+                    metadata={"upload_id": upload_id, "biomarker_count": len(saved_biomarkers), "analysis_method": "legacy_pdf"},
+                )
+
+                return {"upload_id": upload_id, "biomarkers": saved_biomarkers}
+            finally:
+                try:
+                    await file.close()
+                except Exception:
+                    logger.debug("legacy_multipart_file_close_failed filename=%s", getattr(file, "filename", None))
+                if temp_path and os.path.exists(temp_path):
+                    os.remove(temp_path)
+
+        return await analyze_lab_file(
             file=file,
             lab_name=lab_name_form,
             symptoms=symptoms_form,
