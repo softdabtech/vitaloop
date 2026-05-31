@@ -85,6 +85,7 @@ from app.routers.partners import (
     partners_insights_router,
     partners_results_router,
 )
+from app.routers import knowledge
 
 
 def _check_runtime_readiness() -> None:
@@ -215,3 +216,4 @@ app.include_router(partners_results_router)
 app.include_router(partners_embedded_router)
 app.include_router(partners_events_router)
 app.include_router(partners_insights_router)
+app.include_router(knowledge.router)
