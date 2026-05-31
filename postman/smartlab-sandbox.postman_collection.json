@@ -1,0 +1,210 @@
+{
+  "info": {
+    "name": "Smartlab Sandbox",
+    "description": "Sandbox flow for Smartlab to VITALOOP partner integration.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Ingest Lab Result",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Partner-Api-Key",
+            "value": "{{partner_api_key}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"external_patient_id\": \"sandbox-patient-001\",\n  \"external_order_id\": \"sandbox-order-1001\",\n  \"external_result_id\": \"sandbox-result-9001\",\n  \"source_lab\": \"smartlab\",\n  \"result_date\": \"2026-05-31\",\n  \"biomarkers\": [\n    {\n      \"name\": \"Hemoglobin\",\n      \"value\": 13.4,\n      \"unit\": \"g/dL\",\n      \"ref_low\": 12.0,\n      \"ref_high\": 16.0\n    },\n    {\n      \"name\": \"Ferritin\",\n      \"value\": 40,\n      \"unit\": \"ng/mL\",\n      \"ref_low\": 15,\n      \"ref_high\": 150\n    }\n  ],\n  \"metadata\": {\n    \"source\": \"sandbox\",\n    \"channel\": \"demo\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/partners/v1/results",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "partners",
+            "v1",
+            "results"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) {}",
+              "if (json.partner_lab_result_id) {",
+              "  pm.collectionVariables.set('partner_lab_result_id', json.partner_lab_result_id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Insight",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Partner-Api-Key",
+            "value": "{{partner_api_key}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/partners/v1/insights/{{partner_lab_result_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "partners",
+            "v1",
+            "insights",
+            "{{partner_lab_result_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Embedded Session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Partner-Api-Key",
+            "value": "{{partner_api_key}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"partner_lab_result_id\": \"{{partner_lab_result_id}}\",\n  \"external_patient_id\": \"sandbox-patient-001\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/partners/v1/embedded/sessions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "partners",
+            "v1",
+            "embedded",
+            "sessions"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) {}",
+              "if (json.embedded_token) {",
+              "  pm.collectionVariables.set('embedded_token', json.embedded_token);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Open Embedded View",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/partners/v1/embedded/{{embedded_token}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "partners",
+            "v1",
+            "embedded",
+            "{{embedded_token}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Track Event",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Partner-Api-Key",
+            "value": "{{partner_api_key}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event_type\": \"partner.insight_viewed\",\n  \"partner_lab_result_id\": \"{{partner_lab_result_id}}\",\n  \"external_patient_id\": \"sandbox-patient-001\",\n  \"event_payload\": {\n    \"surface\": \"sandbox_demo\",\n    \"source\": \"smartlab_portal\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/partners/v1/events",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "partners",
+            "v1",
+            "events"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://staging-api.vitaloop.today"
+    },
+    {
+      "key": "partner_api_key",
+      "value": ""
+    },
+    {
+      "key": "partner_lab_result_id",
+      "value": ""
+    },
+    {
+      "key": "embedded_token",
+      "value": ""
+    }
+  ]
+}
