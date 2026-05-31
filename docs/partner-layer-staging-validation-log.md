@@ -110,3 +110,29 @@ Use this log after each controlled Stage 6-7 run.
 - Notes:
   - Full flow passed: ingest -> insights -> embedded session -> embedded view -> partner event -> embedded event.
   - Fix validated for embedded patient reference handling (non-UUID external patient IDs no longer trigger UUID cast failure).
+
+## 2026-05-31 Attempt 5 (Public staging HTTPS)
+- Date/time: 2026-05-31
+- Environment: staging (isolated droplet service `vitaloop-staging-api` on `127.0.0.1:8011`)
+- STAGING_API_URL: `https://staging-api.vitaloop.today`
+- Migration applied (`stage-17-partner-integration-mvp.sql`): applied in staging Supabase project (`dcmnnqlrcmhgmhqznpet`)
+- Seed executed (`seed_partner_smartlab.py`): success
+- Smoke executed (`smoke_partner_http_flow.py`): success
+- Tables verified:
+  - partners: seeded/updated
+  - partner_api_keys: seeded/updated
+  - partner_patients: created by seed/smoke
+  - partner_lab_results: created by smoke
+  - partner_biomarkers: created by smoke
+  - partner_insights: created by smoke
+  - partner_events: created by smoke
+  - partner_embedded_sessions: created by smoke
+- Outcome: pass
+- Notes:
+  - SSL issued via certbot for `staging-api.vitaloop.today`; HTTPS health check now returns API JSON (`200 OK`).
+  - Public smoke passed from droplet:
+    - `ingest.status= processed`
+    - `insight.health_score= 78`
+    - `events.partner.ok= True`
+    - `events.embedded.ok= True`
+  - Local macOS resolver remained inconsistent during this run (`curl` from local shell still intermittently returned host resolution errors), but public DNS was confirmed via external resolvers and from droplet network.
