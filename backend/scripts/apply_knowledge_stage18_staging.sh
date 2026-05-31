@@ -4,6 +4,7 @@ set -euo pipefail
 # Applies Stage 18 knowledge base foundation migration to staging ONLY.
 # Required env:
 #   STAGING_DATABASE_URL
+# Optional env (recommended):
 #   STAGING_API_URL
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -16,11 +17,6 @@ fi
 
 if [[ -z "${STAGING_DATABASE_URL:-}" ]]; then
   echo "STAGING_DATABASE_URL is required" >&2
-  exit 1
-fi
-
-if [[ -z "${STAGING_API_URL:-}" ]]; then
-  echo "STAGING_API_URL is required" >&2
   exit 1
 fi
 
@@ -58,9 +54,13 @@ if _looks_like_production_db "$STAGING_DATABASE_URL"; then
   exit 1
 fi
 
-if _looks_like_production_api "$STAGING_API_URL"; then
-  echo "Refusing to run: STAGING_API_URL points to production domain" >&2
-  exit 1
+if [[ -n "${STAGING_API_URL:-}" ]]; then
+  if _looks_like_production_api "$STAGING_API_URL"; then
+    echo "Refusing to run: STAGING_API_URL points to production domain" >&2
+    exit 1
+  fi
+else
+  echo "STAGING_API_URL is not set: running DB-only rollout mode (API smoke can be run later)."
 fi
 
 if ! command -v psql >/dev/null 2>&1; then

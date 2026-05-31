@@ -51,6 +51,16 @@ def _is_production_api_url(url: str) -> bool:
     return host in {"api.vitaloop.today", "vitaloop.today", "www.vitaloop.today"}
 
 
+def _looks_like_supabase_url(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower()
+    return host.endswith(".supabase.co")
+
+
+def _looks_like_jwt(token: str) -> bool:
+    # JWT must have three dot-separated segments.
+    return token.count(".") == 2
+
+
 def _admin_headers(token: str) -> dict[str, str]:
     return {
         "Authorization": f"Bearer {token}",
@@ -77,6 +87,18 @@ def main() -> None:
     if _is_production_api_url(base_url):
         raise SystemExit("Refusing to run smoke against production API URL")
 
+    if _looks_like_supabase_url(base_url):
+        raise SystemExit(
+            "STAGING_API_URL looks like Supabase project URL (.supabase.co). "
+            "Use FastAPI backend URL (for example: https://staging-api...)."
+        )
+
+    if not _looks_like_jwt(token):
+        raise SystemExit(
+            "STAGING_SUPER_ADMIN_BEARER does not look like a user JWT. "
+            "Use staging user access token (service_role key is not valid here)."
+        )
+
     try:
         uuid.UUID(admin_user_id)
     except Exception as exc:  # pragma: no cover - operator input validation
@@ -89,6 +111,29 @@ def main() -> None:
 
     with httpx.Client(base_url=base_url, timeout=30.0) as client:
         headers = _admin_headers(token)
+
+        # Preflight: verify token resolves to the expected super-admin user.
+        auth_me_resp = client.get("/auth/me", headers=headers)
+        _assert_status(auth_me_resp, 200, context="GET /auth/me preflight")
+        auth_me_data = auth_me_resp.json()
+        user = auth_me_data.get("user") if isinstance(auth_me_data, dict) else None
+        if not isinstance(user, dict):
+            raise SystemExit("/auth/me preflight returned unexpected payload (missing user object)")
+
+        actual_user_id = str(user.get("id") or "")
+        if actual_user_id != admin_user_id:
+            raise SystemExit(
+                "Super-admin preflight mismatch: STAGING_SUPER_ADMIN_USER_ID does not match /auth/me user.id "
+                f"(expected {admin_user_id}, got {actual_user_id})"
+            )
+
+        actual_role = str(user.get("global_role") or auth_me_data.get("global_role") or "").lower()
+        if actual_role != "super_admin":
+            raise SystemExit(
+                "Super-admin preflight failed: /auth/me global_role is not super_admin "
+                f"(got {actual_role or 'empty'})"
+            )
+        print("ok: /auth/me preflight confirms expected super-admin token")
 
         # 1) API smoke: POST /knowledge/evaluate
         eval_resp = client.post("/knowledge/evaluate", headers=headers, json=_evaluate_payload(1200))
