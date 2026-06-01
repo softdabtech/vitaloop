@@ -23,7 +23,7 @@ const FEATURES = [
 ]
 
 const REASON_MESSAGES = {
-  UPLOAD_LIMIT_REACHED: "Free plan includes 1 analysis total (PDF upload or manual entry). Upgrade for unlimited analyses.",
+  UPLOAD_LIMIT_REACHED: 'Free plan includes 1 analysis total (PDF upload or manual entry). Upgrade for unlimited analyses.',
   BIOMARKER_QUOTA_EXCEEDED: 'Free plan includes 1 analysis total (PDF upload or manual entry). Upgrade to continue.',
   SUBSCRIPTION_REQUIRED: 'This feature is available with Vitaloop Premium.',
 }

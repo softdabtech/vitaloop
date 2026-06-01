@@ -85,40 +85,40 @@ export default function BillingHistory() {
             )}
 
             <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50">
-                  <th className="text-left px-6 py-4 font-semibold text-slate-600">Plan</th>
-                  <th className="text-left px-6 py-4 font-semibold text-slate-600">Status</th>
-                  <th className="text-left px-6 py-4 font-semibold text-slate-600">Period Start</th>
-                  <th className="text-left px-6 py-4 font-semibold text-slate-600">Period End</th>
-                  <th className="text-left px-6 py-4 font-semibold text-slate-600">Last Updated</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, idx) => {
-                  const meta = STATUS_META[row.status] || STATUS_META.active
-                  const Icon = meta.icon
-                  return (
-                    <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition">
-                      <td className="px-6 py-4 font-medium text-slate-900">
-                        {PLAN_LABELS[row.plan_name] || row.plan_name || 'Unknown'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${meta.color}`}>
-                          <Icon className="w-3 h-3" />
-                          {meta.label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">{fmt(row.current_period_start || row.started_at)}</td>
-                      <td className="px-6 py-4 text-slate-600">{fmt(row.current_period_end)}</td>
-                      <td className="px-6 py-4 text-slate-500">{fmt(row.updated_at)}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50">
+                    <th className="text-left px-6 py-4 font-semibold text-slate-600">Plan</th>
+                    <th className="text-left px-6 py-4 font-semibold text-slate-600">Status</th>
+                    <th className="text-left px-6 py-4 font-semibold text-slate-600">Period Start</th>
+                    <th className="text-left px-6 py-4 font-semibold text-slate-600">Period End</th>
+                    <th className="text-left px-6 py-4 font-semibold text-slate-600">Last Updated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, idx) => {
+                    const meta = STATUS_META[row.status] || STATUS_META.active
+                    const Icon = meta.icon
+                    return (
+                      <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition">
+                        <td className="px-6 py-4 font-medium text-slate-900">
+                          {PLAN_LABELS[row.plan_name] || row.plan_name || 'Unknown'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${meta.color}`}>
+                            <Icon className="w-3 h-3" />
+                            {meta.label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-slate-600">{fmt(row.current_period_start || row.started_at)}</td>
+                        <td className="px-6 py-4 text-slate-600">{fmt(row.current_period_end)}</td>
+                        <td className="px-6 py-4 text-slate-500">{fmt(row.updated_at)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

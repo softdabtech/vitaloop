@@ -69,6 +69,7 @@ class AnalyzeRequest(BaseModel):
 class AnalyzeResponse(BaseModel):
     upload_id: str
     biomarkers: List[dict]
+    analysis_source: Optional[str] = None
     knowledge_evaluation: Optional[dict] = None
 
 

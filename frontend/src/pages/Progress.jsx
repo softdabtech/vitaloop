@@ -582,8 +582,8 @@ export default function Progress() {
                       {card.latestValue == null
                         ? 'Add more uploads to unlock trend'
                         : card.delta == null
-                        ? 'No historical delta yet'
-                        : `${card.delta >= 0 ? '↑' : '↓'} ${shortMetricValue(Math.abs(card.delta))} from ${shortMetricValue(card.firstValue)}`}
+                          ? 'No historical delta yet'
+                          : `${card.delta >= 0 ? '↑' : '↓'} ${shortMetricValue(Math.abs(card.delta))} from ${shortMetricValue(card.firstValue)}`}
                     </p>
                     <span className={`mt-3 inline-flex w-fit rounded-full px-4 py-1.5 text-sm font-semibold ${isNoData ? 'bg-slate-100 text-slate-600' : isGood ? 'bg-teal-50 text-teal-700' : 'bg-amber-50 text-amber-700'}`}>
                       {card.statusLabel}

@@ -61,10 +61,10 @@ export function AccessibleFormField({
             focus:outline-none focus:ring-2 focus:ring-emerald-500/50
             disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500
             ${
-              error
-                ? 'border-red-500 bg-red-50 focus:border-red-600 focus:ring-red-500/30'
-                : 'border-slate-200 bg-white focus:border-emerald-500'
-            }
+    error
+      ? 'border-red-500 bg-red-50 focus:border-red-600 focus:ring-red-500/30'
+      : 'border-slate-200 bg-white focus:border-emerald-500'
+    }
             ${className}
           `}
           {...ariaAttrs}
@@ -176,10 +176,10 @@ export function AccessibleTextarea({
             disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500
             resize-none
             ${
-              error
-                ? 'border-red-500 bg-red-50 focus:border-red-600 focus:ring-red-500/30'
-                : 'border-slate-200 bg-white focus:border-emerald-500'
-            }
+    error
+      ? 'border-red-500 bg-red-50 focus:border-red-600 focus:ring-red-500/30'
+      : 'border-slate-200 bg-white focus:border-emerald-500'
+    }
             ${className}
           `}
           aria-label={label}

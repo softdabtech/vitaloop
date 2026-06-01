@@ -35,7 +35,7 @@ const PAGE_META = {
   '/onboarding': { title: 'Onboarding', subtitle: null },
   '/questionnaire': { title: 'Symptom Check', subtitle: null },
   '/settings': { title: 'Account', subtitle: null },
-    '/help-center': { title: 'Help Center', subtitle: null },
+  '/help-center': { title: 'Help Center', subtitle: null },
 }
 
 function resolvePageMeta(pathname) {
