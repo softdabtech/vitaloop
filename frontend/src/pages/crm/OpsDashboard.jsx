@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { getPrograms } from '../../api/crmPrograms.js'
 import { getClients } from '../../api/crmClients.js'
 import { getPractitioners } from '../../api/crmPractitioners.js'
@@ -11,6 +12,7 @@ import CRMLayout from '../../features/crm/components/CRMLayout.jsx'
 import CRMPageHeader from '../../features/crm/components/CRMPageHeader.jsx'
 import CRMStatCard from '../../features/crm/components/CRMStatCard.jsx'
 import CRMErrorState from '../../features/crm/components/CRMErrorState.jsx'
+import KnowledgeRulesAdminPanel from '../../features/crm/components/KnowledgeRulesAdminPanel.jsx'
 
 const DROPOFF_QUALITY_PRESETS = [
   { id: 'low', label: 'Low', minReached: 1 },
@@ -20,6 +22,8 @@ const DROPOFF_QUALITY_PRESETS = [
 
 export default function OpsDashboard() {
   const { canAccessOps } = useCRMRoleAccess()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') || 'overview'
   const [funnelDays, setFunnelDays] = useState(30)
   const [dropoffSortBy, setDropoffSortBy] = useState('count')
   const [dropoffMinReached, setDropoffMinReached] = useState(5)
@@ -63,6 +67,18 @@ export default function OpsDashboard() {
     return (
       <CRMLayout title="Ops Dashboard">
         <CRMErrorState title="Access denied" error={new Error('Only super_admin can access /ops')} />
+      </CRMLayout>
+    )
+  }
+
+  if (activeTab === 'knowledge') {
+    return (
+      <CRMLayout title="Knowledge Management">
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <button type="button" onClick={() => setSearchParams({ tab: 'overview' })} className="vtl-button-secondary">Overview</button>
+          <button type="button" disabled className="vtl-button-secondary">Knowledge</button>
+        </div>
+        <KnowledgeRulesAdminPanel />
       </CRMLayout>
     )
   }
@@ -185,6 +201,10 @@ export default function OpsDashboard() {
 
   return (
     <CRMLayout title="Ops Dashboard">
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <button type="button" disabled className="vtl-button-secondary">Overview</button>
+        <button type="button" onClick={() => setSearchParams({ tab: 'knowledge' })} className="vtl-button-secondary">Knowledge</button>
+      </div>
       <CRMPageHeader title="Ops Dashboard" subtitle="Stage 6 operational shell backed by live CRM APIs" />
 
       {criticalError ? (

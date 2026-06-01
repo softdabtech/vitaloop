@@ -9,8 +9,11 @@ from app.dependencies_crm import UserContext, require_super_admin
 from app.schemas.knowledge import (
     KnowledgeEvaluateInput,
     KnowledgeEvaluateResponse,
+    KnowledgeRecommendationDetail,
+    KnowledgeRecommendationListItem,
     KnowledgeRuleApproveRequest,
     KnowledgeRuleAuditEntry,
+    KnowledgeRuleCreateDraftCopyRequest,
     KnowledgeRuleCreateRequest,
     KnowledgeRuleDeprecateRequest,
     KnowledgeRuleDetail,
@@ -20,11 +23,14 @@ from app.schemas.knowledge import (
 )
 from app.services.knowledge import (
     approve_rule,
+    create_draft_copy,
     create_rule,
     deprecate_rule,
+    get_recommendation,
     evaluate_health_input,
     get_rule,
     get_rule_audit,
+    list_recommendations,
     list_rules,
     submit_rule_review,
     update_rule,
@@ -123,6 +129,16 @@ async def deprecate_knowledge_rule(
     return KnowledgeRuleDetail.model_validate(updated)
 
 
+@router.post("/rules/{rule_id}/create-draft-copy", response_model=KnowledgeRuleDetail)
+async def create_knowledge_rule_draft_copy(
+    rule_id: str,
+    payload: KnowledgeRuleCreateDraftCopyRequest,
+    user_context: UserContext = Depends(require_super_admin),
+) -> KnowledgeRuleDetail:
+    created = await create_draft_copy(rule_id, payload.model_dump(mode="json"), actor_user_id=str(user_context.user_id))
+    return KnowledgeRuleDetail.model_validate(created)
+
+
 @router.get("/rules/{rule_id}/audit", response_model=list[KnowledgeRuleAuditEntry])
 async def get_knowledge_rule_audit(
     rule_id: str,
@@ -131,3 +147,20 @@ async def get_knowledge_rule_audit(
 ) -> list[KnowledgeRuleAuditEntry]:
     rows = await get_rule_audit(rule_id, limit=limit)
     return [KnowledgeRuleAuditEntry.model_validate(row) for row in rows]
+
+
+@router.get("/recommendations", response_model=list[KnowledgeRecommendationListItem])
+async def list_knowledge_recommendations(
+    _: UserContext = Depends(require_super_admin),
+) -> list[KnowledgeRecommendationListItem]:
+    rows = await list_recommendations()
+    return [KnowledgeRecommendationListItem.model_validate(row) for row in rows]
+
+
+@router.get("/recommendations/{recommendation_id}", response_model=KnowledgeRecommendationDetail)
+async def get_knowledge_recommendation(
+    recommendation_id: str,
+    _: UserContext = Depends(require_super_admin),
+) -> KnowledgeRecommendationDetail:
+    row = await get_recommendation(recommendation_id)
+    return KnowledgeRecommendationDetail.model_validate(row)

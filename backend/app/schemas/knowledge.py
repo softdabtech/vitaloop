@@ -131,6 +131,11 @@ class KnowledgeRuleDeprecateRequest(BaseModel):
     change_note: str = Field(min_length=1)
 
 
+class KnowledgeRuleCreateDraftCopyRequest(BaseModel):
+    last_modified_by: str = Field(min_length=1)
+    change_note: str = Field(min_length=1)
+
+
 class KnowledgeRuleListItem(BaseModel):
     id: str
     key: str
@@ -143,6 +148,8 @@ class KnowledgeRuleListItem(BaseModel):
     source: Optional[str] = None
     source_url: Optional[str] = None
     version: Optional[str] = None
+    copied_from_rule_id: Optional[str] = None
+    copied_from_version: Optional[str] = None
     active: bool = False
     governance_status: GovernanceStatus
     last_modified_by: Optional[str] = None
@@ -174,6 +181,8 @@ class KnowledgeRuleDetail(BaseModel):
     change_note: Optional[str] = None
     auto_update_allowed: bool = False
     version: Optional[str] = None
+    copied_from_rule_id: Optional[str] = None
+    copied_from_version: Optional[str] = None
     active: bool = False
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -188,3 +197,28 @@ class KnowledgeRuleAuditEntry(BaseModel):
     old_value: Dict[str, Any] = Field(default_factory=dict)
     new_value: Dict[str, Any] = Field(default_factory=dict)
     timestamp: Optional[datetime] = None
+
+
+class KnowledgeRecommendationListItem(BaseModel):
+    id: str
+    key: str
+    title: str
+    category: Optional[str] = None
+    priority: Optional[str] = None
+    requires_doctor: bool = False
+    evidence_level: Optional[str] = None
+    source: Optional[str] = None
+
+
+class KnowledgeRecommendationDetail(BaseModel):
+    id: str
+    key: str
+    title: str
+    body: str
+    category: Optional[str] = None
+    priority: Optional[str] = None
+    requires_doctor: bool = False
+    evidence_level: Optional[str] = None
+    source: Optional[str] = None
+    source_url: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)

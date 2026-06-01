@@ -135,6 +135,94 @@ async def test_approve_makes_rule_active(monkeypatch):
     assert body["active"] is True
 
 
+@pytest.mark.asyncio
+async def test_create_draft_copy_endpoint(monkeypatch):
+    app.dependency_overrides[knowledge.require_super_admin] = lambda: _FakeAdminContext()
+
+    async def _fake_create_draft_copy(rule_id, payload, *, actor_user_id):
+        assert rule_id == "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+        assert payload["change_note"] == "copy for edit"
+        assert actor_user_id == "11111111-1111-1111-1111-111111111111"
+        return {
+            "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+            "key": "rule_key",
+            "name": "Rule draft copy",
+            "description": "desc",
+            "input_entities": ["ferritin"],
+            "conditions": {"all": [{"lab_marker": "ferritin", "operator": "lt", "value": 30, "unit": "ng/mL"}]},
+            "outputs": {"risk": "possible_iron_deficiency_risk", "recommendation_keys": ["iron_followup_discussion"]},
+            "confidence": 0.72,
+            "severity": "moderate",
+            "requires_doctor": False,
+            "explanation_template": "template",
+            "source": "placeholder",
+            "source_url": "https://example.org/source",
+            "governance_status": "draft",
+            "last_modified_by": "11111111-1111-1111-1111-111111111111",
+            "medical_reviewed_by": None,
+            "medical_reviewed_at": None,
+            "change_note": payload["change_note"],
+            "auto_update_allowed": False,
+            "version": "v2",
+            "copied_from_rule_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "copied_from_version": "v1",
+            "active": False,
+            "created_at": "2026-06-01T12:00:00Z",
+            "updated_at": "2026-06-01T12:00:00Z",
+        }
+
+    monkeypatch.setattr(knowledge, "create_draft_copy", _fake_create_draft_copy)
+
+    payload = {
+        "last_modified_by": "11111111-1111-1111-1111-111111111111",
+        "change_note": "copy for edit",
+    }
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.post("/knowledge/rules/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/create-draft-copy", json=payload)
+
+    app.dependency_overrides.clear()
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["governance_status"] == "draft"
+    assert body["version"] == "v2"
+    assert body["copied_from_version"] == "v1"
+
+
+@pytest.mark.asyncio
+async def test_list_recommendations_endpoint(monkeypatch):
+    app.dependency_overrides[knowledge.require_super_admin] = lambda: _FakeAdminContext()
+
+    async def _fake_list_recommendations():
+        return [
+            {
+                "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                "key": "iron_followup_discussion",
+                "title": "Discuss iron status follow-up",
+                "category": "hematology",
+                "priority": "high",
+                "requires_doctor": False,
+                "evidence_level": "guideline_placeholder",
+                "source": "clinical_guideline_placeholder",
+            }
+        ]
+
+    monkeypatch.setattr(knowledge, "list_recommendations", _fake_list_recommendations)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.get("/knowledge/recommendations")
+
+    app.dependency_overrides.clear()
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 1
+    assert body[0]["key"] == "iron_followup_discussion"
+
+
 def test_evaluator_uses_only_governance_active_rules():
     rules = [
         {
