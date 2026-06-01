@@ -10,7 +10,8 @@ from fastapi import HTTPException
 from app.services import supabase_service as supabase
 
 ALLOWED_GOVERNANCE_STATUS = {"draft", "reviewed", "active", "deprecated"}
-FORBIDDEN_WORDING = ("confirmed diagnosis",)
+ALLOWED_OPERATORS = {"lt", "lte", "gt", "gte", "eq", "neq", "in", "not_in", "exists"}
+FORBIDDEN_WORDING = ("confirmed diagnosis", "diagnosis confirmed")
 
 
 def _is_uuid(value: str | None) -> bool:
@@ -27,8 +28,125 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _parse_version(version: Any) -> int:
+    raw = str(version or "").strip().lower()
+    if raw.startswith("v"):
+        raw = raw[1:]
+    try:
+        value = int(raw)
+        return value if value > 0 else 1
+    except (TypeError, ValueError):
+        return 1
+
+
+def _ensure_text_without_forbidden(value: Any, field_name: str) -> None:
+    if not isinstance(value, str):
+        return
+    low = value.lower()
+    if any(phrase in low for phrase in FORBIDDEN_WORDING):
+        raise HTTPException(status_code=400, detail=f"Medical wording is forbidden in {field_name}")
+
+
+def _validate_condition_item(item: Dict[str, Any], *, location: str) -> None:
+    if not isinstance(item, dict):
+        raise HTTPException(status_code=400, detail=f"Each condition in {location} must be an object")
+
+    marker = str(item.get("lab_marker") or "").strip()
+    symptom = str(item.get("symptom") or "").strip()
+    key = str(item.get("key") or "").strip()
+    ctype = str(item.get("type") or "").strip()
+    if not ((marker or symptom) or (key and ctype)):
+        raise HTTPException(status_code=400, detail=f"Condition in {location} must include lab_marker/symptom or type+key")
+
+    operator = str(item.get("operator") or "").strip().lower()
+    # Evaluator-compatible shorthand: {"symptom": "fatigue"} is valid without operator/value.
+    if symptom and not operator and not marker and not key:
+        return
+
+    if operator not in ALLOWED_OPERATORS:
+        raise HTTPException(status_code=400, detail=f"Unsupported operator in {location}: {operator or '<empty>'}")
+
+    if operator in {"exists"}:
+        return
+
+    has_value = "value" in item and item.get("value") is not None
+    has_values = "values" in item and isinstance(item.get("values"), list) and len(item.get("values")) > 0
+    if operator in {"in", "not_in"}:
+        if not has_values:
+            raise HTTPException(status_code=400, detail=f"Operator {operator} in {location} requires non-empty values")
+    elif not has_value:
+        raise HTTPException(status_code=400, detail=f"Operator {operator} in {location} requires value")
+
+
+def _validate_conditions_schema(conditions: Any) -> None:
+    if not isinstance(conditions, dict):
+        raise HTTPException(status_code=400, detail="conditions must be an object")
+
+    has_all = "all" in conditions
+    has_any = "any" in conditions
+    if not has_all and not has_any:
+        raise HTTPException(status_code=400, detail="conditions must contain all or any")
+
+    if has_all:
+        all_items = conditions.get("all")
+        if not isinstance(all_items, list):
+            raise HTTPException(status_code=400, detail="conditions.all must be an array")
+        for idx, item in enumerate(all_items):
+            _validate_condition_item(item, location=f"conditions.all[{idx}]")
+
+    if has_any:
+        any_items = conditions.get("any")
+        if not isinstance(any_items, list):
+            raise HTTPException(status_code=400, detail="conditions.any must be an array")
+        for idx, item in enumerate(any_items):
+            _validate_condition_item(item, location=f"conditions.any[{idx}]")
+
+
+def _validate_outputs_schema(outputs: Any) -> None:
+    if not isinstance(outputs, dict):
+        raise HTTPException(status_code=400, detail="outputs must be an object")
+
+    has_recommendation_keys = isinstance(outputs.get("recommendation_keys"), list) and len(outputs.get("recommendation_keys")) > 0
+    has_recommendations = isinstance(outputs.get("recommendations"), list) and len(outputs.get("recommendations")) > 0
+    has_risk_summary = bool(str(outputs.get("risk") or "").strip()) or bool(str(outputs.get("summary") or "").strip())
+    if not (has_recommendation_keys or has_recommendations or has_risk_summary):
+        raise HTTPException(
+            status_code=400,
+            detail="outputs must include recommendation_keys or recommendations or risk/summary",
+        )
+
+    _ensure_text_without_forbidden(outputs.get("summary"), "outputs.summary")
+    recommendations = outputs.get("recommendations")
+    if isinstance(recommendations, list):
+        for idx, rec in enumerate(recommendations):
+            if not isinstance(rec, dict):
+                continue
+            _ensure_text_without_forbidden(rec.get("title"), f"outputs.recommendations[{idx}].title")
+            _ensure_text_without_forbidden(rec.get("body"), f"outputs.recommendations[{idx}].body")
+
+
+async def _supports_rule_copy_columns() -> bool:
+    client = supabase._get_supabase()
+    response = await supabase._run(
+        lambda: client.table("knowledge_rules")
+        .select("id,copied_from_rule_id,copied_from_version")
+        .limit(1)
+        .execute()
+    )
+    _ = response.data or []
+    return True
+
+
 def _contains_forbidden_wording(payload: Dict[str, Any]) -> bool:
     text_fragments: List[str] = []
+
+    name = payload.get("name")
+    if isinstance(name, str):
+        text_fragments.append(name)
+
+    description = payload.get("description")
+    if isinstance(description, str):
+        text_fragments.append(description)
 
     explanation = payload.get("explanation_template")
     if isinstance(explanation, str):
@@ -50,6 +168,9 @@ def _validate_common_payload(payload: Dict[str, Any]) -> None:
     source_url = str(payload.get("source_url") or "").strip()
     if not source or not source_url:
         raise HTTPException(status_code=400, detail="source and source_url are required")
+
+    _validate_conditions_schema(payload.get("conditions"))
+    _validate_outputs_schema(payload.get("outputs"))
 
 
 async def _load_rule(rule_id: str) -> Dict[str, Any]:
@@ -77,7 +198,7 @@ async def list_rules(
 ) -> List[Dict[str, Any]]:
     client = supabase._get_supabase()
     query = client.table("knowledge_rules").select(
-        "id,key,name,description,input_entities,confidence,severity,requires_doctor,source,source_url,version,active,governance_status,last_modified_by,medical_reviewed_by,medical_reviewed_at,change_note,created_at,updated_at"
+        "id,key,name,description,input_entities,confidence,severity,requires_doctor,source,source_url,version,copied_from_rule_id,copied_from_version,active,governance_status,last_modified_by,medical_reviewed_by,medical_reviewed_at,change_note,created_at,updated_at"
     )
 
     if governance_status:
@@ -104,6 +225,106 @@ async def list_rules(
 
 async def get_rule(rule_id: str) -> Dict[str, Any]:
     return await _load_rule(rule_id)
+
+
+async def create_draft_copy(rule_id: str, payload: Dict[str, Any], *, actor_user_id: str) -> Dict[str, Any]:
+    existing = await _load_rule(rule_id)
+    status = str(existing.get("governance_status") or "").lower()
+    if status not in {"active", "deprecated"}:
+        raise HTTPException(status_code=400, detail="Draft copy can be created only from active or deprecated rule")
+
+    change_note = str(payload.get("change_note") or "").strip()
+    if not change_note:
+        raise HTTPException(status_code=400, detail="change_note is required")
+
+    last_modified_by = str(payload.get("last_modified_by") or "").strip()
+    if not _is_uuid(last_modified_by):
+        raise HTTPException(status_code=400, detail="last_modified_by must be a valid UUID")
+
+    next_version = f"v{_parse_version(existing.get('version')) + 1}"
+    row: Dict[str, Any] = {
+        "key": str(existing.get("key") or "").strip(),
+        "name": str(existing.get("name") or "").strip(),
+        "description": existing.get("description"),
+        "input_entities": existing.get("input_entities") if isinstance(existing.get("input_entities"), list) else [],
+        "conditions": existing.get("conditions") if isinstance(existing.get("conditions"), dict) else {},
+        "outputs": existing.get("outputs") if isinstance(existing.get("outputs"), dict) else {},
+        "confidence": existing.get("confidence") if existing.get("confidence") is not None else 0.5,
+        "severity": existing.get("severity"),
+        "requires_doctor": bool(existing.get("requires_doctor", False)),
+        "explanation_template": str(existing.get("explanation_template") or "").strip(),
+        "source": str(existing.get("source") or "").strip(),
+        "source_url": str(existing.get("source_url") or "").strip(),
+        "governance_status": "draft",
+        "active": False,
+        "last_modified_by": last_modified_by,
+        "medical_reviewed_by": None,
+        "medical_reviewed_at": None,
+        "change_note": change_note,
+        "auto_update_allowed": bool(existing.get("auto_update_allowed", False)),
+        "version": next_version,
+    }
+
+    _validate_common_payload(row)
+
+    client = supabase._get_supabase()
+    supports_copy_columns = False
+    try:
+        supports_copy_columns = await _supports_rule_copy_columns()
+    except Exception:
+        supports_copy_columns = False
+
+    if supports_copy_columns:
+        row["copied_from_rule_id"] = rule_id
+        row["copied_from_version"] = existing.get("version")
+
+    response = await supabase._run(lambda: client.table("knowledge_rules").insert(row).execute())
+    rows = response.data or []
+    created = rows[0] if rows else row
+
+    await supabase.write_audit_log(
+        user_id=actor_user_id if _is_uuid(actor_user_id) else None,
+        action="create",
+        entity_type="knowledge_rule",
+        entity_id=str(created.get("id") or ""),
+        old_value={
+            "copied_from_rule_id": rule_id,
+            "copied_from_version": existing.get("version"),
+        },
+        new_value={
+            "governance_status": "draft",
+            "version": created.get("version"),
+            "change_note": change_note,
+        },
+    )
+
+    return created
+
+
+async def list_recommendations() -> List[Dict[str, Any]]:
+    client = supabase._get_supabase()
+    response = await supabase._run(
+        lambda: client.table("recommendations")
+        .select("id,key,title,category,priority,requires_doctor,evidence_level,source")
+        .order("key")
+        .execute()
+    )
+    return response.data or []
+
+
+async def get_recommendation(recommendation_id: str) -> Dict[str, Any]:
+    client = supabase._get_supabase()
+    response = await supabase._run(
+        lambda: client.table("recommendations")
+        .select("id,key,title,body,category,priority,requires_doctor,evidence_level,source,source_url,metadata")
+        .eq("id", recommendation_id)
+        .limit(1)
+        .execute()
+    )
+    rows = response.data or []
+    if not rows:
+        raise HTTPException(status_code=404, detail="Recommendation not found")
+    return rows[0]
 
 
 async def create_rule(payload: Dict[str, Any], *, actor_user_id: str) -> Dict[str, Any]:
