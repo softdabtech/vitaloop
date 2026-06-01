@@ -638,13 +638,56 @@ async def get_rule_audit(rule_id: str, *, limit: int = 200) -> List[Dict[str, An
     safe_limit = max(1, min(limit, 500))
 
     client = supabase._get_supabase()
-    response = await supabase._run(
-        lambda: client.table("audit_logs")
-        .select("id,user_id,action,entity_type,entity_id,old_value,new_value,timestamp")
-        .eq("entity_type", "knowledge_rule")
-        .eq("entity_id", rule_id)
-        .order("timestamp", desc=True)
-        .limit(safe_limit)
-        .execute()
-    )
-    return response.data or []
+    try:
+        response = await supabase._run(
+            lambda: client.table("audit_logs")
+            .select("id,user_id,action,entity_type,entity_id,old_value,new_value,timestamp")
+            .eq("entity_type", "knowledge_rule")
+            .eq("entity_id", rule_id)
+            .order("timestamp", desc=True)
+            .limit(safe_limit)
+            .execute()
+        )
+        return response.data or []
+    except Exception:
+        # Compatibility fallback for deployments where audit_logs stores payload
+        # in changes jsonb and uses created_at instead of timestamp.
+        legacy_response = await supabase._run(
+            lambda: client.table("audit_logs")
+            .select("id,user_id,action,entity_type,entity_id,changes,created_at")
+            .in_("entity_type", ["knowledge_rule", "client"])
+            .order("created_at", desc=True)
+            .limit(min(5000, safe_limit * 20))
+            .execute()
+        )
+        rows = legacy_response.data or []
+        normalized: List[Dict[str, Any]] = []
+        for row in rows:
+            changes = row.get("changes") if isinstance(row.get("changes"), dict) else {}
+            entity_type = str(row.get("entity_type") or "")
+            entity_id = str(row.get("entity_id") or "")
+            source_entity_type = str(changes.get("source_entity_type") or "")
+            source_entity_id = str(changes.get("source_entity_id") or "")
+
+            is_direct_match = entity_type == "knowledge_rule" and entity_id == rule_id
+            is_legacy_match = (
+                entity_type == "client"
+                and source_entity_type == "knowledge_rule"
+                and source_entity_id == rule_id
+            )
+            if not (is_direct_match or is_legacy_match):
+                continue
+
+            normalized.append(
+                {
+                    "id": row.get("id"),
+                    "user_id": row.get("user_id"),
+                    "action": row.get("action"),
+                    "entity_type": "knowledge_rule",
+                    "entity_id": rule_id,
+                    "old_value": changes.get("old_value") if isinstance(changes.get("old_value"), dict) else {},
+                    "new_value": changes.get("new_value") if isinstance(changes.get("new_value"), dict) else {},
+                    "timestamp": row.get("created_at"),
+                }
+            )
+        return normalized[:safe_limit]
