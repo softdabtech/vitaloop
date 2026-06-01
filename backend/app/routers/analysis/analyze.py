@@ -73,6 +73,13 @@ class AnalyzeResponse(BaseModel):
     knowledge_evaluation: Optional[dict] = None
 
 
+def _stable_analysis_source(default: str = "fallback") -> str:
+    source = get_analysis_source()
+    if source in {"llm", "fallback"}:
+        return source
+    return default
+
+
 @router.post("/pdf")
 @router.post("/upload")  # New universal endpoint
 async def analyze_lab_file(
@@ -203,6 +210,7 @@ async def analyze_lab_file(
             prompt_version = "openai_pdf_text_v1"
         else:
             prompt_version = "openai_v1"
+        analysis_source = "llm" if "openai" in prompt_version else _stable_analysis_source("fallback")
 
         upload = await save_lab_upload(
             user_id=user_id,
@@ -250,6 +258,7 @@ async def analyze_lab_file(
             "summary": analysis.get("summary", {}),
             "analysis_time": analysis.get("analysis_time", 0),
             "analysis_method": analysis.get("analysis_method", "openai_pdf"),
+            "analysis_source": analysis_source,
             "knowledge_evaluation": knowledge_evaluation,
         }
     except HTTPException:
@@ -442,7 +451,12 @@ async def analyze_lab(
                     metadata={"upload_id": upload_id, "biomarker_count": len(saved_biomarkers), "analysis_method": "legacy_pdf"},
                 )
 
-                return {"upload_id": upload_id, "biomarkers": saved_biomarkers, "knowledge_evaluation": knowledge_evaluation}
+                return {
+                    "upload_id": upload_id,
+                    "biomarkers": saved_biomarkers,
+                    "analysis_source": _stable_analysis_source("fallback"),
+                    "knowledge_evaluation": knowledge_evaluation,
+                }
             finally:
                 try:
                     await file.close()
@@ -599,6 +613,7 @@ async def analyze_lab(
                 status_code=422,
                 detail={"detail": "Could not extract biomarkers from the provided text", "code": "BIOMARKERS_NOT_EXTRACTED"},
             )
+        analysis_source = _stable_analysis_source("llm" if is_llm_configured() else "fallback")
 
         # Persist biomarkers
         try:
@@ -636,7 +651,7 @@ async def analyze_lab(
         result = {
             "upload_id": upload_id,
             "biomarkers": saved,
-            "analysis_source": get_analysis_source(),  # 'llm' | 'fallback' | 'unknown'
+            "analysis_source": analysis_source,
             "knowledge_evaluation": await evaluate_biomarkers_with_knowledge(
                 biomarkers=saved,
                 symptoms=normalized_symptoms,
