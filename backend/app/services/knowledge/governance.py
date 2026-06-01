@@ -638,20 +638,8 @@ async def get_rule_audit(rule_id: str, *, limit: int = 200) -> List[Dict[str, An
     safe_limit = max(1, min(limit, 500))
 
     client = supabase._get_supabase()
-    try:
-        response = await supabase._run(
-            lambda: client.table("audit_logs")
-            .select("id,user_id,action,entity_type,entity_id,old_value,new_value,timestamp")
-            .eq("entity_type", "knowledge_rule")
-            .eq("entity_id", rule_id)
-            .order("timestamp", desc=True)
-            .limit(safe_limit)
-            .execute()
-        )
-        return response.data or []
-    except Exception:
-        # Compatibility fallback for deployments where audit_logs stores payload
-        # in changes jsonb and uses created_at instead of timestamp.
+
+    async def _load_legacy_audit_rows() -> List[Dict[str, Any]]:
         legacy_response = await supabase._run(
             lambda: client.table("audit_logs")
             .select("id,user_id,action,entity_type,entity_id,changes,created_at")
@@ -691,3 +679,24 @@ async def get_rule_audit(rule_id: str, *, limit: int = 200) -> List[Dict[str, An
                 }
             )
         return normalized[:safe_limit]
+
+    try:
+        response = await supabase._run(
+            lambda: client.table("audit_logs")
+            .select("id,user_id,action,entity_type,entity_id,old_value,new_value,timestamp")
+            .eq("entity_type", "knowledge_rule")
+            .eq("entity_id", rule_id)
+            .order("timestamp", desc=True)
+            .limit(safe_limit)
+            .execute()
+        )
+        rows = response.data or []
+        if rows:
+            return rows
+    except Exception:
+        pass
+
+    # Compatibility fallback for deployments where audit_logs stores payload
+    # in changes jsonb and/or knowledge events were written through legacy CRM
+    # constraints as entity_type=client.
+    return await _load_legacy_audit_rows()
