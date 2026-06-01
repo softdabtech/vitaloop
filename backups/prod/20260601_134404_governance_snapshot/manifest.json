@@ -1,0 +1,30 @@
+{
+  "knowledge_rules": {
+    "status": "ok",
+    "rows": 5
+  },
+  "knowledge_rule_reviews": {
+    "status": "error",
+    "error": {
+      "status": 404,
+      "body": "{\"code\":\"PGRST205\",\"details\":null,\"hint\":\"Perhaps you meant the table 'public.knowledge_rules'\",\"message\":\"Could not find the table 'public.knowledge_rule_reviews' in the schema cache\"}",
+      "order_col": "created_at"
+    }
+  },
+  "knowledge_recommendations": {
+    "status": "error",
+    "error": {
+      "status": 404,
+      "body": "{\"code\":\"PGRST205\",\"details\":null,\"hint\":\"Perhaps you meant the table 'public.knowledge_documents'\",\"message\":\"Could not find the table 'public.knowledge_recommendations' in the schema cache\"}",
+      "order_col": "created_at"
+    }
+  },
+  "lab_markers": {
+    "status": "ok",
+    "rows": 10
+  },
+  "audit_logs": {
+    "status": "ok",
+    "rows": 1000
+  }
+}
