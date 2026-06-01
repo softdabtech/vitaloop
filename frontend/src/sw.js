@@ -45,8 +45,8 @@ self.addEventListener('message', (event) => {
 
   const title = data.title || 'Vitaloop reminder'
   const options = {
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    icon: '/icons/icon-192.png?v=20260601-brand',
+    badge: '/icons/icon-192.png?v=20260601-brand',
     ...data.options,
   }
 
@@ -66,8 +66,8 @@ self.addEventListener('push', (event) => {
   const title = payload.title || 'Vitaloop reminder'
   const options = {
     body: payload.body || 'Open Vitaloop to continue your health progress.',
-    icon: payload.icon || '/icons/icon-192.png',
-    badge: payload.badge || '/icons/icon-192.png',
+    icon: payload.icon || '/icons/icon-192.png?v=20260601-brand',
+    badge: payload.badge || '/icons/icon-192.png?v=20260601-brand',
     tag: payload.tag || 'vitaloop-reminder',
     data: {
       url: payload.url || '/dashboard',
