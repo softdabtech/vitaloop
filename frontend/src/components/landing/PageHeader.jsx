@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.js'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
+import BrandMark from './BrandMark.jsx'
 
 const NAV_LINKS = [
   { id: 'why-vitaloop', label: 'Features', route: '/#why-vitaloop' },
@@ -37,10 +38,7 @@ export function PageHeader() {
           onClick={() => navigate('/')}
           className="flex items-center gap-2 transition hover:opacity-80"
         >
-          <span className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl">
-            <img src="/images/favicon_1.png" alt="VITALOOP" className="h-8 w-8 object-contain" />
-          </span>
-          <span className="text-base font-semibold tracking-tight">VITALOOP</span>
+          <BrandMark />
         </button>
 
         <nav className="hidden items-center gap-7 md:flex">

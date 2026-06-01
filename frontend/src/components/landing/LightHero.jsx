@@ -37,7 +37,7 @@ export function LightHero() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <button
-                onClick={() => navigate('/upload')}
+                onClick={() => navigate('/login?signup=true')}
                 className="group px-8 py-4 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
               >
                 Start with symptoms
@@ -48,7 +48,7 @@ export function LightHero() {
                 onClick={() => navigate('/for-nutritionists')}
                 className="px-8 py-4 border-2 border-teal-500 text-teal-600 hover:bg-teal-50 rounded-lg font-semibold transition-all"
               >
-                Upload lab results
+                For labs & practitioners
               </button>
             </div>
 
