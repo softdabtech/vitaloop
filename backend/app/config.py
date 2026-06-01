@@ -81,6 +81,8 @@ class Settings(BaseSettings):
     webpush_dispatch_secret: str = ""
     emergency_fixes_enabled: bool = False
     analysis_service_url: str = "http://127.0.0.1:8006"
+    knowledge_context_enabled: bool = True
+    knowledge_evaluation_after_analyze_enabled: bool = True
 
     @property
     def origins_list(self) -> List[str]:
