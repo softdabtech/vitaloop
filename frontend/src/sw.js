@@ -1,4 +1,4 @@
-/* eslint-disable no-restricted-globals */
+
 import { clientsClaim } from 'workbox-core'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from 'workbox-precaching'

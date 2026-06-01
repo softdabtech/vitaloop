@@ -127,12 +127,12 @@ export default function Insights() {
 
                 return (
                   <div key={item.label}>
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{item.label}</div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/60">
-                    <div className="h-full rounded-full" style={{ width: `${safeValue}%`, background: scoreColor }} />
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{item.label}</div>
+                    <div className="h-2 overflow-hidden rounded-full bg-white/60">
+                      <div className="h-full rounded-full" style={{ width: `${safeValue}%`, background: scoreColor }} />
+                    </div>
+                    <div className="mt-2 text-sm font-semibold" style={{ color: scoreColor }}>{safeValue}</div>
                   </div>
-                  <div className="mt-2 text-sm font-semibold" style={{ color: scoreColor }}>{safeValue}</div>
-                </div>
                 )
               })}
             </div>

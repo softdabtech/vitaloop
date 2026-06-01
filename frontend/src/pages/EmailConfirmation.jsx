@@ -221,204 +221,204 @@ export default function EmailConfirmation() {
           backgroundColor: '#f5f5f5',
         }}
       >
-      <div
-        style={{
-          padding: '40px',
-          borderRadius: '12px',
-          backgroundColor: 'white',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          textAlign: 'center',
-          maxWidth: '400px',
-          width: '100%',
-        }}
-      >
-        {status === 'pending' && (
-          <>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📧</div>
-            <h1 style={{ fontSize: '22px', marginBottom: '8px' }}>Confirm Your Email To Start Your Health Plan</h1>
-            <p style={{ color: '#666', marginBottom: '16px' }}>
+        <div
+          style={{
+            padding: '40px',
+            borderRadius: '12px',
+            backgroundColor: 'white',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            textAlign: 'center',
+            maxWidth: '400px',
+            width: '100%',
+          }}
+        >
+          {status === 'pending' && (
+            <>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📧</div>
+              <h1 style={{ fontSize: '22px', marginBottom: '8px' }}>Confirm Your Email To Start Your Health Plan</h1>
+              <p style={{ color: '#666', marginBottom: '16px' }}>
               We sent a confirmation link. After you confirm, VITALOOP will help you describe your main concern, choose useful labs to consider, and start your first health loop.
-            </p>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={resendEmail}
-              onChange={(e) => setResendEmail(e.target.value)}
-              style={{
-                width: '100%',
-                marginBottom: '12px',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                fontSize: '16px',
-                boxSizing: 'border-box',
-              }}
-            />
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={handleResend}
+              </p>
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={resendEmail}
+                onChange={(e) => setResendEmail(e.target.value)}
                 style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  backgroundColor: '#007AFF',
-                  color: 'white',
-                  border: 'none',
+                  width: '100%',
+                  marginBottom: '12px',
+                  padding: '10px 12px',
+                  border: '1px solid #ddd',
                   borderRadius: '8px',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
+                  fontSize: '16px',
+                  boxSizing: 'border-box',
                 }}
-              >
+              />
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={handleResend}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    backgroundColor: '#007AFF',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                  }}
+                >
                 Resend Email
-              </button>
-              <button
-                onClick={() => navigate('/login')}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  backgroundColor: '#f0f0f0',
-                  color: '#333',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                }}
-              >
+                </button>
+                <button
+                  onClick={() => navigate('/login')}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    backgroundColor: '#f0f0f0',
+                    color: '#333',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                  }}
+                >
                 Back to Login
-              </button>
-            </div>
-          </>
-        )}
+                </button>
+              </div>
+            </>
+          )}
 
-        {status === 'checking' && (
-          <>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
-            <h1 style={{ fontSize: '20px', marginBottom: '8px' }}>Verifying Email</h1>
-            <p style={{ color: '#666', marginBottom: '24px' }}>
+          {status === 'checking' && (
+            <>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
+              <h1 style={{ fontSize: '20px', marginBottom: '8px' }}>Verifying Email</h1>
+              <p style={{ color: '#666', marginBottom: '24px' }}>
               Please wait while we confirm your email address...
-            </p>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                border: '4px solid #e0e0e0',
-                borderTop: '4px solid #007AFF',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite',
-                margin: '0 auto',
-              }}
-            />
-            <style>{`
+              </p>
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  border: '4px solid #e0e0e0',
+                  borderTop: '4px solid #007AFF',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                  margin: '0 auto',
+                }}
+              />
+              <style>{`
               @keyframes spin {
                 to { transform: rotate(360deg); }
               }
             `}</style>
-          </>
-        )}
+            </>
+          )}
 
-        {status === 'success' && (
-          <>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
-            <h1 style={{ fontSize: '24px', marginBottom: '8px', color: '#34C759' }}>
+          {status === 'success' && (
+            <>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+              <h1 style={{ fontSize: '24px', marginBottom: '8px', color: '#34C759' }}>
               Email Confirmed!
-            </h1>
-            <p style={{ color: '#666', marginBottom: '24px' }}>
-              {redirecting
-                ? 'Redirecting to dashboard...'
-                : 'Your email is verified. You can continue to your account.'}
-            </p>
-            {!redirecting && (
-              <button
-                onClick={async () => {
-                  try {
-                    const destination = await resolvePostLoginDestination()
-                    navigateToResolvedPath(navigate, destination)
-                  } catch {
-                    navigate('/dashboard')
-                  }
-                }}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: '#007AFF',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                }}
-              >
+              </h1>
+              <p style={{ color: '#666', marginBottom: '24px' }}>
+                {redirecting
+                  ? 'Redirecting to dashboard...'
+                  : 'Your email is verified. You can continue to your account.'}
+              </p>
+              {!redirecting && (
+                <button
+                  onClick={async () => {
+                    try {
+                      const destination = await resolvePostLoginDestination()
+                      navigateToResolvedPath(navigate, destination)
+                    } catch {
+                      navigate('/dashboard')
+                    }
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#007AFF',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                  }}
+                >
                 Go to Dashboard
-              </button>
-            )}
-          </>
-        )}
+                </button>
+              )}
+            </>
+          )}
 
-        {status === 'error' && (
-          <>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>❌</div>
-            <h1 style={{ fontSize: '20px', marginBottom: '8px', color: '#FF3B30' }}>
+          {status === 'error' && (
+            <>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>❌</div>
+              <h1 style={{ fontSize: '20px', marginBottom: '8px', color: '#FF3B30' }}>
               Confirmation Failed
-            </h1>
-            <p style={{ color: '#666', marginBottom: '16px' }}>{errorMsg}</p>
-            <p style={{ color: '#999', fontSize: '14px', marginBottom: '24px' }}>
+              </h1>
+              <p style={{ color: '#666', marginBottom: '16px' }}>{errorMsg}</p>
+              <p style={{ color: '#999', fontSize: '14px', marginBottom: '24px' }}>
               The confirmation link may have expired. You can request a new one below.
-            </p>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={resendEmail}
-              onChange={(e) => setResendEmail(e.target.value)}
-              style={{
-                width: '100%',
-                marginBottom: '12px',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                fontSize: '16px',
-                boxSizing: 'border-box',
-              }}
-            />
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={handleResend}
+              </p>
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={resendEmail}
+                onChange={(e) => setResendEmail(e.target.value)}
                 style={{
-                  flex: 1,
-                  padding: '12px 24px',
-                  backgroundColor: '#007AFF',
-                  color: 'white',
-                  border: 'none',
+                  width: '100%',
+                  marginBottom: '12px',
+                  padding: '10px 12px',
+                  border: '1px solid #ddd',
                   borderRadius: '8px',
                   fontSize: '16px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
+                  boxSizing: 'border-box',
                 }}
-              >
+              />
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={handleResend}
+                  style={{
+                    flex: 1,
+                    padding: '12px 24px',
+                    backgroundColor: '#007AFF',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                  }}
+                >
                 Resend Email
-              </button>
-              <button
-                onClick={() => navigate('/login')}
-                style={{
-                  flex: 1,
-                  padding: '12px 24px',
-                  backgroundColor: '#f0f0f0',
-                  color: '#333',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                }}
-              >
+                </button>
+                <button
+                  onClick={() => navigate('/login')}
+                  style={{
+                    flex: 1,
+                    padding: '12px 24px',
+                    backgroundColor: '#f0f0f0',
+                    color: '#333',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                  }}
+                >
                 Back to Login
-              </button>
-            </div>
-          </>
-        )}
+                </button>
+              </div>
+            </>
+          )}
 
-        {/* expired state is folded into generic error flow */}
-      </div>
+          {/* expired state is folded into generic error flow */}
+        </div>
       </div>
     </>
   )
