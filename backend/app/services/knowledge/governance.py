@@ -270,6 +270,7 @@ async def submit_rule_review(rule_id: str, payload: Dict[str, Any], *, actor_use
             {
                 "governance_status": "reviewed",
                 "active": False,
+                "medical_reviewed_at": _utc_now_iso(),
                 "last_modified_by": last_modified_by,
                 "change_note": change_note,
                 "updated_at": _utc_now_iso(),
