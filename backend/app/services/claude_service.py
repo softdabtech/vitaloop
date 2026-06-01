@@ -12,6 +12,7 @@ import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.config import settings
+from app.services.knowledge.integration import build_biomarker_extraction_knowledge_context
 
 _client: httpx.AsyncClient | None = None
 
@@ -504,6 +505,9 @@ async def extract_biomarkers(
     started = time.perf_counter()
     symptoms_str = ", ".join(symptoms) if symptoms else "none reported"
     prompt = EXTRACT_PROMPT.replace("{lab_text}", text).replace("{symptoms}", symptoms_str)
+    knowledge_context = await build_biomarker_extraction_knowledge_context()
+    if knowledge_context:
+        prompt = f"{prompt}{knowledge_context}"
     try:
         raw = _strip_code_block(
             await _chat_completion(

@@ -40,6 +40,7 @@ from app.models.biomarker import (
 )
 from app.services.biomarker_service import BiomarkerService
 from app.services.biomarker_reference import get_all_biomarkers
+from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
@@ -68,6 +69,7 @@ class AnalyzeRequest(BaseModel):
 class AnalyzeResponse(BaseModel):
     upload_id: str
     biomarkers: List[dict]
+    knowledge_evaluation: Optional[dict] = None
 
 
 @router.post("/pdf")
@@ -210,6 +212,12 @@ async def analyze_lab_file(
         upload_id = upload["id"]
 
         saved_biomarkers = await save_biomarkers(upload_id=upload_id, user_id=user_id, biomarkers=biomarkers)
+        knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
+            biomarkers=saved_biomarkers,
+            symptoms=symptoms,
+            user_id=user_id,
+            upload_id=str(upload_id),
+        )
 
         protocol = analysis.get("protocol", [])
         if protocol:
@@ -241,6 +249,7 @@ async def analyze_lab_file(
             "summary": analysis.get("summary", {}),
             "analysis_time": analysis.get("analysis_time", 0),
             "analysis_method": analysis.get("analysis_method", "openai_pdf"),
+            "knowledge_evaluation": knowledge_evaluation,
         }
     except HTTPException:
         if upload_id:
@@ -419,6 +428,12 @@ async def analyze_lab(
                 upload_id = upload["id"]
 
                 saved_biomarkers = await save_biomarkers(upload_id=upload_id, user_id=user_id, biomarkers=biomarkers)
+                knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
+                    biomarkers=saved_biomarkers,
+                    symptoms=symptoms_form,
+                    user_id=user_id,
+                    upload_id=str(upload_id),
+                )
                 await save_timeline_event(
                     user_id=user_id,
                     event_type="lab_analyzed",
@@ -426,7 +441,7 @@ async def analyze_lab(
                     metadata={"upload_id": upload_id, "biomarker_count": len(saved_biomarkers), "analysis_method": "legacy_pdf"},
                 )
 
-                return {"upload_id": upload_id, "biomarkers": saved_biomarkers}
+                return {"upload_id": upload_id, "biomarkers": saved_biomarkers, "knowledge_evaluation": knowledge_evaluation}
             finally:
                 try:
                     await file.close()
@@ -621,6 +636,12 @@ async def analyze_lab(
             "upload_id": upload_id,
             "biomarkers": saved,
             "analysis_source": get_analysis_source(),  # 'llm' | 'fallback' | 'unknown'
+            "knowledge_evaluation": await evaluate_biomarkers_with_knowledge(
+                biomarkers=saved,
+                symptoms=normalized_symptoms,
+                user_id=user_id,
+                upload_id=str(upload_id),
+            ),
         }
         if normalized_key:
             await _complete_idempotency(user_id=user_id, idempotency_key=normalized_key, response=result)
