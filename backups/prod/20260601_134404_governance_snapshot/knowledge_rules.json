@@ -1,0 +1,223 @@
+[
+  {
+    "id": "6acd8341-f519-4443-b8a0-58007bf09a3c",
+    "key": "rule_low_ferritin_fatigue",
+    "name": "Low ferritin with fatigue",
+    "description": "Low ferritin with fatigue may indicate possible iron deficiency risk.",
+    "input_entities": [
+      "ferritin",
+      "fatigue"
+    ],
+    "conditions": {
+      "all": [
+        {
+          "unit": "ng/mL",
+          "value": 30,
+          "operator": "lt",
+          "lab_marker": "ferritin"
+        },
+        {
+          "symptom": "fatigue"
+        }
+      ]
+    },
+    "outputs": {
+      "risk": "possible_iron_deficiency_risk",
+      "summary": "Low ferritin with fatigue may indicate possible iron deficiency risk.",
+      "recommendation_keys": [
+        "iron_followup_discussion"
+      ]
+    },
+    "confidence": 0.72,
+    "severity": "moderate",
+    "requires_doctor": false,
+    "explanation_template": "Ferritin value ({{ferritin_value}} {{ferritin_unit}}) with symptom fatigue may indicate possible iron deficiency risk. Consider discussing with a clinician.",
+    "source": "clinical_guideline_placeholder",
+    "source_url": "https://example.org/iron-guideline",
+    "governance_status": "active",
+    "last_modified_by": null,
+    "medical_reviewed_by": null,
+    "medical_reviewed_at": "2026-06-01T08:34:48.366371+00:00",
+    "change_note": "stage_18_seed",
+    "auto_update_allowed": false,
+    "version": "v1",
+    "active": true,
+    "created_at": "2026-06-01T08:34:48.366371+00:00",
+    "updated_at": "2026-06-01T08:34:48.366371+00:00"
+  },
+  {
+    "id": "a3704593-f63b-43c1-8163-063bf7bddd4c",
+    "key": "rule_low_vitamin_d",
+    "name": "Low vitamin D",
+    "description": "Lower vitamin D may indicate possible insufficiency.",
+    "input_entities": [
+      "vitamin_d"
+    ],
+    "conditions": {
+      "all": [
+        {
+          "unit": "ng/mL",
+          "value": 30,
+          "operator": "lt",
+          "lab_marker": "vitamin_d"
+        }
+      ]
+    },
+    "outputs": {
+      "risk": "possible_vitamin_d_insufficiency",
+      "summary": "Vitamin D level may indicate possible insufficiency.",
+      "recommendation_keys": [
+        "vitamin_d_lifestyle_and_followup"
+      ]
+    },
+    "confidence": 0.68,
+    "severity": "moderate",
+    "requires_doctor": false,
+    "explanation_template": "Vitamin D value ({{vitamin_d_value}} {{vitamin_d_unit}}) may indicate possible insufficiency. Consider discussing with a clinician.",
+    "source": "clinical_guideline_placeholder",
+    "source_url": "https://example.org/vitamin-d-guideline",
+    "governance_status": "active",
+    "last_modified_by": null,
+    "medical_reviewed_by": null,
+    "medical_reviewed_at": "2026-06-01T08:34:48.366371+00:00",
+    "change_note": "stage_18_seed",
+    "auto_update_allowed": false,
+    "version": "v1",
+    "active": true,
+    "created_at": "2026-06-01T08:34:48.366371+00:00",
+    "updated_at": "2026-06-01T08:34:48.366371+00:00"
+  },
+  {
+    "id": "c9311df6-435d-4a14-8f7d-0b26c956ee0c",
+    "key": "rule_high_alt_or_ast",
+    "name": "High ALT or AST",
+    "description": "Elevated ALT or AST may indicate liver enzyme elevation. Significant elevations require medical review.",
+    "input_entities": [
+      "alt",
+      "ast"
+    ],
+    "conditions": {
+      "any": [
+        {
+          "unit": "U/L",
+          "value": 55,
+          "operator": "gt",
+          "lab_marker": "alt"
+        },
+        {
+          "unit": "U/L",
+          "value": 48,
+          "operator": "gt",
+          "lab_marker": "ast"
+        }
+      ]
+    },
+    "outputs": {
+      "risk": "possible_liver_enzyme_elevation",
+      "summary": "ALT/AST may indicate liver enzyme elevation and may require medical review.",
+      "recommendation_keys": [
+        "liver_enzyme_medical_review"
+      ]
+    },
+    "confidence": 0.8,
+    "severity": "high",
+    "requires_doctor": true,
+    "explanation_template": "ALT/AST values (ALT={{alt_value}} {{alt_unit}}, AST={{ast_value}} {{ast_unit}}) may indicate liver enzyme elevation and may require medical review.",
+    "source": "clinical_guideline_placeholder",
+    "source_url": "https://example.org/liver-guideline",
+    "governance_status": "active",
+    "last_modified_by": null,
+    "medical_reviewed_by": null,
+    "medical_reviewed_at": "2026-06-01T08:34:48.366371+00:00",
+    "change_note": "stage_18_seed",
+    "auto_update_allowed": false,
+    "version": "v1",
+    "active": true,
+    "created_at": "2026-06-01T08:34:48.366371+00:00",
+    "updated_at": "2026-06-01T08:34:48.366371+00:00"
+  },
+  {
+    "id": "d05d06db-e603-4810-8d50-b6e329a610ad",
+    "key": "rule_high_ldl",
+    "name": "High LDL",
+    "description": "Elevated LDL may indicate increased cardiovascular risk and should be reviewed in clinical context.",
+    "input_entities": [
+      "ldl"
+    ],
+    "conditions": {
+      "all": [
+        {
+          "unit": "mg/dL",
+          "value": 130,
+          "operator": "gte",
+          "lab_marker": "ldl"
+        }
+      ]
+    },
+    "outputs": {
+      "risk": "possible_cardiovascular_risk",
+      "summary": "LDL may indicate elevated cardiovascular risk; consider clinician discussion.",
+      "recommendation_keys": [
+        "ldl_risk_reduction_plan"
+      ]
+    },
+    "confidence": 0.74,
+    "severity": "moderate",
+    "requires_doctor": true,
+    "explanation_template": "LDL value ({{ldl_value}} {{ldl_unit}}) may indicate elevated cardiovascular risk. Consider discussing with a clinician.",
+    "source": "clinical_guideline_placeholder",
+    "source_url": "https://example.org/lipid-guideline",
+    "governance_status": "active",
+    "last_modified_by": null,
+    "medical_reviewed_by": null,
+    "medical_reviewed_at": "2026-06-01T08:34:48.366371+00:00",
+    "change_note": "stage_18_seed",
+    "auto_update_allowed": false,
+    "version": "v1",
+    "active": true,
+    "created_at": "2026-06-01T08:34:48.366371+00:00",
+    "updated_at": "2026-06-01T08:34:48.366371+00:00"
+  },
+  {
+    "id": "d2f6211f-dd07-4a11-a5bc-7854bcc92266",
+    "key": "rule_high_hba1c",
+    "name": "High HbA1c",
+    "description": "Elevated HbA1c may indicate elevated diabetes risk and requires medical review.",
+    "input_entities": [
+      "hba1c"
+    ],
+    "conditions": {
+      "all": [
+        {
+          "unit": "%",
+          "value": 5.7,
+          "operator": "gte",
+          "lab_marker": "hba1c"
+        }
+      ]
+    },
+    "outputs": {
+      "risk": "possible_elevated_diabetes_risk",
+      "summary": "HbA1c may indicate elevated diabetes risk and requires medical review.",
+      "recommendation_keys": [
+        "hba1c_medical_review"
+      ]
+    },
+    "confidence": 0.82,
+    "severity": "high",
+    "requires_doctor": true,
+    "explanation_template": "HbA1c value ({{hba1c_value}} {{hba1c_unit}}) may indicate elevated diabetes risk and requires medical review.",
+    "source": "clinical_guideline_placeholder",
+    "source_url": "https://example.org/hba1c-guideline",
+    "governance_status": "active",
+    "last_modified_by": null,
+    "medical_reviewed_by": null,
+    "medical_reviewed_at": "2026-06-01T08:34:48.366371+00:00",
+    "change_note": "stage_18_seed",
+    "auto_update_allowed": false,
+    "version": "v1",
+    "active": true,
+    "created_at": "2026-06-01T08:34:48.366371+00:00",
+    "updated_at": "2026-06-01T08:34:48.366371+00:00"
+  }
+]
