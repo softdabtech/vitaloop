@@ -31,6 +31,7 @@ import { InteractivePricing } from '../components/landing/InteractivePricing.jsx
 import { AnimatedFAQ } from '../components/landing/AnimatedFAQ.jsx'
 import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx'
 import Footer from '../components/landing/Footer.jsx'
+import BrandMark from '../components/landing/BrandMark.jsx'
 
 const NAV_LINKS = [
   { id: 'why-vitaloop', label: 'How it helps' },
@@ -702,10 +703,7 @@ export default function Landing() {
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/85 backdrop-blur">
         <div className="mx-auto flex h-[72px] w-full max-w-[1240px] items-center justify-between px-4 sm:px-6">
           <button onClick={() => scrollToTop()} className="flex items-center gap-2">
-            <span className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl">
-              <img src="/images/favicon_1.png" alt="VITALOOP" className="h-8 w-8 object-contain" />
-            </span>
-            <span className="text-base font-semibold tracking-tight">VITALOOP</span>
+            <BrandMark />
           </button>
 
           <nav className="hidden items-center gap-7 md:flex">

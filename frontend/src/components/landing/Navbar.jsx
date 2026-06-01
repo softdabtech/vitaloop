@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { EASE } from '../../lib/motion.js'
 import { useAuth } from '../../hooks/useAuth.js'
+import BrandMark from './BrandMark.jsx'
 
 const NAV_LINKS = [
   { label: 'Features', href: '#why-vitaloop' },
@@ -108,10 +109,7 @@ export default function Navbar() {
             background: 'none', border: 'none', cursor: 'pointer', padding: 0,
           }}
         >
-          <LogoIcon />
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--teal-800)', letterSpacing: '-0.01em' }}>
-            VITALOOP
-          </span>
+          <BrandMark />
         </button>
 
         {/* Desktop nav */}
