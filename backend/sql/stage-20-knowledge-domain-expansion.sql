@@ -2,10 +2,22 @@
 -- Adds deeper educational rules/recommendations for iron/ferritin, glucose/HbA1c,
 -- lipids, vitamin D, liver enzymes, and thyroid patterns.
 -- Non-destructive. Does not enable pgvector/RAG.
+--
+-- Production compatibility note:
+-- This migration intentionally avoids ON CONFLICT because some production tables
+-- may not have the same unique constraints as the original Stage 18 SQL.
 
 begin;
 
-insert into public.lab_markers (key, display_name, common_units, description, category)
+create temp table _stage20_lab_markers (
+  key text,
+  display_name text,
+  common_units jsonb,
+  description text,
+  category text
+) on commit drop;
+
+insert into _stage20_lab_markers (key, display_name, common_units, description, category)
 values
   ('iron', 'Serum Iron', '["ug/dL", "umol/L"]'::jsonb, 'Serum iron concentration.', 'hematology'),
   ('transferrin_saturation', 'Transferrin Saturation', '["%"]'::jsonb, 'Percentage of transferrin saturated with iron.', 'hematology'),
@@ -15,67 +27,70 @@ values
   ('free_t3', 'Free T3', '["pg/mL", "pmol/L"]'::jsonb, 'Free triiodothyronine marker.', 'endocrine'),
   ('ggt', 'GGT', '["U/L"]'::jsonb, 'Gamma-glutamyl transferase.', 'liver'),
   ('crp', 'C-Reactive Protein', '["mg/L"]'::jsonb, 'Inflammation marker.', 'inflammation'),
-  ('insulin', 'Fasting Insulin', '["uIU/mL", "pmol/L"]'::jsonb, 'Fasting insulin concentration.', 'metabolic')
-on conflict (key) do update
-set
-  display_name = excluded.display_name,
-  common_units = excluded.common_units,
-  description = excluded.description,
-  category = excluded.category;
+  ('insulin', 'Fasting Insulin', '["uIU/mL", "pmol/L"]'::jsonb, 'Fasting insulin concentration.', 'metabolic');
 
-insert into public.knowledge_entities (type, key, name, description)
-select 'lab_marker', lm.key, lm.display_name, lm.description
-from public.lab_markers lm
-where lm.key in (
-  'iron',
-  'transferrin_saturation',
-  'total_cholesterol',
-  'apob',
-  'free_t4',
-  'free_t3',
-  'ggt',
-  'crp',
-  'insulin'
-)
-on conflict (key) do update
+update public.lab_markers lm
 set
-  type = excluded.type,
-  name = excluded.name,
-  description = excluded.description;
+  display_name = src.display_name,
+  common_units = src.common_units,
+  description = src.description,
+  category = src.category
+from _stage20_lab_markers src
+where lm.key = src.key;
 
-insert into public.conditions (key, name, description, category, medical_disclaimer)
+insert into public.lab_markers (key, display_name, common_units, description, category)
+select src.key, src.display_name, src.common_units, src.description, src.category
+from _stage20_lab_markers src
+where not exists (
+  select 1 from public.lab_markers lm where lm.key = src.key
+);
+
+create temp table _stage20_conditions (
+  key text,
+  name text,
+  description text,
+  category text,
+  medical_disclaimer text
+) on commit drop;
+
+insert into _stage20_conditions (key, name, description, category, medical_disclaimer)
 values
   ('possible_low_iron_store_pattern', 'Possible Low Iron Store Pattern', 'Low ferritin may indicate reduced iron stores, especially when symptoms are present.', 'hematology', 'This is not a diagnosis. Review in clinical context.'),
   ('possible_glucose_regulation_pattern', 'Possible Glucose Regulation Pattern', 'Elevated glucose or HbA1c may indicate altered glucose regulation.', 'metabolic', 'This is not a diagnosis. Elevated values require clinician review.'),
   ('possible_atherogenic_lipid_pattern', 'Possible Atherogenic Lipid Pattern', 'Elevated LDL, triglycerides, ApoB, or low HDL may indicate increased cardiometabolic risk.', 'cardiometabolic', 'This is not a diagnosis. Review cardiovascular risk with a clinician.'),
   ('possible_severe_vitamin_d_insufficiency', 'Possible Severe Vitamin D Insufficiency', 'Very low vitamin D may require more urgent review and follow-up testing.', 'micronutrient', 'This is not a diagnosis. Review with a clinician.'),
   ('possible_liver_stress_pattern', 'Possible Liver Stress Pattern', 'Elevated liver enzymes may reflect liver or biliary stress and need context.', 'liver', 'This is not a diagnosis. Significant or persistent elevations require clinician review.'),
-  ('possible_thyroid_axis_pattern', 'Possible Thyroid Axis Pattern', 'TSH and thyroid hormone changes may indicate thyroid-axis imbalance.', 'endocrine', 'This is not a diagnosis. Thyroid findings require clinician review.')
-on conflict (key) do update
-set
-  name = excluded.name,
-  description = excluded.description,
-  category = excluded.category,
-  medical_disclaimer = excluded.medical_disclaimer;
+  ('possible_thyroid_axis_pattern', 'Possible Thyroid Axis Pattern', 'TSH and thyroid hormone changes may indicate thyroid-axis imbalance.', 'endocrine', 'This is not a diagnosis. Thyroid findings require clinician review.');
 
-insert into public.knowledge_entities (type, key, name, description)
-select 'condition', c.key, c.name, c.description
-from public.conditions c
-where c.key in (
-  'possible_low_iron_store_pattern',
-  'possible_glucose_regulation_pattern',
-  'possible_atherogenic_lipid_pattern',
-  'possible_severe_vitamin_d_insufficiency',
-  'possible_liver_stress_pattern',
-  'possible_thyroid_axis_pattern'
-)
-on conflict (key) do update
+update public.conditions c
 set
-  type = excluded.type,
-  name = excluded.name,
-  description = excluded.description;
+  name = src.name,
+  description = src.description,
+  category = src.category,
+  medical_disclaimer = src.medical_disclaimer
+from _stage20_conditions src
+where c.key = src.key;
 
-insert into public.recommendations (
+insert into public.conditions (key, name, description, category, medical_disclaimer)
+select src.key, src.name, src.description, src.category, src.medical_disclaimer
+from _stage20_conditions src
+where not exists (
+  select 1 from public.conditions c where c.key = src.key
+);
+
+create temp table _stage20_recommendations (
+  key text,
+  title text,
+  body text,
+  category text,
+  priority text,
+  requires_doctor boolean,
+  evidence_level text,
+  source text,
+  source_url text
+) on commit drop;
+
+insert into _stage20_recommendations (
   key,
   title,
   body,
@@ -174,38 +189,103 @@ values
     'guideline_placeholder',
     'clinical_guideline_placeholder',
     'https://example.org/thyroid-axis'
-  )
-on conflict (key) do update
-set
-  title = excluded.title,
-  body = excluded.body,
-  category = excluded.category,
-  priority = excluded.priority,
-  requires_doctor = excluded.requires_doctor,
-  evidence_level = excluded.evidence_level,
-  source = excluded.source,
-  source_url = excluded.source_url;
+  );
 
-insert into public.knowledge_entities (type, key, name, description)
+update public.recommendations r
+set
+  title = src.title,
+  body = src.body,
+  category = src.category,
+  priority = src.priority,
+  requires_doctor = src.requires_doctor,
+  evidence_level = src.evidence_level,
+  source = src.source,
+  source_url = src.source_url
+from _stage20_recommendations src
+where r.key = src.key;
+
+insert into public.recommendations (
+  key,
+  title,
+  body,
+  category,
+  priority,
+  requires_doctor,
+  evidence_level,
+  source,
+  source_url
+)
+select
+  src.key,
+  src.title,
+  src.body,
+  src.category,
+  src.priority,
+  src.requires_doctor,
+  src.evidence_level,
+  src.source,
+  src.source_url
+from _stage20_recommendations src
+where not exists (
+  select 1 from public.recommendations r where r.key = src.key
+);
+
+create temp table _stage20_entities (
+  type text,
+  key text,
+  name text,
+  description text
+) on commit drop;
+
+insert into _stage20_entities (type, key, name, description)
+select 'lab_marker', lm.key, lm.display_name, lm.description
+from public.lab_markers lm
+where lm.key in (select key from _stage20_lab_markers)
+union all
+select 'condition', c.key, c.name, c.description
+from public.conditions c
+where c.key in (select key from _stage20_conditions)
+union all
 select 'recommendation', r.key, r.title, r.body
 from public.recommendations r
-where r.key in (
-  'iron_panel_context_review',
-  'very_low_ferritin_medical_review',
-  'glucose_regulation_followup',
-  'lipid_pattern_context_review',
-  'triglyceride_hdl_metabolic_review',
-  'severe_vitamin_d_followup',
-  'liver_pattern_context_review',
-  'thyroid_axis_followup'
-)
-on conflict (key) do update
-set
-  type = excluded.type,
-  name = excluded.name,
-  description = excluded.description;
+where r.key in (select key from _stage20_recommendations);
 
-insert into public.knowledge_rules (
+update public.knowledge_entities ke
+set
+  type = src.type,
+  name = src.name,
+  description = src.description
+from _stage20_entities src
+where ke.key = src.key;
+
+insert into public.knowledge_entities (type, key, name, description)
+select src.type, src.key, src.name, src.description
+from _stage20_entities src
+where not exists (
+  select 1 from public.knowledge_entities ke where ke.key = src.key
+);
+
+create temp table _stage20_rules (
+  key text,
+  name text,
+  description text,
+  input_entities jsonb,
+  conditions jsonb,
+  outputs jsonb,
+  confidence numeric,
+  severity text,
+  requires_doctor boolean,
+  explanation_template text,
+  source text,
+  source_url text,
+  governance_status text,
+  medical_reviewed_at timestamptz,
+  change_note text,
+  version text,
+  active boolean
+) on commit drop;
+
+insert into _stage20_rules (
   key,
   name,
   description,
@@ -433,7 +513,48 @@ values
     'stage_20_seed',
     'v1',
     true
-  )
-on conflict (key) do nothing;
+  );
+
+insert into public.knowledge_rules (
+  key,
+  name,
+  description,
+  input_entities,
+  conditions,
+  outputs,
+  confidence,
+  severity,
+  requires_doctor,
+  explanation_template,
+  source,
+  source_url,
+  governance_status,
+  medical_reviewed_at,
+  change_note,
+  version,
+  active
+)
+select
+  src.key,
+  src.name,
+  src.description,
+  src.input_entities,
+  src.conditions,
+  src.outputs,
+  src.confidence,
+  src.severity,
+  src.requires_doctor,
+  src.explanation_template,
+  src.source,
+  src.source_url,
+  src.governance_status,
+  src.medical_reviewed_at,
+  src.change_note,
+  src.version,
+  src.active
+from _stage20_rules src
+where not exists (
+  select 1 from public.knowledge_rules kr where kr.key = src.key
+);
 
 commit;
