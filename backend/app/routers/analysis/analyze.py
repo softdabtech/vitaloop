@@ -97,6 +97,19 @@ _BIOMARKER_CATEGORY_ALIASES = {
     "nutrient": "vitamins",
     "hormonal": "hormones",
 }
+_BIOMARKER_CATEGORY_KEYWORDS = {
+    "blood_count": ["hemoglobin", "hematocrit", "rbc", "wbc", "platelet", "mcv", "mch", "rdw"],
+    "metabolic": ["glucose", "hba1c", "a1c", "insulin"],
+    "lipids": ["cholesterol", "ldl", "hdl", "triglycer"],
+    "liver": ["alt", "ast", "bilirubin", "albumin", "alkaline phosphatase", "ggt"],
+    "kidney": ["creatinine", "bun", "urea", "egfr"],
+    "thyroid": ["tsh", "t3", "t4", "thyroid"],
+    "vitamins": ["vitamin", "b12", "folate"],
+    "minerals": ["ferritin", "iron", "magnesium", "zinc", "selenium", "calcium", "potassium", "sodium"],
+    "hormones": ["testosterone", "estradiol", "progesterone", "cortisol", "dhea"],
+    "inflammation": ["crp", "esr", "homocysteine"],
+    "electrolytes": ["chloride", "bicarbonate", "co2"],
+}
 
 
 class AnalyzeRequest(BaseModel):
@@ -163,11 +176,15 @@ def _normalize_biomarker_status(
     return "OPTIMAL"
 
 
-def _normalize_biomarker_category(category: Any) -> str:
+def _normalize_biomarker_category(category: Any, name: str = "") -> str:
     raw = str(category or "").strip().lower()
     normalized = _BIOMARKER_CATEGORY_ALIASES.get(raw, raw.replace(" ", "_"))
-    if normalized in _ALLOWED_BIOMARKER_CATEGORIES:
+    if normalized in _ALLOWED_BIOMARKER_CATEGORIES and normalized != "other":
         return normalized
+    lowered_name = str(name or "").strip().lower()
+    for inferred_category, keywords in _BIOMARKER_CATEGORY_KEYWORDS.items():
+        if any(keyword in lowered_name for keyword in keywords):
+            return inferred_category
     return "other"
 
 
@@ -219,7 +236,7 @@ def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dic
                     ref_low=ref_low,
                     ref_high=ref_high,
                 ),
-                "category": _normalize_biomarker_category(raw.get("category")),
+                "category": _normalize_biomarker_category(raw.get("category"), name),
             }
         )
     return sanitized
