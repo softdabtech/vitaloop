@@ -17,11 +17,11 @@ def test_sanitize_extracted_biomarkers_filters_invalid_and_defaults_status():
 
     assert result[0]["name"] == "Vitamin D"
     assert result[0]["value"] == 24.5
-    assert result[0]["status"] == "NORMAL"
+    assert result[0]["status"] == "OPTIMAL"
 
     assert result[1]["name"] == "Ferritin"
     assert result[1]["value"] == 18.0
-    assert result[1]["status"] == "LOW"
+    assert result[1]["status"] == "DEFICIENT"
 
 
 def test_sanitize_extracted_biomarkers_accepts_openai_result_shapes():
@@ -40,3 +40,15 @@ def test_sanitize_extracted_biomarkers_accepts_openai_result_shapes():
     assert result[1]["value"] == 5.8
     assert result[1]["unit"] == "%"
     assert result[2]["value"] == 12.0
+
+
+def test_sanitize_extracted_biomarkers_maps_statuses_to_db_allowed_values():
+    raw = [
+        {"name": "LDL", "value": 142, "unit": "mg/dL", "status": "high"},
+        {"name": "Glucose", "value": 95, "unit": "mg/dL", "status": "in range"},
+        {"name": "CRP", "value": 12, "unit": "mg/L", "status": "unknown"},
+    ]
+
+    result = analyze_router._sanitize_extracted_biomarkers(raw)
+
+    assert [item["status"] for item in result] == ["ELEVATED", "OPTIMAL", "OPTIMAL"]
