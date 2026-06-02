@@ -6,8 +6,11 @@
 -- Production compatibility note:
 -- This migration intentionally avoids ON CONFLICT because some production tables
 -- may not have the same unique constraints as the original Stage 18 SQL.
+-- The body is wrapped in one DO statement so Supabase SQL Editor keeps temp
+-- staging tables in the same execution context.
 
-begin;
+do $$
+begin
 
 create temp table _stage20_lab_markers (
   key text,
@@ -557,4 +560,4 @@ where not exists (
   select 1 from public.knowledge_rules kr where kr.key = src.key
 );
 
-commit;
+end $$;
