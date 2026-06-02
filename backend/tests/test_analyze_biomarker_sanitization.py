@@ -71,3 +71,20 @@ def test_sanitize_extracted_biomarkers_recalculates_status_from_reference_range(
     assert result[0]["ref_high"] == 150.0
     assert result[0]["category"] == "minerals"
     assert result[1]["status"] == "ELEVATED"
+
+
+def test_sanitize_extracted_biomarkers_makes_duplicate_names_unique_for_db_constraint():
+    raw = [
+        {"name": "Reticulocytes", "value": 1.2, "unit": "%", "reference_range": "0.5-2.0"},
+        {"name": "Reticulocytes", "value": 55, "unit": "G/L", "reference_range": "25-75"},
+        {"name": "Reticulocytes", "value": 0.08, "unit": "T/L", "reference_range": "0.02-0.1"},
+    ]
+
+    result = analyze_router._sanitize_extracted_biomarkers(raw)
+
+    assert [item["name"] for item in result] == [
+        "Reticulocytes",
+        "Reticulocytes (G/L)",
+        "Reticulocytes (T/L)",
+    ]
+    assert len({item["name"].lower() for item in result}) == 3
