@@ -42,6 +42,7 @@ from app.models.biomarker import (
 from app.services.biomarker_service import BiomarkerService
 from app.services.biomarker_reference import get_all_biomarkers
 from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
+from app.services.knowledge.report import build_knowledge_report
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
@@ -405,6 +406,10 @@ async def analyze_lab_file(
             user_id=user_id,
             upload_id=str(upload_id),
         )
+        knowledge_report = build_knowledge_report(
+            biomarkers=saved_biomarkers,
+            knowledge_evaluation=knowledge_evaluation,
+        )
 
         protocol = analysis.get("protocol", [])
         if protocol:
@@ -450,6 +455,7 @@ async def analyze_lab_file(
             "analysis_method": analysis.get("analysis_method", "openai_pdf"),
             "analysis_source": analysis_source,
             "knowledge_evaluation": knowledge_evaluation,
+            "knowledge_report": knowledge_report,
         }
     except HTTPException:
         if upload_id:
@@ -838,15 +844,20 @@ async def analyze_lab(
             # Timeline should not fail the request after successful biomarker persistence.
             logger.warning("analyze_timeline_event_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
 
+        knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
+            biomarkers=saved,
+            symptoms=normalized_symptoms,
+            user_id=user_id,
+            upload_id=str(upload_id),
+        )
         result = {
             "upload_id": upload_id,
             "biomarkers": saved,
             "analysis_source": analysis_source,
-            "knowledge_evaluation": await evaluate_biomarkers_with_knowledge(
+            "knowledge_evaluation": knowledge_evaluation,
+            "knowledge_report": build_knowledge_report(
                 biomarkers=saved,
-                symptoms=normalized_symptoms,
-                user_id=user_id,
-                upload_id=str(upload_id),
+                knowledge_evaluation=knowledge_evaluation,
             ),
         }
         if normalized_key:
@@ -879,6 +890,17 @@ async def get_results(
 
     # Get protocol (if exists)
     protocol = await get_protocol_by_upload(user_id, upload_id)
+    knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
+        biomarkers=biomarkers,
+        symptoms=[],
+        user_id=user_id,
+        upload_id=str(upload_id),
+        persist=False,
+    )
+    knowledge_report = build_knowledge_report(
+        biomarkers=biomarkers,
+        knowledge_evaluation=knowledge_evaluation,
+    )
 
     await write_audit_log(
         user_id=user_id,
@@ -891,6 +913,8 @@ async def get_results(
     return {
         "biomarkers": biomarkers,
         "protocol": protocol.get("recommendations", []) if protocol else [],
+        "knowledge_evaluation": knowledge_evaluation,
+        "knowledge_report": knowledge_report,
     }
 
 

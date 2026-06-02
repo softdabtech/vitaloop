@@ -8,6 +8,8 @@ from app.services.supabase_service import (
     get_protocol_by_upload,
     get_user_progress,
 )
+from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
+from app.services.knowledge.report import build_knowledge_report
 
 router = APIRouter(tags=["protocol-compatibility"])
 _assignment_service = AssignmentService()
@@ -42,9 +44,22 @@ async def get_results_by_upload(upload_id: str, current_user: dict = Depends(get
     await assert_upload_belongs_to_user(upload_id, user_id)
     biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
     protocol_row = await get_protocol_by_upload(user_id, upload_id)
+    knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
+        biomarkers=biomarkers or [],
+        symptoms=[],
+        user_id=user_id,
+        upload_id=str(upload_id),
+        persist=False,
+    )
+    knowledge_report = build_knowledge_report(
+        biomarkers=biomarkers or [],
+        knowledge_evaluation=knowledge_evaluation,
+    )
 
     return {
         "upload_id": upload_id,
         "biomarkers": biomarkers or [],
         "protocol": (protocol_row or {}).get("recommendations") or [],
+        "knowledge_evaluation": knowledge_evaluation,
+        "knowledge_report": knowledge_report,
     }
