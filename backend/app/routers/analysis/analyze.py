@@ -57,6 +57,20 @@ _ANALYSIS_FAILED = "Analysis failed"
 
 _analyze_idempotency: dict[tuple[str, str], dict] = {}
 _analyze_idempotency_lock = asyncio.Lock()
+_ALLOWED_BIOMARKER_STATUSES = {"OPTIMAL", "BORDERLINE", "DEFICIENT", "ELEVATED"}
+_BIOMARKER_STATUS_ALIASES = {
+    "NORMAL": "OPTIMAL",
+    "IN RANGE": "OPTIMAL",
+    "IN_RANGE": "OPTIMAL",
+    "OK": "OPTIMAL",
+    "LOW": "DEFICIENT",
+    "BELOW RANGE": "DEFICIENT",
+    "BELOW_RANGE": "DEFICIENT",
+    "HIGH": "ELEVATED",
+    "ABOVE RANGE": "ELEVATED",
+    "ABOVE_RANGE": "ELEVATED",
+    "CRITICAL": "ELEVATED",
+}
 
 
 class AnalyzeRequest(BaseModel):
@@ -79,6 +93,14 @@ def _stable_analysis_source(default: str = "fallback") -> str:
     if source in {"llm", "fallback"}:
         return source
     return default
+
+
+def _normalize_biomarker_status(status: Any) -> str:
+    raw_status = str(status or "OPTIMAL").strip().upper()
+    normalized = _BIOMARKER_STATUS_ALIASES.get(raw_status, raw_status)
+    if normalized in _ALLOWED_BIOMARKER_STATUSES:
+        return normalized
+    return "OPTIMAL"
 
 
 def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -109,10 +131,6 @@ def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dic
         if not unit:
             continue
 
-        status = str(raw.get("status") or "NORMAL").strip().upper()
-        if not status:
-            status = "NORMAL"
-
         sanitized.append(
             {
                 "name": name,
@@ -120,7 +138,7 @@ def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dic
                 "unit": unit,
                 "ref_low": raw.get("ref_low"),
                 "ref_high": raw.get("ref_high"),
-                "status": status,
+                "status": _normalize_biomarker_status(raw.get("status")),
                 "category": raw.get("category"),
             }
         )
