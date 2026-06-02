@@ -57,32 +57,32 @@ const STEPS = [
 
 const BENEFITS = [
   {
-    title: 'Your Protocol',
-    body: 'Not generic advice',
-    icon: Sparkles,
-    stat: '100%',
-    label: 'Personalized'
+    title: 'Start With Symptoms',
+    body: 'Answer focused follow-up questions',
+    icon: HeartPulse,
+    stat: 'Start',
+    label: 'Guided intake'
   },
   {
-    title: 'Track Progress',
-    body: 'See trends over time',
-    icon: TrendingUp,
-    stat: '5+',
-    label: 'Test cycles'
+    title: 'Know What To Test',
+    body: 'See useful markers to discuss',
+    icon: FlaskConical,
+    stat: 'Next',
+    label: 'Lab direction'
   },
   {
-    title: 'AI Powered',
-    body: 'Smart recommendations',
+    title: 'Understand Your Labs',
+    body: 'AI reads values, units, and ranges',
     icon: BrainCircuit,
-    stat: 'Deep AI',
-    label: 'Comprehensive analysis'
+    stat: '85+',
+    label: 'Biomarkers'
   },
   {
-    title: 'Secure',
-    body: 'Privacy-first design',
-    icon: ShieldCheck,
-    stat: '🔒',
-    label: 'Encrypted'
+    title: 'Follow The Loop',
+    body: 'Track actions, symptoms, and progress',
+    icon: TrendingUp,
+    stat: 'Loop',
+    label: 'Weekly execution'
   },
 ]
 
