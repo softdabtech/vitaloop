@@ -18,6 +18,7 @@ def test_sanitize_extracted_biomarkers_filters_invalid_and_defaults_status():
     assert result[0]["name"] == "Vitamin D"
     assert result[0]["value"] == 24.5
     assert result[0]["status"] == "OPTIMAL"
+    assert result[0]["category"] == "other"
 
     assert result[1]["name"] == "Ferritin"
     assert result[1]["value"] == 18.0
@@ -37,6 +38,9 @@ def test_sanitize_extracted_biomarkers_accepts_openai_result_shapes():
     assert result[0]["name"] == "Glucose"
     assert result[0]["value"] == 126.0
     assert result[0]["unit"] == "mg/dL"
+    assert result[0]["ref_low"] == 70.0
+    assert result[0]["ref_high"] == 99.0
+    assert result[0]["status"] == "ELEVATED"
     assert result[1]["value"] == 5.8
     assert result[1]["unit"] == "%"
     assert result[2]["value"] == 12.0
@@ -52,3 +56,18 @@ def test_sanitize_extracted_biomarkers_maps_statuses_to_db_allowed_values():
     result = analyze_router._sanitize_extracted_biomarkers(raw)
 
     assert [item["status"] for item in result] == ["ELEVATED", "OPTIMAL", "OPTIMAL"]
+
+
+def test_sanitize_extracted_biomarkers_recalculates_status_from_reference_range():
+    raw = [
+        {"name": "Ferritin", "value": 12, "unit": "ng/mL", "reference_range": "30-150 ng/mL", "status": "normal", "category": "nutrients"},
+        {"name": "LDL Cholesterol", "value": 142, "unit": "mg/dL", "ref_low": 0, "ref_high": 99, "status": "optimal", "category": "lipids"},
+    ]
+
+    result = analyze_router._sanitize_extracted_biomarkers(raw)
+
+    assert result[0]["status"] == "DEFICIENT"
+    assert result[0]["ref_low"] == 30.0
+    assert result[0]["ref_high"] == 150.0
+    assert result[0]["category"] == "vitamins"
+    assert result[1]["status"] == "ELEVATED"

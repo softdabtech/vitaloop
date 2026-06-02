@@ -15,8 +15,15 @@ from PIL import Image
 from pdf2image import convert_from_path
 
 from app.config import settings
+from app.services.knowledge.integration import build_biomarker_extraction_knowledge_context
 
 logger = logging.getLogger("uvicorn.error")
+
+_EXTRACTION_STATUS_VALUES = "OPTIMAL, BORDERLINE, DEFICIENT, ELEVATED"
+_EXTRACTION_CATEGORIES = (
+    "blood_count, metabolic, lipids, liver, kidney, thyroid, vitamins, minerals, "
+    "hormones, inflammation, electrolytes, urinalysis, coagulation, other"
+)
 
 
 class OpenAIFileAnalyzer(ABC):
@@ -188,12 +195,91 @@ class OpenAIFileAnalyzer(ABC):
         return {
             "success": True,
             "biomarkers": result.get("biomarkers", []),
-            "top_priority": result.get("top_priority", []),
-            "protocol": result.get("protocol", []),
-            "retest_schedule": result.get("retest_schedule", []),
+            "top_priority": [],
+            "protocol": [],
+            "retest_schedule": [],
             "summary": result.get("summary", {}),
+            "document_metadata": result.get("document_metadata", {}),
+            "extraction_notes": result.get("extraction_notes", []),
             "analysis_method": analysis_method,
         }
+
+    @staticmethod
+    async def _knowledge_context() -> str:
+        return await build_biomarker_extraction_knowledge_context()
+
+    @staticmethod
+    def _build_extraction_prompt(
+        *,
+        document_kind: str,
+        symptoms: Optional[List[str]] = None,
+        document_text: Optional[str] = None,
+        page_num: Optional[int] = None,
+        knowledge_context: str = "",
+    ) -> str:
+        symptoms_text = ", ".join(symptoms or []) if symptoms else "none reported"
+        page_text = f" Page: {page_num}." if page_num else ""
+        lab_text = f"\n\nDOCUMENT TEXT:\n{document_text[:80000]}" if document_text else ""
+        kb_text = knowledge_context or ""
+
+        return f"""You are VITALOOP's clinical lab data extraction engine.{page_text}
+
+Goal:
+Extract structured lab data from the uploaded {document_kind}. This is extraction only.
+Do not diagnose. Do not generate supplement plans, protocols, medical advice, or treatment recommendations.
+
+Use VITALOOP Knowledge Base marker names/keys when available.
+If a visible marker is not in the knowledge context, still extract it accurately and set marker_key to null.
+
+User-reported symptoms: {symptoms_text}
+
+Extraction rules:
+1. Extract every visible lab marker/analyte with a numeric result.
+2. Preserve the original printed marker label in source_name.
+3. Normalize name to the closest clear display name.
+4. Set marker_key only when the marker confidently matches a known VITALOOP lab marker key.
+5. Extract value as a number only. Put units in unit.
+6. Extract ref_low/ref_high when a numeric reference range is visible. If only text is visible, keep it in reference_range.
+7. Status must be one of: {_EXTRACTION_STATUS_VALUES}.
+8. If status is not printed, infer from value and reference range only; otherwise use OPTIMAL.
+9. Category must be one of: {_EXTRACTION_CATEGORIES}.
+10. Include document metadata when visible: lab_name, report_date, patient_name, specimen_date, collection_date.
+11. Include extraction_notes for uncertainty, missing units, unreadable rows, duplicate pages, or non-lab content.
+
+Return ONLY valid JSON. No markdown. No commentary.
+
+JSON schema:
+{{
+  "document_metadata": {{
+    "lab_name": null,
+    "report_date": null,
+    "patient_name": null,
+    "specimen_date": null,
+    "collection_date": null
+  }},
+  "biomarkers": [
+    {{
+      "marker_key": "vitamin_d",
+      "source_name": "25-OH Vitamin D",
+      "name": "Vitamin D",
+      "value": 24.0,
+      "unit": "ng/mL",
+      "ref_low": 30.0,
+      "ref_high": 100.0,
+      "reference_range": "30-100 ng/mL",
+      "status": "DEFICIENT",
+      "category": "vitamins",
+      "confidence": 0.92,
+      "notes": null
+    }}
+  ],
+  "summary": {{
+    "document_type": "lab_report",
+    "extracted_marker_count": 1
+  }},
+  "extraction_notes": []
+}}
+{kb_text}{lab_text}"""
 
 
 class PDFTextAnalyzer(OpenAIFileAnalyzer):
@@ -211,78 +297,12 @@ class PDFTextAnalyzer(OpenAIFileAnalyzer):
             if len(extracted_text.strip()) < 50:
                 raise ValueError("Could not extract readable text from PDF")
 
-            # Prepare prompt
-            symptoms = symptoms or []
-            symptoms_text = f"\n\nUser-reported symptoms: {', '.join(symptoms)}" if symptoms else ""
-
-            prompt = f"""You are an expert medical lab analyst. Analyze this lab report text.
-
-ANALYSIS REQUIREMENTS:
-1. Extract ALL biomarkers with values and reference ranges
-2. Categorize each: OPTIMAL, BORDERLINE, DEFICIENT, or ELEVATED
-3. Identify TOP PRIORITY issues (most critical first)
-4. Generate evidence-based supplement protocol
-5. Provide retest schedule
-
-PROTOCOL REQUIREMENTS:
-- Use specific supplement names
-- Include exact dosages
-- Specify timing
-- Include duration in weeks
-- Explain rationale for each recommendation
-- Reference the biomarker value that supports each recommendation
-
-{symptoms_text}
-
-LAB REPORT TEXT:
-{extracted_text[:80000]}
-
-RESPONSE FORMAT: Return ONLY valid JSON (no markdown):
-{{
-  "biomarkers": [
-    {{
-      "name": "Vitamin D (25-OH)",
-      "value": 18,
-      "unit": "ng/mL",
-      "ref_low": 30,
-      "ref_high": 100,
-      "status": "DEFICIENT",
-      "category": "vitamins"
-    }}
-  ],
-  "top_priority": [
-    {{
-      "biomarker_name": "Vitamin D",
-      "current_value": 18,
-      "optimal_level": 50,
-      "urgency": "HIGH",
-      "risk": "Immune dysfunction"
-    }}
-  ],
-  "protocol": [
-    {{
-      "supplement": "Vitamin D3",
-      "dosage": "5000 IU",
-      "timing": "morning_with_food",
-      "duration_weeks": 12,
-      "frequency": "daily",
-      "priority": "HIGH",
-      "rationale": "Address deficiency"
-    }}
-  ],
-  "retest_schedule": [
-    {{
-      "biomarker": "Vitamin D",
-      "weeks": 8,
-      "reason": "Check progress"
-    }}
-  ],
-  "summary": {{
-    "key_findings": "Primary deficiency requires intervention",
-    "estimated_improvement_timeline": "4-8 weeks",
-    "lifestyle_recommendations": ["Follow clinician guidance"]
-  }}
-}}"""
+            prompt = self._build_extraction_prompt(
+                document_kind="text-based lab PDF",
+                symptoms=symptoms or [],
+                document_text=extracted_text,
+                knowledge_context=await self._knowledge_context(),
+            )
 
             # Send to API
             analysis_text = await self._send_text_completion(prompt)
@@ -295,7 +315,7 @@ RESPONSE FORMAT: Return ONLY valid JSON (no markdown):
                 raise ValueError(f"API returned invalid JSON: {str(e)}")
 
             # Validate required fields
-            required_fields = ["biomarkers", "protocol", "retest_schedule"]
+            required_fields = ["biomarkers"]
             if not all(field in payload for field in required_fields):
                 logger.error(f"Missing fields in response. Got: {list(payload.keys())}")
                 raise ValueError("Response missing required fields")
@@ -304,9 +324,9 @@ RESPONSE FORMAT: Return ONLY valid JSON (no markdown):
             biomarkers = payload.get("biomarkers", [])
 
             logger.info(
-                "openai_pdf_text_analysis_ok biomarkers=%s protocol=%s duration_ms=%s",
+                "openai_pdf_text_analysis_ok biomarkers=%s notes=%s duration_ms=%s",
                 len(biomarkers),
-                len(payload.get("protocol", [])),
+                len(payload.get("extraction_notes", [])),
                 int(analysis_time * 1000),
             )
 
@@ -361,53 +381,18 @@ class ImageAnalyzer(OpenAIFileAnalyzer):
             # Encode image
             image_base64 = self._encode_image_as_base64(image_path)
 
-            # Prepare prompt
-            symptoms = symptoms or []
-            symptoms_text = f"\n\nUser-reported symptoms: {', '.join(symptoms)}" if symptoms else ""
-
-            prompt = f"""You are an expert medical lab analyst. Analyze this lab report image carefully.
-
-ANALYSIS REQUIREMENTS:
-1. Extract ALL biomarkers visible in the report with values and reference ranges
-2. Categorize each: OPTIMAL, BORDERLINE, DEFICIENT, or ELEVATED
-3. Identify TOP PRIORITY issues (most critical first)
-4. Generate evidence-based supplement protocol
-5. Provide retest schedule
-
-PROTOCOL REQUIREMENTS:
-- Use specific supplement names
-- Include exact dosages
-- Specify timing
-- Include duration in weeks
-- Explain rationale for each recommendation
-
-{symptoms_text}
-
-RESPONSE FORMAT: Return ONLY valid JSON (no markdown):
-{{
-  "biomarkers": [
-    {{
-      "name": "Vitamin D (25-OH)",
-      "value": 18,
-      "unit": "ng/mL",
-      "ref_low": 30,
-      "ref_high": 100,
-      "status": "DEFICIENT",
-      "category": "vitamins"
-    }}
-  ],
-  "top_priority": [...],
-  "protocol": [...],
-  "retest_schedule": [...],
-  "summary": {{...}}
-}}"""
+            prompt = self._build_extraction_prompt(
+                document_kind="lab report image",
+                symptoms=symptoms or [],
+                knowledge_context=await self._knowledge_context(),
+            )
 
             # Send to Vision API
             analysis_text = await self._send_vision_completion(image_base64, prompt)
             payload = self._parse_json(analysis_text)
 
             # Validate
-            required_fields = ["biomarkers", "protocol"]
+            required_fields = ["biomarkers"]
             if not all(field in payload for field in required_fields):
                 raise ValueError("Response missing required fields")
 
@@ -415,9 +400,9 @@ RESPONSE FORMAT: Return ONLY valid JSON (no markdown):
             biomarkers = payload.get("biomarkers", [])
 
             logger.info(
-                "openai_vision_analysis_ok biomarkers=%s protocol=%s duration_ms=%s",
+                "openai_vision_analysis_ok biomarkers=%s notes=%s duration_ms=%s",
                 len(biomarkers),
-                len(payload.get("protocol", [])),
+                len(payload.get("extraction_notes", [])),
                 int(analysis_time * 1000),
             )
 
@@ -494,38 +479,35 @@ class PDFVisionAnalyzer(ImageAnalyzer):
 
             # Analyze first page (or combine results from multiple pages)
             all_biomarkers = []
-            all_protocols = []
+            extraction_notes = []
+            document_metadata: dict[str, Any] = {}
+            knowledge_context = await self._knowledge_context()
 
             for page_num, image_base64 in enumerate(images, 1):
                 logger.info("Analyzing page %d of %d", page_num, len(images))
 
-                symptoms_text = f"\n\nUser-reported symptoms: {', '.join(symptoms or [])}" if symptoms else ""
-
-                prompt = f"""You are an expert medical lab analyst. Analyze this lab report page (page {page_num}).
-
-Extract ALL biomarkers with values and reference ranges.
-Return ONLY valid JSON:
-{{
-  "biomarkers": [...],
-  "protocol": [...],
-  "top_priority": [...],
-  "retest_schedule": [...],
-  "summary": {{...}}
-}}"""
+                prompt = self._build_extraction_prompt(
+                    document_kind="scanned lab PDF page",
+                    symptoms=symptoms or [],
+                    page_num=page_num,
+                    knowledge_context=knowledge_context,
+                )
 
                 analysis_text = await self._send_vision_completion(image_base64, prompt)
                 payload = self._parse_json(analysis_text)
 
                 all_biomarkers.extend(payload.get("biomarkers", []))
-                all_protocols.extend(payload.get("protocol", []))
+                if isinstance(payload.get("extraction_notes"), list):
+                    extraction_notes.extend(payload.get("extraction_notes", []))
+                if not document_metadata and isinstance(payload.get("document_metadata"), dict):
+                    document_metadata = payload.get("document_metadata") or {}
 
             # Merge results
             merged_payload = {
                 "biomarkers": all_biomarkers,
-                "protocol": all_protocols,
-                "top_priority": [],
-                "retest_schedule": [],
-                "summary": {"key_findings": f"Analyzed {len(images)} page(s)"}
+                "summary": {"document_type": "lab_report", "extracted_marker_count": len(all_biomarkers), "pages_analyzed": len(images)},
+                "document_metadata": document_metadata,
+                "extraction_notes": extraction_notes,
             }
 
             analysis_time = time.time() - start_time
@@ -606,15 +588,24 @@ class TIFFAnalyzer(PDFVisionAnalyzer):
 
             # Analyze using vision (similar to PDFVisionAnalyzer)
             all_biomarkers = []
+            extraction_notes = []
+            document_metadata: dict[str, Any] = {}
+            knowledge_context = await self._knowledge_context()
             for page_num, image_base64 in enumerate(base64_images, 1):
-                symptoms_text = f"\n\nUser-reported symptoms: {', '.join(symptoms or [])}" if symptoms else ""
-
-                prompt = f"""Analyze this lab report page {page_num}. Extract biomarkers.
-Return ONLY JSON: {{"biomarkers": [...], "protocol": [...], "top_priority": [], "retest_schedule": [], "summary": {{}}}}"""
+                prompt = self._build_extraction_prompt(
+                    document_kind="TIFF lab report page",
+                    symptoms=symptoms or [],
+                    page_num=page_num,
+                    knowledge_context=knowledge_context,
+                )
 
                 analysis_text = await self._send_vision_completion(image_base64, prompt)
                 payload = self._parse_json(analysis_text)
                 all_biomarkers.extend(payload.get("biomarkers", []))
+                if isinstance(payload.get("extraction_notes"), list):
+                    extraction_notes.extend(payload.get("extraction_notes", []))
+                if not document_metadata and isinstance(payload.get("document_metadata"), dict):
+                    document_metadata = payload.get("document_metadata") or {}
 
             result = {
                 "success": True,
@@ -622,7 +613,9 @@ Return ONLY JSON: {{"biomarkers": [...], "protocol": [...], "top_priority": [], 
                 "protocol": [],
                 "top_priority": [],
                 "retest_schedule": [],
-                "summary": {},
+                "summary": {"document_type": "lab_report", "extracted_marker_count": len(all_biomarkers), "pages_analyzed": len(base64_images)},
+                "document_metadata": document_metadata,
+                "extraction_notes": extraction_notes,
                 "analysis_method": "openai_tiff_vision",
                 "biomarker_count": len(all_biomarkers),
             }

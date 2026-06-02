@@ -24,87 +24,19 @@ class TableAnalyzer(OpenAIFileAnalyzer):
             if not table_text or len(table_text.strip()) < 50:
                 raise ValueError("Could not extract readable data from table")
 
-            # Prepare prompt
-            symptoms = symptoms or []
-            symptoms_text = f"\n\nUser-reported symptoms: {', '.join(symptoms)}" if symptoms else ""
-
-            prompt = f"""You are an expert medical lab analyst. Analyze this lab results table.
-
-The table contains lab test results with biomarker names, values, and reference ranges.
-Extract all biomarkers and provide analysis.
-
-ANALYSIS REQUIREMENTS:
-1. Extract ALL biomarkers with values and reference ranges
-2. Categorize each: OPTIMAL, BORDERLINE, DEFICIENT, or ELEVATED
-3. Identify TOP PRIORITY issues (most critical first)
-4. Generate evidence-based supplement protocol
-5. Provide retest schedule
-
-PROTOCOL REQUIREMENTS:
-- Use specific supplement names
-- Include exact dosages
-- Specify timing
-- Include duration in weeks
-- Explain rationale for each recommendation
-
-{symptoms_text}
-
-LAB RESULTS TABLE:
-{table_text[:80000]}
-
-RESPONSE FORMAT: Return ONLY valid JSON (no markdown):
-{{
-  "biomarkers": [
-    {{
-      "name": "Vitamin D (25-OH)",
-      "value": 18,
-      "unit": "ng/mL",
-      "ref_low": 30,
-      "ref_high": 100,
-      "status": "DEFICIENT",
-      "category": "vitamins"
-    }}
-  ],
-  "top_priority": [
-    {{
-      "biomarker_name": "Vitamin D",
-      "current_value": 18,
-      "optimal_level": 50,
-      "urgency": "HIGH",
-      "risk": "Immune dysfunction"
-    }}
-  ],
-  "protocol": [
-    {{
-      "supplement": "Vitamin D3",
-      "dosage": "5000 IU",
-      "timing": "morning_with_food",
-      "duration_weeks": 12,
-      "frequency": "daily",
-      "priority": "HIGH",
-      "rationale": "Address deficiency"
-    }}
-  ],
-  "retest_schedule": [
-    {{
-      "biomarker": "Vitamin D",
-      "weeks": 8,
-      "reason": "Check progress"
-    }}
-  ],
-  "summary": {{
-    "key_findings": "Primary deficiency requires intervention",
-    "estimated_improvement_timeline": "4-8 weeks",
-    "lifestyle_recommendations": ["Follow clinician guidance"]
-  }}
-}}"""
+            prompt = self._build_extraction_prompt(
+                document_kind="lab results table",
+                symptoms=symptoms or [],
+                document_text=table_text,
+                knowledge_context=await self._knowledge_context(),
+            )
 
             # Send to API
             analysis_text = await self._send_text_completion(prompt)
             payload = self._parse_json(analysis_text)
 
             # Validate required fields
-            required_fields = ["biomarkers", "protocol"]
+            required_fields = ["biomarkers"]
             if not all(field in payload for field in required_fields):
                 raise ValueError("Response missing required fields")
 
@@ -112,9 +44,9 @@ RESPONSE FORMAT: Return ONLY valid JSON (no markdown):
             biomarkers = payload.get("biomarkers", [])
 
             logger.info(
-                "openai_table_analysis_ok biomarkers=%s protocol=%s duration_ms=%s",
+                "openai_table_analysis_ok biomarkers=%s notes=%s duration_ms=%s",
                 len(biomarkers),
-                len(payload.get("protocol", [])),
+                len(payload.get("extraction_notes", [])),
                 int(analysis_time * 1000),
             )
 
