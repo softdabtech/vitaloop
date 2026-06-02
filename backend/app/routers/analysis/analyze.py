@@ -9,7 +9,7 @@ from time import monotonic
 
 from fastapi import APIRouter, HTTPException, Depends, Header, File, UploadFile, Form, Request
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 import logging
 
 from app.dependencies import require_freemium_analyze, get_current_user
@@ -78,6 +78,42 @@ def _stable_analysis_source(default: str = "fallback") -> str:
     if source in {"llm", "fallback"}:
         return source
     return default
+
+
+def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    sanitized: List[Dict[str, Any]] = []
+    for raw in biomarkers or []:
+        if not isinstance(raw, dict):
+            continue
+
+        name = str(raw.get("name") or raw.get("display_name") or "").strip()
+        unit = str(raw.get("unit") or "").strip()
+        value = raw.get("value")
+
+        if not name or not unit or value in (None, ""):
+            continue
+
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError):
+            continue
+
+        status = str(raw.get("status") or "NORMAL").strip().upper()
+        if not status:
+            status = "NORMAL"
+
+        sanitized.append(
+            {
+                "name": name,
+                "value": numeric_value,
+                "unit": unit,
+                "ref_low": raw.get("ref_low"),
+                "ref_high": raw.get("ref_high"),
+                "status": status,
+                "category": raw.get("category"),
+            }
+        )
+    return sanitized
 
 
 @router.post("/pdf")
@@ -183,7 +219,7 @@ async def analyze_lab_file(
 
             raise HTTPException(status_code=500, detail={"detail": error_text, "code": "ANALYSIS_UNKNOWN_ERROR"})
 
-        biomarkers = analysis.get("biomarkers", [])
+        biomarkers = _sanitize_extracted_biomarkers(analysis.get("biomarkers", []))
         if not biomarkers:
             logger.warning(f"No biomarkers extracted from file {file.filename}. Full analysis response: {json.dumps(analysis, default=str)}")
             raise HTTPException(
@@ -212,15 +248,31 @@ async def analyze_lab_file(
             prompt_version = "openai_v1"
         analysis_source = "llm" if "openai" in prompt_version else _stable_analysis_source("fallback")
 
-        upload = await save_lab_upload(
-            user_id=user_id,
-            extracted_text=json.dumps(upload_payload, ensure_ascii=True),
-            lab_name=lab_name or file.filename,
-            analyze_prompt_version=prompt_version,
-        )
+        try:
+            upload = await save_lab_upload(
+                user_id=user_id,
+                extracted_text=json.dumps(upload_payload, ensure_ascii=True),
+                lab_name=lab_name or file.filename,
+                analyze_prompt_version=prompt_version,
+            )
+        except Exception as exc:
+            logger.error("analyze_file_save_upload_failed user_id=%s error=%s", user_id, repr(exc), exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail={"detail": "Could not store uploaded lab data", "code": "LAB_UPLOAD_SAVE_FAILED"},
+            ) from exc
+
         upload_id = upload["id"]
 
-        saved_biomarkers = await save_biomarkers(upload_id=upload_id, user_id=user_id, biomarkers=biomarkers)
+        try:
+            saved_biomarkers = await save_biomarkers(upload_id=upload_id, user_id=user_id, biomarkers=biomarkers)
+        except Exception as exc:
+            logger.error("analyze_file_save_biomarkers_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc), exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail={"detail": "Could not save extracted biomarkers", "code": "BIOMARKER_SAVE_FAILED"},
+            ) from exc
+
         knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
             biomarkers=saved_biomarkers,
             symptoms=symptoms,
@@ -230,24 +282,36 @@ async def analyze_lab_file(
 
         protocol = analysis.get("protocol", [])
         if protocol:
-            await save_protocol(
-                user_id=user_id,
-                upload_id=upload_id,
-                recommendations=protocol,
-                prompt_version=prompt_version,
-            )
+            try:
+                await save_protocol(
+                    user_id=user_id,
+                    upload_id=upload_id,
+                    recommendations=protocol,
+                    prompt_version=prompt_version,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "analyze_file_save_protocol_failed upload_id=%s user_id=%s error=%s",
+                    upload_id,
+                    user_id,
+                    repr(exc),
+                    exc_info=True,
+                )
 
-        await save_timeline_event(
-            user_id=user_id,
-            event_type="lab_analyzed",
-            summary=f"Lab report analyzed: {len(saved_biomarkers)} biomarkers found",
-            metadata={
-                "upload_id": upload_id,
-                "biomarker_count": len(saved_biomarkers),
-                "analysis_method": analysis.get("analysis_method", "unknown"),
-                "file_type": file_ext,
-            },
-        )
+        try:
+            await save_timeline_event(
+                user_id=user_id,
+                event_type="lab_analyzed",
+                summary=f"Lab report analyzed: {len(saved_biomarkers)} biomarkers found",
+                metadata={
+                    "upload_id": upload_id,
+                    "biomarker_count": len(saved_biomarkers),
+                    "analysis_method": analysis.get("analysis_method", "unknown"),
+                    "file_type": file_ext,
+                },
+            )
+        except Exception as exc:
+            logger.warning("analyze_file_timeline_event_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
 
         return {
             "upload_id": upload_id,
@@ -422,7 +486,7 @@ async def analyze_lab(
                     temp_path = tmp.name
 
                 analysis = await pdf_analyzer.analyze_lab_pdf(temp_path, symptoms=symptoms_form)
-                biomarkers = analysis.get("biomarkers", [])
+                biomarkers = _sanitize_extracted_biomarkers(analysis.get("biomarkers", []))
                 if not biomarkers:
                     raise HTTPException(
                         status_code=422,
