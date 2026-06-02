@@ -71,6 +71,32 @@ _BIOMARKER_STATUS_ALIASES = {
     "ABOVE_RANGE": "ELEVATED",
     "CRITICAL": "ELEVATED",
 }
+_ALLOWED_BIOMARKER_CATEGORIES = {
+    "blood_count",
+    "metabolic",
+    "lipids",
+    "liver",
+    "kidney",
+    "thyroid",
+    "vitamins",
+    "minerals",
+    "hormones",
+    "inflammation",
+    "electrolytes",
+    "urinalysis",
+    "coagulation",
+    "other",
+}
+_BIOMARKER_CATEGORY_ALIASES = {
+    "cbc": "blood_count",
+    "blood count": "blood_count",
+    "blood_count": "blood_count",
+    "metabolism": "metabolic",
+    "glucose": "metabolic",
+    "nutrients": "vitamins",
+    "nutrient": "vitamins",
+    "hormonal": "hormones",
+}
 
 
 class AnalyzeRequest(BaseModel):
@@ -95,12 +121,54 @@ def _stable_analysis_source(default: str = "fallback") -> str:
     return default
 
 
-def _normalize_biomarker_status(status: Any) -> str:
+def _coerce_optional_float(value: Any) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        match = re.search(r"[-+]?\d+(?:[.,]\d+)?", str(value))
+        if not match:
+            return None
+        return float(match.group(0).replace(",", "."))
+
+
+def _extract_reference_bounds(raw_range: Any) -> tuple[float | None, float | None]:
+    if raw_range in (None, ""):
+        return None, None
+    # Treat hyphens between two numbers as range separators, not negative signs.
+    values = re.findall(r"(?<!\d)[-+]?\d+(?:[.,]\d+)?", str(raw_range))
+    if len(values) < 2:
+        return None, None
+    return float(values[0].replace(",", ".")), float(values[1].replace(",", "."))
+
+
+def _normalize_biomarker_status(
+    status: Any,
+    *,
+    value: float | None = None,
+    ref_low: float | None = None,
+    ref_high: float | None = None,
+) -> str:
+    if value is not None:
+        if ref_low is not None and value < ref_low:
+            return "DEFICIENT"
+        if ref_high is not None and value > ref_high:
+            return "ELEVATED"
+
     raw_status = str(status or "OPTIMAL").strip().upper()
     normalized = _BIOMARKER_STATUS_ALIASES.get(raw_status, raw_status)
     if normalized in _ALLOWED_BIOMARKER_STATUSES:
         return normalized
     return "OPTIMAL"
+
+
+def _normalize_biomarker_category(category: Any) -> str:
+    raw = str(category or "").strip().lower()
+    normalized = _BIOMARKER_CATEGORY_ALIASES.get(raw, raw.replace(" ", "_"))
+    if normalized in _ALLOWED_BIOMARKER_CATEGORIES:
+        return normalized
+    return "other"
 
 
 def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -131,15 +199,27 @@ def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dic
         if not unit:
             continue
 
+        ref_low = _coerce_optional_float(raw.get("ref_low"))
+        ref_high = _coerce_optional_float(raw.get("ref_high"))
+        if ref_low is None or ref_high is None:
+            range_low, range_high = _extract_reference_bounds(raw.get("reference_range"))
+            ref_low = ref_low if ref_low is not None else range_low
+            ref_high = ref_high if ref_high is not None else range_high
+
         sanitized.append(
             {
                 "name": name,
                 "value": numeric_value,
                 "unit": unit,
-                "ref_low": raw.get("ref_low"),
-                "ref_high": raw.get("ref_high"),
-                "status": _normalize_biomarker_status(raw.get("status")),
-                "category": raw.get("category"),
+                "ref_low": ref_low,
+                "ref_high": ref_high,
+                "status": _normalize_biomarker_status(
+                    raw.get("status"),
+                    value=numeric_value,
+                    ref_low=ref_low,
+                    ref_high=ref_high,
+                ),
+                "category": _normalize_biomarker_category(raw.get("category")),
             }
         )
     return sanitized
