@@ -18,6 +18,7 @@ from app.services.biomarker_reference import (
     calculate_status,
 )
 from app.services import supabase_service as svc
+from app.services.entitlements import resolve_user_entitlements
 
 logger = logging.getLogger("biomarker.service")
 
@@ -311,14 +312,8 @@ class BiomarkerService:
             where used_by is None if quota available, or "pdf"/"manual" if quota already used
         """
         try:
-            # Check user subscription status
-            account = await svc.get_user_account(user_id)
-            if not account:
-                return False, "User account not found", None
-
-            # Check if user has active subscription
-            is_premium = account.get("subscription_status") == "active"
-            if is_premium:
+            entitlements = await resolve_user_entitlements(user_id)
+            if entitlements.get("is_premium"):
                 return True, "Premium user - unlimited biomarker entries", None
 
             # Count all biomarker uploads (both PDF and manual) for this user
