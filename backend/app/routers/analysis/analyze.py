@@ -189,8 +189,39 @@ def _normalize_biomarker_category(category: Any, name: str = "") -> str:
     return "other"
 
 
+def _unique_biomarker_name(name: str, unit: str, seen_names: set[str]) -> str | None:
+    base_name = str(name or "").strip()
+    if not base_name:
+        return None
+
+    key = base_name.lower()
+    if key not in seen_names:
+        seen_names.add(key)
+        return base_name
+
+    unit_suffix = str(unit or "").strip()
+    if unit_suffix:
+        candidate = f"{base_name} ({unit_suffix})"
+        candidate_key = candidate.lower()
+        if candidate_key not in seen_names:
+            seen_names.add(candidate_key)
+            return candidate
+
+    index = 2
+    while index <= 20:
+        candidate = f"{base_name} #{index}"
+        candidate_key = candidate.lower()
+        if candidate_key not in seen_names:
+            seen_names.add(candidate_key)
+            return candidate
+        index += 1
+
+    return None
+
+
 def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     sanitized: List[Dict[str, Any]] = []
+    seen_names: set[str] = set()
     for raw in biomarkers or []:
         if not isinstance(raw, dict):
             continue
@@ -217,6 +248,10 @@ def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dic
         if not unit:
             continue
 
+        unique_name = _unique_biomarker_name(name, unit, seen_names)
+        if not unique_name:
+            continue
+
         ref_low = _coerce_optional_float(raw.get("ref_low"))
         ref_high = _coerce_optional_float(raw.get("ref_high"))
         if ref_low is None or ref_high is None:
@@ -226,7 +261,7 @@ def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dic
 
         sanitized.append(
             {
-                "name": name,
+                "name": unique_name,
                 "value": numeric_value,
                 "unit": unit,
                 "ref_low": ref_low,
@@ -237,7 +272,7 @@ def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dic
                     ref_low=ref_low,
                     ref_high=ref_high,
                 ),
-                "category": _normalize_biomarker_category(raw.get("category"), name),
+                "category": _normalize_biomarker_category(raw.get("category"), unique_name),
             }
         )
     return sanitized
