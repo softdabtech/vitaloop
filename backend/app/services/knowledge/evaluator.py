@@ -25,7 +25,14 @@ EVIDENCE_MULTIPLIER = {
 
 
 def _normalize_unit(value: str | None) -> str:
-    return str(value or "").strip().lower()
+    raw = str(value or "").strip().lower().replace("μ", "u").replace("µ", "u")
+    aliases = {
+        "miu/l": "uiu/ml",
+        "mu/l": "uiu/ml",
+        "uiu/ml": "uiu/ml",
+        "u iu/ml": "uiu/ml",
+    }
+    return aliases.get(raw, raw)
 
 
 def _convert_value(marker_key: str, value: float, from_unit: str, to_unit: str) -> float | None:
