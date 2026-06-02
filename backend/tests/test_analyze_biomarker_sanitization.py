@@ -18,7 +18,7 @@ def test_sanitize_extracted_biomarkers_filters_invalid_and_defaults_status():
     assert result[0]["name"] == "Vitamin D"
     assert result[0]["value"] == 24.5
     assert result[0]["status"] == "OPTIMAL"
-    assert result[0]["category"] == "other"
+    assert result[0]["category"] == "vitamins"
 
     assert result[1]["name"] == "Ferritin"
     assert result[1]["value"] == 18.0
@@ -60,7 +60,7 @@ def test_sanitize_extracted_biomarkers_maps_statuses_to_db_allowed_values():
 
 def test_sanitize_extracted_biomarkers_recalculates_status_from_reference_range():
     raw = [
-        {"name": "Ferritin", "value": 12, "unit": "ng/mL", "reference_range": "30-150 ng/mL", "status": "normal", "category": "nutrients"},
+        {"name": "Ferritin", "value": 12, "unit": "ng/mL", "reference_range": "30-150 ng/mL", "status": "normal"},
         {"name": "LDL Cholesterol", "value": 142, "unit": "mg/dL", "ref_low": 0, "ref_high": 99, "status": "optimal", "category": "lipids"},
     ]
 
@@ -69,5 +69,5 @@ def test_sanitize_extracted_biomarkers_recalculates_status_from_reference_range(
     assert result[0]["status"] == "DEFICIENT"
     assert result[0]["ref_low"] == 30.0
     assert result[0]["ref_high"] == 150.0
-    assert result[0]["category"] == "vitamins"
+    assert result[0]["category"] == "minerals"
     assert result[1]["status"] == "ELEVATED"
