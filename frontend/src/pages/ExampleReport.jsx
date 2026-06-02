@@ -1,206 +1,295 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import BiomarkerMap from '../components/BiomarkerMap.jsx'
 import { motion } from 'framer-motion'
-import { CheckCircle, Zap, TrendingUp } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import {
+  ArrowRight,
+  BarChart3,
+  CheckCircle2,
+  ClipboardList,
+  FileText,
+  FlaskConical,
+  LayoutDashboard,
+  ShieldCheck,
+  TrendingUp,
+  Upload,
+} from 'lucide-react'
 import Seo from '../components/Seo.jsx'
+import Footer from '../components/landing/Footer.jsx'
+import { PageHeader } from '../components/landing/PageHeader.jsx'
 
-// Sample biomarker data for demo
-const DEMO_BIOMARKERS = [
-  { id: 1, name: 'Vitamin B12', value: 850, unit: 'pg/mL', status: 'OPTIMAL', ref_low: 200, ref_high: 900 },
-  { id: 2, name: 'Vitamin D3', value: 38, unit: 'ng/mL', status: 'BORDERLINE', ref_low: 30, ref_high: 100 },
-  { id: 3, name: 'Iron (Ferritin)', value: 45, unit: 'ng/mL', status: 'OPTIMAL', ref_low: 24, ref_high: 336 },
-  { id: 4, name: 'Magnesium', value: 2.1, unit: 'mg/dL', status: 'BORDERLINE', ref_low: 1.7, ref_high: 2.2 },
-  { id: 5, name: 'Cholesterol (Total)', value: 185, unit: 'mg/dL', status: 'OPTIMAL', ref_low: 0, ref_high: 200 },
-  { id: 6, name: 'HDL Cholesterol', value: 52, unit: 'mg/dL', status: 'OPTIMAL', ref_low: 40, ref_high: 999 },
-  { id: 7, name: 'Triglycerides', value: 95, unit: 'mg/dL', status: 'OPTIMAL', ref_low: 0, ref_high: 150 },
-  { id: 8, name: 'TSH', value: 1.8, unit: 'mIU/L', status: 'OPTIMAL', ref_low: 0.4, ref_high: 4.0 },
-  { id: 9, name: 'Zinc', value: 75, unit: 'mcg/dL', status: 'BORDERLINE', ref_low: 60, ref_high: 120 },
-  { id: 10, name: 'Selenium', value: 135, unit: 'ng/mL', status: 'OPTIMAL', ref_low: 70, ref_high: 150 },
+const SCREENSHOTS = [
+  {
+    title: 'Today dashboard',
+    description: 'A single place for current priorities, uploads, weekly tasks, and next actions.',
+    image: '/mockups/example-report/dashboard.png',
+    alt: 'VITALOOP user dashboard with health summary cards and next actions',
+    icon: LayoutDashboard,
+  },
+  {
+    title: 'Lab results',
+    description: 'Normalized biomarkers with values, units, reference ranges, status, and interpretation context.',
+    image: '/mockups/example-report/lab-results.png',
+    alt: 'VITALOOP lab results page with biomarker rows and status indicators',
+    icon: FlaskConical,
+  },
+  {
+    title: 'Upload flow',
+    description: 'Drop in a PDF report and keep the original file connected to the structured analysis.',
+    image: '/mockups/example-report/upload.png',
+    alt: 'VITALOOP upload page for lab report PDFs',
+    icon: Upload,
+  },
+  {
+    title: 'Progress tracking',
+    description: 'See how symptoms, actions, and biomarker trends change across repeated cycles.',
+    image: '/mockups/example-report/progress.png',
+    alt: 'VITALOOP progress page with charts and trend cards',
+    icon: TrendingUp,
+  },
+  {
+    title: 'Weekly check-in',
+    description: 'Capture adherence and how you feel so each loop becomes more useful than the last.',
+    image: '/mockups/example-report/check-in.png',
+    alt: 'VITALOOP weekly check-in page with symptom and action tracking',
+    icon: ClipboardList,
+  },
+  {
+    title: 'Practitioner workspace',
+    description: 'For labs, nutritionists, and practitioners managing client context and review queues.',
+    image: '/mockups/example-report/crm.png',
+    alt: 'VITALOOP practitioner CRM dashboard with client panels',
+    icon: BarChart3,
+  },
 ]
+
+const REPORT_HIGHLIGHTS = [
+  { label: 'Biomarkers parsed', value: '85+', detail: 'names, values, units, and ranges' },
+  { label: 'Workflow', value: '5 steps', detail: 'symptoms -> labs -> protocol -> check-in' },
+  { label: 'Output', value: 'Structured', detail: 'priorities, context, and next actions' },
+]
+
+const BIOMARKERS = [
+  { name: 'Ferritin', value: '12 ng/mL', status: 'Review', tone: 'amber', note: 'Possible low iron storage pattern when paired with fatigue.' },
+  { name: 'Vitamin D', value: '24 ng/mL', status: 'Low', tone: 'amber', note: 'Common optimization target to discuss with a clinician.' },
+  { name: 'HbA1c', value: '5.8%', status: 'Watch', tone: 'rose', note: 'May indicate a metabolic trend that needs follow-up.' },
+  { name: 'HDL', value: '58 mg/dL', status: 'In range', tone: 'emerald', note: 'Useful context for the broader lipid picture.' },
+]
+
+const WORKFLOW = [
+  {
+    icon: FileText,
+    title: 'Upload a report',
+    body: 'VITALOOP reads the PDF, extracts biomarkers, and preserves the source context.',
+  },
+  {
+    icon: FlaskConical,
+    title: 'Normalize the data',
+    body: 'Values, units, and reference ranges are structured so markers can be compared safely.',
+  },
+  {
+    icon: CheckCircle2,
+    title: 'Prioritize what matters',
+    body: 'The system groups findings into review priorities instead of leaving you with a raw table.',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Track the loop',
+    body: 'Weekly feedback and future lab uploads help refine the plan over time.',
+  },
+]
+
+const toneClass = {
+  amber: 'border-amber-200 bg-amber-50 text-amber-800',
+  rose: 'border-rose-200 bg-rose-50 text-rose-800',
+  emerald: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+}
 
 export default function ExampleReport() {
   const navigate = useNavigate()
-  const [showProtocol, setShowProtocol] = useState(false)
-
-  const optimalCount = DEMO_BIOMARKERS.filter(b => b.status === 'OPTIMAL').length
-  const borderlineCount = DEMO_BIOMARKERS.filter(b => b.status === 'BORDERLINE').length
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--gray-950, #0a0a0a)',
-      color: 'white',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Premium Display", sans-serif',
-    }}>
+    <div className="min-h-screen bg-white text-slate-900">
       <Seo
-        title="Blood Test Analysis Example Report | VITALOOP"
-        description="Preview a real AI blood test interpretation with biomarker flags, protocol actions, and trend tracking. Then upload your own labs and start free."
+        title="Example Lab Report Dashboard | VITALOOP"
+        description="Preview how VITALOOP turns lab PDFs into structured biomarker results, dashboard priorities, progress tracking, and weekly health execution."
         path="/example-report"
       />
-      {/* Header */}
-      <div className="bg-gradient-to-r from-teal-900/40 to-teal-800/30 border-b px-6 py-16" style={{ borderColor: 'var(--teal-500)' }}>
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-5xl font-bold text-white mb-4">
-            See Your Health in 3D
-          </h1>
-          <p className="text-xl text-gray-300 mb-8 max-w-2xl">
-            This is a sample report showing how Vitaloop transforms lab data into an interactive visual guide for your health. Upload your own tests to get your personalized avatar.
-          </p>
-          <div className="flex gap-4">
-            <button
-              onClick={() => navigate('/login?signup=true')}
-              style={{ background: 'var(--teal-500, #1D9E75)', color: 'white', border: 'none', borderRadius: 980, padding: '12px 28px', fontWeight: 600, cursor: 'pointer' }}
-            >
-              Try It Live →
-            </button>
-            <button onClick={() => navigate('/how-it-works')} className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition border border-white/20">
-              Learn More
-            </button>
-          </div>
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto p-6 py-16">
-        {/* Stats */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <CheckCircle className="w-6 h-6 text-green-400" />
-              <span className="text-green-300 font-semibold">Optimal</span>
+      <PageHeader />
+
+      <main>
+        <section className="mx-auto grid max-w-[1240px] gap-10 px-4 pb-16 pt-8 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:pt-12">
+          <div>
+            <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+              Example report
+            </motion.p>
+            <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 text-4xl font-black tracking-[-0.035em] text-slate-950 sm:text-5xl md:text-6xl">
+              From lab PDF to a working health dashboard.
+            </motion.h1>
+            <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
+              This page shows the real VITALOOP workflow: upload results, review structured biomarkers, understand priorities, and keep progress moving through weekly check-ins.
+            </motion.p>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button
+                onClick={() => navigate('/login?signup=true')}
+                className="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(16,185,129,0.22)] transition hover:bg-emerald-600"
+              >
+                Start with your results
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </button>
+              <button
+                onClick={() => navigate('/how-it-works')}
+                className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-emerald-400 hover:bg-slate-50"
+              >
+                See how it works
+              </button>
             </div>
-            <p className="text-3xl font-bold text-white">{optimalCount}/10</p>
-            <p className="text-sm text-gray-400 mt-1">Key biomarkers in healthy range</p>
+
           </div>
 
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <Zap className="w-6 h-6 text-yellow-400" />
-              <span className="text-yellow-300 font-semibold">Borderline</span>
+          <motion.div initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="relative">
+            <div className="absolute -inset-6 -z-10 rounded-[32px] bg-[radial-gradient(circle_at_20%_10%,rgba(20,184,166,0.22),transparent_36%),radial-gradient(circle_at_88%_14%,rgba(56,189,248,0.12),transparent_34%)]" />
+            <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 shadow-2xl shadow-emerald-900/10">
+              <img
+                src="/mockups/example-report/dashboard.png"
+                alt="VITALOOP dashboard preview"
+                className="aspect-[16/10] w-full object-cover object-top"
+              />
             </div>
-            <p className="text-3xl font-bold text-white">{borderlineCount}/10</p>
-            <p className="text-sm text-gray-400 mt-1">Room for optimization</p>
-          </div>
+          </motion.div>
+        </section>
 
-          <div className="bg-teal-500/10 border rounded-xl p-6" style={{ borderColor: 'var(--teal-500)' }}>
-            <div className="flex items-center gap-3 mb-2">
-              <TrendingUp className="w-6 h-6" style={{ color: 'var(--teal-400)' }} />
-              <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Insights</span>
+        <section className="mx-auto max-w-[1240px] px-4 pb-16 sm:px-6">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {REPORT_HIGHLIGHTS.map((item) => (
+              <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="text-2xl font-black text-slate-950">{item.value}</div>
+                <div className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">{item.label}</div>
+                <div className="mt-2 text-sm leading-5 text-slate-500">{item.detail}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="border-y border-slate-200 bg-slate-50 py-16">
+          <div className="mx-auto max-w-[1240px] px-4 sm:px-6">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Cabinet screens</p>
+              <h2 className="mt-3 text-4xl font-black tracking-[-0.03em] text-slate-950">What users actually see after upload</h2>
+              <p className="mt-4 text-lg leading-8 text-slate-600">
+                No decorative avatar. The product is a structured workspace for lab interpretation, symptom context, progress, and practitioner review.
+              </p>
             </div>
-            <p className="text-3xl font-bold text-white">3</p>
-            <p className="text-sm text-gray-400 mt-1">Personalized recommendations</p>
+
+            <div className="mt-10 grid gap-6 lg:grid-cols-2">
+              {SCREENSHOTS.map(({ title, description, image, alt, icon: Icon }) => (
+                <motion.article
+                  key={title}
+                  initial={{ opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-80px' }}
+                  className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm"
+                >
+                  <div className="flex items-start gap-3 p-5">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-950">{title}</h3>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
+                    </div>
+                  </div>
+                  <div className="border-t border-slate-100 bg-slate-100 p-2">
+                    <img src={image} alt={alt} className="aspect-[16/10] w-full rounded-[18px] object-cover object-top" loading="lazy" />
+                  </div>
+                </motion.article>
+              ))}
+            </div>
           </div>
-        </motion.div>
+        </section>
 
-        {/* Avatar Section */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-12">
-          <h2 className="text-3xl font-bold text-white mb-6">Your Interactive Biomarker Map</h2>
-          <BiomarkerMap biomarkers={DEMO_BIOMARKERS} />
-        </motion.div>
-
-        {/* Features Highlight */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="grid md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
-            <div className="text-4xl mb-3">🎯</div>
-            <h3 className="font-semibold text-white mb-2">Interactive Zones</h3>
-            <p className="text-gray-400 text-sm">Click any body zone to see related biomarkers, their health impact, and personalized supplement recommendations.</p>
+        <section className="mx-auto grid max-w-[1240px] gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[0.86fr_1.14fr] lg:items-start">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Structured interpretation</p>
+            <h2 className="mt-3 text-4xl font-black tracking-[-0.03em] text-slate-950">A report becomes priorities, not just numbers.</h2>
+            <p className="mt-4 text-lg leading-8 text-slate-600">
+              VITALOOP keeps results readable: each marker is normalized, statused, and connected to the broader workflow. The output is educational decision support, not a diagnosis.
+            </p>
+            <div className="mt-6 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">
+              <ShieldCheck className="h-5 w-5 shrink-0" />
+              Medical review is recommended for abnormal or concerning values.
+            </div>
           </div>
 
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
-            <div className="text-4xl mb-3">📊</div>
-            <h3 className="font-semibold text-white mb-2">Real-Time Data</h3>
-            <p className="text-gray-400 text-sm">Your avatar updates automatically when you upload new tests. Watch your health progress over months and years.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {BIOMARKERS.map((marker) => (
+              <article key={marker.name} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-950">{marker.name}</h3>
+                    <p className="mt-1 text-2xl font-black text-slate-900">{marker.value}</p>
+                  </div>
+                  <span className={`rounded-full border px-3 py-1 text-xs font-bold ${toneClass[marker.tone]}`}>
+                    {marker.status}
+                  </span>
+                </div>
+                <p className="mt-4 text-sm leading-6 text-slate-600">{marker.note}</p>
+              </article>
+            ))}
           </div>
+        </section>
 
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
-            <div className="text-4xl mb-3">💡</div>
-            <h3 className="font-semibold text-white mb-2">Smart Protocols</h3>
-            <p className="text-gray-400 text-sm">Get AI-generated protocols with exact supplement doses, timing, and lifestyle changes tailored to your unique biomarker pattern.</p>
-          </div>
-        </motion.div>
-
-        {/* Sample Protocol */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-gradient-to-br from-teal-900/20 to-teal-800/10 border rounded-xl p-8 mb-12" style={{ borderColor: 'var(--teal-500)' }}>
-          <h3 className="text-2xl font-bold text-white mb-4">Sample Protocol Generated from This Avatar</h3>
-
-          <div className="space-y-6">
-            <div>
-              <h4 className="font-semibold mb-3" style={{ color: 'var(--teal-400)' }}>🧠 Brain & Cognition Protocol</h4>
-              <div className="space-y-2 text-sm text-gray-300">
-                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Methylcobalamin 2mg sublingual</span> — Daily (B12 optimization)</p>
-                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Omega-3 2000mg EPA/DHA</span> — With meals, 2x daily</p>
-                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Magnesium Glycinate 300mg</span> — Before bed (sleep quality)</p>
-                <p className="text-gray-500 text-xs mt-2">💡 Retest: 8 weeks to assess B12 absorption & cognitive improvements</p>
+        <section className="bg-slate-950 py-16 text-white">
+          <div className="mx-auto max-w-[1240px] px-4 sm:px-6">
+            <div className="grid gap-10 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">Workflow</p>
+                <h2 className="mt-3 text-4xl font-black tracking-[-0.03em]">The useful part is the loop.</h2>
+                <p className="mt-4 text-lg leading-8 text-slate-300">
+                  The report is only the starting point. VITALOOP connects it to symptom context, weekly execution, and future retesting.
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {WORKFLOW.map(({ icon: Icon, title, body }) => (
+                  <article key={title} className="rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-400/15 text-emerald-300">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="mt-5 text-lg font-bold">{title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-300">{body}</p>
+                  </article>
+                ))}
               </div>
             </div>
+          </div>
+        </section>
 
-            <div>
-              <h4 className="font-semibold mb-3" style={{ color: 'var(--teal-400)' }}>❤️ Cardiovascular Protocol</h4>
-              <div className="space-y-2 text-sm text-gray-300">
-                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>CoQ10 Ubiquinol 200mg</span> — 2x daily (heart mitochondria)</p>
-                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Berberine 500mg</span> — Before meals, 2x daily (cholesterol support)</p>
-                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Garlic Extract (Kyolic) 2 caps</span> — 2x daily (arterial health)</p>
-                <p className="text-gray-500 text-xs mt-2">💡 Retest: 12 weeks for lipid panel reassessment</p>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-3" style={{ color: 'var(--teal-400)' }}>🔄 Liver Detox Protocol</h4>
-              <div className="space-y-2 text-sm text-gray-300">
-                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>NAC (N-Acetyl Cysteine) 1000mg</span> — 2x daily</p>
-                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Milk Thistle 300mg silymarin</span> — 2x daily</p>
-                <p>✓ <span className="font-semibold" style={{ color: 'var(--teal-400)' }}>Alpha-Lipoic Acid 300mg</span> — 2 hours before meals (antioxidant)</p>
-                <p className="text-gray-500 text-xs mt-2">💡 Lifestyle: 8-10 hours sleep, hydrate 2L+ water daily, limit alcohol</p>
-              </div>
+        <section className="mx-auto max-w-[1240px] px-4 py-16 sm:px-6">
+          <div className="rounded-[28px] bg-[linear-gradient(135deg,#0f766e,#10b981)] px-6 py-12 text-center text-white shadow-2xl shadow-emerald-900/15 sm:px-10">
+            <h2 className="text-4xl font-black tracking-[-0.03em]">Try the workflow with your own lab report.</h2>
+            <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-emerald-50">
+              Start free, upload one report, and see how VITALOOP turns raw lab values into a clearer health workspace.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <button
+                onClick={() => navigate('/login?signup=true')}
+                className="inline-flex items-center rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-50"
+              >
+                Get started free
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </button>
+              <button
+                onClick={() => navigate('/for-nutritionists')}
+                className="inline-flex items-center rounded-2xl border border-white/35 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+              >
+                For labs and practitioners
+              </button>
             </div>
           </div>
-        </motion.div>
+        </section>
+      </main>
 
-        {/* CTA */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="rounded-xl p-12 text-center" style={{ background: 'linear-gradient(135deg, rgba(29,158,117,0.9), rgba(8,80,65,0.95))' }}>
-          <h2 className="text-3xl font-bold text-white mb-4">Ready to Map Your Health?</h2>
-          <p className="text-xl mb-8 max-w-2xl mx-auto" style={{ color: 'rgba(226, 255, 246, 0.9)' }}>
-            Upload your own lab results to get your personalized biomarker map, avatar, and AI-generated protocol.
-          </p>
-          <div className="flex gap-4 justify-center flex-wrap">
-            <button
-              onClick={() => navigate('/login?signup=true')}
-              style={{ background: 'var(--teal-500, #1D9E75)', color: 'white', border: 'none', borderRadius: 980, padding: '12px 28px', fontWeight: 600, cursor: 'pointer' }}
-            >
-              Get Started Free
-            </button>
-            <button onClick={() => navigate('/how-it-works')} className="px-8 py-4 bg-white/20 text-white font-bold rounded-lg hover:bg-white/30 transition border border-white/40">
-              Explore How It Works
-            </button>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* FAQ Section */}
-      <div className="bg-gray-800/30 border-y border-gray-700/50 px-6 py-16">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-white mb-12 text-center">Common Questions</h2>
-          <div className="grid md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="font-semibold mb-2" style={{ color: 'var(--teal-400)' }}>How accurate is the analysis?</h3>
-              <p className="text-gray-400 text-sm">Our analysis is powered by our AI analysis engine trained on 15+ years of clinical nutrition research. Protocols are recommendations only — always consult your healthcare provider.</p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2" style={{ color: 'var(--teal-400)' }}>Where do I get lab tests?</h3>
-              <p className="text-gray-400 text-sm">Use services like Quest Diagnostics, LabCorp, or EverlyWell to order tests. Upload PDFs directly to Vitaloop to get your avatar and protocol.</p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2" style={{ color: 'var(--teal-400)' }}>Can I track progress over time?</h3>
-              <p className="text-gray-400 text-sm">Yes! Upload tests every 6-12 weeks to track biomarker trends. Premium users get charts comparing your metrics across time.</p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2" style={{ color: 'var(--teal-400)' }}>Are the recommendations personalized?</h3>
-              <p className="text-gray-400 text-sm">Completely. Our AI generates protocols based on YOUR specific biomarker patterns, lifestyle, and health goals.</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Footer />
     </div>
   )
 }
