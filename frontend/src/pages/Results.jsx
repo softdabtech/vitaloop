@@ -215,6 +215,7 @@ export default function Results() {
   const { show: showHints, dismiss: dismissHints } = useTourHints('results')
   const [biomarkers, setBiomarkers] = useState([])
   const [protocol, setProtocol] = useState([])
+  const [knowledgeReport, setKnowledgeReport] = useState(null)
   const [medicalAnalysis, setMedicalAnalysis] = useState(null)
   const [medicalAnalysisLoading, setMedicalAnalysisLoading] = useState(false)
   const [medicalAnalysisError, setMedicalAnalysisError] = useState('')
@@ -226,9 +227,11 @@ export default function Results() {
         const { data } = await api.get(`/results/${uploadId}`)
         setBiomarkers(data.biomarkers ?? [])
         setProtocol(data.protocol ?? [])
+        setKnowledgeReport(data.knowledge_report ?? null)
       } catch (_e) {
         setBiomarkers([])
         setProtocol([])
+        setKnowledgeReport(null)
       } finally {
         setLoading(false)
       }
@@ -313,6 +316,13 @@ export default function Results() {
   const borderline = normalizedBiomarkers.filter((b) => b.status_normalized === 'BORDERLINE').length
   const topPriority = rankedBiomarkers.find((b) => b.status_normalized !== 'OPTIMAL') || rankedBiomarkers[0] || null
   const hasActionable = deficient.length + borderline > 0
+  const reportSummary = knowledgeReport?.summary || null
+  const reportFound = knowledgeReport?.what_was_found || null
+  const reportPatterns = Array.isArray(knowledgeReport?.why_it_matters) ? knowledgeReport.why_it_matters : []
+  const reportActions = Array.isArray(knowledgeReport?.action_plan) ? knowledgeReport.action_plan : []
+  const reportDiscussion = Array.isArray(knowledgeReport?.doctor_discussion) ? knowledgeReport.doctor_discussion : []
+  const reportRetest = Array.isArray(knowledgeReport?.retest_plan) ? knowledgeReport.retest_plan : []
+  const reportAlerts = Array.isArray(knowledgeReport?.safety_alerts) ? knowledgeReport.safety_alerts : []
 
   async function exportResultsAsPDF() {
     const node = document.querySelector('.vtl-page')
@@ -448,6 +458,126 @@ export default function Results() {
             <div className="text-xs text-slate-500">Requires action</div>
           </motion.div>
         </motion.div>
+
+        {knowledgeReport && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
+            transition={{ duration: 0.6, delay: 0.05 }}
+            className="mb-8 rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm"
+          >
+            <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">Knowledge Report</div>
+                <h2 className="text-2xl font-bold text-slate-900">Full interpretation</h2>
+                <p className="mt-2 max-w-2xl text-sm text-slate-600">
+                  {reportSummary?.headline || reportFound?.headline || 'Structured interpretation based on your extracted biomarkers and VITALOOP knowledge rules.'}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+                <div className="font-semibold text-slate-900">{reportSummary?.risk_level || 'review'}</div>
+                <div className="text-slate-500">Confidence: {reportSummary?.confidence_label || 'not estimated'}</div>
+              </div>
+            </div>
+
+            {!!reportAlerts.length && (
+              <div className="mb-5 rounded-xl border border-rose-200 bg-rose-50 p-4">
+                <div className="mb-2 flex items-center gap-2 font-semibold text-rose-900">
+                  <AlertTriangle className="h-5 w-5" />
+                  Medical review signal
+                </div>
+                <ul className="space-y-2 text-sm text-rose-800">
+                  {reportAlerts.map((alert, idx) => (
+                    <li key={`alert-${idx}`}>{alert.message || `${alert.marker || 'Marker'} requires medical review.`}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="mb-3 text-base font-semibold text-slate-900">What was found</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="rounded-lg bg-white p-3"><span className="block text-slate-500">Total</span><strong>{reportFound?.counts?.total ?? foundCount}</strong></div>
+                  <div className="rounded-lg bg-white p-3"><span className="block text-slate-500">Needs review</span><strong>{(reportFound?.counts?.deficient || 0) + (reportFound?.counts?.elevated || 0) + (reportFound?.counts?.borderline || 0)}</strong></div>
+                </div>
+                {!!(reportFound?.flagged_markers || []).length && (
+                  <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                    {reportFound.flagged_markers.slice(0, 5).map((marker, idx) => (
+                      <li key={`found-${idx}`} className="rounded-lg bg-white px-3 py-2">
+                        <span className="font-semibold text-slate-900">{marker.name}</span> · {marker.formatted_value} · {marker.status}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="mb-3 text-base font-semibold text-slate-900">Why it matters</h3>
+                {reportPatterns.length ? (
+                  <div className="space-y-3">
+                    {reportPatterns.slice(0, 4).map((item, idx) => (
+                      <div key={`pattern-${idx}`} className="rounded-lg bg-white p-3 text-sm">
+                        <div className="font-semibold text-slate-900">{item.title}</div>
+                        <p className="mt-1 text-slate-600">{item.why_it_matters || item.summary}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-600">No active knowledge rule matched this panel yet. Biomarker status and trends are still available below.</p>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="mb-3 text-base font-semibold text-slate-900">What to discuss</h3>
+                {reportDiscussion.length ? (
+                  <ul className="space-y-2 text-sm text-slate-700">
+                    {reportDiscussion.slice(0, 6).map((item, idx) => (
+                      <li key={`discussion-${idx}`} className="rounded-lg bg-white px-3 py-2">{item}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-slate-600">Bring any out-of-range markers to your clinician or nutritionist for context.</p>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="mb-3 text-base font-semibold text-slate-900">Retest plan</h3>
+                {reportRetest.length ? (
+                  <ul className="space-y-2 text-sm text-slate-700">
+                    {reportRetest.slice(0, 6).map((item, idx) => (
+                      <li key={`retest-${idx}`} className="rounded-lg bg-white px-3 py-2">
+                        <span className="font-semibold text-slate-900">{item.marker}</span> · {item.timing}
+                        <div className="text-xs text-slate-500">{item.reason}</div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-slate-600">No specific retest timing was generated for this panel.</p>
+                )}
+              </div>
+            </div>
+
+            {!!reportActions.length && (
+              <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <h3 className="mb-3 text-base font-semibold text-slate-900">Recommended next steps</h3>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {reportActions.slice(0, 4).map((item, idx) => (
+                    <div key={`action-${item.key || idx}`} className="rounded-lg bg-white p-3 text-sm">
+                      <div className="font-semibold text-slate-900">{item.title}</div>
+                      <p className="mt-1 text-slate-600">{item.body}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <p className="mt-4 text-xs text-slate-500">
+              {reportSummary?.disclaimer || 'This report is educational and is not a diagnosis.'}
+            </p>
+          </motion.section>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}

@@ -54,6 +54,7 @@ async def evaluate_biomarkers_with_knowledge(
     symptoms: List[str],
     user_id: str | None,
     upload_id: str | None,
+    persist: bool = True,
 ) -> Dict[str, Any] | None:
     if not settings.knowledge_evaluation_after_analyze_enabled:
         return None
@@ -72,7 +73,7 @@ async def evaluate_biomarkers_with_knowledge(
         },
     }
     try:
-        return await evaluate_health_input(payload, user_id=user_id, persist=True)
+        return await evaluate_health_input(payload, user_id=user_id, persist=persist)
     except Exception as exc:
         logger.warning(
             "knowledge_evaluation_after_analyze_failed upload_id=%s user_id=%s error=%s",
