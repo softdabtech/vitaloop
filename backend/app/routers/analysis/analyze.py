@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 import os
+import re
 import tempfile
 from collections import deque
 from datetime import date
@@ -88,14 +89,24 @@ def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dic
 
         name = str(raw.get("name") or raw.get("display_name") or "").strip()
         unit = str(raw.get("unit") or "").strip()
-        value = raw.get("value")
+        value = raw.get("value", raw.get("result"))
 
-        if not name or not unit or value in (None, ""):
+        if not name or value in (None, ""):
             continue
 
         try:
             numeric_value = float(value)
         except (TypeError, ValueError):
+            value_text = str(value).strip()
+            match = re.search(r"[-+]?\d+(?:\.\d+)?", value_text)
+            if not match:
+                continue
+            numeric_value = float(match.group(0))
+            if not unit:
+                inferred_unit = value_text[match.end():].strip()
+                unit = inferred_unit.split()[0] if inferred_unit else ""
+
+        if not unit:
             continue
 
         status = str(raw.get("status") or "NORMAL").strip().upper()
