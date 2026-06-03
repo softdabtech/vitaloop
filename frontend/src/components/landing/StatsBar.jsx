@@ -1,18 +1,23 @@
-import { DollarSign, Calendar, TrendingUp } from 'lucide-react'
+import { ClipboardList, FileSearch, FlaskConical, Repeat2 } from 'lucide-react'
 
 const STATS = [
   {
-    icon: DollarSign,
-    number: 'Symptoms -> labs',
-    label: 'Smart intake before testing'
+    icon: ClipboardList,
+    number: 'Symptoms',
+    label: 'Structured intake before testing'
   },
   {
-    icon: Calendar,
+    icon: FlaskConical,
+    number: 'Labs',
+    label: 'Useful marker direction before upload'
+  },
+  {
+    icon: FileSearch,
     number: '85+',
     label: 'Biomarkers normalized after upload'
   },
   {
-    icon: TrendingUp,
+    icon: Repeat2,
     number: 'Weekly loop',
     label: 'Check-ins connect symptoms to progress'
   },
@@ -22,7 +27,7 @@ export function StatsBar() {
   return (
     <section className="bg-white border-t border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10">
           {STATS.map((stat, idx) => {
             const Icon = stat.icon
             return (

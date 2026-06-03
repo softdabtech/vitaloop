@@ -9,11 +9,15 @@ import {
   CheckCircle2,
   Clock3,
   FileText,
+  FileSearch,
   FlaskConical,
   HeartPulse,
   LayoutDashboard,
+  ListChecks,
   Lock,
   Menu,
+  MessageSquareText,
+  Repeat2,
   Shield,
   ShieldCheck,
   Sparkles,
@@ -26,7 +30,6 @@ import Seo from '../components/Seo.jsx'
 import { LightHero } from '../components/landing/LightHero.jsx'
 import { StatsBar } from '../components/landing/StatsBar.jsx'
 import { TrustedServicesSection } from '../components/landing/TrustedServicesSection.jsx'
-import { TestimonialsCarousel } from '../components/landing/TestimonialsCarousel.jsx'
 import { InteractivePricing } from '../components/landing/InteractivePricing.jsx'
 import { AnimatedFAQ } from '../components/landing/AnimatedFAQ.jsx'
 import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx'
@@ -142,66 +145,6 @@ const HUB_GUIDES = [
     title: 'Building a repeatable feedback loop',
     body: 'How to combine symptoms, labs, and weekly adherence into a system that improves over time.',
     icon: LayoutDashboard,
-  },
-]
-
-const LOOP_FLOW = [
-  {
-    title: 'Capture symptoms',
-    body: 'Start with what you feel and what changed.',
-    detail: 'Context includes symptom duration, severity, and relevant lifestyle factors.',
-    icon: HeartPulse,
-  },
-  {
-    title: 'Set direction',
-    body: 'Use follow-ups to shape what to check next.',
-    detail: 'You get a structured list of biomarker categories and discussion points for clinical review.',
-    icon: FlaskConical,
-  },
-  {
-    title: 'Upload lab data',
-    body: 'Map test results to your context.',
-    detail: 'VITALOOP normalizes markers and links patterns to symptoms and goals.',
-    icon: BrainCircuit,
-  },
-  {
-    title: 'Run protocol',
-    body: 'You execute the highest-leverage actions.',
-    detail: 'Dosage, timing, and nutrition actions are structured into a weekly plan.',
-    icon: Sparkles,
-  },
-  {
-    title: 'Check weekly response',
-    body: 'Symptoms and adherence explain what changed.',
-    detail: 'Weekly logs capture energy, sleep, side effects, and protocol consistency.',
-    icon: HeartPulse,
-  },
-  {
-    title: 'Adapt the next cycle',
-    body: 'The next upload becomes more precise than the last.',
-    detail: 'Each completed cycle updates recommendations before the next lab retest.',
-    icon: TrendingUp,
-  },
-]
-
-const TESTIMONIALS = [
-  {
-    quote: 'I stopped guessing. VITALOOP gave me a clear sequence and my energy stabilized in six weeks.',
-    author: 'Nora, 34',
-    role: 'Product lead, Berlin',
-    result: 'Ferritin: 14 to 68 ng/mL in 12 weeks',
-  },
-  {
-    quote: 'The weekly check-ins made me actually follow the plan. My ferritin trend finally moved in the right direction.',
-    author: 'Alex, 41',
-    role: 'Founder, London',
-    result: 'CRP: 5.2 to 1.8 mg/L in 8 weeks',
-  },
-  {
-    quote: 'As a clinician, I value how clearly I can see risk patterns and adherence context in one place.',
-    author: 'Dr. Sam R.',
-    role: 'Functional medicine practitioner',
-    result: 'Client review prep: 45 min to 12 min',
   },
 ]
 
@@ -658,10 +601,76 @@ function MockupCard({ title, alt, index, reduced, device = 'desktop' }) {
   )
 }
 
+function WhyVitaloopSection({ reduced }) {
+  return (
+    <section id="why-vitaloop" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
+      <motion.div {...fadeUp(reduced)} className="mb-7 text-center">
+        <motion.h2
+          className="text-[28px] font-semibold tracking-tight md:text-[34px]"
+          initial={reduced ? false : { opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          Why{' '}
+          <span className="relative">
+            <span className="bg-gradient-to-r from-emerald-600 via-sky-600 to-violet-600 bg-clip-text text-transparent">
+              VITALOOP
+            </span>
+            <motion.span
+              className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-500/20 via-sky-500/20 to-violet-500/20 blur-lg"
+              animate={reduced ? {} : { opacity: [0.3, 0.6, 0.3] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+          </span>
+        </motion.h2>
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-600 md:text-base">
+          A practical health loop that connects symptoms, lab data, explanations, and weekly follow-through.
+        </p>
+      </motion.div>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {BENEFITS.map((benefit, idx) => {
+          const Icon = benefit.icon
+          return (
+            <motion.article
+              key={benefit.title}
+              {...fadeUp(reduced, idx * 0.06)}
+              whileHover={reduced ? undefined : { y: -10, scale: 1.025, boxShadow: '0 0 0 4px rgba(16,185,129,0.12), 0 24px 44px -10px rgba(15,23,42,0.2)' }}
+              className="group relative min-h-[236px] overflow-hidden rounded-3xl border border-slate-200 bg-white p-7 text-center"
+              style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08), inset 0 1px 0 rgba(16,185,129,0.08)' }}
+            >
+              <motion.div className="absolute inset-0 bg-gradient-to-br from-emerald-500/8 via-sky-500/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+              <motion.div
+                className="relative mx-auto mb-4 flex h-20 w-20 items-center justify-center"
+                whileHover={reduced ? {} : { rotate: [0, -10, 10, -5, 5, 0], scale: 1.12 }}
+                transition={{ duration: 0.6 }}
+              >
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400/20 to-sky-400/20 blur-xl" />
+                <Icon className="relative h-10 w-10 text-emerald-500" />
+              </motion.div>
+              <motion.div
+                className="relative mb-3 text-4xl font-bold text-emerald-600"
+                initial={reduced ? false : { opacity: 0, scale: 0.5 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: idx * 0.1 }}
+              >
+                {benefit.stat}
+              </motion.div>
+              <div className="relative text-xs font-semibold uppercase tracking-wider text-emerald-700">{benefit.label}</div>
+              <h3 className="relative mt-3 text-lg font-semibold">{benefit.title}</h3>
+              <p className="relative mt-2 text-sm text-slate-600">{benefit.body}</p>
+            </motion.article>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 export default function Landing() {
   const navigate = useNavigate()
   const reduced = useReducedMotion()
-  const [loopActive, setLoopActive] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user, loading: authLoading } = useAuth()
 
@@ -804,6 +813,7 @@ export default function Landing() {
       <main>
         <LightHero />
         <StatsBar />
+        <WhyVitaloopSection reduced={reduced} />
 
         <section className="mx-auto w-full max-w-[990px] px-4 pb-4 pt-10 sm:px-6 md:pt-14">
           <motion.div
@@ -931,7 +941,7 @@ export default function Landing() {
               <div className="mb-4 flex items-center justify-between px-2">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">Example report</p>
-                  <p className="text-sm font-semibold text-white">Dashboard and biomarker priorities</p>
+                  <p className="text-sm font-semibold text-white">Real cabinet screens and biomarker flow</p>
                 </div>
                 <button
                   onClick={() => navigate('/example-report')}
@@ -943,8 +953,8 @@ export default function Landing() {
               </div>
               <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
                 <img
-                  src="/mockups/example-report/dashboard.png"
-                  alt="VITALOOP dashboard preview"
+                  src="/mockups/cabinet-real/upload-results.png"
+                  alt="VITALOOP upload results cabinet preview"
                   className="rounded-2xl border border-white/10 bg-white shadow-xl"
                 />
                 <div className="grid gap-4">
@@ -967,40 +977,43 @@ export default function Landing() {
                 {
                   title: 'Biomarkers found',
                   body: 'Values, units, statuses, and reference ranges are normalized into a readable table.',
-                  value: '85+',
+                  icon: FileSearch,
                 },
                 {
                   title: 'Why it matters',
                   body: 'Matched Knowledge Base rules explain possible patterns without claiming a diagnosis.',
-                  value: 'KB',
+                  icon: Sparkles,
                 },
                 {
                   title: 'What to discuss',
                   body: 'Doctor/nutritionist discussion points are generated from flagged markers and matched rules.',
-                  value: 'Q',
+                  icon: MessageSquareText,
                 },
                 {
                   title: 'Retest plan',
                   body: 'The report suggests what to monitor again and when, based on marker category and urgency.',
-                  value: 'Loop',
+                  icon: Repeat2,
                 },
-              ].map((item, index) => (
-                <motion.article
-                  key={item.title}
-                  {...fadeUp(reduced, 0.12 + index * 0.04)}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md"
-                >
-                  <div className="flex items-start gap-4">
-                    <span className="inline-flex h-12 min-w-12 items-center justify-center rounded-2xl bg-emerald-50 text-sm font-black text-emerald-700">
-                      {item.value}
-                    </span>
-                    <div>
-                      <h3 className="font-bold text-slate-900">{item.title}</h3>
-                      <p className="mt-1 text-sm leading-6 text-slate-600">{item.body}</p>
+              ].map((item, index) => {
+                const Icon = item.icon
+                return (
+                  <motion.article
+                    key={item.title}
+                    {...fadeUp(reduced, 0.12 + index * 0.04)}
+                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+                  >
+                    <div className="flex items-start gap-4">
+                      <span className="inline-flex h-12 min-w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-50 to-sky-50 text-emerald-700 ring-1 ring-emerald-100">
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <div>
+                        <h3 className="font-bold text-slate-900">{item.title}</h3>
+                        <p className="mt-1 text-sm leading-6 text-slate-600">{item.body}</p>
+                      </div>
                     </div>
-                  </div>
-                </motion.article>
-              ))}
+                  </motion.article>
+                )
+              })}
             </div>
           </div>
         </section>
@@ -1138,7 +1151,7 @@ export default function Landing() {
           <HowItWorksTimeline />
         </section>
 
-        <section className="mx-auto w-full max-w-[990px] px-4 py-14 sm:px-6 md:py-20">
+        <section className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7 text-center">
             <motion.h2
               className="text-[28px] font-semibold tracking-tight md:text-[34px]"
@@ -1162,7 +1175,7 @@ export default function Landing() {
                   key={feature.title}
                   {...fadeUp(reduced, index * 0.05)}
                   whileHover={reduced ? undefined : { y: -12, scale: 1.05, rotate: index % 2 === 0 ? 1 : -1 }}
-                  className={`group relative flex h-full flex-col items-center overflow-hidden rounded-3xl border p-6 text-center sm:p-7 md:p-8 ${'border-slate-200 bg-white'}`}
+                  className={`group relative flex h-full min-h-[330px] flex-col items-center overflow-hidden rounded-3xl border p-6 text-center sm:p-7 md:p-8 ${'border-slate-200 bg-white'}`}
                   style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.1), inset 0 1px 0 rgba(16,185,129,0.08)' }}
                 >
                   {/* Animated gradient background */}
@@ -1190,82 +1203,14 @@ export default function Landing() {
                     </div>
                   </motion.div>
 
-                  <h3 className="relative text-xl font-bold md:min-h-[96px]">{feature.title}</h3>
-                  <p className={`relative mt-3 text-sm leading-6 md:min-h-[88px] ${'text-slate-600'}`}>{feature.body}</p>
+                  <h3 className="relative text-xl font-bold">{feature.title}</h3>
+                  <p className={`relative mt-3 text-sm leading-6 ${'text-slate-600'}`}>{feature.body}</p>
                 </motion.article>
               )
             })}
           </div>
 
 
-        </section>
-
-        <section id="why-vitaloop" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
-          <motion.div {...fadeUp(reduced)} className="mb-7 text-center">
-            <motion.h2
-              className="text-[28px] font-semibold tracking-tight md:text-[34px]"
-              initial={reduced ? false : { opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              Why{' '}
-              <span className="relative">
-                <span className="bg-gradient-to-r from-emerald-600 via-sky-600 to-violet-600 bg-clip-text text-transparent">
-                  VITALOOP
-                </span>
-                <motion.span
-                  className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-500/20 via-sky-500/20 to-violet-500/20 blur-lg"
-                  animate={reduced ? {} : { opacity: [0.3, 0.6, 0.3] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                />
-              </span>
-            </motion.h2>
-          </motion.div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {BENEFITS.map((benefit, idx) => {
-              const Icon = benefit.icon
-              return (
-                <motion.article
-                  key={benefit.title}
-                  {...fadeUp(reduced, idx * 0.06)}
-                  whileHover={reduced ? undefined : { y: -12, scale: 1.05, boxShadow: '0 0 0 4px rgba(16,185,129,0.15), 0 28px 48px -10px rgba(0,0,0,0.25)' }}
-                  className={`group relative min-h-[240px] overflow-hidden rounded-3xl border p-8 text-center ${'border-slate-200 bg-white'}`}
-                  style={{ boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08), inset 0 1px 0 rgba(16,185,129,0.08)' }}
-                >
-                  {/* Animated gradient on hover */}
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-br from-emerald-500/8 via-sky-500/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                  />
-
-                  {/* Large animated icon */}
-                  <motion.div
-                    className="relative mx-auto mb-4 flex h-20 w-20 items-center justify-center"
-                    whileHover={reduced ? {} : { rotate: [0, -10, 10, -5, 5, 0], scale: 1.15 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400/20 to-sky-400/20 blur-xl" />
-                    <Icon className="relative h-10 w-10 text-emerald-500" />
-                  </motion.div>
-
-                  {/* Large stat */}
-                  <motion.div
-                    className="relative mb-3 text-4xl font-bold text-emerald-600"
-                    initial={reduced ? false : { opacity: 0, scale: 0.5 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: idx * 0.1 }}
-                  >
-                    {benefit.stat}
-                  </motion.div>
-
-                  <div className="relative text-xs font-semibold uppercase tracking-wider text-emerald-700">{benefit.label}</div>
-                  <h3 className="relative mt-3 text-lg font-semibold">{benefit.title}</h3>
-                  <p className={`relative mt-2 text-sm ${'text-slate-600'}`}>{benefit.body}</p>
-                </motion.article>
-              )
-            })}
-          </div>
         </section>
 
         <InteractivePricing />
@@ -1304,8 +1249,6 @@ export default function Landing() {
             </div>
           </motion.div>
         </section>
-
-        <TestimonialsCarousel />
 
         {/* === Blog teaser === */}
         <section aria-label="Health intelligence resources" className="mx-auto w-full max-w-[1240px] px-4 py-8 sm:px-6">
@@ -1357,45 +1300,37 @@ export default function Landing() {
         </section>
 
         <section className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
-          <motion.div
-            {...fadeUp(reduced)}
-            onMouseEnter={() => setLoopActive(true)}
-            onMouseLeave={() => setLoopActive(false)}
-            className={`rounded-3xl border p-6 text-center md:p-10 ${sectionCard}`}
-          >
-            <h2 className="text-[28px] font-semibold tracking-tight">The Adaptive Health Loop</h2>
-            <p className={`mx-auto mt-3 max-w-3xl text-[17px] leading-[1.7] ${'text-slate-600'}`}>
-              Health optimization is a continuous cycle, not a one-time interpretation. VITALOOP connects symptoms, labs, protocol actions, and weekly feedback so each cycle becomes more informed than the previous one.
-            </p>
-            <ol className="mx-auto mt-7 max-w-5xl space-y-3 text-left">
-              {LOOP_FLOW.map((item, idx) => {
-                const Icon = item.icon
-                return (
-                  <motion.li
-                    key={item.title}
-                    animate={loopActive && !reduced ? { x: [0, 6, 0] } : { x: 0 }}
-                    transition={{ duration: 0.55, delay: idx * 0.08, ease: 'easeInOut' }}
-                    className={`rounded-2xl border px-4 py-4 sm:px-5 ${'border-slate-200 bg-white'}`}
-                  >
-                    <div className="flex items-start gap-4">
-                      <span className={`mt-0.5 inline-flex h-9 min-w-9 items-center justify-center rounded-full border text-sm font-semibold ${'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
-                        {idx + 1}
+          <motion.div {...fadeUp(reduced)} className={`rounded-3xl border p-6 md:p-10 ${sectionCard}`}>
+            <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Built for repeated cycles</p>
+                <h2 className="mt-2 text-[28px] font-semibold tracking-tight md:text-[34px]">
+                  Not another one-off lab interpretation.
+                </h2>
+                <p className="mt-3 text-[16px] leading-7 text-slate-600">
+                  VITALOOP keeps the useful parts of each cycle: what you felt, what you tested,
+                  what changed, and what should be checked again.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { icon: FileText, title: 'Clear record', body: 'Symptoms and labs stay connected.' },
+                  { icon: ListChecks, title: 'Next actions', body: 'Priorities are ranked before execution.' },
+                  { icon: Repeat2, title: 'Retest logic', body: 'Each upload informs the next cycle.' },
+                ].map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <article key={item.title} className="rounded-2xl border border-slate-200 bg-white p-5">
+                      <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                        <Icon className="h-5 w-5" />
                       </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-3">
-                          <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${'bg-emerald-50 text-emerald-700'}`}>
-                            <Icon className="h-5 w-5" />
-                          </span>
-                          <h3 className="text-base font-semibold leading-tight sm:text-lg">{item.title}</h3>
-                        </div>
-                        <p className={`mt-2 text-sm leading-relaxed ${'text-slate-600'}`}>{item.body}</p>
-                        <p className={`mt-1 text-xs leading-relaxed ${'text-slate-500'}`}>{item.detail}</p>
-                      </div>
-                    </div>
-                  </motion.li>
-                )
-              })}
-            </ol>
+                      <h3 className="mt-4 font-bold text-slate-900">{item.title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{item.body}</p>
+                    </article>
+                  )
+                })}
+              </div>
+            </div>
           </motion.div>
         </section>
 
