@@ -60,32 +60,32 @@ const STEPS = [
 
 const BENEFITS = [
   {
-    title: 'Start With Symptoms',
-    body: 'Answer focused follow-up questions',
-    icon: HeartPulse,
-    stat: 'Start',
-    label: 'Guided intake'
-  },
-  {
-    title: 'Know What To Test',
-    body: 'See useful markers to discuss',
-    icon: FlaskConical,
-    stat: 'Next',
-    label: 'Lab direction'
-  },
-  {
-    title: 'Understand Your Labs',
-    body: 'AI reads values, units, and ranges',
+    title: 'Explainable, not generic AI',
+    body: 'Each report is grounded in governed Knowledge Base rules, marker context, and safety-aware wording instead of loose chatbot guesses.',
     icon: BrainCircuit,
-    stat: '85+',
-    label: 'Biomarkers'
+    stat: 'KB',
+    label: 'Explainable logic'
   },
   {
-    title: 'Follow The Loop',
-    body: 'Track actions, symptoms, and progress',
+    title: 'Symptoms and labs stay connected',
+    body: 'Your concern, duration, severity, lab values, and follow-up notes are kept in one loop so results are interpreted with context.',
+    icon: HeartPulse,
+    stat: 'Context',
+    label: 'Symptom-linked data'
+  },
+  {
+    title: 'Priorities before protocols',
+    body: 'VITALOOP separates what is stable, what needs review, what to discuss with a clinician, and what should be retested.',
+    icon: ListChecks,
+    stat: 'Priority',
+    label: 'Action clarity'
+  },
+  {
+    title: 'Built for repeat cycles',
+    body: 'Each upload, check-in, and retest adds structure for the next decision instead of treating every report as a one-off PDF.',
     icon: TrendingUp,
-    stat: 'Loop',
-    label: 'Weekly execution'
+    stat: 'Progress',
+    label: 'Retest learning'
   },
 ]
 
