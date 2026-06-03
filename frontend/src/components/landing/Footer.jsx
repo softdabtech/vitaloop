@@ -1,18 +1,23 @@
 import BrandMark from './BrandMark.jsx'
 
 const PRODUCT_LINKS = [
-  { label: 'How it works', href: '/#how-it-works' },
+  { label: 'How it works', href: '/#problem' },
+  { label: 'Example report', href: '/example-report' },
   { label: 'Pricing', href: '/#pricing' },
-  { label: 'Health Intelligence Hub', href: '/how-it-works' },
+  { label: 'Help Center', href: '/help' },
 ]
 
 const COMPANY_LINKS = [
   { label: 'About', href: '/about' },
-  { label: 'For Nutritionists', href: '/for-nutritionists' },
-  { label: 'Help Center', href: '/help' },
+  { label: 'For practitioners', href: '/for-nutritionists' },
+  { label: 'For laboratories', href: '/for-nutritionists' },
+  { label: 'For investors', href: '/for-investors' },
+]
+
+const TRUST_LINKS = [
+  { label: 'Privacy & security', href: '/privacy-policy' },
   { label: 'Terms', href: '/terms' },
-  { label: 'Privacy Policy', href: '/privacy-policy' },
-  { label: 'For Investors', href: '/for-investors' },
+  { label: 'Medical disclaimer', href: '/terms' },
 ]
 
 const SOCIAL_LINKS = [
@@ -32,13 +37,13 @@ function InstagramIcon() {
 export default function Footer() {
   return (
     <footer className="border-t border-slate-200 bg-white py-10">
-      <div className="mx-auto grid w-full max-w-[1240px] gap-8 px-4 text-sm sm:px-6 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
+      <div className="mx-auto grid w-full max-w-[1240px] gap-8 px-4 text-sm sm:px-6 lg:grid-cols-[1.25fr_0.7fr_0.7fr_0.7fr]">
         <div>
           <div className="flex items-center gap-2">
             <BrandMark />
           </div>
           <p className="mt-4 max-w-md leading-relaxed text-slate-500">
-            AI lab analysis, personalized protocols, and longitudinal biomarker tracking for people who want a repeatable health system instead of one-off interpretations.
+            Symptom-first lab intelligence, explainable Knowledge reports, and weekly health-loop tracking for people and professional teams.
           </p>
           <p className="mt-4 text-xs uppercase tracking-[0.16em] text-slate-400">Not medical advice. Always work with a qualified clinician for diagnosis and treatment decisions.</p>
           <div className="mt-6 flex flex-col items-start gap-2">
@@ -99,9 +104,20 @@ export default function Footer() {
         </div>
 
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Company</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Professionals</div>
           <div className="mt-4 flex flex-col items-start gap-3 text-left">
             {COMPANY_LINKS.map((link) => (
+              <a key={link.label} href={link.href} className="text-left text-slate-500 underline-offset-2 hover:underline">
+                {link.label}
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Trust</div>
+          <div className="mt-4 flex flex-col items-start gap-3 text-left">
+            {TRUST_LINKS.map((link) => (
               <a key={link.label} href={link.href} className="text-left text-slate-500 underline-offset-2 hover:underline">
                 {link.label}
               </a>

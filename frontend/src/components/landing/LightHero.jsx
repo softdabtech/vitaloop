@@ -1,10 +1,10 @@
-import { ArrowRight, ChevronRight, FileText, ShieldCheck, Sparkles } from 'lucide-react'
+import { ArrowRight, ChevronRight, FileText, ListChecks, ShieldCheck, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 const HERO_SCREENS = [
   {
-    src: '/mockups/example-report/dashboard.png',
-    alt: 'VITALOOP dashboard with health summary and biomarker priorities',
+    src: '/mockups/cabinet-real/upload-results.png',
+    alt: 'VITALOOP upload results cabinet screen',
     label: 'Dashboard',
     className: 'vl-hero-shot-main',
   },
@@ -25,6 +25,7 @@ const HERO_SCREENS = [
 const TRUST_CHIPS = [
   { icon: FileText, label: 'PDF/image lab upload' },
   { icon: Sparkles, label: 'Explainable Knowledge Base' },
+  { icon: ListChecks, label: 'Priority report and retest plan' },
   { icon: ShieldCheck, label: 'Privacy-first flow' },
 ]
 
@@ -142,7 +143,7 @@ export function LightHero() {
                 <div className="mb-3 flex items-center justify-between px-2">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">Live product flow</p>
-                    <p className="text-sm font-semibold text-slate-900">Dashboard → Labs → Check-in</p>
+                    <p className="text-sm font-semibold text-slate-900">Cabinet → Upload → Report</p>
                   </div>
                   <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Report ready</span>
                 </div>
@@ -155,7 +156,7 @@ export function LightHero() {
 
               <div className="absolute -left-1 bottom-14 w-[52%] rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl sm:left-0 sm:bottom-10">
                 <div className="mb-2 flex items-center justify-between px-1">
-                  <span className="text-[11px] font-bold text-slate-800">Lab results</span>
+                  <span className="text-[11px] font-bold text-slate-800">Upload results</span>
                   <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">3 review</span>
                 </div>
                 <img
