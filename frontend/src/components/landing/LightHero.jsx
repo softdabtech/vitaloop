@@ -1,23 +1,72 @@
-import { ChevronRight } from 'lucide-react'
+import { ArrowRight, ChevronRight, FileText, ShieldCheck, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+
+const HERO_SCREENS = [
+  {
+    src: '/mockups/example-report/dashboard.png',
+    alt: 'VITALOOP dashboard with health summary and biomarker priorities',
+    label: 'Dashboard',
+    className: 'vl-hero-shot-main',
+  },
+  {
+    src: '/mockups/example-report/lab-results.png',
+    alt: 'VITALOOP lab results table with biomarker status and ranges',
+    label: 'Lab results',
+    className: 'vl-hero-shot-side vl-hero-shot-results',
+  },
+  {
+    src: '/mockups/example-report/check-in.png',
+    alt: 'VITALOOP weekly check-in screen',
+    label: 'Check-in',
+    className: 'vl-hero-shot-side vl-hero-shot-checkin',
+  },
+]
+
+const TRUST_CHIPS = [
+  { icon: FileText, label: 'PDF/image lab upload' },
+  { icon: Sparkles, label: 'Explainable Knowledge Base' },
+  { icon: ShieldCheck, label: 'Privacy-first flow' },
+]
 
 export function LightHero() {
   const navigate = useNavigate()
 
   return (
-    <section className="relative bg-white py-20 lg:py-28">
+    <section className="relative overflow-hidden bg-white py-10 sm:py-16 lg:py-24">
+      <style>{`
+        @keyframes vlHeroFloatMain {
+          0%, 100% { transform: translate3d(0, 0, 0) rotate(-1deg); }
+          50% { transform: translate3d(0, -12px, 0) rotate(0.6deg); }
+        }
+        @keyframes vlHeroFloatResults {
+          0%, 100% { transform: translate3d(0, 0, 0) rotate(2.5deg); }
+          50% { transform: translate3d(-8px, -16px, 0) rotate(1deg); }
+        }
+        @keyframes vlHeroFloatCheckin {
+          0%, 100% { transform: translate3d(0, 0, 0) rotate(-2deg); }
+          50% { transform: translate3d(8px, -10px, 0) rotate(-0.4deg); }
+        }
+        .vl-hero-shot-main { animation: vlHeroFloatMain 7s ease-in-out infinite; }
+        .vl-hero-shot-results { animation: vlHeroFloatResults 8s ease-in-out infinite; }
+        .vl-hero-shot-checkin { animation: vlHeroFloatCheckin 7.5s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .vl-hero-shot-main,
+          .vl-hero-shot-results,
+          .vl-hero-shot-checkin { animation: none; }
+        }
+      `}</style>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Two-column grid */}
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <div className="grid lg:grid-cols-[0.95fr_1.05fr] gap-12 lg:gap-16 items-center">
           {/* LEFT: Content */}
           <div className="space-y-8">
             {/* Eyebrow badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 border border-teal-200 rounded-full">
-              <span className="text-teal-600 font-semibold text-sm">✨ AI LAB INTELLIGENCE</span>
+              <span className="text-teal-600 font-semibold text-sm">AI LAB INTELLIGENCE</span>
             </div>
 
             {/* Headline */}
-            <h1 className="text-5xl lg:text-6xl font-bold text-slate-900 leading-tight">
+            <h1 className="text-[44px] font-bold leading-[1.04] text-slate-900 sm:text-5xl lg:text-6xl">
               Feel off, but don't know
               <br />
               <span className="bg-gradient-to-r from-teal-600 to-teal-500 bg-clip-text text-transparent">
@@ -27,10 +76,10 @@ export function LightHero() {
 
             {/* Subheadline */}
             <p className="text-lg text-slate-600 leading-relaxed max-w-xl space-y-3">
-              <span className="block">Start with your symptoms and answer focused follow-up questions.</span>
-              <span className="block font-semibold text-slate-900">From symptoms to labs to weekly execution.</span>
+              <span className="block">Start with symptoms. Upload labs when you have them.</span>
+              <span className="block font-semibold text-slate-900">From scattered signals to an explainable health report.</span>
               <span className="block text-base text-slate-500">
-                VITALOOP helps you identify possible contributing factors, choose useful labs to discuss, and turn results into a structured protocol you can follow.
+                VITALOOP reads your results, highlights the patterns that matter, and turns them into a priority list, retest plan, and weekly action loop.
               </span>
             </p>
 
@@ -45,15 +94,27 @@ export function LightHero() {
               </button>
 
               <button
-                onClick={() => navigate('/for-nutritionists')}
+                onClick={() => navigate('/example-report')}
                 className="px-8 py-4 border-2 border-teal-500 text-teal-600 hover:bg-teal-50 rounded-lg font-semibold transition-all"
               >
-                For labs & practitioners
+                See example report
               </button>
             </div>
 
+            <div className="hidden flex-wrap gap-2 sm:flex">
+              {TRUST_CHIPS.map((chip) => {
+                const Icon = chip.icon
+                return (
+                  <span key={chip.label} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm">
+                    <Icon className="h-4 w-4 text-teal-600" />
+                    {chip.label}
+                  </span>
+                )
+              })}
+            </div>
+
             {/* Key stats */}
-            <div className="grid grid-cols-2 gap-6 pt-8 border-t border-slate-200">
+            <div className="hidden grid-cols-2 gap-6 border-t border-slate-200 pt-8 sm:grid">
               <div>
                 <div className="text-2xl font-bold text-slate-900">$19.99/mo</div>
                 <div className="text-sm text-slate-600">Premium plan</div>
@@ -73,16 +134,58 @@ export function LightHero() {
             </div>
           </div>
 
-          {/* RIGHT: Illustration */}
+          {/* RIGHT: Animated product screens */}
           <div className="flex justify-center lg:justify-end">
-            <div className="relative w-full max-w-lg">
-              <img
-                src="/images/woman-health-dashboard.webp"
-                alt="Woman reviewing health improvement dashboard"
-                className="w-full h-auto rounded-2xl shadow-2xl"
-              />
-              {/* Subtle glow effect */}
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-teal-500/20 to-transparent pointer-events-none" />
+            <div className="relative h-[380px] w-full max-w-[620px] sm:h-[500px] lg:h-[560px]">
+              <div className="absolute inset-4 rounded-[36px] bg-gradient-to-br from-teal-100 via-sky-50 to-white blur-2xl" />
+              <div className="absolute left-4 right-4 top-8 rounded-[28px] border border-slate-200 bg-white/70 p-3 shadow-2xl backdrop-blur sm:left-8 sm:right-8">
+                <div className="mb-3 flex items-center justify-between px-2">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">Live product flow</p>
+                    <p className="text-sm font-semibold text-slate-900">Dashboard → Labs → Check-in</p>
+                  </div>
+                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Report ready</span>
+                </div>
+                <img
+                  src={HERO_SCREENS[0].src}
+                  alt={HERO_SCREENS[0].alt}
+                  className={`${HERO_SCREENS[0].className} w-full rounded-2xl border border-slate-200 bg-white shadow-xl`}
+                />
+              </div>
+
+              <div className="absolute -left-1 bottom-14 w-[52%] rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl sm:left-0 sm:bottom-10">
+                <div className="mb-2 flex items-center justify-between px-1">
+                  <span className="text-[11px] font-bold text-slate-800">Lab results</span>
+                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">3 review</span>
+                </div>
+                <img
+                  src={HERO_SCREENS[1].src}
+                  alt={HERO_SCREENS[1].alt}
+                  className={`${HERO_SCREENS[1].className} w-full rounded-xl border border-slate-100`}
+                />
+              </div>
+
+              <div className="absolute -right-1 bottom-2 w-[34%] rounded-[24px] border border-slate-200 bg-white p-2 shadow-2xl sm:right-3 sm:bottom-0">
+                <div className="mb-2 flex items-center justify-between px-1">
+                  <span className="text-[10px] font-bold text-slate-800">Weekly loop</span>
+                </div>
+                <img
+                  src={HERO_SCREENS[2].src}
+                  alt={HERO_SCREENS[2].alt}
+                  className={`${HERO_SCREENS[2].className} w-full rounded-[18px] border border-slate-100`}
+                />
+              </div>
+
+              <div className="absolute right-4 top-4 hidden rounded-2xl border border-emerald-200 bg-white/95 px-4 py-3 shadow-xl sm:block">
+                <p className="text-xs font-semibold text-slate-500">Knowledge report</p>
+                <p className="mt-1 text-xl font-bold text-slate-900">85+ markers</p>
+                <p className="text-xs font-medium text-emerald-700">Explainable patterns</p>
+              </div>
+
+              <div className="absolute left-6 top-[44%] hidden rounded-2xl border border-sky-200 bg-white/95 px-4 py-3 shadow-xl sm:block">
+                <p className="text-xs font-semibold text-slate-500">Next step</p>
+                <p className="mt-1 text-sm font-bold text-slate-900">Retest plan generated</p>
+              </div>
             </div>
           </div>
         </div>
