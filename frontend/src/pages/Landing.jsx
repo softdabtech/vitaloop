@@ -34,10 +34,10 @@ import Footer from '../components/landing/Footer.jsx'
 import BrandMark from '../components/landing/BrandMark.jsx'
 
 const NAV_LINKS = [
-  { id: 'why-vitaloop', label: 'How it helps' },
+  { id: 'problem', label: 'How it works' },
+  { id: 'example-report', label: 'Example report', route: '/example-report' },
   { id: 'pricing', label: 'Pricing' },
-  { id: 'about', label: 'About', route: '/about' },
-  { id: 'for-nutritionists', label: 'For Practitioners', route: '/for-nutritionists' },
+  { id: 'for-nutritionists', label: 'For professionals', route: '/for-nutritionists' },
 ]
 
 // S7764 helper functions for safe window access
@@ -88,23 +88,23 @@ const BENEFITS = [
 
 const PREMIUM_FEATURES = [
   {
-    title: 'Symptom check-ins and trend overlays',
-    body: 'Track weekly symptom changes next to biomarker movement to understand what is actually improving.',
-    icon: HeartPulse,
+    title: 'Full Knowledge report',
+    body: 'Explainable biomarker patterns, source-backed reasoning, doctor discussion points, and safety-aware summaries.',
+    icon: BrainCircuit,
   },
   {
-    title: 'Priority ranking by impact',
-    body: 'See the highest-leverage issues first with a clear order of execution instead of scattered suggestions.',
+    title: 'Priority action protocol',
+    body: 'See what matters first, what can wait, and which findings need clinical review before action.',
     icon: TrendingUp,
   },
   {
-    title: 'Lab discussion prep',
-    body: 'Bring structured notes and focused questions to your clinician conversations.',
-    icon: Stethoscope,
+    title: 'Weekly adaptation',
+    body: 'Track symptoms, adherence, energy, sleep, and response so the plan can adjust across the loop.',
+    icon: HeartPulse,
   },
   {
-    title: 'Protocol adaptation across cycles',
-    body: 'Move from one-off interpretation to an iterative loop with retests and weekly adjustments.',
+    title: 'Progress and retest tracking',
+    body: 'Compare uploads and retest cycles instead of reading each lab report in isolation.',
     icon: Upload,
   },
 ]
@@ -909,6 +909,102 @@ export default function Landing() {
           </motion.div>
         </section>
 
+        <section id="example-report" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
+          <motion.div {...fadeUp(reduced)} className="mb-8 text-center">
+            <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-sky-700">
+              Product proof
+            </span>
+            <h2 className="mt-4 text-[30px] font-bold tracking-tight text-slate-900 md:text-[42px]">
+              What you get after uploading labs
+            </h2>
+            <p className="mx-auto mt-4 max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
+              VITALOOP turns a PDF or image into a structured report: biomarkers found, what needs review,
+              why it matters, what to discuss, and when to retest.
+            </p>
+          </motion.div>
+
+          <div className="grid items-center gap-7 lg:grid-cols-[1.15fr_0.85fr]">
+            <motion.div
+              {...fadeUp(reduced, 0.08)}
+              className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-slate-950 p-4 shadow-2xl"
+            >
+              <div className="mb-4 flex items-center justify-between px-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">Example report</p>
+                  <p className="text-sm font-semibold text-white">Dashboard and biomarker priorities</p>
+                </div>
+                <button
+                  onClick={() => navigate('/example-report')}
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold text-slate-900 transition hover:bg-emerald-50"
+                >
+                  Open report
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
+                <img
+                  src="/mockups/example-report/dashboard.png"
+                  alt="VITALOOP dashboard preview"
+                  className="rounded-2xl border border-white/10 bg-white shadow-xl"
+                />
+                <div className="grid gap-4">
+                  <img
+                    src="/mockups/example-report/lab-results.png"
+                    alt="VITALOOP lab result table preview"
+                    className="rounded-2xl border border-white/10 bg-white shadow-xl"
+                  />
+                  <img
+                    src="/mockups/example-report/progress.png"
+                    alt="VITALOOP progress tracking preview"
+                    className="rounded-2xl border border-white/10 bg-white shadow-xl"
+                  />
+                </div>
+              </div>
+            </motion.div>
+
+            <div className="grid gap-3">
+              {[
+                {
+                  title: 'Biomarkers found',
+                  body: 'Values, units, statuses, and reference ranges are normalized into a readable table.',
+                  value: '85+',
+                },
+                {
+                  title: 'Why it matters',
+                  body: 'Matched Knowledge Base rules explain possible patterns without claiming a diagnosis.',
+                  value: 'KB',
+                },
+                {
+                  title: 'What to discuss',
+                  body: 'Doctor/nutritionist discussion points are generated from flagged markers and matched rules.',
+                  value: 'Q',
+                },
+                {
+                  title: 'Retest plan',
+                  body: 'The report suggests what to monitor again and when, based on marker category and urgency.',
+                  value: 'Loop',
+                },
+              ].map((item, index) => (
+                <motion.article
+                  key={item.title}
+                  {...fadeUp(reduced, 0.12 + index * 0.04)}
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+                >
+                  <div className="flex items-start gap-4">
+                    <span className="inline-flex h-12 min-w-12 items-center justify-center rounded-2xl bg-emerald-50 text-sm font-black text-emerald-700">
+                      {item.value}
+                    </span>
+                    <div>
+                      <h3 className="font-bold text-slate-900">{item.title}</h3>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">{item.body}</p>
+                    </div>
+                  </div>
+                </motion.article>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section id="problem" className="mx-auto w-full max-w-[990px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-12 text-center">
             <motion.h2
@@ -918,17 +1014,16 @@ export default function Landing() {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              Your Doctor{' '}
-              <span className="relative">
-                <span className="bg-gradient-to-r from-rose-600 to-orange-600 bg-clip-text text-transparent">vs</span>
-              </span>{' '}
-              VITALOOP
+              Your doctor gives care.{' '}
+              <span className="bg-gradient-to-r from-emerald-600 to-sky-600 bg-clip-text text-transparent">
+                VITALOOP gives structure.
+              </span>
             </motion.h2>
             <p className={`mx-auto mt-4 max-w-2xl text-lg ${'text-slate-600'}`}>
-              Why this complements, not replaces, medical care
+              Built to support better health conversations, not replace medical care.
             </p>
             <p className={`mx-auto mt-6 max-w-3xl text-base ${'text-slate-600'}`}>
-              VITALOOP is built to help you prepare better context, ask better questions, and follow a clearer execution loop between appointments. The goal is informed collaboration with your healthcare team.
+              Doctors diagnose and treat. VITALOOP organizes your symptoms, lab results, weekly response, and retest context so every appointment starts with clearer information.
             </p>
           </motion.div>
 
@@ -940,14 +1035,14 @@ export default function Landing() {
                 className="text-center mb-6"
               >
                 <span className="inline-flex rounded-full bg-slate-100 px-4 py-2 text-sm font-bold uppercase tracking-wider text-slate-700">
-                  📄 Lab Report
+                  Before VITALOOP
                 </span>
               </motion.div>
 
               {[
-                { icon: X, title: 'Time-limited context', stat: '•', label: 'Short visits can miss longitudinal patterns' },
-                { icon: X, title: 'Fragmented information', stat: '•', label: 'Symptoms, labs, and habits often stay disconnected' },
-                { icon: X, title: 'Unstructured follow-through', stat: '•', label: 'It is easy to leave without a clear weekly plan' },
+                { icon: X, title: 'One-time snapshot', stat: '•', label: 'A lab report often arrives without symptom and lifestyle context' },
+                { icon: X, title: 'Fragmented notes', stat: '•', label: 'Symptoms, labs, questions, and habits stay in separate places' },
+                { icon: X, title: 'Unclear follow-through', stat: '•', label: 'It is easy to leave without a weekly plan or retest structure' },
               ].map((item, idx) => {
                 const Icon = item.icon
                 return (
@@ -995,9 +1090,9 @@ export default function Landing() {
               </motion.div>
 
               {[
-                { icon: TrendingUp, title: 'Structured intake', stat: '✓', label: 'Symptoms and context captured before analysis' },
-                { icon: Clock3, title: 'Connected tracking', stat: '✓', label: 'Labs and weekly response stay in one timeline' },
-                { icon: Sparkles, title: 'Execution clarity', stat: '✓', label: 'Prioritized actions you can actually follow' },
+                { icon: TrendingUp, title: 'Structured symptom context', stat: '✓', label: 'How you feel is captured before the lab report is interpreted' },
+                { icon: Clock3, title: 'Connected tracking', stat: '✓', label: 'Labs, actions, symptoms, and retests stay in one loop' },
+                { icon: Sparkles, title: 'Prepared discussion', stat: '✓', label: 'You get priorities and focused questions for a clinician or nutritionist' },
               ].map((item, idx) => {
                 const Icon = item.icon
                 return (
@@ -1052,10 +1147,10 @@ export default function Landing() {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              Premium Features
+              What Premium unlocks
             </motion.h2>
             <p className={`mt-3 text-[17px] leading-[1.7] ${'text-slate-600'}`}>
-              Everything you need to optimize your health
+              The full health loop: deeper reports, prioritized actions, weekly adaptation, and progress over time.
             </p>
           </motion.div>
 
@@ -1175,6 +1270,41 @@ export default function Landing() {
 
         <InteractivePricing />
 
+        <section className="mx-auto w-full max-w-[1100px] px-4 py-10 sm:px-6">
+          <motion.div
+            {...fadeUp(reduced)}
+            className="overflow-hidden rounded-3xl border border-slate-200 bg-[linear-gradient(135deg,#0f172a,#134e4a)] p-6 text-white shadow-2xl md:p-8"
+          >
+            <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">For professionals</p>
+                <h2 className="mt-2 text-[26px] font-bold tracking-tight md:text-[34px]">
+                  Practitioners and laboratories can build on the same intelligence layer.
+                </h2>
+                <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-200 md:text-base">
+                  Use VITALOOP for client workflows, lab-result interpretation, embedded insights, and follow-up loops.
+                  The consumer product and B2B product share the same Knowledge Base foundation.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
+                <button
+                  onClick={() => navigate('/for-nutritionists')}
+                  className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-50"
+                >
+                  For practitioners
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => navigate('/for-nutritionists')}
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/30 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+                >
+                  For laboratories
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+
         <TestimonialsCarousel />
 
         {/* === Blog teaser === */}
@@ -1279,8 +1409,11 @@ export default function Landing() {
               <button onClick={() => navigate('/login?signup=true')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                 Start with symptoms
               </button>
-              <button onClick={() => navigate('/upload')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
-                Upload lab results
+              <button onClick={() => navigate('/example-report')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+                See example report
+              </button>
+              <button onClick={() => navigate('/for-nutritionists')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+                For professionals
               </button>
               <a href="/help" className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                 Help Center
