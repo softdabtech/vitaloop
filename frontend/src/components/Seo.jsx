@@ -1,5 +1,4 @@
 import { Helmet } from 'react-helmet-async'
-import { useEffect } from 'react'
 
 const BASE_URL = 'https://vitaloop.today'
 const DEFAULT_TITLE = 'Interpret Blood Test Results with AI | VITALOOP'
@@ -19,8 +18,6 @@ export default function Seo({
   title,
   description,
   path = '/',
-  canonicalUrl,
-  locale = 'en_US',
   image = `${BASE_URL}/og-cover-2026-05.jpg`,
   imageAlt = 'VITALOOP — AI-powered blood test analysis and biohacking platform dashboard',
   noindex = false,
@@ -28,54 +25,10 @@ export default function Seo({
 }) {
   const fullTitle = title || DEFAULT_TITLE
   const safeDescription = description || DEFAULT_DESCRIPTION
-  const canonical = canonicalUrl || `${BASE_URL}${path}`
+  const canonical = `${BASE_URL}${path}`
   const robotsContent = noindex
     ? 'noindex,nofollow'
     : 'index,follow,max-image-preview:large,max-snippet:-1'
-
-  useEffect(() => {
-    if (typeof document === 'undefined') return
-
-    const setSingleMeta = (selector, createAttrs, content) => {
-      const nodes = Array.from(document.head.querySelectorAll(selector))
-      const node = nodes[0] || document.createElement('meta')
-      Object.entries(createAttrs).forEach(([key, value]) => node.setAttribute(key, value))
-      node.setAttribute('content', content)
-      if (!nodes[0]) document.head.appendChild(node)
-      nodes.slice(1).forEach((extra) => extra.remove())
-    }
-
-    const setSingleLink = (selector, createAttrs, href) => {
-      const nodes = Array.from(document.head.querySelectorAll(selector))
-      const node = nodes[0] || document.createElement('link')
-      Object.entries(createAttrs).forEach(([key, value]) => node.setAttribute(key, value))
-      node.setAttribute('href', href)
-      if (!nodes[0]) document.head.appendChild(node)
-      nodes.slice(1).forEach((extra) => extra.remove())
-    }
-
-    const syncHead = () => {
-      document.documentElement.lang = locale === 'uk_UA' ? 'uk' : 'en'
-      document.title = fullTitle
-      setSingleMeta('meta[name="description"]', { name: 'description' }, safeDescription)
-      setSingleMeta('meta[name="robots"]', { name: 'robots' }, robotsContent)
-      setSingleLink('link[rel="canonical"]', { rel: 'canonical' }, canonical)
-      setSingleMeta('meta[property="og:title"]', { property: 'og:title' }, fullTitle)
-      setSingleMeta('meta[property="og:description"]', { property: 'og:description' }, safeDescription)
-      setSingleMeta('meta[property="og:url"]', { property: 'og:url' }, canonical)
-      setSingleMeta('meta[property="og:image"]', { property: 'og:image' }, image)
-      setSingleMeta('meta[property="og:image:alt"]', { property: 'og:image:alt' }, imageAlt)
-      setSingleMeta('meta[property="og:locale"]', { property: 'og:locale' }, locale)
-      setSingleMeta('meta[name="twitter:title"]', { name: 'twitter:title' }, fullTitle)
-      setSingleMeta('meta[name="twitter:description"]', { name: 'twitter:description' }, safeDescription)
-      setSingleMeta('meta[name="twitter:image"]', { name: 'twitter:image' }, image)
-      setSingleMeta('meta[name="twitter:image:alt"]', { name: 'twitter:image:alt' }, imageAlt)
-    }
-
-    syncHead()
-    const cleanupId = window.setTimeout(syncHead, 0)
-    return () => window.clearTimeout(cleanupId)
-  }, [canonical, fullTitle, image, imageAlt, locale, robotsContent, safeDescription])
 
   return (
     <Helmet>
@@ -93,7 +46,7 @@ export default function Seo({
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
       <meta property="og:image:alt" content={imageAlt} />
-      <meta property="og:locale" content={locale} />
+      <meta property="og:locale" content="en_US" />
 
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:site" content="@vitaloop" />
