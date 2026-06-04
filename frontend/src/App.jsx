@@ -28,14 +28,6 @@ const Terms = lazy(() => import('./pages/Terms.jsx'))
 const Help = lazy(() => import('./pages/Help.jsx'))
 const UaLanding = lazy(() => import('./pages/UaLanding.jsx'))
 const UaPage = lazy(() => import('./pages/UaPage.jsx'))
-const UaCabinetLayout = lazy(() => import('./components/ua/UaCabinetLayout.jsx'))
-const UaDashboard = lazy(() => import('./pages/ua-cabinet/UaDashboard.jsx'))
-const UaUpload = lazy(() => import('./pages/ua-cabinet/UaUpload.jsx'))
-const UaLabResults = lazy(() => import('./pages/ua-cabinet/UaLabResults.jsx'))
-const UaResults = lazy(() => import('./pages/ua-cabinet/UaResults.jsx'))
-const UaQuestionnaire = lazy(() => import('./pages/ua-cabinet/UaQuestionnaire.jsx'))
-const UaSettings = lazy(() => import('./pages/ua-cabinet/UaSimplePage.jsx').then((module) => ({ default: module.UaSettings })))
-const UaSubscription = lazy(() => import('./pages/ua-cabinet/UaSimplePage.jsx').then((module) => ({ default: module.UaSubscription })))
 
 // UI components — lazy
 const SupportChat = lazy(() => import('./components/SupportChat.jsx'))
@@ -215,16 +207,6 @@ export default function App() {
       </EndUserFlowRoute>
     </ProtectedRoute>
   )
-  const renderUaCabinetRoute = (page, options = {}) => (
-    <ProtectedRoute>
-      <EndUserFlowRoute
-        allowBeforeOnboarding={Boolean(options.allowBeforeOnboarding)}
-        redirectIfOnboardingComplete={Boolean(options.redirectIfOnboardingComplete)}
-      >
-        <UaCabinetLayout>{page}</UaCabinetLayout>
-      </EndUserFlowRoute>
-    </ProtectedRoute>
-  )
 
   return (
     <BrowserRouter>
@@ -260,23 +242,23 @@ export default function App() {
           <Route path="/help/:articleId" element={<Help />} />
           <Route path="/login" element={<Login />} />
           <Route path="/auth/confirmation" element={<EmailConfirmation />} />
-          <Route path="/dashboard" element={isUaHost ? renderUaCabinetRoute(<UaDashboard />, { allowBeforeOnboarding: true }) : renderCabinetRoute(<UserDashboard />, { allowBeforeOnboarding: true })} />
+          <Route path="/dashboard" element={renderCabinetRoute(<UserDashboard />, { allowBeforeOnboarding: true })} />
           <Route path="/today" element={<Navigate to="/dashboard" replace />} />
           <Route path="/symptom-check" element={<Navigate to="/questionnaire" replace />} />
           <Route path="/results-trends" element={<Navigate to="/lab-results" replace />} />
-          <Route path="/upload" element={isUaHost ? renderUaCabinetRoute(<UaUpload />, { allowBeforeOnboarding: true }) : renderCabinetRoute(<Upload />, { allowBeforeOnboarding: true })} />
-          <Route path="/lab-plan" element={isUaHost ? <Navigate to="/questionnaire" replace /> : renderCabinetRoute(<LabPlan />, { allowBeforeOnboarding: true })} />
-          <Route path="/results/:uploadId" element={isUaHost ? renderUaCabinetRoute(<UaResults />) : renderCabinetRoute(<Results />)} />
-          <Route path="/protocol/:uploadId" element={isUaHost ? renderUaCabinetRoute(<ProtocolPage />) : renderCabinetRoute(<ProtocolPage />)} />
-          <Route path="/avatar" element={isUaHost ? <Navigate to="/dashboard" replace /> : renderCabinetRoute(<Avatar />)} />
+          <Route path="/upload" element={renderCabinetRoute(<Upload />, { allowBeforeOnboarding: true })} />
+          <Route path="/lab-plan" element={renderCabinetRoute(<LabPlan />, { allowBeforeOnboarding: true })} />
+          <Route path="/results/:uploadId" element={renderCabinetRoute(<Results />)} />
+          <Route path="/protocol/:uploadId" element={renderCabinetRoute(<ProtocolPage />)} />
+          <Route path="/avatar" element={renderCabinetRoute(<Avatar />)} />
           <Route path="/progress" element={<Navigate to="/lab-results" replace />} />
-          <Route path="/assignments" element={isUaHost ? <Navigate to="/dashboard" replace /> : renderCabinetRoute(<Assignments />, { allowBeforeOnboarding: true })} />
-          <Route path="/assignments/:assignmentId" element={isUaHost ? <Navigate to="/dashboard" replace /> : renderCabinetRoute(<AssignmentDetails />, { allowBeforeOnboarding: true })} />
-          <Route path="/lab-results" element={isUaHost ? renderUaCabinetRoute(<UaLabResults />, { allowBeforeOnboarding: true }) : renderCabinetRoute(<LabResultsList />, { allowBeforeOnboarding: true })} />
-          <Route path="/settings" element={isUaHost ? renderUaCabinetRoute(<UaSettings />, { allowBeforeOnboarding: true }) : renderCabinetRoute(<Settings />, { allowBeforeOnboarding: true })} />
-          <Route path="/health-profile" element={isUaHost ? <Navigate to="/settings" replace /> : renderCabinetRoute(<HealthProfile />, { allowBeforeOnboarding: true })} />
-          <Route path="/subscription" element={isUaHost ? renderUaCabinetRoute(<UaSubscription />, { allowBeforeOnboarding: true }) : renderCabinetRoute(<Subscription />, { allowBeforeOnboarding: true })} />
-          <Route path="/billing-history" element={isUaHost ? <Navigate to="/subscription" replace /> : renderCabinetRoute(<BillingHistory />, { allowBeforeOnboarding: true })} />
+          <Route path="/assignments" element={renderCabinetRoute(<Assignments />, { allowBeforeOnboarding: true })} />
+          <Route path="/assignments/:assignmentId" element={renderCabinetRoute(<AssignmentDetails />, { allowBeforeOnboarding: true })} />
+          <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />, { allowBeforeOnboarding: true })} />
+          <Route path="/settings" element={renderCabinetRoute(<Settings />, { allowBeforeOnboarding: true })} />
+          <Route path="/health-profile" element={renderCabinetRoute(<HealthProfile />, { allowBeforeOnboarding: true })} />
+          <Route path="/subscription" element={renderCabinetRoute(<Subscription />, { allowBeforeOnboarding: true })} />
+          <Route path="/billing-history" element={renderCabinetRoute(<BillingHistory />, { allowBeforeOnboarding: true })} />
           <Route path="/help-center" element={renderCabinetRoute(<Help embedded basePath="/help-center" />, { allowBeforeOnboarding: true })} />
           <Route path="/admin" element={<ProtectedRoute><CRMRoute needsOps><Navigate to="/ops" replace /></CRMRoute></ProtectedRoute>} />
           <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
@@ -286,10 +268,10 @@ export default function App() {
           <Route path="/crm/clients/:id" element={<ProtectedRoute><CRMRoute><CRMClientDetails /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/practitioners" element={<ProtectedRoute><CRMRoute><CRMPractitioners /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
-          <Route path="/onboarding" element={isUaHost ? renderUaCabinetRoute(<UaDashboard />, { allowBeforeOnboarding: true }) : renderCabinetRoute(<Onboarding />, { allowBeforeOnboarding: true })} />
-          <Route path="/questionnaire" element={isUaHost ? renderUaCabinetRoute(<UaQuestionnaire />, { allowBeforeOnboarding: true }) : renderCabinetRoute(<Questionnaire />, { allowBeforeOnboarding: true })} />
-          <Route path="/check-ins" element={isUaHost ? <Navigate to="/dashboard" replace /> : renderCabinetRoute(<WeeklyCheckIn />)} />
-          <Route path="/insights" element={isUaHost ? <Navigate to="/lab-results" replace /> : renderCabinetRoute(<Insights />)} />
+          <Route path="/onboarding" element={renderCabinetRoute(<Onboarding />, { allowBeforeOnboarding: true })} />
+          <Route path="/questionnaire" element={renderCabinetRoute(<Questionnaire />, { allowBeforeOnboarding: true })} />
+          <Route path="/check-ins" element={renderCabinetRoute(<WeeklyCheckIn />)} />
+          <Route path="/insights" element={renderCabinetRoute(<Insights />)} />
           {/* Legacy route redirects */}
           <Route path="/checkin" element={<Navigate to="/check-ins" replace />} />
           <Route path="/timeline" element={<Navigate to="/insights" replace />} />
