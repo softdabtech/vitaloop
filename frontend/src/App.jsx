@@ -26,6 +26,8 @@ const ForNutritionists = lazy(() => import('./pages/ForNutritionists.jsx'))
 const Privacy = lazy(() => import('./pages/Privacy.jsx'))
 const Terms = lazy(() => import('./pages/Terms.jsx'))
 const Help = lazy(() => import('./pages/Help.jsx'))
+const UaLanding = lazy(() => import('./pages/UaLanding.jsx'))
+const UaPage = lazy(() => import('./pages/UaPage.jsx'))
 
 // UI components — lazy
 const SupportChat = lazy(() => import('./components/SupportChat.jsx'))
@@ -192,6 +194,9 @@ function FloatingSupportChat() {
 }
 
 export default function App() {
+  const isUaHost = typeof window !== 'undefined' && window.location.hostname.toLowerCase() === 'ua.vitaloop.today'
+  const isUaPreviewPath = typeof window !== 'undefined' && (window.location.pathname === '/ua' || window.location.pathname.startsWith('/ua/'))
+  const isUaLandingShell = typeof window !== 'undefined' && (isUaHost || isUaPreviewPath)
   const renderCabinetRoute = (page, options = {}) => (
     <ProtectedRoute>
       <EndUserFlowRoute
@@ -205,12 +210,19 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Suspense fallback={null}><PaywallModal /></Suspense>
+      {!isUaLandingShell && <Suspense fallback={null}><PaywallModal /></Suspense>}
       <GAPageTracker />
       <ScrollToTop />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
-          <Route path="/" element={<Landing />} />
+          <Route path="/" element={isUaHost ? <UaLanding /> : <Landing />} />
+          <Route path="/ua" element={<UaLanding />} />
+          <Route path="/ua/:pageSlug" element={<UaPage />} />
+          <Route path="/samopochuttia" element={isUaHost ? <UaPage pageSlug="samopochuttia" /> : <NotFound />} />
+          <Route path="/symptomy" element={isUaHost ? <UaPage pageSlug="symptomy" /> : <NotFound />} />
+          <Route path="/analizy" element={isUaHost ? <UaPage pageSlug="analizy" /> : <NotFound />} />
+          <Route path="/laboratorii" element={isUaHost ? <UaPage pageSlug="laboratorii" /> : <NotFound />} />
+          <Route path="/tarify" element={isUaHost ? <UaPage pageSlug="tarify" /> : <NotFound />} />
           <Route path="/product" element={<Product />} />
           <Route path="/features" element={<Features />} />
           <Route path="/pricing" element={<Pricing />} />
@@ -269,7 +281,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
-      <FloatingSupportChat />
+      {!isUaLandingShell && <FloatingSupportChat />}
     </BrowserRouter>
   )
 }

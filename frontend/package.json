@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "validate:env": "node ./scripts/validate-env.mjs",
-    "build": "npm run validate:env && vite build",
+    "build": "npm run validate:env && vite build && node ./scripts/create-ua-index.mjs",
     "build:snap": "react-snap",
     "build:prod": "npm run build && npm run build:snap",
     "build:bundle:prod": "npm run validate:env && NODE_OPTIONS=--max-old-space-size=2048 vite build --mode production",
