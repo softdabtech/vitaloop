@@ -14,6 +14,7 @@ def test_origins_list_includes_production_fallbacks_when_env_empty(monkeypatch):
 
     assert "https://vitaloop.today" in origins
     assert "https://www.vitaloop.today" in origins
+    assert "https://ua.vitaloop.today" in origins
     assert "https://crm.vitaloop.today" in origins
     assert "http://localhost:5173" in origins
     assert "http://127.0.0.1:5173" in origins
@@ -27,6 +28,7 @@ def test_origins_list_excludes_localhost_in_production_when_env_empty(monkeypatc
 
     assert "https://vitaloop.today" in origins
     assert "https://www.vitaloop.today" in origins
+    assert "https://ua.vitaloop.today" in origins
     assert "https://crm.vitaloop.today" in origins
     assert "http://localhost:5173" not in origins
     assert "http://127.0.0.1:5173" not in origins
@@ -52,6 +54,7 @@ def test_origins_list_deduplicates_and_keeps_custom_origins(monkeypatch):
     [
         "https://vitaloop.today",
         "https://www.vitaloop.today",
+        "https://ua.vitaloop.today",
         "https://crm.vitaloop.today",
     ],
 )

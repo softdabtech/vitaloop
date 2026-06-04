@@ -93,6 +93,7 @@ class Settings(BaseSettings):
         fallback_origins = [
             "https://vitaloop.today",
             "https://www.vitaloop.today",
+            "https://ua.vitaloop.today",
             "https://crm.vitaloop.today",
         ]
 
