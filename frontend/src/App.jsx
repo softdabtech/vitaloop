@@ -267,7 +267,7 @@ export default function App() {
           <Route path="/upload" element={isUaHost ? renderUaCabinetRoute(<UaUpload />, { allowBeforeOnboarding: true }) : renderCabinetRoute(<Upload />, { allowBeforeOnboarding: true })} />
           <Route path="/lab-plan" element={isUaHost ? <Navigate to="/questionnaire" replace /> : renderCabinetRoute(<LabPlan />, { allowBeforeOnboarding: true })} />
           <Route path="/results/:uploadId" element={isUaHost ? renderUaCabinetRoute(<UaResults />) : renderCabinetRoute(<Results />)} />
-          <Route path="/protocol/:uploadId" element={isUaHost ? <Navigate to="/lab-results" replace /> : renderCabinetRoute(<ProtocolPage />)} />
+          <Route path="/protocol/:uploadId" element={isUaHost ? renderUaCabinetRoute(<ProtocolPage />) : renderCabinetRoute(<ProtocolPage />)} />
           <Route path="/avatar" element={isUaHost ? <Navigate to="/dashboard" replace /> : renderCabinetRoute(<Avatar />)} />
           <Route path="/progress" element={<Navigate to="/lab-results" replace />} />
           <Route path="/assignments" element={isUaHost ? <Navigate to="/dashboard" replace /> : renderCabinetRoute(<Assignments />, { allowBeforeOnboarding: true })} />
