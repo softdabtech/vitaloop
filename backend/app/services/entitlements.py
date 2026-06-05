@@ -39,7 +39,10 @@ def _is_paid_subscription(active_sub: Optional[Dict[str, Any]], account: Dict[st
         plan_key = account_plan or 'personal'
         source = 'users'
     elif active_sub:
-        billing_status = sub_table_status if sub_table_status in {'active', 'past_due', 'paused', 'cancelled', 'free'} else 'free'
+        if sub_table_plan == 'free' and sub_table_status == 'active':
+            billing_status = 'free'
+        else:
+            billing_status = sub_table_status if sub_table_status in {'active', 'past_due', 'paused', 'cancelled', 'free'} else 'free'
         plan_key = sub_table_plan or account_plan or 'free'
         source = 'subscriptions'
     else:

@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -52,6 +52,22 @@ def _normalize_role(*values: Any) -> str:
     return "end_user"
 
 
+async def _has_user_row(table: str, user_id: str, *, status: Optional[str] = None) -> bool:
+    try:
+        sb = svc._get_supabase()
+        query = (
+            sb.table(table)
+            .select("id")
+            .eq("user_id", user_id)
+        )
+        if status is not None:
+            query = query.eq("status", status)
+        resp = await svc._run(lambda: query.limit(1).execute())
+        return bool(resp.data)
+    except Exception:
+        return False
+
+
 @router.get("/state")
 async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
     user_id = current_user.get("sub")
@@ -92,35 +108,11 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
             "first_health_loop_complete": True,
         }
 
-    sb = svc._get_supabase()
-    complaints_resp = await svc._run(
-        lambda: sb.table("recurring_complaints")
-        .select("id")
-        .eq("user_id", user_id)
-        .limit(1)
-        .execute()
-    )
-    uploads_resp = await svc._run(
-        lambda: sb.table("lab_uploads")
-        .select("id")
-        .eq("user_id", user_id)
-        .limit(1)
-        .execute()
-    )
-    questionnaire_resp = await svc._run(
-        lambda: sb.table("questionnaire_sessions")
-        .select("id")
-        .eq("user_id", user_id)
-        .eq("status", "completed")
-        .limit(1)
-        .execute()
-    )
-
     has_profile_basics = _has_profile_basics(profile)
     has_location = _has_location(location)
-    has_complaints = bool(complaints_resp.data)
-    has_uploads = bool(uploads_resp.data)
-    has_questionnaire = bool(questionnaire_resp.data)
+    has_complaints = await _has_user_row("recurring_complaints", user_id)
+    has_uploads = await _has_user_row("lab_uploads", user_id)
+    has_questionnaire = await _has_user_row("questionnaire_sessions", user_id, status="completed")
     first_health_loop_started = bool(has_complaints or has_uploads or has_questionnaire)
     first_health_loop_complete = bool(has_uploads and has_questionnaire)
 
