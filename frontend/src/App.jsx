@@ -122,14 +122,18 @@ function CRMRoute({ children, needsOps = false }) {
 }
 
 function EndUserFlowRoute({ children, allowBeforeOnboarding = false, redirectIfOnboardingComplete = false }) {
-  const { user, loading } = useAuth()
+  const { loading } = useAuth()
   const { state, loading: onboardingLoading } = useOnboardingState()
+  const shouldWaitForOnboarding = !allowBeforeOnboarding || redirectIfOnboardingComplete
   const onboardingStateKnown = state?.requires_onboarding !== null && state?.requires_onboarding !== undefined
   const requiresOnboarding = Boolean(state?.requires_onboarding)
 
-  if (loading || onboardingLoading || !onboardingStateKnown) {
+  if (loading) {
     return <AppLoadingScreen />
   }
+  if (!shouldWaitForOnboarding) return children
+  if (onboardingLoading || !onboardingStateKnown) return <AppLoadingScreen />
+
   if (requiresOnboarding && !allowBeforeOnboarding) return <Navigate to="/onboarding" replace />
   if (!requiresOnboarding && redirectIfOnboardingComplete) return <Navigate to="/dashboard" replace />
 
