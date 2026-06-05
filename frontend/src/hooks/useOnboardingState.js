@@ -39,7 +39,7 @@ export function useOnboardingState() {
 
     async function load() {
       try {
-        const { data } = await api.get('/auth/onboarding/state')
+        const { data } = await api.get('/auth/onboarding/state', { timeout: 6000 })
         if (active && data) {
           setState({ ...FALLBACK_STATE, ...data, checklist: { ...FALLBACK_STATE.checklist, ...(data.checklist || {}) } })
         }
