@@ -1,13 +1,34 @@
 import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 
-export default function UploadZone({ onFile, disabled = false }) {
+function resolveRejectionMessage(rejection) {
+  const code = rejection?.errors?.[0]?.code
+
+  if (code === 'file-too-large') {
+    return 'File is too large. Please upload a file under 20MB.'
+  }
+  if (code === 'file-invalid-type') {
+    return 'Unsupported file type. Please upload a PDF file.'
+  }
+  if (code === 'too-many-files') {
+    return 'Please upload one lab report at a time.'
+  }
+
+  return 'Could not accept this file. Please upload a PDF file under 20MB.'
+}
+
+export default function UploadZone({ onFile, onError, disabled = false }) {
   const onDrop = useCallback((accepted) => {
     if (accepted[0]) onFile(accepted[0])
   }, [onFile])
 
+  const onDropRejected = useCallback((rejections) => {
+    if (rejections[0]) onError?.(resolveRejectionMessage(rejections[0]))
+  }, [onError])
+
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
+    onDropRejected,
     disabled,
     noClick: true,
     accept: {

@@ -261,6 +261,11 @@ export default function Upload() {
     await handleFile(selectedFile)
   }
 
+  function handleUploadZoneError(message) {
+    setErrorMessage(message)
+    toast.error(message)
+  }
+
   const handleAnalyzeManual = (result) => {
     // Same behavior as PDF upload - navigate to results with analysis
     trackFunnelEvent('funnel_first_upload_completed', 'User completed first manual biomarker entry', {
@@ -480,7 +485,7 @@ export default function Upload() {
                 </div>
               )}
 
-              {!analyzing && <UploadZone onFile={handleFile} disabled={isBusy} />}
+              {!analyzing && <UploadZone onFile={handleFile} onError={handleUploadZoneError} disabled={isBusy} />}
             </div>
           </>
         ) : (
