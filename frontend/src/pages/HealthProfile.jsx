@@ -28,6 +28,21 @@ const GOAL_OPTIONS = [
   'Healthy aging',
 ]
 
+const DEFAULT_PROFILE = {
+  age: '',
+  sex: '',
+  height_cm: '',
+  weight_kg: '',
+  goals: [],
+  timezone: 'America/New_York',
+  medications: '',
+  allergies: '',
+  pregnancy_status: '',
+  current_supplements: '',
+  current_medications: '',
+  prior_diagnoses: '',
+}
+
 const fieldStyle = {
   width: '100%',
   minHeight: 44,
@@ -138,20 +153,7 @@ function buildProfileUpdatePayload(profile) {
 export default function HealthProfile() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const [profile, setProfile] = useState({
-    age: '',
-    sex: '',
-    height_cm: '',
-    weight_kg: '',
-    goals: [],
-    timezone: 'America/New_York',
-    medications: '',
-    allergies: '',
-    pregnancy_status: '',
-    current_supplements: '',
-    current_medications: '',
-    prior_diagnoses: '',
-  })
+  const [profile, setProfile] = useState(DEFAULT_PROFILE)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -178,7 +180,7 @@ export default function HealthProfile() {
     async function loadProfile() {
       setLoading(true)
       try {
-        const response = await api.get('/profile')
+        const response = await api.get('/profile', { timeout: 8000 })
         const data = response.data?.profile || {}
         setProfile(mapProfileFromApi(data))
       } catch (error) {
@@ -235,6 +237,12 @@ export default function HealthProfile() {
         subtitle="Medical context, goals, and constraints that improve personalization quality."
         helper="Completing safety and context sections improves recommendation quality and reduces unsafe suggestions."
       />
+
+      {loading && (
+        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+          Loading saved profile details...
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-6">
