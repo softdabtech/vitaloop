@@ -139,7 +139,7 @@ function upsertTag(html, pattern, replacement) {
 
 function renderStaticRoot(route) {
   const paragraphs = route.text.map((item) => `<p>${escapeHtml(item)}</p>`).join('\n          ')
-  return `<div id="root"><main data-crawler-content="true" style="max-width: 760px; margin: 0 auto; padding: 48px 20px; font-family: Inter, Arial, sans-serif; color: #0f172a;">
+  return `<div id="root"><main data-crawler-content="true" aria-hidden="true" style="display: none !important; visibility: hidden; max-width: 760px; margin: 0 auto; padding: 48px 20px; font-family: Inter, Arial, sans-serif; color: #0f172a;">
         <h1>${escapeHtml(route.title.replace(' | VITALOOP', ''))}</h1>
         <p>${escapeHtml(route.description)}</p>
         ${paragraphs}

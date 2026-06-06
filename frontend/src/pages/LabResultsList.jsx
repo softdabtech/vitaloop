@@ -156,8 +156,8 @@ export default function LabResultsList() {
           <HintBanner
             hints={[
               '🗂 This is your lab history — every upload you make is stored here with a biomarker quality snapshot.',
-              '📊 Each row shows how many markers are optimal, borderline, or critical. Click "Results" for the full breakdown.',
-              '💊 Click "Protocol" on any row to jump directly to the supplement plan for that specific upload.',
+              '📊 Each row shows how many markers are in range, worth watching, or ready for review. Click "Results" for the full breakdown.',
+              '📋 Open the action plan to see priorities, clinician discussion points, and retest direction.',
             ]}
             onDone={dismissHints}
           />
@@ -226,7 +226,7 @@ export default function LabResultsList() {
                       <div className="flex items-center gap-2 text-xs">
                         <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">Optimal {optimal}</span>
                         <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">Warning {warning}</span>
-                        <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">Critical {critical}</span>
+                        <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">Review {critical}</span>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -252,7 +252,7 @@ export default function LabResultsList() {
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-amber-800">Premium features available</p>
                       <p className="mt-1 text-sm text-amber-700">
-                        Upgrade to see your complete lab history, track trends over time, and get personalized supplement protocols.
+                        Upgrade to see your complete lab history, track trends over time, and keep action plans connected to follow-up check-ins.
                       </p>
                       <button
                         onClick={triggerLabHistoryAccessPaywall}
@@ -272,7 +272,7 @@ export default function LabResultsList() {
               <div className="mt-4 space-y-3">
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
                   <p className="text-xs uppercase tracking-wide text-emerald-700 font-semibold">Stable zone</p>
-                  <p className="mt-1 text-sm text-slate-700">Maintain current protocol elements supporting these markers.</p>
+                  <p className="mt-1 text-sm text-slate-700">Keep the routines that support markers currently in range.</p>
                 </div>
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
                   <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">Needs attention</p>
@@ -280,11 +280,11 @@ export default function LabResultsList() {
                 </div>
                 <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
                   <p className="text-xs uppercase tracking-wide text-rose-700 font-semibold">Safety context</p>
-                  <p className="mt-1 text-sm text-slate-700">Discuss critical markers with your clinician without delay.</p>
+                  <p className="mt-1 text-sm text-slate-700">Review out-of-range markers with a qualified clinician when appropriate.</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                   <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Next step</p>
-                  <p className="mt-1 text-sm text-slate-700">Open Protocol and Check-in to confirm whether changes improve symptoms.</p>
+                  <p className="mt-1 text-sm text-slate-700">Open the action plan and use check-ins to track whether symptoms change.</p>
                 </div>
               </div>
             </aside>

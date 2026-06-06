@@ -1,16 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { supabase } from '../lib/supabase.js'
-import { useAuth } from '../hooks/useAuth.js'
+import api from '../lib/api.js'
 import { useFeature } from '../hooks/useFeature.js'
-import FeatureGate from '../components/FeatureGate.jsx'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
-import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import {
-  ArrowLeft, Pill, Droplets, Moon, Zap, Check,
-  ExternalLink, UtensilsCrossed, Clock, Download,
+  ArrowLeft, ClipboardCheck, Droplets, Moon, Zap, Check,
+  UtensilsCrossed, Clock, Download,
 } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -36,25 +33,25 @@ const TIMING_TO_SCHEDULE = {
 
 const NUTRITION_MAP = [
   {
-    name: 'Leafy Greens',
+    name: 'Nutrient-dense greens',
     keywords: ['iron', 'folate', 'folic acid', 'magnesium', 'calcium', 'vitamin k', 'b9'],
     foods: ['Spinach, kale, arugula', 'Broccoli & Brussels sprouts', 'Swiss chard, collard greens'],
     color: 'emerald',
   },
   {
-    name: 'Lean Proteins',
+    name: 'Protein support',
     keywords: ['b12', 'vitamin b12', 'zinc', 'protein', 'albumin', 'ferritin', 'selenium'],
     foods: ['Chicken breast, turkey', 'Eggs, tuna, legumes', 'Greek yogurt, cottage cheese'],
     color: 'teal',
   },
   {
-    name: 'Healthy Fats',
+    name: 'Healthy fats',
     keywords: ['vitamin d', 'd3', 'omega', 'omega-3', 'vitamin a', 'vitamin e', 'epa', 'dha'],
     foods: ['Salmon, sardines, mackerel', 'Avocado, extra-virgin olive oil', 'Walnuts, flaxseeds'],
     color: 'amber',
   },
   {
-    name: 'Complex Carbs',
+    name: 'Steady energy carbs',
     keywords: ['glucose', 'blood sugar', 'insulin', 'hba1c', 'glycated', 'cortisol'],
     foods: ['Oats, quinoa, sweet potato', 'Brown rice, whole grains', 'Lentils, black beans'],
     color: 'blue',
@@ -87,7 +84,7 @@ const LIFESTYLE_SECTIONS = [
     title: 'Exercise',
     color: 'emerald',
     items: [
-      'Protocol-aligned movement daily',
+      'Plan-aligned movement daily',
       'Strength training 3× per week',
       'Morning walks to aid absorption',
     ],
@@ -140,25 +137,15 @@ function countDeficientBiomarkers(biomarkers) {
   return biomarkers.filter((biomarker) => hasStatusIn(biomarker.status, DEFICIENT_STATUSES)).length
 }
 
-function triggerSubscriptionRequiredPaywall() {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent('paywall:trigger', {
-        detail: { reason: 'SUBSCRIPTION_REQUIRED' },
-      })
-    )
-  }
-}
-
 async function loadProtocolData(uploadId) {
-  const [bmRes, prRes] = await Promise.all([
-    supabase.from('biomarkers').select('*').eq('upload_id', uploadId),
-    supabase.from('protocols').select('*').eq('upload_id', uploadId).single(),
-  ])
+  const { data } = await api.get(`/results/${uploadId}`)
+  const biomarkers = data?.biomarkers ?? []
+  const storedProtocol = Array.isArray(data?.protocol) ? data.protocol : []
+  const actionPlan = Array.isArray(data?.knowledge_report?.action_plan) ? data.knowledge_report.action_plan : []
 
   return {
-    biomarkers: bmRes.data ?? [],
-    protocol: prRes.data?.recommendations ?? [],
+    biomarkers,
+    protocol: storedProtocol.length ? storedProtocol : actionPlan,
   }
 }
 
@@ -166,11 +153,11 @@ function buildPdfRows(protocolRows) {
   return protocolRows.map((rec) => {
     const schedule = TIMING_TO_SCHEDULE[rec.timing] ?? (rec.timing?.replace(/_/g, ' ') ?? '-')
     return [
-      rec.supplement || '-',
-      rec.dosage || '-',
+      rec.supplement || rec.title || '-',
+      rec.dosage || rec.amount || '-',
       schedule,
       formatPriority(rec.priority),
-      rec.rationale || '-',
+      rec.rationale || rec.body || '-',
     ]
   })
 }
@@ -187,10 +174,10 @@ async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSecti
   const contentWidth = pageWidth - margin * 2
   const createdAt = new Date().toLocaleString()
 
-  const supplementsTotal = protocolRows.length
+  const actionsTotal = protocolRows.length
   const highPriority = protocolRows.filter((row) => formatPriority(row.priority) === 'HIGH').length
   const mediumPriority = protocolRows.filter((row) => formatPriority(row.priority) === 'MEDIUM').length
-  const lowPriority = Math.max(0, supplementsTotal - highPriority - mediumPriority)
+  const lowPriority = Math.max(0, actionsTotal - highPriority - mediumPriority)
 
   const drawLogo = () => {
     doc.setFillColor(255, 255, 255)
@@ -233,7 +220,7 @@ async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSecti
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
     doc.setTextColor(100, 116, 139)
-    doc.text('VITALOOP Confidential Protocol', margin, pageHeight - 20)
+    doc.text('VITALOOP Educational Action Plan', margin, pageHeight - 20)
     doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth - margin - 54, pageHeight - 20)
   }
 
@@ -251,7 +238,7 @@ async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSecti
   }
 
   // Summary page
-  drawHeader('VITALOOP - 7-Day Health Protocol', 'Personalized summary and action plan')
+  drawHeader('VITALOOP - Personal Action Plan', 'Educational priorities based on your lab report')
 
   let y = 112
   doc.setTextColor(31, 41, 55)
@@ -263,7 +250,7 @@ async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSecti
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
   const summaryLines = [
-    `Total supplements in current protocol: ${supplementsTotal}`,
+    `Total action items in current plan: ${actionsTotal}`,
     `Priority split: HIGH ${highPriority}, MEDIUM ${mediumPriority}, LOW ${lowPriority}`,
     `Nutrition focus groups: ${nutritionGroups.map((group) => group.name).slice(0, 4).join(', ') || 'N/A'}`,
     `Lifestyle blocks included: ${lifestyleSections.map((item) => item.title).join(', ')}`,
@@ -277,32 +264,33 @@ async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSecti
   y += 8
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
-  doc.text('Top Priority Supplements', margin, y)
+  doc.text('Top Priority Actions', margin, y)
   y += 14
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
 
   const topRows = protocolRows.slice(0, 5)
   if (topRows.length === 0) {
-    doc.text('- No supplements available for this upload yet.', margin, y)
+    doc.text('- No action items available for this upload yet.', margin, y)
     y += 12
   } else {
     topRows.forEach((row) => {
       const schedule = TIMING_TO_SCHEDULE[row.timing] ?? (row.timing?.replace(/_/g, ' ') ?? '-')
-      const line = `${row.supplement || '-'} (${row.dosage || '-'}) - ${schedule} [${formatPriority(row.priority)}]`
+      const amount = row.dosage || row.amount || 'context review'
+      const line = `${row.supplement || row.title || '-'} (${amount}) - ${schedule} [${formatPriority(row.priority)}]`
       const wrapped = doc.splitTextToSize(`- ${line}`, contentWidth)
-      y = ensureSpace(y, wrapped.length * 12 + 4, 'Protocol Summary (cont.)', 'Auto-generated continuation')
+      y = ensureSpace(y, wrapped.length * 12 + 4, 'Action Plan Summary (cont.)', 'Auto-generated continuation')
       doc.text(wrapped, margin, y)
       y += wrapped.length * 12 + 2
     })
   }
 
   // Detailed table starts on a new page
-  addPage('Supplement Protocol', 'Detailed dosage, schedule, and rationale')
+  addPage('Action Plan', 'Priorities, timing, and rationale')
   autoTable(doc, {
     startY: 112,
     margin: { left: margin, right: margin },
-    head: [['Supplement', 'Dosage', 'Schedule', 'Priority', 'Rationale']],
+    head: [['Action', 'Amount', 'Schedule', 'Priority', 'Rationale']],
     body: buildPdfRows(protocolRows),
     styles: {
       font: 'helvetica',
@@ -333,16 +321,16 @@ async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSecti
       }
     },
     didDrawPage: () => {
-      drawHeader('Supplement Protocol', 'Detailed dosage, schedule, and rationale')
+      drawHeader('Action Plan', 'Priorities, timing, and rationale')
     },
   })
 
   const tableY = (doc.lastAutoTable?.finalY || 112) + 18
   y = tableY
 
-  y = ensureSpace(y, 24, 'Protocol Details', 'Nutrition and lifestyle guidance')
+  y = ensureSpace(y, 24, 'Action Plan Details', 'Nutrition and lifestyle guidance')
   if (y === 112) {
-    drawHeader('Protocol Details', 'Nutrition and lifestyle guidance')
+    drawHeader('Action Plan Details', 'Nutrition and lifestyle guidance')
   }
 
   doc.setFont('helvetica', 'bold')
@@ -357,9 +345,9 @@ async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSecti
     const foods = (group.foods || []).join(', ')
     const wrappedFoods = doc.splitTextToSize(foods, contentWidth - 8)
     const blockHeight = 12 + wrappedFoods.length * 12 + 8
-    y = ensureSpace(y, blockHeight, 'Protocol Details (cont.)', 'Nutrition and lifestyle guidance')
+    y = ensureSpace(y, blockHeight, 'Action Plan Details (cont.)', 'Nutrition and lifestyle guidance')
     if (y === 112) {
-      drawHeader('Protocol Details (cont.)', 'Nutrition and lifestyle guidance')
+      drawHeader('Action Plan Details (cont.)', 'Nutrition and lifestyle guidance')
     }
     doc.setFont('helvetica', 'bold')
     doc.text(group.name, margin, y)
@@ -370,9 +358,9 @@ async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSecti
   })
 
   y += 2
-  y = ensureSpace(y, 24, 'Protocol Details (cont.)', 'Lifestyle guidance')
+  y = ensureSpace(y, 24, 'Action Plan Details (cont.)', 'Lifestyle guidance')
   if (y === 112) {
-    drawHeader('Protocol Details (cont.)', 'Lifestyle guidance')
+    drawHeader('Action Plan Details (cont.)', 'Lifestyle guidance')
   }
 
   doc.setFont('helvetica', 'bold')
@@ -387,9 +375,9 @@ async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSecti
       return acc + wrapped.length
     }, 0)
     const requiredHeight = 12 + sectionLines * 12 + 10
-    y = ensureSpace(y, requiredHeight, 'Protocol Details (cont.)', 'Lifestyle guidance')
+    y = ensureSpace(y, requiredHeight, 'Action Plan Details (cont.)', 'Lifestyle guidance')
     if (y === 112) {
-      drawHeader('Protocol Details (cont.)', 'Lifestyle guidance')
+      drawHeader('Action Plan Details (cont.)', 'Lifestyle guidance')
     }
 
     doc.setFont('helvetica', 'bold')
@@ -433,9 +421,12 @@ function PriorityBadge({ priority }) {
   )
 }
 
-function SupplementRow({ rec, index }) {
+function ActionRow({ rec, index }) {
   const isHighlighted = rec.priority === 'HIGH' || index === 0
   const schedule = TIMING_TO_SCHEDULE[rec.timing] ?? (rec.timing?.replace(/_/g, ' ') ?? '—')
+  const actionName = rec.supplement || rec.title || 'Action item'
+  const amount = rec.dosage || rec.amount || rec.category || 'Context review'
+  const rationale = rec.rationale || rec.body || ''
 
   return (
     <motion.tr
@@ -452,18 +443,18 @@ function SupplementRow({ rec, index }) {
             transition={{ duration: 3, repeat: isHighlighted ? Infinity : 0 }}
             className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isHighlighted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}
           >
-            <Pill className="w-3.5 h-3.5" />
+            <ClipboardCheck className="w-3.5 h-3.5" />
           </motion.div>
           <div>
             <div className={`font-semibold text-sm ${isHighlighted ? 'text-emerald-900' : 'text-slate-900'}`}>
-              {rec.supplement}
+              {actionName}
             </div>
-            <div className="text-xs text-slate-400">{rec.dosage}</div>
+            <div className="text-xs text-slate-400">{amount}</div>
           </div>
         </div>
       </td>
       <td className="px-4 py-3.5 hidden md:table-cell max-w-xs">
-        <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">{rec.rationale}</p>
+        <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">{rationale}</p>
       </td>
       <td className="px-4 py-3.5 whitespace-nowrap">
         <div className="flex items-center gap-1.5">
@@ -474,51 +465,10 @@ function SupplementRow({ rec, index }) {
       <td className="px-4 py-3.5">
         <div className="flex flex-col gap-1.5 items-start">
           <PriorityBadge priority={rec.priority} />
-          {rec.iherb_url && (
-            <a
-              href={rec.iherb_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 text-[10px] text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
-            >
-              iHerb <ExternalLink className="w-2.5 h-2.5" />
-            </a>
-          )}
+          {rec.iherb_url && <span className="text-[10px] text-slate-400">Product link available</span>}
         </div>
       </td>
     </motion.tr>
-  )
-}
-
-function PaywallTeaser({ onUpgrade }) {
-  return (
-    <div className="relative select-none">
-      {/* Blurred rows */}
-      <div className="blur-sm pointer-events-none">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-100">
-            <div className="w-8 h-8 rounded-lg bg-slate-100" />
-            <div className="flex-1 space-y-1.5">
-              <div className="h-3.5 w-36 rounded bg-slate-200" />
-              <div className="h-2.5 w-20 rounded bg-slate-100" />
-            </div>
-            <div className="h-3 w-20 rounded bg-slate-100 hidden md:block" />
-            <div className="h-3 w-16 rounded bg-slate-200" />
-          </div>
-        ))}
-      </div>
-      {/* Overlay */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-[2px] rounded-b-xl">
-        <p className="text-slate-900 font-bold text-base mb-1">Unlock Your Protocol</p>
-        <p className="text-slate-500 text-sm mb-4">Subscribe to see your personalized supplement schedule</p>
-        <button
-          onClick={onUpgrade}
-          className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-semibold text-sm transition-colors shadow-sm"
-        >
-          Upgrade — {PREMIUM_PRICE_LABEL}
-        </button>
-      </div>
-    </div>
   )
 }
 
@@ -529,7 +479,6 @@ function PaywallTeaser({ onUpgrade }) {
 export default function ProtocolPage() {
   const { uploadId } = useParams()
   const navigate = useNavigate()
-  const { user, signOut } = useAuth()
   const { show: showHints, dismiss: dismissHints } = useTourHints('protocol')
   const { hasAccess: canExport } = useFeature('advanced_protocol')
   const [biomarkers, setBiomarkers] = useState([])
@@ -546,11 +495,6 @@ export default function ProtocolPage() {
     }
     load()
   }, [uploadId])
-
-  const handleLogout = async () => {
-    await signOut()
-    navigate('/login')
-  }
 
   const nutritionGroups = deriveNutritionGroups(biomarkers)
   const sortedProtocol = sortProtocolByPriority(protocol)
@@ -577,7 +521,7 @@ export default function ProtocolPage() {
       <div className="flex items-center justify-center h-screen bg-slate-50">
         <div className="text-center space-y-3">
           <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-slate-500 text-sm">Loading your protocol…</p>
+          <p className="text-slate-500 text-sm">Loading your action plan…</p>
         </div>
       </div>
     )
@@ -597,7 +541,7 @@ export default function ProtocolPage() {
               <span className="hidden sm:inline">Back to Results</span>
             </button>
             <div className="h-5 w-px bg-slate-200" />
-            <h1 className="text-base sm:text-lg font-semibold text-slate-900">7-Day Health Protocol</h1>
+            <h1 className="text-base sm:text-lg font-semibold text-slate-900">Personal Action Plan</h1>
           </div>
           <button
             onClick={handleExportPdf}
@@ -616,9 +560,9 @@ export default function ProtocolPage() {
             {showHints && (
               <HintBanner
                 hints={[
-                  '💊 Each supplement is ranked by health impact — highest priority first. Focus on the first 1–3 items before adding more.',
-                  '⏰ Timing matters: "morning empty stomach" means 30 min before food. "With food" means any meal. Follow the schedule for best absorption.',
-                  '📥 Premium subscribers can export this protocol as a PDF to share with their doctor or nutritionist.',
+                  'Each action is ranked by practical priority. Focus on the first few items before changing too much at once.',
+                  'Timing is guidance, not a prescription. Confirm supplements, medications, and dosages with a clinician when needed.',
+                  'Premium subscribers can export this plan as a PDF to share with a doctor, nutritionist, or coach.',
                 ]}
                 onDone={dismissHints}
               />
@@ -633,10 +577,10 @@ export default function ProtocolPage() {
               className="rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 p-6 sm:p-8 text-white shadow-lg overflow-hidden relative"
             >
               <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 50%)' }} />
-              <p className="text-emerald-100 text-xs font-semibold uppercase tracking-widest mb-2">Personalized Protocol</p>
-              <h2 className="text-2xl sm:text-3xl font-bold leading-tight mb-2">Your 7-Day Health Plan</h2>
+              <p className="text-emerald-100 text-xs font-semibold uppercase tracking-widest mb-2">Personalized Action Plan</p>
+              <h2 className="text-2xl sm:text-3xl font-bold leading-tight mb-2">What to do after this report</h2>
               <p className="text-emerald-100 text-sm max-w-lg leading-relaxed">
-                Based on your lab results{deficientCount > 0 ? ` and ${deficientCount} flagged biomarkers` : ''}, here is your personalized supplement, nutrition, and lifestyle protocol.
+                Based on your lab results{deficientCount > 0 ? ` and ${deficientCount} priority markers` : ''}, this plan organizes nutrition, lifestyle, follow-up, and discussion points into a clearer next step.
               </p>
               <div className="flex flex-wrap gap-6 mt-5">
                 <motion.div
@@ -646,7 +590,7 @@ export default function ProtocolPage() {
                   transition={{ duration: 0.4, delay: 0.1 }}
                 >
                   <div className="text-2xl font-bold">{sortedProtocol.length}</div>
-                  <div className="text-emerald-200 text-xs uppercase tracking-wider">Supplements</div>
+                  <div className="text-emerald-200 text-xs uppercase tracking-wider">Actions</div>
                 </motion.div>
                 <div className="w-px bg-emerald-400/60" />
                 <motion.div
@@ -656,7 +600,7 @@ export default function ProtocolPage() {
                   transition={{ duration: 0.4, delay: 0.2 }}
                 >
                   <div className="text-2xl font-bold">{nutritionGroups.length}</div>
-                  <div className="text-emerald-200 text-xs uppercase tracking-wider">Food Groups</div>
+                  <div className="text-emerald-200 text-xs uppercase tracking-wider">Nutrition</div>
                 </motion.div>
                 <div className="w-px bg-emerald-400/60" />
                 <motion.div
@@ -666,7 +610,7 @@ export default function ProtocolPage() {
                   transition={{ duration: 0.4, delay: 0.3 }}
                 >
                   <div className="text-2xl font-bold">3</div>
-                  <div className="text-emerald-200 text-xs uppercase tracking-wider">Lifestyle Areas</div>
+                  <div className="text-emerald-200 text-xs uppercase tracking-wider">Lifestyle</div>
                 </motion.div>
               </div>
             </motion.div>
@@ -682,9 +626,9 @@ export default function ProtocolPage() {
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                 <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
                   <UtensilsCrossed className="w-4 h-4 text-emerald-600" />
-                  Nutrition Plan
+                  Nutrition Priorities
                 </h3>
-                <span className="text-xs text-slate-400">Prioritised by your deficiencies</span>
+                <span className="text-xs text-slate-400">Based on markers that may need attention</span>
               </div>
               <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {nutritionGroups.map((group, i) => {
@@ -722,7 +666,7 @@ export default function ProtocolPage() {
               </div>
             </motion.div>
 
-            {/* ── Supplement Protocol Table ── */}
+            {/* ── Action Plan Table ── */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -732,41 +676,35 @@ export default function ProtocolPage() {
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                 <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                  <Pill className="w-4 h-4 text-emerald-600" />
-                  Supplement Protocol
+                  <ClipboardCheck className="w-4 h-4 text-emerald-600" />
+                  Priority Action Plan
                 </h3>
-                <span className="text-xs text-slate-400">{sortedProtocol.length} supplements · 7 days</span>
+                <span className="text-xs text-slate-400">{sortedProtocol.length} items · review with context</span>
               </div>
 
-              <FeatureGate
-                feature="advanced_protocol"
-                onLocked={triggerSubscriptionRequiredPaywall}
-                fallback={<PaywallTeaser onUpgrade={triggerSubscriptionRequiredPaywall} />}
-              >
-                {sortedProtocol.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="border-b border-slate-100 bg-slate-50/80">
-                          <th className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Supplement / Dosage</th>
-                          <th className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider hidden md:table-cell">Rationale</th>
-                          <th className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Daily Schedule</th>
-                          <th className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Priority</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sortedProtocol.map((rec, i) => (
-                          <SupplementRow key={`${rec.supplement}-${i}`} rec={rec} index={i} />
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="p-10 text-center text-slate-400 text-sm">
-                    No supplement protocol generated yet.
-                  </div>
-                )}
-              </FeatureGate>
+              {sortedProtocol.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-slate-50/80">
+                        <th className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Action / Amount</th>
+                        <th className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider hidden md:table-cell">Rationale</th>
+                        <th className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Suggested Timing</th>
+                        <th className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Priority</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedProtocol.map((rec, i) => (
+                        <ActionRow key={`${rec.supplement || rec.title}-${i}`} rec={rec} index={i} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-10 text-center text-slate-400 text-sm">
+                  No action plan generated yet.
+                </div>
+              )}
             </motion.div>
 
             {/* ── Lifestyle Recommendations ── */}

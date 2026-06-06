@@ -936,12 +936,12 @@ export default function Landing() {
           <div className="grid items-center gap-7 lg:grid-cols-[1.15fr_0.85fr]">
             <motion.div
               {...fadeUp(reduced, 0.08)}
-              className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-slate-950 p-4 shadow-2xl"
+              className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-white p-4 shadow-2xl"
             >
               <div className="mb-4 flex items-center justify-between px-2">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">Example report</p>
-                  <p className="text-sm font-semibold text-white">Real cabinet screens and biomarker flow</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Example report</p>
+                  <p className="text-sm font-semibold text-slate-700">Real cabinet screens and biomarker flow</p>
                 </div>
                 <button
                   onClick={() => navigate('/example-report')}
@@ -951,25 +951,12 @@ export default function Landing() {
                   <ArrowRight className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
-                <img
-                  src="/mockups/cabinet-real/upload-results.png"
-                  alt="VITALOOP upload results cabinet preview"
-                  className="rounded-2xl border border-white/10 bg-white shadow-xl"
-                />
-                <div className="grid gap-4">
-                  <img
-                    src="/mockups/example-report/lab-results.png"
-                    alt="VITALOOP lab result table preview"
-                    className="rounded-2xl border border-white/10 bg-white shadow-xl"
-                  />
-                  <img
-                    src="/mockups/example-report/progress.png"
-                    alt="VITALOOP progress tracking preview"
-                    className="rounded-2xl border border-white/10 bg-white shadow-xl"
-                  />
-                </div>
-              </div>
+              <img
+                src="/mockups/example-report/dashboard.png?v=20260606"
+                alt="VITALOOP cabinet dashboard preview"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 object-cover shadow-xl"
+                loading="eager"
+              />
             </motion.div>
 
             <div className="grid gap-3">

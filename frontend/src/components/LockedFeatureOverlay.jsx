@@ -6,8 +6,8 @@ import { gaBeginCheckout } from '../lib/analytics.js'
 
 const FEATURES = [
   '📈 Full biomarker progress charts',
-  '💊 Detailed supplement protocol',
-  '🛒 Personalized iHerb links',
+  '📋 Personal action plans',
+  '🔁 Follow-up check-ins',
   '📅 90-day retest reminders',
   '🔬 Unlimited lab uploads',
 ]
@@ -41,7 +41,7 @@ export default function LockedFeatureOverlay({ children, locked = true }) {
         <div className="text-4xl mb-3">🔒</div>
         <h3 className="text-white font-bold text-lg mb-1">Unlock Full Access</h3>
         <p className="text-gray-400 text-sm mb-4">
-          Subscribe for a complete AI-powered supplement protocol.
+          Subscribe for deeper tracking, action plans, and follow-up guidance.
         </p>
         <ul className="text-sm text-gray-300 space-y-1.5 mb-5 text-left">
           {FEATURES.map((f) => (
@@ -54,7 +54,7 @@ export default function LockedFeatureOverlay({ children, locked = true }) {
           onClick={handleCheckout}
           className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-xl transition"
         >
-          Start — {PREMIUM_PRICE_LABEL}
+          Continue — {PREMIUM_PRICE_LABEL}
         </button>
         <p className="text-gray-600 text-xs mt-3">Cancel anytime · Secure checkout via Stripe</p>
       </div>

@@ -15,11 +15,11 @@ import { useUserEntitlements } from '../hooks/useQueries.js'
 
 const FEATURES = [
   'Unlimited lab uploads and manual entries',
-  'AI supplement protocol with priority actions',
-  'Personalized iHerb supplement links',
+  'Personal action plans after each report',
   'Biomarker trend tracking and progress charts',
-  'Smart insights and red-flag alerts',
-  'Weekly adaptive check-ins with AI coaching',
+  'Longitudinal history across uploads',
+  'Follow-up check-ins and retest planning',
+  'Exportable summaries for clinician visits',
 ]
 
 const REASON_MESSAGES = {
@@ -74,7 +74,7 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
 
   if (!isVisible) return null
 
-  const message = REASON_MESSAGES[reason] ?? 'Unlock unlimited analyses, full protocols, and longitudinal tracking.'
+  const message = REASON_MESSAGES[reason] ?? 'Unlock unlimited analyses, action plans, and longitudinal tracking.'
 
   return (
     <div
@@ -87,7 +87,7 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
       >
         {/* Header */}
         <div className="bg-gradient-to-br from-emerald-500 to-teal-600 px-6 pt-8 pb-6 text-white text-center">
-          <div className="text-4xl mb-2">✨</div>
+          <div className="text-4xl mb-2">✓</div>
           <h2 className="text-xl font-bold">Vitaloop Premium</h2>
           <p className="mt-1 text-sm text-emerald-100">{message}</p>
         </div>
@@ -108,7 +108,7 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
             disabled={loading}
             className="w-full rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-semibold py-3.5 transition"
           >
-            {loading ? 'Redirecting to Stripe…' : `Start — ${PREMIUM_PRICE_LABEL}`}
+            {loading ? 'Redirecting to Stripe…' : `Continue — ${PREMIUM_PRICE_LABEL}`}
           </button>
           <p className="mt-2 text-center text-xs text-slate-400">
             Cancel anytime · Secure checkout via Stripe

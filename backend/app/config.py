@@ -93,15 +93,24 @@ class Settings(BaseSettings):
         fallback_origins = [
             "https://vitaloop.today",
             "https://www.vitaloop.today",
+            "https://ua.vitaloop.today",
+            "https://www.ua.vitaloop.today",
             "https://crm.vitaloop.today",
         ]
 
-        # Add localhost only in development mode
+        # Keep common local frontend ports available for browser QA against
+        # deployed API. This is origin-scoped and still requires a valid token.
         if self.app_env in ("development", "staging"):
             fallback_origins.extend([
                 "http://localhost:5173",
                 "http://127.0.0.1:5173",
             ])
+        fallback_origins.extend([
+            "http://localhost:4173",
+            "http://127.0.0.1:4173",
+            "http://localhost:4174",
+            "http://127.0.0.1:4174",
+        ])
 
         seen = set()
         merged: List[str] = []
