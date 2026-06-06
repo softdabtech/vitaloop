@@ -19,6 +19,7 @@ export const useFeature = (featureName) => {
     health_score: true,
     trend_analysis: true,
     predictions: true,
+    check_ins: true,
   }
 
   const FREE_FEATURES = {
@@ -27,7 +28,6 @@ export const useFeature = (featureName) => {
     results: false,
     basic_protocol: false,
     assignments: false,
-    check_ins: false,
     health_profile: false,
   }
 

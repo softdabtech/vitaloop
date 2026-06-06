@@ -30,14 +30,14 @@ export default function Paywall() {
         </div>
       </div>
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950/80 rounded-xl">
-        <p className="text-white font-bold text-lg mb-1">Unlock Your Protocol</p>
-        <p className="text-gray-400 text-sm mb-4">Subscribe to see your personalized supplement stack</p>
+        <p className="text-white font-bold text-lg mb-1">Unlock Your Action Plan</p>
+        <p className="text-gray-400 text-sm mb-4">Subscribe to see priorities, trends, and follow-up guidance.</p>
         <button
           onClick={handleCheckout}
           disabled={loading}
           className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl transition"
         >
-          {loading ? 'Redirecting…' : `Start — ${PREMIUM_PRICE_LABEL}`}
+          {loading ? 'Redirecting…' : `Continue — ${PREMIUM_PRICE_LABEL}`}
         </button>
       </div>
     </div>

@@ -1,104 +1,32 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import api from '../lib/api.js'
-import ProtocolCard from '../components/ProtocolCard.jsx'
 import FeatureGate from '../components/FeatureGate.jsx'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
-import BiomarkerAlertsDisplay from '../components/BiomarkerAlertsDisplay.jsx'
-import HealthTipsDisplay from '../components/HealthTipsDisplay.jsx'
 import BiomarkerContextTooltip from '../components/BiomarkerContextTooltip.jsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Info, Activity } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  ClipboardList,
+  Download,
+  FileText,
+  HeartPulse,
+  Info,
+  MessageCircle,
+  RefreshCw,
+  ShieldAlert,
+  Stethoscope,
+} from 'lucide-react'
 
 const STATUS_META = {
-  DEFICIENT: { rank: 0, border: 'border-rose-300', stripe: 'bg-rose-500', badge: 'bg-rose-50 text-rose-700', text: 'text-rose-700' },
-  ELEVATED: { rank: 1, border: 'border-orange-300', stripe: 'bg-orange-500', badge: 'bg-orange-50 text-orange-700', text: 'text-orange-700' },
-  BORDERLINE: { rank: 2, border: 'border-amber-300', stripe: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700', text: 'text-amber-700' },
-  OPTIMAL: { rank: 3, border: 'border-emerald-300', stripe: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700', text: 'text-emerald-700' },
-}
-
-const BIOMARKER_NAME_TRANSLATIONS = [
-  // Reticulocytes (Ukrainian/Russian variations)
-  [/^Ретикулоцити\s*\(%\)$/i, 'Reticulocytes (%)'],
-  [/^Ретикулоцити\s*\(Г\/л\)$/i, 'Reticulocytes (G/L)'],
-  [/^Ретикулоцити$/i, 'Reticulocytes'],
-  [/^Незрілі ретикулоцити$/i, 'Immature Reticulocytes'],
-  [/^Зрілі ретикулоцити\s*\(%\)$/i, 'Mature Reticulocytes (%)'],
-  [/^Зрілі ретикулоцити\s*\(Т\/л\)$/i, 'Mature Reticulocytes (T/L)'],
-  [/^Зрілі ретикулоцити$/i, 'Mature Reticulocytes'],
-  [/^Середній об[‘’]єм ретикулоцита$/i, 'Mean Reticulocyte Volume'],
-  [/^Середній об[‘’]єм сферичних клітин$/i, 'Mean Spherized Cell Volume'],
-  [/^Ширина розподілення ретикулоцитів по об[‘’]єму$/i, 'Reticulocyte Volume Distribution Width'],
-  // Red blood cell markers
-  [/^Еритроцити|^RBC|^Red blood cells?/i, 'Red Blood Cells (RBC)'],
-  [/^Гемоглобін|^Hemoglobin|^HGB?$/i, 'Hemoglobin'],
-  [/^Гематокрит|^Hematocrit|^HCT$/i, 'Hematocrit'],
-  [/^MCV|^Середній об[‘’]єм еритроцита/i, 'Mean Cell Volume (MCV)'],
-  [/^MCH|^Середній вміст гемоглобіна/i, 'Mean Cell Hemoglobin (MCH)'],
-  [/^MCHC|^Середня концентрація гемоглобіна/i, 'Mean Cell Hemoglobin Concentration (MCHC)'],
-  // White blood cell markers
-  [/^Лейкоцити|^WBC|^White blood cells?/i, 'White Blood Cells (WBC)'],
-  [/^Нейтрофіли|^Neutrophils?/i, 'Neutrophils'],
-  [/^Лімфоцити|^Lymphocytes?/i, 'Lymphocytes'],
-  [/^Моноцити|^Monocytes?/i, 'Monocytes'],
-  [/^Еозинофіли|^Eosinophils?/i, 'Eosinophils'],
-  [/^Базофіли|^Basophils?/i, 'Basophils'],
-  // Platelet markers
-  [/^Тромбоцити|^Platelets?|^PLT$/i, 'Platelets'],
-  [/^MPV|^Середній об[‘’]єм тромбоцита/i, 'Mean Platelet Volume (MPV)'],
-  // Common chemistry markers
-  [/^Глюкоза|^Glucose$/i, 'Glucose'],
-  [/^Креатинін|^Creatinine$/i, 'Creatinine'],
-  [/^Сечовина|^BUN|^Urea$/i, 'Blood Urea Nitrogen (BUN)'],
-  [/^Білірубін|^Bilirubin$/i, 'Bilirubin'],
-  [/^ALT|^SGPT|^Аланін амінотрансфераза/i, 'Alanine Aminotransferase (ALT)'],
-  [/^AST|^SGOT|^Аспартат амінотрансфераза/i, 'Aspartate Aminotransferase (AST)'],
-  [/^Лужна фосфатаза|^Alkaline phosphatase|^ALP$/i, 'Alkaline Phosphatase'],
-  [/^ГГТ|^Gamma-glutamyl transferase|^GGT$/i, 'Gamma-Glutamyl Transferase (GGT)'],
-  // Lipid markers
-  [/^Холестерин|^Total cholesterol|^TC$/i, 'Total Cholesterol'],
-  [/^Тригліцериди|^Triglycerides?$/i, 'Triglycerides'],
-  [/^ЛПНЩ|^LDL|^Low-density lipoprotein/i, 'Low-Density Lipoprotein (LDL)'],
-  [/^ЛПВЩ|^HDL|^High-density lipoprotein/i, 'High-Density Lipoprotein (HDL)'],
-  // General markers
-  [/^Білки|^Total protein|^Protein$/i, 'Total Protein'],
-  [/^Альбумін|^Albumin$/i, 'Albumin'],
-  [/^Кальцій|^Calcium$/i, 'Calcium'],
-  [/^Фосфор|^Phosphorus|^Phosphate$/i, 'Phosphorus'],
-  [/^Магній|^Magnesium$/i, 'Magnesium'],
-  [/^Калій|^Potassium|^K$/i, 'Potassium'],
-  [/^Натрій|^Sodium|^Na$/i, 'Sodium'],
-  [/^Хлор|^Chloride|^Cl$/i, 'Chloride'],
-  [/^СОЕ|^ESR|^Erythrocyte sedimentation rate/i, 'Erythrocyte Sedimentation Rate (ESR)'],
-  [/^CRP|^C-reactive protein/i, 'C-Reactive Protein (CRP)'],
-]
-
-function toEnglishBiomarkerName(name) {
-  const raw = String(name || '').trim()
-  for (const [pattern, translated] of BIOMARKER_NAME_TRANSLATIONS) {
-    if (pattern.test(raw)) return translated
-  }
-  return raw
-}
-
-function scoreStatus(status) {
-  return (STATUS_META[String(status || '').toUpperCase()] || { rank: 4 }).rank
-}
-
-function formatMetric(biomarker) {
-  const value = biomarker?.value ?? '--'
-  const unit = biomarker?.unit ? ` ${biomarker.unit}` : ''
-  return `${value}${unit}`
-}
-
-function computeRangePercent(biomarker) {
-  const low = Number(biomarker?.ref_low)
-  const high = Number(biomarker?.ref_high)
-  const value = Number(biomarker?.value)
-  if (!Number.isFinite(low) || !Number.isFinite(high) || !Number.isFinite(value) || high <= low) return 0
-  return Math.max(0, Math.min(100, ((value - low) / (high - low)) * 100))
+  DEFICIENT: { rank: 0, label: 'Below range', badge: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' },
+  ELEVATED: { rank: 1, label: 'Above range', badge: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500' },
+  BORDERLINE: { rank: 2, label: 'Worth watching', badge: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
+  OPTIMAL: { rank: 3, label: 'In range', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
 }
 
 const STATUS_ALIAS_MAP = {
@@ -117,83 +45,91 @@ const STATUS_ALIAS_MAP = {
   CRITICAL: 'ELEVATED',
 }
 
+const BIOMARKER_NAME_TRANSLATIONS = [
+  [/^Ретикулоцити\s*\(%\)$/i, 'Reticulocytes (%)'],
+  [/^Ретикулоцити\s*\(Г\/л\)$/i, 'Reticulocytes (G/L)'],
+  [/^Ретикулоцити$/i, 'Reticulocytes'],
+  [/^Незрілі ретикулоцити$/i, 'Immature Reticulocytes'],
+  [/^Зрілі ретикулоцити\s*\(%\)$/i, 'Mature Reticulocytes (%)'],
+  [/^Зрілі ретикулоцити\s*\(Т\/л\)$/i, 'Mature Reticulocytes (T/L)'],
+  [/^Зрілі ретикулоцити$/i, 'Mature Reticulocytes'],
+  [/^Еритроцити|^RBC|^Red blood cells?/i, 'Red Blood Cells (RBC)'],
+  [/^Гемоглобін|^Hemoglobin|^HGB?$/i, 'Hemoglobin'],
+  [/^Гематокрит|^Hematocrit|^HCT$/i, 'Hematocrit'],
+  [/^MCV|^Середній об[‘’]єм еритроцита/i, 'Mean Cell Volume (MCV)'],
+  [/^MCH|^Середній вміст гемоглобіна/i, 'Mean Cell Hemoglobin (MCH)'],
+  [/^MCHC|^Середня концентрація гемоглобіна/i, 'Mean Cell Hemoglobin Concentration (MCHC)'],
+  [/^Лейкоцити|^WBC|^White blood cells?/i, 'White Blood Cells (WBC)'],
+  [/^Нейтрофіли|^Neutrophils?/i, 'Neutrophils'],
+  [/^Лімфоцити|^Lymphocytes?/i, 'Lymphocytes'],
+  [/^Моноцити|^Monocytes?/i, 'Monocytes'],
+  [/^Еозинофіли|^Eosinophils?/i, 'Eosinophils'],
+  [/^Базофіли|^Basophils?/i, 'Basophils'],
+  [/^Тромбоцити|^Platelets?|^PLT$/i, 'Platelets'],
+  [/^Глюкоза|^Glucose$/i, 'Glucose'],
+  [/^Креатинін|^Creatinine$/i, 'Creatinine'],
+  [/^Сечовина|^BUN|^Urea$/i, 'Blood Urea Nitrogen (BUN)'],
+  [/^Білірубін|^Bilirubin$/i, 'Bilirubin'],
+  [/^ALT|^SGPT|^Аланін амінотрансфераза/i, 'Alanine Aminotransferase (ALT)'],
+  [/^AST|^SGOT|^Аспартат амінотрансфераза/i, 'Aspartate Aminotransferase (AST)'],
+  [/^Лужна фосфатаза|^Alkaline phosphatase|^ALP$/i, 'Alkaline Phosphatase'],
+  [/^ГГТ|^Gamma-glutamyl transferase|^GGT$/i, 'Gamma-Glutamyl Transferase (GGT)'],
+  [/^Холестерин|^Total cholesterol|^TC$/i, 'Total Cholesterol'],
+  [/^Тригліцериди|^Triglycerides?$/i, 'Triglycerides'],
+  [/^ЛПНЩ|^LDL|^Low-density lipoprotein/i, 'Low-Density Lipoprotein (LDL)'],
+  [/^ЛПВЩ|^HDL|^High-density lipoprotein/i, 'High-Density Lipoprotein (HDL)'],
+  [/^Альбумін|^Albumin$/i, 'Albumin'],
+  [/^Кальцій|^Calcium$/i, 'Calcium'],
+  [/^Магній|^Magnesium$/i, 'Magnesium'],
+  [/^Калій|^Potassium|^K$/i, 'Potassium'],
+  [/^Натрій|^Sodium|^Na$/i, 'Sodium'],
+  [/^CRP|^C-reactive protein/i, 'C-Reactive Protein (CRP)'],
+]
+
+const RESULTS_HINTS = [
+  'Start with the priority markers, not the full table. The goal is to understand what deserves attention first.',
+  'Use the doctor discussion list when you want a concise way to talk about the report with a clinician.',
+  'VITALOOP is educational software. It helps organize the next step, but it does not diagnose or prescribe treatment.',
+]
+
+function toEnglishBiomarkerName(name) {
+  const raw = String(name || '').trim()
+  for (const [pattern, translated] of BIOMARKER_NAME_TRANSLATIONS) {
+    if (pattern.test(raw)) return translated
+  }
+  return raw
+}
+
 function inferStatusFromRange(biomarker) {
   const low = Number(biomarker?.ref_low)
   const high = Number(biomarker?.ref_high)
   const value = Number(biomarker?.value)
-
-  if (!Number.isFinite(low) || !Number.isFinite(high) || !Number.isFinite(value) || high <= low) {
-    return 'BORDERLINE'
-  }
-
+  if (!Number.isFinite(low) || !Number.isFinite(high) || !Number.isFinite(value) || high <= low) return 'BORDERLINE'
   if (value < low) return 'DEFICIENT'
   if (value > high) return 'ELEVATED'
-
-  const band = high - low
-  const lowerWarn = low + band * 0.15
-  const upperWarn = high - band * 0.15
-  if (value <= lowerWarn || value >= upperWarn) return 'BORDERLINE'
+  const span = high - low
+  if (value <= low + span * 0.15 || value >= high - span * 0.15) return 'BORDERLINE'
   return 'OPTIMAL'
 }
 
 function normalizeBiomarkerStatus(biomarker) {
   const raw = String(biomarker?.status || '').trim().toUpperCase()
-  if (STATUS_ALIAS_MAP[raw]) return STATUS_ALIAS_MAP[raw]
-  return inferStatusFromRange(biomarker)
+  return STATUS_ALIAS_MAP[raw] || inferStatusFromRange(biomarker)
 }
 
-function buildMedicalAnalysisLines(normalizedBiomarkers) {
-  return normalizedBiomarkers.map((b) => {
-    const low = b?.ref_low != null ? String(b.ref_low) : ''
-    const high = b?.ref_high != null ? String(b.ref_high) : ''
-    const rangePart = low && high ? ` (${low}-${high})` : ''
-    const unitPart = b?.unit ? ` ${b.unit}` : ''
-    return `${b?.name_en || 'Unknown'}: ${b?.value ?? '--'}${unitPart}${rangePart}`
-  })
+function scoreStatus(status) {
+  return (STATUS_META[String(status || '').toUpperCase()] || { rank: 4 }).rank
 }
 
-async function requestMedicalAnalysis(normalizedBiomarkers) {
-  const lines = buildMedicalAnalysisLines(normalizedBiomarkers)
-  const formData = new FormData()
-  formData.append('text', lines.join('\n'))
-
-  const response = await fetch('/api/v1/analyze/text', {
-    method: 'POST',
-    body: formData,
-  })
-
-  if (!response.ok) {
-    throw new Error(`Medical analysis failed: ${response.status}`)
-  }
-
-  return response.json()
+function formatMetric(biomarker) {
+  if (!biomarker) return '—'
+  const unit = biomarker.unit ? ` ${biomarker.unit}` : ''
+  return `${biomarker.value ?? '—'}${unit}`
 }
 
-function resolveTrendMeta(value, low, high) {
-  if (value < low) {
-    return {
-      icon: TrendingDown,
-      text: 'Below normal range',
-      color: 'text-blue-600',
-      iconColor: 'text-blue-600',
-    }
-  }
-
-  if (value > high) {
-    return {
-      icon: TrendingUp,
-      text: 'Above normal range',
-      color: 'text-rose-600',
-      iconColor: 'text-rose-600',
-    }
-  }
-
-  return {
-    icon: Minus,
-    text: 'Within range',
-    color: 'text-slate-600',
-    iconColor: 'text-slate-400',
-  }
+function formatRange(biomarker) {
+  if (biomarker?.ref_low == null || biomarker?.ref_high == null) return 'No reference range'
+  return `${biomarker.ref_low} - ${biomarker.ref_high}${biomarker.unit ? ` ${biomarker.unit}` : ''}`
 }
 
 function triggerSubscriptionRequiredPaywall() {
@@ -202,12 +138,19 @@ function triggerSubscriptionRequiredPaywall() {
   }
 }
 
-const RESULTS_HINTS = [
-  '� Your results are color-coded: Green = optimal, Yellow = borderline, Red = needs attention. Focus on red markers first.',
-  '🎯 The position indicator shows where your value falls within the reference range. 50% means you\'re right in the middle!',
-  '💡 Clinical interpretation provides context for what your results mean for your health.',
-  '🔬 Regular testing helps track trends and measure the impact of your health interventions.',
-]
+function SectionCard({ icon: Icon, title, children, className = '' }) {
+  return (
+    <section className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
+      <div className="mb-4 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+          <Icon className="h-5 w-5" />
+        </div>
+        <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
+      </div>
+      {children}
+    </section>
+  )
+}
 
 export default function Results() {
   const { uploadId } = useParams()
@@ -216,106 +159,48 @@ export default function Results() {
   const [biomarkers, setBiomarkers] = useState([])
   const [protocol, setProtocol] = useState([])
   const [knowledgeReport, setKnowledgeReport] = useState(null)
-  const [medicalAnalysis, setMedicalAnalysis] = useState(null)
-  const [medicalAnalysisLoading, setMedicalAnalysisLoading] = useState(false)
-  const [medicalAnalysisError, setMedicalAnalysisError] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let active = true
     async function load() {
       try {
         const { data } = await api.get(`/results/${uploadId}`)
+        if (!active) return
         setBiomarkers(data.biomarkers ?? [])
         setProtocol(data.protocol ?? [])
         setKnowledgeReport(data.knowledge_report ?? null)
       } catch (_e) {
+        if (!active) return
         setBiomarkers([])
         setProtocol([])
         setKnowledgeReport(null)
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
     }
     load()
-  }, [uploadId])
-
-  const normalizedBiomarkers = biomarkers.map((b) => {
-    const normalizedStatus = normalizeBiomarkerStatus(b)
-    return {
-      ...b,
-      name_en: toEnglishBiomarkerName(b?.name),
-      status_normalized: normalizedStatus,
-    }
-  })
-
-  useEffect(() => {
-    if (!biomarkers.length) {
-      setMedicalAnalysis(null)
-      setMedicalAnalysisError('')
-      return
-    }
-
-    let active = true
-
-    async function runMedicalMicroserviceAnalysis() {
-      setMedicalAnalysisLoading(true)
-      setMedicalAnalysisError('')
-
-      try {
-        const payload = await requestMedicalAnalysis(normalizedBiomarkers)
-        if (active) {
-          setMedicalAnalysis(payload)
-        }
-      } catch (_err) {
-        if (active) {
-          setMedicalAnalysis(null)
-          setMedicalAnalysisError('Medical microservice analysis is temporarily unavailable.')
-        }
-      } finally {
-        if (active) {
-          setMedicalAnalysisLoading(false)
-        }
-      }
-    }
-
-    runMedicalMicroserviceAnalysis()
-
     return () => {
       active = false
     }
-  }, [biomarkers, normalizedBiomarkers])
+  }, [uploadId])
 
-  if (loading) return <div className="flex items-center justify-center h-screen text-slate-500">Loading…</div>
+  const normalizedBiomarkers = useMemo(() => biomarkers.map((b) => ({
+    ...b,
+    name_en: toEnglishBiomarkerName(b?.name),
+    status_normalized: normalizeBiomarkerStatus(b),
+  })), [biomarkers])
 
-  if (normalizedBiomarkers.length === 0) {
-    return (
-      <div className="min-h-screen p-6">
-        <div className="max-w-4xl mx-auto">
-          <button
-            onClick={() => navigate('/lab-results')}
-            className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-800 transition-colors mb-8"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Lab Results
-          </button>
-          <div className="py-12">
-            <EmptyStateIllustration type="results" size="lg" />
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const rankedBiomarkers = useMemo(
+    () => [...normalizedBiomarkers].sort((a, b) => scoreStatus(a.status_normalized) - scoreStatus(b.status_normalized)),
+    [normalizedBiomarkers]
+  )
 
-  const rankedBiomarkers = [...normalizedBiomarkers].sort((a, b) => scoreStatus(a.status_normalized) - scoreStatus(b.status_normalized))
-  const deficient = normalizedBiomarkers.filter((b) => {
-    const status = b.status_normalized
-    return status === 'DEFICIENT' || status === 'ELEVATED'
-  })
-  const foundCount = normalizedBiomarkers.length
-  const optimal = normalizedBiomarkers.filter((b) => b.status_normalized === 'OPTIMAL').length
-  const borderline = normalizedBiomarkers.filter((b) => b.status_normalized === 'BORDERLINE').length
-  const topPriority = rankedBiomarkers.find((b) => b.status_normalized !== 'OPTIMAL') || rankedBiomarkers[0] || null
-  const hasActionable = deficient.length + borderline > 0
+  const priorityMarkers = rankedBiomarkers.filter((b) => b.status_normalized !== 'OPTIMAL').slice(0, 5)
+  const optimalCount = normalizedBiomarkers.filter((b) => b.status_normalized === 'OPTIMAL').length
+  const watchCount = normalizedBiomarkers.filter((b) => b.status_normalized === 'BORDERLINE').length
+  const outOfRangeCount = normalizedBiomarkers.filter((b) => ['DEFICIENT', 'ELEVATED'].includes(b.status_normalized)).length
+
   const reportSummary = knowledgeReport?.summary || null
   const reportFound = knowledgeReport?.what_was_found || null
   const reportPatterns = Array.isArray(knowledgeReport?.why_it_matters) ? knowledgeReport.why_it_matters : []
@@ -327,622 +212,293 @@ export default function Results() {
   async function exportResultsAsPDF() {
     const node = document.querySelector('.vtl-page')
     if (!node) return
-
     try {
       const html2canvas = (await import('html2canvas')).default
       const jsPDF = (await import('jspdf')).jsPDF
-
       const canvas = await html2canvas(node, { scale: 2 })
-      const imgData = canvas.toDataURL('image/png')
       const pdf = new jsPDF({ orientation: 'p', unit: 'px', format: 'a4' })
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-      pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight)
-      pdf.save('lab-results.pdf')
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight())
+      pdf.save('vitaloop-results.pdf')
     } catch (err) {
       console.error('Failed to export PDF', err)
     }
   }
 
-  async function exportResultsAsPNG() {
-    const node = document.querySelector('.vtl-page')
-    if (!node) return
-
-    try {
-      const html2canvas = (await import('html2canvas')).default
-      const canvas = await html2canvas(node, { scale: 2 })
-      const link = document.createElement('a')
-      link.download = 'lab-results.png'
-      link.href = canvas.toDataURL('image/png')
-      link.click()
-    } catch (err) {
-      console.error('Failed to export PNG', err)
-    }
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-500">
+        Loading your report…
+      </div>
+    )
   }
 
-  return (
-    <div className="vtl-page min-h-screen p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Back button */}
-        <div className="mb-6">
-          <button
-            onClick={() => navigate('/lab-results')}
-            className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-800 transition-colors"
-          >
+  if (normalizedBiomarkers.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-6">
+        <div className="mx-auto max-w-4xl">
+          <button onClick={() => navigate('/lab-results')} className="mb-8 inline-flex items-center gap-2 text-slate-600 transition hover:text-slate-900">
             <ArrowLeft className="h-4 w-4" />
             Back to Lab Results
           </button>
+          <div className="rounded-2xl border border-slate-200 bg-white py-12 shadow-sm">
+            <EmptyStateIllustration type="results" size="lg" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="vtl-page min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <button onClick={() => navigate('/lab-results')} className="inline-flex w-fit items-center gap-2 rounded-xl px-2 py-1 text-sm text-slate-600 transition hover:bg-white hover:text-slate-900">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Lab Results
+          </button>
+          <button onClick={exportResultsAsPDF} className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700">
+            <Download className="h-4 w-4" />
+            Export summary
+          </button>
         </div>
 
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Lab Results Analysis</h1>
-          <p className="text-slate-600">Detailed breakdown of your biomarkers with personalized insights</p>
-        </div>
+        {showHints && <div className="mb-6"><HintBanner hints={RESULTS_HINTS} onDone={dismissHints} /></div>}
 
-        <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-          <p className="text-sm text-slate-600">
-            Found <span className="font-semibold text-slate-900">{foundCount}</span> biomarkers in this report.
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Higher counts usually indicate a more complete lab panel and richer protocol guidance.
-          </p>
-        </div>
-
-        {showHints && (
-          <HintBanner hints={RESULTS_HINTS} onDone={dismissHints} />
-        )}
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
+        <motion.header
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+          transition={{ duration: 0.45 }}
+          className="mb-6 overflow-hidden rounded-[28px] border border-emerald-100 bg-white shadow-sm"
         >
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
-            className="cabinet-card p-6 text-center transition-all"
-          >
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="flex items-center justify-center mb-3"
-            >
-              <CheckCircle className="h-8 w-8 text-emerald-600 mr-2" />
-              <div className="text-3xl font-bold text-emerald-600">{optimal}</div>
-            </motion.div>
-            <div className="text-sm font-semibold text-slate-900 mb-1">Optimal</div>
-            <div className="text-xs text-slate-500">Within healthy range</div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
-            className="cabinet-card p-6 text-center transition-all"
-          >
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2.5, repeat: Infinity, delay: 0.3 }}
-              className="flex items-center justify-center mb-3"
-            >
-              <Info className="h-8 w-8 text-amber-600 mr-2" />
-              <div className="text-3xl font-bold text-amber-600">{borderline}</div>
-            </motion.div>
-            <div className="text-sm font-semibold text-slate-900 mb-1">Borderline</div>
-            <div className="text-xs text-slate-500">Monitor closely</div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
-            className="cabinet-card p-6 text-center transition-all"
-          >
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
-              className="flex items-center justify-center mb-3"
-            >
-              <AlertTriangle className="h-8 w-8 text-rose-600 mr-2" />
-              <div className="text-3xl font-bold text-rose-600">{deficient.length}</div>
-            </motion.div>
-            <div className="text-sm font-semibold text-slate-900 mb-1">Needs Attention</div>
-            <div className="text-xs text-slate-500">Requires action</div>
-          </motion.div>
-        </motion.div>
-
-        {knowledgeReport && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-100px' }}
-            transition={{ duration: 0.6, delay: 0.05 }}
-            className="mb-8 rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm"
-          >
-            <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div>
-                <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">Knowledge Report</div>
-                <h2 className="text-2xl font-bold text-slate-900">Full interpretation</h2>
-                <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                  {reportSummary?.headline || reportFound?.headline || 'Structured interpretation based on your extracted biomarkers and VITALOOP knowledge rules.'}
-                </p>
+          <div className="grid gap-0 lg:grid-cols-[1.35fr_0.65fr]">
+            <div className="p-6 sm:p-8">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                <HeartPulse className="h-3.5 w-3.5" />
+                Lab report summary
               </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
-                <div className="font-semibold text-slate-900">{reportSummary?.risk_level || 'review'}</div>
-                <div className="text-slate-500">Confidence: {reportSummary?.confidence_label || 'not estimated'}</div>
+              <h1 className="max-w-3xl text-3xl font-bold leading-tight text-slate-950 sm:text-4xl">
+                {reportSummary?.headline || 'Your results are organized into clear priorities.'}
+              </h1>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
+                VITALOOP groups your biomarkers into what looks stable, what is worth watching, and what may deserve a clinician’s review.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <button
+                  onClick={() => navigate(`/protocol/${uploadId}`)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                >
+                  View personal action plan
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => navigate('/check-ins')}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
+                >
+                  Start a check-in
+                </button>
               </div>
             </div>
-
-            {!!reportAlerts.length && (
-              <div className="mb-5 rounded-xl border border-rose-200 bg-rose-50 p-4">
-                <div className="mb-2 flex items-center gap-2 font-semibold text-rose-900">
-                  <AlertTriangle className="h-5 w-5" />
-                  Medical review signal
+            <div className="border-t border-slate-100 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-6 lg:border-l lg:border-t-0">
+              <div className="grid grid-cols-3 gap-3 lg:grid-cols-1">
+                <div className="rounded-2xl bg-white p-4 shadow-sm">
+                  <div className="text-2xl font-bold text-slate-950">{normalizedBiomarkers.length}</div>
+                  <div className="text-xs font-medium text-slate-500">markers read</div>
                 </div>
-                <ul className="space-y-2 text-sm text-rose-800">
-                  {reportAlerts.map((alert, idx) => (
-                    <li key={`alert-${idx}`}>{alert.message || `${alert.marker || 'Marker'} requires medical review.`}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <h3 className="mb-3 text-base font-semibold text-slate-900">What was found</h3>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="rounded-lg bg-white p-3"><span className="block text-slate-500">Total</span><strong>{reportFound?.counts?.total ?? foundCount}</strong></div>
-                  <div className="rounded-lg bg-white p-3"><span className="block text-slate-500">Needs review</span><strong>{(reportFound?.counts?.deficient || 0) + (reportFound?.counts?.elevated || 0) + (reportFound?.counts?.borderline || 0)}</strong></div>
+                <div className="rounded-2xl bg-white p-4 shadow-sm">
+                  <div className="text-2xl font-bold text-amber-600">{watchCount}</div>
+                  <div className="text-xs font-medium text-slate-500">watch list</div>
                 </div>
-                {!!(reportFound?.flagged_markers || []).length && (
-                  <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                    {reportFound.flagged_markers.slice(0, 5).map((marker, idx) => (
-                      <li key={`found-${idx}`} className="rounded-lg bg-white px-3 py-2">
-                        <span className="font-semibold text-slate-900">{marker.name}</span> · {marker.formatted_value} · {marker.status}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <h3 className="mb-3 text-base font-semibold text-slate-900">Why it matters</h3>
-                {reportPatterns.length ? (
-                  <div className="space-y-3">
-                    {reportPatterns.slice(0, 4).map((item, idx) => (
-                      <div key={`pattern-${idx}`} className="rounded-lg bg-white p-3 text-sm">
-                        <div className="font-semibold text-slate-900">{item.title}</div>
-                        <p className="mt-1 text-slate-600">{item.why_it_matters || item.summary}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-600">No active knowledge rule matched this panel yet. Biomarker status and trends are still available below.</p>
-                )}
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <h3 className="mb-3 text-base font-semibold text-slate-900">What to discuss</h3>
-                {reportDiscussion.length ? (
-                  <ul className="space-y-2 text-sm text-slate-700">
-                    {reportDiscussion.slice(0, 6).map((item, idx) => (
-                      <li key={`discussion-${idx}`} className="rounded-lg bg-white px-3 py-2">{item}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-slate-600">Bring any out-of-range markers to your clinician or nutritionist for context.</p>
-                )}
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <h3 className="mb-3 text-base font-semibold text-slate-900">Retest plan</h3>
-                {reportRetest.length ? (
-                  <ul className="space-y-2 text-sm text-slate-700">
-                    {reportRetest.slice(0, 6).map((item, idx) => (
-                      <li key={`retest-${idx}`} className="rounded-lg bg-white px-3 py-2">
-                        <span className="font-semibold text-slate-900">{item.marker}</span> · {item.timing}
-                        <div className="text-xs text-slate-500">{item.reason}</div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-slate-600">No specific retest timing was generated for this panel.</p>
-                )}
+                <div className="rounded-2xl bg-white p-4 shadow-sm">
+                  <div className="text-2xl font-bold text-rose-600">{outOfRangeCount}</div>
+                  <div className="text-xs font-medium text-slate-500">out of range</div>
+                </div>
               </div>
             </div>
+          </div>
+        </motion.header>
 
-            {!!reportActions.length && (
-              <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                <h3 className="mb-3 text-base font-semibold text-slate-900">Recommended next steps</h3>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {reportActions.slice(0, 4).map((item, idx) => (
-                    <div key={`action-${item.key || idx}`} className="rounded-lg bg-white p-3 text-sm">
-                      <div className="font-semibold text-slate-900">{item.title}</div>
-                      <p className="mt-1 text-slate-600">{item.body}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <p className="mt-4 text-xs text-slate-500">
-              {reportSummary?.disclaimer || 'This report is educational and is not a diagnosis.'}
-            </p>
-          </motion.section>
+        {!!reportAlerts.length && (
+          <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-900">
+            <div className="mb-2 flex items-center gap-2 font-semibold">
+              <ShieldAlert className="h-5 w-5" />
+              Medical review signal
+            </div>
+            <ul className="space-y-2 text-sm leading-6">
+              {reportAlerts.map((alert, idx) => (
+                <li key={`alert-${idx}`}>{alert.message || `${alert.marker || 'A marker'} should be reviewed with a clinician.`}</li>
+              ))}
+            </ul>
+          </div>
         )}
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="mb-8"
-        >
-          <h3 className="text-xl font-bold text-slate-900 mb-4">Results Table</h3>
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white cabinet-card">
+        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+          <SectionCard icon={ClipboardList} title="Priority markers">
+            {priorityMarkers.length ? (
+              <div className="space-y-3">
+                {priorityMarkers.map((b) => {
+                  const meta = STATUS_META[b.status_normalized] || STATUS_META.BORDERLINE
+                  return (
+                    <div key={b.id || `${b.name_en}-${b.value}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className={`h-2.5 w-2.5 rounded-full ${meta.dot}`} />
+                            <h3 className="font-semibold text-slate-950">{b.name_en}</h3>
+                            <BiomarkerContextTooltip biomarkerName={b.name_en || b.name} value={b.value} status={b.status_normalized} size="sm" />
+                          </div>
+                          <p className="mt-1 text-sm text-slate-500">{formatMetric(b)} · reference {formatRange(b)}</p>
+                        </div>
+                        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{meta.label}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
+                This report does not show obvious out-of-range priorities. Tracking trends over time is still useful.
+              </div>
+            )}
+          </SectionCard>
+
+          <SectionCard icon={Info} title="What this may mean">
+            {reportPatterns.length ? (
+              <div className="space-y-3">
+                {reportPatterns.slice(0, 4).map((item, idx) => (
+                  <div key={`pattern-${idx}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                    <div className="font-semibold text-slate-950">{item.title}</div>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">{item.why_it_matters || item.summary}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm leading-6 text-slate-600">
+                No deeper knowledge pattern matched this panel yet. Your biomarker table and status groups are still available below.
+              </p>
+            )}
+          </SectionCard>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-3">
+          <SectionCard icon={CheckCircle2} title="Next steps">
+            {reportActions.length ? (
+              <ul className="space-y-3 text-sm leading-6 text-slate-700">
+                {reportActions.slice(0, 4).map((item, idx) => (
+                  <li key={`action-${item.key || idx}`} className="rounded-xl bg-slate-50 p-3">
+                    <span className="font-semibold text-slate-950">{item.title}</span>
+                    <span className="block text-slate-600">{item.body}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm leading-6 text-slate-600">Save this report, compare it with your symptoms, and review meaningful changes with a clinician.</p>
+            )}
+          </SectionCard>
+
+          <SectionCard icon={MessageCircle} title="Discuss with a clinician">
+            {reportDiscussion.length ? (
+              <ul className="space-y-2 text-sm leading-6 text-slate-700">
+                {reportDiscussion.slice(0, 5).map((item, idx) => (
+                  <li key={`discussion-${idx}`} className="rounded-xl bg-slate-50 px-3 py-2">{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm leading-6 text-slate-600">Ask whether the priority markers fit your symptoms, medications, history, and recent lifestyle changes.</p>
+            )}
+          </SectionCard>
+
+          <SectionCard icon={RefreshCw} title="Retest plan">
+            {reportRetest.length ? (
+              <ul className="space-y-2 text-sm leading-6 text-slate-700">
+                {reportRetest.slice(0, 5).map((item, idx) => (
+                  <li key={`retest-${idx}`} className="rounded-xl bg-slate-50 px-3 py-2">
+                    <span className="font-semibold text-slate-950">{item.marker}</span>
+                    <span className="block text-slate-600">{item.timing}</span>
+                    {item.reason && <span className="block text-xs text-slate-500">{item.reason}</span>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm leading-6 text-slate-600">Retesting depends on the marker, symptoms, and clinician guidance. Keep this report for comparison.</p>
+            )}
+          </SectionCard>
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">Full biomarker table</h2>
+              <p className="mt-1 text-sm text-slate-500">{optimalCount} in range · {watchCount} worth watching · {outOfRangeCount} out of range</p>
+            </div>
+            <FeatureGate
+              feature="advanced_protocol"
+              onLocked={triggerSubscriptionRequiredPaywall}
+              fallback={
+                <button onClick={triggerSubscriptionRequiredPaywall} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
+                  Unlock trends
+                </button>
+              }
+            >
+              <button onClick={() => navigate('/progress')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
+                View trends
+              </button>
+            </FeatureGate>
+          </div>
+          <div className="overflow-x-auto rounded-2xl border border-slate-100">
             <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-slate-700">
+              <thead className="bg-slate-50 text-slate-600">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold">Biomarker</th>
                   <th className="px-4 py-3 text-left font-semibold">Value</th>
-                  <th className="px-4 py-3 text-left font-semibold">Unit</th>
-                  <th className="px-4 py-3 text-left font-semibold">Reference Range</th>
+                  <th className="px-4 py-3 text-left font-semibold">Reference</th>
                   <th className="px-4 py-3 text-left font-semibold">Status</th>
                 </tr>
               </thead>
-              <tbody>
-                {rankedBiomarkers.map((b, idx) => (
-                  <tr key={b.id || `${b.name}-${idx}`} className="border-t border-slate-100 hover:bg-slate-50 transition">
-                    <td className="px-4 py-3 text-slate-900 flex items-center gap-2">
-                      {b.name_en || '—'}
-                      <BiomarkerContextTooltip biomarkerName={b.name_en || b.name} value={b.value} status={b.status_normalized} size="sm" />
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">{b.value ?? '—'}</td>
-                    <td className="px-4 py-3 text-slate-700">{b.unit || '—'}</td>
-                    <td className="px-4 py-3 text-slate-700">{b.ref_low != null && b.ref_high != null ? `${b.ref_low} - ${b.ref_high}` : '—'}</td>
-                    <td className={`px-4 py-3 font-semibold ${STATUS_META[b.status_normalized || '']?.text || 'text-slate-700'}`}>{b.status_normalized}</td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {rankedBiomarkers.map((b, idx) => {
+                  const meta = STATUS_META[b.status_normalized] || STATUS_META.BORDERLINE
+                  return (
+                    <tr key={b.id || `${b.name}-${idx}`} className="transition hover:bg-slate-50">
+                      <td className="px-4 py-3 font-medium text-slate-950">{b.name_en || '—'}</td>
+                      <td className="px-4 py-3 text-slate-700">{formatMetric(b)}</td>
+                      <td className="px-4 py-3 text-slate-500">{formatRange(b)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{meta.label}</span>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
-        </motion.div>
-
-        {topPriority && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-100px' }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-            whileHover={{ boxShadow: '0 20px 40px rgba(16, 185, 129, 0.15)' }}
-            className="mb-8 rounded-2xl border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 to-white p-6 transition-all"
-            style={{
-              boxShadow: '0 10px 30px rgba(16, 185, 129, 0.1), inset 0 1px 0 rgba(16, 185, 129, 0.1)',
-            }}
-          >
-            <motion.div
-              animate={{ rotate: [0, 5, -5, 0] }}
-              transition={{ duration: 3, repeat: Infinity }}
-              className="flex items-center gap-3 mb-3"
-            >
-              <AlertTriangle className="h-6 w-6 text-emerald-600" />
-              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">🎯 Start Here</div>
-            </motion.div>
-            <motion.h3
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="text-2xl font-bold text-slate-900 mb-2"
-            >
-              Your Top Priority: {topPriority.name_en}
-            </motion.h3>
-            <div className="mb-4 flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-emerald-600">{formatMetric(topPriority)}</span>
-              <span className="text-sm text-slate-600">(Reference: {topPriority.ref_low}-{topPriority.ref_high} {topPriority.unit})</span>
-            </div>
-            <p className="mb-4 text-base text-slate-700">
-              This is your most impactful marker to address right now. Improving this will have the biggest effect on your health outcomes.
-            </p>
-            <button
-              onClick={() => navigate(`/protocol/${uploadId}`)}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-emerald-500 shadow-sm"
-            >
-              Get Supplement Plan for This →
-            </button>
-          </motion.div>
-        )}
-
-        <div className="mb-8">
-          <h3 className="text-xl font-bold text-slate-900 mb-4">Medical Microservice Analysis</h3>
-          {medicalAnalysisLoading && (
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-              Running medical analysis...
-            </div>
-          )}
-
-          {!medicalAnalysisLoading && medicalAnalysisError && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              {medicalAnalysisError}
-            </div>
-          )}
-
-          {!medicalAnalysisLoading && medicalAnalysis && (
-            <div className="space-y-4">
-              {(medicalAnalysis.biomarkers || []).length ? (
-                <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-slate-50 text-slate-700">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-semibold">Biomarker</th>
-                        <th className="px-4 py-3 text-left font-semibold">Value</th>
-                        <th className="px-4 py-3 text-left font-semibold">Unit</th>
-                        <th className="px-4 py-3 text-left font-semibold">Category</th>
-                        <th className="px-4 py-3 text-left font-semibold">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(medicalAnalysis.biomarkers || []).map((item, idx) => (
-                        <tr key={`${item.key || item.name || 'm'}-${idx}`} className="border-t border-slate-100">
-                          <td className="px-4 py-3 text-slate-900">{item.name || '—'}</td>
-                          <td className="px-4 py-3 text-slate-700">{item.value ?? '—'}</td>
-                          <td className="px-4 py-3 text-slate-700">{item.unit || '—'}</td>
-                          <td className="px-4 py-3 text-slate-700">{item.category || '—'}</td>
-                          <td className="px-4 py-3 text-slate-700">{item.status || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-                  No additional microservice interpretation is available for this panel yet.
-                </div>
-              )}
-
-              {!!(medicalAnalysis.recommendations || []).length && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-                  <h4 className="mb-1 text-base font-semibold text-slate-900">Microservice Recommendations</h4>
-                  <p className="mb-3 text-sm text-slate-600">
-                    These suggestions come from the separate medical microservice and are supplemental to the biomarker interpretation below.
-                  </p>
-                  <ul className="list-disc pl-5 text-base text-slate-800">
-                    {(medicalAnalysis.recommendations || []).map((r, idx) => (
-                      <li key={`rec-${idx}`}>{r}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        <div className="mb-8">
-          <h3 className="text-xl font-bold text-slate-900 mb-4">Health Insights</h3>
-          <div className="grid gap-4">
-            {hasActionable ? (
-              <div className="bg-rose-50 border border-rose-200 rounded-xl p-6">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-6 w-6 text-rose-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-rose-900 mb-2">What Needs Action Now</h4>
-                    <p className="text-rose-700 mb-3">
-                      Prioritize these biomarkers first, then re-test to confirm movement toward range.
-                    </p>
-                    <ul className="space-y-2 text-sm text-rose-900">
-                      {rankedBiomarkers
-                        .filter((b) => b.status_normalized !== 'OPTIMAL')
-                        .slice(0, 5)
-                        .map((b, idx) => (
-                          <li key={`${b.id || b.name_en}-${idx}`} className="rounded-lg bg-white/70 px-3 py-2 border border-rose-100">
-                            <span className="font-semibold">{b.name_en}</span>
-                            <span className="mx-2">•</span>
-                            <span>{b.value} {b.unit}</span>
-                            <span className="mx-2">•</span>
-                            <span className="uppercase">{b.status_normalized}</span>
-                          </li>
-                        ))}
-                    </ul>
-                  </div>
-                </div>
+        <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-emerald-700">
+                <Stethoscope className="h-5 w-5" />
               </div>
-            ) : (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-6 w-6 text-emerald-600 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-emerald-900 mb-2">Current Panel Looks Stable</h4>
-                    <p className="text-emerald-700">
-                      Most biomarkers are in range. Keep your current routine and monitor trends over time.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-white border border-slate-200 rounded-xl p-6">
-              <h4 className="font-semibold text-slate-900 mb-2">How to use this section</h4>
-              <p className="text-sm text-slate-600 mb-3">
-                Health Insights is a triage layer. It does not replace diagnosis and should be interpreted with your clinician.
-              </p>
-              <BiomarkerAlertsDisplay
-                biomarkers={rankedBiomarkers}
-                previousBiomarkers={[]}
-                userPreferences={{}}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-8">
-          <h3 className="text-xl font-bold text-slate-900 mb-4">Biomarker Analysis</h3>
-          <div className="grid gap-4">
-            {rankedBiomarkers.map((b) => {
-              const status = b.status_normalized
-              const meta = STATUS_META[status] || STATUS_META.BORDERLINE
-              const rangeLabel = b.ref_low != null && b.ref_high != null ? `${b.ref_low}-${b.ref_high} ${b.unit || ''}`.trim() : 'No reference range'
-              const bar = computeRangePercent(b)
-              const value = Number(b.value)
-              const low = Number(b.ref_low)
-              const high = Number(b.ref_high)
-              const trend = resolveTrendMeta(value, low, high)
-              const TrendIcon = trend.icon
-
-              return (
-                <div key={b.id || `${b.name_en}-${b.value}`} className={`relative overflow-hidden rounded-xl border bg-white p-6 ${meta.border} shadow-sm`}>
-                  <span className={`absolute inset-y-0 left-0 w-1.5 ${meta.stripe}`} aria-hidden="true" />
-
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-slate-900 mb-1">{b.name_en}</h4>
-                      <div className="flex items-center gap-2 mb-2">
-                        <TrendIcon className={`h-4 w-4 ${trend.iconColor}`} />
-                        <span className={`text-sm font-medium ${trend.color}`}>{trend.text}</span>
-                      </div>
-                    </div>
-                    <span className={`rounded-full px-3 py-1 text-sm font-semibold ${meta.badge}`}>{status}</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-slate-900 mb-1">
-                        {b.value}
-                        <span className="text-lg font-medium text-slate-500 ml-1">{b.unit}</span>
-                      </div>
-                      <div className="text-sm text-slate-600">Your Value</div>
-                    </div>
-
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-slate-700 mb-1">{rangeLabel}</div>
-                      <div className="text-sm text-slate-600">Reference Range</div>
-                    </div>
-
-                    <div className="text-center">
-                      <div className="flex items-center justify-center mb-1">
-                        <Activity className="h-5 w-5 text-slate-600 mr-2" />
-                        <span className="text-3xl font-bold text-slate-700">
-                          {bar.toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="text-sm text-slate-600">Range Position</div>
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <div className="flex justify-between text-sm text-slate-600 mb-2">
-                      <span>{b.ref_low || 'Min'}</span>
-                      <span>{b.ref_high || 'Max'}</span>
-                    </div>
-                    <div className="h-3 overflow-hidden rounded-full bg-slate-100 relative">
-                      <div className={`h-full rounded-full ${meta.stripe}`} style={{ width: `${Math.min(bar, 100)}%` }} />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-1 h-1 bg-slate-900 rounded-full" style={{ left: `${Math.min(bar, 100)}%`, transform: 'translateX(-50%)' }} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {b.interpretation && (
-                    <div className="bg-slate-50 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <Info className="h-5 w-5 text-slate-500 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <h5 className="font-medium text-slate-900 mb-1">Clinical Interpretation</h5>
-                          <p className="text-sm text-slate-700">{b.interpretation}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="flex gap-3 mb-6">
-          <button
-            onClick={exportResultsAsPDF}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-900 text-white rounded-xl font-semibold text-sm transition-colors shadow-sm"
-          >
-            Export as PDF
-          </button>
-          <button
-            onClick={exportResultsAsPNG}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-900 text-white rounded-xl font-semibold text-sm transition-colors shadow-sm"
-          >
-            Export as PNG
-          </button>
-        </div>
-
-        <div className="mb-8">
-          <h3 className="text-xl font-bold text-slate-900 mb-4">Health Optimization Tips</h3>
-          <HealthTipsDisplay
-            biomarkers={rankedBiomarkers.map((b) => ({ ...b, name: b.name_en, status: b.status_normalized }))}
-            userContext={{
-              age: 30,
-              lifestyle: 'active',
-              goals: ['improve energy', 'optimize recovery'],
-              protocol_adherence: 'high'
-            }}
-          />
-        </div>
-
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">Personalized Supplement Protocol</h3>
-              <p className="text-slate-600 mt-1">AI-generated recommendations based on your biomarker results</p>
-            </div>
-            <button
-              onClick={() => navigate(`/protocol/${uploadId}`)}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-semibold text-sm transition-colors shadow-sm"
-            >
-              View Full Protocol →
-            </button>
-          </div>
-
-          <FeatureGate
-            feature="basic_protocol"
-            onLocked={triggerSubscriptionRequiredPaywall}
-            fallback={
-              <div className="bg-gradient-to-br from-emerald-50 to-blue-50 border border-emerald-200 rounded-xl p-8 text-center">
-                <div className="max-w-md mx-auto">
-                  <Activity className="h-12 w-12 text-emerald-600 mx-auto mb-4" />
-                  <h4 className="text-lg font-semibold text-slate-900 mb-2">Unlock Your Personalized Protocol</h4>
-                  <p className="text-slate-600 mb-6">
-                    Get AI-powered supplement recommendations tailored to your specific biomarker results and health goals.
-                  </p>
-                </div>
-              </div>
-            }
-          >
-            {protocol.length > 0 ? (
-              <div className="space-y-4">
-                {protocol.map((rec, i) => <ProtocolCard key={i} recommendation={rec} />)}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <h4 className="text-base font-semibold text-slate-900 mb-1">Protocol is not generated yet</h4>
-                <p className="text-sm text-slate-600 mb-4">
-                  This section shows personalized supplement actions after protocol generation. It is empty for this upload right now.
+              <div>
+                <h2 className="font-semibold text-slate-950">Ready for the next step?</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  Turn this report into a practical action plan with priorities, clinician discussion points, and follow-up tracking.
                 </p>
-                <button
-                  onClick={() => navigate(`/protocol/${uploadId}`)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500"
-                >
-                  Generate / Open Protocol
-                </button>
               </div>
-            )}
-          </FeatureGate>
+            </div>
+            <button
+              onClick={() => navigate(`/protocol/${uploadId}`)}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              Open action plan
+              <FileText className="h-4 w-4" />
+            </button>
+          </div>
         </div>
+
+        <p className="mt-5 text-xs leading-5 text-slate-500">
+          {reportSummary?.disclaimer || 'VITALOOP provides educational information and does not diagnose, treat, or replace professional medical advice.'}
+        </p>
       </div>
     </div>
   )

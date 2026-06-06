@@ -1,5 +1,32 @@
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api.js'
+import { supabase, hasSupabaseConfig } from '../lib/supabase.js'
+
+function readAccessTokenFromSupabaseStorage() {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const key = Object.keys(window.localStorage).find((item) => item.startsWith('sb-') && item.endsWith('-auth-token'))
+    if (!key) return null
+
+    const raw = window.localStorage.getItem(key)
+    if (!raw) return null
+
+    const parsed = JSON.parse(raw)
+    return parsed?.access_token || parsed?.currentSession?.access_token || null
+  } catch {
+    return null
+  }
+}
+
+async function hasActiveAccessToken() {
+  if (hasSupabaseConfig) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) return true
+  }
+
+  return Boolean(readAccessTokenFromSupabaseStorage())
+}
 
 // Dashboard summary (stats, assignments)
 export const useDashboardSummary = () =>
@@ -97,6 +124,11 @@ export const useUserEntitlements = () =>
         plan_key: 'free',
         has_active_subscription: false,
         features: { upload_limit: 1, lab_history: true, trend_analysis: false, advanced_protocol: false, symptom_lab_plan: true, checkins: false },
+      }
+
+      const hasToken = await hasActiveAccessToken()
+      if (!hasToken) {
+        return freeEntitlements
       }
 
       try {

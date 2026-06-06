@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async'
+import { useEffect } from 'react'
 
 const BASE_URL = 'https://vitaloop.today'
 const DEFAULT_TITLE = 'Find the Cause, Not Just the Symptom | VITALOOP'
@@ -18,6 +19,8 @@ export default function Seo({
   title,
   description,
   path = '/',
+  canonicalUrl,
+  locale = 'en_US',
   image = `${BASE_URL}/og-cover-2026-05.jpg`,
   imageAlt = 'VITALOOP — AI-powered blood test analysis and biohacking platform dashboard',
   noindex = false,
@@ -25,10 +28,16 @@ export default function Seo({
 }) {
   const fullTitle = title || DEFAULT_TITLE
   const safeDescription = description || DEFAULT_DESCRIPTION
-  const canonical = `${BASE_URL}${path}`
+  const canonical = canonicalUrl || `${BASE_URL}${path}`
   const robotsContent = noindex
     ? 'noindex,nofollow'
     : 'index,follow,max-image-preview:large,max-snippet:-1'
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+
+    document.documentElement.lang = locale === 'uk_UA' ? 'uk' : 'en'
+  }, [locale])
 
   return (
     <Helmet>
@@ -46,7 +55,7 @@ export default function Seo({
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
       <meta property="og:image:alt" content={imageAlt} />
-      <meta property="og:locale" content="en_US" />
+      <meta property="og:locale" content={locale} />
 
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:site" content="@vitaloop" />

@@ -11,21 +11,21 @@ const LOADING_STATE = {
 
 const FALLBACK_STATE = {
   role: 'end_user',
-  requires_onboarding: true,
-  current_stage: 'profile',
-  completed: false,
+  requires_onboarding: false,
+  current_stage: 'unknown',
+  completed: true,
   checklist: {
     profile_basics: false,
     location: false,
     complaints: false,
     first_upload: false,
     questionnaire_completed: false,
-    onboarding_complete: false,
-    account_setup_complete: false,
+    onboarding_complete: true,
+    account_setup_complete: true,
     first_health_loop_started: false,
     first_health_loop_complete: false,
   },
-  account_setup_complete: false,
+  account_setup_complete: true,
   first_health_loop_started: false,
   first_health_loop_complete: false,
 }
@@ -44,7 +44,8 @@ export function useOnboardingState() {
           setState({ ...FALLBACK_STATE, ...data, checklist: { ...FALLBACK_STATE.checklist, ...(data.checklist || {}) } })
         }
       } catch {
-        // API failed - assume onboarding is needed for safety.
+        // Do not hard-block the cabinet on a transient onboarding-state/CORS
+        // failure. The onboarding page itself can still be opened directly.
         if (active) {
           setState(FALLBACK_STATE)
         }

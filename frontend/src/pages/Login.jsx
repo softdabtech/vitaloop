@@ -81,33 +81,124 @@ function resolveEmailConfirmationRedirect(returnUrl = null) {
   return confirmationUrl.toString()
 }
 
-function mapAuthErrorMessage(message) {
+const AUTH_COPY = {
+  en: {
+    seoTitle: 'Log In or Sign Up | VITALOOP',
+    seoDescription: 'Sign in to your VITALOOP account or create a free account to start interpreting blood test results with AI. No credit card required.',
+    backToSite: 'Back to site',
+    resetTitle: 'Reset password',
+    signupTitle: 'Create account',
+    signinTitle: 'Welcome back',
+    resetSubtitle: 'Enter your email to receive a reset link.',
+    signupSubtitle: 'Start with symptoms, labs, or a health goal.',
+    signinSubtitle: 'Sign in to your VITALOOP account.',
+    resetSuccess: 'Password reset successfully. Sign in with your new password.',
+    emailLabel: 'EMAIL',
+    passwordLabel: 'PASSWORD',
+    forgotPassword: 'Forgot password?',
+    loading: 'Loading…',
+    sendReset: 'Send reset link',
+    createAccount: 'Create account',
+    signIn: 'Sign in',
+    or: 'or',
+    continueGoogle: 'Continue with Google',
+    backToSignIn: '← Back to sign in',
+    alreadyHave: 'Already have an account? ',
+    noAccount: "Don't have an account? ",
+    signUpFree: 'Sign up free',
+    securityTitle: 'Your data security',
+    securityBody: 'Your health data is protected with privacy-first safeguards and account-level access controls. VITALOOP does not sell your health data.',
+    resendLoading: 'Sending…',
+    resendConfirmation: 'Resend confirmation email',
+    invalidResendEmail: 'Enter a valid email to resend confirmation.',
+    confirmationResent: 'Confirmation email sent again. Check your inbox.',
+    confirmationResendError: 'Could not send email: ',
+    rateLimit: 'Too many attempts. Please wait 1 minute and try again.',
+    invalidEmail: 'Enter a valid email.',
+    weakPassword: 'Password must be at least 8 characters and include letters and numbers.',
+    resetLinkSent: 'Reset link sent - check your email',
+    accountCreatedRedirect: 'Account created. Redirecting...',
+    accountCreatedOnboarding: 'Account created. Continue with onboarding.',
+    accountCreatedConfirm: 'Account created. Confirm your email to continue.',
+    sessionFailed: 'Session validation failed. Please sign in again.',
+    emailNotConfirmed: 'Email is not confirmed. Confirm it from the email link or resend the confirmation email.',
+    invalidCredentials: 'Invalid email or password. Check the details and try again.',
+    tooManyRequests: 'Too many sign-in attempts. Wait a minute and try again.',
+    defaultAuthError: 'Could not sign in. Try again.',
+  },
+  uk: {
+    seoTitle: 'Увійти або створити акаунт | VITALOOP Ukraine',
+    seoDescription: 'Увійдіть у VITALOOP Ukraine або створіть акаунт, щоб почати з симптомів, аналізів і персонального плану дій.',
+    backToSite: 'На сайт',
+    resetTitle: 'Відновити пароль',
+    signupTitle: 'Створити акаунт',
+    signinTitle: 'Вхід до акаунта',
+    resetSubtitle: 'Введіть email, і ми надішлемо посилання для відновлення.',
+    signupSubtitle: 'Почніть із симптомів, аналізів або цілі щодо здоровʼя.',
+    signinSubtitle: 'Увійдіть у свій акаунт VITALOOP.',
+    resetSuccess: 'Пароль успішно змінено. Увійдіть із новим паролем.',
+    emailLabel: 'EMAIL',
+    passwordLabel: 'ПАРОЛЬ',
+    forgotPassword: 'Забули пароль?',
+    loading: 'Завантаження…',
+    sendReset: 'Надіслати посилання',
+    createAccount: 'Створити акаунт',
+    signIn: 'Увійти',
+    or: 'або',
+    continueGoogle: 'Продовжити з Google',
+    backToSignIn: '← Повернутися до входу',
+    alreadyHave: 'Вже маєте акаунт? ',
+    noAccount: 'Ще немає акаунта? ',
+    signUpFree: 'Створити безкоштовно',
+    securityTitle: 'Безпека ваших даних',
+    securityBody: 'Ваші дані про здоровʼя захищені privacy-first підходом і доступом на рівні акаунта. VITALOOP не продає ваші медичні дані.',
+    resendLoading: 'Надсилаємо…',
+    resendConfirmation: 'Надіслати підтвердження ще раз',
+    invalidResendEmail: 'Введіть коректний email для повторного надсилання.',
+    confirmationResent: 'Лист підтвердження надіслано повторно. Перевірте пошту.',
+    confirmationResendError: 'Не вдалося надіслати лист: ',
+    rateLimit: 'Забагато спроб. Зачекайте 1 хвилину і спробуйте ще раз.',
+    invalidEmail: 'Введіть коректний email.',
+    weakPassword: 'Пароль має містити щонайменше 8 символів, літери й цифри.',
+    resetLinkSent: 'Посилання для відновлення надіслано на email.',
+    accountCreatedRedirect: 'Акаунт створено. Переходимо далі...',
+    accountCreatedOnboarding: 'Акаунт створено. Продовжте налаштування.',
+    accountCreatedConfirm: 'Акаунт створено. Підтвердьте email, щоб продовжити.',
+    sessionFailed: 'Не вдалося перевірити сесію. Увійдіть ще раз.',
+    emailNotConfirmed: 'Email не підтверджено. Підтвердьте його за посиланням у листі або надішліть лист повторно.',
+    invalidCredentials: 'Невірний email або пароль. Перевірте дані й спробуйте ще раз.',
+    tooManyRequests: 'Забагато спроб входу. Зачекайте хвилину й повторіть.',
+    defaultAuthError: 'Не вдалося увійти. Спробуйте ще раз.',
+  },
+}
+
+function mapAuthErrorMessage(message, copy = AUTH_COPY.en) {
   const raw = String(message || '')
   const normalized = raw.toLowerCase()
 
   if (normalized.includes('email not confirmed') || normalized.includes('email_not_confirmed')) {
     return {
-      text: 'Email не подтвержден. Подтвердите email по ссылке из письма или отправьте письмо повторно.',
+      text: copy.emailNotConfirmed,
       canResendConfirmation: true,
     }
   }
 
   if (normalized.includes('invalid login credentials')) {
     return {
-      text: 'Неверный email или пароль. Проверьте данные и попробуйте снова.',
+      text: copy.invalidCredentials,
       canResendConfirmation: false,
     }
   }
 
   if (normalized.includes('too many requests')) {
     return {
-      text: 'Слишком много попыток входа. Подождите минуту и повторите.',
+      text: copy.tooManyRequests,
       canResendConfirmation: false,
     }
   }
 
   return {
-    text: raw || 'Не удалось выполнить вход. Попробуйте еще раз.',
+    text: raw || copy.defaultAuthError,
     canResendConfirmation: false,
   }
 }
@@ -351,6 +442,14 @@ export default function Login() {
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword, signOut } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const isUaAuth =
+    searchParams.get('lang') === 'uk' ||
+    searchParams.get('locale') === 'uk' ||
+    (typeof window !== 'undefined' && window.location.hostname.toLowerCase() === 'ua.vitaloop.today')
+  const copy = isUaAuth ? AUTH_COPY.uk : AUTH_COPY.en
+  const siteHomePath = isUaAuth && typeof window !== 'undefined' && window.location.hostname.toLowerCase() !== 'ua.vitaloop.today'
+    ? '/ua'
+    : '/'
   const [email, setEmail] = useState('')
   const [showResetInfo, setShowResetInfo] = useState(false)
   const [password, setPassword] = useState('')
@@ -437,7 +536,7 @@ export default function Login() {
   async function handleResendConfirmation(emailToUse) {
     const targetEmail = String(emailToUse || '').trim()
     if (!isValidEmail(targetEmail)) {
-      toast.error('Введите корректный email для повторной отправки.')
+      toast.error(copy.invalidResendEmail)
       return
     }
 
@@ -451,10 +550,10 @@ export default function Login() {
         },
       })
       if (error) throw error
-      toast.success('Письмо подтверждения отправлено повторно. Проверьте почту.')
+      toast.success(copy.confirmationResent)
       navigate(`/auth/confirmation?pending=1&email=${encodeURIComponent(targetEmail)}`, { replace: true })
     } catch (err) {
-      toast.error('Не удалось отправить письмо: ' + (err?.message || 'Unknown error'))
+      toast.error(copy.confirmationResendError + (err?.message || 'Unknown error'))
     } finally {
       setResendLoading(false)
     }
@@ -463,23 +562,23 @@ export default function Login() {
   // Validate submission form inputs
   function validateSubmission() {
     if (rateLimitedUntil > Date.now()) {
-      toast.error('Too many attempts. Please wait 1 minute and try again.')
+      toast.error(copy.rateLimit)
       return null
     }
 
     if (!registerAttempt()) {
-      toast.error('Too many attempts. Please wait 1 minute and try again.')
+      toast.error(copy.rateLimit)
       return null
     }
 
     const normalizedEmail = email.trim()
     if (!isValidEmail(normalizedEmail)) {
-      toast.error('Введите корректный email.')
+      toast.error(copy.invalidEmail)
       return null
     }
 
     if (!isForgot && !hasAnyPasswordSymbol(password)) {
-      toast.error('Password must be at least 8 characters and include letters and numbers.')
+      toast.error(copy.weakPassword)
       return null
     }
 
@@ -491,7 +590,7 @@ export default function Login() {
     const { error } = await resetPassword(normalizedEmail)
     if (error) toast.error(error.message)
     else {
-      toast.success('Reset link sent - check your email')
+      toast.success(copy.resetLinkSent)
       setIsForgot(false)
     }
   }
@@ -510,18 +609,18 @@ export default function Login() {
       await sendWelcomeEmail()
       import('./UserDashboard.jsx').catch(() => {})
       if (returnUrl) {
-        toast.success('Account created. Redirecting...')
+        toast.success(copy.accountCreatedRedirect)
         const destination = await resolvePostLoginDestination(returnUrl)
         navigateToResolvedPath(navigate, destination)
         return
       }
 
-      toast.success('Account created. Continue with onboarding.')
+      toast.success(copy.accountCreatedOnboarding)
       navigate('/onboarding', { replace: true })
       return
     }
 
-    toast.success('Account created. Confirm your email to continue.')
+    toast.success(copy.accountCreatedConfirm)
     const confirmationParams = new URLSearchParams({ pending: '1', email: normalizedEmail })
     if (returnUrl) {
       confirmationParams.set('returnUrl', returnUrl)
@@ -540,7 +639,7 @@ export default function Login() {
     } catch (err) {
       console.error('[ERROR] Exception caught in login flow:', err)
       await signOut()
-      toast.error('Session validation failed. Please sign in again.')
+      toast.error(copy.sessionFailed)
       navigate('/login', { replace: true })
     }
   }
@@ -570,7 +669,7 @@ export default function Login() {
     setLoading(false)
 
     if (error) {
-      const mapped = mapAuthErrorMessage(error.message)
+      const mapped = mapAuthErrorMessage(error.message, copy)
       setAuthAlert(mapped)
       toast.error(mapped.text)
       return
@@ -586,8 +685,8 @@ export default function Login() {
   return (
     <>
       <Seo
-        title="Log In or Sign Up | VITALOOP"
-        description="Sign in to your VITALOOP account or create a free account to start interpreting blood test results with AI. No credit card required."
+        title={copy.seoTitle}
+        description={copy.seoDescription}
         path="/login"
         noindex
       />
@@ -617,7 +716,7 @@ export default function Login() {
 
           {/* Back to site */}
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate(siteHomePath)}
             style={{
               position: 'absolute', top: 24, left: 24,
               display: 'flex', alignItems: 'center', gap: 6,
@@ -628,7 +727,7 @@ export default function Login() {
             onMouseEnter={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
             onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
           >
-            <ArrowLeft size={14}/> Back to site
+            <ArrowLeft size={14}/> {copy.backToSite}
           </button>
 
           {/* Logo */}
@@ -644,14 +743,14 @@ export default function Login() {
               </span>
             </div>
             <h1 style={{ fontSize: 24, fontWeight: 700, color: 'white', margin: '16px 0 4px' }}>
-              {isForgot ? 'Reset password' : isSignUp ? 'Create account' : 'Welcome back'}
+              {isForgot ? copy.resetTitle : isSignUp ? copy.signupTitle : copy.signinTitle}
             </h1>
             <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', margin: 0 }}>
               {isForgot
-                ? 'Enter your email to receive a reset link.'
+                ? copy.resetSubtitle
                 : isSignUp
-                  ? 'Start with symptoms, labs, or a health goal.'
-                  : 'Sign in to your VITALOOP account.'}
+                  ? copy.signupSubtitle
+                  : copy.signinSubtitle}
             </p>
           </div>
 
@@ -665,7 +764,7 @@ export default function Login() {
               fontSize: 14,
               marginBottom: 16,
             }}>
-            Пароль успешно сброшен. Войдите с новым паролем.
+              {copy.resetSuccess}
             </div>
           )}
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -699,7 +798,7 @@ export default function Login() {
                       cursor: resendLoading ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    {resendLoading ? 'Sending…' : 'Resend confirmation email'}
+                    {resendLoading ? copy.resendLoading : copy.resendConfirmation}
                   </button>
                 )}
               </div>
@@ -720,7 +819,7 @@ export default function Login() {
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)',
                 letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
-              EMAIL
+                {copy.emailLabel}
               </label>
               <input
                 type="email"
@@ -746,7 +845,7 @@ export default function Login() {
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)',
                   letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
-                PASSWORD
+                  {copy.passwordLabel}
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -791,7 +890,7 @@ export default function Login() {
                         fontSize: 12, color: '#1D9E75',
                       }}
                     >
-                    Forgot password?
+                      {copy.forgotPassword}
                     </button>
                   </div>
                 )}
@@ -813,10 +912,10 @@ export default function Login() {
               onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#0F6E56' }}
               onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = '#1D9E75' }}
             >
-              {loading ? 'Loading…'
-                : isForgot ? 'Send reset link'
-                  : isSignUp ? 'Create account'
-                    : 'Sign in'}
+              {loading ? copy.loading
+                : isForgot ? copy.sendReset
+                  : isSignUp ? copy.createAccount
+                    : copy.signIn}
             </button>
           </form>
 
@@ -827,7 +926,7 @@ export default function Login() {
                 display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0',
               }}>
                 <div style={{ flex: 1, height: '0.5px', background: 'rgba(255,255,255,0.08)' }}/>
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>or</span>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>{copy.or}</span>
                 <div style={{ flex: 1, height: '0.5px', background: 'rgba(255,255,255,0.08)' }}/>
               </div>
 
@@ -852,7 +951,7 @@ export default function Login() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-              Continue with Google
+                {copy.continueGoogle}
               </button>
 
               {/* Apple ID button hidden until provider is enabled */}
@@ -864,14 +963,14 @@ export default function Login() {
             {isForgot ? (
               <button onClick={() => setIsForgot(false)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1D9E75', fontSize: 13 }}>
-              ← Back to sign in
+                {copy.backToSignIn}
               </button>
             ) : (
               <>
-                {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+                {isSignUp ? copy.alreadyHave : copy.noAccount}
                 <button onClick={() => setIsSignUp((v) => !v)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1D9E75', fontSize: 13 }}>
-                  {isSignUp ? 'Sign in' : 'Sign up free'}
+                  {isSignUp ? copy.signIn : copy.signUpFree}
                 </button>
               </>
             )}
@@ -886,11 +985,10 @@ export default function Login() {
           }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.35)',
               letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
-            Your data security
+              {copy.securityTitle}
             </div>
             <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', lineHeight: 1.6, margin: 0 }}>
-            Your health data is protected with privacy-first safeguards and account-level access controls.
-            VITALOOP does not sell your health data.
+              {copy.securityBody}
             </p>
           </div>
         </div>
