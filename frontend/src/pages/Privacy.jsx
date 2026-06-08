@@ -91,7 +91,7 @@ export default function Privacy() {
 
         <div>
           <h2 style={h2Style}>8. Cookies and Tracking</h2>
-          <p>We use essential cookies for authentication and core functionality, and privacy-first analytics. We do not use advertising cookies, social media pixels, or cross-site tracking tools.</p>
+          <p>We use essential cookies for authentication and core functionality, product analytics, and conversion tracking tools (including Meta Pixel) to measure campaign performance.</p>
         </div>
 
         <div>
