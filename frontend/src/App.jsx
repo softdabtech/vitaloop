@@ -8,7 +8,7 @@ import { useAuth } from './hooks/useAuth.js'
 import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
 import { useEffect, useState } from 'react'
 import { useOnboardingState } from './hooks/useOnboardingState.js'
-import { gaPageView } from './lib/analytics.js'
+import { gaPageView, gaPurchase } from './lib/analytics.js'
 
 // Marketing pages — lazy
 const Product = lazy(() => import('./pages/Product.jsx'))
@@ -103,6 +103,15 @@ function GAPageTracker() {
   const location = useLocation()
   useEffect(() => {
     gaPageView(location.pathname + location.search)
+
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(location.search)
+    if (params.get('sub') !== 'success') return
+
+    const purchaseTrackedKey = 'vtl_purchase_tracked_sub_success'
+    if (window.sessionStorage.getItem(purchaseTrackedKey) === '1') return
+    window.sessionStorage.setItem(purchaseTrackedKey, '1')
+    gaPurchase(`stripe_sub_success_${Date.now()}`)
   }, [location.pathname, location.search])
   return null
 }

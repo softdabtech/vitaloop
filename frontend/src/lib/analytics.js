@@ -7,6 +7,16 @@
 
 const GA_ID = 'G-LG0BCMBJJE'
 
+function fbqTrack(eventName, params = {}) {
+  if (typeof window === 'undefined') return
+  if (typeof window.fbq !== 'function') return
+  try {
+    window.fbq('track', eventName, params)
+  } catch {
+    // Never throw from analytics
+  }
+}
+
 function gtag(...args) {
   if (typeof window === 'undefined') return
   if (typeof window.gtag !== 'function') return
@@ -56,6 +66,11 @@ export function gaPageView(path, title) {
  */
 export function gaSignUp(method = 'email') {
   gaEvent('sign_up', { method })
+  fbqTrack('CompleteRegistration', {
+    content_name: 'signup',
+    status: true,
+    method,
+  })
 }
 
 /**
@@ -89,6 +104,14 @@ export function gaBeginCheckout(priceLabel = null) {
     ],
     ...(priceLabel ? { coupon: priceLabel } : {}),
   })
+  fbqTrack('InitiateCheckout', {
+    currency: 'USD',
+    value: 19.99,
+  })
+  fbqTrack('AddPaymentInfo', {
+    currency: 'USD',
+    value: 19.99,
+  })
 }
 
 /**
@@ -110,6 +133,27 @@ export function gaPurchase(transactionId, value = 19.99) {
       },
     ],
   })
+  fbqTrack('Purchase', {
+    currency: 'USD',
+    value,
+  })
+  fbqTrack('Subscribe', {
+    currency: 'USD',
+    value,
+  })
+}
+
+/** Fire when a user views pricing/subscription content. */
+export function gaViewPricing(source = 'subscription') {
+  gaEvent('view_item', {
+    item_category: 'subscription',
+    item_name: 'VITALOOP Premium',
+    source,
+  })
+  fbqTrack('ViewContent', {
+    content_name: 'VITALOOP Premium',
+    content_category: 'subscription',
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -127,6 +171,11 @@ export function gaLabUpload() {
     value: 1,
   })
   gaEvent('lab_upload_completed')
+  fbqTrack('Lead', {
+    content_name: 'lab_upload_completed',
+    value: 1,
+    currency: 'USD',
+  })
 }
 
 /** Fire when the user completes the onboarding flow. */

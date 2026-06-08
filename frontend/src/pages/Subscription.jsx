@@ -7,6 +7,7 @@ import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import api from '../lib/api.js'
 import { SUBSCRIPTION_PLAN_IDS } from '../lib/subscriptionFlow.js'
+import { gaBeginCheckout, gaViewPricing } from '../lib/analytics.js'
 import '../styles/dashboard2026.css'
 
 const PLANS = {
@@ -188,6 +189,10 @@ export default function Subscription() {
     loadSubscription()
   }, [user])
 
+  useEffect(() => {
+    gaViewPricing('subscription_page')
+  }, [])
+
   async function loadSubscription() {
     setLoading(true)
     try {
@@ -215,6 +220,7 @@ export default function Subscription() {
     setUpgrading(true)
     try {
       const backendPlanId = PLAN_KEY_TO_BACKEND[planKey] || 'personal'
+      gaBeginCheckout(`${backendPlanId}_${billingCycle}`)
       const { data } = await api.post('/stripe/checkout', { plan_id: backendPlanId, billing_cycle: billingCycle })
       if (data.checkout_url) {
         navigateToUrl(data.checkout_url)
