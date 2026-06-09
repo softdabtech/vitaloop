@@ -830,12 +830,12 @@ export default function Landing() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={reduced ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.92 }}
             transition={{ duration: 0.18 }}
-            className="fixed bottom-5 right-5 z-50 inline-flex h-12 w-12 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-[0_18px_40px_rgba(15,23,42,0.16)] transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 sm:bottom-7 sm:right-7 sm:h-14 sm:w-14"
+            className="fixed right-6 z-[2998] inline-flex h-[52px] w-[52px] items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-[0_18px_40px_rgba(15,23,42,0.16)] transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
             style={{
-              bottom: 'max(20px, calc(env(safe-area-inset-bottom) + 16px))',
+              bottom: 'max(84px, calc(env(safe-area-inset-bottom) + 84px))',
             }}
           >
-            <ArrowUp className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+            <ArrowUp className="h-5 w-5" aria-hidden="true" />
           </motion.button>
         )}
       </AnimatePresence>
