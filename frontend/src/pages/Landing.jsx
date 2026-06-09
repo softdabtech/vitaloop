@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth.js'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   ArrowRight,
+  ArrowUp,
   BrainCircuit,
   CheckCircle2,
   Clock3,
@@ -672,6 +673,7 @@ export default function Landing() {
   const navigate = useNavigate()
   const reduced = useReducedMotion()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [showBackToTop, setShowBackToTop] = useState(false)
   const { user, loading: authLoading } = useAuth()
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
@@ -683,6 +685,13 @@ export default function Landing() {
     }
     setTimeout(() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' }), mobileMenuOpen ? 280 : 0)
   }
+
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 560)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   const rootClasses = 'overflow-x-hidden bg-white text-slate-900'
   const sectionCard = 'border border-slate-200 bg-white/85 backdrop-blur'
@@ -809,6 +818,27 @@ export default function Landing() {
           )}
         </AnimatePresence>
       </header>
+
+      <AnimatePresence>
+        {showBackToTop && (
+          <motion.button
+            type="button"
+            onClick={scrollToTop}
+            aria-label="Back to top"
+            title="Back to top"
+            initial={reduced ? false : { opacity: 0, y: 16, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.92 }}
+            transition={{ duration: 0.18 }}
+            className="fixed bottom-5 right-5 z-50 inline-flex h-12 w-12 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-[0_18px_40px_rgba(15,23,42,0.16)] transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 sm:bottom-7 sm:right-7 sm:h-14 sm:w-14"
+            style={{
+              bottom: 'max(20px, calc(env(safe-area-inset-bottom) + 16px))',
+            }}
+          >
+            <ArrowUp className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       <main>
         <LightHero />
