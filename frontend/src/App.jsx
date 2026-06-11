@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import Landing from './pages/Landing.jsx'
 import Login from './pages/Login.jsx'
@@ -207,6 +207,113 @@ function FloatingSupportChat() {
   )
 }
 
+const SYMPTOM_PROMPT_STORAGE_KEY = 'vitaloop_symptom_prompt_seen'
+
+function PublicSymptomPrompt({ disabled = false }) {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { user, loading } = useAuth()
+  const [visible, setVisible] = useState(false)
+
+  const isExcludedRoute = [
+    '/ua',
+    '/symptom-intake',
+    '/login',
+    '/auth',
+    '/dashboard',
+    '/today',
+    '/upload',
+    '/lab-plan',
+    '/results/',
+    '/protocol/',
+    '/avatar',
+    '/progress',
+    '/assignments',
+    '/lab-results',
+    '/settings',
+    '/health-profile',
+    '/subscription',
+    '/billing-history',
+    '/help-center',
+    '/admin',
+    '/ops',
+    '/crm',
+    '/onboarding',
+    '/questionnaire',
+    '/check-ins',
+    '/checkin',
+    '/insights',
+  ].some((prefix) => location.pathname === prefix || location.pathname.startsWith(prefix))
+
+  useEffect(() => {
+    setVisible(false)
+    if (disabled || loading || user || isExcludedRoute) return undefined
+    if (typeof window === 'undefined') return undefined
+    if (window.sessionStorage.getItem(SYMPTOM_PROMPT_STORAGE_KEY) === '1') return undefined
+
+    const timerId = window.setTimeout(() => {
+      window.sessionStorage.setItem(SYMPTOM_PROMPT_STORAGE_KEY, '1')
+      setVisible(true)
+    }, 3000)
+
+    return () => window.clearTimeout(timerId)
+  }, [disabled, loading, user, isExcludedRoute, location.pathname])
+
+  if (!visible) return null
+
+  const closePrompt = () => setVisible(false)
+  const startIntake = () => {
+    setVisible(false)
+    navigate('/symptom-intake')
+  }
+
+  return (
+    <div className="fixed inset-0 z-[3200] flex items-end justify-center bg-slate-950/35 px-4 pb-4 pt-10 backdrop-blur-[2px] sm:items-center sm:pb-10">
+      <div className="w-full max-w-[520px] overflow-hidden rounded-[28px] border border-emerald-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.26)]">
+        <div className="relative bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.20),transparent_38%),linear-gradient(135deg,#ffffff,#f0fdfa)] px-5 py-5 sm:px-6">
+          <button
+            type="button"
+            onClick={closePrompt}
+            aria-label="Close symptom check prompt"
+            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-xl leading-none text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+          >
+            x
+          </button>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Quick symptom check</p>
+          <h2 className="mt-3 max-w-[390px] text-2xl font-bold tracking-tight text-slate-950 sm:text-[28px]">
+            Feel off, but not sure what to check?
+          </h2>
+          <p className="mt-3 max-w-[420px] text-sm leading-6 text-slate-600">
+            Answer a few questions and get a safe lab discussion list before creating an account.
+          </p>
+        </div>
+        <div className="px-5 py-5 sm:px-6">
+          <div className="grid gap-2 text-sm text-slate-700">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold">No login required</div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold">Takes about one minute</div>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
+            <button
+              type="button"
+              onClick={startIntake}
+              className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
+            >
+              Start symptom check
+            </button>
+            <button
+              type="button"
+              onClick={closePrompt}
+              className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-400 hover:text-slate-950"
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const isUaHost = typeof window !== 'undefined' && window.location.hostname.toLowerCase() === 'ua.vitaloop.today'
   const isUaPreviewPath = typeof window !== 'undefined' && (window.location.pathname === '/ua' || window.location.pathname.startsWith('/ua/'))
@@ -303,6 +410,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      {!isUaLandingShell && <PublicSymptomPrompt disabled={isUaLandingShell} />}
       {!isUaLandingShell && <FloatingSupportChat />}
     </BrowserRouter>
   )
