@@ -1,4 +1,4 @@
-import { ArrowRight, ChevronRight, FileText, ListChecks, ShieldCheck, Sparkles } from 'lucide-react'
+import { ChevronRight, FileText, ListChecks, ShieldCheck, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 const HERO_SCREENS = [
@@ -87,7 +87,7 @@ export function LightHero() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <button
-                onClick={() => navigate('/login?signup=true')}
+                onClick={() => navigate('/symptom-intake')}
                 className="group px-8 py-4 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
               >
                 Start with symptoms

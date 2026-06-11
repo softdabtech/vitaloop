@@ -69,7 +69,7 @@ elif settings.sentry_dsn and sentry_sdk is None:
     logger.warning("sentry_dsn_set_but_sdk_missing")
 else:
     logger.info("sentry_disabled dsn_empty=%s", not settings.sentry_dsn)
-from app.routers import health, llm_consult, emergency_fixes
+from app.routers import health, llm_consult, emergency_fixes, assessment
 from app.routers.identity import auth, profile, onboarding, settings as settings_router
 from app.routers.analysis import analyze, insights, red_flags, timeline, dashboard, uploads
 from app.routers.protocol import protocol, progress, symptoms, checkins, questionnaire, assignments, compatibility
@@ -192,6 +192,7 @@ app.include_router(analyze.router, prefix="/analyze", tags=["analyze"])
 app.include_router(protocol.router, prefix="/protocol", tags=["protocol"])
 app.include_router(progress.router, prefix="/progress", tags=["progress"])
 app.include_router(symptoms.router, prefix="/symptoms", tags=["symptoms"])
+app.include_router(assessment.router, prefix="/assessment", tags=["assessment"])
 app.include_router(stripe_router.router, prefix="/stripe", tags=["stripe"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
 app.include_router(data_integrity.router, prefix="/admin", tags=["admin"])
