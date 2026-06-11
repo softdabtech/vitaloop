@@ -31,6 +31,18 @@ const routes = [
     ],
   },
   {
+    path: '/symptom-intake',
+    title: 'Symptom Intake and Lab Direction | VITALOOP',
+    description: 'Answer a few symptom questions and see which lab markers may be worth discussing with a qualified healthcare professional.',
+    priority: '0.9',
+    changefreq: 'weekly',
+    text: [
+      'VITALOOP starts with symptoms before lab uploads.',
+      'The symptom intake flow helps organize fatigue, sleep issues, hair loss, brain fog, digestion, and other signals.',
+      'Recommendations are educational and intended for discussion with qualified healthcare professionals.',
+    ],
+  },
+  {
     path: '/example-report',
     title: 'Example Health Report | VITALOOP',
     description: 'Preview how VITALOOP explains biomarker priorities, symptom context, recommendations, and progress without replacing a clinician.',

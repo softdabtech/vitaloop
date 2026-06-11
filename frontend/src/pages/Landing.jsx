@@ -36,6 +36,7 @@ import { AnimatedFAQ } from '../components/landing/AnimatedFAQ.jsx'
 import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx'
 import Footer from '../components/landing/Footer.jsx'
 import BrandMark from '../components/landing/BrandMark.jsx'
+import { trackPublicFunnelEvent } from '../lib/publicFunnel.js'
 
 const NAV_LINKS = [
   { id: 'problem', label: 'How it works' },
@@ -691,6 +692,10 @@ export default function Landing() {
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    trackPublicFunnelEvent('landing_view', { path: '/' })
   }, [])
 
   const rootClasses = 'overflow-x-hidden bg-white text-slate-900'

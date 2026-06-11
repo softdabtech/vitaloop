@@ -26,6 +26,7 @@ const ForNutritionists = lazy(() => import('./pages/ForNutritionists.jsx'))
 const Privacy = lazy(() => import('./pages/Privacy.jsx'))
 const Terms = lazy(() => import('./pages/Terms.jsx'))
 const Help = lazy(() => import('./pages/Help.jsx'))
+const SymptomIntake = lazy(() => import('./pages/SymptomIntake.jsx'))
 const UaLanding = lazy(() => import('./pages/UaLanding.jsx'))
 const UaPage = lazy(() => import('./pages/UaPage.jsx'))
 
@@ -260,6 +261,7 @@ export default function App() {
           <Route path="/help" element={<Help />} />
           <Route path="/help/section/:sectionId" element={<Help />} />
           <Route path="/help/:articleId" element={<Help />} />
+          <Route path="/symptom-intake" element={<SymptomIntake />} />
           <Route path="/login" element={<Login />} />
           <Route path="/auth/confirmation" element={<EmailConfirmation />} />
           <Route path="/dashboard" element={renderCabinetRoute(<UserDashboard />, { allowBeforeOnboarding: true })} />
