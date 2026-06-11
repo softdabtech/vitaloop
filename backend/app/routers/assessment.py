@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request, status
@@ -9,6 +10,7 @@ from pydantic import BaseModel, Field
 from app.services import supabase_service as svc
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 EVENT_NAMES = {
     "landing_view",
@@ -129,10 +131,21 @@ async def _record_event(session_id: str, event_name: str, properties: Dict[str, 
     await svc._run(lambda: sb.table("public_funnel_events").insert(payload).execute())
 
 
+async def _try_record_event(session_id: str, event_name: str, properties: Dict[str, Any], request: Request) -> bool:
+    try:
+        await _record_event(session_id, event_name, properties, request)
+        return True
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning("public_funnel_event_failed event=%s error=%r", event_name, exc)
+        return False
+
+
 @router.post("/events", status_code=status.HTTP_202_ACCEPTED)
 async def track_public_funnel_event(body: FunnelEventRequest, request: Request):
-    await _record_event(body.session_id, body.event_name, body.properties, request)
-    return {"ok": True}
+    stored = await _try_record_event(body.session_id, body.event_name, body.properties, request)
+    return {"ok": True, "stored": stored}
 
 
 @router.post("/symptom-intake", status_code=status.HTTP_201_CREATED)
@@ -152,16 +165,22 @@ async def submit_symptom_intake(body: SymptomAssessmentRequest, request: Request
         "metadata": _client_context(request),
     }
 
-    resp = await svc._run(lambda: sb.table("symptom_assessments").insert(payload).execute())
-    assessment = (resp.data or [{}])[0]
+    stored = True
+    try:
+        resp = await svc._run(lambda: sb.table("symptom_assessments").insert(payload).execute())
+        assessment = (resp.data or [{}])[0]
+    except Exception as exc:
+        logger.warning("symptom_assessment_storage_failed session_id=%s error=%r", body.session_id, exc)
+        stored = False
+        assessment = {"id": f"pending:{body.session_id}"}
 
-    await _record_event(
+    await _try_record_event(
         body.session_id,
         "symptom_completed",
         {"assessment_id": assessment.get("id"), "symptom_count": len(body.symptoms), "duration": body.duration},
         request,
     )
-    await _record_event(
+    await _try_record_event(
         body.session_id,
         "results_viewed",
         {"assessment_id": assessment.get("id"), "recommended_lab_count": len(recommended_labs)},
@@ -171,6 +190,7 @@ async def submit_symptom_intake(body: SymptomAssessmentRequest, request: Request
     return {
         "assessment_id": assessment.get("id"),
         "recommended_labs": recommended_labs,
+        "stored": stored,
         "disclaimer": "This is wellness education, not a diagnosis. Discuss symptoms and testing decisions with a qualified healthcare professional.",
     }
 
@@ -179,17 +199,22 @@ async def submit_symptom_intake(body: SymptomAssessmentRequest, request: Request
 async def capture_assessment_email(body: EmailCaptureRequest, request: Request):
     email = _validate_email(body.email)
     sb = svc._get_supabase()
-    await svc._run(
-        lambda: sb.table("symptom_assessments")
-        .update({"email": email})
-        .eq("id", body.assessment_id)
-        .eq("session_id", body.session_id)
-        .execute()
-    )
-    await _record_event(
+    stored = True
+    try:
+        await svc._run(
+            lambda: sb.table("symptom_assessments")
+            .update({"email": email})
+            .eq("id", body.assessment_id)
+            .eq("session_id", body.session_id)
+            .execute()
+        )
+    except Exception as exc:
+        logger.warning("symptom_assessment_email_storage_failed session_id=%s error=%r", body.session_id, exc)
+        stored = False
+    await _try_record_event(
         body.session_id,
         "email_submitted",
         {"assessment_id": body.assessment_id, "email_domain": email.split("@")[-1]},
         request,
     )
-    return {"ok": True}
+    return {"ok": True, "stored": stored}
