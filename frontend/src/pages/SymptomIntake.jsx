@@ -28,6 +28,12 @@ const DURATIONS = [
 
 const AGE_RANGES = ['Under 25', '25-34', '35-44', '45-54', '55+']
 const SEX_OPTIONS = ['Female', 'Male', 'Prefer not to say']
+const HEADER_LINKS = [
+  { label: 'Home', path: '/' },
+  { label: 'How it works', path: '/how-it-works' },
+  { label: 'Example report', path: '/example-report' },
+  { label: 'Pricing', path: '/#pricing' },
+]
 
 function StepPill({ active, done, children }) {
   return (
@@ -164,17 +170,38 @@ export default function SymptomIntake() {
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-950">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-16 w-full max-w-[1120px] items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex min-h-16 w-full max-w-[1120px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <button type="button" onClick={() => navigate('/')} className="flex items-center gap-2">
             <BrandMark />
           </button>
-          <button
-            type="button"
-            onClick={() => navigate('/login?signup=true')}
-            className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-800 transition hover:border-emerald-300"
-          >
-            Create account
-          </button>
+          <nav className="hidden items-center gap-6 md:flex" aria-label="Main navigation">
+            {HEADER_LINKS.map((item) => (
+              <button
+                key={item.path}
+                type="button"
+                onClick={() => navigate(item.path)}
+                className="text-sm font-semibold text-slate-600 transition hover:text-slate-950"
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="hidden rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-slate-400 hover:text-slate-950 sm:inline-flex"
+            >
+              Back to site
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/login?signup=true')}
+              className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-800 transition hover:border-emerald-300"
+            >
+              Create account
+            </button>
+          </div>
         </div>
       </header>
 
