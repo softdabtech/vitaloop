@@ -837,7 +837,7 @@ export default function Landing() {
             transition={{ duration: 0.18 }}
             className="fixed right-6 z-[2998] inline-flex h-[52px] w-[52px] items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-[0_18px_40px_rgba(15,23,42,0.16)] transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
             style={{
-              bottom: 'max(84px, calc(env(safe-area-inset-bottom) + 84px))',
+              bottom: 'max(196px, calc(env(safe-area-inset-bottom) + 196px))',
             }}
           >
             <ArrowUp className="h-5 w-5" aria-hidden="true" />
