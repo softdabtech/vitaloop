@@ -165,6 +165,8 @@ function FloatingSupportChat() {
   const [chatOpen, setChatOpen] = useState(false)
   const [ferriOpen, setFerriOpen] = useState(false)
   const [ferriInvestigating, setFerriInvestigating] = useState(false)
+  const [ferriGreetingVisible, setFerriGreetingVisible] = useState(false)
+  const [ferriAction, setFerriAction] = useState('idle')
 
   const isCabinetRoute = [
     '/dashboard',
@@ -189,9 +191,21 @@ function FloatingSupportChat() {
   useEffect(() => {
     if (isCabinetRoute) return undefined
 
+    try {
+      const greetedKey = 'vtl_ferri_first_visit_greeting_seen'
+      if (window.localStorage.getItem(greetedKey) !== '1') {
+        setFerriGreetingVisible(true)
+        window.localStorage.setItem(greetedKey, '1')
+        window.setTimeout(() => setFerriGreetingVisible(false), 4000)
+      }
+    } catch {
+      setFerriGreetingVisible(false)
+    }
+
     let settleTimer
     const triggerInvestigation = () => {
       setFerriInvestigating(true)
+      setFerriAction('jump')
       settleTimer = window.setTimeout(() => setFerriInvestigating(false), 1900)
     }
     const firstJumpTimer = window.setTimeout(triggerInvestigation, 15000)
@@ -203,10 +217,39 @@ function FloatingSupportChat() {
     }
   }, [isCabinetRoute, location.pathname])
 
+  useEffect(() => {
+    if (isCabinetRoute) return undefined
+
+    const actions = ['scan', 'chart', 'think', 'particles', 'jump']
+    let actionTimer
+    let clearTimer
+    const scheduleAction = () => {
+      const delay = 10000 + Math.round(Math.random() * 15000)
+      actionTimer = window.setTimeout(() => {
+        const nextAction = actions[Math.floor(Math.random() * actions.length)]
+        setFerriAction(nextAction)
+        setFerriInvestigating(nextAction === 'scan' || nextAction === 'jump')
+        clearTimer = window.setTimeout(() => {
+          setFerriAction('idle')
+          setFerriInvestigating(false)
+          scheduleAction()
+        }, 3600)
+      }, delay)
+    }
+
+    scheduleAction()
+    return () => {
+      window.clearTimeout(actionTimer)
+      window.clearTimeout(clearTimer)
+    }
+  }, [isCabinetRoute, location.pathname])
+
   const toggleFerriHints = () => {
     setFerriOpen((value) => !value)
     setFerriInvestigating(true)
+    setFerriAction('scan')
     window.setTimeout(() => setFerriInvestigating(false), 1400)
+    window.setTimeout(() => setFerriAction('idle'), 2200)
   }
 
   const startSymptomCheck = () => {
@@ -224,13 +267,14 @@ function FloatingSupportChat() {
       <>
         <style>{`
           @keyframes ferriFloat {
-            0%, 100% { transform: translate3d(0, 0, 0) rotate(-2deg) scale(1); }
-            50% { transform: translate3d(0, -9px, 0) rotate(2deg) scale(1.025); }
+            0%, 100% { transform: translate3d(-4px, 3px, 0) rotate(-2deg) scale(1); }
+            35% { transform: translate3d(5px, -8px, 0) rotate(2.4deg) scale(1.025); }
+            70% { transform: translate3d(2px, -3px, 0) rotate(-0.8deg) scale(1.01); }
           }
           @keyframes ferriLookAround {
-            0%, 42%, 100% { transform: translateX(0); }
-            52% { transform: translateX(-2px); }
-            68% { transform: translateX(2px); }
+            0%, 32%, 100% { transform: translateX(0); }
+            45% { transform: translateX(-2.4px); }
+            66% { transform: translateX(2.6px); }
           }
           @keyframes ferriLensSpin {
             0%, 84%, 100% { transform: rotate(0deg); }
@@ -250,9 +294,19 @@ function FloatingSupportChat() {
             0%, 100% { opacity: 0.56; transform: scale(1); }
             50% { opacity: 0.9; transform: scale(1.12); }
           }
+          @keyframes ferriParticleDrift {
+            0%, 100% { transform: translate3d(0, 0, 0); opacity: 0.45; }
+            45% { transform: translate3d(2px, -3px, 0); opacity: 0.92; }
+            75% { transform: translate3d(-2px, 2px, 0); opacity: 0.7; }
+          }
           @keyframes ferriChartPeek {
             0%, 70%, 100% { opacity: 0; transform: translate3d(4px, 8px, 0) scale(0.72); }
             78%, 93% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+          }
+          @keyframes ferriHologramBuild {
+            0%, 100% { opacity: 0; transform: translate3d(5px, 8px, 0) scale(0.78); }
+            16%, 78% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+            88% { opacity: 0; transform: translate3d(-4px, -2px, 0) scale(0.9); }
           }
           @keyframes ferriBounce {
             0%, 100% { transform: translateY(0) scale(1); }
@@ -268,20 +322,50 @@ function FloatingSupportChat() {
             0%, 100% { transform: translateX(-3px); opacity: 0.48; }
             50% { transform: translateX(4px); opacity: 1; }
           }
+          @keyframes ferriBeam {
+            0%, 100% { opacity: 0; transform: scaleX(0.6); }
+            32%, 74% { opacity: 0.62; transform: scaleX(1); }
+          }
+          @keyframes ferriLegHover {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(2px); }
+          }
+          @keyframes ferriNod {
+            0%, 100% { transform: rotate(0deg); }
+            45% { transform: rotate(4deg); }
+            70% { transform: rotate(-2deg); }
+          }
+          @keyframes ferriGreeting {
+            0% { opacity: 0; transform: translate3d(10px, 8px, 0) scale(0.92); }
+            14%, 82% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+            100% { opacity: 0; transform: translate3d(6px, 4px, 0) scale(0.96); }
+          }
           .ferri-bounce {
             animation: ferriBounce 1.9s ease-in-out 1 !important;
           }
           .group:hover .ferri-left-arm {
             animation: ferriWave 0.9s ease-in-out 1;
           }
+          .ferri-action-think .ferri-body-shell {
+            animation: ferriNod 2.2s ease-in-out 1;
+          }
+          .ferri-action-scan .ferri-scan-beam,
+          .ferri-action-chart .ferri-hologram,
+          .ferri-action-think .ferri-hologram,
+          .ferri-action-particles .ferri-hologram {
+            animation: ferriHologramBuild 3.2s ease-in-out 1;
+          }
+          .ferri-action-scan .ferri-lens-glow {
+            opacity: 0.72;
+          }
           @media (prefers-reduced-motion: reduce) {
-            .ferri-float, .ferri-eye, .ferri-scan, .ferri-lens, .ferri-arm, .ferri-core, .ferri-chart, .ferri-bounce, .ferri-sparkle, .ferri-pupils { animation: none !important; }
+            .ferri-float, .ferri-eye, .ferri-scan, .ferri-lens, .ferri-arm, .ferri-core, .ferri-chart, .ferri-bounce, .ferri-sparkle, .ferri-pupils, .ferri-particle, .ferri-hologram, .ferri-leg { animation: none !important; }
           }
         `}</style>
 
-        <div className="fixed bottom-7 right-7 z-[2999] flex max-w-[calc(100vw-48px)] flex-col items-end gap-3 sm:bottom-8 sm:right-8">
+        <div className="fixed bottom-6 right-6 z-[2999] flex max-w-[calc(100vw-48px)] flex-col items-end gap-3 sm:bottom-8 sm:right-8">
           {ferriOpen && (
-            <div className="mb-1 grid w-[min(260px,calc(100vw-56px))] gap-2 rounded-2xl border border-emerald-200 bg-white/95 p-3 shadow-[0_18px_54px_rgba(15,23,42,0.2)] backdrop-blur">
+            <div className="mb-2 grid w-[min(260px,calc(100vw-56px))] gap-2 rounded-2xl border border-emerald-200 bg-white/95 p-3 shadow-[0_18px_54px_rgba(15,23,42,0.2)] backdrop-blur">
               <button
                 type="button"
                 onClick={startSymptomCheck}
@@ -299,16 +383,25 @@ function FloatingSupportChat() {
             </div>
           )}
 
-          <div className="flex h-20 w-20 items-center justify-center">
+          {ferriGreetingVisible && (
+            <div
+              className="pointer-events-none absolute bottom-[102px] right-0 rounded-[22px] border border-cyan-200/90 bg-white/95 px-4 py-3 text-sm font-bold text-slate-900 shadow-[0_18px_48px_rgba(15,23,42,0.18)] backdrop-blur sm:bottom-[152px]"
+              style={{ animation: 'ferriGreeting 4s ease-in-out forwards' }}
+            >
+              Hi, I'm Ferri 👋
+            </div>
+          )}
+
+          <div className="relative flex h-28 w-28 items-end justify-end overflow-visible sm:h-[140px] sm:w-[140px]">
             <button
               type="button"
               onClick={toggleFerriHints}
               aria-label="Open Ferri biomarker assistant"
               title="Ferri - Iron Detective"
-              className={`ferri-float group relative flex h-20 w-20 items-center justify-center rounded-full bg-transparent transition hover:scale-[1.03] focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/60 ${ferriInvestigating ? 'ferri-bounce' : ''}`}
+              className={`ferri-float ferri-action-${ferriAction} group relative flex h-16 w-16 items-center justify-center rounded-full bg-transparent transition hover:scale-[1.04] focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/60 sm:h-24 sm:w-24 ${ferriInvestigating ? 'ferri-bounce' : ''}`}
               style={{ animation: 'ferriFloat 4.6s ease-in-out infinite' }}
             >
-              <svg viewBox="0 0 104 104" className="h-20 w-20 overflow-visible drop-shadow-[0_18px_28px_rgba(15,23,42,0.22)]" aria-hidden="true">
+              <svg viewBox="0 0 120 120" className="h-20 w-20 overflow-visible drop-shadow-[0_18px_28px_rgba(15,23,42,0.22)] sm:h-28 sm:w-28" aria-hidden="true">
                 <defs>
                   <radialGradient id="ferriBody" cx="35%" cy="24%" r="72%">
                     <stop offset="0%" stopColor="#c7fff8" />
@@ -328,41 +421,62 @@ function FloatingSupportChat() {
                     <stop offset="0%" stopColor="#ffffff" stopOpacity="0.94" />
                     <stop offset="100%" stopColor="#b9f7ef" stopOpacity="0.72" />
                   </linearGradient>
+                  <filter id="ferriGlow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
                 </defs>
-                <ellipse cx="52" cy="88" rx="26" ry="7" fill="#0f766e" opacity="0.13" />
-                <g className="ferri-chart" style={{ transformOrigin: '31px 50px', animation: 'ferriChartPeek 13s ease-in-out infinite' }}>
-                  <rect x="13" y="39" width="25" height="18" rx="5" fill="#ffffff" stroke="#80eadb" strokeWidth="2" />
-                  <path d="M18 51h3l3-6 4 8 4-10 3 5" fill="none" stroke="#2ABFAA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <ellipse cx="62" cy="101" rx="30" ry="8" fill="#0f766e" opacity="0.14" />
+                <g className="ferri-hologram" style={{ transformOrigin: '28px 52px', opacity: 0 }}>
+                  <rect x="9" y="35" width="35" height="25" rx="7" fill="#eafffb" fillOpacity="0.76" stroke="#80eadb" strokeWidth="1.8" />
+                  <path d="M15 54h4l4-8 5 10 5-13 5 7" fill="none" stroke="#2ABFAA" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M16 43h13m-13 4h8" stroke="#0f766e" strokeWidth="1.4" strokeLinecap="round" opacity="0.72" />
                 </g>
-                <path className="ferri-arm ferri-left-arm" d="M25 59c-8 3-12 9-10 13 2 4 9 3 15-3" fill="none" stroke="#0f766e" strokeWidth="5" strokeLinecap="round" style={{ transformOrigin: '28px 61px' }} />
-                <path className="ferri-arm ferri-right-arm" d="M77 60c7 4 10 10 7 14-3 3-9 2-14-3" fill="none" stroke="#0f766e" strokeWidth="5" strokeLinecap="round" style={{ transformOrigin: '76px 60px', animation: 'ferriLensSpin 8s ease-in-out infinite' }} />
-                <circle cx="52" cy="49" r="33" fill="url(#ferriBody)" />
-                <circle cx="52" cy="49" r="28" fill="url(#ferriShell)" stroke="#b8fff5" strokeWidth="1.5" opacity="0.82" />
-                <g className="ferri-core" style={{ transformOrigin: '52px 51px', animation: 'ferriPulseCore 3.8s ease-in-out infinite' }}>
-                  <circle cx="49" cy="53" r="4.2" fill="url(#ironCore)" opacity="0.72" />
-                  <circle cx="57" cy="55" r="3.4" fill="url(#ironCore)" opacity="0.64" />
-                  <circle cx="54" cy="46" r="2.8" fill="url(#ironCore)" opacity="0.55" />
+                <g className="ferri-chart" style={{ transformOrigin: '30px 50px', animation: 'ferriChartPeek 16s ease-in-out infinite' }}>
+                  <rect x="16" y="69" width="31" height="19" rx="6" fill="#ffffff" fillOpacity="0.72" stroke="#80eadb" strokeWidth="1.6" />
+                  <path d="M22 82v-5m6 5V73m6 9v-8m6 8V70" stroke="#2ABFAA" strokeWidth="3" strokeLinecap="round" />
                 </g>
-                <path d="M31 36c7-9 22-14 36-5" fill="none" stroke="#eafffb" strokeWidth="3" strokeLinecap="round" opacity="0.72" />
-                <path d="M26 51c7 4 14 5 21 2m11-13c9 2 16 7 22 14m-43 19c10-2 19-1 27 4" fill="none" stroke="#d9fff9" strokeWidth="1.8" strokeLinecap="round" opacity="0.42" />
-                <g className="ferri-pupils" style={{ transformOrigin: '52px 46px', animation: 'ferriLookAround 7.4s ease-in-out infinite' }}>
-                  <circle cx="41" cy="44" r="8.8" fill="#ffffff" />
-                  <circle cx="63" cy="44" r="8.8" fill="#ffffff" />
-                  <ellipse className="ferri-eye transition-transform group-hover:scale-y-110" cx="43" cy="45" rx="3.6" ry="4.7" fill="#062f2a" style={{ transformOrigin: '43px 45px', animation: 'ferriBlink 4.8s ease-in-out infinite' }} />
-                  <ellipse className="ferri-eye transition-transform group-hover:scale-y-110" cx="61" cy="45" rx="3.6" ry="4.7" fill="#062f2a" style={{ transformOrigin: '61px 45px', animation: 'ferriBlink 4.8s ease-in-out infinite' }} />
-                  <circle cx="44.5" cy="42.7" r="1.2" fill="#ffffff" />
-                  <circle cx="62.5" cy="42.7" r="1.2" fill="#ffffff" />
+                <path className="ferri-arm ferri-left-arm" d="M31 68c-8 3-13 10-11 14 2 4 10 2 16-5" fill="none" stroke="#0b7668" strokeWidth="5.2" strokeLinecap="round" style={{ transformOrigin: '34px 70px' }} />
+                <path className="ferri-arm ferri-right-arm" d="M89 66c8 4 12 11 8 15-3 4-10 1-16-6" fill="none" stroke="#0b7668" strokeWidth="5.2" strokeLinecap="round" style={{ transformOrigin: '86px 67px', animation: 'ferriLensSpin 8s ease-in-out infinite' }} />
+                <g className="ferri-body-shell" style={{ transformOrigin: '60px 57px' }}>
+                  <path d="M59 18c15-1 30 8 37 22 8 15 4 32-7 45-10 12-28 18-44 12-16-5-27-19-27-37 0-15 8-29 20-36 6-4 13-5 21-6z" fill="url(#ferriBody)" />
+                  <path d="M59 24c13-1 25 7 31 19 6 13 3 26-6 37-9 10-24 14-37 10-14-5-23-17-23-31 0-12 7-24 17-30 5-3 11-4 18-5z" fill="url(#ferriShell)" stroke="#b8fff5" strokeWidth="1.6" opacity="0.84" />
+                  <path d="M32 50c9-8 20-12 32-12 11 0 20 4 28 11M29 64c10 5 21 8 34 8 10 0 19-2 27-7M45 27c-4 10-5 20-2 31 3 13 10 23 20 31M72 28c7 11 9 24 5 38-2 9-7 17-14 24" fill="none" stroke="#d9fff9" strokeWidth="1.7" strokeLinecap="round" opacity="0.42" />
                 </g>
-                <path d="M43 59c5 5 13 5 18 0" fill="none" stroke="#073b35" strokeWidth="3" strokeLinecap="round" className="transition-transform group-hover:translate-y-0.5" />
-                <g className="ferri-lens" style={{ transformOrigin: '72px 66px', animation: 'ferriLensSpin 8s ease-in-out infinite' }}>
-                  <circle cx="72" cy="64" r="10" fill="url(#ferriLens)" stroke="#063f37" strokeWidth="3" />
-                  <path d="M79 71l11 11" stroke="#063f37" strokeWidth="5" strokeLinecap="round" />
-                  <path className="ferri-scan" d="M67 64h10" stroke="#2ABFAA" strokeWidth="2" strokeLinecap="round" style={{ animation: 'ferriScan 2.4s ease-in-out infinite' }} />
+                <g className="ferri-core" filter="url(#ferriGlow)" style={{ transformOrigin: '60px 60px', animation: 'ferriPulseCore 3.8s ease-in-out infinite' }}>
+                  <circle cx="56" cy="60" r="5.2" fill="url(#ironCore)" opacity="0.78" />
+                  <circle cx="66" cy="63" r="4.1" fill="url(#ironCore)" opacity="0.7" />
+                  <circle cx="63" cy="52" r="3.5" fill="url(#ironCore)" opacity="0.6" />
                 </g>
-                <path className="transition-transform group-hover:-translate-y-1" d="M38 78l-4 8" stroke="#0f766e" strokeWidth="5" strokeLinecap="round" />
-                <path className="transition-transform group-hover:-translate-y-1" d="M60 78l5 8" stroke="#0f766e" strokeWidth="5" strokeLinecap="round" />
-                <g className="ferri-sparkle" style={{ transformOrigin: '82px 26px', animation: ferriInvestigating ? 'ferriSparkle 0.9s ease-in-out 2' : 'none' }}>
-                  <path d="M82 18l2.2 5.5 5.8 2-5.8 2-2.2 5.5-2.2-5.5-5.8-2 5.8-2z" fill="#8cf7ec" />
+                <g>
+                  <circle className="ferri-particle" cx="47" cy="51" r="1.7" fill="#ffd27a" style={{ animation: 'ferriParticleDrift 4.8s ease-in-out infinite' }} />
+                  <circle className="ferri-particle" cx="72" cy="57" r="1.3" fill="#ffe7b8" style={{ animation: 'ferriParticleDrift 5.5s ease-in-out infinite 0.8s' }} />
+                  <circle className="ferri-particle" cx="54" cy="76" r="1.4" fill="#ffd27a" style={{ animation: 'ferriParticleDrift 5.1s ease-in-out infinite 1.3s' }} />
+                </g>
+                <g className="ferri-pupils" style={{ transformOrigin: '60px 51px', animation: 'ferriLookAround 7.4s ease-in-out infinite' }}>
+                  <path d="M38 48c2-8 13-11 19-5 5 6 2 17-7 19-8 1-15-6-12-14z" fill="#ffffff" />
+                  <path d="M65 43c7-5 17-1 19 7 2 9-8 16-16 12-7-3-10-13-3-19z" fill="#ffffff" />
+                  <ellipse className="ferri-eye transition-transform group-hover:scale-y-110" cx="50" cy="52" rx="4.4" ry="5.8" fill="#062f2a" style={{ transformOrigin: '50px 52px', animation: 'ferriBlink 4.8s ease-in-out infinite' }} />
+                  <ellipse className="ferri-eye transition-transform group-hover:scale-y-110" cx="72" cy="52" rx="4.4" ry="5.8" fill="#062f2a" style={{ transformOrigin: '72px 52px', animation: 'ferriBlink 4.8s ease-in-out infinite' }} />
+                  <circle cx="51.8" cy="49" r="1.7" fill="#ffffff" />
+                  <circle cx="73.8" cy="49" r="1.7" fill="#ffffff" />
+                </g>
+                <path d="M49 39c4-3 9-3 13 0m6 0c4-3 9-3 13 0" fill="none" stroke="#06463d" strokeWidth="2.4" strokeLinecap="round" opacity="0.72" />
+                <path d="M51 68c6 5 16 5 22-1" fill="none" stroke="#073b35" strokeWidth="3.2" strokeLinecap="round" className="transition-transform group-hover:translate-y-0.5" />
+                <g className="ferri-lens" style={{ transformOrigin: '86px 73px', animation: 'ferriLensSpin 8s ease-in-out infinite' }}>
+                  <circle className="ferri-lens-glow" cx="86" cy="70" r="16" fill="#7df5e6" opacity="0.12" />
+                  <circle cx="84" cy="70" r="12" fill="url(#ferriLens)" stroke="#063f37" strokeWidth="3.2" />
+                  <path d="M92 79l13 13" stroke="#063f37" strokeWidth="6" strokeLinecap="round" />
+                  <path className="ferri-scan" d="M78 70h12" stroke="#2ABFAA" strokeWidth="2.2" strokeLinecap="round" style={{ animation: 'ferriScan 2.4s ease-in-out infinite' }} />
+                  <path className="ferri-scan-beam" d="M73 70L35 57 73 83z" fill="#8cf7ec" opacity="0" style={{ animation: ferriInvestigating ? 'ferriBeam 1.4s ease-in-out 1' : 'none' }} />
+                </g>
+                <path className="ferri-leg transition-transform group-hover:-translate-y-1" d="M45 91l-5 9" stroke="#0f766e" strokeWidth="5.2" strokeLinecap="round" style={{ animation: 'ferriLegHover 3.2s ease-in-out infinite' }} />
+                <path className="ferri-leg transition-transform group-hover:-translate-y-1" d="M67 91l6 9" stroke="#0f766e" strokeWidth="5.2" strokeLinecap="round" style={{ animation: 'ferriLegHover 3.2s ease-in-out infinite 0.4s' }} />
+                <g className="ferri-sparkle" style={{ transformOrigin: '94px 29px', animation: ferriInvestigating ? 'ferriSparkle 0.9s ease-in-out 2' : 'none' }}>
+                  <path d="M94 20l2.3 5.8 6 2.2-6 2.1-2.3 5.9-2.3-5.9-6-2.1 6-2.2z" fill="#8cf7ec" />
                 </g>
               </svg>
             </button>
