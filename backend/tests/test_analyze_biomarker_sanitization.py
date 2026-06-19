@@ -73,6 +73,23 @@ def test_sanitize_extracted_biomarkers_recalculates_status_from_reference_range(
     assert result[1]["status"] == "ELEVATED"
 
 
+def test_sanitize_extracted_biomarkers_overrides_false_llm_flag_inside_range():
+    raw = [
+        {
+            "name": "Thrombocrit",
+            "value": 0.46,
+            "unit": "%",
+            "ref_low": 0.1,
+            "ref_high": 0.5,
+            "status": "elevated",
+        }
+    ]
+
+    result = analyze_router._sanitize_extracted_biomarkers(raw)
+
+    assert result[0]["status"] == "OPTIMAL"
+
+
 def test_sanitize_extracted_biomarkers_makes_duplicate_names_unique_for_db_constraint():
     raw = [
         {"name": "Reticulocytes", "value": 1.2, "unit": "%", "reference_range": "0.5-2.0"},
