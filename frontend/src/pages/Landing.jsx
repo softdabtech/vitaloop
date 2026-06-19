@@ -289,14 +289,8 @@ const PRICING = {
   ],
 }
 
-function fadeUp(reduced, delay = 0) {
-  if (reduced) return { initial: false, whileInView: {}, viewport: { once: true } }
-  return {
-    initial: { opacity: 0, y: 28 },
-    whileInView: { opacity: 1, y: 0 },
-    transition: { duration: 0.6, delay, ease: [0.2, 0.65, 0.3, 1] },
-    viewport: { once: true, margin: '-10% 0px -10% 0px' },
-  }
+function fadeUp(_reduced, _delay = 0) {
+  return { initial: false, whileInView: {}, viewport: { once: true } }
 }
 
 // ── Rich screen mockup content per card ─────────────────────────────────────
@@ -609,8 +603,8 @@ function WhyVitaloopSection({ reduced }) {
       <motion.div {...fadeUp(reduced)} className="mb-7 text-center">
         <motion.h2
           className="text-[28px] font-semibold tracking-tight md:text-[34px]"
-          initial={reduced ? false : { opacity: 0, scale: 0.9 }}
-          whileInView={{ opacity: 1, scale: 1 }}
+          initial={false}
+          whileInView={{}}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
@@ -619,11 +613,7 @@ function WhyVitaloopSection({ reduced }) {
             <span className="bg-gradient-to-r from-emerald-600 via-sky-600 to-violet-600 bg-clip-text text-transparent">
               VITALOOP
             </span>
-            <motion.span
-              className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-500/20 via-sky-500/20 to-violet-500/20 blur-lg"
-              animate={reduced ? {} : { opacity: [0.3, 0.6, 0.3] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
+            <span className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-500/20 via-sky-500/20 to-violet-500/20 blur-lg opacity-40" />
           </span>
         </motion.h2>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-600 md:text-base">
@@ -652,8 +642,8 @@ function WhyVitaloopSection({ reduced }) {
               </motion.div>
               <motion.div
                 className="relative mb-3 text-4xl font-bold text-emerald-600"
-                initial={reduced ? false : { opacity: 0, scale: 0.5 }}
-                whileInView={{ opacity: 1, scale: 1 }}
+                initial={false}
+                whileInView={{}}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
               >
@@ -831,7 +821,7 @@ export default function Landing() {
             onClick={scrollToTop}
             aria-label="Back to top"
             title="Back to top"
-            initial={reduced ? false : { opacity: 0, y: 16, scale: 0.92 }}
+            initial={false}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={reduced ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.92 }}
             transition={{ duration: 0.18 }}
@@ -1044,8 +1034,8 @@ export default function Landing() {
           <motion.div {...fadeUp(reduced)} className="mb-12 text-center">
             <motion.h2
               className="text-[32px] font-bold tracking-tight md:text-[40px]"
-              initial={reduced ? false : { opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
+              initial={false}
+              whileInView={{}}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
@@ -1148,11 +1138,7 @@ export default function Landing() {
                         whileHover={reduced ? {} : { rotate: 360, scale: 1.1 }}
                         transition={{ duration: 0.6 }}
                       >
-                        <motion.div
-                          className="absolute inset-0 rounded-lg bg-emerald-400/20 blur-xl"
-                          animate={reduced ? {} : { scale: [1, 1.15, 1], opacity: [0.5, 0.7, 0.5] }}
-                          transition={{ duration: 2, repeat: Infinity, delay: idx * 0.2 }}
-                        />
+                        <div className="absolute inset-0 rounded-lg bg-emerald-400/20 blur-xl opacity-60" />
                         <Icon className="relative h-6 w-6 text-emerald-600" />
                       </motion.div>
 
@@ -1177,8 +1163,8 @@ export default function Landing() {
           <motion.div {...fadeUp(reduced)} className="mb-7 text-center">
             <motion.h2
               className="text-[28px] font-semibold tracking-tight md:text-[34px]"
-              initial={reduced ? false : { opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={false}
+              whileInView={{}}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
