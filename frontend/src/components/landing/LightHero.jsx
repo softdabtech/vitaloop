@@ -35,26 +35,9 @@ export function LightHero() {
   return (
     <section className="relative overflow-hidden bg-white py-10 sm:py-16 lg:py-24">
       <style>{`
-        @keyframes vlHeroFloatMain {
-          0%, 100% { transform: translate3d(0, 0, 0) rotate(-1deg); }
-          50% { transform: translate3d(0, -12px, 0) rotate(0.6deg); }
-        }
-        @keyframes vlHeroFloatResults {
-          0%, 100% { transform: translate3d(0, 0, 0) rotate(2.5deg); }
-          50% { transform: translate3d(-8px, -16px, 0) rotate(1deg); }
-        }
-        @keyframes vlHeroFloatCheckin {
-          0%, 100% { transform: translate3d(0, 0, 0) rotate(-2deg); }
-          50% { transform: translate3d(8px, -10px, 0) rotate(-0.4deg); }
-        }
-        .vl-hero-shot-main { animation: vlHeroFloatMain 7s ease-in-out infinite; }
-        .vl-hero-shot-results { animation: vlHeroFloatResults 8s ease-in-out infinite; }
-        .vl-hero-shot-checkin { animation: vlHeroFloatCheckin 7.5s ease-in-out infinite; }
-        @media (prefers-reduced-motion: reduce) {
-          .vl-hero-shot-main,
-          .vl-hero-shot-results,
-          .vl-hero-shot-checkin { animation: none; }
-        }
+        .vl-hero-shot-main { transform: rotate(-1deg); }
+        .vl-hero-shot-results { transform: rotate(2.5deg); }
+        .vl-hero-shot-checkin { transform: rotate(-2deg); }
       `}</style>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Two-column grid */}
