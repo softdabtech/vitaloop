@@ -136,6 +136,7 @@ class OpenAIFileAnalyzer(ABC):
                 {"role": "system", "content": "You are a precise clinical lab report analyzer. Return ONLY valid JSON."},
                 {"role": "user", "content": prompt},
             ],
+            "response_format": {"type": "json_object"},
             "temperature": 0,
             "max_tokens": min(self.max_tokens, 4096),
         }
@@ -321,6 +322,64 @@ JSON schema:
 class PDFTextAnalyzer(OpenAIFileAnalyzer):
     """Analyze text-based PDF files"""
 
+    @staticmethod
+    def _chunk_document_text(document_text: str, max_chars: int = 6000) -> list[str]:
+        lines = document_text.splitlines()
+        chunks: list[str] = []
+        current: list[str] = []
+        current_length = 0
+        for line in lines:
+            line_length = len(line) + 1
+            if current and current_length + line_length > max_chars:
+                chunks.append("\n".join(current).strip())
+                current = []
+                current_length = 0
+            current.append(line)
+            current_length += line_length
+        if current:
+            chunks.append("\n".join(current).strip())
+        return [chunk for chunk in chunks if chunk]
+
+    @staticmethod
+    def _merge_extraction_payloads(payloads: list[dict[str, Any]]) -> dict[str, Any]:
+        biomarkers: list[dict[str, Any]] = []
+        seen: set[tuple[str, str, str]] = set()
+        extraction_notes: list[Any] = []
+        document_metadata: dict[str, Any] = {}
+
+        for payload in payloads:
+            if not document_metadata and isinstance(payload.get("document_metadata"), dict):
+                document_metadata = payload.get("document_metadata") or {}
+            if isinstance(payload.get("extraction_notes"), list):
+                extraction_notes.extend(payload.get("extraction_notes") or [])
+            for item in payload.get("biomarkers") or []:
+                if not isinstance(item, dict):
+                    continue
+                marker_name = str(
+                    item.get("marker_key")
+                    or item.get("source_name")
+                    or item.get("name")
+                    or ""
+                ).strip().lower()
+                value = str(item.get("value") or "").strip()
+                unit = str(item.get("unit") or "").strip().lower()
+                dedupe_key = (marker_name, value, unit)
+                if not marker_name or dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                biomarkers.append(item)
+
+        return {
+            "biomarkers": biomarkers,
+            "summary": {
+                "document_type": "lab_report",
+                "extracted_marker_count": len(biomarkers),
+                "text_chunks_analyzed": len(payloads),
+            },
+            "document_metadata": document_metadata,
+            "extraction_notes": extraction_notes,
+        }
+
     async def analyze(self, pdf_path: str, symptoms: Optional[List[str]] = None) -> dict[str, Any]:
         start_time = time.time()
 
@@ -336,26 +395,32 @@ class PDFTextAnalyzer(OpenAIFileAnalyzer):
             if len(extracted_text.strip()) < 50:
                 raise ValueError("Could not extract readable text from PDF")
 
-            prompt = self._build_extraction_prompt(
-                document_kind=(
-                    "Markdown-converted lab PDF"
-                    if document_parser == "markitdown"
-                    else "text-based lab PDF"
-                ),
-                symptoms=symptoms or [],
-                document_text=extracted_text,
-                knowledge_context=await self._knowledge_context(),
-            )
+            chunks = self._chunk_document_text(extracted_text)
+            knowledge_context = await self._knowledge_context()
+            payloads: list[dict[str, Any]] = []
+            for chunk_index, chunk in enumerate(chunks, 1):
+                prompt = self._build_extraction_prompt(
+                    document_kind=(
+                        "Markdown-converted lab PDF"
+                        if document_parser == "markitdown"
+                        else "text-based lab PDF"
+                    ),
+                    symptoms=symptoms or [],
+                    document_text=chunk,
+                    page_num=chunk_index if len(chunks) > 1 else None,
+                    knowledge_context=knowledge_context,
+                )
 
-            # Send to API
-            analysis_text = await self._send_text_completion(prompt)
-            logger.debug(f"OpenAI response (first 500 chars): {analysis_text[:500]}")
+                analysis_text = await self._send_text_completion(prompt)
+                logger.debug(f"OpenAI response (first 500 chars): {analysis_text[:500]}")
 
-            try:
-                payload = self._parse_json(analysis_text)
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON parsing failed: {e}, response: {analysis_text[:1000]}")
-                raise ValueError(f"API returned invalid JSON: {str(e)}")
+                try:
+                    payloads.append(self._parse_json(analysis_text))
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON parsing failed: {e}, response: {analysis_text[:1000]}")
+                    raise ValueError(f"API returned invalid JSON: {str(e)}")
+
+            payload = self._merge_extraction_payloads(payloads)
 
             # Validate required fields
             required_fields = ["biomarkers"]
@@ -383,6 +448,7 @@ class PDFTextAnalyzer(OpenAIFileAnalyzer):
             result["biomarker_count"] = len(biomarkers)
             result["document_parser"] = document_parser
             result["document_input_chars"] = len(extracted_text)
+            result["document_chunks"] = len(chunks)
             return result
 
         except Exception as exc:
