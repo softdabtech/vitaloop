@@ -169,6 +169,8 @@ def _normalize_biomarker_status(
             return "DEFICIENT"
         if ref_high is not None and value > ref_high:
             return "ELEVATED"
+        if ref_low is not None or ref_high is not None:
+            return "OPTIMAL"
 
     raw_status = str(status or "OPTIMAL").strip().upper()
     normalized = _BIOMARKER_STATUS_ALIASES.get(raw_status, raw_status)
