@@ -29,6 +29,7 @@ where coalesce(
 );
 
 revoke all on public.knowledge_cohort_observations from anon, authenticated;
+revoke all on public.knowledge_cohort_observations from service_role;
 grant select on public.knowledge_cohort_observations to service_role;
 
 commit;

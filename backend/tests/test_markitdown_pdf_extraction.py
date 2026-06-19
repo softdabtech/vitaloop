@@ -85,6 +85,34 @@ async def test_pdf_analysis_reports_markitdown_method(monkeypatch, tmp_path):
     assert result["analysis_method"] == "openai_pdf_text_markitdown"
     assert result["document_parser"] == "markitdown"
     assert result["document_input_chars"] > 50
+    assert result["document_chunks"] == 1
+
+
+def test_chunk_document_text_and_merge_payloads_deduplicate_markers():
+    text = "\n".join(f"Ferritin row {index}" for index in range(1000))
+    chunks = PDFTextAnalyzer._chunk_document_text(text, max_chars=500)
+
+    assert len(chunks) > 1
+    assert all(len(chunk) <= 520 for chunk in chunks)
+
+    merged = PDFTextAnalyzer._merge_extraction_payloads(
+        [
+            {
+                "biomarkers": [
+                    {"marker_key": "ferritin", "name": "Ferritin", "value": 10.06, "unit": "ng/mL"},
+                ]
+            },
+            {
+                "biomarkers": [
+                    {"marker_key": "ferritin", "name": "Ferritin", "value": 10.06, "unit": "ng/mL"},
+                    {"marker_key": "vitamin_b12", "name": "Vitamin B12", "value": 1177, "unit": "pg/mL"},
+                ]
+            },
+        ]
+    )
+
+    assert len(merged["biomarkers"]) == 2
+    assert merged["summary"]["text_chunks_analyzed"] == 2
 
 
 async def _empty_knowledge_context():

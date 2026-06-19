@@ -394,6 +394,7 @@ async def analyze_lab_file(
             "analysis_time": analysis.get("analysis_time"),
             "document_parser": analysis.get("document_parser"),
             "document_input_chars": analysis.get("document_input_chars"),
+            "document_chunks": analysis.get("document_chunks"),
             "summary": analysis.get("summary", {}),
             "top_priority": analysis.get("top_priority", []),
             "retest_schedule": analysis.get("retest_schedule", []),
