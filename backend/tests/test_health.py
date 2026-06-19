@@ -21,11 +21,9 @@ async def test_health_includes_build_metadata():
 
 @pytest.mark.asyncio
 async def test_llm_health_unconfigured(monkeypatch):
-    monkeypatch.setattr(health.settings, "digitalocean_claude_api_key", "")
-    monkeypatch.setattr(health.settings, "abacus_ai_api_key", "")
-    monkeypatch.setattr(health.settings, "routellm_base_url", "")
-    monkeypatch.setattr(health.settings, "routellm_api_key", "")
-    monkeypatch.setattr(health.settings, "routellm_model", "")
+    monkeypatch.setattr(health.settings, "openai_api_key", "")
+    monkeypatch.setattr(health.settings, "openai_base_url", "https://api.openai.com/v1")
+    monkeypatch.setattr(health.settings, "openai_model", "gpt-4o-mini")
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -40,12 +38,10 @@ async def test_llm_health_unconfigured(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_llm_health_reachable_via_chat_fallback(monkeypatch):
-    monkeypatch.setattr(health.settings, "digitalocean_claude_api_key", "")
-    monkeypatch.setattr(health.settings, "abacus_ai_api_key", "")
-    monkeypatch.setattr(health.settings, "routellm_base_url", "http://llm.local/v1")
-    monkeypatch.setattr(health.settings, "routellm_api_key", "test-key")
-    monkeypatch.setattr(health.settings, "routellm_model", "test-model")
+async def test_llm_health_reachable_via_openai_chat(monkeypatch):
+    monkeypatch.setattr(health.settings, "openai_base_url", "https://api.openai.com/v1")
+    monkeypatch.setattr(health.settings, "openai_api_key", "test-key")
+    monkeypatch.setattr(health.settings, "openai_model", "gpt-4o-mini")
 
     class _FakeResponse:
         def __init__(self, status_code: int):
@@ -68,7 +64,7 @@ async def test_llm_health_reachable_via_chat_fallback(monkeypatch):
 
         async def post(self, path: str, json: dict):
             assert path == "chat/completions"
-            assert json["model"] == "test-model"
+            assert json["model"] == "gpt-4o-mini"
             return _FakeResponse(200)
 
     monkeypatch.setattr(health.httpx, "AsyncClient", _FakeClient)
@@ -120,22 +116,18 @@ async def test_detailed_health_marks_stripe_configured_with_new_price_ids(monkey
 # /ops/llm/synthetic-check tests
 # ---------------------------------------------------------------------------
 
-def _set_do_serverless(monkeypatch):
-    """Configure settings to mimic DO Serverless Inference."""
-    monkeypatch.setattr(health.settings, "digitalocean_claude_api_key", "test-do-key")
-    monkeypatch.setattr(health.settings, "digitalocean_claude_base_url", "https://inference.do-ai.run/v1")
-    monkeypatch.setattr(health.settings, "digitalocean_claude_model", "claude-3-5-sonnet-20241022")
-    monkeypatch.setattr(health.settings, "routellm_api_key", "")
-    monkeypatch.setattr(health.settings, "abacus_ai_api_key", "")
+def _set_openai(monkeypatch):
+    """Configure direct OpenAI access."""
+    monkeypatch.setattr(health.settings, "openai_api_key", "test-openai-key")
+    monkeypatch.setattr(health.settings, "openai_base_url", "https://api.openai.com/v1")
+    monkeypatch.setattr(health.settings, "openai_model", "gpt-4o-mini")
 
 
 @pytest.mark.asyncio
 async def test_synthetic_check_unconfigured(monkeypatch):
-    monkeypatch.setattr(health.settings, "digitalocean_claude_api_key", "")
-    monkeypatch.setattr(health.settings, "abacus_ai_api_key", "")
-    monkeypatch.setattr(health.settings, "routellm_api_key", "")
-    monkeypatch.setattr(health.settings, "routellm_base_url", "")
-    monkeypatch.setattr(health.settings, "routellm_model", "")
+    monkeypatch.setattr(health.settings, "openai_api_key", "")
+    monkeypatch.setattr(health.settings, "openai_base_url", "https://api.openai.com/v1")
+    monkeypatch.setattr(health.settings, "openai_model", "gpt-4o-mini")
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -148,27 +140,10 @@ async def test_synthetic_check_unconfigured(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_synthetic_check_generic_do_agent_url_rejected(monkeypatch):
-    monkeypatch.setattr(health.settings, "digitalocean_claude_api_key", "test-key")
-    monkeypatch.setattr(health.settings, "digitalocean_claude_base_url", "https://agents.do-ai.run")
-    monkeypatch.setattr(health.settings, "digitalocean_claude_model", "claude-3-5-sonnet")
-    monkeypatch.setattr(health.settings, "routellm_api_key", "")
-    monkeypatch.setattr(health.settings, "abacus_ai_api_key", "")
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.get("/ops/llm/synthetic-check")
-
-    assert resp.status_code == 200
-    payload = resp.json()
-    assert payload["ok"] is False
-    assert "invalid_do_agent_url" in payload["check"]["reason"]
-
-
 @pytest.mark.asyncio
-async def test_synthetic_check_do_serverless_success(monkeypatch):
-    """DO Serverless Inference path: base_url ends in /v1, model sent in payload."""
-    _set_do_serverless(monkeypatch)
+async def test_synthetic_check_openai_success(monkeypatch):
+    """Direct OpenAI path: base URL ends in /v1 and model is sent in payload."""
+    _set_openai(monkeypatch)
 
     class _FakeResponse:
         status_code = 200
@@ -189,8 +164,8 @@ async def test_synthetic_check_do_serverless_success(monkeypatch):
 
         async def post(self, path, json):
             assert path == "chat/completions", f"unexpected path: {path}"
-            assert "model" in json, "model field missing for serverless inference"
-            assert json["model"] == "claude-3-5-sonnet-20241022"
+            assert "model" in json
+            assert json["model"] == "gpt-4o-mini"
             return _FakeResponse()
 
     monkeypatch.setattr(health.httpx, "AsyncClient", _FakeClient)
@@ -208,7 +183,7 @@ async def test_synthetic_check_do_serverless_success(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_synthetic_check_http_error_returns_degraded(monkeypatch):
-    _set_do_serverless(monkeypatch)
+    _set_openai(monkeypatch)
 
     class _FakeResponse401:
         status_code = 401
@@ -238,7 +213,7 @@ async def test_synthetic_check_http_error_returns_degraded(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_synthetic_check_empty_content_returns_degraded(monkeypatch):
-    _set_do_serverless(monkeypatch)
+    _set_openai(monkeypatch)
 
     class _FakeResponseEmpty:
         status_code = 200
