@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import logging
@@ -13,6 +14,11 @@ import httpx
 from pypdf import PdfReader
 from PIL import Image
 from pdf2image import convert_from_path
+
+try:
+    from markitdown import MarkItDown
+except ImportError:  # pragma: no cover - production dependency, fallback remains available
+    MarkItDown = None
 
 from app.config import settings
 from app.services.knowledge.integration import build_biomarker_extraction_knowledge_context
@@ -72,8 +78,8 @@ class OpenAIFileAnalyzer(ABC):
         return type_mapping.get(ext, 'unknown')
 
     @staticmethod
-    def _extract_pdf_text(pdf_path: str, max_length: int = 80000) -> str:
-        """Extract text from PDF file"""
+    def _extract_pdf_text_with_pypdf(pdf_path: str, max_length: int = 80000) -> str:
+        """Extract plain text from a PDF using the lightweight fallback parser."""
         try:
             reader = PdfReader(pdf_path)
             chunks: list[str] = []
@@ -86,6 +92,36 @@ class OpenAIFileAnalyzer(ABC):
         except Exception as e:
             logger.warning(f"Failed to extract PDF text: {e}")
             return ""
+
+    @classmethod
+    def _extract_pdf_content(cls, pdf_path: str, max_length: int = 80000) -> tuple[str, str]:
+        """Convert a local PDF to LLM-friendly Markdown with a pypdf fallback."""
+        if MarkItDown is not None:
+            try:
+                result = MarkItDown(enable_plugins=False).convert_local(pdf_path)
+                markdown = (result.text_content or "").strip()
+                if markdown:
+                    logger.info(
+                        "markitdown_pdf_conversion_ok chars=%s path=%s",
+                        len(markdown),
+                        Path(pdf_path).name,
+                    )
+                    return markdown[:max_length], "markitdown"
+            except Exception as exc:
+                logger.warning(
+                    "markitdown_pdf_conversion_failed error=%s path=%s",
+                    repr(exc),
+                    Path(pdf_path).name,
+                )
+
+        fallback_text = cls._extract_pdf_text_with_pypdf(pdf_path, max_length=max_length)
+        return fallback_text, "pypdf"
+
+    @classmethod
+    def _extract_pdf_text(cls, pdf_path: str, max_length: int = 80000) -> str:
+        """Backward-compatible PDF extraction helper."""
+        text, _parser = cls._extract_pdf_content(pdf_path, max_length=max_length)
+        return text
 
     async def _send_text_completion(self, prompt: str, model: Optional[str] = None) -> str:
         """Send text prompt to OpenAI API and get completion"""
@@ -293,12 +329,19 @@ class PDFTextAnalyzer(OpenAIFileAnalyzer):
             if not self._validate_pdf(pdf_path):
                 raise ValueError("Invalid PDF format or file too large")
 
-            extracted_text = self._extract_pdf_text(pdf_path)
+            extracted_text, document_parser = await asyncio.to_thread(
+                self._extract_pdf_content,
+                pdf_path,
+            )
             if len(extracted_text.strip()) < 50:
                 raise ValueError("Could not extract readable text from PDF")
 
             prompt = self._build_extraction_prompt(
-                document_kind="text-based lab PDF",
+                document_kind=(
+                    "Markdown-converted lab PDF"
+                    if document_parser == "markitdown"
+                    else "text-based lab PDF"
+                ),
                 symptoms=symptoms or [],
                 document_text=extracted_text,
                 knowledge_context=await self._knowledge_context(),
@@ -330,9 +373,16 @@ class PDFTextAnalyzer(OpenAIFileAnalyzer):
                 int(analysis_time * 1000),
             )
 
-            result = self._normalize_response(payload, "openai_pdf_text")
+            analysis_method = (
+                "openai_pdf_text_markitdown"
+                if document_parser == "markitdown"
+                else "openai_pdf_text"
+            )
+            result = self._normalize_response(payload, analysis_method)
             result["analysis_time"] = analysis_time
             result["biomarker_count"] = len(biomarkers)
+            result["document_parser"] = document_parser
+            result["document_input_chars"] = len(extracted_text)
             return result
 
         except Exception as exc:
@@ -637,7 +687,7 @@ async def create_file_analyzer(file_path: str) -> OpenAIFileAnalyzer:
 
     if file_type == "pdf":
         # Determine if text-based or scanned
-        text = OpenAIFileAnalyzer._extract_pdf_text(file_path)
+        text = OpenAIFileAnalyzer._extract_pdf_text_with_pypdf(file_path)
         if len(text.strip()) > 100:
             return PDFTextAnalyzer(api_key=settings.active_llm_api_key)
         else:

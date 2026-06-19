@@ -8,10 +8,11 @@ supabase==2.4.2
 
 # PDF text extraction for OpenAI PDF analysis path
 pypdf==4.2.0
+markitdown[pdf]==0.1.6
 
 # PDF to image conversion for Vision API
 pdf2image==1.17.0
-pillow==12.0.0
+pillow==12.2.0
 
 # File type detection
 python-magic==0.4.27
