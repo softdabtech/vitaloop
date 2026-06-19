@@ -392,6 +392,8 @@ async def analyze_lab_file(
         upload_payload = {
             "analysis_method": analysis.get("analysis_method"),
             "analysis_time": analysis.get("analysis_time"),
+            "document_parser": analysis.get("document_parser"),
+            "document_input_chars": analysis.get("document_input_chars"),
             "summary": analysis.get("summary", {}),
             "top_priority": analysis.get("top_priority", []),
             "retest_schedule": analysis.get("retest_schedule", []),
