@@ -61,6 +61,12 @@ public class AuthController : Controller
     public async Task<IActionResult> PostLoginPost([FromForm] string? token, [FromForm] string? returnUrl, CancellationToken ct)
         => await PostLoginCore(token, returnUrl, ct);
 
+    // JSON variant — avoids form-urlencoded '+' → space corruption of JWT
+    [HttpPost("post-login-json")]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> PostLoginJson([FromBody] PostLoginJsonRequest body, [FromQuery] string? returnUrl, CancellationToken ct)
+        => await PostLoginCore(body?.Token, returnUrl, ct);
+
     private async Task<IActionResult> PostLoginCore(string? token, string? returnUrl, CancellationToken ct)
     {
         Console.WriteLine("[CRM] post-login called");
@@ -209,5 +215,10 @@ public class AuthController : Controller
 
         return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
     }
+}
+
+public sealed class PostLoginJsonRequest
+{
+    public string? Token { get; set; }
 }
 

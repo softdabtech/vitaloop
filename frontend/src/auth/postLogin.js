@@ -38,19 +38,28 @@ function withToken(url, token) {
 }
 
 function postTokenHandoff(url, token) {
-  const form = document.createElement('form')
-  form.method = 'POST'
-  form.action = url
-  form.style.display = 'none'
+  // JWT contains base64url chars; form-urlencoded decodes '+' as space and corrupts the token.
+  // Use JSON POST to the dedicated endpoint that avoids this issue.
+  const target = new URL(url)
+  const jsonUrl = new URL(target.origin + '/auth/post-login-json')
+  const returnUrl = target.searchParams.get('returnUrl')
+  if (returnUrl) jsonUrl.searchParams.set('returnUrl', returnUrl)
 
-  const tokenInput = document.createElement('input')
-  tokenInput.type = 'hidden'
-  tokenInput.name = 'token'
-  tokenInput.value = token
-  form.appendChild(tokenInput)
-
-  document.body.appendChild(form)
-  form.submit()
+  fetch(jsonUrl.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+    redirect: 'manual',
+    credentials: 'include',
+  }).then(() => {
+    const dest = returnUrl || '/ops'
+    window.location.assign(`${target.origin}${dest.startsWith('/') ? dest : '/' + dest}`)
+  }).catch(() => {
+    // Fallback: query param handoff
+    const fallback = new URL(url)
+    fallback.searchParams.set('token', token)
+    window.location.assign(fallback.toString())
+  })
 }
 
 export function navigateToResolvedPath(_navigate, destination) {
