@@ -433,32 +433,96 @@ export const HEALTH_HUB_ARTICLES = [
 export const HEALTH_HUB_CLUSTERS = [
   {
     id: 'fatigue',
+    slug: 'fatigue-low-energy',
     title: 'Fatigue & Low Energy',
+    seoTitle: 'Fatigue & Low Energy: Symptoms, Tests and Next Steps | VITALOOP',
+    seoDescription: 'A structured guide to persistent fatigue, iron and vitamin context, useful blood-test discussions, warning signs, and questions to prepare for a clinician.',
     description: 'Move from a vague “I feel tired” to a structured symptom timeline, focused clinician questions, and relevant biomarker context.',
+    intro: 'Fatigue can mean sleepiness, weakness, reduced exercise tolerance, mental exhaustion, or a substantial drop in normal capacity. This topic center helps you define the pattern before deciding which clinical questions or tests may be useful.',
+    questions: [
+      'Is the main problem sleepiness, weakness, breathlessness, poor recovery, or cognitive fatigue?',
+      'Did it begin after illness, blood loss, dietary change, medication changes, stress, or disrupted sleep?',
+      'Which associated symptoms or risk factors make targeted testing more useful?',
+      'What would make the situation urgent rather than suitable for routine follow-up?',
+    ],
+    steps: [
+      'Track timing, duration, triggers, sleep, activity response, medications, diet, and associated symptoms.',
+      'Review likely contributors with a qualified professional instead of ordering a broad untargeted panel.',
+      'Interpret ferritin, blood count, thyroid, nutrient, and metabolic results as related patterns rather than isolated flags.',
+      'Agree on follow-up: what changes treatment, when to repeat testing, and which symptoms require earlier review.',
+    ],
     icon: BatteryLow,
     tone: 'from-amber-100 via-white to-orange-50',
     articleSlugs: HEALTH_HUB_ARTICLES.filter((article) => article.cluster === 'Fatigue').map((article) => article.slug),
   },
   {
     id: 'sleep',
+    slug: 'sleep-recovery',
     title: 'Sleep & Recovery',
+    seoTitle: 'Sleep, Recovery and Daytime Fatigue Guide | VITALOOP',
+    seoDescription: 'Understand sleep duration, timing, breathing, recovery and daytime fatigue before assuming a blood-test result explains low energy.',
     description: 'Understand sleep patterns, recovery signals, and the lab context that may be worth discussing.',
+    intro: 'Sleep duration alone does not describe recovery. Continuity, timing, breathing, schedule consistency, substances, pain, mood, and whether sleep feels restorative all change the clinical picture.',
+    questions: [
+      'Is the problem difficulty sleeping, excessive sleepiness, or fatigue despite adequate time in bed?',
+      'Are snoring, breathing pauses, restless legs, headaches, or repeated awakenings present?',
+      'How do work schedule, caffeine, alcohol, medications, exercise, and screen use affect the pattern?',
+      'Does activity produce a disproportionate or delayed worsening that needs separate assessment?',
+    ],
+    steps: [
+      'Keep a one- to two-week sleep and symptom record.',
+      'Separate sleepiness from physical or cognitive fatigue.',
+      'Discuss breathing, neurological, medication, mood, and metabolic context when relevant.',
+      'Treat unsafe sleepiness, especially while driving, as a prompt for timely professional review.',
+    ],
     icon: Moon,
     tone: 'from-indigo-100 via-white to-sky-50',
     articleSlugs: HEALTH_HUB_ARTICLES.filter((article) => article.cluster === 'Sleep').map((article) => article.slug),
   },
   {
     id: 'metabolic',
+    slug: 'metabolic-health',
     title: 'Metabolic Health',
+    seoTitle: 'Metabolic Health: Glucose, HbA1c and Lipid Context | VITALOOP',
+    seoDescription: 'Connect glucose, HbA1c, lipids, appetite, energy and longitudinal trends with practical questions for a focused clinician discussion.',
     description: 'Connect energy, appetite, glucose patterns, lipids, and longitudinal change.',
+    intro: 'Metabolic markers are most useful when connected to symptoms, medications, family history, body changes, meal patterns, activity, sleep, and trends over time.',
+    questions: [
+      'Are thirst, urination, appetite, weight, energy, or post-meal symptoms changing?',
+      'Do glucose, HbA1c, triglycerides, HDL, blood pressure, and waist trend in the same direction?',
+      'Could illness, fasting status, medications, pregnancy, or recent lifestyle changes affect the result?',
+      'Which change should be measured again, and over what timeframe?',
+    ],
+    steps: [
+      'Confirm units, collection conditions, reference intervals, and prior results.',
+      'Review glucose and lipid markers as a connected risk pattern.',
+      'Prioritize sustainable changes and clinician-guided follow-up over reacting to a single reading.',
+      'Track both laboratory trends and meaningful outcomes such as energy, sleep, activity, and symptoms.',
+    ],
     icon: Activity,
     tone: 'from-emerald-100 via-white to-teal-50',
     articleSlugs: HEALTH_HUB_ARTICLES.filter((article) => article.cluster === 'Metabolic').map((article) => article.slug),
   },
   {
     id: 'biomarkers',
+    slug: 'blood-test-biomarkers',
     title: 'Biomarker Library',
+    seoTitle: 'Blood Test Biomarkers: Interpretation Guide | VITALOOP',
+    seoDescription: 'Understand common blood-test biomarkers, reference ranges, related values, trends, limitations, and questions to discuss with a clinician.',
     description: 'Understand what common blood tests measure, what can affect them, and why patterns matter more than isolated flags.',
+    intro: 'A laboratory flag is not a diagnosis. Units, methods, biological variation, collection conditions, symptoms, medications, and related markers determine what a result may mean.',
+    questions: [
+      'What does this marker measure, and which related values help interpret it?',
+      'Could fasting, hydration, illness, exercise, supplements, medication, or timing change the result?',
+      'Is the finding new, persistent, clinically significant, or part of a wider pattern?',
+      'Would repeating or confirming the test change the next decision?',
+    ],
+    steps: [
+      'Verify the exact test, units, reference interval, date, and collection conditions.',
+      'Compare with related biomarkers and previous results.',
+      'Connect the pattern to symptoms and individual risk rather than relying on an online optimal range.',
+      'Use the result to prepare questions, not to diagnose or self-prescribe.',
+    ],
     icon: ShieldAlert,
     tone: 'from-rose-100 via-white to-pink-50',
     articleSlugs: HEALTH_HUB_ARTICLES.filter((article) => ['Biomarkers', 'Hair & Thyroid', 'Cognition'].includes(article.cluster)).map((article) => article.slug),
@@ -467,4 +531,12 @@ export const HEALTH_HUB_CLUSTERS = [
 
 export function getHealthHubArticle(slug) {
   return HEALTH_HUB_ARTICLES.find((article) => article.slug === slug) || null
+}
+
+export function getHealthHubCluster(slug) {
+  return HEALTH_HUB_CLUSTERS.find((cluster) => cluster.slug === slug) || null
+}
+
+export function getClusterForArticle(article) {
+  return HEALTH_HUB_CLUSTERS.find((cluster) => cluster.articleSlugs.includes(article.slug)) || null
 }

@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { ALL_ARTICLE_IDS, HELP_ARTICLES, HELP_SECTIONS } from '../src/data/helpArticles.js'
-import { HEALTH_HUB_ARTICLES } from '../src/data/healthHubContent.js'
+import { HEALTH_HUB_ARTICLES, HEALTH_HUB_CLUSTERS } from '../src/data/healthHubContent.js'
 
 const DIST_DIR = path.resolve(process.cwd(), 'dist')
 const BASE_URL = 'https://vitaloop.today'
@@ -145,6 +145,10 @@ const routes = [
       'Explore connected guides about symptoms, blood tests, biomarker context, and better clinician conversations.',
       'Start with persistent fatigue and low energy, then move through focused testing and biomarker interpretation guides.',
     ],
+    links: HEALTH_HUB_CLUSTERS.map((cluster) => ({
+      href: `/health-hub/topics/${cluster.slug}/`,
+      label: cluster.title,
+    })),
   },
   {
     path: '/editorial-policy',
@@ -172,7 +176,27 @@ const routes = [
   },
 ]
 
+for (const cluster of HEALTH_HUB_CLUSTERS) {
+  routes.push({
+    path: `/health-hub/topics/${cluster.slug}`,
+    title: cluster.seoTitle,
+    description: cluster.seoDescription,
+    priority: '0.85',
+    changefreq: 'monthly',
+    text: [
+      cluster.intro,
+      ...cluster.questions,
+      ...cluster.steps,
+    ],
+    links: cluster.articleSlugs.map((slug) => {
+      const article = HEALTH_HUB_ARTICLES.find((item) => item.slug === slug)
+      return { href: `/health-hub/${slug}/`, label: article?.title || slug }
+    }),
+  })
+}
+
 for (const article of HEALTH_HUB_ARTICLES) {
+  const cluster = HEALTH_HUB_CLUSTERS.find((item) => item.articleSlugs.includes(article.slug))
   routes.push({
     path: `/health-hub/${article.slug}`,
     title: article.seoTitle,
@@ -188,6 +212,13 @@ for (const article of HEALTH_HUB_ARTICLES) {
         ...(section.bullets || []),
         ...(section.callout ? [section.callout] : []),
       ]),
+    ],
+    links: [
+      ...(cluster ? [{ href: `/health-hub/topics/${cluster.slug}/`, label: cluster.title }] : []),
+      ...article.related.map((slug) => {
+        const related = HEALTH_HUB_ARTICLES.find((item) => item.slug === slug)
+        return { href: `/health-hub/${slug}/`, label: related?.title || slug }
+      }),
     ],
   })
 }
@@ -279,10 +310,14 @@ function upsertTag(html, pattern, replacement) {
 
 function renderStaticRoot(route) {
   const paragraphs = route.text.map((item) => `<p>${escapeHtml(item)}</p>`).join('\n          ')
+  const links = route.links?.length
+    ? `<nav aria-label="Related pages"><h2>Related guides</h2><ul>${route.links.map((link) => `<li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`).join('')}</ul></nav>`
+    : ''
   return `<div id="root"><main data-crawler-content="true" style="max-width: 760px; margin: 0 auto; padding: 48px 20px; font-family: Inter, Arial, sans-serif; color: #0f172a;">
         <h1>${escapeHtml(route.title.replace(' | VITALOOP', ''))}</h1>
         <p>${escapeHtml(route.description)}</p>
         ${paragraphs}
+        ${links}
       </main></div>`
 }
 
