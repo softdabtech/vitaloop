@@ -23,7 +23,7 @@ export default function Privacy() {
     }}>
       <Seo
         title="Privacy Policy | VITALOOP"
-        description="Read how VITALOOP stores, processes, and protects your blood test data, including AI processing, security controls, and deletion rights."
+        description="Learn how VITALOOP collects, processes, stores, protects, exports, and deletes symptom data, blood test reports, biomarker results, and account information."
         path="/privacy-policy"
       />
       <button

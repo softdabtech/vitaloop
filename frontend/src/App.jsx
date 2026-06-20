@@ -12,11 +12,7 @@ import { gaPageView, gaPurchase } from './lib/analytics.js'
 import { trackPublicFunnelEvent } from './lib/publicFunnel.js'
 
 // Marketing pages — lazy
-const Product = lazy(() => import('./pages/Product.jsx'))
 const Features = lazy(() => import('./pages/Features.jsx'))
-const Pricing = lazy(() => import('./pages/Pricing.jsx'))
-const Stories = lazy(() => import('./pages/Stories.jsx'))
-const Investors = lazy(() => import('./pages/Investors.jsx'))
 const FAQ = lazy(() => import('./pages/FAQ.jsx'))
 const EmailConfirmation = lazy(() => import('./pages/EmailConfirmation.jsx'))
 const ExampleReport = lazy(() => import('./pages/ExampleReport.jsx'))
@@ -709,11 +705,11 @@ export default function App() {
           <Route path="/volossia" element={isUaHost ? <UaPage pageSlug="volossia" /> : <NotFound />} />
           <Route path="/son" element={isUaHost ? <UaPage pageSlug="son" /> : <NotFound />} />
           <Route path="/dity-analizy" element={isUaHost ? <UaPage pageSlug="dity-analizy" /> : <NotFound />} />
-          <Route path="/product" element={<Product />} />
+          <Route path="/product" element={<Navigate to="/how-it-works/" replace />} />
           <Route path="/features" element={<Features />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/stories" element={<Stories />} />
-          <Route path="/investors" element={<Investors />} />
+          <Route path="/pricing" element={<Navigate to="/#pricing" replace />} />
+          <Route path="/stories" element={<Navigate to="/#stories" replace />} />
+          <Route path="/investors" element={<Navigate to="/for-investors/" replace />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/example-report" element={<ExampleReport />} />
           <Route path="/how-it-works" element={<HowItWorks />} />

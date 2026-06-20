@@ -99,8 +99,9 @@ export default function About() {
   return (
     <>
       <Seo
-        title="About VITALOOP - Our Mission & Team"
-        description="Learn how VITALOOP uses a symptom-first workflow to connect context, labs, and weekly protocol execution."
+        title="About VITALOOP | Symptom & Lab Health Intelligence"
+        description="Learn why VITALOOP connects symptom intake, AI blood test analysis, biomarker explanations, and longitudinal progress in one health workflow."
+        path="/about"
       />
 
       <div className="min-h-screen bg-white">

@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, FlaskConical, Loader2, Mail, Shiel
 import toast from 'react-hot-toast'
 
 import BrandMark from '../components/landing/BrandMark.jsx'
+import Seo from '../components/Seo.jsx'
 import api from '../lib/api.js'
 import { getPublicFunnelSessionId, trackPublicFunnelEvent } from '../lib/publicFunnel.js'
 
@@ -169,6 +170,11 @@ export default function SymptomIntake() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-950">
+      <Seo
+        title="Free Symptom Checker & Lab Discussion Guide | VITALOOP"
+        description="Organize fatigue, sleep, brain fog, hair loss, digestion, and other symptoms. Get lab categories and questions to discuss with a clinician."
+        path="/symptom-intake"
+      />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex min-h-16 w-full max-w-[1120px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <button type="button" onClick={() => navigate('/')} className="flex items-center gap-2">

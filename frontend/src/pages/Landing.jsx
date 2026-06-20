@@ -701,8 +701,8 @@ export default function Landing() {
   return (
     <div className={rootClasses}>
       <Seo
-        title="Start with Symptoms, Then Understand Your Labs | VITALOOP"
-        description="VITALOOP starts with symptom intake, guides what to check next, and connects lab results to a practical weekly protocol and feedback loop."
+        title="AI Blood Test Analysis & Symptom Checker | VITALOOP"
+        description="Start with symptoms or upload blood test results. Get clear biomarker explanations, lab discussion guidance, and a health action plan you can track."
         path="/"
         schemas={[SCHEMA_HOWTO, SCHEMA_FAQ]}
       />
@@ -853,7 +853,7 @@ export default function Landing() {
               How we store your data
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700 md:text-base">
-              VITALOOP applies HIPAA Security Rule-aligned safeguards across data storage, transmission, and access management. Controls are organized to mirror administrative, technical, and operational best practices used in healthcare workflows.
+              VITALOOP uses encryption, access controls, workspace isolation, and privacy-focused processing to protect sensitive health information.
             </p>
 
             <div className="mt-4 inline-flex items-start gap-2 rounded-2xl border border-emerald-200/80 bg-white/90 px-4 py-3 text-sm text-slate-700">

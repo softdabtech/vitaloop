@@ -2,8 +2,13 @@ import { Helmet } from 'react-helmet-async'
 import { useEffect } from 'react'
 
 const BASE_URL = 'https://vitaloop.today'
-const DEFAULT_TITLE = 'Find the Cause, Not Just the Symptom | VITALOOP'
-const DEFAULT_DESCRIPTION = 'Start with symptoms, understand what may be driving them, see which lab markers are worth checking, and turn results into a clear health action plan.'
+const DEFAULT_TITLE = 'AI Blood Test Analysis & Symptom Checker | VITALOOP'
+const DEFAULT_DESCRIPTION = 'Start with symptoms or upload blood test results. Get clear biomarker explanations, lab discussion guidance, and a health action plan you can track.'
+
+function canonicalizePath(path) {
+  if (!path || path === '/') return '/'
+  return `${path.replace(/\/+$/, '')}/`
+}
 
 /**
  * Per-page SEO head manager.
@@ -22,13 +27,13 @@ export default function Seo({
   canonicalUrl,
   locale = 'en_US',
   image = `${BASE_URL}/og-cover-2026-05.jpg`,
-  imageAlt = 'VITALOOP — AI-powered blood test analysis and biohacking platform dashboard',
+  imageAlt = 'VITALOOP dashboard for symptom intake, blood test analysis, biomarker explanations, and progress tracking',
   noindex = false,
   schemas = [],
 }) {
   const fullTitle = title || DEFAULT_TITLE
   const safeDescription = description || DEFAULT_DESCRIPTION
-  const canonical = canonicalUrl || `${BASE_URL}${path}`
+  const canonical = canonicalUrl || `${BASE_URL}${canonicalizePath(path)}`
   const robotsContent = noindex
     ? 'noindex,nofollow'
     : 'index,follow,max-image-preview:large,max-snippet:-1'
@@ -58,8 +63,6 @@ export default function Seo({
       <meta property="og:locale" content={locale} />
 
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:site" content="@vitaloop" />
-      <meta name="twitter:creator" content="@vitaloop" />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={safeDescription} />
       <meta name="twitter:image" content={image} />
