@@ -223,7 +223,15 @@
   .crm-aside { position:static; max-height:none; border-left:none; border-top:1px solid var(--c-border); }
   .kpi-strip { grid-template-columns:repeat(2,1fr); }
 }
-@@media (max-width:640px) { .kpi-strip { grid-template-columns:1fr 1fr; } }
+@@media (max-width:640px) {
+  .kpi-strip { grid-template-columns:1fr 1fr; }
+  .crm-main { padding:14px; }
+  .crm-aside { padding:14px; }
+  .kpi-cell { padding:16px; }
+  .kpi-val { font-size:30px; }
+  .modal-grid { grid-template-columns:1fr; }
+  .user-modal { width:calc(100% - 24px); padding:20px; }
+}
 </style>
 
 <div class="crm-wrap">

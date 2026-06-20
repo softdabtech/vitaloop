@@ -47,6 +47,17 @@
 .btn-danger:hover { background:#fecaca; }
 .m-name  { font-weight:600; color:#0f172a; }
 .m-email { font-size:11px; color:#94a3b8; margin-top:2px; }
+@@media (max-width:900px) {
+  .pg-wrap { padding:16px; }
+  .stat-row { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@@media (max-width:560px) {
+  .pg-head { align-items:stretch; }
+  .btn-primary { justify-content:center; }
+  .stat-row { grid-template-columns:1fr; gap:10px; }
+  .members-bar { flex-direction:column; }
+  .members-bar input, .members-bar select { width:100%; min-width:0; }
+}
 </style>
 
 <div class="pg-wrap">
@@ -164,6 +175,7 @@ function mFilter() {
 }
 </script>
 
+@* Old duplicate layout is disabled so only the redesigned page renders.
 @await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
 <div class="container-page">
     <div class="page-header">
@@ -462,3 +474,4 @@ function mFilter() {
         margin-bottom: 1rem;
     }
 </style>
+*@
