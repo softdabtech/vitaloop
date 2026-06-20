@@ -30,7 +30,11 @@ function gtag(...args) {
 /** Fire any GA4 event with arbitrary parameters. */
 export function gaEvent(eventName, params = {}) {
   try {
-    gtag('event', eventName, params)
+    gtag('event', eventName, {
+      ...params,
+      send_to: GA_ID,
+      engagement_time_msec: 100,
+    })
   } catch {
     // Never throw from analytics
   }
@@ -191,6 +195,23 @@ export function gaQuestionnaireComplete(score) {
   gaEvent('questionnaire_completed', {
     event_category: 'engagement',
     ...(score !== undefined ? { value: Math.round(score) } : {}),
+  })
+}
+
+/** Fire when the public symptom flow returns a completed lab discussion list. */
+export function gaSymptomAssessmentComplete({ assessmentId, labCount } = {}) {
+  gaEvent('symptom_assessment_completed', {
+    event_category: 'activation',
+    ...(assessmentId ? { assessment_id: assessmentId } : {}),
+    ...(Number.isFinite(labCount) ? { recommended_lab_count: labCount } : {}),
+  })
+}
+
+/** Fire for high-intent public CTAs that lead into account creation. */
+export function gaSignupIntent(source = 'public_site') {
+  gaEvent('signup_intent', {
+    event_category: 'acquisition',
+    source,
   })
 }
 

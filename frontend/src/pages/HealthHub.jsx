@@ -5,6 +5,7 @@ import Footer from '../components/landing/Footer.jsx'
 import { PageHeader } from '../components/landing/PageHeader.jsx'
 import Seo from '../components/Seo.jsx'
 import { HEALTH_HUB_ARTICLES, HEALTH_HUB_CLUSTERS } from '../data/healthHubContent.js'
+import { gaEvent } from '../lib/analytics.js'
 
 export default function HealthHub() {
   const [query, setQuery] = useState('')
@@ -54,7 +55,7 @@ export default function HealthHub() {
                 Practical, evidence-aware guides for connecting symptoms, blood tests, biomarker context, and better clinician conversations.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link to="/symptom-intake/" className="inline-flex items-center rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-800">
+                <Link onClick={() => gaEvent('health_hub_cta_click', { destination: 'symptom_intake' })} to="/symptom-intake/" className="inline-flex items-center rounded-2xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-800">
                   Start symptom check <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
                 <Link to="/example-report/" className="inline-flex items-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 transition hover:border-emerald-300">
@@ -128,7 +129,7 @@ export default function HealthHub() {
               {filteredArticles.map((article) => {
                 const Icon = article.icon
                 return (
-                  <Link key={article.slug} to={`/health-hub/${article.slug}/`} className="group flex h-full flex-col rounded-[28px] border border-slate-200 bg-white p-7 transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-xl">
+                  <Link onClick={() => gaEvent('health_hub_article_click', { article_slug: article.slug, cluster: article.cluster })} key={article.slug} to={`/health-hub/${article.slug}/`} className="group flex h-full flex-col rounded-[28px] border border-slate-200 bg-white p-7 transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-xl">
                     <div className="flex items-center justify-between gap-3">
                       <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700"><Icon className="h-5 w-5" /></span>
                       <span className="text-xs font-semibold text-slate-600">{article.readTime}</span>

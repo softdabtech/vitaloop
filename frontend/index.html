@@ -136,12 +136,14 @@
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
+      window.gtag = gtag;
       gtag('js', new Date());
       /* send_page_view: false — SPA page views are tracked manually via GAPageTracker in App.jsx */
       gtag('config', 'G-LG0BCMBJJE', { send_page_view: false });
 
-      window.fbq = window.fbq || function(){(window.fbq.q = window.fbq.q || []).push(arguments)};
-      window.fbq.loaded = false;
+      window.fbq = window.fbq || function(){window.fbq.callMethod ? window.fbq.callMethod.apply(window.fbq, arguments) : window.fbq.queue.push(arguments)};
+      window.fbq.queue = window.fbq.queue || [];
+      window.fbq.loaded = true;
       window.fbq.version = '2.0';
       fbq('init', '1703367347333580');
       fbq('track', 'PageView');

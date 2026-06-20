@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import BrandMark from '../components/landing/BrandMark.jsx'
 import Seo from '../components/Seo.jsx'
 import api from '../lib/api.js'
+import { gaSignupIntent, gaSymptomAssessmentComplete } from '../lib/analytics.js'
 import { getPublicFunnelSessionId, trackPublicFunnelEvent } from '../lib/publicFunnel.js'
 
 const SYMPTOMS = [
@@ -134,6 +135,10 @@ export default function SymptomIntake() {
       })
       setAssessmentId(data?.assessment_id || '')
       setRecommendedLabs(Array.isArray(data?.recommended_labs) ? data.recommended_labs : [])
+      gaSymptomAssessmentComplete({
+        assessmentId: data?.assessment_id,
+        labCount: Array.isArray(data?.recommended_labs) ? data.recommended_labs.length : 0,
+      })
       setStep(4)
     } catch {
       toast.error('Could not save the assessment. Try again.')
@@ -363,7 +368,7 @@ export default function SymptomIntake() {
                   <button type="button" onClick={goUpload} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700">
                     <Upload className="h-4 w-4" /> Upload PDF
                   </button>
-                  <button type="button" onClick={() => navigate('/login?signup=true')} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-900 transition hover:border-emerald-300">
+                  <button type="button" onClick={() => { gaSignupIntent('symptom_assessment'); navigate('/login?signup=true') }} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-900 transition hover:border-emerald-300">
                     Create account <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>
