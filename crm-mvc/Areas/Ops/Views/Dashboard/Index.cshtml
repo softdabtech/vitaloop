@@ -556,10 +556,10 @@
         </div>
       </div>
 
-      <!-- Claude API Spend -->
+      <!-- OpenAI API Spend -->
       <div class="widget">
         <div class="widget-head">
-          <p class="widget-title">🤖 Claude API Spend</p>
+          <p class="widget-title">🤖 OpenAI API Spend</p>
           <span style="font-size:11px;color:var(--c-muted)">30d</span>
         </div>
         <div id="claude-spend" style="padding:16px;font-size:13px;color:var(--c-muted)">Loading…</div>
@@ -728,7 +728,7 @@ fetch('/ops/client-activity-data?days=30&limit=100')
     document.getElementById('labs-loading').textContent = 'Lab data unavailable'
   })
 
-// ── Claude API spend ──────────────────────────────
+// ── OpenAI API spend ──────────────────────────────
 fetch('/ops/claude-usage-data?days=30')
   .then(r => r.json())
   .then(data => {
