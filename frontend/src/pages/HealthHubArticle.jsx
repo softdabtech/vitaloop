@@ -4,6 +4,7 @@ import Footer from '../components/landing/Footer.jsx'
 import { PageHeader } from '../components/landing/PageHeader.jsx'
 import Seo from '../components/Seo.jsx'
 import { getHealthHubArticle, HEALTH_HUB_ARTICLES } from '../data/healthHubContent.js'
+import { gaEvent } from '../lib/analytics.js'
 
 export default function HealthHubArticle() {
   const { articleSlug } = useParams()
@@ -111,7 +112,7 @@ export default function HealthHubArticle() {
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Turn reading into context</p>
                 <h2 className="mt-3 text-xl font-black">Start with your symptoms</h2>
                 <p className="mt-3 text-sm leading-6 text-slate-600">Organize timing, duration, and related signals before deciding what to discuss next.</p>
-                <Link to="/symptom-intake/" className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700">Start free check <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link onClick={() => gaEvent('health_article_cta_click', { article_slug: article.slug, destination: 'symptom_intake' })} to="/symptom-intake/" className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700">Start free check <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </div>
               <div className="rounded-[24px] border border-slate-200 bg-slate-950 p-6 text-white">
                 <ShieldAlert className="h-5 w-5 text-emerald-300" />
