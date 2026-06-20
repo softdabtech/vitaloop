@@ -2,7 +2,167 @@
 @{
     ViewData["Title"] = "Team Members";
     Layout = "_CrmLayout";
+    var members = Model?.Members ?? Array.Empty<MemberViewModel>();
+    var activeCount = members.Count(m => string.Equals(m.MembershipStatus,"active",StringComparison.OrdinalIgnoreCase));
+    var practCount  = Model?.PractitionerCount ?? 0;
 }
+<style>
+.pg-wrap { padding:24px; max-width:1400px; }
+.pg-head { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.pg-title { font-size:20px; font-weight:800; color:#0f172a; margin:0; }
+.pg-sub   { font-size:13px; color:#64748b; margin:4px 0 0; }
+.btn-primary { background:#1D9E75; color:#fff; border:none; border-radius:8px; padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+.btn-primary:hover { background:#0F6E56; }
+.stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px; }
+.stat-c { background:#fff; border:1px solid #e8ecf2; border-radius:10px; padding:16px 20px; }
+.stat-c .lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; margin:0 0 4px; }
+.stat-c .val { font-size:28px; font-weight:900; color:#0f172a; margin:0; }
+.members-card { background:#fff; border:1px solid #e8ecf2; border-radius:12px; overflow:hidden; }
+.members-bar { padding:10px 16px; border-bottom:1px solid #e8ecf2; background:#fafbfc; display:flex; gap:10px; flex-wrap:wrap; }
+.members-bar input { flex:1; min-width:200px; padding:7px 12px 7px 32px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%2394a3b8' stroke-width='2' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center; box-sizing:border-box; color:#0f172a; }
+.members-bar input:focus { border-color:#1D9E75; outline:none; }
+.members-bar select { border:1px solid #e2e8f0; border-radius:8px; padding:7px 10px; font-size:13px; outline:none; }
+.members-bar select:focus { border-color:#1D9E75; }
+.mtbl { width:100%; border-collapse:collapse; font-size:13px; }
+.mtbl th { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; padding:9px 16px; border-bottom:1px solid #e8ecf2; text-align:left; background:#fafbfc; }
+.mtbl td { padding:11px 16px; border-bottom:1px solid #f8fafc; vertical-align:middle; }
+.mtbl tbody tr:last-child td { border-bottom:none; }
+.mtbl tbody tr:hover td { background:#f8fafc; }
+.tag { display:inline-flex; align-items:center; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+.tag-teal   { background:#d1fae5; color:#065f46; }
+.tag-blue   { background:#dbeafe; color:#1e40af; }
+.tag-amber  { background:#fef3c7; color:#92400e; }
+.tag-red    { background:#fee2e2; color:#991b1b; }
+.tag-gray   { background:#f1f5f9; color:#475569; }
+.tag-purple { background:#ede9fe; color:#5b21b6; }
+.act-row { display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
+.act-row select, .act-row input[type=text] { border:1px solid #e2e8f0; border-radius:6px; padding:4px 8px; font-size:12px; outline:none; }
+.act-row select:focus, .act-row input:focus { border-color:#1D9E75; }
+.btn-xs { padding:4px 11px; border-radius:6px; font-size:12px; font-weight:600; border:none; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; white-space:nowrap; }
+.btn-save   { background:#1D9E75; color:#fff; }
+.btn-save:hover { background:#0F6E56; }
+.btn-ghost  { background:#f1f5f9; color:#475569; }
+.btn-ghost:hover { background:#e2e8f0; }
+.btn-danger { background:#fee2e2; color:#991b1b; }
+.btn-danger:hover { background:#fecaca; }
+.m-name  { font-weight:600; color:#0f172a; }
+.m-email { font-size:11px; color:#94a3b8; margin-top:2px; }
+</style>
+
+<div class="pg-wrap">
+  <div class="pg-head">
+    <div>
+      <h1 class="pg-title">👥 Team Members</h1>
+      <p class="pg-sub">Manage your organization's team and roles</p>
+    </div>
+    <a href="@Url.Action("Invite")" class="btn-primary">✉️ Invite Member</a>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-c"><p class="lbl">Total Members</p><p class="val">@(Model?.TotalMembers)</p></div>
+    <div class="stat-c"><p class="lbl">Active</p><p class="val" style="color:#065f46">@activeCount</p></div>
+    <div class="stat-c"><p class="lbl">Practitioners</p><p class="val" style="color:#5b21b6">@practCount</p></div>
+    <div class="stat-c"><p class="lbl">Inactive</p><p class="val" style="color:#94a3b8">@(members.Count - activeCount)</p></div>
+  </div>
+
+  <div class="members-card">
+    <div class="members-bar">
+      <input type="text" id="members-search" placeholder="Search by name, email, role…" oninput="mFilter()">
+      <select id="role-filter" onchange="mFilter()">
+        <option value="">All roles</option>
+        @foreach (var r in new[]{"org_owner","client_admin","manager","practitioner","support","member"})
+        { <option value="@r">@r</option> }
+      </select>
+      <select id="status-filter" onchange="mFilter()">
+        <option value="">All statuses</option>
+        <option value="active">active</option>
+        <option value="inactive">inactive</option>
+        <option value="pending">pending</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="mtbl">
+        <thead>
+          <tr>
+            <th>Member</th><th>Age / Sex</th><th>Role</th>
+            <th>Status</th><th>Subscription</th><th style="min-width:340px">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="members-tbody">
+          @if (!members.Any())
+          {
+            <tr><td colspan="6" style="text-align:center;padding:40px;color:#94a3b8">
+              No team members yet. <a href="@Url.Action("Invite")" style="color:#1D9E75">Invite someone →</a>
+            </td></tr>
+          }
+          @foreach (var m in members)
+          {
+            var roleCls = m.OrgRole switch {
+              "org_owner"=>"tag-teal","client_admin"=>"tag-blue",
+              "practitioner"=>"tag-purple","manager"=>"tag-amber",
+              "support"=>"tag-amber",_=>"tag-gray"
+            };
+            var statusCls = string.Equals(m.MembershipStatus,"active",StringComparison.OrdinalIgnoreCase)?"tag-teal":"tag-gray";
+            var tariffCls = m.SubscriptionStatus switch {
+              "active"or"trialing"=>"tag-teal","past_due"or"unpaid"=>"tag-red","canceled"=>"tag-amber",_=>"tag-gray"
+            };
+            var sr = (m.DisplayName+" "+m.Email+" "+(m.OrgRole??"")+" "+(m.MembershipStatus??"")).ToLower();
+            <tr data-s="@sr" data-role="@(m.OrgRole?.ToLower()??"")" data-status="@(m.MembershipStatus?.ToLower()??"")">
+              <td>
+                <div class="m-name">@m.DisplayName</div>
+                <div class="m-email">@m.Email</div>
+              </td>
+              <td style="color:#64748b">@(m.Age?.ToString()??"—") / @(string.IsNullOrEmpty(m.Sex)?"—":m.Sex)</td>
+              <td><span class="tag @roleCls">@m.OrgRole</span></td>
+              <td><span class="tag @statusCls">@m.MembershipStatus</span></td>
+              <td><span class="tag @tariffCls">@(string.IsNullOrEmpty(m.SubscriptionStatus)?"free":m.SubscriptionStatus)</span></td>
+              <td>
+                <div class="act-row">
+                  <form method="post" action="/admin/members/@m.UserId/profile" style="display:contents">
+                    @Html.AntiForgeryToken()
+                    <input type="text" name="fullName" value="@m.FullName" placeholder="Full name" style="width:100px">
+                    <button type="submit" class="btn-xs btn-save">Save</button>
+                  </form>
+                  <form method="post" action="/admin/members/@m.UserId/role" style="display:contents">
+                    @Html.AntiForgeryToken()
+                    <select name="newRole">
+                      @foreach (var r in new[]{"org_owner","client_admin","manager","practitioner","support","member"})
+                      {
+                        if (string.Equals(r,m.OrgRole,StringComparison.OrdinalIgnoreCase)){ <option value="@r" selected="selected">@r</option> }
+                        else { <option value="@r">@r</option> }
+                      }
+                    </select>
+                    <button type="submit" class="btn-xs btn-ghost">Role</button>
+                  </form>
+                  <a href="/admin/members/@m.UserId/profile" class="btn-xs btn-ghost">Profile</a>
+                  <form method="post" action="/admin/members/@m.UserId/remove" style="display:contents"
+                        onsubmit="return confirm('Remove @(m.DisplayName.Replace("'","\'")) from organization?')">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn-xs btn-danger">Remove</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+function mFilter() {
+  const q = document.getElementById('members-search').value.toLowerCase()
+  const rf = document.getElementById('role-filter').value.toLowerCase()
+  const sf = document.getElementById('status-filter').value.toLowerCase()
+  document.querySelectorAll('#members-tbody tr[data-s]').forEach(tr => {
+    tr.style.display = (
+      (!q || tr.dataset.s.includes(q)) &&
+      (!rf || tr.dataset.role === rf) &&
+      (!sf || tr.dataset.status === sf)
+    ) ? '' : 'none'
+  })
+}
+</script>
 
 @await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
 <div class="container-page">

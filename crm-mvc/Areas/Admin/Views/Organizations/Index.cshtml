@@ -2,140 +2,132 @@
 @{
     ViewData["Title"] = "Organizations";
     Layout = "_CrmLayout";
+    var orgs = Model?.Organizations ?? Array.Empty<OrganizationViewModel>();
+    var activeCount   = orgs.Count(o => string.Equals(o.Status,"active",StringComparison.OrdinalIgnoreCase));
+    var inactiveCount = orgs.Count(o => !string.Equals(o.Status,"active",StringComparison.OrdinalIgnoreCase));
 }
-
-@await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
-<div class="container-page">
-    <div class="page-header">
-        <div class="page-title-group">
-            <h1 class="page-title">Organizations</h1>
-            <p class="page-subtitle">Manage CRM organizations and permissions</p>
-        </div>
-        @if (Model?.IsSuperAdmin == true)
-        {
-            <a href="@Model.CreateOrgUrl" class="btn btn-primary">
-                <span class="btn-icon">➕</span> Create Organization
-            </a>
-        }
-    </div>
-
-    @{
-        var rows = (Model?.Organizations ?? Array.Empty<OrganizationViewModel>())
-            .Select(org => new EditableTableRowViewModel
-            {
-                RowKey = org.Id.ToString("N"),
-                Cells = new List<EditableTableCellViewModel>
-                {
-                    new() { Kind = EditableTableCellKind.Text, Text = org.Name },
-                    new() { Kind = EditableTableCellKind.Code, Text = org.Slug },
-                    new() { Kind = EditableTableCellKind.Text, Text = org.OwnerName },
-                    new()
-                    {
-                        Kind = EditableTableCellKind.Select,
-                        Name = "status",
-                        CssClass = "inline-input",
-                        Options = new List<EditableTableOptionViewModel>
-                        {
-                            new() { Value = "active", Label = "active", Selected = string.Equals(org.Status, "active", StringComparison.OrdinalIgnoreCase) },
-                            new() { Value = "inactive", Label = "inactive", Selected = string.Equals(org.Status, "inactive", StringComparison.OrdinalIgnoreCase) },
-                            new() { Value = "suspended", Label = "suspended", Selected = string.Equals(org.Status, "suspended", StringComparison.OrdinalIgnoreCase) },
-                        }
-                    },
-                },
-                PrimaryAction = new EditableTableActionViewModel
-                {
-                    ActionUrl = $"/admin/organizations/{org.Id}/status",
-                    SubmitLabel = "Save Status",
-                },
-                SecondaryActions = new List<EditableTableActionViewModel>
-                {
-                    new()
-                    {
-                        ActionUrl = $"/admin/organizations/{org.Id}",
-                        Method = "get",
-                        SubmitLabel = "Details",
-                        SubmitButtonClass = "btn btn-xs btn-secondary",
-                    },
-                    new()
-                    {
-                        ActionUrl = $"/admin/orgs/{org.Id}/switch?returnUrl=%2Fadmin%2Forganizations",
-                        Method = "get",
-                        SubmitLabel = "Switch",
-                    },
-                    new()
-                    {
-                        ActionUrl = "/admin/members",
-                        Method = "get",
-                        SubmitLabel = "Team",
-                    },
-                    new()
-                    {
-                        ActionUrl = $"/admin/orgs/{org.Id}/switch?returnUrl=%2Forganizations%2Fsettings%3Forg_id%3D{org.Id}",
-                        Method = "get",
-                        SubmitLabel = "Settings",
-                    },
-                }
-            })
-            .ToList();
-    }
-
-    <div id="orgs-table-wrap">
-    @await Html.PartialAsync("~/Views/Shared/Ui/_EditableTable.cshtml", new EditableTableViewModel
-    {
-        Title = "Organizations",
-        Columns = new[] { "Name", "Slug", "Owner", "Status" },
-        EmptyMessage = "You don't have access to any organizations yet.",
-        Rows = rows,
-    })
-    </div>
-
-    @if ((Model?.Organizations.Count ?? 0) == 0 && Model?.IsSuperAdmin == true)
-    {
-        <div class="empty-state" style="padding-top: 0;">
-            <a href="@Model.CreateOrgUrl" class="btn btn-primary btn-lg">Create Your First Organization</a>
-        </div>
-    }
-</div>
-
-<script>
-  voInitTable({ wrapId: 'orgs-table-wrap', pageSize: 20, searchPlaceholder: 'Search organizations…' });
-</script>
-
 <style>
-    .btn {
-        padding: 0.5rem 1rem;
-        border-radius: 4px;
-        font-size: 0.875rem;
-        cursor: pointer;
-        text-decoration: none;
-        transition: all 0.2s ease;
-        display: inline-block;
-    }
-
-    .btn-primary {
-        background: var(--color-primary);
-        color: white;
-    }
-
-    .btn-secondary {
-        background: var(--color-bg);
-        color: var(--color-text);
-        border: 1px solid var(--color-border);
-    }
-
-    .btn-outline {
-        background: transparent;
-        color: var(--color-primary);
-        border: 1px solid var(--color-primary);
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 3rem 1rem;
-    }
-
-    .empty-icon {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-    }
+.pg-wrap { padding:24px; max-width:1400px; }
+.pg-head { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.pg-title { font-size:20px; font-weight:800; color:#0f172a; margin:0; }
+.pg-sub   { font-size:13px; color:#64748b; margin:4px 0 0; }
+.btn-primary { background:#1D9E75; color:#fff; border:none; border-radius:8px; padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+.btn-primary:hover { background:#0F6E56; }
+.stat-row { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:20px; }
+.stat-c { background:#fff; border:1px solid #e8ecf2; border-radius:10px; padding:16px 20px; }
+.stat-c .lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; margin:0 0 4px; }
+.stat-c .val { font-size:28px; font-weight:900; color:#0f172a; margin:0; }
+.orgs-card { background:#fff; border:1px solid #e8ecf2; border-radius:12px; overflow:hidden; }
+.orgs-search { padding:10px 16px; border-bottom:1px solid #e8ecf2; background:#fafbfc; }
+.orgs-search input { width:100%; padding:7px 12px 7px 32px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%2394a3b8' stroke-width='2' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center; box-sizing:border-box; color:#0f172a; }
+.orgs-search input:focus { border-color:#1D9E75; outline:none; }
+.otbl { width:100%; border-collapse:collapse; font-size:13px; }
+.otbl th { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; padding:9px 16px; border-bottom:1px solid #e8ecf2; text-align:left; background:#fafbfc; }
+.otbl td { padding:12px 16px; border-bottom:1px solid #f8fafc; vertical-align:middle; }
+.otbl tbody tr:last-child td { border-bottom:none; }
+.otbl tbody tr:hover td { background:#f8fafc; }
+.tag { display:inline-flex; align-items:center; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+.tag-teal { background:#d1fae5; color:#065f46; }
+.tag-gray { background:#f1f5f9; color:#475569; }
+.tag-red  { background:#fee2e2; color:#991b1b; }
+.act-row { display:flex; gap:5px; flex-wrap:wrap; align-items:center; }
+.act-row select { border:1px solid #e2e8f0; border-radius:6px; padding:4px 8px; font-size:12px; outline:none; }
+.act-row select:focus { border-color:#1D9E75; }
+.btn-xs { padding:4px 11px; border-radius:6px; font-size:12px; font-weight:600; border:none; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
+.btn-save  { background:#1D9E75; color:#fff; }
+.btn-save:hover { background:#0F6E56; }
+.btn-ghost { background:#f1f5f9; color:#475569; }
+.btn-ghost:hover { background:#e2e8f0; }
+.org-name { font-weight:700; color:#0f172a; }
+.org-slug { font-size:11px; font-family:ui-monospace,monospace; color:#94a3b8; margin-top:2px; }
 </style>
+
+<div class="pg-wrap">
+  <div class="pg-head">
+    <div>
+      <h1 class="pg-title">🏢 Organizations</h1>
+      <p class="pg-sub">Manage CRM organizations and permissions</p>
+    </div>
+    @if (Model?.IsSuperAdmin == true)
+    {
+      <a href="@Model.CreateOrgUrl" class="btn-primary">➕ Create Organization</a>
+    }
+  </div>
+
+  <!-- Stats -->
+  <div class="stat-row">
+    <div class="stat-c"><p class="lbl">Total</p><p class="val">@orgs.Count</p></div>
+    <div class="stat-c"><p class="lbl">Active</p><p class="val" style="color:#065f46">@activeCount</p></div>
+    <div class="stat-c"><p class="lbl">Inactive / Suspended</p><p class="val" style="color:#94a3b8">@inactiveCount</p></div>
+  </div>
+
+  <!-- Table -->
+  <div class="orgs-card">
+    <div class="orgs-search">
+      <input type="text" id="orgs-search" placeholder="Search by name, slug, owner…" oninput="orgFilter(this.value)">
+    </div>
+    <div style="overflow-x:auto">
+      <table class="otbl">
+        <thead>
+          <tr>
+            <th>Organization</th>
+            <th>Owner</th>
+            <th>Status</th>
+            <th>Members</th>
+            <th style="min-width:280px">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="orgs-tbody">
+          @if (!orgs.Any())
+          {
+            <tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8">
+              @if (Model?.IsSuperAdmin == true)
+              { <span>No organizations yet. <a href="@Model.CreateOrgUrl" style="color:#1D9E75">Create one →</a></span> }
+              else { <span>You don't have access to any organizations yet.</span> }
+            </td></tr>
+          }
+          @foreach (var org in orgs)
+          {
+            var statusCls = org.Status?.ToLower() switch { "active"=>"tag-teal","suspended"=>"tag-red",_=>"tag-gray" };
+            var searchStr = (org.Name+" "+org.Slug+" "+(org.OwnerName??"")).ToLower();
+            <tr data-s="@searchStr">
+              <td>
+                <div class="org-name">@org.Name</div>
+                <div class="org-slug">/@org.Slug</div>
+              </td>
+              <td style="color:#475569">@(org.OwnerName ?? "—")</td>
+              <td><span class="tag @statusCls">@(org.Status ?? "unknown")</span></td>
+              <td style="color:#64748b;font-size:13px">—</td>
+              <td>
+                <form method="post" action="/admin/organizations/@org.Id/status" style="display:inline">
+                  @Html.AntiForgeryToken()
+                  <div class="act-row">
+                    <select name="status">
+                      @foreach (var st in new[]{"active","inactive","suspended"})
+                      {
+                        if (string.Equals(st,org.Status,StringComparison.OrdinalIgnoreCase)){ <option value="@st" selected="selected">@st</option> }
+                        else { <option value="@st">@st</option> }
+                      }
+                    </select>
+                    <button type="submit" class="btn-xs btn-save">Save</button>
+                    <a href="/admin/organizations/@org.Id" class="btn-xs btn-ghost">Details</a>
+                    <a href="/admin/orgs/@org.Id/switch?returnUrl=%2Fadmin%2Fmembers" class="btn-xs btn-ghost">Team</a>
+                    <a href="/admin/orgs/@org.Id/switch?returnUrl=%2Forganizations%2Fsettings" class="btn-xs btn-ghost">Settings</a>
+                  </div>
+                </form>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+function orgFilter(q) {
+  q = q.toLowerCase()
+  document.querySelectorAll('#orgs-tbody tr[data-s]').forEach(tr => {
+    tr.style.display = tr.dataset.s.includes(q) ? '' : 'none'
+  })
+}
+</script>

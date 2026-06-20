@@ -1,63 +1,184 @@
 @model OpsAuditPageViewModel
 @{
   ViewData["Title"] = "Activity Log";
+  var actionColors = new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase) {
+    {"create","tag-teal"},{"insert","tag-teal"},{"update","tag-blue"},{"edit","tag-blue"},
+    {"delete","tag-red"},{"remove","tag-red"},{"login","tag-purple"},{"logout","tag-gray"},
+    {"invite","tag-amber"},{"assign","tag-amber"},{"read","tag-gray"}
+  };
+  string TagColor(string action) {
+    foreach (var kv in actionColors) if (action.Contains(kv.Key, StringComparison.OrdinalIgnoreCase)) return kv.Value;
+    return "tag-gray";
+  }
 }
+<style>
+.al-wrap { padding:24px; max-width:1400px; }
+.al-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.al-title { font-size:20px; font-weight:800; color:#0f172a; margin:0; }
+.al-sub   { font-size:13px; color:#64748b; margin:4px 0 0; }
+.al-card  { background:#fff; border:1px solid #e8ecf2; border-radius:12px; overflow:hidden; }
+.al-filter {
+  display:flex; gap:10px; padding:14px 20px; border-bottom:1px solid #e8ecf2;
+  background:#fafbfc; flex-wrap:wrap; align-items:flex-end;
+}
+.al-filter label { display:flex; flex-direction:column; gap:4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#64748b; }
+.al-filter input, .al-filter select {
+  border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px;
+  font-size:13px; color:#0f172a; outline:none; min-width:120px;
+}
+.al-filter input:focus, .al-filter select:focus { border-color:#1D9E75; }
+.al-filter-btn {
+  padding:7px 16px; border-radius:8px; background:#1D9E75; color:#fff;
+  border:none; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; align-self:flex-end;
+}
+.al-filter-btn:hover { background:#0F6E56; }
 
-@await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
-@await Html.PartialAsync("~/Views/Shared/Partials/_PageHeader.cshtml", new PageHeaderViewModel {
-  Title = "Activity Log",
-  Subtitle = "Platform-wide audit events",
-  Eyebrow = "Ops"
-})
+.al-stats { display:grid; grid-template-columns:repeat(4,1fr); border-bottom:1px solid #e8ecf2; }
+.al-stat { padding:14px 20px; border-right:1px solid #e8ecf2; }
+.al-stat:last-child { border-right:none; }
+.al-stat-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; margin:0 0 4px; }
+.al-stat-val   { font-size:24px; font-weight:800; color:#0f172a; margin:0; }
 
-<form method="get" class="vo-filter-bar" style="margin-bottom:var(--vo-space-4)">
-  <label>
-    <span>Organization ID</span>
-    <input type="text" name="organizationId" value="@Model.OrganizationId" placeholder="Optional" />
-  </label>
-  <label>
-    <span>Limit</span>
-    <input type="number" name="limit" min="1" max="1000" value="@Model.Limit" />
-  </label>
-  <button type="submit" class="vo-btn vo-btn-primary">Apply</button>
-</form>
+.al-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+.al-tbl th { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; padding:9px 16px; border-bottom:1px solid #e8ecf2; text-align:left; background:#fafbfc; }
+.al-tbl td { padding:10px 16px; border-bottom:1px solid #f8fafc; vertical-align:middle; }
+.al-tbl tbody tr:last-child td { border-bottom:none; }
+.al-tbl tbody tr:hover td { background:#f8fafc; }
 
-<div id="audit-log-wrap">
-@await Html.PartialAsync("~/Views/Shared/Ui/_DataTableShell.cshtml", new DataTableShellViewModel {
-  Title = "Audit Events",
-  Columns = new[] { "When", "Action", "Entity", "Entity Id", "User", "Org" },
-  EmptyMessage = "No audit events found.",
-  Rows = Model.Logs
-    .Select(l => (IReadOnlyList<string>)new[] {
-      l.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"),
-      l.Action,
-      l.EntityType,
-      l.EntityId,
-      l.UserId?.ToString() ?? "-",
-      l.OrganizationId?.ToString() ?? "-",
-    })
-    .ToList()
-})
-</div>
+.tag { display:inline-flex; align-items:center; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; }
+.tag-teal   { background:#d1fae5; color:#065f46; }
+.tag-blue   { background:#dbeafe; color:#1e40af; }
+.tag-amber  { background:#fef3c7; color:#92400e; }
+.tag-red    { background:#fee2e2; color:#991b1b; }
+.tag-gray   { background:#f1f5f9; color:#475569; }
+.tag-purple { background:#ede9fe; color:#5b21b6; }
 
-<div style="display:flex; align-items:center; gap:12px; margin-top:4px; font-size:.82rem; opacity:.7;">
-  <span>Auto-refresh: <span id="audit-countdown">60</span>s</span>
-  <button type="button" class="vo-btn vo-btn-secondary" id="audit-refresh-now" style="padding:3px 10px; font-size:.8rem;">Refresh now</button>
+.mono { font-family:ui-monospace,monospace; font-size:11px; color:#94a3b8; cursor:pointer; border-bottom:1px dashed #cbd5e1; }
+.mono:hover { color:#1D9E75; }
+
+.al-refresh { display:flex; align-items:center; gap:12px; padding:10px 20px; border-top:1px solid #e8ecf2; background:#fafbfc; font-size:12px; color:#64748b; }
+.al-refresh-btn { padding:4px 12px; border-radius:6px; background:#f1f5f9; border:none; font-size:12px; cursor:pointer; color:#475569; }
+.al-refresh-btn:hover { background:#e2e8f0; }
+</style>
+
+<div class="al-wrap">
+  <div class="al-head">
+    <div>
+      <h1 class="al-title">📋 Activity Log</h1>
+      <p class="al-sub">Platform-wide audit events — super_admin only</p>
+    </div>
+    <a href="/ops" style="font-size:13px;color:#1D9E75;text-decoration:none;">← Ops Dashboard</a>
+  </div>
+
+  <div class="al-card">
+
+    <!-- Filter bar -->
+    <form method="get" class="al-filter">
+      <label>
+        Organization ID
+        <input type="text" name="organizationId" value="@Model.OrganizationId" placeholder="All orgs" style="width:220px">
+      </label>
+      <label>
+        Limit
+        <select name="limit">
+          @foreach (var lim in new[]{25,50,100,200,500})
+          {
+            if (lim == Model.Limit){ <option value="@lim" selected="selected">@lim rows</option> }
+            else { <option value="@lim">@lim rows</option> }
+          }
+        </select>
+      </label>
+      <button type="submit" class="al-filter-btn">Apply filter</button>
+    </form>
+
+    <!-- Stats strip -->
+    <div class="al-stats">
+      @{
+        var total    = Model.Logs.Count;
+        var creates  = Model.Logs.Count(l => l.Action.Contains("create", StringComparison.OrdinalIgnoreCase) || l.Action.Contains("insert", StringComparison.OrdinalIgnoreCase));
+        var updates  = Model.Logs.Count(l => l.Action.Contains("update", StringComparison.OrdinalIgnoreCase) || l.Action.Contains("edit", StringComparison.OrdinalIgnoreCase));
+        var deletes  = Model.Logs.Count(l => l.Action.Contains("delete", StringComparison.OrdinalIgnoreCase) || l.Action.Contains("remove", StringComparison.OrdinalIgnoreCase));
+        var uniqueUsers = Model.Logs.Select(l => l.UserId).Distinct().Count();
+      }
+      <div class="al-stat"><p class="al-stat-label">Total Events</p><p class="al-stat-val">@total</p></div>
+      <div class="al-stat"><p class="al-stat-label">Creates</p><p class="al-stat-val" style="color:#065f46">@creates</p></div>
+      <div class="al-stat"><p class="al-stat-label">Updates</p><p class="al-stat-val" style="color:#1e40af">@updates</p></div>
+      <div class="al-stat"><p class="al-stat-label">Unique Users</p><p class="al-stat-val">@uniqueUsers</p></div>
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x:auto">
+      <table class="al-tbl">
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>Action</th>
+            <th>Entity</th>
+            <th>Entity ID</th>
+            <th>User ID</th>
+            <th>Org ID</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (!Model.Logs.Any())
+          {
+            <tr><td colspan="6" style="text-align:center;padding:40px;color:#94a3b8">No audit events found</td></tr>
+          }
+          @foreach (var log in Model.Logs)
+          {
+            <tr>
+              <td style="white-space:nowrap;color:#64748b;font-size:12px">@log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+              <td><span class="tag @TagColor(log.Action)">@log.Action</span></td>
+              <td style="color:#475569;font-size:12px">@log.EntityType</td>
+              <td>
+                @if (!string.IsNullOrEmpty(log.EntityId))
+                {
+                  <span class="mono" onclick="navigator.clipboard.writeText('@log.EntityId').then(()=>this.textContent='copied!').catch(()=>{})" title="@log.EntityId">
+                    @(log.EntityId.Length > 12 ? log.EntityId[..8]+"…" : log.EntityId)
+                  </span>
+                }
+                else { <span style="color:#cbd5e1">—</span> }
+              </td>
+              <td>
+                @if (log.UserId.HasValue)
+                {
+                  <span class="mono" onclick="navigator.clipboard.writeText('@log.UserId').then(()=>this.textContent='copied!').catch(()=>{})" title="@log.UserId">
+                    @log.UserId.Value.ToString()[..8]…
+                  </span>
+                }
+                else { <span style="color:#cbd5e1">—</span> }
+              </td>
+              <td>
+                @if (log.OrganizationId.HasValue)
+                {
+                  <span class="mono" title="@log.OrganizationId">@log.OrganizationId.Value.ToString()[..8]…</span>
+                }
+                else { <span style="color:#cbd5e1">—</span> }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Auto-refresh -->
+    <div class="al-refresh">
+      <span>Auto-refresh in <strong id="al-countdown">60</strong>s</span>
+      <button class="al-refresh-btn" id="al-refresh-btn">Refresh now</button>
+      <span style="margin-left:auto;color:#94a3b8">Showing @Model.Logs.Count events</span>
+    </div>
+  </div>
 </div>
 
 <script>
-  voInitTable({ wrapId: 'audit-log-wrap', pageSize: 50, searchPlaceholder: 'Search events, users, actions…' });
-  voInitCopyUuid('audit-log-wrap');
-
-  let countdown = 60;
-  const countEl = document.getElementById('audit-countdown');
-  const interval = setInterval(() => {
-    countdown--;
-    if (countEl) countEl.textContent = countdown;
-    if (countdown <= 0) { clearInterval(interval); window.location.reload(); }
-  }, 1000);
-  document.getElementById('audit-refresh-now')?.addEventListener('click', () => {
-    clearInterval(interval);
-    window.location.reload();
-  });
+let countdown = 60
+const countEl = document.getElementById('al-countdown')
+const iv = setInterval(() => {
+  countdown--
+  if (countEl) countEl.textContent = countdown
+  if (countdown <= 0) { clearInterval(iv); window.location.reload() }
+}, 1000)
+document.getElementById('al-refresh-btn')?.addEventListener('click', () => {
+  clearInterval(iv); window.location.reload()
+})
 </script>
