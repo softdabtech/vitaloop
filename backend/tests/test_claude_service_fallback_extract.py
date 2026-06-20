@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 from app.services import claude_service
 from app.services.claude_service import (
     _analysis_source_cv,
@@ -30,46 +28,12 @@ def test_fallback_extract_supports_cyrillic_lines():
 
 
 # ---------------------------------------------------------------------------
-# _chat_completions_path routing tests
+# Direct OpenAI routing tests
 # ---------------------------------------------------------------------------
 
-def test_path_do_serverless_inference():
-    """DO Serverless Inference base URL (.../v1) -> path must be chat/completions."""
-    with patch.object(claude_service.settings, "digitalocean_claude_api_key", "key"):
-        with patch.object(claude_service.settings, "digitalocean_claude_base_url", "https://inference.do-ai.run/v1"):
-            with patch.object(claude_service.settings, "routellm_api_key", ""):
-                with patch.object(claude_service.settings, "abacus_ai_api_key", ""):
-                    path = _chat_completions_path()
-    assert path == "chat/completions"
-
-
-def test_path_do_agent_valid_subdomain():
-    """Customer-specific DO Agent URL -> path must be api/v1/chat/completions."""
-    with patch.object(claude_service.settings, "digitalocean_claude_api_key", "key"):
-        with patch.object(claude_service.settings, "digitalocean_claude_base_url", "https://my-agent-abc.agents.do-ai.run"):
-            with patch.object(claude_service.settings, "routellm_api_key", ""):
-                with patch.object(claude_service.settings, "abacus_ai_api_key", ""):
-                    path = _chat_completions_path()
-    assert path == "api/v1/chat/completions"
-
-
-def test_path_generic_do_agent_url_still_returns_api_path():
-    """Generic agents.do-ai.run (no subdomain) returns api/v1/... path; error is logged separately."""
-    with patch.object(claude_service.settings, "digitalocean_claude_api_key", "key"):
-        with patch.object(claude_service.settings, "digitalocean_claude_base_url", "https://agents.do-ai.run"):
-            with patch.object(claude_service.settings, "routellm_api_key", ""):
-                with patch.object(claude_service.settings, "abacus_ai_api_key", ""):
-                    path = _chat_completions_path()
-    assert path == "api/v1/chat/completions"
-
-
-def test_path_standard_openai_compatible():
-    """Standard OpenAI-compatible base URL (/v1) -> path is chat/completions."""
-    with patch.object(claude_service.settings, "digitalocean_claude_api_key", ""):
-        with patch.object(claude_service.settings, "routellm_api_key", "routellm-key"):
-            with patch.object(claude_service.settings, "routellm_base_url", "https://routellm.abacus.ai/v1"):
-                with patch.object(claude_service.settings, "abacus_ai_api_key", ""):
-                    path = _chat_completions_path()
+def test_path_uses_direct_openai_chat_completions():
+    """The backend only uses the direct OpenAI-compatible endpoint."""
+    path = _chat_completions_path()
     assert path == "chat/completions"
 
 

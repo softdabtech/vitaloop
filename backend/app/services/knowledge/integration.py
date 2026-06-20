@@ -48,6 +48,61 @@ def biomarkers_to_knowledge_lab_results(biomarkers: List[Dict[str, Any]]) -> Dic
     return lab_results
 
 
+def _age_band(age: Any) -> str | None:
+    try:
+        value = int(age)
+    except (TypeError, ValueError):
+        return None
+    if value < 18:
+        return "under_18"
+    if value < 30:
+        return "18_29"
+    if value < 40:
+        return "30_39"
+    if value < 50:
+        return "40_49"
+    if value < 60:
+        return "50_59"
+    if value < 70:
+        return "60_69"
+    return "70_plus"
+
+
+def _bmi_band(height_cm: Any, weight_kg: Any) -> str | None:
+    try:
+        height_m = float(height_cm) / 100
+        weight = float(weight_kg)
+    except (TypeError, ValueError):
+        return None
+    if height_m <= 0 or weight <= 0:
+        return None
+    bmi = weight / (height_m * height_m)
+    if bmi < 18.5:
+        return "underweight"
+    if bmi < 25:
+        return "healthy_range"
+    if bmi < 30:
+        return "overweight"
+    return "obesity_range"
+
+
+def build_deidentified_person_avatar(profile: Dict[str, Any] | None) -> Dict[str, Any]:
+    profile = profile if isinstance(profile, dict) else {}
+    goals = profile.get("goals")
+    safe_goals = [
+        str(item).strip().lower()
+        for item in (goals if isinstance(goals, list) else [])
+        if str(item).strip()
+    ][:10]
+    avatar = {
+        "age_band": _age_band(profile.get("age")),
+        "sex": str(profile.get("sex") or "").strip().lower() or None,
+        "bmi_band": _bmi_band(profile.get("height_cm"), profile.get("weight_kg")),
+        "goals": safe_goals,
+    }
+    return {key: value for key, value in avatar.items() if value not in (None, [], "")}
+
+
 async def evaluate_biomarkers_with_knowledge(
     *,
     biomarkers: List[Dict[str, Any]],
@@ -63,6 +118,17 @@ async def evaluate_biomarkers_with_knowledge(
     if not lab_results:
         return None
 
+    profile: Dict[str, Any] = {}
+    if user_id:
+        try:
+            profile = await supabase.get_user_profile(user_id)
+        except Exception as exc:
+            logger.warning(
+                "knowledge_person_avatar_unavailable user_id=%s error=%s",
+                user_id,
+                exc,
+            )
+
     payload = {
         "lab_results": lab_results,
         "symptoms": symptoms or [],
@@ -70,6 +136,8 @@ async def evaluate_biomarkers_with_knowledge(
             "upload_id": upload_id,
             "source": "biomarker_analyzer",
             "data_age_days": 0,
+            "person_avatar": build_deidentified_person_avatar(profile),
+            "cohort_learning_allowed": bool(profile.get("knowledge_learning_consent")),
         },
     }
     try:

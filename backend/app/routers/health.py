@@ -1,7 +1,6 @@
 import asyncio
 import time
 import httpx
-from urllib.parse import urlparse
 from fastapi import APIRouter
 from app.config import settings
 from app.services import supabase_service as svc
@@ -301,11 +300,6 @@ async def _synthetic_llm_call(timeout_seconds: float = 15.0) -> dict:
 
     if not result["configured"]:
         result["reason"] = "missing_llm_configuration"
-        return result
-
-    host = (urlparse(base_url).hostname or "").lower()
-    if host == "agents.do-ai.run":
-        result["reason"] = "invalid_do_agent_url: missing subdomain"
         return result
 
     from app.services.claude_service import _chat_completions_path as _svc_path
