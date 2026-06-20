@@ -665,6 +665,7 @@ export default function Landing() {
   const reduced = useReducedMotion()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showBackToTop, setShowBackToTop] = useState(false)
+  const [symptomModalOpen, setSymptomModalOpen] = useState(false)
   const { user, loading: authLoading } = useAuth()
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
@@ -676,6 +677,38 @@ export default function Landing() {
     }
     setTimeout(() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' }), mobileMenuOpen ? 280 : 0)
   }
+
+  // Show symptom modal after 10s OR when scrolling to "What Premium unlocks"
+  useEffect(() => {
+    if (user) return // don't show to logged-in users
+    const shown = sessionStorage.getItem('vo:symptom-prompt-shown')
+    if (shown) return
+
+    const show = () => {
+      if (sessionStorage.getItem('vo:symptom-prompt-shown')) return
+      sessionStorage.setItem('vo:symptom-prompt-shown', '1')
+      setSymptomModalOpen(true)
+      trackPublicFunnelEvent('symptom_prompt_shown', {})
+    }
+
+    // Trigger 1: 10 seconds timer
+    const timer = setTimeout(show, 10000)
+
+    // Trigger 2: scroll to "What Premium unlocks" section
+    const premiumSection = document.querySelector('[data-section="premium"]')
+    let observer
+    if (premiumSection) {
+      observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) { show(); observer.disconnect() }
+      }, { threshold: 0.2 })
+      observer.observe(premiumSection)
+    }
+
+    return () => {
+      clearTimeout(timer)
+      observer?.disconnect()
+    }
+  }, [user])
 
   useEffect(() => {
     const onScroll = () => setShowBackToTop(window.scrollY > 560)
@@ -1159,7 +1192,7 @@ export default function Landing() {
           <HowItWorksTimeline />
         </section>
 
-        <section className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
+        <section data-section="premium" className="mx-auto w-full max-w-[1240px] px-4 py-14 sm:px-6 md:py-20">
           <motion.div {...fadeUp(reduced)} className="mb-7 text-center">
             <motion.h2
               className="text-[28px] font-semibold tracking-tight md:text-[34px]"
@@ -1369,6 +1402,103 @@ export default function Landing() {
       </main>
 
       <Footer />
+
+      {/* ── Symptom Check Prompt Modal ── */}
+      <AnimatePresence>
+        {symptomModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[9999] flex items-end justify-center sm:items-center"
+            style={{ background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setSymptomModalOpen(false) }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 24, scale: 0.97 }}
+              transition={{ duration: 0.25, ease: [0.2, 0.65, 0.3, 1] }}
+              className="relative w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl overflow-hidden"
+            >
+              {/* Teal gradient header */}
+              <div style={{ background: 'linear-gradient(135deg,#04342C,#0F6E56,#1D9E75)', padding: '28px 28px 24px' }}>
+                <button
+                  onClick={() => setSymptomModalOpen(false)}
+                  style={{
+                    position: 'absolute', top: 16, right: 16,
+                    width: 32, height: 32, borderRadius: 8, border: 'none',
+                    background: 'rgba(255,255,255,0.15)', color: '#fff',
+                    cursor: 'pointer', fontSize: 16, display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}
+                >✕</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 10,
+                    background: 'rgba(255,255,255,0.15)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 20,
+                  }}>💬</div>
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+                    letterSpacing: '.1em', color: 'rgba(255,255,255,0.7)' }}>
+                    Quick symptom check
+                  </span>
+                </div>
+                <h2 style={{ color: '#fff', fontSize: 22, fontWeight: 800, lineHeight: 1.2, margin: 0 }}>
+                  Feel off, but not sure<br/>what to check?
+                </h2>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: '24px 28px 28px' }}>
+                <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.6, margin: '0 0 20px' }}>
+                  Start by describing your symptoms — VITALOOP will help you figure out what to look at and which lab markers are most relevant.
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                  {[
+                    { icon: '😴', text: 'Constant fatigue, low energy' },
+                    { icon: '🌡️', text: 'Inflammation or pain signals' },
+                    { icon: '🧠', text: 'Brain fog or mood changes' },
+                  ].map(({ icon, text }) => (
+                    <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#334155' }}>
+                      <span style={{ fontSize: 18 }}>{icon}</span>
+                      <span>{text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => { setSymptomModalOpen(false); navigate('/symptom-intake') }}
+                  style={{
+                    width: '100%', background: '#1D9E75', color: '#fff',
+                    border: 'none', borderRadius: 12, padding: '14px',
+                    fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                    marginBottom: 10, transition: 'background .15s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#0F6E56'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#1D9E75'}
+                >
+                  Start symptom check →
+                </button>
+
+                <button
+                  onClick={() => setSymptomModalOpen(false)}
+                  style={{
+                    width: '100%', background: 'transparent', color: '#94a3b8',
+                    border: 'none', padding: '8px', fontSize: 13,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Maybe later
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
