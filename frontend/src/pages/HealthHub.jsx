@@ -30,13 +30,21 @@ export default function HealthHub() {
           '@context': 'https://schema.org',
           '@type': 'CollectionPage',
           name: 'VITALOOP Health Intelligence Hub',
+          '@id': 'https://vitaloop.today/health-hub/#collection',
           url: 'https://vitaloop.today/health-hub/',
           description: 'Evidence-aware guides about symptoms, blood tests, and biomarker context.',
-          hasPart: HEALTH_HUB_ARTICLES.map((article) => ({
-            '@type': 'Article',
-            name: article.title,
-            url: `https://vitaloop.today/health-hub/${article.slug}/`,
-          })),
+          hasPart: [
+            ...HEALTH_HUB_CLUSTERS.map((cluster) => ({
+              '@type': 'CollectionPage',
+              name: cluster.title,
+              url: `https://vitaloop.today/health-hub/topics/${cluster.slug}/`,
+            })),
+            ...HEALTH_HUB_ARTICLES.map((article) => ({
+              '@type': 'Article',
+              name: article.title,
+              url: `https://vitaloop.today/health-hub/${article.slug}/`,
+            })),
+          ],
         }]}
       />
       <PageHeader />
@@ -108,9 +116,9 @@ export default function HealthHub() {
                     <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-emerald-700 shadow-sm"><Icon className="h-6 w-6" /></span>
                     {cluster.comingSoon && <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-bold text-slate-500">Coming next</span>}
                   </div>
-                  <h3 className="mt-6 text-2xl font-black">{cluster.title}</h3>
+                  <h3 className="mt-6 text-2xl font-black"><Link to={`/health-hub/topics/${cluster.slug}/`} className="hover:text-emerald-800">{cluster.title}</Link></h3>
                   <p className="mt-3 max-w-xl leading-7 text-slate-600">{cluster.description}</p>
-                  {!cluster.comingSoon && <p className="mt-6 text-sm font-bold text-emerald-800">{cluster.articleSlugs.length} connected guides available</p>}
+                  {!cluster.comingSoon && <Link to={`/health-hub/topics/${cluster.slug}/`} className="mt-6 inline-flex items-center text-sm font-bold text-emerald-800">{cluster.articleSlugs.length} connected guides <ArrowRight className="ml-2 h-4 w-4" /></Link>}
                 </article>
               )
             })}

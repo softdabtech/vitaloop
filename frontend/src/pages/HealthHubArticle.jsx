@@ -3,7 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import Footer from '../components/landing/Footer.jsx'
 import { PageHeader } from '../components/landing/PageHeader.jsx'
 import Seo from '../components/Seo.jsx'
-import { getHealthHubArticle, HEALTH_HUB_ARTICLES } from '../data/healthHubContent.js'
+import { getClusterForArticle, getHealthHubArticle } from '../data/healthHubContent.js'
 import { gaEvent } from '../lib/analytics.js'
 
 export default function HealthHubArticle() {
@@ -12,16 +12,20 @@ export default function HealthHubArticle() {
   if (!article) return <Navigate to="/404.html" replace />
 
   const Icon = article.icon
+  const cluster = getClusterForArticle(article)
   const related = article.related.map(getHealthHubArticle).filter(Boolean)
   const articleSchema = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: article.title,
     description: article.description,
+    articleSection: cluster?.title || article.cluster,
+    image: 'https://vitaloop.today/og-cover-2026-05.jpg',
     datePublished: '2026-06-20',
     dateModified: '2026-06-20',
-    author: { '@type': 'Organization', name: 'VITALOOP Editorial Team', url: 'https://vitaloop.today/authors/vitaloop-editorial-team/' },
+    author: { '@type': 'Organization', '@id': 'https://vitaloop.today/authors/vitaloop-editorial-team/#author', name: 'VITALOOP Editorial Team', url: 'https://vitaloop.today/authors/vitaloop-editorial-team/' },
     publisher: { '@id': 'https://vitaloop.today/#organization' },
+    isPartOf: cluster ? { '@id': `https://vitaloop.today/health-hub/topics/${cluster.slug}/` } : { '@id': 'https://vitaloop.today/health-hub/#collection' },
     mainEntityOfPage: `https://vitaloop.today/health-hub/${article.slug}/`,
   }
   const breadcrumbSchema = {
@@ -30,7 +34,8 @@ export default function HealthHubArticle() {
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://vitaloop.today/' },
       { '@type': 'ListItem', position: 2, name: 'Health Intelligence Hub', item: 'https://vitaloop.today/health-hub/' },
-      { '@type': 'ListItem', position: 3, name: article.title, item: `https://vitaloop.today/health-hub/${article.slug}/` },
+      ...(cluster ? [{ '@type': 'ListItem', position: 3, name: cluster.title, item: `https://vitaloop.today/health-hub/topics/${cluster.slug}/` }] : []),
+      { '@type': 'ListItem', position: cluster ? 4 : 3, name: article.title, item: `https://vitaloop.today/health-hub/${article.slug}/` },
     ],
   }
 
@@ -46,6 +51,7 @@ export default function HealthHubArticle() {
               <Link to="/health-hub/" className="inline-flex items-center text-sm font-bold text-slate-500 hover:text-emerald-700">
                 <ArrowLeft className="mr-2 h-4 w-4" /> Health Intelligence Hub
               </Link>
+              {cluster && <p className="mt-4 text-sm font-bold"><Link to={`/health-hub/topics/${cluster.slug}/`} className="text-emerald-700 hover:underline">{cluster.title}</Link></p>}
               <div className="mt-10 flex items-center gap-3">
                 <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700"><Icon className="h-6 w-6" /></span>
                 <div>
@@ -125,7 +131,7 @@ export default function HealthHubArticle() {
 
         <section className="border-t border-slate-200 bg-white">
           <div className="mx-auto max-w-[1120px] px-4 py-14 sm:px-6">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Continue the fatigue cluster</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Continue the {cluster?.title || 'topic'} cluster</p>
             <div className="mt-6 grid gap-4 md:grid-cols-3">
               {related.map((item) => (
                 <Link key={item.slug} to={`/health-hub/${item.slug}/`} className="rounded-2xl border border-slate-200 p-5 transition hover:border-emerald-300 hover:shadow-lg">

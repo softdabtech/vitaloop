@@ -26,6 +26,7 @@ const Help = lazy(() => import('./pages/Help.jsx'))
 const SymptomIntake = lazy(() => import('./pages/SymptomIntake.jsx'))
 const HealthHub = lazy(() => import('./pages/HealthHub.jsx'))
 const HealthHubArticle = lazy(() => import('./pages/HealthHubArticle.jsx'))
+const HealthHubCluster = lazy(() => import('./pages/HealthHubCluster.jsx'))
 const EditorialPolicy = lazy(() => import('./pages/EditorialPolicy.jsx'))
 const MedicalReviewPolicy = lazy(() => import('./pages/MedicalReviewPolicy.jsx'))
 const EditorialTeam = lazy(() => import('./pages/EditorialTeam.jsx'))
@@ -729,6 +730,7 @@ export default function App() {
           <Route path="/help/:articleId" element={<Help />} />
           <Route path="/symptom-intake" element={<SymptomIntake />} />
           <Route path="/health-hub" element={<HealthHub />} />
+          <Route path="/health-hub/topics/:clusterSlug" element={<HealthHubCluster />} />
           <Route path="/health-hub/:articleSlug" element={<HealthHubArticle />} />
           <Route path="/editorial-policy" element={<EditorialPolicy />} />
           <Route path="/medical-review-policy" element={<MedicalReviewPolicy />} />

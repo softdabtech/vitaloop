@@ -6,6 +6,8 @@ const PRODUCT_LINKS = [
   { label: 'Pricing', href: '/#pricing' },
   { label: 'Help Center', href: '/help' },
   { label: 'Health Intelligence Hub', href: '/health-hub/' },
+  { label: 'Fatigue & low energy', href: '/health-hub/topics/fatigue-low-energy/' },
+  { label: 'Blood test biomarkers', href: '/health-hub/topics/blood-test-biomarkers/' },
 ]
 
 const COMPANY_LINKS = [
