@@ -109,8 +109,8 @@ export default function ExampleReport() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
-        title="Example Lab Report Dashboard | VITALOOP"
-        description="Preview how VITALOOP turns lab PDFs into structured biomarker results, dashboard priorities, progress tracking, and weekly health execution."
+        title="AI Blood Test Analysis Example Report | VITALOOP"
+        description="Preview an AI blood test analysis with normalized biomarkers, plain-English explanations, priority findings, discussion points, and progress tracking."
         path="/example-report"
       />
 

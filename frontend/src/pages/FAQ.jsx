@@ -52,7 +52,7 @@ const FAQ_ITEMS = [
     questions: [
       {
         q: 'What\'s the difference between Free and Premium?',
-        a: 'Free plan: 3 uploads/year, basic analysis. Premium plan: unlimited uploads, longitudinal tracking, AI health coaching, weekly check-ins, doctor sharing, and trend analytics.',
+        a: 'Free includes one active upload, a basic biomarker summary, and the core dashboard. Premium adds unlimited uploads, personalized action plans, weekly check-ins, priority insights, and progress tracking.',
       },
       {
         q: 'Can I cancel my subscription anytime?',
@@ -60,7 +60,7 @@ const FAQ_ITEMS = [
       },
       {
         q: 'What\'s included in the protocol recommendations?',
-        a: 'Personalized supplement rankings (with links to buy), nutrition changes tied to your biomarkers, lifestyle adjustments, retest timing, and expected timelines for improvement.',
+        a: 'Your action plan can organize supplement, nutrition, lifestyle, adherence, and retest discussion points around your available symptom and biomarker context. Review major changes with a qualified clinician.',
       },
       {
         q: 'Do you have a team/family plan?',
@@ -73,19 +73,19 @@ const FAQ_ITEMS = [
     questions: [
       {
         q: 'How do I share with my doctor?',
-        a: 'Generate a secure share link from your dashboard, set an expiration date, and choose the access level (view, comment, or export). Send the link to your doctor — no account needed.',
+        a: 'Use your structured results and progress summaries to prepare for a clinician conversation. Practitioner collaboration features depend on your plan and workspace setup.',
       },
       {
         q: 'Can my doctor add comments to my results?',
-        a: 'Yes, if you grant "comment" access. They can add annotations, recommendations, and flag priority items. You\'ll get notifications when they comment.',
+        a: 'Practitioner workspaces can review client context and follow-up progress. VITALOOP does not replace your clinician\'s own medical record or communication system.',
       },
       {
         q: 'What\'s the Practitioner plan?',
-        a: 'The Practitioner plan is $29/month and lets doctors manage up to 50 patients, batch-send recommendations, track adherence, and generate clinical reports automatically.',
+        a: 'The Practitioner plan starts at $29/month and adds client workspaces, practitioner CRM workflows, assignments, progress review, and structured reporting tools.',
       },
       {
         q: 'Do you integrate with EMR systems?',
-        a: 'Yes. We support HL7 v2.x and FHIR APIs for modern EMR systems like Epic, Cerner, and Allscripts. Enterprise plans include custom integrations.',
+        a: 'Direct EMR integrations are not part of the standard self-service product today. Organizations can contact us to discuss integration requirements and available options.',
       },
     ],
   },
@@ -115,7 +115,7 @@ const FAQ_ITEMS = [
     questions: [
       {
         q: 'How accurate are your recommendations?',
-        a: 'Recommendations are evidence-based and personalized to your specific biomarkers and history. However, they\'re not medical advice. Always discuss major changes with your practitioner.',
+        a: 'VITALOOP provides educational decision support based on the information available to it and may make mistakes. It does not diagnose conditions or replace professional medical judgment.',
       },
       {
         q: 'Can I chat with an AI about my results?',
@@ -123,11 +123,11 @@ const FAQ_ITEMS = [
       },
       {
         q: 'How does the protocol engine work?',
-        a: 'It analyzes your abnormal markers, cross-biomarker correlations, and your history to recommend the most impactful interventions. Supplements are ranked by expected impact.',
+        a: 'It organizes out-of-range markers, related patterns, symptoms, and available history into prioritized educational actions and follow-up questions. Clinical decisions remain with you and your qualified practitioner.',
       },
       {
         q: 'Does the protocol adapt over time?',
-        a: 'Yes. Your weekly check-ins (sleep, energy, mood) feed back into the system. The AI adjusts recommendations between lab tests, not just after them.',
+        a: 'Weekly check-ins keep sleep, energy, symptoms, and adherence connected to your plan. New labs and follow-up context can then inform the next review cycle.',
       },
     ],
   },
@@ -148,7 +148,7 @@ const FAQ_ITEMS = [
       },
       {
         q: 'What\'s your refund policy?',
-        a: 'We offer a 30-day money-back guarantee for annual plans. Monthly plans can be cancelled anytime before the next billing date.',
+        a: 'Subscriptions can be cancelled before the next billing date. Access continues through the paid period; review the current Terms of Service for refund conditions.',
       },
     ],
   },
@@ -165,8 +165,8 @@ export default function FAQ() {
   return (
     <>
       <Seo
-        title="FAQ - Symptom-First Health Workflow | VITALOOP"
-        description="Answers about symptom-first intake, lab uploads, privacy, plans, and how VITALOOP supports clinician conversations and weekly protocol tracking."
+        title="AI Blood Test Analysis FAQ | VITALOOP"
+        description="Answers about symptom intake, blood test uploads, biomarker explanations, privacy, pricing, practitioner workflows, and VITALOOP safety limits."
         path="/faq"
         schemas={[
           {

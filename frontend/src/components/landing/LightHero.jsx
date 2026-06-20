@@ -46,15 +46,15 @@ export function LightHero() {
           <div className="space-y-8">
             {/* Eyebrow badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 border border-teal-200 rounded-full">
-              <span className="text-teal-600 font-semibold text-sm">AI LAB INTELLIGENCE</span>
+              <span className="text-teal-600 font-semibold text-sm">AI BLOOD TEST ANALYSIS + SYMPTOM CONTEXT</span>
             </div>
 
             {/* Headline */}
             <h1 className="text-[44px] font-bold leading-[1.04] text-slate-900 sm:text-5xl lg:text-6xl">
-              Feel off, but don't know
+              Understand your symptoms
               <br />
               <span className="bg-gradient-to-r from-teal-600 to-teal-500 bg-clip-text text-transparent">
-                what to check?
+                and blood test results
               </span>
             </h1>
 
@@ -63,7 +63,7 @@ export function LightHero() {
               <span className="block">Start with symptoms. Upload labs when you have them.</span>
               <span className="block font-semibold text-slate-900">From scattered signals to an explainable health report.</span>
               <span className="block text-base text-slate-500">
-                VITALOOP reads your results, highlights the patterns that matter, and turns them into a priority list, retest plan, and weekly action loop.
+                VITALOOP explains biomarker results in plain language and organizes priority findings, clinician discussion points, retest timing, and weekly follow-through.
               </span>
             </p>
 
@@ -112,8 +112,8 @@ export function LightHero() {
                 <div className="text-sm text-slate-600">Free plan includes one lab upload</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-slate-900">100%</div>
-                <div className="text-sm text-slate-600">Personalized to your labs</div>
+                <div className="text-2xl font-bold text-slate-900">One loop</div>
+                <div className="text-sm text-slate-600">Symptoms, labs, actions, and retests</div>
               </div>
             </div>
           </div>

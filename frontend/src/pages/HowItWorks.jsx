@@ -72,8 +72,8 @@ export default function HowItWorks() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
-        title="How VITALOOP Works: Symptoms -> Labs -> Action"
-        description="See how VITALOOP starts with symptoms, guides lab direction, analyzes uploaded results, and adapts your protocol through weekly feedback."
+        title="How AI Blood Test Analysis Works | VITALOOP"
+        description="See how VITALOOP connects symptom intake, lab discussion guidance, AI blood test analysis, biomarker explanations, and weekly progress tracking."
         path="/how-it-works"
         schemas={[
           {
@@ -130,10 +130,10 @@ export default function HowItWorks() {
             Health Intelligence Hub
           </motion.p>
           <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 text-5xl font-bold tracking-[-0.03em] text-slate-900 md:text-6xl">
-            See the full symptom-first workflow
+            From symptoms and blood tests to a clearer next step
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-            This page shows how VITALOOP moves from symptom intake to lab interpretation and then into a practical protocol loop that improves over time.
+            Start with what you feel, understand which lab categories may be worth discussing, upload results, and keep every next step connected over time.
           </motion.p>
 
           <div className="mt-8 flex flex-wrap gap-3">

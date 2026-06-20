@@ -33,9 +33,9 @@ const FEATURES = [
   },
   {
     icon: Sparkles,
-    title: 'Smart Protocol Engine',
-    description: 'Get personalized supplement, nutrition, and lifestyle recommendations ranked by predicted impact on your specific biomarkers.',
-    details: ['Personalized rankings', 'Evidence-based recs', 'Adherence tracking', 'Protocol adaptation'],
+    title: 'Personalized Action Plan',
+    description: 'Turn symptom and biomarker context into organized nutrition, supplement, lifestyle, and retest discussion points.',
+    details: ['Prioritized actions', 'Plain-language rationale', 'Adherence tracking', 'Retest planning'],
   },
   {
     icon: HeartPulse,
@@ -51,45 +51,45 @@ const FEATURES = [
   },
   {
     icon: Zap,
-    title: 'AI Health Coaching',
-    description: 'Chat with AI-powered guidance personalized to your biomarkers. Get answers to questions about your results in real-time.',
-    details: ['Natural language Q&A', 'Biomarker context', 'Evidence-based answers', 'Protocol guidance'],
+    title: 'Contextual AI Guidance',
+    description: 'Ask questions about your results and receive educational explanations grounded in your available symptom and lab context.',
+    details: ['Natural-language Q&A', 'Biomarker context', 'Educational explanations', 'Safety reminders'],
   },
   {
     icon: BarChart3,
-    title: 'Advanced Analytics',
-    description: 'Deep dive into your biomarker correlations, patterns, and predictive indicators. Understand what drives your health outcomes.',
-    details: ['Correlation analysis', 'Predictive scoring', 'Pattern detection', 'Risk assessment'],
+    title: 'Trends and Progress',
+    description: 'Compare repeated uploads and weekly check-ins to see how biomarkers, symptoms, and adherence change over time.',
+    details: ['Timeline views', 'Retest comparisons', 'Symptom tracking', 'Progress summaries'],
   },
   {
     icon: Lock,
-    title: 'Clinician Sharing',
-    description: 'Securely share your results with practitioners. They can add annotations and collaborate on protocol adjustments.',
-    details: ['Token-based access', 'Expiring links', 'Comment threads', 'Audit logs'],
+    title: 'Practitioner Collaboration',
+    description: 'Keep results and progress organized so a qualified practitioner can review the same structured context with you.',
+    details: ['Readable summaries', 'Client workspaces', 'Progress context', 'Clear follow-up'],
   },
   {
     icon: FileText,
-    title: 'Clinical Reports',
-    description: 'Generate beautiful, practitioner-ready PDF reports of your results, trends, and protocol recommendations.',
-    details: ['Auto-generated PDFs', 'FHIR export', 'Trending visualizations', 'Professional formatting'],
+    title: 'Structured Reports',
+    description: 'Review normalized values, priority markers, explanations, and next-step questions in a consistent report format.',
+    details: ['Normalized values', 'Priority findings', 'Trend visualizations', 'Discussion points'],
   },
   {
     icon: Users,
     title: 'Practitioner Tools',
-    description: 'Manage multiple patients in one dashboard. Annotate results, batch-send recommendations, and track adherence easily.',
-    details: ['Patient management', 'Batch operations', 'Annotation system', 'Performance metrics'],
+    description: 'Manage client workspaces, review symptom and lab context, assign actions, and monitor follow-up progress.',
+    details: ['Client management', 'Assignment workflows', 'Progress review', 'Workspace controls'],
   },
   {
     icon: Shield,
-    title: 'Enterprise Security',
-    description: 'HIPAA-compliant, encrypted storage. Control who accesses your data with granular permissions and audit logs.',
-    details: ['HIPAA compliance', 'AES-256 encryption', 'Access controls', 'Compliance audits'],
+    title: 'Privacy and Access Controls',
+    description: 'Sensitive information is protected with encrypted transport, access controls, and isolated user workspaces.',
+    details: ['TLS in transit', 'Encrypted storage', 'Access controls', 'Audit visibility'],
   },
   {
     icon: CheckCircle2,
-    title: 'Social Sharing',
-    description: 'Share your health wins with friends. Track streaks, earn achievements, and stay motivated with the community.',
-    details: ['Social cards', 'Achievement badges', 'Streak tracking', 'Friend comparison'],
+    title: 'Repeatable Health Loop',
+    description: 'Keep symptoms, lab uploads, action plans, check-ins, and retests connected instead of starting over each time.',
+    details: ['Persistent context', 'Weekly check-ins', 'Retest cycles', 'Next-step continuity'],
   },
 ]
 
@@ -99,8 +99,9 @@ export default function Features() {
   return (
     <>
       <Seo
-        title="Features - Symptom-First Health Workflow | VITALOOP"
-        description="Explore how VITALOOP connects symptom intake, lab interpretation, protocol execution, and weekly adaptation in one continuous workflow."
+        title="AI Blood Test Analysis Features | VITALOOP"
+        description="Explore symptom intake, AI blood test analysis, biomarker explanations, personalized action plans, weekly check-ins, and progress tracking."
+        path="/features"
       />
 
       <div className="min-h-screen bg-white">
@@ -127,13 +128,13 @@ export default function Features() {
           >
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2">
               <Sparkles size={16} className="text-emerald-600" />
-              <span className="text-sm font-semibold text-slate-900">12 Powerful Features</span>
+              <span className="text-sm font-semibold text-slate-900">One Connected Health Workflow</span>
             </div>
             <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 mb-6 leading-tight">
-              Everything You Need for a Symptom-First Health Loop
+              Understand Symptoms and Blood Tests in One Place
             </h1>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              From guided symptom intake to lab interpretation and adaptive protocol execution, VITALOOP keeps your health workflow structured and consistent.
+              Organize how you feel, understand blood test results, prepare better questions, and track what changes over time.
             </p>
           </motion.div>
         </div>
@@ -181,10 +182,10 @@ export default function Features() {
             className="rounded-[34px] bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 p-12 sm:p-16 text-center"
           >
             <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4">
-              Ready to take control of your health?
+              Ready for a clearer next step?
             </h2>
             <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
-              Start with a free account and upload your first lab report. No credit card required.
+              Start with symptoms or upload a blood test report. No credit card required.
             </p>
             <button
               onClick={() => navigate('/login')}

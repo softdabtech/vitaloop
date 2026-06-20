@@ -271,8 +271,8 @@ export default function ForNutritionists() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
-        title="AI Lab Analysis for Nutritionists | VITALOOP"
-        description="Manage clients with a symptom-first workflow, interpret lab reports, and run adaptive nutrition protocols in one practitioner workspace."
+        title="AI Blood Test Analysis for Nutritionists | VITALOOP"
+        description="Organize client symptoms, review blood test results, prepare nutrition protocols, and track follow-up progress in one practitioner workspace."
         path="/for-nutritionists"
         schemas={[
           {

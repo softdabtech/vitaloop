@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { ALL_ARTICLE_IDS, HELP_ARTICLES, HELP_SECTIONS } from '../src/data/helpArticles.js'
 
 const DIST_DIR = path.resolve(process.cwd(), 'dist')
 const BASE_URL = 'https://vitaloop.today'
@@ -8,8 +9,8 @@ const DEFAULT_IMAGE = `${BASE_URL}/og-cover-2026-05.jpg`
 const routes = [
   {
     path: '/',
-    title: 'Find the Cause, Not Just the Symptom | VITALOOP',
-    description: 'Start with symptoms, understand what may be driving them, see which lab markers are worth checking, and turn results into a clear health action plan.',
+    title: 'AI Blood Test Analysis & Symptom Checker | VITALOOP',
+    description: 'Start with symptoms or upload blood test results. Get clear biomarker explanations, lab discussion guidance, and a health action plan you can track.',
     priority: '1.0',
     changefreq: 'weekly',
     text: [
@@ -20,8 +21,8 @@ const routes = [
   },
   {
     path: '/how-it-works',
-    title: 'How VITALOOP Works: Symptoms, Labs, Action Plan',
-    description: 'See how VITALOOP moves from symptom intake to lab direction, biomarker interpretation, personalized action plans, and weekly progress tracking.',
+    title: 'How AI Blood Test Analysis Works | VITALOOP',
+    description: 'See how VITALOOP connects symptom intake, lab discussion guidance, AI blood test analysis, biomarker explanations, and weekly progress tracking.',
     priority: '0.9',
     changefreq: 'monthly',
     text: [
@@ -32,8 +33,8 @@ const routes = [
   },
   {
     path: '/symptom-intake',
-    title: 'Symptom Intake and Lab Direction | VITALOOP',
-    description: 'Answer a few symptom questions and see which lab markers may be worth discussing with a qualified healthcare professional.',
+    title: 'Free Symptom Checker & Lab Discussion Guide | VITALOOP',
+    description: 'Organize fatigue, sleep, brain fog, hair loss, digestion, and other symptoms. Get lab categories and questions to discuss with a clinician.',
     priority: '0.9',
     changefreq: 'weekly',
     text: [
@@ -43,9 +44,21 @@ const routes = [
     ],
   },
   {
+    path: '/features',
+    title: 'AI Blood Test Analysis Features | VITALOOP',
+    description: 'Explore symptom intake, AI blood test analysis, biomarker explanations, personalized action plans, weekly check-ins, and progress tracking.',
+    priority: '0.8',
+    changefreq: 'monthly',
+    text: [
+      'Explore the VITALOOP symptom-first health workflow.',
+      'Connect symptom intake, lab interpretation, action protocols, weekly check-ins, and retesting in one continuous loop.',
+      'VITALOOP supports clearer health conversations and does not replace qualified medical care.',
+    ],
+  },
+  {
     path: '/example-report',
-    title: 'Example Health Report | VITALOOP',
-    description: 'Preview how VITALOOP explains biomarker priorities, symptom context, recommendations, and progress without replacing a clinician.',
+    title: 'AI Blood Test Analysis Example Report | VITALOOP',
+    description: 'Preview an AI blood test analysis with normalized biomarkers, plain-English explanations, priority findings, discussion points, and progress tracking.',
     priority: '0.8',
     changefreq: 'monthly',
     text: [
@@ -55,8 +68,8 @@ const routes = [
   },
   {
     path: '/for-nutritionists',
-    title: 'VITALOOP for Nutritionists and Preventive Health Practitioners',
-    description: 'Manage client symptoms, lab results, biomarker trends, protocols, and progress tracking in one practitioner workflow.',
+    title: 'AI Blood Test Analysis for Nutritionists | VITALOOP',
+    description: 'Organize client symptoms, review blood test results, prepare nutrition protocols, and track follow-up progress in one practitioner workspace.',
     priority: '0.8',
     changefreq: 'monthly',
     text: [
@@ -66,8 +79,8 @@ const routes = [
   },
   {
     path: '/faq',
-    title: 'VITALOOP FAQ',
-    description: 'Answers about symptoms, lab uploads, biomarker interpretation, privacy, safety, pricing, and how VITALOOP should be used with clinicians.',
+    title: 'AI Blood Test Analysis FAQ | VITALOOP',
+    description: 'Answers about symptom intake, blood test uploads, biomarker explanations, privacy, pricing, practitioner workflows, and VITALOOP safety limits.',
     priority: '0.7',
     changefreq: 'monthly',
     text: [
@@ -78,7 +91,7 @@ const routes = [
   },
   {
     path: '/for-investors',
-    title: 'VITALOOP for Investors',
+    title: 'VITALOOP Investor Overview | AI Health Platform',
     description: 'Learn about VITALOOP as a HealthTech platform connecting symptom intake, lab interpretation, protocols, and recurring health loops.',
     priority: '0.6',
     changefreq: 'monthly',
@@ -88,7 +101,7 @@ const routes = [
   },
   {
     path: '/help',
-    title: 'VITALOOP Help Center',
+    title: 'VITALOOP Help Center | Product & Account Support',
     description: 'Get help with account access, uploading lab reports, understanding results, subscriptions, privacy, and using the VITALOOP cabinet.',
     priority: '0.6',
     changefreq: 'monthly',
@@ -107,34 +120,92 @@ const routes = [
   {
     path: '/privacy-policy',
     title: 'Privacy Policy | VITALOOP',
-    description: 'Read how VITALOOP handles privacy, account data, lab uploads, analytics, security, and user rights.',
+    description: 'Learn how VITALOOP collects, processes, stores, protects, exports, and deletes symptom data, blood test reports, biomarker results, and account information.',
     priority: '0.3',
     changefreq: 'yearly',
     text: ['VITALOOP privacy policy covering account data, lab uploads, analytics, security, and user rights.'],
   },
   {
     path: '/about',
-    title: 'About VITALOOP',
-    description: 'VITALOOP helps people make better health decisions by connecting symptoms, lab results, context, and progress over time.',
+    title: 'About VITALOOP | Symptom & Lab Health Intelligence',
+    description: 'Learn why VITALOOP connects symptom intake, AI blood test analysis, biomarker explanations, and longitudinal progress in one health workflow.',
     priority: '0.6',
     changefreq: 'monthly',
     text: ['About VITALOOP and the product mission: clearer health decisions from symptoms, labs, and progress over time.'],
   },
 ]
 
+function helpBlockText(block) {
+  if (block.text) return block.text
+  if (!Array.isArray(block.items)) return ''
+  return block.items.map((item) => (
+    typeof item === 'string'
+      ? item
+      : [item.title, item.body, item.label, item.desc].filter(Boolean).join(' ')
+  )).join(' ')
+}
+
+function truncateAtWord(value, maxLength) {
+  if (value.length <= maxLength) return value
+  const shortened = value.slice(0, maxLength + 1)
+  return `${shortened.slice(0, shortened.lastIndexOf(' ')).replace(/[?:,;.-]+$/, '')}…`
+}
+
+function helpDescription(article) {
+  const firstText = article.content.map(helpBlockText).find(Boolean) || ''
+  const suffix = ' Find clear steps, safety context, and product guidance in the VITALOOP Help Center.'
+  return truncateAtWord(`${firstText}${suffix}`, 155)
+}
+
+for (const section of HELP_SECTIONS) {
+  routes.push({
+    path: `/help/section/${section.id}`,
+    title: `${section.title} | VITALOOP Help Center`,
+    description: `Browse VITALOOP help articles about ${section.title.toLowerCase()}, product use, blood test uploads, privacy, account access, and practical troubleshooting.`,
+    priority: '0.5',
+    changefreq: 'monthly',
+    text: section.articles
+      .map((articleId) => HELP_ARTICLES[articleId]?.title)
+      .filter(Boolean),
+  })
+}
+
+for (const articleId of ALL_ARTICLE_IDS) {
+  const article = HELP_ARTICLES[articleId]
+  const articleText = article.content.map(helpBlockText).filter(Boolean)
+  routes.push({
+    path: `/help/${articleId}`,
+    title: truncateAtWord(`${article.title} | VITALOOP Help`, 60),
+    description: helpDescription(article),
+    priority: '0.5',
+    changefreq: 'monthly',
+    text: articleText.slice(0, 6),
+  })
+}
+
 const privateRoutes = [
   '/login',
   '/dashboard',
   '/upload',
+  '/lab-plan',
+  '/avatar',
+  '/assignments',
   '/lab-results',
   '/settings',
   '/health-profile',
   '/subscription',
   '/billing-history',
+  '/help-center',
   '/onboarding',
   '/questionnaire',
   '/check-ins',
   '/insights',
+  '/ops',
+  '/admin/dashboard',
+  '/crm/programs',
+  '/crm/clients',
+  '/crm/practitioners',
+  '/crm/activity',
 ]
 
 function escapeHtml(value) {
@@ -151,7 +222,7 @@ function upsertTag(html, pattern, replacement) {
 
 function renderStaticRoot(route) {
   const paragraphs = route.text.map((item) => `<p>${escapeHtml(item)}</p>`).join('\n          ')
-  return `<div id="root"><main data-crawler-content="true" aria-hidden="true" style="display: none !important; visibility: hidden; max-width: 760px; margin: 0 auto; padding: 48px 20px; font-family: Inter, Arial, sans-serif; color: #0f172a;">
+  return `<div id="root"><main data-crawler-content="true" style="max-width: 760px; margin: 0 auto; padding: 48px 20px; font-family: Inter, Arial, sans-serif; color: #0f172a;">
         <h1>${escapeHtml(route.title.replace(' | VITALOOP', ''))}</h1>
         <p>${escapeHtml(route.description)}</p>
         ${paragraphs}
@@ -159,7 +230,8 @@ function renderStaticRoot(route) {
 }
 
 function renderHtml(baseHtml, route, { noindex = false } = {}) {
-  const canonical = `${BASE_URL}${route.path === '/' ? '/' : route.path}`
+  const canonicalPath = route.path === '/' ? '/' : `${route.path.replace(/\/+$/, '')}/`
+  const canonical = `${BASE_URL}${canonicalPath}`
   let html = baseHtml
   html = html.replace(/<html\b[^>]*>/i, '<html lang="en" prefix="og: https://ogp.me/ns#">')
   html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(route.title)}</title>`)
@@ -224,6 +296,8 @@ Disallow: /api/
 Disallow: /dashboard
 Disallow: /dashboard/
 Disallow: /upload
+Disallow: /lab-plan
+Disallow: /avatar
 Disallow: /lab-results
 Disallow: /lab-results/
 Disallow: /results/
@@ -234,6 +308,7 @@ Disallow: /check-ins
 Disallow: /insights
 Disallow: /health-profile
 Disallow: /billing-history
+Disallow: /help-center
 Disallow: /subscription
 Disallow: /onboarding
 Disallow: /questionnaire
@@ -247,7 +322,7 @@ Sitemap: ${BASE_URL}/sitemap.xml
 
   const today = new Date().toISOString().slice(0, 10)
   const urls = routes.map((route) => `  <url>
-    <loc>${BASE_URL}${route.path === '/' ? '/' : route.path}</loc>
+    <loc>${BASE_URL}${route.path === '/' ? '/' : `${route.path.replace(/\/+$/, '')}/`}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>${route.changefreq}</changefreq>
     <priority>${route.priority}</priority>${route.path === '/' ? `
@@ -270,12 +345,14 @@ ${urls}
 
 ## Official URLs
 - Website: ${BASE_URL}/
-- How it works: ${BASE_URL}/how-it-works
-- Example report: ${BASE_URL}/example-report
-- FAQ: ${BASE_URL}/faq
-- Practitioners: ${BASE_URL}/for-nutritionists
-- Privacy policy: ${BASE_URL}/privacy-policy
-- Terms: ${BASE_URL}/terms
+- How it works: ${BASE_URL}/how-it-works/
+- Features: ${BASE_URL}/features/
+- Symptom intake: ${BASE_URL}/symptom-intake/
+- Example report: ${BASE_URL}/example-report/
+- FAQ: ${BASE_URL}/faq/
+- Practitioners: ${BASE_URL}/for-nutritionists/
+- Privacy policy: ${BASE_URL}/privacy-policy/
+- Terms: ${BASE_URL}/terms/
 
 ## What VITALOOP does
 - Starts with symptoms and health context.

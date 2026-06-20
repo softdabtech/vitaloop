@@ -66,7 +66,7 @@ export default function Terms() {
         </div>
         <div>
           <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>7. Contact</h2>
-          <p>Legal inquiries: <a href="mailto:legal@vitaloop.com" style={{ color: 'var(--teal-500)' }}>legal@vitaloop.com</a></p>
+          <p>Legal inquiries: <a href="mailto:legal@vitaloop.today" style={{ color: 'var(--teal-500)' }}>legal@vitaloop.today</a></p>
         </div>
       </section>
 
