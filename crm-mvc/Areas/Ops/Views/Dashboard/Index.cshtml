@@ -1,453 +1,751 @@
 @model OpsDashboardViewModel
-
 @{
   ViewData["Title"] = "Ops Dashboard";
+  var globalRoleOptions = new[] { "end_user","support","practitioner","client_admin","super_admin" };
+  var tariffOptions     = new[] { "free","active","trialing","past_due","canceled","incomplete","unpaid" };
+  var practitioners = Model.GlobalUsers.Where(u => string.Equals(u.GlobalRole,"practitioner",StringComparison.OrdinalIgnoreCase)).ToList();
+  var problemUsers  = Model.GlobalUsers.Where(u => new[]{"past_due","canceled","unpaid"}.Contains(u.SubscriptionStatus,StringComparer.OrdinalIgnoreCase)).ToList();
 }
 
-@await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
-@await Html.PartialAsync("~/Views/Shared/Partials/_PageHeader.cshtml", new PageHeaderViewModel { Title = "Ops Dashboard", Subtitle = "Global user visibility — super_admin only", Eyebrow = "Ops" })
+<style>
+:root {
+  --c-bg: #f4f6f9;
+  --c-card: #ffffff;
+  --c-border: #e8ecf2;
+  --c-text: #0f172a;
+  --c-sub: #64748b;
+  --c-muted: #94a3b8;
+  --c-teal: #1D9E75;
+  --c-teal-d: #0F6E56;
+  --c-red: #ef4444;
+  --c-amber: #f59e0b;
+  --c-blue: #3b82f6;
+  --c-purple: #8b5cf6;
+}
 
-<nav class="vo-quick-actions" aria-label="Quick actions">
-  <a class="vo-quick-action" href="/ops">
-    <span class="vo-quick-action-icon">👤</span> Global Users
-  </a>
-  <a class="vo-quick-action" href="/ops/activity">
-    <span class="vo-quick-action-icon">🧾</span> Activity Log
-  </a>
-  <a class="vo-quick-action" href="/admin/organizations">
-    <span class="vo-quick-action-icon">🏢</span> All Organizations
-  </a>
-</nav>
+/* Root */
+.crm-wrap { display:flex; flex-direction:column; gap:0; background:var(--c-bg); min-height:100vh; padding:0; }
 
-<section class="vo-grid two-up" style="margin-bottom: var(--vo-space-6);">
-  <div id="ops-stat-total-users">@await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Total Users", Value = Model.TotalUsers.ToString(), Trend = "All organizations", Tone = "teal" })</div>
-  <div id="ops-stat-total-organizations">@await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Organizations", Value = Model.TotalOrganizations.ToString(), Trend = "Multi-org scope", Tone = "default" })</div>
-  <div id="ops-stat-active-programs">@await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "Active Programs", Value = Model.ActivePrograms.ToString(), Trend = "Active assignments", Tone = "default" })</div>
-  <div id="ops-stat-new-registrations">@await Html.PartialAsync("~/Views/Shared/Ui/_StatCard.cshtml", new StatCardViewModel { Label = "New Registrations (24h)", Value = Model.NewRegistrations24h.ToString(), Trend = "Last 24 hours", Tone = "default" })</div>
-</section>
+/* ═══ KPI STRIP ══════════════════════════════════ */
+.kpi-strip {
+  display:grid; grid-template-columns:repeat(4,1fr);
+  gap:0; border-bottom:1px solid var(--c-border);
+  background:var(--c-card);
+}
+.kpi-cell {
+  padding:20px 28px; border-right:1px solid var(--c-border);
+  position:relative; cursor:default;
+}
+.kpi-cell:last-child { border-right:none; }
+.kpi-cell::after {
+  content:''; position:absolute; bottom:0; left:0; right:0; height:3px;
+  background:var(--kc,#e2e8f0); transform:scaleX(0);
+  transition:transform .25s; transform-origin:left;
+}
+.kpi-cell:hover::after { transform:scaleX(1); }
+.kpi-cell--teal   { --kc:var(--c-teal); }
+.kpi-cell--blue   { --kc:var(--c-blue); }
+.kpi-cell--amber  { --kc:var(--c-amber); }
+.kpi-cell--red    { --kc:var(--c-red); }
+.kpi-label { font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--c-muted); margin:0 0 6px; }
+.kpi-val   { font-size:38px; font-weight:900; line-height:1; color:var(--c-text); margin:0 0 4px; }
+.kpi-sub   { font-size:12px; color:var(--c-muted); margin:0; }
 
-<section class="vo-panel" style="margin-bottom: var(--vo-space-6);">
-  <div style="display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:8px;">
-    <div>
-      <h3 style="margin:0;">Rate Limiter Runtime</h3>
-      <p id="ops-last-updated" style="margin:6px 0 0 0; opacity:.7; font-size:.85rem;">Last updated: @Model.LastUpdatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</p>
+/* ═══ PAGE GRID ══════════════════════════════════ */
+.crm-grid {
+  display:grid; grid-template-columns:1fr 340px;
+  gap:0; flex:1; align-items:start;
+}
+.crm-main  { padding:24px; display:flex; flex-direction:column; gap:20px; }
+.crm-aside { padding:20px 16px; display:flex; flex-direction:column; gap:16px;
+             border-left:1px solid var(--c-border); position:sticky; top:60px;
+             max-height:calc(100vh - 60px); overflow-y:auto; background:#fafbfc; }
+
+/* ═══ PANEL CARD ═════════════════════════════════ */
+.panel {
+  background:var(--c-card); border:1px solid var(--c-border);
+  border-radius:12px; overflow:hidden;
+}
+.panel-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 20px; border-bottom:1px solid var(--c-border);
+  background:#fff;
+}
+.panel-title { font-size:13px; font-weight:700; color:var(--c-text); margin:0; display:flex; align-items:center; gap:8px; }
+.panel-badge {
+  font-size:11px; font-weight:700; padding:2px 10px;
+  border-radius:20px; background:#f1f5f9; color:var(--c-sub);
+}
+.panel-badge--red    { background:#fee2e2; color:#991b1b; }
+.panel-badge--green  { background:#dcfce7; color:#166534; }
+.panel-badge--amber  { background:#fef3c7; color:#92400e; }
+
+/* ═══ SEARCH ═════════════════════════════════════ */
+.tbl-search {
+  padding:10px 16px; border-bottom:1px solid var(--c-border);
+  background:#fafbfc;
+}
+.tbl-search input {
+  width:100%; padding:7px 12px 7px 32px;
+  border:1px solid var(--c-border); border-radius:8px;
+  font-size:13px; color:var(--c-text); background:#fff;
+  outline:none; box-sizing:border-box;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%2394a3b8' stroke-width='2' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:10px center;
+}
+.tbl-search input:focus { border-color:var(--c-teal); }
+
+/* ═══ TABLE ══════════════════════════════════════ */
+.crm-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+.crm-tbl thead tr { background:#fafbfc; }
+.crm-tbl th {
+  font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--c-muted); padding:9px 16px; border-bottom:1px solid var(--c-border);
+  text-align:left; white-space:nowrap;
+}
+.crm-tbl td { padding:11px 16px; border-bottom:1px solid #f8fafc; vertical-align:middle; }
+.crm-tbl tbody tr:last-child td { border-bottom:none; }
+.crm-tbl tbody tr:hover td { background:#f8fafc; }
+
+.user-name { font-weight:600; color:var(--c-text); font-size:13px; }
+.user-email { font-size:11px; color:var(--c-muted); margin-top:2px; }
+
+/* ═══ BADGES ═════════════════════════════════════ */
+.tag {
+  display:inline-flex; align-items:center;
+  padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600;
+  white-space:nowrap; line-height:1.6;
+}
+.tag-teal   { background:#d1fae5; color:#065f46; }
+.tag-blue   { background:#dbeafe; color:#1e40af; }
+.tag-amber  { background:#fef3c7; color:#92400e; }
+.tag-red    { background:#fee2e2; color:#991b1b; }
+.tag-gray   { background:#f1f5f9; color:#475569; }
+.tag-purple { background:#ede9fe; color:#5b21b6; }
+.tag-dot::before { content:'●'; margin-right:4px; font-size:8px; vertical-align:1px; }
+
+/* ═══ INLINE ACTIONS ═════════════════════════════ */
+.act-row { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.act-row select, .act-row input[type=text] {
+  border:1px solid var(--c-border); border-radius:6px; padding:4px 8px;
+  font-size:12px; color:var(--c-text); background:#fff; outline:none;
+}
+.act-row select:focus, .act-row input[type=text]:focus { border-color:var(--c-teal); }
+.btn-xs {
+  padding:4px 11px; border-radius:6px; font-size:12px; font-weight:600;
+  border:none; cursor:pointer; white-space:nowrap; line-height:1.5;
+  transition:background .15s;
+}
+.btn-save   { background:var(--c-teal); color:#fff; }
+.btn-save:hover { background:var(--c-teal-d); }
+.btn-ghost  { background:#f1f5f9; color:var(--c-sub); }
+.btn-ghost:hover { background:#e2e8f0; }
+.btn-danger { background:#fee2e2; color:#991b1b; }
+.btn-danger:hover { background:#fecaca; }
+
+/* ═══ UUID copy ══════════════════════════════════ */
+.uuid {
+  font-family:ui-monospace,monospace; font-size:11px; color:var(--c-muted);
+  cursor:pointer; border-bottom:1px dashed #cbd5e1; transition:color .15s;
+}
+.uuid:hover { color:var(--c-teal); }
+
+/* ═══ ASIDE WIDGETS ══════════════════════════════ */
+.widget { background:var(--c-card); border:1px solid var(--c-border); border-radius:10px; overflow:hidden; }
+.widget-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px; border-bottom:1px solid var(--c-border);
+}
+.widget-title { font-size:12px; font-weight:700; color:var(--c-text); margin:0; }
+
+/* Status dots */
+.dot-list { padding:12px 16px; display:flex; flex-direction:column; gap:10px; }
+.dot-row  { display:flex; align-items:center; justify-content:space-between; font-size:12px; color:var(--c-sub); }
+.dot-right { display:flex; align-items:center; gap:6px; }
+.dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.dot-green  { background:#22c55e; box-shadow:0 0 5px #22c55e60; }
+.dot-red    { background:#ef4444; }
+.dot-amber  { background:#f59e0b; }
+.dot-gray   { background:#cbd5e1; }
+
+/* Activity feed */
+.feed-list { max-height:280px; overflow-y:auto; }
+.feed-item { display:flex; gap:10px; padding:9px 14px; border-bottom:1px solid #f8fafc; font-size:12px; }
+.feed-item:last-child { border-bottom:none; }
+.feed-icon { font-size:15px; flex-shrink:0; margin-top:1px; }
+.feed-action { font-weight:600; color:var(--c-text); }
+.feed-meta { color:var(--c-muted); font-size:11px; margin-top:2px; }
+
+/* Quick links */
+.qlink-list { padding:8px 0; }
+.qlink {
+  display:flex; align-items:center; gap:8px;
+  padding:9px 16px; font-size:13px; color:var(--c-teal);
+  text-decoration:none; border-bottom:1px solid #f8fafc;
+  transition:background .12s;
+}
+.qlink:last-child { border-bottom:none; }
+.qlink:hover { background:#f0fdf4; }
+
+/* ═══ SECTION TABS ═══════════════════════════════ */
+.section-tabs { display:flex; gap:0; border-bottom:1px solid var(--c-border); padding:0 20px; background:#fafbfc; }
+.stab {
+  padding:10px 16px; font-size:12px; font-weight:600; color:var(--c-muted);
+  border-bottom:2px solid transparent; cursor:pointer; white-space:nowrap;
+  transition:color .15s, border-color .15s;
+}
+.stab.active, .stab:hover { color:var(--c-teal); border-bottom-color:var(--c-teal); }
+
+/* ═══ USER MODAL ═════════════════════════════════ */
+.user-modal-overlay {
+  display:none; position:fixed; inset:0; background:rgba(15,23,42,.6);
+  backdrop-filter:blur(4px); z-index:9000; align-items:center; justify-content:center;
+}
+.user-modal-overlay.open { display:flex; }
+.user-modal {
+  background:#fff; border-radius:16px; width:90%; max-width:720px;
+  max-height:85vh; overflow-y:auto; padding:28px;
+  box-shadow:0 32px 64px rgba(15,23,42,.24);
+}
+.user-modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.user-modal-close {
+  width:32px; height:32px; border-radius:8px; border:none;
+  background:#f1f5f9; cursor:pointer; font-size:16px; display:flex;
+  align-items:center; justify-content:center;
+}
+.user-modal-close:hover { background:#e2e8f0; }
+.modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px 24px; }
+.modal-field label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--c-muted); display:block; margin-bottom:4px; }
+.modal-field span { font-size:14px; color:var(--c-text); font-weight:500; }
+
+@@media (max-width:1100px) {
+  .crm-grid { grid-template-columns:1fr; }
+  .crm-aside { position:static; max-height:none; border-left:none; border-top:1px solid var(--c-border); }
+  .kpi-strip { grid-template-columns:repeat(2,1fr); }
+}
+@@media (max-width:640px) { .kpi-strip { grid-template-columns:1fr 1fr; } }
+</style>
+
+<div class="crm-wrap">
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi-cell kpi-cell--teal">
+      <p class="kpi-label">Total Users</p>
+      <p class="kpi-val">@Model.TotalUsers</p>
+      <p class="kpi-sub">All organizations</p>
     </div>
-    <div style="display:flex; align-items:center; gap:12px;">
-      <span id="ops-api-latency" style="font-size:.82rem;"></span>
-      <button id="ops-refresh-button" type="button" class="vo-btn vo-btn-secondary">Refresh now</button>
+    <div class="kpi-cell kpi-cell--blue">
+      <p class="kpi-label">Organizations</p>
+      <p class="kpi-val">@Model.TotalOrganizations</p>
+      <p class="kpi-sub">Multi-org scope</p>
+    </div>
+    <div class="kpi-cell kpi-cell--amber">
+      <p class="kpi-label">Active Programs</p>
+      <p class="kpi-val">@Model.ActivePrograms</p>
+      <p class="kpi-sub">Active assignments</p>
+    </div>
+    <div class="kpi-cell kpi-cell--red">
+      <p class="kpi-label">New Registrations (24h)</p>
+      <p class="kpi-val">@Model.NewRegistrations24h</p>
+      <p class="kpi-sub">Last 24 hours</p>
     </div>
   </div>
-  @if (!Model.RuntimeReadiness.Available)
-  {
-    <p style="margin:0; opacity:.8;">Runtime readiness feed is unavailable.</p>
-  }
-  else
-  {
-    var redisReachable = Model.RuntimeReadiness.RedisReachable.HasValue
-      ? (Model.RuntimeReadiness.RedisReachable.Value ? "yes" : "no")
-      : "n/a";
-    <div class="vo-grid three-up">
-      <div>
-        <div style="font-size:.8rem; opacity:.7;">Backend</div>
-        <strong id="ops-runtime-backend">@Model.RuntimeReadiness.LimiterBackend</strong>
-      </div>
-      <div>
-        <div style="font-size:.8rem; opacity:.7;">Limiter OK</div>
-        <strong id="ops-runtime-limiter-ok">@(Model.RuntimeReadiness.LimiterOk ? "yes" : "no")</strong>
-      </div>
-      <div>
-        <div style="font-size:.8rem; opacity:.7;">Overall runtime OK</div>
-        <strong id="ops-runtime-ok">@(Model.RuntimeReadiness.Ok ? "yes" : "no")</strong>
-      </div>
-      <div>
-        <div style="font-size:.8rem; opacity:.7;">Redis required</div>
-        <strong id="ops-runtime-redis-required">@(Model.RuntimeReadiness.RedisRequired ? "yes" : "no")</strong>
-      </div>
-      <div>
-        <div style="font-size:.8rem; opacity:.7;">Redis configured</div>
-        <strong id="ops-runtime-redis-configured">@(Model.RuntimeReadiness.RedisConfigured ? "yes" : "no")</strong>
-      </div>
-      <div>
-        <div style="font-size:.8rem; opacity:.7;">Redis reachable</div>
-        <strong id="ops-runtime-redis-reachable">@redisReachable</strong>
-      </div>
-    </div>
-    <p id="ops-runtime-summary" style="margin:10px 0 0 0; opacity:.8;">Reason: @Model.RuntimeReadiness.RedisReason | Missing checks: @Model.RuntimeReadiness.MissingCount | Warnings: @Model.RuntimeReadiness.WarningCount</p>
-  }
-</section>
 
-@{
-  var globalRoleOptions = new[] { "end_user", "support", "practitioner", "client_admin", "super_admin" };
-  var tariffOptions = new[] { "free", "active", "trialing", "past_due", "canceled", "incomplete", "unpaid" };
-  var globalUserRows = Model.GlobalUsers.Select(u =>
-  {
-    var roleOptions = globalRoleOptions
-      .Select(option => new EditableTableOptionViewModel
-      {
-        Value = option,
-        Label = option,
-        Selected = string.Equals(option, u.GlobalRole, StringComparison.OrdinalIgnoreCase),
-      })
-      .ToList();
+  <!-- MAIN GRID -->
+  <div class="crm-grid">
 
-    var options = tariffOptions
-      .Select(option => new EditableTableOptionViewModel
-      {
-        Value = option,
-        Label = option,
-        Selected = string.Equals(option, u.SubscriptionStatus, StringComparison.OrdinalIgnoreCase),
-      })
-      .ToList();
+    <!-- ══ LEFT: MAIN CONTENT ══ -->
+    <div class="crm-main">
 
-    if (!tariffOptions.Contains((u.SubscriptionStatus ?? string.Empty).Trim(), StringComparer.OrdinalIgnoreCase))
-    {
-      options.Add(new EditableTableOptionViewModel
-      {
-        Value = u.SubscriptionStatus ?? string.Empty,
-        Label = u.SubscriptionStatus ?? string.Empty,
-        Selected = true,
-      });
-    }
+      <!-- ── GLOBAL USERS ── -->
+      <div class="panel">
+        <div class="panel-head">
+          <p class="panel-title">👥 Global Users</p>
+          <span class="panel-badge">@Model.GlobalUsers.Count</span>
+        </div>
+        <div class="tbl-search">
+          <input id="search-users" type="text" placeholder="Search by name, email, role, tariff…"
+                 oninput="tblFilter('tbody-users',this.value)">
+        </div>
+        <div style="overflow-x:auto">
+          <table class="crm-tbl">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Global Role</th>
+                <th>Tariff</th>
+                <th>Status</th>
+                <th style="min-width:280px">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-users">
+              @foreach (var u in Model.GlobalUsers)
+              {
+                var rid = u.UserId.ToString("N");
+                var s = (u.DisplayName+" "+u.Email+" "+u.GlobalRole+" "+u.SubscriptionStatus).ToLower();
+                var roleCls = u.GlobalRole switch {
+                  "super_admin"=>"tag-red","practitioner"=>"tag-purple",
+                  "client_admin"=>"tag-blue","support"=>"tag-amber",_=>"tag-gray"
+                };
+                var tarCls = u.SubscriptionStatus switch {
+                  "active"or"trialing"=>"tag-teal","past_due"or"unpaid"=>"tag-red",
+                  "canceled"=>"tag-amber",_=>"tag-gray"
+                };
+                <tr data-s="@s">
+                  <td>
+                    <div class="user-name">@u.DisplayName</div>
+                    <div class="user-email">@u.Email</div>
+                  </td>
+                  <td><span class="tag @roleCls">@u.GlobalRole</span></td>
+                  <td><span class="tag @tarCls">@(string.IsNullOrEmpty(u.SubscriptionStatus)?"free":u.SubscriptionStatus)</span></td>
+                  <td>
+                    @if (u.MembershipStatus=="active")
+                    { <span class="tag tag-teal tag-dot">active</span> }
+                    else
+                    { <span class="tag tag-gray">@(string.IsNullOrEmpty(u.MembershipStatus)?"-":u.MembershipStatus)</span> }
+                  </td>
+                  <td>
+                    <form method="post" action="/ops/users/@u.UserId">
+                      @Html.AntiForgeryToken()
+                      <div class="act-row">
+                        <select name="globalRole">
+                          @foreach (var r in globalRoleOptions)
+                          {
+                            if (r==u.GlobalRole){ <option value="@r" selected="selected">@r</option> }
+                            else { <option value="@r">@r</option> }
+                          }
+                        </select>
+                        <select name="subscriptionStatus">
+                          @foreach (var t in tariffOptions)
+                          {
+                            if (t==u.SubscriptionStatus){ <option value="@t" selected="selected">@t</option> }
+                            else { <option value="@t">@t</option> }
+                          }
+                        </select>
+                        <button type="submit" class="btn-xs btn-save">Save</button>
+                        <button type="button" class="btn-xs btn-ghost"
+                          onclick="openModal('@u.UserId','@u.DisplayName','@u.Email','@u.GlobalRole','@u.SubscriptionStatus','@u.MembershipStatus','@u.Age','@u.Sex')">
+                          Detail
+                        </button>
+                      </div>
+                    </form>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-    return new EditableTableRowViewModel
-    {
-      RowKey = u.UserId.ToString("N"),
-      Cells = new List<EditableTableCellViewModel>
-      {
-        new() { Kind = EditableTableCellKind.InputText, Name = "fullName", Value = u.FullName, Placeholder = u.Email, CssClass = "inline-input" },
-        new() { Kind = EditableTableCellKind.Text, Text = u.Email },
-        new() { Kind = EditableTableCellKind.Select, Name = "globalRole", CssClass = "inline-input", Options = roleOptions },
-        new()
+      <!-- ── NUTRITIONISTS ── -->
+      <div class="panel">
+        <div class="panel-head">
+          <p class="panel-title">🩺 Nutritionists & Practitioners</p>
+          <span class="panel-badge">@practitioners.Count</span>
+        </div>
+        @if (practitioners.Count == 0)
         {
-          Kind = EditableTableCellKind.Select,
-          Name = "subscriptionStatus",
-          CssClass = "inline-input",
-          Options = options,
-        },
-        new() { Kind = EditableTableCellKind.Text, Text = u.Age.HasValue || !string.IsNullOrWhiteSpace(u.Sex) ? $"{(u.Age?.ToString() ?? "-")} / {(string.IsNullOrWhiteSpace(u.Sex) ? "-" : u.Sex)}" : "-" },
-        new() { Kind = EditableTableCellKind.Text, Text = u.MembershipStatus },
-        new() { Kind = EditableTableCellKind.Text, Text = u.UserId.ToString() },
-      },
-      PrimaryAction = new EditableTableActionViewModel
-      {
-        ActionUrl = $"/ops/users/{u.UserId}",
-        SubmitLabel = "Save",
-        SubmitButtonClass = "vo-btn vo-btn-secondary",
-      },
-    };
-  }).ToList();
+          <div style="padding:32px;text-align:center;color:var(--c-muted);font-size:13px;">
+            No practitioners registered yet
+          </div>
+        }
+        else
+        {
+          <div class="tbl-search">
+            <input id="search-pract" type="text" placeholder="Search practitioners…"
+                   oninput="tblFilter('tbody-pract',this.value)">
+          </div>
+          <div style="overflow-x:auto">
+            <table class="crm-tbl">
+              <thead>
+                <tr><th>Practitioner</th><th>Tariff</th><th>Status</th><th>User ID</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="tbody-pract">
+                @foreach (var p in practitioners)
+                {
+                  var tc2 = p.SubscriptionStatus switch {
+                    "active"or"trialing"=>"tag-teal","past_due"or"unpaid"=>"tag-red",
+                    "canceled"=>"tag-amber",_=>"tag-gray"
+                  };
+                  <tr data-s="@((p.DisplayName+" "+p.Email).ToLower())">
+                    <td>
+                      <div class="user-name">@p.DisplayName</div>
+                      <div class="user-email">@p.Email</div>
+                    </td>
+                    <td><span class="tag @tc2">@(string.IsNullOrEmpty(p.SubscriptionStatus)?"free":p.SubscriptionStatus)</span></td>
+                    <td>
+                      @if (p.MembershipStatus=="active")
+                      { <span class="tag tag-teal tag-dot">active</span> }
+                      else
+                      { <span class="tag tag-gray">@p.MembershipStatus</span> }
+                    </td>
+                    <td>
+                      <span class="uuid" onclick="cpUUID(this,'@p.UserId')" title="Click to copy">
+                        @p.UserId.ToString()[..8]…
+                      </span>
+                    </td>
+                    <td>
+                      <div class="act-row">
+                        <a href="/admin/members/@p.UserId/profile" class="btn-xs btn-ghost">Profile</a>
+                        <a href="/admin/assignments?userId=@p.UserId" class="btn-xs btn-ghost">Clients</a>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <!-- ── LABS ── -->
+      <div class="panel" id="panel-labs">
+        <div class="panel-head">
+          <p class="panel-title">🧪 Lab Partners & Uploads</p>
+          <span class="panel-badge" id="labs-count">—</span>
+        </div>
+        <div id="labs-loading" style="padding:24px;text-align:center;color:var(--c-muted);font-size:13px;">
+          Loading lab activity…
+        </div>
+        <div id="labs-content" style="display:none; overflow-x:auto">
+          <table class="crm-tbl">
+            <thead>
+              <tr><th>User</th><th>Lab Uploads</th><th>Last Upload</th><th>Events (30d)</th></tr>
+            </thead>
+            <tbody id="tbody-labs"></tbody>
+          </table>
+        </div>
+        <div id="labs-empty" style="display:none;padding:24px;text-align:center;color:var(--c-muted);font-size:13px;">
+          No lab uploads found
+        </div>
+      </div>
+
+      <!-- ── PAYMENTS ── -->
+      <div class="panel">
+        <div class="panel-head">
+          <p class="panel-title">💳 Payments & Subscriptions</p>
+          @{
+            var payOk = Model.GlobalUsers.Count(u => u.SubscriptionStatus == "active");
+            var payProblem = problemUsers.Count;
+          }
+          <div style="display:flex;gap:8px">
+            <span class="panel-badge panel-badge--green">@payOk active</span>
+            @if (payProblem > 0)
+            { <span class="panel-badge panel-badge--red">@payProblem issues</span> }
+          </div>
+        </div>
+
+        <!-- Billing KPI grid -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--c-border);">
+          @{
+            var byStatus = Model.GlobalUsers.GroupBy(u => string.IsNullOrEmpty(u.SubscriptionStatus)?"free":u.SubscriptionStatus)
+                           .ToDictionary(g=>g.Key,g=>g.Count());
+            var billItems = new[] {
+              ("Active",    byStatus.GetValueOrDefault("active",0),     "tag-teal"),
+              ("Trialing",  byStatus.GetValueOrDefault("trialing",0),   "tag-blue"),
+              ("Free",      byStatus.GetValueOrDefault("free",0),       "tag-gray"),
+              ("Past Due",  byStatus.GetValueOrDefault("past_due",0),   "tag-red"),
+              ("Canceled",  byStatus.GetValueOrDefault("canceled",0),   "tag-amber"),
+              ("Unpaid",    byStatus.GetValueOrDefault("unpaid",0),     "tag-red"),
+            };
+          }
+          @foreach (var (lbl, cnt, cls) in billItems)
+          {
+            <div style="padding:16px 20px;border-right:1px solid var(--c-border);">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--c-muted);margin-bottom:4px;">@lbl</div>
+              <div style="font-size:26px;font-weight:800;color:var(--c-text);">@cnt</div>
+            </div>
+          }
+        </div>
+
+        @if (problemUsers.Count > 0)
+        {
+          <div style="padding:12px 20px;background:#fff9f9;border-bottom:1px solid #fee2e2;">
+            <p style="font-size:12px;font-weight:700;color:#991b1b;margin:0 0 10px">⚠ Problem Accounts</p>
+            <table class="crm-tbl" style="font-size:12px;">
+              <thead><tr><th>User</th><th>Status</th><th>Fix</th></tr></thead>
+              <tbody>
+                @foreach (var pu in problemUsers)
+                {
+                  var pc = pu.SubscriptionStatus switch { "past_due"=>"tag-amber","unpaid"=>"tag-red",_=>"tag-gray" };
+                  <tr>
+                    <td>
+                      <div class="user-name" style="font-size:12px">@pu.DisplayName</div>
+                      <div class="user-email">@pu.Email</div>
+                    </td>
+                    <td><span class="tag @pc">@pu.SubscriptionStatus</span></td>
+                    <td>
+                      <form method="post" action="/ops/users/@pu.UserId/subscription" style="display:inline">
+                        @Html.AntiForgeryToken()
+                        <div class="act-row">
+                          <select name="subscriptionStatus">
+                            @foreach (var t in tariffOptions)
+                            {
+                              if (t==pu.SubscriptionStatus){ <option value="@t" selected="selected">@t</option> }
+                              else { <option value="@t">@t</option> }
+                            }
+                          </select>
+                          <button type="submit" class="btn-xs btn-save">Fix</button>
+                        </div>
+                      </form>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        else
+        {
+          <div style="padding:20px;text-align:center;color:#166534;font-size:13px;">✅ No payment issues</div>
+        }
+      </div>
+
+    </div><!-- /crm-main -->
+
+    <!-- ══ RIGHT: ASIDE PANEL ══ -->
+    <div class="crm-aside">
+
+      <!-- System Status -->
+      <div class="widget">
+        <div class="widget-head">
+          <p class="widget-title">⚡ System Status</p>
+          @if (Model.RuntimeReadiness.Ok)
+          { <span class="panel-badge panel-badge--green">OK</span> }
+          else
+          { <span class="panel-badge panel-badge--red">WARN</span> }
+        </div>
+        <div class="dot-list">
+          <div class="dot-row">
+            <span>Runtime</span>
+            <div class="dot-right">
+              <div class="dot @(Model.RuntimeReadiness.Ok?"dot-green":"dot-red")"></div>
+              <span>@(Model.RuntimeReadiness.Ok?"healthy":"issues")</span>
+            </div>
+          </div>
+          <div class="dot-row">
+            <span>Rate Limiter</span>
+            <div class="dot-right">
+              <div class="dot @(Model.RuntimeReadiness.LimiterOk?"dot-green":"dot-amber")"></div>
+              <span>@Model.RuntimeReadiness.LimiterBackend</span>
+            </div>
+          </div>
+          <div class="dot-row">
+            <span>Redis</span>
+            <div class="dot-right">
+              @if (Model.RuntimeReadiness.RedisReachable==true)
+              { <div class="dot dot-green"></div><span>connected</span> }
+              else if (Model.RuntimeReadiness.RedisRequired)
+              { <div class="dot dot-red"></div><span>unreachable</span> }
+              else
+              { <div class="dot dot-gray"></div><span>not required</span> }
+            </div>
+          </div>
+          @if (Model.RuntimeReadiness.MissingCount > 0)
+          {
+            <div class="dot-row"><span style="color:var(--c-red)">Missing: @Model.RuntimeReadiness.MissingCount</span></div>
+          }
+          @if (Model.RuntimeReadiness.WarningCount > 0)
+          {
+            <div class="dot-row"><span style="color:var(--c-amber)">Warnings: @Model.RuntimeReadiness.WarningCount</span></div>
+          }
+          <div style="padding-top:8px;border-top:1px solid var(--c-border);margin-top:2px;">
+            <span style="font-size:11px;color:var(--c-muted)">@Model.LastUpdatedAt.ToString("yyyy-MM-dd HH:mm") UTC</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Claude API Spend -->
+      <div class="widget">
+        <div class="widget-head">
+          <p class="widget-title">🤖 Claude API Spend</p>
+          <span style="font-size:11px;color:var(--c-muted)">30d</span>
+        </div>
+        <div id="claude-spend" style="padding:16px;font-size:13px;color:var(--c-muted)">Loading…</div>
+      </div>
+
+      <!-- Activity Feed -->
+      <div class="widget">
+        <div class="widget-head">
+          <p class="widget-title">📋 Recent Activity</p>
+          <a href="/ops/activity" style="font-size:11px;color:var(--c-teal);text-decoration:none;">All →</a>
+        </div>
+        <div class="feed-list">
+          @if (!Model.RecentAuditLogs.Any())
+          {
+            <div style="padding:20px;text-align:center;color:var(--c-muted);font-size:12px;">No activity yet</div>
+          }
+          @foreach (var log in Model.RecentAuditLogs.Take(15))
+          {
+            var fi = log.Action switch {
+              var a when a.Contains("create")=>"✅",
+              var a when a.Contains("delete")=>"🗑️",
+              var a when a.Contains("update")=>"✏️",
+              var a when a.Contains("login") =>"🔑",
+              var a when a.Contains("invite")=>"✉️",
+              _=>"📌"
+            };
+            <div class="feed-item">
+              <div class="feed-icon">@fi</div>
+              <div>
+                <div class="feed-action">@log.Action</div>
+                <div class="feed-meta">
+                  @log.EntityType
+                  @(!string.IsNullOrEmpty(log.EntityId)?"· "+log.EntityId[..Math.Min(8,log.EntityId.Length)]:"")
+                  · @log.Timestamp.ToString("MM-dd HH:mm")
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="widget">
+        <div class="widget-head"><p class="widget-title">🔗 Quick Links</p></div>
+        <div class="qlink-list">
+          <a class="qlink" href="/admin/organizations">🏢 Organizations</a>
+          <a class="qlink" href="/admin/members">👥 All Members</a>
+          <a class="qlink" href="/admin/members/invite">✉️ Invite Member</a>
+          <a class="qlink" href="/admin/assignments">🔗 Assignments</a>
+          <a class="qlink" href="/ops/activity">📋 Activity Log</a>
+          <a class="qlink" href="/billing">💳 Billing</a>
+          <a class="qlink" href="/settings">⚙️ Settings</a>
+        </div>
+      </div>
+
+    </div><!-- /crm-aside -->
+  </div><!-- /crm-grid -->
+</div><!-- /crm-wrap -->
+
+<!-- USER DETAIL MODAL -->
+<div class="user-modal-overlay" id="user-modal">
+  <div class="user-modal">
+    <div class="user-modal-head">
+      <h2 style="font-size:18px;font-weight:800;color:var(--c-text);margin:0" id="modal-name">User Detail</h2>
+      <button class="user-modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-field"><label>Email</label><span id="modal-email">—</span></div>
+      <div class="modal-field"><label>Global Role</label><span id="modal-role">—</span></div>
+      <div class="modal-field"><label>Subscription</label><span id="modal-tariff">—</span></div>
+      <div class="modal-field"><label>Status</label><span id="modal-status">—</span></div>
+      <div class="modal-field"><label>Age</label><span id="modal-age">—</span></div>
+      <div class="modal-field"><label>Sex</label><span id="modal-sex">—</span></div>
+    </div>
+    <div id="modal-activity" style="margin-top:20px">
+      <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--c-muted);margin:0 0 10px">90-day Activity</p>
+      <div id="modal-activity-content" style="color:var(--c-muted);font-size:13px">Loading…</div>
+    </div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--c-border);display:flex;gap:10px;">
+      <a id="modal-profile-link" href="#" class="btn-xs btn-save">Open Profile →</a>
+      <button onclick="closeModal()" class="btn-xs btn-ghost">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Table filter ──────────────────────────────────
+function tblFilter(tbodyId, q) {
+  q = q.toLowerCase()
+  document.querySelectorAll('#'+tbodyId+' tr[data-s]').forEach(tr => {
+    tr.style.display = tr.dataset.s.includes(q) ? '' : 'none'
+  })
 }
 
-<div id="global-users-wrap">
-@await Html.PartialAsync("~/Views/Shared/Ui/_EditableTable.cshtml", new EditableTableViewModel
-{
-  Title = "Global Users",
-  Columns = new[] { "Name", "Email", "Global Role", "Tariff Plan", "Age / Sex", "Status", "User ID" },
-  EmptyMessage = "No global users found.",
-  Rows = globalUserRows,
-})
-</div>
+// ── Copy UUID ─────────────────────────────────────
+function cpUUID(el, uuid) {
+  navigator.clipboard.writeText(uuid).then(() => {
+    const orig = el.textContent
+    el.textContent = 'copied!'
+    setTimeout(() => el.textContent = orig, 1500)
+  })
+}
 
-<div id="ops-audit-wrap">
-@await Html.PartialAsync("~/Views/Shared/Ui/_DataTableShell.cshtml", new DataTableShellViewModel {
-  Title = "Recent Activity Log",
-  Columns = new[] { "When", "Action", "Entity", "Entity Id", "User", "Org" },
-  EmptyMessage = "No recent activity found.",
-  Rows = Model.RecentAuditLogs
-    .Select(l => (IReadOnlyList<string>)new[] {
-      l.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"),
-      l.Action,
-      l.EntityType,
-      l.EntityId,
-      l.UserId?.ToString() ?? "-",
-      l.OrganizationId?.ToString() ?? "-",
-    })
-    .ToList()
-})
-</div>
+// ── User modal ────────────────────────────────────
+function openModal(id, name, email, role, tariff, status, age, sex) {
+  document.getElementById('modal-name').textContent   = name || email
+  document.getElementById('modal-email').textContent  = email
+  document.getElementById('modal-role').textContent   = role
+  document.getElementById('modal-tariff').textContent = tariff || 'free'
+  document.getElementById('modal-status').textContent = status || '-'
+  document.getElementById('modal-age').textContent    = age || '-'
+  document.getElementById('modal-sex').textContent    = sex || '-'
+  document.getElementById('modal-profile-link').href  = '/admin/members/' + id + '/profile'
+  document.getElementById('modal-activity-content').textContent = 'Loading…'
+  document.getElementById('user-modal').classList.add('open')
 
-<script>
-  (function () {
-    const endpoints = {
-      snapshot: '/ops/live-snapshot',
-    };
-
-    const updateText = (id, value) => {
-      const node = document.getElementById(id);
-      if (node) node.textContent = value;
-    };
-
-    const updateStatCard = (id, label, value, trend, tone) => {
-      const node = document.getElementById(id);
-      if (!node) return;
-      node.innerHTML = `
-        <article class="vo-stat-card tone-${tone}">
-          <div class="vo-stat-card-label">${label}</div>
-          <div class="vo-stat-card-value">${value}</div>
-          <div class="vo-stat-card-trend">${trend}</div>
-        </article>`;
-    };
-
-    const refreshSnapshot = async () => {
-      try {
-        const response = await fetch(endpoints.snapshot, { credentials: 'same-origin' });
-        if (!response.ok) return;
-
-        const data = await response.json();
-        updateStatCard('ops-stat-total-users', 'Total Users', String(data.totalUsers ?? 0), 'All organizations', 'teal');
-        updateStatCard('ops-stat-total-organizations', 'Organizations', String(data.totalOrganizations ?? 0), 'Multi-org scope', 'default');
-        updateStatCard('ops-stat-active-programs', 'Active Programs', String(data.activePrograms ?? 0), 'Active assignments', 'default');
-        updateStatCard('ops-stat-new-registrations', 'New Registrations (24h)', String(data.newRegistrations24h ?? 0), 'Last 24 hours', 'default');
-
-        const runtime = data.runtimeReadiness || {};
-        updateText('ops-runtime-backend', runtime.limiterBackend || 'unknown');
-        updateText('ops-runtime-limiter-ok', runtime.limiterOk ? 'yes' : 'no');
-        updateText('ops-runtime-ok', runtime.ok ? 'yes' : 'no');
-        updateText('ops-runtime-redis-required', runtime.redisRequired ? 'yes' : 'no');
-        updateText('ops-runtime-redis-configured', runtime.redisConfigured ? 'yes' : 'no');
-        updateText('ops-runtime-redis-reachable', typeof runtime.redisReachable === 'boolean' ? (runtime.redisReachable ? 'yes' : 'no') : 'n/a');
-        updateText('ops-runtime-summary', `Reason: ${runtime.redisReason || 'n/a'} | Missing checks: ${runtime.missingCount ?? 0} | Warnings: ${runtime.warningCount ?? 0}`);
-
-        if (data.lastUpdatedAt) {
-          const formatted = new Date(data.lastUpdatedAt).toLocaleString();
-          updateText('ops-last-updated', `Last updated: ${formatted}`);
-        }
-      } catch {
-      }
-    };
-
-    document.getElementById('ops-refresh-button')?.addEventListener('click', refreshSnapshot);
-    window.setInterval(refreshSnapshot, 60000);
-  })();
-
-  // ── Global Users: search + pagination + copy UUID ──────────────────────────
-  voInitTable({ wrapId: 'global-users-wrap', pageSize: 25, searchPlaceholder: 'Search by name, email, role…' });
-  voInitCopyUuid('global-users-wrap');
-
-  // ── Audit log: search + pagination ────────────────────────────────────────
-  voInitTable({ wrapId: 'ops-audit-wrap', pageSize: 30, searchPlaceholder: 'Search audit events…' });
-
-  // ── Service API latency indicator ─────────────────────────────────────────
-  (async function checkApiLatency() {
-    const el = document.getElementById('ops-api-latency');
-    if (!el) return;
-    const t0 = performance.now();
-    try {
-      const r = await fetch('/ops/live-snapshot', { credentials: 'same-origin' });
-      const ms = Math.round(performance.now() - t0);
-      const tone = ms < 400 ? '#86efac' : ms < 1200 ? '#fde68a' : '#fca5a5';
-      el.innerHTML = r.ok
-        ? `<span style="color:${tone}">✓ API OK</span> <span style="opacity:.6;">${ms} ms</span>`
-        : `<span style="color:#fca5a5;">✗ API ${r.status}</span>`;
-    } catch {
-      el.innerHTML = '<span style="color:#fca5a5;">✗ API unreachable</span>';
-    }
-  })();
-</script>
-
-<!-- ============================================================
-     CLAUDE TOKEN SPEND
-     ============================================================ -->
-<section class="vo-panel" style="margin-top:var(--vo-space-6);" id="claude-spend-section">
-  <h3 style="margin:0 0 8px;">Claude API Spend <span id="claude-spend-window" style="font-weight:400; font-size:.85rem; opacity:.7;">(last 30 days)</span></h3>
-  <div class="vo-grid two-up" style="margin-bottom:12px;" id="claude-spend-cards">
-    <div id="claude-card-requests" class="vo-stat-card tone-default"><div class="vo-stat-card-label">LLM Requests</div><div class="vo-stat-card-value">—</div></div>
-    <div id="claude-card-prompt" class="vo-stat-card tone-default"><div class="vo-stat-card-label">Prompt Tokens</div><div class="vo-stat-card-value">—</div></div>
-    <div id="claude-card-completion" class="vo-stat-card tone-default"><div class="vo-stat-card-label">Completion Tokens</div><div class="vo-stat-card-value">—</div></div>
-    <div id="claude-card-total" class="vo-stat-card tone-teal"><div class="vo-stat-card-label">Total Tokens</div><div class="vo-stat-card-value">—</div></div>
-  </div>
-  <div id="claude-by-task" style="margin-top:8px;"></div>
-</section>
-
-<!-- ============================================================
-     CLIENT ACTIVITY
-     ============================================================ -->
-<section class="vo-panel" style="margin-top:var(--vo-space-6);" id="client-activity-section">
-  <h3 style="margin:0 0 8px;">Client Activity <span id="client-activity-window" style="font-weight:400; font-size:.85rem; opacity:.7;">(last 30 days)</span></h3>
-  <div class="vo-grid two-up" style="margin-bottom:12px;">
-    <div id="ca-card-users" class="vo-stat-card tone-default"><div class="vo-stat-card-label">Tracked Users</div><div class="vo-stat-card-value">—</div></div>
-    <div id="ca-card-active" class="vo-stat-card tone-teal"><div class="vo-stat-card-label">Active Users</div><div class="vo-stat-card-value">—</div></div>
-    <div id="ca-card-uploads" class="vo-stat-card tone-default"><div class="vo-stat-card-label">Uploads + Check-ins</div><div class="vo-stat-card-value">—</div></div>
-    <div id="ca-card-tokens" class="vo-stat-card tone-default"><div class="vo-stat-card-label">User Claude Tokens</div><div class="vo-stat-card-value">—</div></div>
-  </div>
-  <div id="client-activity-table" style="overflow-x:auto;"></div>
-</section>
-
-<!-- ============================================================
-     USER ACTIVITY MODAL
-     ============================================================ -->
-<div id="user-activity-modal" role="dialog" aria-modal="true" aria-labelledby="user-modal-title"
-  style="display:none; position:fixed; inset:0; z-index:300; background:rgba(2,6,23,.82); backdrop-filter:blur(3px); padding:16px; overflow-y:auto;">
-  <div style="max-width:900px; margin:auto; background:var(--vo-bg-elevated,#101827); border:1px solid rgba(148,163,184,.3); border-radius:12px; padding:16px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
-      <h3 id="user-modal-title" style="margin:0;">Client activity profile</h3>
-      <button type="button" id="user-modal-close" class="vo-btn vo-btn-secondary" style="flex-shrink:0;">Close</button>
-    </div>
-    <div id="user-modal-body">Loading…</div>
-  </div>
-</div>
-
-<script>
-(function () {
-  const fmt = (n) => Number(n || 0).toLocaleString('en-US');
-
-  // ── Claude Spend ──────────────────────────────────────────────────────────
-  async function loadClaudeSpend() {
-    try {
-      const r = await fetch('/ops/claude-usage-data?days=30', { credentials: 'same-origin' });
-      if (!r.ok) return;
-      const d = await r.json();
-      const t = d.totals || {};
-      const setCard = (id, value) => {
-        const el = document.getElementById(id);
-        if (el) el.querySelector('.vo-stat-card-value').textContent = fmt(value);
-      };
-      setCard('claude-card-requests', t.requests);
-      setCard('claude-card-prompt', t.prompt_tokens);
-      setCard('claude-card-completion', t.completion_tokens);
-      setCard('claude-card-total', t.total_tokens);
-      if (!d.tracked) {
-        const note = document.createElement('p');
-        note.style.cssText = 'margin:4px 0; opacity:.7; font-size:.85rem;';
-        note.textContent = d.note || 'Token tracking migration pending. Apply stage-13 SQL first.';
-        document.getElementById('claude-by-task')?.appendChild(note);
-        return;
-      }
-      const tasks = Array.isArray(d.by_task) ? d.by_task : [];
-      if (tasks.length === 0) return;
-      const table = `<table style="width:100%; border-collapse:collapse; font-size:.85rem;">
-        <thead><tr style="opacity:.6;"><th style="text-align:left; padding:4px 8px;">Task</th><th style="text-align:right; padding:4px 8px;">Requests</th><th style="text-align:right; padding:4px 8px;">Total tokens</th></tr></thead>
-        <tbody>${tasks.slice(0, 10).map(row =>
-          `<tr><td style="padding:4px 8px;">${row.task_name || '—'}</td><td style="text-align:right; padding:4px 8px;">${fmt(row.requests)}</td><td style="text-align:right; padding:4px 8px; color:#fde68a;">${fmt(row.total_tokens)}</td></tr>`
-        ).join('')}</tbody></table>`;
-      document.getElementById('claude-by-task').innerHTML = table;
-    } catch {}
-  }
-
-  // ── Client Activity ───────────────────────────────────────────────────────
-  async function loadClientActivity() {
-    try {
-      const r = await fetch('/ops/client-activity-data?days=30&limit=200', { credentials: 'same-origin' });
-      if (!r.ok) return;
-      const d = await r.json();
-      const s = d.summary || {};
-      const setCard = (id, value) => {
-        const el = document.getElementById(id);
-        if (el) el.querySelector('.vo-stat-card-value').textContent = fmt(value);
-      };
-      setCard('ca-card-users', s.users);
-      setCard('ca-card-active', s.active_users);
-      setCard('ca-card-uploads', (s.uploads || 0) + (s.checkins || 0));
-      setCard('ca-card-tokens', s.llm_total_tokens);
-
-      const items = Array.isArray(d.items) ? d.items : [];
-      if (items.length === 0) {
-        document.getElementById('client-activity-table').innerHTML = '<p style="opacity:.7; font-size:.9rem; margin:4px 0;">No user activity data yet.</p>';
-        return;
-      }
-      const rows = items.slice(0, 30).map(item => `
-        <tr>
-          <td style="padding:6px 8px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-            <strong style="display:block;">${item.full_name || '—'}</strong>
-            <span style="opacity:.65; font-size:.8rem;">${item.email || ''}</span>
-          </td>
-          <td style="padding:6px 8px; text-align:right; color:#93c5fd;">${fmt(item.metrics?.uploads)}</td>
-          <td style="padding:6px 8px; text-align:right; color:#86efac;">${fmt(item.metrics?.checkins)}</td>
-          <td style="padding:6px 8px; text-align:right; color:#fde68a;">${fmt(item.metrics?.llm_total_tokens)}</td>
-          <td style="padding:6px 8px; text-align:right;">
-            <button type="button" class="vo-btn vo-btn-secondary vo-btn-sm open-user-activity"
-              data-user-id="${item.user_id}"
-              data-user-name="${(item.full_name || 'User').replace(/"/g, '&quot;')}"
-              style="font-size:.78rem; padding:4px 8px;">Details</button>
-          </td>
-        </tr>`).join('');
-
-      document.getElementById('client-activity-table').innerHTML = `
-        <table style="width:100%; border-collapse:collapse; font-size:.85rem;">
-          <thead><tr style="opacity:.6;">
-            <th style="text-align:left; padding:6px 8px;">User</th>
-            <th style="text-align:right; padding:6px 8px;">Uploads</th>
-            <th style="text-align:right; padding:6px 8px;">Check-ins</th>
-            <th style="text-align:right; padding:6px 8px;">Claude tokens</th>
-            <th style="padding:6px 8px;"></th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`;
-
-      document.querySelectorAll('.open-user-activity').forEach(btn => {
-        btn.addEventListener('click', () => openUserModal(btn.dataset.userId, btn.dataset.userName));
-      });
-    } catch {}
-  }
-
-  // ── User activity modal ───────────────────────────────────────────────────
-  const modal = document.getElementById('user-activity-modal');
-  const modalBody = document.getElementById('user-modal-body');
-  document.getElementById('user-modal-close')?.addEventListener('click', () => {
-    modal.style.display = 'none';
-    modalBody.innerHTML = 'Loading…';
-  });
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.style.display = 'none';
-      modalBody.innerHTML = 'Loading…';
-    }
-  });
-
-  async function openUserModal(userId, userName) {
-    document.getElementById('user-modal-title').textContent = `Activity: ${userName}`;
-    modalBody.innerHTML = '<p style="opacity:.7;">Loading user activity…</p>';
-    modal.style.display = 'block';
-    modal.scrollTop = 0;
-    try {
-      const r = await fetch(`/ops/users/${userId}/activity-data?days=90`, { credentials: 'same-origin' });
-      if (!r.ok) { modalBody.innerHTML = '<p>Failed to load activity data.</p>'; return; }
-      const d = await r.json();
-      const user = d.user || {};
-      const s = d.summary || {};
-      const llm = d.llm_usage || {};
-
-      const metricCards = [
-        ['Uploads', s.uploads, '#93c5fd'],
-        ['Check-ins', s.checkins, '#86efac'],
-        ['Insights', s.insights, '#fde68a'],
-        ['Notifications', s.notifications, '#c4b5fd'],
-        ['Timeline events', s.timeline_events, '#67e8f9'],
-        ['Claude tokens', llm.total_tokens, '#fca5a5'],
-      ].map(([label, value, color]) =>
-        `<div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:10px 12px; text-align:center;">
-          <div style="font-size:.78rem; opacity:.65; margin-bottom:4px;">${label}</div>
-          <div style="font-size:1.35rem; font-weight:700; color:${color};">${fmt(value)}</div>
+  fetch('/ops/users/' + id + '/activity-data?days=90')
+    .then(r => r.json())
+    .then(data => {
+      const el = document.getElementById('modal-activity-content')
+      if (data.error) { el.textContent = 'No activity data'; return }
+      const items = data.items || []
+      if (!items.length) { el.textContent = 'No events in 90 days'; return }
+      el.innerHTML = items.slice(0,10).map(i =>
+        `<div style="padding:6px 0;border-bottom:1px solid #f8fafc;font-size:12px;">
+          <span style="font-weight:600">${i.action||i.event_type||'event'}</span>
+          <span style="color:#94a3b8;margin-left:8px">${(i.timestamp||'').slice(0,16)}</span>
         </div>`
-      ).join('');
+      ).join('')
+    })
+    .catch(() => { document.getElementById('modal-activity-content').textContent = 'Failed to load' })
+}
 
-      const uploadRows = (Array.isArray(d.uploads) ? d.uploads : []).slice(0, 10)
-        .map(u => `<tr><td style="padding:4px 8px;">${(u.created_at || '').slice(0, 10)}</td><td style="padding:4px 8px;">${u.lab_name || '—'}</td><td style="padding:4px 8px;">${u.status || '—'}</td></tr>`).join('');
-      const checkinRows = (Array.isArray(d.checkins) ? d.checkins : []).slice(0, 8)
-        .map(c => `<tr><td style="padding:4px 8px;">${(c.created_at || '').slice(0, 10)}</td><td style="padding:4px 8px;">${c.protocol_adherence ?? '—'}%</td><td style="padding:4px 8px;">energy ${c.energy_score ?? '—'}/10</td></tr>`).join('');
-      const timelineRows = (Array.isArray(d.timeline) ? d.timeline : []).slice(0, 15)
-        .map(e => `<tr><td style="padding:4px 8px;">${(e.occurred_at || '').slice(0, 16).replace('T', ' ')}</td><td style="padding:4px 8px;">${e.event_type || '—'}</td><td style="padding:4px 8px; opacity:.75;">${e.summary || ''}</td></tr>`).join('');
+function closeModal() {
+  document.getElementById('user-modal').classList.remove('open')
+}
+document.getElementById('user-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal()
+})
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal() })
 
-      const tableStyle = 'width:100%; border-collapse:collapse; font-size:.82rem; margin-top:4px;';
-      const headStyle = 'opacity:.6; text-align:left; padding:4px 8px;';
-
-      modalBody.innerHTML = `
-        <p style="margin:0 0 12px; opacity:.7; font-size:.87rem;">${user.email || ''} · ${user.sub_status || '—'} · window: 90 days</p>
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:8px; margin-bottom:16px;">${metricCards}</div>
-        <details open style="margin-bottom:10px;"><summary style="cursor:pointer; font-weight:600; padding:4px 0;">Labs (${fmt(s.uploads)})</summary>
-          ${uploadRows ? `<table style="${tableStyle}"><thead><tr><th style="${headStyle}">Date</th><th style="${headStyle}">Lab</th><th style="${headStyle}">Status</th></tr></thead><tbody>${uploadRows}</tbody></table>` : '<p style="opacity:.65; font-size:.85rem; margin:4px 0;">No uploads in window.</p>'}</details>
-        <details open style="margin-bottom:10px;"><summary style="cursor:pointer; font-weight:600; padding:4px 0;">Check-ins (${fmt(s.checkins)})</summary>
-          ${checkinRows ? `<table style="${tableStyle}"><thead><tr><th style="${headStyle}">Date</th><th style="${headStyle}">Adherence</th><th style="${headStyle}">Energy</th></tr></thead><tbody>${checkinRows}</tbody></table>` : '<p style="opacity:.65; font-size:.85rem; margin:4px 0;">No check-ins in window.</p>'}</details>
-        <details style="margin-bottom:10px;"><summary style="cursor:pointer; font-weight:600; padding:4px 0;">Timeline (${fmt(s.timeline_events)})</summary>
-          ${timelineRows ? `<table style="${tableStyle}"><thead><tr><th style="${headStyle}">Time</th><th style="${headStyle}">Type</th><th style="${headStyle}">Summary</th></tr></thead><tbody>${timelineRows}</tbody></table>` : '<p style="opacity:.65; font-size:.85rem; margin:4px 0;">No timeline events in window.</p>'}</details>
-      `;
-    } catch (err) {
-      modalBody.innerHTML = `<p style="color:#fca5a5;">Error loading user activity: ${err.message}</p>`;
+// ── Labs data ─────────────────────────────────────
+fetch('/ops/client-activity-data?days=30&limit=100')
+  .then(r => r.json())
+  .then(data => {
+    const items = data.items || []
+    const labUsers = items.filter(i => (i.lab_uploads||0) > 0 || (i.events||0) > 0)
+    document.getElementById('labs-count').textContent = labUsers.length
+    document.getElementById('labs-loading').style.display = 'none'
+    if (!labUsers.length) {
+      document.getElementById('labs-empty').style.display = 'block'; return
     }
-  }
+    document.getElementById('labs-content').style.display = 'block'
+    document.getElementById('tbody-labs').innerHTML = labUsers.map(u => `
+      <tr>
+        <td>
+          <div class="user-name">${u.full_name||u.email||u.user_id}</div>
+          <div class="user-email">${u.email||''}</div>
+        </td>
+        <td><strong>${u.lab_uploads||0}</strong></td>
+        <td style="color:#64748b;font-size:12px">${u.last_activity ? u.last_activity.slice(0,10) : '—'}</td>
+        <td>${u.events||0}</td>
+      </tr>`).join('')
+  })
+  .catch(() => {
+    document.getElementById('labs-loading').textContent = 'Lab data unavailable'
+  })
 
-  // ── Init ──────────────────────────────────────────────────────────────────
-  loadClaudeSpend();
-  loadClientActivity();
-})();
+// ── Claude API spend ──────────────────────────────
+fetch('/ops/claude-usage-data?days=30')
+  .then(r => r.json())
+  .then(data => {
+    const el = document.getElementById('claude-spend')
+    if (!data.tracked) {
+      el.innerHTML = '<span style="color:#94a3b8">Not tracked</span>'; return
+    }
+    const cost = data.total_cost_usd || data.cost || 0
+    const tokens = data.total_tokens || data.tokens || 0
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:22px;font-weight:800;color:#0f172a">$${Number(cost).toFixed(2)}</span>
+        <span class="tag tag-gray">${Number(tokens).toLocaleString()} tokens</span>
+      </div>
+      <div style="font-size:11px;color:#94a3b8">Last 30 days</div>`
+  })
+  .catch(() => {
+    document.getElementById('claude-spend').innerHTML = '<span style="color:#94a3b8">Unavailable</span>'
+  })
 </script>
