@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import Landing from './pages/Landing.jsx'
-import Login from './pages/Login.jsx'
 import NotFound from './pages/NotFound.jsx'
 import AppLoadingScreen from './components/AppLoadingScreen.jsx'
 import { useAuth } from './hooks/useAuth.js'
@@ -13,6 +12,7 @@ import { trackPublicFunnelEvent } from './lib/publicFunnel.js'
 
 // Marketing pages — lazy
 const Features = lazy(() => import('./pages/Features.jsx'))
+const Login = lazy(() => import('./pages/Login.jsx'))
 const FAQ = lazy(() => import('./pages/FAQ.jsx'))
 const EmailConfirmation = lazy(() => import('./pages/EmailConfirmation.jsx'))
 const ExampleReport = lazy(() => import('./pages/ExampleReport.jsx'))
@@ -24,6 +24,11 @@ const Privacy = lazy(() => import('./pages/Privacy.jsx'))
 const Terms = lazy(() => import('./pages/Terms.jsx'))
 const Help = lazy(() => import('./pages/Help.jsx'))
 const SymptomIntake = lazy(() => import('./pages/SymptomIntake.jsx'))
+const HealthHub = lazy(() => import('./pages/HealthHub.jsx'))
+const HealthHubArticle = lazy(() => import('./pages/HealthHubArticle.jsx'))
+const EditorialPolicy = lazy(() => import('./pages/EditorialPolicy.jsx'))
+const MedicalReviewPolicy = lazy(() => import('./pages/MedicalReviewPolicy.jsx'))
+const EditorialTeam = lazy(() => import('./pages/EditorialTeam.jsx'))
 const UaLanding = lazy(() => import('./pages/UaLanding.jsx'))
 const UaPage = lazy(() => import('./pages/UaPage.jsx'))
 
@@ -723,6 +728,11 @@ export default function App() {
           <Route path="/help/section/:sectionId" element={<Help />} />
           <Route path="/help/:articleId" element={<Help />} />
           <Route path="/symptom-intake" element={<SymptomIntake />} />
+          <Route path="/health-hub" element={<HealthHub />} />
+          <Route path="/health-hub/:articleSlug" element={<HealthHubArticle />} />
+          <Route path="/editorial-policy" element={<EditorialPolicy />} />
+          <Route path="/medical-review-policy" element={<MedicalReviewPolicy />} />
+          <Route path="/authors/vitaloop-editorial-team" element={<EditorialTeam />} />
           <Route path="/login" element={<Login />} />
           <Route path="/auth/confirmation" element={<EmailConfirmation />} />
           <Route path="/dashboard" element={renderCabinetRoute(<UserDashboard />, { allowBeforeOnboarding: true })} />

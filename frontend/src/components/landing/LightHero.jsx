@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 const HERO_SCREENS = [
   {
-    src: '/mockups/cabinet-real/upload-results.png',
+    src: '/mockups/cabinet-real/upload-results.webp',
     alt: 'VITALOOP upload results cabinet screen',
     label: 'Dashboard',
     className: 'vl-hero-shot-main',
@@ -133,6 +133,10 @@ export function LightHero() {
                 <img
                   src={HERO_SCREENS[0].src}
                   alt={HERO_SCREENS[0].alt}
+                  width="1792"
+                  height="928"
+                  fetchPriority="high"
+                  decoding="async"
                   className={`${HERO_SCREENS[0].className} w-full rounded-2xl border border-slate-200 bg-white shadow-xl`}
                 />
               </div>
@@ -145,6 +149,10 @@ export function LightHero() {
                 <img
                   src={HERO_SCREENS[1].src}
                   alt={HERO_SCREENS[1].alt}
+                  width="1600"
+                  height="1000"
+                  loading="lazy"
+                  decoding="async"
                   className={`${HERO_SCREENS[1].className} w-full rounded-xl border border-slate-100`}
                 />
               </div>
@@ -156,6 +164,10 @@ export function LightHero() {
                 <img
                   src={HERO_SCREENS[2].src}
                   alt={HERO_SCREENS[2].alt}
+                  width="1600"
+                  height="1000"
+                  loading="lazy"
+                  decoding="async"
                   className={`${HERO_SCREENS[2].className} w-full rounded-[18px] border border-slate-100`}
                 />
               </div>

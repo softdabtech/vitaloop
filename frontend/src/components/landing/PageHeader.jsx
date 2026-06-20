@@ -8,6 +8,7 @@ import BrandMark from './BrandMark.jsx'
 const NAV_LINKS = [
   { id: 'why-vitaloop', label: 'Features', route: '/#why-vitaloop' },
   { id: 'pricing', label: 'Pricing', route: '/#pricing' },
+  { id: 'health-hub', label: 'Health Hub', route: '/health-hub/' },
   { id: 'about', label: 'About', route: '/about' },
   { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
 ]

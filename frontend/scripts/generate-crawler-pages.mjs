@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { ALL_ARTICLE_IDS, HELP_ARTICLES, HELP_SECTIONS } from '../src/data/helpArticles.js'
+import { HEALTH_HUB_ARTICLES } from '../src/data/healthHubContent.js'
 
 const DIST_DIR = path.resolve(process.cwd(), 'dist')
 const BASE_URL = 'https://vitaloop.today'
@@ -133,7 +134,63 @@ const routes = [
     changefreq: 'monthly',
     text: ['About VITALOOP and the product mission: clearer health decisions from symptoms, labs, and progress over time.'],
   },
+  {
+    path: '/health-hub',
+    title: 'Health Intelligence Hub: Symptoms & Blood Tests | VITALOOP',
+    description: 'Evidence-aware guides that connect symptoms, blood-test categories, biomarker context, clinician questions, and practical next steps.',
+    priority: '0.9',
+    changefreq: 'weekly',
+    text: [
+      'Understand the signal before you chase the number.',
+      'Explore connected guides about symptoms, blood tests, biomarker context, and better clinician conversations.',
+      'Start with persistent fatigue and low energy, then move through focused testing and biomarker interpretation guides.',
+    ],
+  },
+  {
+    path: '/editorial-policy',
+    title: 'Editorial Policy & Health Content Standards | VITALOOP',
+    description: 'Read how VITALOOP researches, writes, reviews, updates, sources, and corrects educational content about symptoms, blood tests, and biomarkers.',
+    priority: '0.5',
+    changefreq: 'yearly',
+    text: ['VITALOOP editorial standards for evidence-aware health education, transparent review status, authoritative sourcing, corrections, and updates.'],
+  },
+  {
+    path: '/medical-review-policy',
+    title: 'Medical Review Policy | VITALOOP',
+    description: 'Learn when VITALOOP health content requires licensed clinical review, how reviewer credentials are disclosed, and what a medical-review badge means.',
+    priority: '0.5',
+    changefreq: 'yearly',
+    text: ['VITALOOP does not display a medical-review badge unless a licensed clinician has reviewed the specific article within their professional scope.'],
+  },
+  {
+    path: '/authors/vitaloop-editorial-team',
+    title: 'VITALOOP Editorial Team | Health Content Authors',
+    description: 'Meet the team responsible for researching, writing, sourcing, updating, and correcting VITALOOP educational content about symptoms and blood tests.',
+    priority: '0.5',
+    changefreq: 'yearly',
+    text: ['The VITALOOP Editorial Team researches and writes educational content using authoritative health agencies, guidelines, and peer-reviewed evidence.'],
+  },
 ]
+
+for (const article of HEALTH_HUB_ARTICLES) {
+  routes.push({
+    path: `/health-hub/${article.slug}`,
+    title: article.seoTitle,
+    description: article.description,
+    priority: '0.8',
+    changefreq: 'monthly',
+    text: [
+      article.summary,
+      ...article.keyPoints,
+      ...article.sections.flatMap((section) => [
+        section.heading,
+        ...(section.paragraphs || []),
+        ...(section.bullets || []),
+        ...(section.callout ? [section.callout] : []),
+      ]),
+    ],
+  })
+}
 
 function helpBlockText(block) {
   if (block.text) return block.text

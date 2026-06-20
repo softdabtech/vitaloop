@@ -5,6 +5,7 @@ const PRODUCT_LINKS = [
   { label: 'Example report', href: '/example-report' },
   { label: 'Pricing', href: '/#pricing' },
   { label: 'Help Center', href: '/help' },
+  { label: 'Health Intelligence Hub', href: '/health-hub/' },
 ]
 
 const COMPANY_LINKS = [
@@ -17,6 +18,8 @@ const COMPANY_LINKS = [
 const TRUST_LINKS = [
   { label: 'Privacy & security', href: '/privacy-policy' },
   { label: 'Terms', href: '/terms' },
+  { label: 'Editorial policy', href: '/editorial-policy/' },
+  { label: 'Medical review policy', href: '/medical-review-policy/' },
   { label: 'Medical disclaimer', href: '/terms' },
 ]
 
@@ -45,18 +48,18 @@ export default function Footer() {
           <p className="mt-4 max-w-md leading-relaxed text-slate-500">
             Symptom-first lab intelligence, explainable Knowledge reports, and weekly health-loop tracking for people and professional teams.
           </p>
-          <p className="mt-4 text-xs uppercase tracking-[0.16em] text-slate-400">Not medical advice. Always work with a qualified clinician for diagnosis and treatment decisions.</p>
+          <p className="mt-4 text-xs font-medium uppercase tracking-[0.16em] text-slate-600">Not medical advice. Always work with a qualified clinician for diagnosis and treatment decisions.</p>
           <div className="mt-6 flex flex-col items-start gap-2">
             <a href="mailto:info@softdab.tech" className="text-left text-slate-500 underline-offset-2 hover:underline">
               info@softdab.tech
             </a>
-            <p className="text-left text-slate-400">
+            <p className="text-left text-slate-600">
               © 2026 VITALOOP. Made by{' '}
               <a
                 href="https://softdab.tech"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-emerald-700 underline-offset-2 hover:text-emerald-600 hover:underline"
+                className="text-emerald-700 underline decoration-current underline-offset-2 hover:text-emerald-600"
               >
                 SoftDAB
               </a>
