@@ -23,8 +23,6 @@
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png?v=20260601-brand" />
     <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png?v=20260601-brand" />
     <link rel="canonical" href="https://vitaloop.today/" />
-    <script>document.documentElement.classList.add('js')</script>
-    <style>.js [data-crawler-content="true"]{display:none!important}</style>
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
@@ -134,31 +132,43 @@
     }
     </script>
 
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-LG0BCMBJJE"></script>
-    <script src="https://t.contentsquare.net/uxa/e823a98ecd1a5.js"></script>
+    <!-- Analytics queue. External analytics load after the initial user experience. -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       /* send_page_view: false — SPA page views are tracked manually via GAPageTracker in App.jsx */
       gtag('config', 'G-LG0BCMBJJE', { send_page_view: false });
-    </script>
 
-    <!-- Meta Pixel Code -->
-    <script>
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
+      window.fbq = window.fbq || function(){(window.fbq.q = window.fbq.q || []).push(arguments)};
+      window.fbq.loaded = false;
+      window.fbq.version = '2.0';
       fbq('init', '1703367347333580');
       fbq('track', 'PageView');
+
+      function loadDeferredAnalytics() {
+        if (window.__vitaloopAnalyticsLoaded) return;
+        window.__vitaloopAnalyticsLoaded = true;
+
+        [
+          'https://www.googletagmanager.com/gtag/js?id=G-LG0BCMBJJE',
+          'https://t.contentsquare.net/uxa/e823a98ecd1a5.js',
+          'https://connect.facebook.net/en_US/fbevents.js'
+        ].forEach(function(src) {
+          var script = document.createElement('script');
+          script.async = true;
+          script.src = src;
+          document.head.appendChild(script);
+        });
+      }
+
+      ['pointerdown', 'keydown', 'touchstart'].forEach(function(eventName) {
+        window.addEventListener(eventName, loadDeferredAnalytics, { once: true, passive: true });
+      });
+      window.addEventListener('load', function() {
+        window.setTimeout(loadDeferredAnalytics, 15000);
+      }, { once: true });
     </script>
-    <!-- End Meta Pixel Code -->
   </head>
   <body>
     <noscript><img height="1" width="1" style="display:none"

@@ -10,7 +10,7 @@ export default function BrandMark({ compact = false, className = '' }) {
           aria-label="VITALOOP"
         >
           <span className="text-[#10343a]">VITA</span>
-          <span className="text-[#08c7ba]">LOOP</span>
+          <span className="text-[#087f78]">LOOP</span>
         </span>
       )}
     </span>

@@ -1270,10 +1270,10 @@ export default function Landing() {
                 </p>
                 <div className="mt-5 flex flex-wrap gap-3">
                   <button
-                    onClick={() => navigate('/how-it-works')}
+                    onClick={() => navigate('/health-hub/')}
                     className={`${ctaBase} shrink-0 ${'bg-slate-900 text-white hover:bg-slate-700'}`}
                   >
-                    Explore guides
+                    Explore Health Hub
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </button>
                   <button
