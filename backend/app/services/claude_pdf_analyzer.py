@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import logging
@@ -13,6 +14,11 @@ import httpx
 from pypdf import PdfReader
 from PIL import Image
 from pdf2image import convert_from_path
+
+try:
+    from markitdown import MarkItDown
+except ImportError:  # pragma: no cover - production dependency, fallback remains available
+    MarkItDown = None
 
 from app.config import settings
 from app.services.knowledge.integration import build_biomarker_extraction_knowledge_context
@@ -72,8 +78,8 @@ class OpenAIFileAnalyzer(ABC):
         return type_mapping.get(ext, 'unknown')
 
     @staticmethod
-    def _extract_pdf_text(pdf_path: str, max_length: int = 80000) -> str:
-        """Extract text from PDF file"""
+    def _extract_pdf_text_with_pypdf(pdf_path: str, max_length: int = 80000) -> str:
+        """Extract plain text from a PDF using the lightweight fallback parser."""
         try:
             reader = PdfReader(pdf_path)
             chunks: list[str] = []
@@ -86,6 +92,36 @@ class OpenAIFileAnalyzer(ABC):
         except Exception as e:
             logger.warning(f"Failed to extract PDF text: {e}")
             return ""
+
+    @classmethod
+    def _extract_pdf_content(cls, pdf_path: str, max_length: int = 80000) -> tuple[str, str]:
+        """Convert a local PDF to LLM-friendly Markdown with a pypdf fallback."""
+        if MarkItDown is not None:
+            try:
+                result = MarkItDown(enable_plugins=False).convert_local(pdf_path)
+                markdown = (result.text_content or "").strip()
+                if markdown:
+                    logger.info(
+                        "markitdown_pdf_conversion_ok chars=%s path=%s",
+                        len(markdown),
+                        Path(pdf_path).name,
+                    )
+                    return markdown[:max_length], "markitdown"
+            except Exception as exc:
+                logger.warning(
+                    "markitdown_pdf_conversion_failed error=%s path=%s",
+                    repr(exc),
+                    Path(pdf_path).name,
+                )
+
+        fallback_text = cls._extract_pdf_text_with_pypdf(pdf_path, max_length=max_length)
+        return fallback_text, "pypdf"
+
+    @classmethod
+    def _extract_pdf_text(cls, pdf_path: str, max_length: int = 80000) -> str:
+        """Backward-compatible PDF extraction helper."""
+        text, _parser = cls._extract_pdf_content(pdf_path, max_length=max_length)
+        return text
 
     async def _send_text_completion(self, prompt: str, model: Optional[str] = None) -> str:
         """Send text prompt to OpenAI API and get completion"""
@@ -100,6 +136,7 @@ class OpenAIFileAnalyzer(ABC):
                 {"role": "system", "content": "You are a precise clinical lab report analyzer. Return ONLY valid JSON."},
                 {"role": "user", "content": prompt},
             ],
+            "response_format": {"type": "json_object"},
             "temperature": 0,
             "max_tokens": min(self.max_tokens, 4096),
         }
@@ -285,6 +322,64 @@ JSON schema:
 class PDFTextAnalyzer(OpenAIFileAnalyzer):
     """Analyze text-based PDF files"""
 
+    @staticmethod
+    def _chunk_document_text(document_text: str, max_chars: int = 6000) -> list[str]:
+        lines = document_text.splitlines()
+        chunks: list[str] = []
+        current: list[str] = []
+        current_length = 0
+        for line in lines:
+            line_length = len(line) + 1
+            if current and current_length + line_length > max_chars:
+                chunks.append("\n".join(current).strip())
+                current = []
+                current_length = 0
+            current.append(line)
+            current_length += line_length
+        if current:
+            chunks.append("\n".join(current).strip())
+        return [chunk for chunk in chunks if chunk]
+
+    @staticmethod
+    def _merge_extraction_payloads(payloads: list[dict[str, Any]]) -> dict[str, Any]:
+        biomarkers: list[dict[str, Any]] = []
+        seen: set[tuple[str, str, str]] = set()
+        extraction_notes: list[Any] = []
+        document_metadata: dict[str, Any] = {}
+
+        for payload in payloads:
+            if not document_metadata and isinstance(payload.get("document_metadata"), dict):
+                document_metadata = payload.get("document_metadata") or {}
+            if isinstance(payload.get("extraction_notes"), list):
+                extraction_notes.extend(payload.get("extraction_notes") or [])
+            for item in payload.get("biomarkers") or []:
+                if not isinstance(item, dict):
+                    continue
+                marker_name = str(
+                    item.get("marker_key")
+                    or item.get("source_name")
+                    or item.get("name")
+                    or ""
+                ).strip().lower()
+                value = str(item.get("value") or "").strip()
+                unit = str(item.get("unit") or "").strip().lower()
+                dedupe_key = (marker_name, value, unit)
+                if not marker_name or dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                biomarkers.append(item)
+
+        return {
+            "biomarkers": biomarkers,
+            "summary": {
+                "document_type": "lab_report",
+                "extracted_marker_count": len(biomarkers),
+                "text_chunks_analyzed": len(payloads),
+            },
+            "document_metadata": document_metadata,
+            "extraction_notes": extraction_notes,
+        }
+
     async def analyze(self, pdf_path: str, symptoms: Optional[List[str]] = None) -> dict[str, Any]:
         start_time = time.time()
 
@@ -293,26 +388,39 @@ class PDFTextAnalyzer(OpenAIFileAnalyzer):
             if not self._validate_pdf(pdf_path):
                 raise ValueError("Invalid PDF format or file too large")
 
-            extracted_text = self._extract_pdf_text(pdf_path)
+            extracted_text, document_parser = await asyncio.to_thread(
+                self._extract_pdf_content,
+                pdf_path,
+            )
             if len(extracted_text.strip()) < 50:
                 raise ValueError("Could not extract readable text from PDF")
 
-            prompt = self._build_extraction_prompt(
-                document_kind="text-based lab PDF",
-                symptoms=symptoms or [],
-                document_text=extracted_text,
-                knowledge_context=await self._knowledge_context(),
-            )
+            chunks = self._chunk_document_text(extracted_text)
+            knowledge_context = await self._knowledge_context()
+            payloads: list[dict[str, Any]] = []
+            for chunk_index, chunk in enumerate(chunks, 1):
+                prompt = self._build_extraction_prompt(
+                    document_kind=(
+                        "Markdown-converted lab PDF"
+                        if document_parser == "markitdown"
+                        else "text-based lab PDF"
+                    ),
+                    symptoms=symptoms or [],
+                    document_text=chunk,
+                    page_num=chunk_index if len(chunks) > 1 else None,
+                    knowledge_context=knowledge_context,
+                )
 
-            # Send to API
-            analysis_text = await self._send_text_completion(prompt)
-            logger.debug(f"OpenAI response (first 500 chars): {analysis_text[:500]}")
+                analysis_text = await self._send_text_completion(prompt)
+                logger.debug(f"OpenAI response (first 500 chars): {analysis_text[:500]}")
 
-            try:
-                payload = self._parse_json(analysis_text)
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON parsing failed: {e}, response: {analysis_text[:1000]}")
-                raise ValueError(f"API returned invalid JSON: {str(e)}")
+                try:
+                    payloads.append(self._parse_json(analysis_text))
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON parsing failed: {e}, response: {analysis_text[:1000]}")
+                    raise ValueError(f"API returned invalid JSON: {str(e)}")
+
+            payload = self._merge_extraction_payloads(payloads)
 
             # Validate required fields
             required_fields = ["biomarkers"]
@@ -330,9 +438,17 @@ class PDFTextAnalyzer(OpenAIFileAnalyzer):
                 int(analysis_time * 1000),
             )
 
-            result = self._normalize_response(payload, "openai_pdf_text")
+            analysis_method = (
+                "openai_pdf_text_markitdown"
+                if document_parser == "markitdown"
+                else "openai_pdf_text"
+            )
+            result = self._normalize_response(payload, analysis_method)
             result["analysis_time"] = analysis_time
             result["biomarker_count"] = len(biomarkers)
+            result["document_parser"] = document_parser
+            result["document_input_chars"] = len(extracted_text)
+            result["document_chunks"] = len(chunks)
             return result
 
         except Exception as exc:
@@ -637,7 +753,7 @@ async def create_file_analyzer(file_path: str) -> OpenAIFileAnalyzer:
 
     if file_type == "pdf":
         # Determine if text-based or scanned
-        text = OpenAIFileAnalyzer._extract_pdf_text(file_path)
+        text = OpenAIFileAnalyzer._extract_pdf_text_with_pypdf(file_path)
         if len(text.strip()) > 100:
             return PDFTextAnalyzer(api_key=settings.active_llm_api_key)
         else:

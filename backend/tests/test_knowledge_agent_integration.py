@@ -35,6 +35,29 @@ def test_biomarkers_to_knowledge_lab_results_maps_stage20_display_names():
     assert payload["alt"]["value"] == 75.0
 
 
+def test_build_deidentified_person_avatar_uses_bands_only():
+    avatar = integration.build_deidentified_person_avatar(
+        {
+            "age": 37,
+            "sex": "female",
+            "height_cm": 170,
+            "weight_kg": 68,
+            "goals": ["Energy", "Sleep"],
+            "full_name": "Must Not Leak",
+        }
+    )
+
+    assert avatar == {
+        "age_band": "30_39",
+        "sex": "female",
+        "bmi_band": "healthy_range",
+        "goals": ["energy", "sleep"],
+    }
+    assert "full_name" not in avatar
+    assert "height_cm" not in avatar
+    assert "weight_kg" not in avatar
+
+
 @pytest.mark.asyncio
 async def test_evaluate_biomarkers_with_knowledge_calls_evaluator(monkeypatch):
     captured = {}
@@ -46,6 +69,17 @@ async def test_evaluate_biomarkers_with_knowledge_calls_evaluator(monkeypatch):
         return {"matched_rules": [{"rule_key": "rule_low_ferritin_fatigue"}]}
 
     monkeypatch.setattr(integration, "evaluate_health_input", _fake_evaluate_health_input)
+    async def _fake_get_user_profile(_user_id):
+        return {
+            "age": 37,
+            "sex": "female",
+            "height_cm": 170,
+            "weight_kg": 68,
+            "goals": ["energy"],
+            "knowledge_learning_consent": True,
+        }
+
+    monkeypatch.setattr(integration.supabase, "get_user_profile", _fake_get_user_profile)
 
     result = await integration.evaluate_biomarkers_with_knowledge(
         biomarkers=[{"name": "Ferritin", "value": 18, "unit": "ng/mL"}],
@@ -58,6 +92,9 @@ async def test_evaluate_biomarkers_with_knowledge_calls_evaluator(monkeypatch):
     assert captured["payload"]["lab_results"]["ferritin"]["value"] == 18.0
     assert captured["payload"]["symptoms"] == ["fatigue"]
     assert captured["payload"]["context"]["source"] == "biomarker_analyzer"
+    assert captured["payload"]["context"]["person_avatar"]["age_band"] == "30_39"
+    assert captured["payload"]["context"]["person_avatar"]["bmi_band"] == "healthy_range"
+    assert captured["payload"]["context"]["cohort_learning_allowed"] is True
     assert captured["user_id"] == "11111111-1111-1111-1111-111111111111"
     assert captured["persist"] is True
 

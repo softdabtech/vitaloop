@@ -169,6 +169,8 @@ def _normalize_biomarker_status(
             return "DEFICIENT"
         if ref_high is not None and value > ref_high:
             return "ELEVATED"
+        if ref_low is not None or ref_high is not None:
+            return "OPTIMAL"
 
     raw_status = str(status or "OPTIMAL").strip().upper()
     normalized = _BIOMARKER_STATUS_ALIASES.get(raw_status, raw_status)
@@ -392,6 +394,9 @@ async def analyze_lab_file(
         upload_payload = {
             "analysis_method": analysis.get("analysis_method"),
             "analysis_time": analysis.get("analysis_time"),
+            "document_parser": analysis.get("document_parser"),
+            "document_input_chars": analysis.get("document_input_chars"),
+            "document_chunks": analysis.get("document_chunks"),
             "summary": analysis.get("summary", {}),
             "top_priority": analysis.get("top_priority", []),
             "retest_schedule": analysis.get("retest_schedule", []),

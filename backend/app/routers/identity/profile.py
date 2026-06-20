@@ -23,6 +23,7 @@ class ProfileUpdate(BaseModel):
     current_supplements: Optional[List[str]] = None
     current_medications: Optional[List[str]] = None
     prior_diagnoses: Optional[str] = None
+    knowledge_learning_consent: Optional[bool] = None
     onboarding_complete: Optional[bool] = None
 
 

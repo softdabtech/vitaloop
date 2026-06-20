@@ -6,7 +6,6 @@ import time
 from contextvars import ContextVar
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from urllib.parse import urlparse
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -338,14 +337,7 @@ def _get_client() -> httpx.AsyncClient:
 
 
 def _chat_completions_path() -> str:
-    """Return chat completions path relative to the configured provider base URL."""
-    base_url = str(settings.active_llm_base_url or "").strip()
-    host = (urlparse(base_url).hostname or "").lower()
-
-    # DigitalOcean Agent Inference uses /api/v1/chat/completions.
-    if host.endswith("agents.do-ai.run"):
-        return "api/v1/chat/completions"
-
+    """Return the direct OpenAI-compatible chat completions path."""
     return "chat/completions"
 
 

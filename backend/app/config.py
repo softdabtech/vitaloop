@@ -15,12 +15,6 @@ class Settings(BaseSettings):
     claude_max_tokens: int = 8192
     claude_pdf_max_size_mb: int = 10
     claude_analysis_retry_count: int = 2
-    abacus_ai_api_key: str = ""
-    abacus_ai_base_url: str = "https://routellm.abacus.ai/v1"
-    abacus_ai_model: str = "route-llm"
-    routellm_api_key: str = ""
-    routellm_base_url: str = "https://routellm.abacus.ai/v1"
-    routellm_model: str = "route-llm"
     openai_api_key: str = ""
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-4o-mini"
@@ -30,13 +24,6 @@ class Settings(BaseSettings):
     tiff_max_pages: int = 10  # Max pages in multi-page TIFF
     table_analysis_max_rows: int = 1000  # Max rows when parsing tables
     table_analysis_max_columns: int = 50  # Max columns when parsing tables
-    # DigitalOcean AI endpoint.
-    # For Agent Inference (customer-specific):    https://{your-agent}.agents.do-ai.run
-    # For Serverless Inference:                  https://inference.do-ai.run/v1
-    # The generic https://agents.do-ai.run without a subdomain returns 404 and is NOT valid.
-    digitalocean_claude_api_key: str = ""
-    digitalocean_claude_base_url: str = ""
-    digitalocean_claude_model: str = "claude-3-5-sonnet"
     app_env: str = "development"
     allowed_origins: str = "http://localhost:5173"
     security_enable_headers: bool = True
@@ -122,49 +109,18 @@ class Settings(BaseSettings):
 
     @property
     def active_llm_api_key(self) -> str:
-        """Active LLM API key with provider priority."""
-        if (self.digitalocean_claude_api_key or "").strip():
-            return self.digitalocean_claude_api_key
-        if (self.routellm_api_key or "").strip():
-            return self.routellm_api_key
-        if (self.abacus_ai_api_key or "").strip():
-            return self.abacus_ai_api_key
+        """Direct OpenAI API key."""
         return self.openai_api_key
 
     @property
     def active_llm_base_url(self) -> str:
-        """Active LLM base URL with provider priority."""
-        if (self.digitalocean_claude_api_key or "").strip():
-            return self.digitalocean_claude_base_url
-        if (self.routellm_api_key or "").strip():
-            return self.routellm_base_url
-        if (self.abacus_ai_api_key or "").strip():
-            return self.abacus_ai_base_url
+        """Direct OpenAI API base URL."""
         return self.openai_base_url or "https://api.openai.com/v1"
 
     @property
     def active_llm_model(self) -> str:
-        """Active LLM model with provider priority."""
-        if (self.digitalocean_claude_api_key or "").strip():
-            return self.digitalocean_claude_model
-        if (self.routellm_api_key or "").strip():
-            return self.routellm_model
-        if (self.abacus_ai_api_key or "").strip():
-            return self.abacus_ai_model
+        """Direct OpenAI model."""
         return self.openai_model or "gpt-4o-mini"
-
-    # Backward-compatible aliases (deprecated — use active_llm_* instead)
-    @property
-    def active_abacus_ai_api_key(self) -> str:
-        return self.active_llm_api_key
-
-    @property
-    def active_abacus_ai_base_url(self) -> str:
-        return self.active_llm_base_url
-
-    @property
-    def active_abacus_ai_model(self) -> str:
-        return self.active_llm_model
 
     @property
     def active_supabase_service_key(self) -> str:
