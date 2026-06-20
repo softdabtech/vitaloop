@@ -1,9 +1,9 @@
 
 import { clientsClaim } from 'workbox-core'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
-import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from 'workbox-precaching'
+import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
-import { CacheFirst } from 'workbox-strategies'
+import { CacheFirst, NetworkFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 
 self.skipWaiting()
@@ -11,7 +11,13 @@ clientsClaim()
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST || [])
 
-const navigationHandler = createHandlerBoundToURL('/index.html')
+const navigationHandler = new NetworkFirst({
+  cacheName: 'navigation-shell',
+  networkTimeoutSeconds: 3,
+  plugins: [
+    new CacheableResponsePlugin({ statuses: [0, 200] }),
+  ],
+})
 const navigationRoute = new NavigationRoute(navigationHandler, {
   denylist: [/^\/api\//, /^\/auth\//, /^\/admin/, /^\/__/],
 })
