@@ -59,6 +59,13 @@
 .al-refresh { display:flex; align-items:center; gap:12px; padding:10px 20px; border-top:1px solid #e8ecf2; background:#fafbfc; font-size:12px; color:#64748b; }
 .al-refresh-btn { padding:4px 12px; border-radius:6px; background:#f1f5f9; border:none; font-size:12px; cursor:pointer; color:#475569; }
 .al-refresh-btn:hover { background:#e2e8f0; }
+@@media (max-width:720px) {
+  .al-wrap { padding:16px; }
+  .al-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .al-filter { align-items:stretch; }
+  .al-filter label, .al-filter input, .al-filter select, .al-filter-btn { width:100% !important; }
+  .al-refresh { flex-wrap:wrap; }
+}
 </style>
 
 <div class="al-wrap">

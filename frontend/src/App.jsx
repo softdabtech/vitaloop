@@ -612,7 +612,7 @@ function PublicSymptomPrompt({ disabled = false }) {
     const timerId = window.setTimeout(() => {
       window.sessionStorage.setItem(SYMPTOM_PROMPT_STORAGE_KEY, '1')
       setVisible(true)
-    }, 6000)
+    }, 10000)
 
     return () => window.clearTimeout(timerId)
   }, [disabled, loading, user, isExcludedRoute, location.pathname])
