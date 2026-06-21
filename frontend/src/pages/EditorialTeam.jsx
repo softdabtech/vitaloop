@@ -19,7 +19,7 @@ export default function EditorialTeam() {
         <p className="mt-6 max-w-3xl text-xl leading-9 text-slate-600">The editorial team translates authoritative public-health and laboratory information into practical educational guides for symptom tracking, test discussions, and biomarker context.</p>
 
         <div className="mt-12 grid gap-6 md:grid-cols-[220px_1fr]">
-          <img src="/images/alex.png" alt="Alex Bombela, founder of VITALOOP" className="h-52 w-52 rounded-[28px] border-4 border-white object-cover shadow-lg" />
+          <img src="/images/alex.webp" alt="Alex Bombela, founder of VITALOOP" className="h-52 w-52 rounded-[28px] border-4 border-white object-cover shadow-lg" />
           <section className="rounded-[28px] border border-slate-200 bg-white p-7">
             <h2 className="text-2xl font-black">Editorial ownership</h2>
             <p className="mt-4 leading-8 text-slate-700">Alex Bombela, Founder and CEO, is accountable for the product’s editorial standards and correction process. His background is in technology and product leadership—not clinical practice. VITALOOP does not represent him as a medical professional.</p>

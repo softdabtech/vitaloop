@@ -273,7 +273,7 @@ export default function About() {
             <div className="mb-8 flex justify-center">
               {!imageError ? (
                 <img
-                  src="/images/alex.png"
+                  src="/images/alex.webp"
                   alt="Alex Bombela"
                   onError={() => setImageError(true)}
                   className="h-40 w-40 rounded-full border-4 border-emerald-200 object-cover shadow-lg"

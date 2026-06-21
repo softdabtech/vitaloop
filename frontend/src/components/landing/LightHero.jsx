@@ -9,13 +9,13 @@ const HERO_SCREENS = [
     className: 'vl-hero-shot-main',
   },
   {
-    src: '/mockups/example-report/lab-results.png',
+    src: '/mockups/example-report/lab-results.webp',
     alt: 'VITALOOP lab results table with biomarker status and ranges',
     label: 'Lab results',
     className: 'vl-hero-shot-side vl-hero-shot-results',
   },
   {
-    src: '/mockups/example-report/check-in.png',
+    src: '/mockups/example-report/check-in.webp',
     alt: 'VITALOOP weekly check-in screen',
     label: 'Check-in',
     className: 'vl-hero-shot-side vl-hero-shot-checkin',

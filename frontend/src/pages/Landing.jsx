@@ -977,7 +977,7 @@ export default function Landing() {
                 </button>
               </div>
               <img
-                src="/mockups/example-report/dashboard.png?v=20260606"
+                src="/mockups/example-report/dashboard.webp?v=20260606"
                 alt="VITALOOP cabinet dashboard preview"
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 object-cover shadow-xl"
                 loading="eager"
