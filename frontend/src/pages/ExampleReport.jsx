@@ -20,42 +20,42 @@ const SCREENSHOTS = [
   {
     title: 'Today dashboard',
     description: 'A single place for current priorities, uploads, weekly tasks, and next actions.',
-    image: '/mockups/example-report/dashboard.png',
+    image: '/mockups/example-report/dashboard.webp',
     alt: 'VITALOOP user dashboard with health summary cards and next actions',
     icon: LayoutDashboard,
   },
   {
     title: 'Lab results',
     description: 'Normalized biomarkers with values, units, reference ranges, status, and interpretation context.',
-    image: '/mockups/example-report/lab-results.png',
+    image: '/mockups/example-report/lab-results.webp',
     alt: 'VITALOOP lab results page with biomarker rows and status indicators',
     icon: FlaskConical,
   },
   {
     title: 'Upload flow',
     description: 'Drop in a PDF report and keep the original file connected to the structured analysis.',
-    image: '/mockups/example-report/upload.png',
+    image: '/mockups/example-report/upload.webp',
     alt: 'VITALOOP upload page for lab report PDFs',
     icon: Upload,
   },
   {
     title: 'Progress tracking',
     description: 'See how symptoms, actions, and biomarker trends change across repeated cycles.',
-    image: '/mockups/example-report/progress.png',
+    image: '/mockups/example-report/progress.webp',
     alt: 'VITALOOP progress page with charts and trend cards',
     icon: TrendingUp,
   },
   {
     title: 'Weekly check-in',
     description: 'Capture adherence and how you feel so each loop becomes more useful than the last.',
-    image: '/mockups/example-report/check-in.png',
+    image: '/mockups/example-report/check-in.webp',
     alt: 'VITALOOP weekly check-in page with symptom and action tracking',
     icon: ClipboardList,
   },
   {
     title: 'Practitioner workspace',
     description: 'For labs, nutritionists, and practitioners managing client context and review queues.',
-    image: '/mockups/example-report/crm.png',
+    image: '/mockups/example-report/crm.webp',
     alt: 'VITALOOP practitioner CRM dashboard with client panels',
     icon: BarChart3,
   },
@@ -151,7 +151,7 @@ export default function ExampleReport() {
             <div className="absolute -inset-6 -z-10 rounded-[32px] bg-[radial-gradient(circle_at_20%_10%,rgba(20,184,166,0.22),transparent_36%),radial-gradient(circle_at_88%_14%,rgba(56,189,248,0.12),transparent_34%)]" />
             <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 shadow-2xl shadow-emerald-900/10">
               <img
-                src="/mockups/example-report/dashboard.png"
+                src="/mockups/example-report/dashboard.webp"
                 alt="VITALOOP dashboard preview"
                 className="aspect-[16/10] w-full object-cover object-top"
               />

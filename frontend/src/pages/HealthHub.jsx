@@ -23,7 +23,7 @@ export default function HealthHub() {
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-950">
       <Seo
-        title="Health Intelligence Hub: Symptoms & Blood Tests | VITALOOP"
+        title="Health Hub: Symptoms and Blood Tests | VITALOOP"
         description="Evidence-aware guides that connect symptoms, blood-test categories, biomarker context, clinician questions, and practical next steps."
         path="/health-hub"
         schemas={[{

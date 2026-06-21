@@ -111,8 +111,19 @@ const routes = [
     ],
   },
   {
+    path: '/site-map',
+    title: 'VITALOOP Site Map | Health Guides and Product Pages',
+    description: 'Browse every public VITALOOP product page, health guide, editorial standard, and help center resource from one accessible site map.',
+    priority: '0.5',
+    changefreq: 'weekly',
+    text: [
+      'Use this site map to browse all public VITALOOP resources.',
+      'Explore symptom-first product information, evidence-aware health guides, trust policies, and practical help articles.',
+    ],
+  },
+  {
     path: '/terms',
-    title: 'Terms of Service | VITALOOP',
+    title: 'Terms of Service and Subscription Rules | VITALOOP',
     description: 'Read the VITALOOP terms of service for using the website, user cabinet, subscriptions, and health support features.',
     priority: '0.3',
     changefreq: 'yearly',
@@ -120,7 +131,7 @@ const routes = [
   },
   {
     path: '/privacy-policy',
-    title: 'Privacy Policy | VITALOOP',
+    title: 'Privacy Policy and Health Data Protection | VITALOOP',
     description: 'Learn how VITALOOP collects, processes, stores, protects, exports, and deletes symptom data, blood test reports, biomarker results, and account information.',
     priority: '0.3',
     changefreq: 'yearly',
@@ -136,7 +147,7 @@ const routes = [
   },
   {
     path: '/health-hub',
-    title: 'Health Intelligence Hub: Symptoms & Blood Tests | VITALOOP',
+    title: 'Health Hub: Symptoms and Blood Tests | VITALOOP',
     description: 'Evidence-aware guides that connect symptoms, blood-test categories, biomarker context, clinician questions, and practical next steps.',
     priority: '0.9',
     changefreq: 'weekly',
@@ -271,6 +282,14 @@ for (const articleId of ALL_ARTICLE_IDS) {
   })
 }
 
+const siteMapRoute = routes.find((route) => route.path === '/site-map')
+siteMapRoute.links = routes
+  .filter((route) => route.path !== '/site-map')
+  .map((route) => ({
+    href: route.path === '/' ? '/' : `${route.path.replace(/\/+$/, '')}/`,
+    label: route.title.replace(' | VITALOOP', ''),
+  }))
+
 const privateRoutes = [
   '/login',
   '/dashboard',
@@ -309,7 +328,11 @@ function upsertTag(html, pattern, replacement) {
 }
 
 function renderStaticRoot(route) {
-  const paragraphs = route.text.map((item) => `<p>${escapeHtml(item)}</p>`).join('\n          ')
+  const [lead, ...supportingText] = route.text
+  const paragraphs = [
+    lead ? `<p><strong>${escapeHtml(lead)}</strong></p>` : '',
+    ...supportingText.map((item) => `<p>${escapeHtml(item)}</p>`),
+  ].join('\n          ')
   const coreLinks = [
     { href: '/', label: 'VITALOOP home' },
     { href: '/how-it-works/', label: 'How VITALOOP works' },
@@ -317,11 +340,12 @@ function renderStaticRoot(route) {
     { href: '/health-hub/', label: 'Health Intelligence Hub' },
     { href: '/example-report/', label: 'Example health report' },
     { href: '/about/', label: 'About VITALOOP' },
+    { href: '/site-map/', label: 'Browse the complete VITALOOP site map' },
   ]
   const links = [...coreLinks, ...(route.links || [])]
     .filter((link, index, all) => all.findIndex((item) => item.href === link.href) === index)
   const navigation = `<nav aria-label="Related pages"><h2>Explore VITALOOP</h2><ul>${links.map((link) => `<li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`).join('')}</ul></nav>`
-  return `<div id="root"><main data-crawler-content="true" style="max-width: 760px; margin: 0 auto; padding: 48px 20px; font-family: Inter, Arial, sans-serif; color: #0f172a;">
+  return `<div id="root"><main data-crawler-content="true">
         <h1>${escapeHtml(route.title.replace(' | VITALOOP', ''))}</h1>
         <p>${escapeHtml(route.description)}</p>
         ${paragraphs}
@@ -346,6 +370,7 @@ function renderHtml(baseHtml, route, { noindex = false } = {}) {
   html = upsertTag(html, /<meta\s+name="twitter:description"\s+content="[^"]*"[^>]*\/?>/i, `<meta name="twitter:description" content="${escapeHtml(route.description)}" data-rh="true" />`)
   if (route.path !== '/') {
     html = html.replace(/\s*<link\s+rel="alternate"\s+hreflang="[^"]+"\s+href="[^"]*"\s*\/?>/gi, '')
+    html = html.replace('</head>', `    <link rel="alternate" hreflang="en" href="${canonical}" />\n  </head>`)
   }
   html = html.replace(/<div id="root"><\/div>/i, renderStaticRoot(route))
   return html
