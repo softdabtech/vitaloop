@@ -125,8 +125,8 @@ export default function Privacy() {
 
         <div>
           <h2 style={h2Style}>Related Documents</h2>
-          <p><a href="/terms" style={{ color: 'var(--teal-500)' }}>Terms of Service</a></p>
-          <p><a href="/privacy-policy" style={{ color: 'var(--teal-500)' }}>Privacy Policy</a></p>
+          <p><a href="/terms/" style={{ color: 'var(--teal-500)' }}>Terms of Service</a></p>
+          <p><a href="/privacy-policy/" style={{ color: 'var(--teal-500)' }}>Privacy Policy</a></p>
           <p style={{ color: 'var(--gray-500, #6e6e73)', fontSize: 14 }}><em>This Privacy Policy is effective as of May 19, 2026.</em></p>
         </div>
       </section>

@@ -8,8 +8,8 @@ import BrandMark from './BrandMark.jsx'
 const NAV_LINKS = [
   { label: 'Features', href: '#why-vitaloop' },
   { label: 'Pricing', href: '#pricing' },
-  { label: 'For Nutritionists', href: '/for-nutritionists', page: true },
-  { label: 'Help', href: '/help', page: true },
+  { label: 'For Nutritionists', href: '/for-nutritionists/', page: true },
+  { label: 'Help', href: '/help/', page: true },
 ]
 
 function LogoIcon() {

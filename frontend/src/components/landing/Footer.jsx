@@ -2,27 +2,27 @@ import BrandMark from './BrandMark.jsx'
 
 const PRODUCT_LINKS = [
   { label: 'How it works', href: '/#problem' },
-  { label: 'Example report', href: '/example-report' },
+  { label: 'Example report', href: '/example-report/' },
   { label: 'Pricing', href: '/#pricing' },
-  { label: 'Help Center', href: '/help' },
+  { label: 'Help Center', href: '/help/' },
   { label: 'Health Intelligence Hub', href: '/health-hub/' },
   { label: 'Fatigue & low energy', href: '/health-hub/topics/fatigue-low-energy/' },
   { label: 'Blood test biomarkers', href: '/health-hub/topics/blood-test-biomarkers/' },
 ]
 
 const COMPANY_LINKS = [
-  { label: 'About', href: '/about' },
-  { label: 'For practitioners', href: '/for-nutritionists' },
-  { label: 'For laboratories', href: '/for-nutritionists' },
-  { label: 'For investors', href: '/for-investors' },
+  { label: 'About', href: '/about/' },
+  { label: 'For practitioners', href: '/for-nutritionists/' },
+  { label: 'For laboratories', href: '/for-nutritionists/' },
+  { label: 'For investors', href: '/for-investors/' },
 ]
 
 const TRUST_LINKS = [
-  { label: 'Privacy & security', href: '/privacy-policy' },
-  { label: 'Terms', href: '/terms' },
+  { label: 'Privacy & security', href: '/privacy-policy/' },
+  { label: 'Terms', href: '/terms/' },
   { label: 'Editorial policy', href: '/editorial-policy/' },
   { label: 'Medical review policy', href: '/medical-review-policy/' },
-  { label: 'Medical disclaimer', href: '/terms' },
+  { label: 'Medical disclaimer', href: '/terms/' },
 ]
 
 const SOCIAL_LINKS = [

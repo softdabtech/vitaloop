@@ -63,6 +63,7 @@ export default function Seo({
       <meta property="og:locale" content={locale} />
 
       <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:site" content="@vitaloop_today" />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={safeDescription} />
       <meta name="twitter:image" content={image} />

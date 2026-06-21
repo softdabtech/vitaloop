@@ -379,6 +379,7 @@ export default function ForInvestors() {
           </p>
           <div className="mt-6 overflow-x-auto">
             <table className="min-w-full border-collapse text-left text-sm">
+              <caption className="sr-only">VITALOOP investment and business metrics</caption>
               <thead>
                 <tr className="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-600">
                   <th className="px-3 py-3">Competitor</th>

@@ -30,9 +30,9 @@ export default function DisclaimerModal() {
         </p>
         <p className="text-gray-500 text-xs mb-5">
           By continuing, you agree to our{' '}
-          <a href="/terms" className="text-green-400 hover:underline" target="_blank" rel="noreferrer">Terms of Service</a>
+          <a href="/terms/" className="text-green-400 hover:underline" target="_blank" rel="noreferrer">Terms of Service</a>
           {' '}and{' '}
-          <a href="/privacy-policy" className="text-green-400 hover:underline" target="_blank" rel="noreferrer">Privacy Policy</a>.
+          <a href="/privacy-policy/" className="text-green-400 hover:underline" target="_blank" rel="noreferrer">Privacy Policy</a>.
         </p>
         <button
           onClick={acceptDisclaimer}
