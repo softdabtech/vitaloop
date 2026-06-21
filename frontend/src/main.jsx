@@ -58,3 +58,12 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </React.StrictMode>
 )
+
+window.requestAnimationFrame(() => {
+  window.requestAnimationFrame(() => {
+    const bootCover = document.getElementById('vitaloop-boot-cover')
+    if (!bootCover) return
+    bootCover.dataset.ready = 'true'
+    window.setTimeout(() => bootCover.remove(), 180)
+  })
+})
