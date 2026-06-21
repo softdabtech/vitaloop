@@ -569,6 +569,8 @@ function FloatingSupportChat() {
 }
 
 const SYMPTOM_PROMPT_STORAGE_KEY = 'vitaloop_symptom_prompt_seen'
+const SYMPTOM_PROMPT_STARTED_AT_KEY = 'vitaloop_symptom_prompt_started_at'
+const SYMPTOM_PROMPT_DELAY_MS = 10000
 
 function PublicSymptomPrompt({ disabled = false }) {
   const location = useLocation()
@@ -612,10 +614,17 @@ function PublicSymptomPrompt({ disabled = false }) {
     if (typeof window === 'undefined') return undefined
     if (window.sessionStorage.getItem(SYMPTOM_PROMPT_STORAGE_KEY) === '1') return undefined
 
+    const storedStartedAt = Number(window.sessionStorage.getItem(SYMPTOM_PROMPT_STARTED_AT_KEY))
+    const startedAt = Number.isFinite(storedStartedAt) && storedStartedAt > 0 ? storedStartedAt : Date.now()
+    if (startedAt !== storedStartedAt) {
+      window.sessionStorage.setItem(SYMPTOM_PROMPT_STARTED_AT_KEY, String(startedAt))
+    }
+    const remainingDelay = Math.max(0, SYMPTOM_PROMPT_DELAY_MS - (Date.now() - startedAt))
+
     const timerId = window.setTimeout(() => {
       window.sessionStorage.setItem(SYMPTOM_PROMPT_STORAGE_KEY, '1')
       setVisible(true)
-    }, 10000)
+    }, remainingDelay)
 
     return () => window.clearTimeout(timerId)
   }, [disabled, loading, user, isExcludedRoute, location.pathname])

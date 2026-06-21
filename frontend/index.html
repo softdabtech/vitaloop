@@ -3,6 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      #vitaloop-boot-cover {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: grid;
+        place-items: center;
+        background: #f8fafc;
+        transition: opacity 160ms ease;
+      }
+      #vitaloop-boot-cover[data-ready="true"] {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #vitaloop-boot-cover-mark {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        object-fit: contain;
+      }
+    </style>
     <!-- Primary SEO -->
     <title>AI Blood Test Analysis & Symptom Checker | VITALOOP</title>
     <meta name="description" content="Start with symptoms or upload blood test results. Get clear biomarker explanations, lab discussion guidance, and a health action plan you can track." data-rh="true" />
@@ -175,6 +196,9 @@
     </script>
   </head>
   <body>
+    <div id="vitaloop-boot-cover" aria-hidden="true">
+      <img id="vitaloop-boot-cover-mark" src="/images/favicon_1.png?v=20260525" width="44" height="44" alt="" />
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
