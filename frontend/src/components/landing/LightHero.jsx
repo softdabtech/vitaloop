@@ -5,20 +5,17 @@ const HERO_SCREENS = [
   {
     src: '/mockups/cabinet-real/upload-results.webp',
     alt: 'VITALOOP upload results cabinet screen',
-    label: 'Dashboard',
-    className: 'vl-hero-shot-main',
+    label: 'Upload results',
   },
   {
     src: '/mockups/example-report/lab-results.webp',
     alt: 'VITALOOP lab results table with biomarker status and ranges',
     label: 'Lab results',
-    className: 'vl-hero-shot-side vl-hero-shot-results',
   },
   {
     src: '/mockups/example-report/check-in.webp',
     alt: 'VITALOOP weekly check-in screen',
-    label: 'Check-in',
-    className: 'vl-hero-shot-side vl-hero-shot-checkin',
+    label: 'Weekly check-in',
   },
 ]
 
@@ -34,25 +31,21 @@ export function LightHero() {
 
   return (
     <section className="relative overflow-hidden bg-white py-10 sm:py-16 lg:py-24">
-      <style>{`
-        .vl-hero-shot-main { transform: rotate(-1deg); }
-        .vl-hero-shot-results { transform: rotate(2.5deg); }
-        .vl-hero-shot-checkin { transform: rotate(-2deg); }
-      `}</style>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Two-column grid */}
         <div className="grid lg:grid-cols-[0.95fr_1.05fr] gap-12 lg:gap-16 items-center">
           {/* LEFT: Content */}
-          <div className="space-y-8">
+          <div className="min-w-0 space-y-8">
             {/* Eyebrow badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 border border-teal-200 rounded-full">
-              <span className="text-teal-600 font-semibold text-sm">AI BLOOD TEST ANALYSIS + SYMPTOM CONTEXT</span>
+            <div className="inline-flex max-w-full items-center gap-2 rounded-2xl border border-teal-200 bg-teal-50 px-3 py-2 sm:rounded-full sm:px-4">
+              <span className="min-w-0 whitespace-normal text-center text-[11px] font-semibold leading-4 text-teal-600 sm:text-sm">AI BLOOD TEST ANALYSIS + SYMPTOM CONTEXT</span>
             </div>
 
             {/* Headline */}
-            <h1 className="text-[44px] font-bold leading-[1.04] text-slate-900 sm:text-5xl lg:text-6xl">
+            <h1 className="max-w-full break-words text-[38px] font-bold leading-[1.04] tracking-[-0.035em] text-slate-900 sm:text-5xl lg:text-6xl">
               Understand your symptoms
-              <br />
+              <br className="hidden sm:block" />
+              {' '}
               <span className="bg-gradient-to-r from-teal-600 to-teal-500 bg-clip-text text-transparent">
                 and blood test results
               </span>
@@ -118,69 +111,63 @@ export function LightHero() {
             </div>
           </div>
 
-          {/* RIGHT: Animated product screens */}
-          <div className="flex justify-center lg:justify-end">
-            <div className="relative h-[380px] w-full max-w-[620px] sm:h-[500px] lg:h-[560px]">
-              <div className="absolute inset-4 rounded-[36px] bg-gradient-to-br from-teal-100 via-sky-50 to-white blur-2xl" />
-              <div className="absolute left-4 right-4 top-8 rounded-[28px] border border-slate-200 bg-white/70 p-3 shadow-2xl backdrop-blur sm:left-8 sm:right-8">
-                <div className="mb-3 flex items-center justify-between px-2">
+          {/* RIGHT: Product workflow preview */}
+          <div className="min-w-0 flex justify-center lg:justify-end">
+            <div className="relative w-full max-w-[660px]">
+              <div className="absolute inset-6 rounded-[36px] bg-gradient-to-br from-teal-100 via-sky-50 to-white blur-3xl" />
+              <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white p-3 shadow-[0_28px_80px_rgba(15,23,42,0.16)] sm:p-4">
+                <div className="mb-3 flex items-center justify-between gap-4 px-1 sm:mb-4 sm:px-2">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">Live product flow</p>
-                    <p className="text-sm font-semibold text-slate-900">Cabinet → Upload → Report</p>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-slate-900 sm:text-base">Upload → Results → Weekly follow-through</p>
                   </div>
-                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Report ready</span>
+                  <span className="hidden rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 sm:inline-flex">Real product screens</span>
                 </div>
-                <img
-                  src={HERO_SCREENS[0].src}
-                  alt={HERO_SCREENS[0].alt}
-                  width="1792"
-                  height="928"
-                  fetchPriority="high"
-                  decoding="async"
-                  className={`${HERO_SCREENS[0].className} w-full rounded-2xl border border-slate-200 bg-white shadow-xl`}
-                />
-              </div>
 
-              <div className="absolute -left-1 bottom-14 w-[52%] rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl sm:left-0 sm:bottom-10">
-                <div className="mb-2 flex items-center justify-between px-1">
-                  <span className="text-[11px] font-bold text-slate-800">Upload results</span>
-                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">3 review</span>
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                  <img
+                    src={HERO_SCREENS[0].src}
+                    alt={HERO_SCREENS[0].alt}
+                    width="1792"
+                    height="928"
+                    fetchPriority="high"
+                    decoding="async"
+                    className="aspect-[1.93/1] w-full object-cover object-top"
+                  />
                 </div>
-                <img
-                  src={HERO_SCREENS[1].src}
-                  alt={HERO_SCREENS[1].alt}
-                  width="1600"
-                  height="1000"
-                  loading="lazy"
-                  decoding="async"
-                  className={`${HERO_SCREENS[1].className} w-full rounded-xl border border-slate-100`}
-                />
-              </div>
 
-              <div className="absolute -right-1 bottom-2 w-[34%] rounded-[24px] border border-slate-200 bg-white p-2 shadow-2xl sm:right-3 sm:bottom-0">
-                <div className="mb-2 flex items-center justify-between px-1">
-                  <span className="text-[10px] font-bold text-slate-800">Weekly loop</span>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {HERO_SCREENS.slice(1).map((screen) => (
+                    <div key={screen.label} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                      <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+                        <span className="text-xs font-bold text-slate-700">{screen.label}</span>
+                        <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                      </div>
+                      <img
+                        src={screen.src}
+                        alt={screen.alt}
+                        width="1600"
+                        height="1000"
+                        loading="lazy"
+                        decoding="async"
+                        className="aspect-[1.6/1] w-full object-cover object-top"
+                      />
+                    </div>
+                  ))}
                 </div>
-                <img
-                  src={HERO_SCREENS[2].src}
-                  alt={HERO_SCREENS[2].alt}
-                  width="1600"
-                  height="1000"
-                  loading="lazy"
-                  decoding="async"
-                  className={`${HERO_SCREENS[2].className} w-full rounded-[18px] border border-slate-100`}
-                />
-              </div>
 
-              <div className="absolute right-4 top-4 hidden rounded-2xl border border-emerald-200 bg-white/95 px-4 py-3 shadow-xl sm:block">
-                <p className="text-xs font-semibold text-slate-500">Knowledge report</p>
-                <p className="mt-1 text-xl font-bold text-slate-900">85+ markers</p>
-                <p className="text-xs font-medium text-emerald-700">Explainable patterns</p>
-              </div>
-
-              <div className="absolute left-6 top-[44%] hidden rounded-2xl border border-sky-200 bg-white/95 px-4 py-3 shadow-xl sm:block">
-                <p className="text-xs font-semibold text-slate-500">Next step</p>
-                <p className="mt-1 text-sm font-bold text-slate-900">Retest plan generated</p>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {[
+                    ['85+', 'biomarkers'],
+                    ['Clear', 'priority report'],
+                    ['Weekly', 'progress loop'],
+                  ].map(([value, label]) => (
+                    <div key={label} className="rounded-xl bg-slate-50 px-2 py-3 text-center">
+                      <p className="text-sm font-black text-slate-900 sm:text-base">{value}</p>
+                      <p className="mt-0.5 text-[10px] font-semibold text-slate-500 sm:text-xs">{label}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
