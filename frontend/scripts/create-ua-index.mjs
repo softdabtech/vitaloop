@@ -67,22 +67,29 @@ html = html
   .replace('content="Vitaloop"', 'content="Vitaloop Ukraine"')
 
 html = replaceTag(html, /<title>[\s\S]*?<\/title>/, `<title>${UA.title}</title>`)
-html = replaceTag(html, /<meta name="description" content="[^"]*" \/>/, `<meta name="description" content="${UA.description}" />`)
+html = replaceTag(html, /<meta name="description" content="[^"]*"[^>]*\/>/, `<meta name="description" content="${UA.description}" data-rh="true" />`)
 html = replaceTag(html, /<meta name="keywords" content="[^"]*" \/>/, '<meta name="keywords" content="самопочуття, симптоми, аналізи, лабораторні аналізи, здоровʼя українською, Vitaloop Ukraine" />')
-html = replaceTag(html, /<link rel="canonical" href="[^"]*" \/>/, `<link rel="canonical" href="${UA.url}" />`)
-html = replaceTag(html, /<meta property="og:title" content="[^"]*" \/>/, `<meta property="og:title" content="${UA.title}" />`)
-html = replaceTag(html, /<meta property="og:description" content="[^"]*" \/>/, `<meta property="og:description" content="${UA.description}" />`)
-html = replaceTag(html, /<meta property="og:url" content="[^"]*" \/>/, `<meta property="og:url" content="${UA.url}" />`)
-html = replaceTag(html, /<meta property="og:site_name" content="[^"]*" \/>/, '<meta property="og:site_name" content="VITALOOP Ukraine" />')
-html = replaceTag(html, /<meta property="og:image" content="[^"]*" \/>/, `<meta property="og:image" content="${UA.image}" />`)
-html = replaceTag(html, /<meta property="og:image:alt" content="[^"]*" \/>/, `<meta property="og:image:alt" content="${UA.imageAlt}" />`)
-html = replaceTag(html, /<meta property="og:locale" content="[^"]*" \/>/, '<meta property="og:locale" content="uk_UA" />')
-html = replaceTag(html, /<meta name="twitter:title" content="[^"]*" \/>/, `<meta name="twitter:title" content="${UA.title}" />`)
-html = replaceTag(html, /<meta name="twitter:description" content="[^"]*" \/>/, `<meta name="twitter:description" content="${UA.description}" />`)
-html = replaceTag(html, /<meta name="twitter:image" content="[^"]*" \/>/, `<meta name="twitter:image" content="${UA.image}" />`)
-html = replaceTag(html, /<meta name="twitter:image:alt" content="[^"]*" \/>/, `<meta name="twitter:image:alt" content="${UA.imageAlt}" />`)
-html = replaceTag(html, /<link rel="alternate" hreflang="en" href="[^"]*" \/>/, `<link rel="alternate" hreflang="uk-UA" href="${UA.url}" />`)
-html = replaceTag(html, /<link rel="alternate" hreflang="x-default" href="[^"]*" \/>/, `<link rel="alternate" hreflang="x-default" href="${UA.url}" />`)
+html = replaceTag(html, /<link rel="canonical" href="[^"]*"[^>]*\/>/, `<link rel="canonical" href="${UA.url}" data-rh="true" />`)
+html = replaceTag(html, /<meta property="og:title" content="[^"]*"[^>]*\/>/, `<meta property="og:title" content="${UA.title}" data-rh="true" />`)
+html = replaceTag(html, /<meta property="og:description" content="[^"]*"[^>]*\/>/, `<meta property="og:description" content="${UA.description}" data-rh="true" />`)
+html = replaceTag(html, /<meta property="og:url" content="[^"]*"[^>]*\/>/, `<meta property="og:url" content="${UA.url}" data-rh="true" />`)
+html = replaceTag(html, /<meta property="og:site_name" content="[^"]*"[^>]*\/>/, '<meta property="og:site_name" content="VITALOOP Ukraine" data-rh="true" />')
+html = replaceTag(html, /<meta property="og:image" content="[^"]*"[^>]*\/>/, `<meta property="og:image" content="${UA.image}" data-rh="true" />`)
+html = replaceTag(html, /<meta property="og:image:alt" content="[^"]*"[^>]*\/>/, `<meta property="og:image:alt" content="${UA.imageAlt}" data-rh="true" />`)
+html = replaceTag(html, /<meta property="og:locale" content="[^"]*"[^>]*\/>/, '<meta property="og:locale" content="uk_UA" data-rh="true" />')
+html = replaceTag(html, /<meta name="twitter:title" content="[^"]*"[^>]*\/>/, `<meta name="twitter:title" content="${UA.title}" data-rh="true" />`)
+html = replaceTag(html, /<meta name="twitter:description" content="[^"]*"[^>]*\/>/, `<meta name="twitter:description" content="${UA.description}" data-rh="true" />`)
+html = replaceTag(html, /<meta name="twitter:image" content="[^"]*"[^>]*\/>/, `<meta name="twitter:image" content="${UA.image}" data-rh="true" />`)
+html = replaceTag(html, /<meta name="twitter:image:alt" content="[^"]*"[^>]*\/>/, `<meta name="twitter:image:alt" content="${UA.imageAlt}" data-rh="true" />`)
+html = html.replace(/\s*<link rel="alternate" hreflang="[^"]+" href="[^"]*" \/>/g, '')
+html = upsertAfter(
+  html,
+  /<link rel="canonical" href="[^"]*"[^>]*\/>/,
+  'hreflang="uk-UA"',
+  `<link rel="alternate" hreflang="uk-UA" href="${UA.url}" />
+    <link rel="alternate" hreflang="en" href="https://vitaloop.today/" />
+    <link rel="alternate" hreflang="x-default" href="https://vitaloop.today/" />`,
+)
 
 html = upsertAfter(
   html,

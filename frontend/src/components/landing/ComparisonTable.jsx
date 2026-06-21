@@ -64,6 +64,7 @@ export function ComparisonTable() {
         className="overflow-x-auto rounded-3xl border border-slate-200 bg-white"
       >
         <table className="w-full">
+          <caption className="sr-only">Comparison of the VITALOOP workflow with conventional health tracking</caption>
           {/* Header */}
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50">

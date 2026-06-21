@@ -310,14 +310,22 @@ function upsertTag(html, pattern, replacement) {
 
 function renderStaticRoot(route) {
   const paragraphs = route.text.map((item) => `<p>${escapeHtml(item)}</p>`).join('\n          ')
-  const links = route.links?.length
-    ? `<nav aria-label="Related pages"><h2>Related guides</h2><ul>${route.links.map((link) => `<li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`).join('')}</ul></nav>`
-    : ''
+  const coreLinks = [
+    { href: '/', label: 'VITALOOP home' },
+    { href: '/how-it-works/', label: 'How VITALOOP works' },
+    { href: '/symptom-intake/', label: 'Start symptom check' },
+    { href: '/health-hub/', label: 'Health Intelligence Hub' },
+    { href: '/example-report/', label: 'Example health report' },
+    { href: '/about/', label: 'About VITALOOP' },
+  ]
+  const links = [...coreLinks, ...(route.links || [])]
+    .filter((link, index, all) => all.findIndex((item) => item.href === link.href) === index)
+  const navigation = `<nav aria-label="Related pages"><h2>Explore VITALOOP</h2><ul>${links.map((link) => `<li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`).join('')}</ul></nav>`
   return `<div id="root"><main data-crawler-content="true" style="max-width: 760px; margin: 0 auto; padding: 48px 20px; font-family: Inter, Arial, sans-serif; color: #0f172a;">
         <h1>${escapeHtml(route.title.replace(' | VITALOOP', ''))}</h1>
         <p>${escapeHtml(route.description)}</p>
         ${paragraphs}
-        ${links}
+        ${navigation}
       </main></div>`
 }
 
@@ -327,15 +335,18 @@ function renderHtml(baseHtml, route, { noindex = false } = {}) {
   let html = baseHtml
   html = html.replace(/<html\b[^>]*>/i, '<html lang="en" prefix="og: https://ogp.me/ns#">')
   html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(route.title)}</title>`)
-  html = upsertTag(html, /<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i, `<meta name="description" content="${escapeHtml(route.description)}" />`)
-  html = upsertTag(html, /<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/i, `<meta name="robots" content="${noindex ? 'noindex,nofollow' : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1'}" />`)
-  html = upsertTag(html, /<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/i, `<link rel="canonical" href="${canonical}" />`)
-  html = upsertTag(html, /<meta\s+property="og:title"\s+content="[^"]*"\s*\/?>/i, `<meta property="og:title" content="${escapeHtml(route.title)}" />`)
-  html = upsertTag(html, /<meta\s+property="og:description"\s+content="[^"]*"\s*\/?>/i, `<meta property="og:description" content="${escapeHtml(route.description)}" />`)
-  html = upsertTag(html, /<meta\s+property="og:url"\s+content="[^"]*"\s*\/?>/i, `<meta property="og:url" content="${canonical}" />`)
-  html = upsertTag(html, /<meta\s+property="og:image"\s+content="[^"]*"\s*\/?>/i, `<meta property="og:image" content="${DEFAULT_IMAGE}" />`)
-  html = upsertTag(html, /<meta\s+name="twitter:title"\s+content="[^"]*"\s*\/?>/i, `<meta name="twitter:title" content="${escapeHtml(route.title)}" />`)
-  html = upsertTag(html, /<meta\s+name="twitter:description"\s+content="[^"]*"\s*\/?>/i, `<meta name="twitter:description" content="${escapeHtml(route.description)}" />`)
+  html = upsertTag(html, /<meta\s+name="description"\s+content="[^"]*"[^>]*\/?>/i, `<meta name="description" content="${escapeHtml(route.description)}" data-rh="true" />`)
+  html = upsertTag(html, /<meta\s+name="robots"\s+content="[^"]*"[^>]*\/?>/i, `<meta name="robots" content="${noindex ? 'noindex,nofollow' : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1'}" data-rh="true" />`)
+  html = upsertTag(html, /<link\s+rel="canonical"\s+href="[^"]*"[^>]*\/?>/i, `<link rel="canonical" href="${canonical}" data-rh="true" />`)
+  html = upsertTag(html, /<meta\s+property="og:title"\s+content="[^"]*"[^>]*\/?>/i, `<meta property="og:title" content="${escapeHtml(route.title)}" data-rh="true" />`)
+  html = upsertTag(html, /<meta\s+property="og:description"\s+content="[^"]*"[^>]*\/?>/i, `<meta property="og:description" content="${escapeHtml(route.description)}" data-rh="true" />`)
+  html = upsertTag(html, /<meta\s+property="og:url"\s+content="[^"]*"[^>]*\/?>/i, `<meta property="og:url" content="${canonical}" data-rh="true" />`)
+  html = upsertTag(html, /<meta\s+property="og:image"\s+content="[^"]*"[^>]*\/?>/i, `<meta property="og:image" content="${DEFAULT_IMAGE}" data-rh="true" />`)
+  html = upsertTag(html, /<meta\s+name="twitter:title"\s+content="[^"]*"[^>]*\/?>/i, `<meta name="twitter:title" content="${escapeHtml(route.title)}" data-rh="true" />`)
+  html = upsertTag(html, /<meta\s+name="twitter:description"\s+content="[^"]*"[^>]*\/?>/i, `<meta name="twitter:description" content="${escapeHtml(route.description)}" data-rh="true" />`)
+  if (route.path !== '/') {
+    html = html.replace(/\s*<link\s+rel="alternate"\s+hreflang="[^"]+"\s+href="[^"]*"\s*\/?>/gi, '')
+  }
   html = html.replace(/<div id="root"><\/div>/i, renderStaticRoot(route))
   return html
 }

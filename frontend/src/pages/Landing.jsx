@@ -929,7 +929,7 @@ export default function Landing() {
               <FileText className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
               <span>
                 Read our full Privacy Policy{' '}
-                <a href="/privacy-policy" className="font-semibold text-emerald-700 underline-offset-2 hover:text-emerald-600 hover:underline">
+                <a href="/privacy-policy/" className="font-semibold text-emerald-700 underline-offset-2 hover:text-emerald-600 hover:underline">
                   here
                 </a>
                 .
@@ -1358,7 +1358,7 @@ export default function Landing() {
               <button onClick={() => navigate('/for-nutritionists')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                 For professionals
               </button>
-              <a href="/help" className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+              <a href="/help/" className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                 Help Center
               </a>
             </div>
