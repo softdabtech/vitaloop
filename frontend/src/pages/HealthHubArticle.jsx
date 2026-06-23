@@ -20,7 +20,7 @@ export default function HealthHubArticle() {
     headline: article.title,
     description: article.description,
     articleSection: cluster?.title || article.cluster,
-    image: 'https://vitaloop.today/og-cover-2026-05.jpg',
+    image: 'https://vitaloop.today/vitaloop-social-preview-2026-06.png',
     datePublished: '2026-06-20',
     dateModified: '2026-06-20',
     author: { '@type': 'Organization', '@id': 'https://vitaloop.today/authors/vitaloop-editorial-team/#author', name: 'VITALOOP Editorial Team', url: 'https://vitaloop.today/authors/vitaloop-editorial-team/' },
