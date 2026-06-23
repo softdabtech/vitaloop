@@ -26,8 +26,8 @@ export default function Seo({
   path = '/',
   canonicalUrl,
   locale = 'en_US',
-  image = `${BASE_URL}/og-cover-2026-05.jpg`,
-  imageAlt = 'VITALOOP dashboard for symptom intake, blood test analysis, biomarker explanations, and progress tracking',
+  image = `${BASE_URL}/vitaloop-social-preview-2026-06.png`,
+  imageAlt = 'VITALOOP AI-powered health tracking dashboard with biomarker analysis, personalized protocols, and progress tracking',
   noindex = false,
   schemas = [],
 }) {

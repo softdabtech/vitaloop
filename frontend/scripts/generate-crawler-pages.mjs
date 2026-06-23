@@ -5,7 +5,7 @@ import { HEALTH_HUB_ARTICLES, HEALTH_HUB_CLUSTERS } from '../src/data/healthHubC
 
 const DIST_DIR = path.resolve(process.cwd(), 'dist')
 const BASE_URL = 'https://vitaloop.today'
-const DEFAULT_IMAGE = `${BASE_URL}/og-cover-2026-05.jpg`
+const DEFAULT_IMAGE = `${BASE_URL}/vitaloop-social-preview-2026-06.png`
 
 const routes = [
   {
