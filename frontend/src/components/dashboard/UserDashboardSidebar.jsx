@@ -20,19 +20,20 @@ import {
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { buildSubscriptionPath, getCabinetUpgradeTarget } from '../../lib/subscriptionFlow.js'
 import { CABINET_VERSION } from '../../lib/cabinetV511.js'
+import { isUkrainianLocale } from '../../lib/locale.js'
 
 const MENU_ITEMS = [
-  { icon: Home, label: 'Today', path: '/dashboard', badge: null },
-  { icon: Target, label: 'Symptom Check', path: '/questionnaire', badge: null },
-  { icon: Route, label: 'Lab Plan', path: '/lab-plan', badge: null },
-  { icon: Upload, label: 'Upload Results', path: '/upload', badge: null },
-  { icon: FileText, label: 'Results & Trends', path: '/lab-results', badge: null },
-  { icon: ClipboardList, label: 'Protocol', path: '/assignments', badgeKey: 'pending_assignments', premium: true },
-  { icon: Clock, label: 'Check-in', path: '/check-ins', badge: null, premium: true },
-  { icon: Flame, label: 'Profile & Safety', path: '/health-profile', badge: null },
-  { icon: CreditCard, label: 'Billing', path: '/subscription', badge: null },
-  { icon: Settings, label: 'Account', path: '/settings', badge: null },
-  { icon: HelpCircle, label: 'Help Center', path: '/help-center', badge: null },
+  { icon: Home, label: 'Today', ukLabel: 'Сьогодні', path: '/dashboard', badge: null },
+  { icon: Target, label: 'Symptom Check', ukLabel: 'Симптоми', path: '/questionnaire', badge: null },
+  { icon: Route, label: 'Lab Plan', ukLabel: 'План аналізів', path: '/lab-plan', badge: null },
+  { icon: Upload, label: 'Upload Results', ukLabel: 'Завантажити', path: '/upload', badge: null },
+  { icon: FileText, label: 'Results & Trends', ukLabel: 'Результати', path: '/lab-results', badge: null },
+  { icon: ClipboardList, label: 'Protocol', ukLabel: 'План дій', path: '/assignments', badgeKey: 'pending_assignments', premium: true },
+  { icon: Clock, label: 'Check-in', ukLabel: 'Чек-ін', path: '/check-ins', badge: null, premium: true },
+  { icon: Flame, label: 'Profile & Safety', ukLabel: 'Профіль і безпека', path: '/health-profile', badge: null },
+  { icon: CreditCard, label: 'Billing', ukLabel: 'Оплата', path: '/subscription', badge: null },
+  { icon: Settings, label: 'Account', ukLabel: 'Акаунт', path: '/settings', badge: null },
+  { icon: HelpCircle, label: 'Help Center', ukLabel: 'Допомога', path: '/help-center', badge: null },
 ]
 
 function isItemActive(currentPath, itemPath) {
@@ -79,6 +80,7 @@ export default function UserDashboardSidebar({
   const sidebarWidth = collapsed ? 'w-[72px]' : 'w-[280px]'
   const visibleItems = MENU_ITEMS
   const upgradeTarget = hasPremium ? null : getCabinetUpgradeTarget(planName, hasPremium)
+  const isUk = isUkrainianLocale()
 
   function handleLockedFeature(item) {
     if (!item.premium || subscriptionLoading || hasPremium) return
@@ -134,7 +136,7 @@ export default function UserDashboardSidebar({
               <ItemIcon className="h-5 w-5 shrink-0" />
               {!collapsed && (
                 <>
-                  <span className="flex-1 text-sm font-medium">{item.label}</span>
+                  <span className="flex-1 text-sm font-medium">{isUk ? item.ukLabel || item.label : item.label}</span>
                   {isLocked && !subscriptionLoading ? (
                     <div className="flex items-center gap-1.5">
                       <Crown className="w-3.5 h-3.5 text-amber-500" />
@@ -187,9 +189,9 @@ export default function UserDashboardSidebar({
             onClick={() => window.location.assign(buildSubscriptionPath({ planId: upgradeTarget.planId, billingCycle: 'monthly' }))}
             className="mb-2 w-full rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-3 py-3 text-left transition hover:border-amber-300 hover:shadow-sm"
           >
-            <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">Premium access</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">{isUk ? 'Преміум доступ' : 'Premium access'}</div>
             <div className="mt-1 text-sm font-semibold text-slate-800">{upgradeTarget.label}</div>
-            <div className="mt-1 text-xs text-slate-500">Continue to Stripe checkout</div>
+            <div className="mt-1 text-xs text-slate-500">{isUk ? 'Перейти до оплати Stripe' : 'Continue to Stripe checkout'}</div>
           </button>
         )}
 
@@ -198,13 +200,13 @@ export default function UserDashboardSidebar({
           className="group mt-0.5 flex h-11 w-full items-center gap-3 rounded-xl px-3 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
         >
           <LogOut className="h-5 w-5 shrink-0" />
-          {!collapsed && <span className="text-sm font-medium">Sign out</span>}
+          {!collapsed && <span className="text-sm font-medium">{isUk ? 'Вийти' : 'Sign out'}</span>}
         </button>
 
         {!collapsed && (
           <div className="mt-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
             <p className="truncate text-xs font-medium text-slate-700">{user?.name || user?.email?.split('@')[0] || 'User'}</p>
-            <p className="truncate text-xs text-slate-400">{user?.email || 'No email'}</p>
+            <p className="truncate text-xs text-slate-400">{user?.email || (isUk ? 'Email не вказано' : 'No email')}</p>
           </div>
         )}
       </div>

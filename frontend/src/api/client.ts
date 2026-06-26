@@ -1,6 +1,7 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { supabase, hasSupabaseConfig } from '../lib/supabase.js'
+import { getAcceptLanguage, getCurrentLocale } from '../lib/locale.js'
 
 const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ||
@@ -41,9 +42,18 @@ async function resolveAccessToken() {
 }
 
 api.interceptors.request.use(async (config) => {
+  config.headers = config.headers || {}
   const token = await resolveAccessToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+  }
+  const locale = getCurrentLocale()
+  if (typeof config.headers.set === 'function') {
+    config.headers.set('Accept-Language', getAcceptLanguage(locale))
+    config.headers.set('X-Vitaloop-Locale', locale)
+  } else {
+    config.headers['Accept-Language'] = getAcceptLanguage(locale)
+    config.headers['X-Vitaloop-Locale'] = locale
   }
   return config
 })

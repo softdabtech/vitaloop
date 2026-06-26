@@ -21,12 +21,13 @@ import {
   ShieldAlert,
   Stethoscope,
 } from 'lucide-react'
+import { isUkrainianLocale } from '../lib/locale.js'
 
 const STATUS_META = {
-  DEFICIENT: { rank: 0, label: 'Below range', badge: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' },
-  ELEVATED: { rank: 1, label: 'Above range', badge: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500' },
-  BORDERLINE: { rank: 2, label: 'Worth watching', badge: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
-  OPTIMAL: { rank: 3, label: 'In range', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  DEFICIENT: { rank: 0, label: 'Below range', ukLabel: 'Нижче референсу', badge: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' },
+  ELEVATED: { rank: 1, label: 'Above range', ukLabel: 'Вище референсу', badge: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500' },
+  BORDERLINE: { rank: 2, label: 'Worth watching', ukLabel: 'Потребує спостереження', badge: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
+  OPTIMAL: { rank: 3, label: 'In range', ukLabel: 'У референсі', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
 }
 
 const STATUS_ALIAS_MAP = {
@@ -92,6 +93,93 @@ const RESULTS_HINTS = [
   'VITALOOP is educational software. It helps organize the next step, but it does not diagnose or prescribe treatment.',
 ]
 
+const RESULTS_COPY = {
+  en: {
+    hints: RESULTS_HINTS,
+    loading: 'Loading your report…',
+    back: 'Back to Lab Results',
+    export: 'Export summary',
+    eyebrow: 'Lab report summary',
+    fallbackHeadline: 'Your results are organized into clear priorities.',
+    intro: 'VITALOOP groups your biomarkers into what looks stable, what is worth watching, and what may deserve a clinician’s review.',
+    actionPlan: 'View personal action plan',
+    checkIn: 'Start a check-in',
+    markersRead: 'markers read',
+    watchList: 'watch list',
+    outOfRange: 'out of range',
+    medicalSignal: 'Medical review signal',
+    alertFallback: (marker) => `${marker || 'A marker'} should be reviewed with a clinician.`,
+    priorityMarkers: 'Priority markers',
+    reference: 'reference',
+    noPriorities: 'This report does not show obvious out-of-range priorities. Tracking trends over time is still useful.',
+    meaning: 'What this may mean',
+    noPattern: 'No deeper knowledge pattern matched this panel yet. Your biomarker table and status groups are still available below.',
+    nextSteps: 'Next steps',
+    nextFallback: 'Save this report, compare it with your symptoms, and review meaningful changes with a clinician.',
+    discuss: 'Discuss with a clinician',
+    discussFallback: 'Ask whether the priority markers fit your symptoms, medications, history, and recent lifestyle changes.',
+    retest: 'Retest plan',
+    retestFallback: 'Retesting depends on the marker, symptoms, and clinician guidance. Keep this report for comparison.',
+    tableTitle: 'Full biomarker table',
+    tableSummary: (optimal, watch, out) => `${optimal} in range · ${watch} worth watching · ${out} out of range`,
+    biomarker: 'Biomarker',
+    value: 'Value',
+    ref: 'Reference',
+    status: 'Status',
+    unlockTrends: 'Unlock trends',
+    viewTrends: 'View trends',
+    readyTitle: 'Ready for the next step?',
+    readyBody: 'Turn this report into a practical action plan with priorities, clinician discussion points, and follow-up tracking.',
+    openPlan: 'Open action plan',
+    disclaimer: 'VITALOOP provides educational information and does not diagnose, treat, or replace professional medical advice.',
+    noRange: 'No reference range',
+  },
+  uk: {
+    hints: [
+      'Починайте з пріоритетних показників, а не з усієї таблиці одразу.',
+      'Використовуйте список питань до лікаря, щоб коротко обговорити результат.',
+      'VITALOOP має освітній характер: допомагає структурувати наступний крок, але не ставить діагноз.',
+    ],
+    loading: 'Завантажуємо ваш звіт…',
+    back: 'До результатів',
+    export: 'Експортувати підсумок',
+    eyebrow: 'Підсумок аналізів',
+    fallbackHeadline: 'Ваші результати зібрані в зрозумілі пріоритети.',
+    intro: 'VITALOOP групує показники: що виглядає стабільно, що варто відстежити і що краще обговорити з лікарем.',
+    actionPlan: 'Переглянути план дій',
+    checkIn: 'Почати чек-ін',
+    markersRead: 'показників',
+    watchList: 'спостерігати',
+    outOfRange: 'поза референсом',
+    medicalSignal: 'Сигнал для медичного перегляду',
+    alertFallback: (marker) => `${marker || 'Показник'} варто обговорити з лікарем.`,
+    priorityMarkers: 'Пріоритетні показники',
+    reference: 'референс',
+    noPriorities: 'У цьому звіті немає очевидних пріоритетів поза референсом. Відстеження динаміки все одно корисне.',
+    meaning: 'Що це може означати',
+    noPattern: 'Глибший патерн із бази знань поки не знайдено. Таблиця показників і статуси доступні нижче.',
+    nextSteps: 'Наступні кроки',
+    nextFallback: 'Збережіть цей звіт, порівняйте його із симптомами та обговоріть значущі зміни з лікарем.',
+    discuss: 'Обговорити з лікарем',
+    discussFallback: 'Запитайте, чи відповідають пріоритетні показники вашим симптомам, лікам, історії та змінам способу життя.',
+    retest: 'План повторної перевірки',
+    retestFallback: 'Повторна перевірка залежить від показника, симптомів і рекомендацій лікаря. Збережіть звіт для порівняння.',
+    tableTitle: 'Повна таблиця показників',
+    tableSummary: (optimal, watch, out) => `${optimal} у референсі · ${watch} потребують спостереження · ${out} поза референсом`,
+    biomarker: 'Показник',
+    value: 'Значення',
+    ref: 'Референс',
+    status: 'Статус',
+    unlockTrends: 'Відкрити динаміку',
+    viewTrends: 'Переглянути динаміку',
+    readyTitle: 'Готові до наступного кроку?',
+    readyBody: 'Перетворіть звіт на практичний план дій із пріоритетами, питаннями до лікаря і відстеженням.',
+    openPlan: 'Відкрити план дій',
+    disclaimer: 'VITALOOP надає освітню інформацію і не ставить діагноз, не лікує та не замінює професійну медичну консультацію.',
+    noRange: 'Референс не вказано',
+  },
+}
+
 function toEnglishBiomarkerName(name) {
   const raw = String(name || '').trim()
   for (const [pattern, translated] of BIOMARKER_NAME_TRANSLATIONS) {
@@ -127,9 +215,15 @@ function formatMetric(biomarker) {
   return `${biomarker.value ?? '—'}${unit}`
 }
 
-function formatRange(biomarker) {
-  if (biomarker?.ref_low == null || biomarker?.ref_high == null) return 'No reference range'
+function formatRange(biomarker, copy = RESULTS_COPY.en) {
+  if (biomarker?.ref_low == null || biomarker?.ref_high == null) return copy.noRange
   return `${biomarker.ref_low} - ${biomarker.ref_high}${biomarker.unit ? ` ${biomarker.unit}` : ''}`
+}
+
+function displayBiomarkerName(biomarker, isUk) {
+  if (!biomarker) return '—'
+  if (isUk) return biomarker.name || biomarker.source_name || biomarker.name_en || '—'
+  return biomarker.name_en || biomarker.name || biomarker.source_name || '—'
 }
 
 function triggerSubscriptionRequiredPaywall() {
@@ -160,6 +254,8 @@ export default function Results() {
   const [protocol, setProtocol] = useState([])
   const [knowledgeReport, setKnowledgeReport] = useState(null)
   const [loading, setLoading] = useState(true)
+  const isUk = isUkrainianLocale()
+  const copy = isUk ? RESULTS_COPY.uk : RESULTS_COPY.en
 
   useEffect(() => {
     let active = true
@@ -227,7 +323,7 @@ export default function Results() {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-500">
-        Loading your report…
+        {copy.loading}
       </div>
     )
   }
@@ -238,7 +334,7 @@ export default function Results() {
         <div className="mx-auto max-w-4xl">
           <button onClick={() => navigate('/lab-results')} className="mb-8 inline-flex items-center gap-2 text-slate-600 transition hover:text-slate-900">
             <ArrowLeft className="h-4 w-4" />
-            Back to Lab Results
+            {copy.back}
           </button>
           <div className="rounded-2xl border border-slate-200 bg-white py-12 shadow-sm">
             <EmptyStateIllustration type="results" size="lg" />
@@ -254,15 +350,15 @@ export default function Results() {
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button onClick={() => navigate('/lab-results')} className="inline-flex w-fit items-center gap-2 rounded-xl px-2 py-1 text-sm text-slate-600 transition hover:bg-white hover:text-slate-900">
             <ArrowLeft className="h-4 w-4" />
-            Back to Lab Results
+            {copy.back}
           </button>
           <button onClick={exportResultsAsPDF} className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700">
             <Download className="h-4 w-4" />
-            Export summary
+            {copy.export}
           </button>
         </div>
 
-        {showHints && <div className="mb-6"><HintBanner hints={RESULTS_HINTS} onDone={dismissHints} /></div>}
+        {showHints && <div className="mb-6"><HintBanner hints={copy.hints} onDone={dismissHints} /></div>}
 
         <motion.header
           initial={{ opacity: 0, y: 16 }}
@@ -274,27 +370,27 @@ export default function Results() {
             <div className="p-6 sm:p-8">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
                 <HeartPulse className="h-3.5 w-3.5" />
-                Lab report summary
+                {copy.eyebrow}
               </div>
               <h1 className="max-w-3xl text-3xl font-bold leading-tight text-slate-950 sm:text-4xl">
-                {reportSummary?.headline || 'Your results are organized into clear priorities.'}
+                {reportSummary?.headline || copy.fallbackHeadline}
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
-                VITALOOP groups your biomarkers into what looks stable, what is worth watching, and what may deserve a clinician’s review.
+                {copy.intro}
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button
                   onClick={() => navigate(`/protocol/${uploadId}`)}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
                 >
-                  View personal action plan
+                  {copy.actionPlan}
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => navigate('/check-ins')}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
                 >
-                  Start a check-in
+                  {copy.checkIn}
                 </button>
               </div>
             </div>
@@ -302,15 +398,15 @@ export default function Results() {
               <div className="grid grid-cols-3 gap-3 lg:grid-cols-1">
                 <div className="rounded-2xl bg-white p-4 shadow-sm">
                   <div className="text-2xl font-bold text-slate-950">{normalizedBiomarkers.length}</div>
-                  <div className="text-xs font-medium text-slate-500">markers read</div>
+                  <div className="text-xs font-medium text-slate-500">{copy.markersRead}</div>
                 </div>
                 <div className="rounded-2xl bg-white p-4 shadow-sm">
                   <div className="text-2xl font-bold text-amber-600">{watchCount}</div>
-                  <div className="text-xs font-medium text-slate-500">watch list</div>
+                  <div className="text-xs font-medium text-slate-500">{copy.watchList}</div>
                 </div>
                 <div className="rounded-2xl bg-white p-4 shadow-sm">
                   <div className="text-2xl font-bold text-rose-600">{outOfRangeCount}</div>
-                  <div className="text-xs font-medium text-slate-500">out of range</div>
+                  <div className="text-xs font-medium text-slate-500">{copy.outOfRange}</div>
                 </div>
               </div>
             </div>
@@ -321,18 +417,18 @@ export default function Results() {
           <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-900">
             <div className="mb-2 flex items-center gap-2 font-semibold">
               <ShieldAlert className="h-5 w-5" />
-              Medical review signal
+              {copy.medicalSignal}
             </div>
             <ul className="space-y-2 text-sm leading-6">
               {reportAlerts.map((alert, idx) => (
-                <li key={`alert-${idx}`}>{alert.message || `${alert.marker || 'A marker'} should be reviewed with a clinician.`}</li>
+                <li key={`alert-${idx}`}>{alert.message || copy.alertFallback(alert.marker)}</li>
               ))}
             </ul>
           </div>
         )}
 
         <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <SectionCard icon={ClipboardList} title="Priority markers">
+          <SectionCard icon={ClipboardList} title={copy.priorityMarkers}>
             {priorityMarkers.length ? (
               <div className="space-y-3">
                 {priorityMarkers.map((b) => {
@@ -343,12 +439,12 @@ export default function Results() {
                         <div>
                           <div className="flex items-center gap-2">
                             <span className={`h-2.5 w-2.5 rounded-full ${meta.dot}`} />
-                            <h3 className="font-semibold text-slate-950">{b.name_en}</h3>
-                            <BiomarkerContextTooltip biomarkerName={b.name_en || b.name} value={b.value} status={b.status_normalized} size="sm" />
+                            <h3 className="font-semibold text-slate-950">{displayBiomarkerName(b, isUk)}</h3>
+                            <BiomarkerContextTooltip biomarkerName={displayBiomarkerName(b, isUk)} value={b.value} status={b.status_normalized} size="sm" />
                           </div>
-                          <p className="mt-1 text-sm text-slate-500">{formatMetric(b)} · reference {formatRange(b)}</p>
+                          <p className="mt-1 text-sm text-slate-500">{formatMetric(b)} · {copy.reference} {formatRange(b, copy)}</p>
                         </div>
-                        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{meta.label}</span>
+                        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{isUk ? meta.ukLabel || meta.label : meta.label}</span>
                       </div>
                     </div>
                   )
@@ -356,12 +452,12 @@ export default function Results() {
               </div>
             ) : (
               <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
-                This report does not show obvious out-of-range priorities. Tracking trends over time is still useful.
+                {copy.noPriorities}
               </div>
             )}
           </SectionCard>
 
-          <SectionCard icon={Info} title="What this may mean">
+          <SectionCard icon={Info} title={copy.meaning}>
             {reportPatterns.length ? (
               <div className="space-y-3">
                 {reportPatterns.slice(0, 4).map((item, idx) => (
@@ -373,14 +469,14 @@ export default function Results() {
               </div>
             ) : (
               <p className="text-sm leading-6 text-slate-600">
-                No deeper knowledge pattern matched this panel yet. Your biomarker table and status groups are still available below.
+                {copy.noPattern}
               </p>
             )}
           </SectionCard>
         </div>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          <SectionCard icon={CheckCircle2} title="Next steps">
+          <SectionCard icon={CheckCircle2} title={copy.nextSteps}>
             {reportActions.length ? (
               <ul className="space-y-3 text-sm leading-6 text-slate-700">
                 {reportActions.slice(0, 4).map((item, idx) => (
@@ -391,11 +487,11 @@ export default function Results() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm leading-6 text-slate-600">Save this report, compare it with your symptoms, and review meaningful changes with a clinician.</p>
+              <p className="text-sm leading-6 text-slate-600">{copy.nextFallback}</p>
             )}
           </SectionCard>
 
-          <SectionCard icon={MessageCircle} title="Discuss with a clinician">
+          <SectionCard icon={MessageCircle} title={copy.discuss}>
             {reportDiscussion.length ? (
               <ul className="space-y-2 text-sm leading-6 text-slate-700">
                 {reportDiscussion.slice(0, 5).map((item, idx) => (
@@ -403,11 +499,11 @@ export default function Results() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm leading-6 text-slate-600">Ask whether the priority markers fit your symptoms, medications, history, and recent lifestyle changes.</p>
+              <p className="text-sm leading-6 text-slate-600">{copy.discussFallback}</p>
             )}
           </SectionCard>
 
-          <SectionCard icon={RefreshCw} title="Retest plan">
+          <SectionCard icon={RefreshCw} title={copy.retest}>
             {reportRetest.length ? (
               <ul className="space-y-2 text-sm leading-6 text-slate-700">
                 {reportRetest.slice(0, 5).map((item, idx) => (
@@ -419,7 +515,7 @@ export default function Results() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm leading-6 text-slate-600">Retesting depends on the marker, symptoms, and clinician guidance. Keep this report for comparison.</p>
+              <p className="text-sm leading-6 text-slate-600">{copy.retestFallback}</p>
             )}
           </SectionCard>
         </div>
@@ -427,20 +523,20 @@ export default function Results() {
         <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-slate-950">Full biomarker table</h2>
-              <p className="mt-1 text-sm text-slate-500">{optimalCount} in range · {watchCount} worth watching · {outOfRangeCount} out of range</p>
+              <h2 className="text-lg font-semibold text-slate-950">{copy.tableTitle}</h2>
+              <p className="mt-1 text-sm text-slate-500">{copy.tableSummary(optimalCount, watchCount, outOfRangeCount)}</p>
             </div>
             <FeatureGate
               feature="advanced_protocol"
               onLocked={triggerSubscriptionRequiredPaywall}
               fallback={
                 <button onClick={triggerSubscriptionRequiredPaywall} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
-                  Unlock trends
+                  {copy.unlockTrends}
                 </button>
               }
             >
               <button onClick={() => navigate('/progress')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
-                View trends
+                {copy.viewTrends}
               </button>
             </FeatureGate>
           </div>
@@ -448,10 +544,10 @@ export default function Results() {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold">Biomarker</th>
-                  <th className="px-4 py-3 text-left font-semibold">Value</th>
-                  <th className="px-4 py-3 text-left font-semibold">Reference</th>
-                  <th className="px-4 py-3 text-left font-semibold">Status</th>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.biomarker}</th>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.value}</th>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.ref}</th>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.status}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -459,11 +555,11 @@ export default function Results() {
                   const meta = STATUS_META[b.status_normalized] || STATUS_META.BORDERLINE
                   return (
                     <tr key={b.id || `${b.name}-${idx}`} className="transition hover:bg-slate-50">
-                      <td className="px-4 py-3 font-medium text-slate-950">{b.name_en || '—'}</td>
+                      <td className="px-4 py-3 font-medium text-slate-950">{displayBiomarkerName(b, isUk)}</td>
                       <td className="px-4 py-3 text-slate-700">{formatMetric(b)}</td>
-                      <td className="px-4 py-3 text-slate-500">{formatRange(b)}</td>
+                      <td className="px-4 py-3 text-slate-500">{formatRange(b, copy)}</td>
                       <td className="px-4 py-3">
-                        <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{meta.label}</span>
+                        <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{isUk ? meta.ukLabel || meta.label : meta.label}</span>
                       </td>
                     </tr>
                   )
@@ -480,9 +576,9 @@ export default function Results() {
                 <Stethoscope className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-semibold text-slate-950">Ready for the next step?</h2>
+                <h2 className="font-semibold text-slate-950">{copy.readyTitle}</h2>
                 <p className="mt-1 text-sm leading-6 text-slate-600">
-                  Turn this report into a practical action plan with priorities, clinician discussion points, and follow-up tracking.
+                  {copy.readyBody}
                 </p>
               </div>
             </div>
@@ -490,14 +586,14 @@ export default function Results() {
               onClick={() => navigate(`/protocol/${uploadId}`)}
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
             >
-              Open action plan
+              {copy.openPlan}
               <FileText className="h-4 w-4" />
             </button>
           </div>
         </div>
 
         <p className="mt-5 text-xs leading-5 text-slate-500">
-          {reportSummary?.disclaimer || 'VITALOOP provides educational information and does not diagnose, treat, or replace professional medical advice.'}
+          {reportSummary?.disclaimer || copy.disclaimer}
         </p>
       </div>
     </div>

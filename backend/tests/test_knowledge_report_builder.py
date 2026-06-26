@@ -49,3 +49,48 @@ def test_build_knowledge_report_creates_user_facing_sections():
     assert report["action_plan"][0]["key"] == "iron_followup_discussion"
     assert report["doctor_discussion"]
     assert report["retest_plan"][0]["marker"] == "Ferritin"
+
+
+def test_build_knowledge_report_supports_ukrainian_locale():
+    biomarkers = [
+        {"name": "Феритин", "value": 12, "unit": "ng/mL", "status": "DEFICIENT", "category": "minerals", "ref_low": 30, "ref_high": 150},
+        {"name": "ALT", "value": 22, "unit": "U/L", "status": "OPTIMAL", "category": "liver", "ref_low": 7, "ref_high": 56},
+    ]
+    evaluation = {
+        "matched_rules": [
+            {
+                "rule_key": "rule_low_ferritin_fatigue",
+                "name": "Low ferritin with fatigue",
+                "summary": "Low ferritin pattern",
+                "risk": "possible iron status issue",
+                "explanation": "Ferritin at 12 ng/mL may contribute to fatigue and should be reviewed.",
+                "severity": "moderate",
+                "confidence": 0.72,
+                "requires_doctor": False,
+            }
+        ],
+        "generated_recommendations": [
+            {
+                "key": "iron_followup_discussion",
+                "title": "Discuss iron status follow-up",
+                "body": "Discuss ferritin and iron panel follow-up with a qualified clinician.",
+                "priority": "high",
+                "requires_doctor": False,
+                "evidence_level": "moderate",
+            }
+        ],
+        "requires_doctor": False,
+        "confidence": 0.71,
+        "safety_alerts": [],
+        "source_references": [],
+    }
+
+    report = build_knowledge_report(biomarkers=biomarkers, knowledge_evaluation=evaluation, locale="uk")
+
+    assert report["locale"] == "uk"
+    assert "Знайдено 2 показників" in report["summary"]["headline"]
+    assert "освітній" in report["summary"]["disclaimer"]
+    assert report["why_it_matters"][0]["title"] == "Низький феритин на фоні втоми"
+    assert report["action_plan"][0]["title"] == "Обговоріть подальшу перевірку статусу заліза"
+    assert report["doctor_discussion"][0].startswith("Обговоріть")
+    assert report["retest_plan"][0]["marker"] == "Феритин"

@@ -9,6 +9,7 @@ import { useAuth } from '../../hooks/useAuth.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { buildSubscriptionPath, getCabinetUpgradeTarget } from '../../lib/subscriptionFlow.js'
 import { CABINET_VERSION } from '../../lib/cabinetV511.js'
+import { isUkrainianLocale } from '../../lib/locale.js'
 import '../../styles/dashboard2026.css'
 
 const CRM_BASE_URL = (import.meta.env.VITE_CRM_BASE_URL || 'https://crm.vitaloop.today').replace(/\/$/, '')
@@ -24,26 +25,26 @@ function isCrmRole(user) {
 }
 
 const PAGE_META = {
-  '/dashboard': { title: 'Today', subtitle: null },
-  '/upload': { title: 'Upload Results', subtitle: null },
-  '/lab-plan': { title: 'Lab Plan', subtitle: null },
-  '/lab-results': { title: 'Results & Trends', subtitle: null },
-  '/assignments': { title: 'Protocol', subtitle: null },
-  '/progress': { title: 'Results & Trends', subtitle: null },
-  '/insights': { title: 'Review', subtitle: null },
-  '/check-ins': { title: 'Check-in', subtitle: null },
-  '/onboarding': { title: 'Onboarding', subtitle: null },
-  '/questionnaire': { title: 'Symptom Check', subtitle: null },
-  '/settings': { title: 'Account', subtitle: null },
-  '/help-center': { title: 'Help Center', subtitle: null },
+  '/dashboard': { title: 'Today', ukTitle: 'Сьогодні', subtitle: null },
+  '/upload': { title: 'Upload Results', ukTitle: 'Завантажити аналізи', subtitle: null },
+  '/lab-plan': { title: 'Lab Plan', ukTitle: 'План аналізів', subtitle: null },
+  '/lab-results': { title: 'Results & Trends', ukTitle: 'Результати й динаміка', subtitle: null },
+  '/assignments': { title: 'Protocol', ukTitle: 'План дій', subtitle: null },
+  '/progress': { title: 'Results & Trends', ukTitle: 'Результати й динаміка', subtitle: null },
+  '/insights': { title: 'Review', ukTitle: 'Огляд', subtitle: null },
+  '/check-ins': { title: 'Check-in', ukTitle: 'Чек-ін', subtitle: null },
+  '/onboarding': { title: 'Onboarding', ukTitle: 'Налаштування', subtitle: null },
+  '/questionnaire': { title: 'Symptom Check', ukTitle: 'Перевірка симптомів', subtitle: null },
+  '/settings': { title: 'Account', ukTitle: 'Акаунт', subtitle: null },
+  '/help-center': { title: 'Help Center', ukTitle: 'Допомога', subtitle: null },
 }
 
-function resolvePageMeta(pathname) {
+function resolvePageMeta(pathname, isUk = false) {
   const direct = PAGE_META[pathname]
-  if (direct) return direct
-  if (pathname.startsWith('/results/')) return { title: 'Results', subtitle: null }
-  if (pathname.startsWith('/protocol/')) return { title: 'Protocol', subtitle: null }
-  if (pathname.startsWith('/assignments/')) return { title: 'Assignment', subtitle: null }
+  if (direct) return { ...direct, title: isUk ? direct.ukTitle || direct.title : direct.title }
+  if (pathname.startsWith('/results/')) return { title: isUk ? 'Результати' : 'Results', subtitle: null }
+  if (pathname.startsWith('/protocol/')) return { title: isUk ? 'План дій' : 'Protocol', subtitle: null }
+  if (pathname.startsWith('/assignments/')) return { title: isUk ? 'Завдання' : 'Assignment', subtitle: null }
   return { title: 'Vitaloop', subtitle: null }
 }
 
@@ -55,8 +56,9 @@ export default function UserCabinetLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const upgradeTarget = isPremium ? null : getCabinetUpgradeTarget(planName, isPremium)
+  const isUk = isUkrainianLocale()
 
-  const pageMeta = useMemo(() => resolvePageMeta(location.pathname), [location.pathname])
+  const pageMeta = useMemo(() => resolvePageMeta(location.pathname, isUk), [location.pathname, isUk])
 
   useEffect(() => {
     document.title = `${pageMeta.title} | VITALOOP`
@@ -142,7 +144,7 @@ export default function UserCabinetLayout({ children }) {
                 >
                   <Crown className="h-4 w-4" />
                   <span className="hidden sm:inline">{upgradeTarget.label}</span>
-                  <span className="sm:hidden">Upgrade</span>
+                  <span className="sm:hidden">{isUk ? 'Преміум' : 'Upgrade'}</span>
                 </button>
               )}
               <a
@@ -151,7 +153,7 @@ export default function UserCabinetLayout({ children }) {
                 rel="noopener noreferrer"
                 className="vtl-button-secondary inline-flex shrink-0 items-center gap-2 px-3 py-2 text-sm transition hover:bg-slate-700 hover:border-slate-500 hover:text-white"
               >
-                <span className="hidden sm:inline">Website</span>
+                <span className="hidden sm:inline">{isUk ? 'Сайт' : 'Website'}</span>
                 <span className="sm:hidden">↗</span>
               </a>
               <button
@@ -159,7 +161,7 @@ export default function UserCabinetLayout({ children }) {
                 className="vtl-button-secondary inline-flex shrink-0 items-center gap-2 px-3 text-sm"
               >
                 <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Sign out</span>
+                <span className="hidden sm:inline">{isUk ? 'Вийти' : 'Sign out'}</span>
               </button>
             </div>
           </div>

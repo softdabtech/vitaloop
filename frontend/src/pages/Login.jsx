@@ -475,6 +475,9 @@ export default function Login() {
       borderColor: 'rgba(100,180,240,0.22)',
     }
 
+  const rootClassName = isUaAuth ? 'ua-auth-root' : ''
+  const panelClassName = isUaAuth ? 'ua-auth-center' : ''
+
   useEffect(() => {
     // Show info if user comes from reset password link
     if (searchParams.get('reset') === 'true') {
@@ -684,24 +687,128 @@ export default function Login() {
 
   return (
     <>
+      {isUaAuth && (
+        <style>{`
+          .ua-auth-root {
+            position: relative;
+            overflow: hidden;
+            background:
+              radial-gradient(circle at 18% 14%, rgba(20,184,166,0.16), transparent 34%),
+              radial-gradient(circle at 88% 6%, rgba(212,180,131,0.18), transparent 30%),
+              linear-gradient(180deg, #fbfaf7 0%, #f8f5f0 54%, #efebe5 100%) !important;
+            color: #0f172a;
+          }
+          .ua-auth-root::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+              linear-gradient(rgba(15,118,110,0.06) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(15,118,110,0.06) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: linear-gradient(180deg, rgba(0,0,0,0.7), transparent 72%);
+          }
+          .ua-auth-center {
+            max-width: 520px !important;
+            margin: min(7vh, 64px) auto !important;
+            justify-content: flex-start !important;
+            background: rgba(255,255,255,0.88) !important;
+            border: 1px solid #e5dfd6 !important;
+            border-radius: 34px !important;
+            box-shadow: 0 30px 90px rgba(15,23,42,0.14) !important;
+            backdrop-filter: blur(18px);
+          }
+          .ua-auth-center button:first-child {
+            color: #64748b !important;
+          }
+          .ua-auth-center h1,
+          .ua-auth-center span,
+          .ua-auth-center label {
+            color: #0f172a !important;
+          }
+          .ua-auth-center p {
+            color: #475569 !important;
+          }
+          .ua-auth-center label {
+            color: #0f766e !important;
+          }
+          .ua-auth-center input {
+            background: #fffdf5 !important;
+            border: 1px solid #e5dfd6 !important;
+            color: #0f172a !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+          }
+          .ua-auth-center input::placeholder {
+            color: #94a3b8 !important;
+          }
+          .ua-auth-center form > button[type="submit"] {
+            border-radius: 999px !important;
+            background: linear-gradient(135deg, #0f766e 0%, #14b8a6 58%, #d4b483 135%) !important;
+            box-shadow: 0 16px 34px rgba(15,118,110,0.22);
+          }
+          .ua-auth-center form + div span {
+            color: #94a3b8 !important;
+          }
+          .ua-auth-center form + div div {
+            background: #e5dfd6 !important;
+          }
+          .ua-auth-center form + div + button {
+            background: #ffffff !important;
+            border: 1px solid #e5dfd6 !important;
+            color: #0f172a !important;
+            border-radius: 999px !important;
+          }
+          .ua-auth-center p button,
+          .ua-auth-center form button[type="button"] {
+            color: #0f766e !important;
+          }
+          .ua-auth-center > div:last-child {
+            background: #f8f5f0 !important;
+            border: 1px solid #e5dfd6 !important;
+            border-radius: 22px !important;
+          }
+          .ua-auth-center > div:last-child div {
+            color: #0f766e !important;
+          }
+          .ua-auth-center > div:last-child p {
+            color: #64748b !important;
+          }
+          .ua-auth-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #e5dfd6;
+            background: #ffffff;
+            border-radius: 999px;
+            padding: 7px 10px;
+            color: #0f766e;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+          }
+        `}</style>
+      )}
       <Seo
         title={copy.seoTitle}
         description={copy.seoDescription}
         path="/login"
+        locale={isUaAuth ? 'uk_UA' : 'en_US'}
         noindex
       />
-      <div style={{
+      <div className={rootClassName} style={{
         minHeight: '100svh', display: 'flex',
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Premium Display", sans-serif',
         background: authTheme.appBg,
       }}>
         {/* Left abstract panel - hidden on mobile */}
-        <div className="hidden lg:block" style={{ flex: 1, position: 'relative' }}>
+        <div className={`${isUaAuth ? 'hidden' : 'hidden lg:block'}`} style={{ flex: 1, position: 'relative' }}>
           <AbstractPanel side="left" variant={isSignUp ? 'signup' : 'signin'} />
         </div>
 
         {/* Center form */}
-        <div style={{
+        <div className={panelClassName} style={{
           width: '100%', maxWidth: 440,
           display: 'flex', flexDirection: 'column',
           justifyContent: 'center',
@@ -732,6 +839,12 @@ export default function Login() {
 
           {/* Logo */}
           <div style={{ marginBottom: 40, marginTop: 8 }}>
+            {isUaAuth && (
+              <div className="ua-auth-badge" style={{ marginBottom: 18 }}>
+                <span aria-hidden="true">🇺🇦</span>
+                Vitaloop Ukraine
+              </div>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
                 <circle cx="14" cy="14" r="13" fill="var(--teal-500,#1D9E75)"/>
@@ -994,7 +1107,7 @@ export default function Login() {
         </div>
 
         {/* Right abstract panel - hidden on mobile */}
-        <div className="hidden lg:block" style={{ flex: 1, position: 'relative' }}>
+        <div className={`${isUaAuth ? 'hidden' : 'hidden lg:block'}`} style={{ flex: 1, position: 'relative' }}>
           <AbstractPanel side="right" variant={isSignUp ? 'signup' : 'signin'} />
         </div>
       </div>
