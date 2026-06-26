@@ -1,30 +1,32 @@
 import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
+import { isUkrainianLocale } from '../lib/locale.js'
 
-function resolveRejectionMessage(rejection) {
+function resolveRejectionMessage(rejection, isUk = false) {
   const code = rejection?.errors?.[0]?.code
 
   if (code === 'file-too-large') {
-    return 'File is too large. Please upload a file under 20MB.'
+    return isUk ? 'Файл завеликий. Завантажте файл до 20MB.' : 'File is too large. Please upload a file under 20MB.'
   }
   if (code === 'file-invalid-type') {
-    return 'Unsupported file type. Please upload a PDF file.'
+    return isUk ? 'Непідтримуваний тип файлу. Завантажте PDF.' : 'Unsupported file type. Please upload a PDF file.'
   }
   if (code === 'too-many-files') {
-    return 'Please upload one lab report at a time.'
+    return isUk ? 'Завантажуйте один бланк аналізів за раз.' : 'Please upload one lab report at a time.'
   }
 
-  return 'Could not accept this file. Please upload a PDF file under 20MB.'
+  return isUk ? 'Не вдалося прийняти файл. Завантажте PDF до 20MB.' : 'Could not accept this file. Please upload a PDF file under 20MB.'
 }
 
 export default function UploadZone({ onFile, onError, disabled = false }) {
+  const isUk = isUkrainianLocale()
   const onDrop = useCallback((accepted) => {
     if (accepted[0]) onFile(accepted[0])
   }, [onFile])
 
   const onDropRejected = useCallback((rejections) => {
-    if (rejections[0]) onError?.(resolveRejectionMessage(rejections[0]))
-  }, [onError])
+    if (rejections[0]) onError?.(resolveRejectionMessage(rejections[0], isUk))
+  }, [isUk, onError])
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
@@ -52,9 +54,11 @@ export default function UploadZone({ onFile, onError, disabled = false }) {
       <input {...getInputProps()} />
       <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-100 text-4xl ring-1 ring-emerald-300">📄</div>
       <p className="text-xl font-semibold text-slate-800 sm:text-2xl">
-        {isDragActive ? 'Drop your lab report here' : 'Drag and drop your lab report'}
+        {isDragActive
+          ? (isUk ? 'Відпустіть файл тут' : 'Drop your lab report here')
+          : (isUk ? 'Перетягніть PDF з аналізами' : 'Drag and drop your lab report')}
       </p>
-      <p className="mt-2 text-sm text-slate-500">PDF only. Max 20MB.</p>
+      <p className="mt-2 text-sm text-slate-500">{isUk ? 'Тільки PDF. До 20MB.' : 'PDF only. Max 20MB.'}</p>
 
       <button
         type="button"
@@ -62,10 +66,12 @@ export default function UploadZone({ onFile, onError, disabled = false }) {
         onClick={open}
         className="vtl-button-primary vtl-focus-ring mt-5 inline-flex items-center justify-center px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
       >
-        Choose File
+        {isUk ? 'Обрати файл' : 'Choose File'}
       </button>
 
-      <p className="mt-3 text-xs text-emerald-700">Your PDF is securely uploaded for structured biomarker analysis.</p>
+      <p className="mt-3 text-xs text-emerald-700">
+        {isUk ? 'PDF безпечно завантажується для структурованого аналізу показників.' : 'Your PDF is securely uploaded for structured biomarker analysis.'}
+      </p>
     </div>
   )
 }

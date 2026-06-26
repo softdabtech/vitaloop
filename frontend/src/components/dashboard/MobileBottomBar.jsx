@@ -1,13 +1,14 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ActivitySquare, Home, Settings, Stethoscope, Upload } from 'lucide-react'
+import { isUkrainianLocale } from '../../lib/locale.js'
 
 const TAB_ITEMS = [
-  { path: '/dashboard', label: 'Today', icon: Home },
-  { path: '/questionnaire', label: 'Symptom', icon: Stethoscope },
-  { path: '/upload', label: 'Upload', icon: Upload, accent: true },
-  { path: '/lab-results', label: 'Results', icon: ActivitySquare },
-  { path: '/settings', label: 'Account', icon: Settings },
+  { path: '/dashboard', label: 'Today', ukLabel: 'Сьогодні', icon: Home },
+  { path: '/questionnaire', label: 'Symptom', ukLabel: 'Симптоми', icon: Stethoscope },
+  { path: '/upload', label: 'Upload', ukLabel: 'Аналізи', icon: Upload, accent: true },
+  { path: '/lab-results', label: 'Results', ukLabel: 'Результати', icon: ActivitySquare },
+  { path: '/settings', label: 'Account', ukLabel: 'Акаунт', icon: Settings },
 ]
 
 function isActive(current, item) {
@@ -19,6 +20,7 @@ function isActive(current, item) {
 export default function MobileBottomBar() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const isUk = isUkrainianLocale()
 
   return (
     <nav
@@ -30,13 +32,14 @@ export default function MobileBottomBar() {
         {TAB_ITEMS.map((item) => {
           const active = isActive(pathname, item)
           const Icon = item.icon
+          const label = isUk ? item.ukLabel || item.label : item.label
 
           if (item.accent) {
             return (
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                aria-label={item.label}
+                aria-label={label}
                 aria-current={active ? 'page' : undefined}
                 className="relative -mt-5 flex flex-col items-center"
               >
@@ -51,7 +54,7 @@ export default function MobileBottomBar() {
                   <Icon className="h-6 w-6 text-white" />
                 </span>
                 <span className={`mt-1.5 text-xs font-semibold ${active ? 'text-emerald-700' : 'text-slate-500'}`}>
-                  {item.label}
+                  {label}
                 </span>
               </button>
             )
@@ -61,7 +64,7 @@ export default function MobileBottomBar() {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              aria-label={item.label}
+              aria-label={label}
               aria-current={active ? 'page' : undefined}
               className="relative flex flex-col items-center gap-1 pb-1 pt-0.5 min-w-[48px] transition-all duration-150 active:scale-95"
             >
@@ -76,7 +79,7 @@ export default function MobileBottomBar() {
                 )}
               </span>
               <span className={`text-xs font-semibold leading-none transition-colors duration-200 ${active ? 'text-emerald-700' : 'text-slate-500'}`}>
-                {item.label}
+                {label}
               </span>
             </button>
           )

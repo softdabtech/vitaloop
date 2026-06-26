@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from app.dependencies import get_current_user, require_active_subscription
 from app.services.assignment_service import AssignmentService
@@ -13,6 +13,21 @@ from app.services.knowledge.report import build_knowledge_report
 
 router = APIRouter(tags=["protocol-compatibility"])
 _assignment_service = AssignmentService()
+
+
+def _resolve_response_locale(request: Request | None) -> str:
+    if request is None:
+        return "en"
+    explicit = str(request.headers.get("X-Vitaloop-Locale") or "").strip().lower()
+    if explicit.startswith("uk"):
+        return "uk"
+    accept_language = str(request.headers.get("Accept-Language") or "").strip().lower()
+    if accept_language.startswith("uk") or "uk-ua" in accept_language or ",uk" in accept_language:
+        return "uk"
+    origin = str(request.headers.get("Origin") or request.headers.get("Referer") or "").lower()
+    if "ua.vitaloop.today" in origin:
+        return "uk"
+    return "en"
 
 
 @router.get("/lab-results")
@@ -37,7 +52,7 @@ async def list_assignments(current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/results/{upload_id}")
-async def get_results_by_upload(upload_id: str, current_user: dict = Depends(get_current_user)):
+async def get_results_by_upload(upload_id: str, request: Request, current_user: dict = Depends(get_current_user)):
     """Compatibility endpoint for clients expecting /results/{upload_id}."""
     user_id = current_user.get("sub")
 
@@ -54,6 +69,7 @@ async def get_results_by_upload(upload_id: str, current_user: dict = Depends(get
     knowledge_report = build_knowledge_report(
         biomarkers=biomarkers or [],
         knowledge_evaluation=knowledge_evaluation,
+        locale=_resolve_response_locale(request),
     )
 
     return {

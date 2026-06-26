@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { useOnboardingState } from './hooks/useOnboardingState.js'
 import { gaPageView, gaPurchase } from './lib/analytics.js'
 import { trackPublicFunnelEvent } from './lib/publicFunnel.js'
+import { isUkrainianLocale } from './lib/locale.js'
 
 // Marketing pages — lazy
 const Features = lazy(() => import('./pages/Features.jsx'))
@@ -121,10 +122,26 @@ function GAPageTracker() {
   return null
 }
 
+function buildLoginRedirect(location) {
+  const params = new URLSearchParams()
+  const returnUrl = `${location.pathname}${location.search}${location.hash}`
+
+  if (isUkrainianLocale()) {
+    params.set('locale', 'uk')
+  }
+  if (returnUrl && returnUrl !== '/') {
+    params.set('returnUrl', returnUrl)
+  }
+
+  const query = params.toString()
+  return query ? `/login?${query}` : '/login'
+}
+
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
+  const location = useLocation()
   if (loading) return <AppLoadingScreen />
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to={buildLoginRedirect(location)} replace />
 
   return children
 }

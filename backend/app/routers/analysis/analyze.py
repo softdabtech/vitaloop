@@ -128,6 +128,25 @@ class AnalyzeResponse(BaseModel):
     knowledge_evaluation: Optional[dict] = None
 
 
+def _resolve_response_locale(request: Request | None) -> str:
+    if request is None:
+        return "en"
+
+    explicit = str(request.headers.get("X-Vitaloop-Locale") or "").strip().lower()
+    if explicit.startswith("uk"):
+        return "uk"
+
+    accept_language = str(request.headers.get("Accept-Language") or "").strip().lower()
+    if accept_language.startswith("uk") or "uk-ua" in accept_language or ",uk" in accept_language:
+        return "uk"
+
+    origin = str(request.headers.get("Origin") or request.headers.get("Referer") or "").lower()
+    if "ua.vitaloop.today" in origin:
+        return "uk"
+
+    return "en"
+
+
 def _stable_analysis_source(default: str = "fallback") -> str:
     source = get_analysis_source()
     if source in {"llm", "fallback"}:
@@ -283,6 +302,7 @@ def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dic
 @router.post("/pdf")
 @router.post("/upload")  # New universal endpoint
 async def analyze_lab_file(
+    request: Request,
     file: UploadFile = File(...),
     lab_name: Optional[str] = Form(default=None),
     symptoms: List[str] = Form(default_factory=list),
@@ -299,6 +319,7 @@ async def analyze_lab_file(
     - Multi-page: TIFF
     """
     user_id: str = current_user["sub"]
+    response_locale = _resolve_response_locale(request)
 
     # Check quota (unified biomarker quota)
     quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "file")
@@ -449,6 +470,7 @@ async def analyze_lab_file(
         knowledge_report = build_knowledge_report(
             biomarkers=saved_biomarkers,
             knowledge_evaluation=knowledge_evaluation,
+            locale=response_locale,
         )
 
         protocol = analysis.get("protocol", [])
@@ -898,6 +920,7 @@ async def analyze_lab(
             "knowledge_report": build_knowledge_report(
                 biomarkers=saved,
                 knowledge_evaluation=knowledge_evaluation,
+                locale=_resolve_response_locale(request),
             ),
         }
         if normalized_key:
@@ -917,6 +940,7 @@ async def analyze_lab(
 @router.get("/{upload_id}")
 async def get_results(
     upload_id: str,
+    request: Request,
     current_user: dict = Depends(get_current_user),
 ):
     """Get biomarkers and protocol for a specific upload."""
@@ -940,6 +964,7 @@ async def get_results(
     knowledge_report = build_knowledge_report(
         biomarkers=biomarkers,
         knowledge_evaluation=knowledge_evaluation,
+        locale=_resolve_response_locale(request),
     )
 
     await write_audit_log(
