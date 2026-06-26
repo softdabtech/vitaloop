@@ -179,6 +179,14 @@ function RouteFallback() {
   return <AppLoadingScreen />
 }
 
+function RegisterRedirect() {
+  const location = useLocation()
+  const params = new URLSearchParams(location.search)
+  params.set('signup', 'true')
+  const query = params.toString()
+  return <Navigate to={`/login${query ? `?${query}` : '?signup=true'}`} replace />
+}
+
 function FloatingSupportChat() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -764,6 +772,7 @@ export default function App() {
           <Route path="/medical-review-policy" element={<MedicalReviewPolicy />} />
           <Route path="/authors/vitaloop-editorial-team" element={<EditorialTeam />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<RegisterRedirect />} />
           <Route path="/auth/confirmation" element={<EmailConfirmation />} />
           <Route path="/dashboard" element={renderCabinetRoute(<UserDashboard />, { allowBeforeOnboarding: true })} />
           <Route path="/today" element={<Navigate to="/dashboard" replace />} />
