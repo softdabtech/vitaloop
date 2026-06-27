@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Vitaloop.Crm.Web.Attributes;
 using Vitaloop.Crm.Web.Models.Auth;
 using Vitaloop.Crm.Web.Services.Contracts;
+using Xunit;
 
 namespace Vitaloop.Crm.Web.Tests;
 

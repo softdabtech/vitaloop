@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging.Abstractions;
 using Vitaloop.Crm.Web.Areas.Admin.Controllers;
+using Xunit;
 using Vitaloop.Crm.Web.Models.Auth;
 using Vitaloop.Crm.Web.Models.Crm;
 using Vitaloop.Crm.Web.Services.Assignments;
@@ -19,9 +21,26 @@ public class AdminControllersTests
     [Fact]
     public async Task Dashboard_Index_Returns_View()
     {
-        var controller = new DashboardController();
+        var orgId = Guid.NewGuid();
+        var userCtx = TestUsers.OrgAdmin(orgId);
+        var gateway = new FakeCrmDataGateway();
+        var policy = new FakeAccessPolicyService { CanAccessOrgResult = true, HasOrgRoleResult = true };
+        var orgService = new OrganizationService(gateway, policy);
+        var membership = new MembershipService(gateway, policy);
+        var invitations = new InvitationService(gateway, policy);
+        var assignmentService = new AssignmentService(gateway, policy);
 
-        var result = controller.Index();
+        var controller = new DashboardController(
+            new FakeUserContextAccessor(userCtx),
+            policy,
+            new FakeActiveOrganizationResolver(),
+            orgService,
+            membership,
+            invitations,
+            assignmentService);
+
+        AttachMvcContext(controller);
+        var result = await controller.Index(CancellationToken.None);
 
         Assert.IsType<ViewResult>(result);
     }
@@ -287,9 +306,13 @@ public class AdminControllersTests
 
         var membership = new MembershipService(gateway, policy);
         var invitations = new InvitationService(gateway, policy);
+        var orgService = new OrganizationService(gateway, policy);
 
         var controller = new UsersController(
             new FakeUserContextAccessor(userCtx),
+            new FakeActiveOrganizationResolver(),
+            policy,
+            orgService,
             membership,
             invitations,
             NullLogger<UsersController>.Instance);
@@ -314,11 +337,16 @@ public class AdminControllersTests
             CanAccessOrgResult = canAccessOrg
         };
 
+        var membership = new MembershipService(gateway, policy);
+        var orgService = new OrganizationService(gateway, policy);
         var assignmentService = new AssignmentService(gateway, policy);
 
         var controller = new AssignmentsController(
             new FakeUserContextAccessor(userCtx),
+            new FakeActiveOrganizationResolver(),
             policy,
+            orgService,
+            membership,
             assignmentService,
             NullLogger<AssignmentsController>.Instance);
 
@@ -512,4 +540,22 @@ internal sealed class FakeCrmDataGateway : Vitaloop.Crm.Web.Services.Data.ICrmDa
 
     public Task<RuntimeReadinessSnapshot?> GetRuntimeReadiness(CancellationToken ct = default)
         => Task.FromResult<RuntimeReadinessSnapshot?>(new RuntimeReadinessSnapshot { Ok = true, MissingCount = 0 });
+
+    public Task UpdateMemberProfile(Guid orgId, Guid userId, string? fullName, int? age, string? sex, string? subscriptionStatus, CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task UpdateGlobalUser(Guid userId, string? fullName, string? globalRole, string? subscriptionStatus, CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task UpdateGlobalUserSubscription(Guid userId, string subscriptionStatus, CancellationToken ct = default)
+        => Task.CompletedTask;
+
+    public Task<System.Text.Json.JsonDocument?> GetClaudeUsage(int days = 30, CancellationToken ct = default)
+        => Task.FromResult<System.Text.Json.JsonDocument?>(null);
+
+    public Task<System.Text.Json.JsonDocument?> GetClientActivity(int days = 30, int limit = 200, CancellationToken ct = default)
+        => Task.FromResult<System.Text.Json.JsonDocument?>(null);
+
+    public Task<System.Text.Json.JsonDocument?> GetUserActivityDetail(Guid userId, int days = 90, CancellationToken ct = default)
+        => Task.FromResult<System.Text.Json.JsonDocument?>(null);
 }
