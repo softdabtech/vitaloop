@@ -2,6 +2,7 @@ using Vitaloop.Crm.Web.Models.Auth;
 using Vitaloop.Crm.Web.Models.Crm;
 using Vitaloop.Crm.Web.Services.Auth;
 using Vitaloop.Crm.Web.Services.Memberships;
+using Xunit;
 
 namespace Vitaloop.Crm.Web.Tests;
 
