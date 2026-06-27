@@ -438,6 +438,119 @@ function AbstractPanel({ side, variant = 'signin' }) {
   return <MedicalPanel side={side} signup={true} />
 }
 
+// UA hero image panel — left side for Ukrainian login
+function UaHeroPanel({ isSignUp }) {
+  const taglines = isSignUp
+    ? {
+        badge: '🇺🇦 Vitaloop Ukraine',
+        title: 'Ваше здоров\'я — ваш пріоритет',
+        sub: 'Завантажте аналізи або почніть із симптомів. Отримайте персональний план дій.',
+        stats: [
+          { n: '95+', label: 'біомаркерів' },
+          { n: '110', label: 'правил аналізу' },
+          { n: '100%', label: 'конфіденційно' },
+        ],
+      }
+    : {
+        badge: '🇺🇦 Vitaloop Ukraine',
+        title: 'Розумійте своє здоров\'я глибше',
+        sub: 'AI-аналіз аналізів крові, симптомів і персональний план дій українською.',
+        stats: [
+          { n: '95+', label: 'біомаркерів' },
+          { n: '110', label: 'правил аналізу' },
+          { n: '100%', label: 'конфіденційно' },
+        ],
+      }
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+      {/* Hero image */}
+      <img
+        src="/images/ua-health-hero-dashboard-ua-20260606.jpg"
+        alt=""
+        style={{
+          position: 'absolute', inset: 0,
+          width: '100%', height: '100%',
+          objectFit: 'cover', objectPosition: '60% center',
+        }}
+      />
+      {/* Multi-layer overlay for readability */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(135deg, rgba(10,40,30,0.72) 0%, rgba(15,118,110,0.48) 45%, rgba(10,30,50,0.65) 100%)',
+      }}/>
+      {/* Bottom fade for text area */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: '55%',
+        background: 'linear-gradient(to top, rgba(8,25,20,0.90) 0%, transparent 100%)',
+      }}/>
+
+      {/* Content */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: '40px 40px 44px',
+      }}>
+        {/* Top: logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255,255,255,0.20)',
+            borderRadius: 100, padding: '8px 14px',
+          }}>
+            <span style={{ fontSize: 14 }}>🇺🇦</span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: '#fff', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              Vitaloop Ukraine
+            </span>
+          </div>
+        </div>
+
+        {/* Bottom: tagline + stats */}
+        <div>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'rgba(20,184,166,0.20)', backdropFilter: 'blur(6px)',
+            border: '1px solid rgba(20,184,166,0.40)',
+            borderRadius: 100, padding: '5px 14px', marginBottom: 20,
+          }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }}/>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#a7f3d0', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              AI аналіз · персональний план
+            </span>
+          </div>
+
+          <h2 style={{
+            margin: '0 0 12px',
+            fontSize: 'clamp(22px, 2.8vw, 32px)',
+            fontWeight: 900, color: '#fff',
+            letterSpacing: '-0.02em', lineHeight: 1.15,
+          }}>
+            {taglines.title}
+          </h2>
+          <p style={{
+            margin: '0 0 28px', fontSize: 15, color: 'rgba(255,255,255,0.72)', lineHeight: 1.6,
+            maxWidth: 340,
+          }}>
+            {taglines.sub}
+          </p>
+
+          {/* Stats row */}
+          <div style={{ display: 'flex', gap: 20 }}>
+            {taglines.stats.map((s) => (
+              <div key={s.label}>
+                <div style={{ fontSize: 22, fontWeight: 900, color: '#5eead4', lineHeight: 1 }}>{s.n}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 3 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Login() {
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword, signOut } = useAuth()
   const navigate = useNavigate()
@@ -709,84 +822,111 @@ export default function Login() {
             background-size: 44px 44px;
             mask-image: linear-gradient(180deg, rgba(0,0,0,0.7), transparent 72%);
           }
+          /* ── UA auth card ── */
           .ua-auth-center {
-            max-width: 520px !important;
-            margin: min(7vh, 64px) auto !important;
-            justify-content: flex-start !important;
-            background: rgba(255,255,255,0.88) !important;
-            border: 1px solid #e5dfd6 !important;
-            border-radius: 34px !important;
-            box-shadow: 0 30px 90px rgba(15,23,42,0.14) !important;
-            backdrop-filter: blur(18px);
+            max-width: 460px !important;
+            margin: 0 !important;
+            justify-content: center !important;
+            background: #ffffff !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            border-left: 1px solid #e5dfd6 !important;
           }
-          .ua-auth-center button:first-child {
+
+          /* Text overrides — light theme */
+          .ua-auth-center h1 { color: #0f172a !important; }
+          .ua-auth-center p  { color: #475569 !important; }
+          .ua-auth-center label { color: #0f766e !important; font-size: 11px !important; }
+
+          /* Back-to-site button */
+          .ua-auth-center > button:first-of-type {
             color: #64748b !important;
           }
-          .ua-auth-center h1,
-          .ua-auth-center span,
-          .ua-auth-center label {
+
+          /* Input fields */
+          .ua-auth-center input[type="email"],
+          .ua-auth-center input[type="password"],
+          .ua-auth-center input[type="text"] {
+            background: #f8fafc !important;
+            border: 1.5px solid #e2e8f0 !important;
             color: #0f172a !important;
+            border-radius: 14px !important;
+            box-shadow: none !important;
           }
-          .ua-auth-center p {
-            color: #475569 !important;
+          .ua-auth-center input::placeholder { color: #94a3b8 !important; }
+          .ua-auth-center input:focus {
+            border-color: #0d9488 !important;
+            outline: none !important;
+            box-shadow: 0 0 0 3px rgba(13,148,136,0.10) !important;
           }
-          .ua-auth-center label {
-            color: #0f766e !important;
-          }
-          .ua-auth-center input {
-            background: #fffdf5 !important;
-            border: 1px solid #e5dfd6 !important;
-            color: #0f172a !important;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
-          }
-          .ua-auth-center input::placeholder {
+
+          /* Eye toggle in password */
+          .ua-auth-center form div > button[type="button"] {
             color: #94a3b8 !important;
           }
-          .ua-auth-center form > button[type="submit"] {
-            border-radius: 999px !important;
-            background: linear-gradient(135deg, #0f766e 0%, #14b8a6 58%, #d4b483 135%) !important;
-            box-shadow: 0 16px 34px rgba(15,118,110,0.22);
-          }
-          .ua-auth-center form + div span {
-            color: #94a3b8 !important;
-          }
-          .ua-auth-center form + div div {
-            background: #e5dfd6 !important;
-          }
-          .ua-auth-center form + div + button {
-            background: #ffffff !important;
-            border: 1px solid #e5dfd6 !important;
-            color: #0f172a !important;
-            border-radius: 999px !important;
-          }
-          .ua-auth-center p button,
+
+          /* Forgot password link */
           .ua-auth-center form button[type="button"] {
             color: #0f766e !important;
           }
-          .ua-auth-center > div:last-child {
+
+          /* Submit button */
+          .ua-auth-center button[type="submit"] {
+            border-radius: 14px !important;
+            background: linear-gradient(135deg, #0f766e 0%, #14b8a6 60%, #d4b483 140%) !important;
+            box-shadow: 0 10px 30px rgba(15,118,110,0.28) !important;
+            font-weight: 700 !important;
+            font-size: 16px !important;
+            padding: 15px !important;
+          }
+
+          /* Divider */
+          .ua-auth-center .ua-divider-line { background: #e2e8f0 !important; }
+          .ua-auth-center .ua-divider-text { color: #94a3b8 !important; }
+
+          /* Google button */
+          .ua-auth-center .ua-google-btn {
+            background: #fff !important;
+            border: 1.5px solid #e2e8f0 !important;
+            color: #0f172a !important;
+            border-radius: 14px !important;
+          }
+          .ua-auth-center .ua-google-btn:hover {
+            border-color: #cbd5e1 !important;
+            background: #f8fafc !important;
+          }
+
+          /* Toggle sign-in/up text */
+          .ua-auth-center .ua-toggle-text { color: #64748b !important; }
+          .ua-auth-center .ua-toggle-btn  { color: #0f766e !important; font-weight: 700 !important; }
+
+          /* Security note */
+          .ua-auth-center .ua-security-box {
             background: #f8f5f0 !important;
             border: 1px solid #e5dfd6 !important;
-            border-radius: 22px !important;
+            border-radius: 16px !important;
           }
-          .ua-auth-center > div:last-child div {
-            color: #0f766e !important;
+          .ua-auth-center .ua-security-title { color: #0f766e !important; }
+          .ua-auth-center .ua-security-body  { color: #64748b !important; }
+
+          /* Auth alert */
+          .ua-auth-center .ua-alert {
+            background: #fff1f2 !important;
+            border: 1px solid #fecdd3 !important;
+            color: #be123c !important;
+            border-radius: 12px !important;
           }
-          .ua-auth-center > div:last-child p {
-            color: #64748b !important;
-          }
+
+          /* UA badge */
           .ua-auth-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+            display: inline-flex; align-items: center; gap: 8px;
             border: 1px solid #e5dfd6;
-            background: #ffffff;
-            border-radius: 999px;
-            padding: 7px 10px;
-            color: #0f766e;
-            font-size: 11px;
-            font-weight: 900;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
+            background: #f0fdfa;
+            border-radius: 999px; padding: 7px 14px;
+            color: #0f766e; font-size: 11px; font-weight: 900;
+            letter-spacing: 0.12em; text-transform: uppercase;
           }
         `}</style>
       )}
@@ -802,10 +942,16 @@ export default function Login() {
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Premium Display", sans-serif',
         background: authTheme.appBg,
       }}>
-        {/* Left abstract panel - hidden on mobile */}
-        <div className={`${isUaAuth ? 'hidden' : 'hidden lg:block'}`} style={{ flex: 1, position: 'relative' }}>
-          <AbstractPanel side="left" variant={isSignUp ? 'signup' : 'signin'} />
-        </div>
+        {/* Left panel: hero image for UA, abstract for EN */}
+        {isUaAuth ? (
+          <div className="hidden lg:block" style={{ flex: 1, position: 'relative', minHeight: '100svh' }}>
+            <UaHeroPanel isSignUp={isSignUp} />
+          </div>
+        ) : (
+          <div className="hidden lg:block" style={{ flex: 1, position: 'relative' }}>
+            <AbstractPanel side="left" variant={isSignUp ? 'signup' : 'signin'} />
+          </div>
+        )}
 
         {/* Center form */}
         <div className={panelClassName} style={{
@@ -828,11 +974,12 @@ export default function Login() {
               position: 'absolute', top: 24, left: 24,
               display: 'flex', alignItems: 'center', gap: 6,
               background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 13, color: 'rgba(255,255,255,0.4)',
+              fontSize: 13,
+              color: isUaAuth ? '#64748b' : 'rgba(255,255,255,0.4)',
               transition: 'color 200ms',
             }}
-            onMouseEnter={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
-            onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+            onMouseEnter={(e) => e.currentTarget.style.color = isUaAuth ? '#0f172a' : 'rgba(255,255,255,0.8)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = isUaAuth ? '#64748b' : 'rgba(255,255,255,0.4)'}
           >
             <ArrowLeft size={14}/> {copy.backToSite}
           </button>
@@ -851,14 +998,14 @@ export default function Login() {
                 <path d="M4 14h4l2-6 4 12 2-7 2 4h6" stroke="white"
                   strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
               </svg>
-              <span style={{ fontSize: 16, fontWeight: 700, color: 'white', letterSpacing: '-0.01em' }}>
-              VITALOOP
+              <span style={{ fontSize: 16, fontWeight: 700, color: isUaAuth ? '#0f172a' : 'white', letterSpacing: '-0.01em' }}>
+                VITALOOP
               </span>
             </div>
-            <h1 style={{ fontSize: 24, fontWeight: 700, color: 'white', margin: '16px 0 4px' }}>
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: isUaAuth ? '#0f172a' : 'white', margin: '16px 0 4px', letterSpacing: '-0.02em' }}>
               {isForgot ? copy.resetTitle : isSignUp ? copy.signupTitle : copy.signinTitle}
             </h1>
-            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+            <p style={{ fontSize: 14, color: isUaAuth ? '#64748b' : 'rgba(255,255,255,0.4)', margin: 0 }}>
               {isForgot
                 ? copy.resetSubtitle
                 : isSignUp
@@ -884,7 +1031,7 @@ export default function Login() {
             {/* Google reCAPTCHA (only for sign up) — удалено */}
 
             {authAlert && (
-              <div style={{
+              <div className="ua-alert" style={{
                 background: 'rgba(255,99,71,0.12)',
                 border: '0.5px solid rgba(255,99,71,0.35)',
                 borderRadius: 12,
@@ -1038,13 +1185,14 @@ export default function Login() {
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0',
               }}>
-                <div style={{ flex: 1, height: '0.5px', background: 'rgba(255,255,255,0.08)' }}/>
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>{copy.or}</span>
-                <div style={{ flex: 1, height: '0.5px', background: 'rgba(255,255,255,0.08)' }}/>
+                <div className="ua-divider-line" style={{ flex: 1, height: '0.5px', background: 'rgba(255,255,255,0.08)' }}/>
+                <span className="ua-divider-text" style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>{copy.or}</span>
+                <div className="ua-divider-line" style={{ flex: 1, height: '0.5px', background: 'rgba(255,255,255,0.08)' }}/>
               </div>
 
               {/* Google */}
               <button
+                className="ua-google-btn"
                 onClick={() => { gaLogin('google'); signInWithGoogle() }}
                 style={{
                   width: '100%', background: 'rgba(255,255,255,0.04)',
@@ -1072,9 +1220,10 @@ export default function Login() {
           )}
 
           {/* Toggle sign in / sign up */}
-          <p style={{ marginTop: 24, textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
+          <p className="ua-toggle-text" style={{ marginTop: 24, textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
             {isForgot ? (
               <button onClick={() => setIsForgot(false)}
+                className="ua-toggle-btn"
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1D9E75', fontSize: 13 }}>
                 {copy.backToSignIn}
               </button>
@@ -1082,6 +1231,7 @@ export default function Login() {
               <>
                 {isSignUp ? copy.alreadyHave : copy.noAccount}
                 <button onClick={() => setIsSignUp((v) => !v)}
+                  className="ua-toggle-btn"
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1D9E75', fontSize: 13 }}>
                   {isSignUp ? copy.signIn : copy.signUpFree}
                 </button>
@@ -1090,26 +1240,28 @@ export default function Login() {
           </p>
 
           {/* Security note */}
-          <div style={{
+          <div className="ua-security-box" style={{
             marginTop: 32, padding: '14px 16px',
             background: 'rgba(255,255,255,0.02)',
             border: '0.5px solid rgba(255,255,255,0.06)',
             borderRadius: 10,
           }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.35)',
+            <div className="ua-security-title" style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.35)',
               letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
               {copy.securityTitle}
             </div>
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', lineHeight: 1.6, margin: 0 }}>
+            <p className="ua-security-body" style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', lineHeight: 1.6, margin: 0 }}>
               {copy.securityBody}
             </p>
           </div>
         </div>
 
-        {/* Right abstract panel - hidden on mobile */}
-        <div className={`${isUaAuth ? 'hidden' : 'hidden lg:block'}`} style={{ flex: 1, position: 'relative' }}>
-          <AbstractPanel side="right" variant={isSignUp ? 'signup' : 'signin'} />
-        </div>
+        {/* Right abstract panel — hidden for UA (hero is on the left) */}
+        {!isUaAuth && (
+          <div className="hidden lg:block" style={{ flex: 1, position: 'relative' }}>
+            <AbstractPanel side="right" variant={isSignUp ? 'signup' : 'signin'} />
+          </div>
+        )}
       </div>
     </>
   )
