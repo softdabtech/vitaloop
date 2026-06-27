@@ -38,6 +38,7 @@ const UaPage = lazy(() => import('./pages/UaPage.jsx'))
 // UI components — lazy
 const SupportChat = lazy(() => import('./components/SupportChat.jsx'))
 const PaywallModal = lazy(() => import('./components/PaywallModal.jsx'))
+const CookieConsent = lazy(() => import('./components/CookieConsent.jsx'))
 
 // Cabinet pages — lazy
 const UserDashboard = lazy(() => import('./pages/UserDashboard.jsx'))
@@ -815,6 +816,7 @@ export default function App() {
       </Suspense>
       {!isUaLandingShell && <PublicSymptomPrompt disabled={isUaLandingShell} />}
       {!isUaLandingShell && <FloatingSupportChat />}
+      <Suspense fallback={null}><CookieConsent /></Suspense>
     </BrowserRouter>
   )
 }

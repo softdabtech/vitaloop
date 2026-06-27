@@ -162,36 +162,59 @@
       window.gtag = gtag;
       gtag('js', new Date());
       /* send_page_view: false — SPA page views are tracked manually via GAPageTracker in App.jsx */
-      gtag('config', 'G-LG0BCMBJJE', { send_page_view: false });
+      gtag('config', 'G-LG0BCMBJJE', { send_page_view: false, cookie_domain: 'vitaloop.today', cookie_flags: 'SameSite=None;Secure' });
 
-      window.fbq = window.fbq || function(){window.fbq.callMethod ? window.fbq.callMethod.apply(window.fbq, arguments) : window.fbq.queue.push(arguments)};
-      window.fbq.queue = window.fbq.queue || [];
-      window.fbq.loaded = true;
-      window.fbq.version = '2.0';
-      fbq('init', '1703367347333580');
-      fbq('track', 'PageView');
+      if (!window.__fbPixelInit) {
+        window.__fbPixelInit = true;
+        window.fbq = window.fbq || function(){window.fbq.callMethod ? window.fbq.callMethod.apply(window.fbq, arguments) : window.fbq.queue.push(arguments)};
+        if (!window._fbq) window._fbq = window.fbq;
+        window.fbq.push = window.fbq;
+        window.fbq.loaded = true;
+        window.fbq.version = '2.0';
+        window.fbq.queue = window.fbq.queue || [];
+        fbq('init', '1703367347333580', {}, { cookieDomain: 'vitaloop.today' });
+        fbq('track', 'PageView');
+      }
 
-      function loadDeferredAnalytics() {
+      // Analytics loader — called by React CookieConsent after consent decision.
+      // Consent flags: window.__vitaloopConsent = { analytics, marketing, functional }
+      window.loadVitaloopAnalytics = function(consent) {
+        consent = consent || {};
         if (window.__vitaloopAnalyticsLoaded) return;
         window.__vitaloopAnalyticsLoaded = true;
 
-        [
-          'https://www.googletagmanager.com/gtag/js?id=G-LG0BCMBJJE',
-          'https://t.contentsquare.net/uxa/e823a98ecd1a5.js',
-          'https://connect.facebook.net/en_US/fbevents.js'
-        ].forEach(function(src) {
+        var scripts = [];
+        if (consent.analytics !== false) {
+          scripts.push('https://www.googletagmanager.com/gtag/js?id=G-LG0BCMBJJE');
+          scripts.push('https://t.contentsquare.net/uxa/e823a98ecd1a5.js');
+        } else {
+          // GA opt-out
+          window['ga-disable-G-LG0BCMBJJE'] = true;
+        }
+        if (consent.marketing !== false) {
+          scripts.push('https://connect.facebook.net/en_US/fbevents.js');
+        } else {
+          // Disable FB pixel tracking
+          if (window.fbq) { window.fbq = function(){}; }
+        }
+        scripts.forEach(function(src) {
           var script = document.createElement('script');
           script.async = true;
           script.src = src;
           document.head.appendChild(script);
         });
-      }
+      };
 
-      ['pointerdown', 'keydown', 'touchstart'].forEach(function(eventName) {
-        window.addEventListener(eventName, loadDeferredAnalytics, { once: true, passive: true });
-      });
+      // Fallback: load analytics 30s after page load ONLY if user had previously consented.
       window.addEventListener('load', function() {
-        window.setTimeout(loadDeferredAnalytics, 15000);
+        window.setTimeout(function() {
+          try {
+            var stored = JSON.parse(localStorage.getItem('vitaloop-cookie-consent') || 'null');
+            if (stored && stored.decided) {
+              window.loadVitaloopAnalytics(stored);
+            }
+          } catch(e) {}
+        }, 30000);
       }, { once: true });
     </script>
   </head>
@@ -201,5 +224,266 @@
     </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-  </body>
+  
+<script id="vitaloop-cookie-consent-script">
+(function(){
+  var STORAGE_KEY = 'vitaloop-cookie-consent';
+  var CONSENT_VERSION = '1';
+
+  function stored() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      var p = JSON.parse(raw);
+      return (p && p.version === CONSENT_VERSION && p.decided) ? p : null;
+    } catch(e) { return null; }
+  }
+
+  function save(prefs) {
+    var rec = Object.assign({}, prefs, { version: CONSENT_VERSION, timestamp: new Date().toISOString() });
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(rec)); } catch(e) {}
+    if (typeof window.loadVitaloopAnalytics === 'function') {
+      window.loadVitaloopAnalytics(rec);
+    }
+  }
+
+  function destroy() {
+    var el = document.getElementById('vl-cookie-banner');
+    if (el) el.remove();
+  }
+
+  function acceptAll() { save({ decided:true, essential:true, analytics:true, marketing:true, functional:true }); destroy(); }
+  function rejectOptional() { save({ decided:true, essential:true, analytics:false, marketing:false, functional:false }); destroy(); }
+
+  function isUk() {
+    var h = (window.location.hostname || '').toLowerCase();
+    var s = (window.location.search || '');
+    return h === 'ua.vitaloop.today' || s.indexOf('lang=uk') !== -1;
+  }
+
+  var L = isUk() ? {
+    title: 'Ми використовуємо cookie',
+    text: 'Ми використовуємо необхідні файли cookie для роботи сервісу та додаткові — для аналітики та маркетингу.',
+    acceptAll: 'Прийняти всі',
+    rejectOpt: 'Відхилити необов’язкові',
+    manage: 'Налаштування',
+    privacy: 'Конфіденційність',
+    cookie: 'Política Cookie',
+    saveBtn: 'Зберегти',
+    essLabel: 'Необхідні', essDesc: 'Для авторизації та безпеки. Не можна вимкнути.',
+    anaLabel: 'Аналітика', anaDesc: 'Google Analytics та ContentSquare — агреговані дані.',
+    mktLabel: 'Маркетинг', mktDesc: 'Meta Pixel для звіту про конверсії.',
+    funLabel: 'Функціональні', funDesc: 'Мова, регіон та параметри відображення.',
+    alwaysOn: 'Завжди увімк.',
+    back: '← Назад'
+  } : {
+    title: 'We use cookies',
+    text: 'We use essential cookies for authentication and core functionality, and optional cookies for analytics and marketing.',
+    acceptAll: 'Accept All',
+    rejectOpt: 'Reject Non-Essential',
+    manage: 'Manage Settings',
+    privacy: 'Privacy Policy',
+    cookie: 'Cookie Policy',
+    saveBtn: 'Save Preferences',
+    essLabel: 'Essential', essDesc: 'Required for login, security and core features. Cannot be disabled.',
+    anaLabel: 'Analytics', anaDesc: 'Google Analytics & ContentSquare — aggregate usage data only.',
+    mktLabel: 'Marketing', mktDesc: 'Meta Pixel for conversion tracking. No personal data sold.',
+    funLabel: 'Functional', funDesc: 'Language, region and display preference memory.',
+    alwaysOn: 'Always on',
+    back: '← Back'
+  };
+
+  function toggle(id, initial) {
+    var state = initial;
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.role = 'switch';
+    btn.setAttribute('aria-checked', state ? 'true' : 'false');
+    btn.setAttribute('data-vl-toggle', id);
+    btn.style.cssText = 'position:relative;display:inline-flex;width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;padding:0;transition:background .2s;flex-shrink:0;background:' + (state ? '#0d9488' : '#d1d5db');
+    var dot = document.createElement('span');
+    dot.style.cssText = 'position:absolute;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .18s;left:' + (state ? '23px' : '3px');
+    btn.appendChild(dot);
+    btn.addEventListener('click', function(){
+      state = !state;
+      btn.style.background = state ? '#0d9488' : '#d1d5db';
+      dot.style.left = state ? '23px' : '3px';
+      btn.setAttribute('aria-checked', state ? 'true' : 'false');
+    });
+    btn.getValue = function(){ return state; };
+    return btn;
+  }
+
+  function buildSettingsPanel(container) {
+    container.innerHTML = '';
+    var panel = document.createElement('div');
+    panel.style.cssText = 'background:#fff;border:1px solid #e2e8f0;border-radius:20px;box-shadow:0 20px 60px rgba(15,23,42,.22);padding:24px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-sizing:border-box;';
+
+    var backBtn = document.createElement('button');
+    backBtn.textContent = L.back;
+    backBtn.style.cssText = 'padding:6px 14px;border-radius:8px;border:1px solid #e2e8f0;background:transparent;cursor:pointer;color:#64748b;font-size:13px;font-weight:600;margin-bottom:12px;';
+    backBtn.addEventListener('click', function(){ buildBanner(container); });
+
+    var h2 = document.createElement('h2');
+    h2.textContent = L.title;
+    h2.style.cssText = 'margin:0 0 6px;font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-.01em;';
+
+    var sub = document.createElement('p');
+    sub.textContent = L.text;
+    sub.style.cssText = 'margin:0 0 18px;font-size:13px;color:#64748b;line-height:1.55;';
+
+    var cats = [
+      { key:'essential', label:L.essLabel, desc:L.essDesc, locked:true, init:true },
+      { key:'analytics', label:L.anaLabel, desc:L.anaDesc, locked:false, init:true },
+      { key:'marketing', label:L.mktLabel, desc:L.mktDesc, locked:false, init:true },
+      { key:'functional', label:L.funLabel, desc:L.funDesc, locked:false, init:true },
+    ];
+
+    var toggles = {};
+    var rows = document.createElement('div');
+    rows.style.cssText = 'display:flex;flex-direction:column;gap:12px;margin-bottom:20px;';
+
+    cats.forEach(function(c){
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:flex-start;gap:16px;padding:14px 16px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;';
+      var info = document.createElement('div');
+      info.style.flex = '1';
+      var head = document.createElement('div');
+      head.style.cssText = 'display:flex;align-items:center;gap:8px;';
+      var lbl = document.createElement('span');
+      lbl.textContent = c.label;
+      lbl.style.cssText = 'font-weight:700;font-size:14px;color:#0f172a;';
+      head.appendChild(lbl);
+      if (c.locked) {
+        var chip = document.createElement('span');
+        chip.textContent = L.alwaysOn;
+        chip.style.cssText = 'font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#0d9488;background:#f0fdfa;border:1px solid #99f6e4;border-radius:100px;padding:2px 8px;';
+        head.appendChild(chip);
+      }
+      var desc = document.createElement('p');
+      desc.textContent = c.desc;
+      desc.style.cssText = 'margin:4px 0 0;font-size:12.5px;color:#64748b;line-height:1.5;';
+      info.appendChild(head);
+      info.appendChild(desc);
+
+      var ctrl = document.createElement('div');
+      ctrl.style.cssText = 'display:flex;align-items:center;gap:8px;flex-shrink:0;';
+
+      if (c.locked) {
+        var lt = document.createElement('button');
+        lt.type = 'button';
+        lt.setAttribute('aria-checked', 'true');
+        lt.style.cssText = 'position:relative;display:inline-flex;width:44px;height:24px;border-radius:12px;border:none;cursor:not-allowed;padding:0;background:#9ca3af;flex-shrink:0;';
+        var ld = document.createElement('span');
+        ld.style.cssText = 'position:absolute;top:3px;left:23px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);';
+        lt.appendChild(ld);
+        ctrl.appendChild(lt);
+      } else {
+        var tg = toggle(c.key, c.init);
+        toggles[c.key] = tg;
+        ctrl.appendChild(tg);
+      }
+      row.appendChild(info);
+      row.appendChild(ctrl);
+      rows.appendChild(row);
+    });
+
+    var btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
+
+    var saveBtn = document.createElement('button');
+    saveBtn.textContent = L.saveBtn;
+    saveBtn.style.cssText = PRIMARY_BTN;
+    saveBtn.addEventListener('click', function(){
+      save({ decided:true, essential:true,
+        analytics: toggles.analytics ? toggles.analytics.getValue() : false,
+        marketing: toggles.marketing ? toggles.marketing.getValue() : false,
+        functional: toggles.functional ? toggles.functional.getValue() : false });
+      destroy();
+    });
+
+    var allBtn = document.createElement('button');
+    allBtn.textContent = L.acceptAll;
+    allBtn.style.cssText = SECONDARY_BTN;
+    allBtn.addEventListener('click', acceptAll);
+
+    btnRow.appendChild(saveBtn);
+    btnRow.appendChild(allBtn);
+    panel.appendChild(backBtn);
+    panel.appendChild(h2);
+    panel.appendChild(sub);
+    panel.appendChild(rows);
+    panel.appendChild(btnRow);
+    container.appendChild(panel);
+  }
+
+  function buildBanner(container) {
+    container.innerHTML = '';
+    var inner = document.createElement('div');
+    inner.style.cssText = 'pointer-events:auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;box-shadow:0 -4px 6px rgba(0,0,0,.04),0 20px 60px rgba(15,23,42,.18);padding:20px 24px;width:100%;max-width:740px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box;';
+
+    var top = document.createElement('div');
+    top.style.cssText = 'display:flex;align-items:flex-start;gap:14px;';
+    var emoji = document.createElement('span');
+    emoji.textContent = '🍪';
+    emoji.style.cssText = 'font-size:28px;line-height:1;flex-shrink:0;margin-top:2px;';
+    var textBlock = document.createElement('div');
+    textBlock.style.flex = '1';
+    var h2 = document.createElement('h2');
+    h2.textContent = L.title;
+    h2.style.cssText = 'margin:0;font-size:16px;font-weight:800;color:#0f172a;letter-spacing:-.01em;';
+    var p = document.createElement('p');
+    p.style.cssText = 'margin:6px 0 0;font-size:13.5px;color:#475569;line-height:1.55;max-width:520px;';
+    p.textContent = L.text + ' ';
+    var privA = document.createElement('a');
+    privA.href = '/privacy-policy/'; privA.target = '_blank'; privA.rel = 'noreferrer';
+    privA.textContent = L.privacy;
+    privA.style.cssText = 'color:#0d9488;text-decoration:underline;text-underline-offset:2px;';
+    var sep = document.createTextNode(' · ');
+    var cookA = document.createElement('a');
+    cookA.href = '/privacy-policy/#cookies'; cookA.target = '_blank'; cookA.rel = 'noreferrer';
+    cookA.textContent = L.cookie;
+    cookA.style.cssText = 'color:#0d9488;text-decoration:underline;text-underline-offset:2px;';
+    p.appendChild(privA); p.appendChild(sep); p.appendChild(cookA);
+    textBlock.appendChild(h2); textBlock.appendChild(p);
+    top.appendChild(emoji); top.appendChild(textBlock);
+
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;align-items:center;';
+
+    var aBtn = document.createElement('button'); aBtn.textContent = L.acceptAll; aBtn.style.cssText = PRIMARY_BTN;
+    aBtn.addEventListener('click', acceptAll);
+    var rBtn = document.createElement('button'); rBtn.textContent = L.rejectOpt; rBtn.style.cssText = OUTLINE_BTN;
+    rBtn.addEventListener('click', rejectOptional);
+    var mBtn = document.createElement('button'); mBtn.textContent = L.manage; mBtn.style.cssText = GHOST_BTN;
+    mBtn.addEventListener('click', function(){ buildSettingsPanel(container); });
+
+    btns.appendChild(aBtn); btns.appendChild(rBtn); btns.appendChild(mBtn);
+    inner.appendChild(top); inner.appendChild(btns);
+    container.appendChild(inner);
+  }
+
+  var PRIMARY_BTN = 'padding:10px 22px;border-radius:100px;border:none;cursor:pointer;background:linear-gradient(135deg,#0f766e 0%,#14b8a6 100%);color:#fff;font-weight:700;font-size:13.5px;box-shadow:0 4px 14px rgba(15,118,110,.30);transition:opacity .15s;white-space:nowrap;font-family:inherit;';
+  var SECONDARY_BTN = 'padding:10px 22px;border-radius:100px;border:none;cursor:pointer;background:#0f172a;color:#fff;font-weight:700;font-size:13.5px;box-shadow:0 4px 14px rgba(15,23,42,.20);white-space:nowrap;font-family:inherit;';
+  var OUTLINE_BTN = 'padding:10px 22px;border-radius:100px;cursor:pointer;background:transparent;border:1.5px solid #cbd5e1;color:#475569;font-weight:700;font-size:13.5px;white-space:nowrap;font-family:inherit;';
+  var GHOST_BTN = 'padding:10px 16px;border-radius:100px;border:none;cursor:pointer;background:transparent;color:#94a3b8;font-weight:600;font-size:13px;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;font-family:inherit;';
+
+  if (stored()) return; // Already decided — don't show
+
+  function init() {
+    var wrap = document.createElement('div');
+    wrap.id = 'vl-cookie-banner';
+    wrap.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:10000;padding:0 16px 20px;display:flex;justify-content:center;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+    buildBanner(wrap);
+    document.body.appendChild(wrap);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 800); });
+  } else {
+    setTimeout(init, 800);
+  }
+})();
+</script>
+
+</body>
 </html>
