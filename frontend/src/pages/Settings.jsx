@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Mail, Bell, Lock, LogOut, AlertTriangle, Cookie } from 'lucide-react'
+import { Mail, Bell, Lock, LogOut, AlertTriangle, Cookie, UserCircle2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import NotificationPreferences from '../components/NotificationPreferences.jsx'
+import AvatarUpload from '../components/AvatarUpload.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import { supabase } from '../lib/supabase.js'
 import api from '../lib/api.js'
+import { isUkrainianLocale } from '../lib/locale.js'
 import '../styles/dashboard2026.css'
 
 const COOKIE_STORAGE_KEY = 'vitaloop-cookie-consent'
@@ -161,6 +163,34 @@ export default function Settings() {
       />
 
       <div className="grid gap-6 max-w-2xl">
+
+        {/* Avatar Upload */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}
+          style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 20, padding: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+            <span style={{ width: 36, height: 36, borderRadius: 10, background: '#f0fdfa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <UserCircle2 size={18} color="#0d9488" />
+            </span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>
+                {isUkrainianLocale() ? 'Фото профілю' : 'Profile photo'}
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
+                {isUkrainianLocale() ? 'Відображається у кабінеті та сайдбарі' : 'Shown in cabinet and sidebar'}
+              </div>
+            </div>
+          </div>
+          <AvatarUpload
+            user={user}
+            isUk={isUkrainianLocale()}
+            onUpdate={useCallback(() => {
+              supabase.auth.getUser().then(({ data }) => {
+                if (data?.user) toast.success(isUkrainianLocale() ? 'Аватар оновлено' : 'Avatar updated')
+              })
+            }, [])}
+          />
+        </motion.div>
+
         {/* Account Info */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

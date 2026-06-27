@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import UserDashboardSidebar from './UserDashboardSidebar.jsx'
 import MobileBottomBar from './MobileBottomBar.jsx'
 import PWAInstallBanner from './PWAInstallBanner.jsx'
+import UserAvatar from '../UserAvatar.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { buildSubscriptionPath, getCabinetUpgradeTarget } from '../../lib/subscriptionFlow.js'
@@ -156,6 +157,15 @@ export default function UserCabinetLayout({ children }) {
                 <span className="hidden sm:inline">{isUk ? 'Сайт' : 'Website'}</span>
                 <span className="sm:hidden">↗</span>
               </a>
+              {/* Avatar → Settings shortcut */}
+              <button
+                onClick={() => navigate('/settings')}
+                title={isUk ? 'Налаштування профілю' : 'Profile settings'}
+                className="vtl-focus-ring rounded-full transition hover:opacity-80"
+                style={{ padding: 0, border: 'none', background: 'transparent', cursor: 'pointer' }}
+              >
+                <UserAvatar user={user} size={36} border />
+              </button>
               <button
                 onClick={handleLogout}
                 className="vtl-button-secondary inline-flex shrink-0 items-center gap-2 px-3 text-sm"
