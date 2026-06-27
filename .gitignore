@@ -39,3 +39,6 @@ backend/app/.env*
 # Sensitive configs
 config/secrets.json
 config/api-keys.json
+crm-mvc/tests/**/bin/
+crm-mvc/tests/**/obj/
+deploy.log
