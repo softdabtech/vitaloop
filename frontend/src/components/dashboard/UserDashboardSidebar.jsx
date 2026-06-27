@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   BarChart3,
   ClipboardList,
@@ -16,11 +16,13 @@ import {
   Settings,
   Target,
   Upload,
+  User,
 } from 'lucide-react'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { buildSubscriptionPath, getCabinetUpgradeTarget } from '../../lib/subscriptionFlow.js'
 import { CABINET_VERSION } from '../../lib/cabinetV511.js'
 import { isUkrainianLocale } from '../../lib/locale.js'
+import UserAvatar from '../UserAvatar.jsx'
 
 const MENU_ITEMS = [
   { icon: Home, label: 'Today', ukLabel: 'Сьогодні', path: '/dashboard', badge: null },
@@ -203,12 +205,25 @@ export default function UserDashboardSidebar({
           {!collapsed && <span className="text-sm font-medium">{isUk ? 'Вийти' : 'Sign out'}</span>}
         </button>
 
-        {!collapsed && (
-          <div className="mt-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-            <p className="truncate text-xs font-medium text-slate-700">{user?.name || user?.email?.split('@')[0] || 'User'}</p>
-            <p className="truncate text-xs text-slate-400">{user?.email || (isUk ? 'Email не вказано' : 'No email')}</p>
+        {/* User profile card */}
+        <div
+          className="mt-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 cursor-pointer hover:bg-slate-100 transition-colors"
+          onClick={() => { if (typeof window !== 'undefined') window.location.href = '/settings' }}
+          title={isUk ? 'Налаштування профілю' : 'Profile settings'}
+        >
+          <div className="flex items-center gap-2">
+            <UserAvatar user={user} size={collapsed ? 32 : 36} />
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-semibold text-slate-700">
+                  {user?.user_metadata?.full_name || user?.name || user?.email?.split('@')[0] || 'User'}
+                </p>
+                <p className="truncate text-xs text-slate-400">{user?.email || (isUk ? 'Email не вказано' : 'No email')}</p>
+              </div>
+            )}
+            {!collapsed && <Settings className="h-3.5 w-3.5 flex-shrink-0 text-slate-300" />}
           </div>
-        )}
+        </div>
       </div>
     </aside>
   )
