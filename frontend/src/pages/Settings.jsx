@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Mail, Bell, Lock, LogOut, AlertTriangle } from 'lucide-react'
+import { Mail, Bell, Lock, LogOut, AlertTriangle, Cookie } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import NotificationPreferences from '../components/NotificationPreferences.jsx'
@@ -9,6 +9,12 @@ import { useSubscription } from '../hooks/useSubscription.js'
 import { supabase } from '../lib/supabase.js'
 import api from '../lib/api.js'
 import '../styles/dashboard2026.css'
+
+const COOKIE_STORAGE_KEY = 'vitaloop-cookie-consent'
+function resetCookieConsent() {
+  try { localStorage.removeItem(COOKIE_STORAGE_KEY) } catch {}
+  window.location.reload()
+}
 
 const fieldStyle = {
   width: '100%',
@@ -365,6 +371,34 @@ export default function Settings() {
               )}
             </div>
           </div>
+        {/* Cookie Preferences */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
+          style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <span style={{ width: 36, height: 36, borderRadius: 10, background: '#f0fdfa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Cookie size={18} color="#0d9488" />
+            </span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>Cookie Preferences</div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>Manage what data we may collect</div>
+            </div>
+          </div>
+          <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.55, margin: '0 0 16px' }}>
+            Review or update your consent for analytics, marketing and functional cookies.
+            Essential cookies required for login and security cannot be disabled.
+          </p>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button onClick={resetCookieConsent}
+              style={{ padding: '10px 20px', borderRadius: 100, border: '1.5px solid #cbd5e1', background: 'transparent', cursor: 'pointer', fontWeight: 700, fontSize: 13, color: '#475569' }}>
+              Update Cookie Settings
+            </button>
+            <a href="/privacy-policy/#cookies" target="_blank" rel="noreferrer"
+              style={{ padding: '10px 20px', borderRadius: 100, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#0d9488', textDecoration: 'underline', textUnderlineOffset: 3, display: 'inline-flex', alignItems: 'center' }}>
+              Cookie Policy ↗
+            </a>
+          </div>
+        </motion.div>
+
         </motion.div>
       </div>
     </>
