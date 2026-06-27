@@ -34,6 +34,18 @@ class ProtocolResponse(BaseModel):
     recommendations: list[dict]
 
 
+@router.get("")
+async def protocol_method_not_allowed(_: dict = Depends(get_current_user)):
+    """GET /protocol is not supported. Use POST with upload_id and symptoms."""
+    from fastapi import Response
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=405,
+        content={"detail": "Method Not Allowed. Use POST /protocol."},
+        headers={"Allow": "POST"},
+    )
+
+
 @router.post("", response_model=ProtocolResponse)
 async def create_protocol(
     request: ProtocolRequest,

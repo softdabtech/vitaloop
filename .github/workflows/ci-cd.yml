@@ -64,22 +64,49 @@ jobs:
 
       - name: Run unit tests
         env:
-          # Stub values so modules that guard against missing config pass import
           SUPABASE_URL: "https://placeholder.supabase.co"
           SUPABASE_SERVICE_ROLE_KEY: "placeholder"
         run: |
           pytest tests/test_analyze.py \
                  tests/test_router_input_guards.py \
                  tests/test_rate_limit_middleware.py \
+                 tests/test_billing_stripe.py \
+                 tests/test_knowledge_rule_evaluator.py \
+                 tests/test_knowledge_governance_api.py \
+                 tests/test_cors_origins.py \
+                 tests/test_uuid_validation.py \
+                 tests/test_ua_wellbeing_assessment.py \
                  -q --tb=short
 
   # ─────────────────────────────────────────────────────────
-  # JOB 2: Frontend build check
+  # JOB 2: CRM .NET tests
+  # ─────────────────────────────────────────────────────────
+  crm-test:
+    name: CRM — .NET unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ./crm-mvc
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Run xUnit tests
+        run: dotnet test tests/Vitaloop.Crm.Web.Tests/ -q
+
+  # ─────────────────────────────────────────────────────────
+  # JOB 3: Frontend build + Playwright smoke
   # ─────────────────────────────────────────────────────────
   frontend-build:
-    name: Frontend — build check
+    name: Frontend — build & E2E smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: ./frontend
@@ -100,13 +127,22 @@ jobs:
       - name: Build production bundle
         run: NODE_OPTIONS=--max-old-space-size=1536 vite build --mode production
 
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Playwright smoke tests (EN site)
+        env:
+          PLAYWRIGHT_BASE_URL: "https://vitaloop.today"
+        run: npx playwright test tests/sidebar-links.spec.ts tests/subscription-status.spec.ts --project=chromium --reporter=list
+        continue-on-error: true  # E2E smoke is advisory; doesn't block deploy
+
   # ─────────────────────────────────────────────────────────
   # JOB 3: Deploy to production (only on push to main)
   # ─────────────────────────────────────────────────────────
   deploy:
     name: Deploy to production
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-build]
+    needs: [backend-test, crm-test, frontend-build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     timeout-minutes: 20
 
