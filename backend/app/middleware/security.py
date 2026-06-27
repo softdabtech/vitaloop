@@ -119,7 +119,16 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     _CSP = "default-src 'none'; frame-ancestors 'none'"
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        response = await call_next(request)
+        # OPTIONS preflight is fully handled by CORSMiddleware upstream.
+        # Passing it through call_next causes "No response returned" in
+        # BaseHTTPMiddleware when the route only accepts other methods.
+        if request.method == "OPTIONS":
+            return await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            # Prevent unhandled-exception in TaskGroup from surfacing as ASGI error.
+            response = Response(status_code=500)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
