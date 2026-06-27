@@ -181,6 +181,7 @@ app.add_middleware(
         "X-Partner-Context",
         "x-supabase-api-version",
         "stripe-signature",
+        "X-Vitaloop-Locale",
     ],
     expose_headers=["X-Request-ID"],
 )

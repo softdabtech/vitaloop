@@ -49,12 +49,14 @@ async def test_assert_upload_belongs_to_user_returns_row(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_get_user_account_falls_back_when_plan_tier_missing(monkeypatch):
+async def test_get_user_account_falls_back_when_primary_returns_empty(monkeypatch):
+    """Primary query returns empty (e.g. schema mismatch) → fallback columns tried."""
     calls = []
 
     async def fake_select(table, columns, user_id):
         calls.append(columns)
-        if "plan_tier" in columns:
+        if len(calls) == 1:
+            # Simulate primary columns query returning nothing
             return {}
         return {
             "id": user_id,
@@ -70,7 +72,8 @@ async def test_get_user_account_falls_back_when_plan_tier_missing(monkeypatch):
     account = await svc.get_user_account("11111111-1111-1111-1111-111111111111")
 
     assert len(calls) == 2
-    assert "plan_tier" in calls[0]
+    # Primary columns include sub_status; fallback drops it
+    assert "sub_status" in calls[0]
     assert "subscription_status" in calls[1]
     assert account.get("sub_status") == "free"
 

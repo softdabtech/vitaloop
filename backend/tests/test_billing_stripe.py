@@ -581,23 +581,31 @@ async def test_webhook_payment_failed_missing_sub_id_is_noop(monkeypatch):
 # ===========================================================================
 
 def test_price_id_personal_primary(monkeypatch):
+    monkeypatch.setattr(billing.settings, "stripe_price_id_personal_monthly", "")
+    monkeypatch.setattr(billing.settings, "stripe_price_id_personal_yearly", "")
     monkeypatch.setattr(billing.settings, "stripe_price_id_personal", "price_abc")
     monkeypatch.setattr(billing.settings, "stripe_price_id", "")
     assert billing._price_id_for_plan("personal") == "price_abc"
 
 
 def test_price_id_personal_falls_back_to_legacy(monkeypatch):
+    monkeypatch.setattr(billing.settings, "stripe_price_id_personal_monthly", "")
+    monkeypatch.setattr(billing.settings, "stripe_price_id_personal_yearly", "")
     monkeypatch.setattr(billing.settings, "stripe_price_id_personal", "")
     monkeypatch.setattr(billing.settings, "stripe_price_id", "price_legacy")
     assert billing._price_id_for_plan("personal") == "price_legacy"
 
 
 def test_price_id_practitioner(monkeypatch):
+    monkeypatch.setattr(billing.settings, "stripe_price_id_practitioner_monthly", "")
+    monkeypatch.setattr(billing.settings, "stripe_price_id_practitioner_yearly", "")
     monkeypatch.setattr(billing.settings, "stripe_price_id_practitioner", "price_prac")
     assert billing._price_id_for_plan("practitioner") == "price_prac"
 
 
 def test_price_id_missing_raises_503(monkeypatch):
+    monkeypatch.setattr(billing.settings, "stripe_price_id_practitioner_monthly", "")
+    monkeypatch.setattr(billing.settings, "stripe_price_id_practitioner_yearly", "")
     monkeypatch.setattr(billing.settings, "stripe_price_id_practitioner", "")
     monkeypatch.setattr(billing.settings, "stripe_price_id", "")
     with pytest.raises(HTTPException) as exc:
@@ -621,7 +629,11 @@ def _configure_stripe(
 ):
     monkeypatch.setattr(billing.settings, "stripe_secret_key", secret_key)
     monkeypatch.setattr(billing.settings, "stripe_price_id_personal", personal_price)
+    monkeypatch.setattr(billing.settings, "stripe_price_id_personal_monthly", personal_price)
+    monkeypatch.setattr(billing.settings, "stripe_price_id_personal_yearly", "")
     monkeypatch.setattr(billing.settings, "stripe_price_id_practitioner", practitioner_price)
+    monkeypatch.setattr(billing.settings, "stripe_price_id_practitioner_monthly", practitioner_price)
+    monkeypatch.setattr(billing.settings, "stripe_price_id_practitioner_yearly", "")
     monkeypatch.setattr(billing.settings, "stripe_price_id", "")
 
 

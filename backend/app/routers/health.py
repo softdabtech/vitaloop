@@ -237,6 +237,133 @@ async def readiness_check():
     return checks
 
 
+@router.get("/health/knowledge")
+async def knowledge_health_check():
+    """Knowledge Base health check.
+
+    Verifies:
+    - Active rule count in Supabase
+    - Recommendations table is populated
+    - Evaluator engine runs without error (dry-run, no persist)
+    """
+    import time as _time
+    started = _time.perf_counter()
+    result: dict = {
+        "service": "vitaloop-api",
+        "component": "knowledge_base",
+        "status": "ok",
+        "ok": True,
+        "checks": {},
+        "timestamp": _time.time(),
+    }
+
+    # 1. Active rules count
+    try:
+        sb = svc._get_supabase()
+        r = await asyncio.wait_for(
+            svc._run(
+                lambda: sb.table("knowledge_rules")
+                .select("id", count="exact")
+                .eq("active", True)
+                .eq("governance_status", "active")
+                .execute()
+            ),
+            timeout=4.0,
+        )
+        active_count = r.count or 0
+        result["checks"]["active_rules"] = {"count": active_count, "ok": active_count >= 1}
+        if active_count == 0:
+            result["status"] = "degraded"
+            result["ok"] = False
+    except Exception as e:
+        result["checks"]["active_rules"] = {"ok": False, "error": str(e)[:100]}
+        result["status"] = "degraded"
+        result["ok"] = False
+
+    # 2. Recommendations count
+    try:
+        sb = svc._get_supabase()
+        r2 = await asyncio.wait_for(
+            svc._run(
+                lambda: sb.table("recommendations")
+                .select("id", count="exact")
+                .execute()
+            ),
+            timeout=4.0,
+        )
+        rec_count = r2.count or 0
+        result["checks"]["recommendations"] = {"count": rec_count, "ok": rec_count >= 1}
+        if rec_count == 0:
+            result["status"] = "degraded"
+            result["ok"] = False
+    except Exception as e:
+        result["checks"]["recommendations"] = {"ok": False, "error": str(e)[:100]}
+        result["status"] = "degraded"
+        result["ok"] = False
+
+    # 3. Evaluator engine dry-run (no DB persist, no LLM)
+    try:
+        from app.services.knowledge.evaluator import evaluate_health_input
+        eval_result = await asyncio.wait_for(
+            evaluate_health_input(
+                {
+                    "lab_results": {
+                        "ferritin": {"value": 6.0, "unit": "ng/ml"},
+                        "hba1c": {"value": 9.5, "unit": "%"},
+                    },
+                    "symptoms": ["fatigue"],
+                    "context": {},
+                },
+                user_id=None,
+                persist=False,
+            ),
+            timeout=5.0,
+        )
+        matched = len(eval_result.get("matched_rules", []))
+        alerts = len(eval_result.get("safety_alerts", []))
+        confidence = eval_result.get("confidence", 0)
+        evaluator_ok = matched >= 1 and alerts >= 1
+        result["checks"]["evaluator"] = {
+            "ok": evaluator_ok,
+            "matched_rules": matched,
+            "safety_alerts": alerts,
+            "confidence": confidence,
+        }
+        if not evaluator_ok:
+            result["status"] = "degraded"
+            result["ok"] = False
+    except Exception as e:
+        result["checks"]["evaluator"] = {"ok": False, "error": str(e)[:100]}
+        result["status"] = "degraded"
+        result["ok"] = False
+
+    # 4. Recent evaluations activity (last 7 days)
+    try:
+        from datetime import datetime, timezone, timedelta
+        since = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        sb = svc._get_supabase()
+        r3 = await asyncio.wait_for(
+            svc._run(
+                lambda: sb.table("rule_evaluations")
+                .select("id", count="exact")
+                .gte("created_at", since)
+                .execute()
+            ),
+            timeout=4.0,
+        )
+        recent = r3.count or 0
+        result["checks"]["recent_evaluations_7d"] = {"count": recent}
+    except Exception as e:
+        result["checks"]["recent_evaluations_7d"] = {"error": str(e)[:80]}
+
+    result["duration_ms"] = int((_time.perf_counter() - started) * 1000)
+    logger.info(
+        "knowledge_health_check ok=%s status=%s duration_ms=%s",
+        result["ok"], result["status"], result["duration_ms"],
+    )
+    return result
+
+
 @router.get("/ops/llm/health")
 async def llm_health_check():
     """Dedicated LLM health endpoint for operational monitoring.
