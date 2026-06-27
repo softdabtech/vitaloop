@@ -184,6 +184,8 @@ async def _select_first_by_id_with_fallback(table: str, columns: str, user_id: s
             .limit(1)
             .execute()
         )
+        # Reset circuit-breaker on success so SDK is preferred again.
+        _use_rest_auth_context = False
         return response.data[0] if response.data else {}
     except Exception as ex:
         # Keep REST fallback for auth context lookup resilience.
@@ -710,8 +712,8 @@ async def record_health_failure(
 
 
 async def get_user_account(user_id: str) -> Dict[str, Any]:
-    primary_columns = "id, email, full_name, sub_status, plan_tier, global_role, created_at"
-    fallback_columns = "id, email, full_name, sub_status, subscription_status, global_role, created_at"
+    primary_columns = "id, email, full_name, sub_status, subscription_status, global_role, created_at"
+    fallback_columns = "id, email, full_name, subscription_status, global_role, created_at"
 
     account = await _select_first_by_id_with_fallback("users", primary_columns, user_id)
     if not account:

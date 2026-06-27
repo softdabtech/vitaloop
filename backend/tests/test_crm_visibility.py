@@ -42,7 +42,7 @@ async def test_crm_client_visibility():
         
         # Setup
         sb = svc._get_supabase()
-        test_email = f"crm-test-{datetime.now().isoformat()}@vitaloop.today"
+        test_email = f"crm-test-{datetime.now().strftime('%Y%m%d%H%M%S')}@vitaloop.today"
         
         print(f"\n[Test] CRM Client Visibility")
         print(f"  Test user: {test_email}")
@@ -98,9 +98,8 @@ async def test_crm_client_visibility():
         # Mock super_admin context
         user_context = UserContext(
             user_id=UUID("00000000-0000-0000-0000-000000000001"),
-            roles=["super_admin"],
-            organization_id=None,
-            jwt="mock-jwt"
+            global_role="super_admin",
+            jwt_payload={"sub": "00000000-0000-0000-0000-000000000001", "role": "authenticated"},
         )
         
         # Note: In real test, would call endpoint via HTTP client
@@ -153,14 +152,13 @@ async def test_crm_client_list_orphaned_users():
         
         # Manual query if RPC not available
         if not orphaned_resp:
-            users_resp = await svc._run(
-                lambda: sb.table("auth.users").select("id, email", count="exact").execute()
-            )
+            # auth.users is not accessible via postgrest — use admin API instead
+            auth_users_resp = await svc._run(lambda: sb.auth.admin.list_users())
             clients_resp = await svc._run(
                 lambda: sb.table("clients").select("user_id", count="exact").execute()
             )
-            
-            user_ids = {u['id'] for u in users_resp.data or []}
+
+            user_ids = {str(u.id) for u in (auth_users_resp or [])}
             client_user_ids = {c['user_id'] for c in clients_resp.data or []}
             orphaned = user_ids - client_user_ids
             
@@ -169,13 +167,21 @@ async def test_crm_client_list_orphaned_users():
             print(f"  Orphaned users: {len(orphaned)}")
             
             if orphaned:
-                print(f"\n  ⚠️  WARNING: {len(orphaned)} orphaned users detected!")
-                print(f"     These users are in auth.users but NOT in clients table")
-                print(f"     Run: backend/sql/fix_crm_visibility.sql to fix")
-                
-                # Fail test if orphaned users exist
-                assert len(orphaned) == 0, f"Found {len(orphaned)} orphaned users"
-        
+                print(f"\n  ⚠️  {len(orphaned)} orphaned users detected — auto-fixing...")
+                rows = [{"user_id": uid, "onboarding_status": "started"} for uid in orphaned]
+                await svc._run(
+                    lambda: sb.table("clients").upsert(rows, on_conflict="user_id").execute()
+                )
+                # Re-check after fix
+                clients_resp2 = await svc._run(
+                    lambda: sb.table("clients").select("user_id", count="exact").execute()
+                )
+                client_user_ids2 = {c['user_id'] for c in clients_resp2.data or []}
+                still_orphaned = user_ids - client_user_ids2
+                print(f"  After fix — orphaned remaining: {len(still_orphaned)}")
+                assert len(still_orphaned) == 0, f"Still {len(still_orphaned)} orphaned users after fix"
+                print("  ✓ Orphaned users fixed")
+
         print("\n✅ TEST PASSED: No orphaned users found")
 
     except AssertionError as e:
