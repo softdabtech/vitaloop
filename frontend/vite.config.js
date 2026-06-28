@@ -68,34 +68,24 @@ export default defineConfig({
     // Code splitting strategy for better performance
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor libraries
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-ui': ['lucide-react', 'framer-motion'],
-          'vendor-state': ['zustand'],
-          'vendor-http': ['axios'],
-          
-          // Feature-based chunks
-          'feature-dashboard': [
-            'src/pages/UserDashboard.jsx',
-            'src/components/dashboard/AssignmentCard.jsx',
-            'src/components/dashboard/HealthChart.jsx',
-            'src/components/dashboard/ProgressTimeline.jsx',
-            'src/components/dashboard/QuickActionsPanel.jsx',
-            'src/components/dashboard/RecommendationsPanel.jsx',
-            'src/components/dashboard/StatCard.jsx',
-            'src/components/dashboard/UserDashboardSidebar.jsx',
-          ],
-          
-          // Utilities
-          'lib-api': ['src/lib/api.js'],
-          'lib-features': [
-            'src/lib/assignmentRouting.js',
-            'src/lib/assignmentScoring.js',
-            'src/lib/funnel.js',
-            'src/lib/store.js',
-            'src/lib/symptoms.js',
-          ],
+        manualChunks(id) {
+          // Vendor: React core — always needed
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor-react'
+          }
+          // Vendor: UI animations/icons — lazy-loaded with components
+          if (id.includes('node_modules/framer-motion')) return 'vendor-ui'
+          if (id.includes('node_modules/lucide-react')) return 'vendor-ui'
+          // Vendor: state
+          if (id.includes('node_modules/zustand')) return 'vendor-state'
+          // Vendor: HTTP
+          if (id.includes('node_modules/axios')) return 'vendor-http'
+          // API client — loaded on demand (not eager preload)
+          if (id.includes('/src/lib/api.js')) return 'lib-api'
+          // NOTE: feature-dashboard removed from manualChunks intentionally.
+          // UserDashboard and cabinet components are lazy-imported in App.jsx
+          // and should be loaded on demand only, not preloaded on the landing page.
+          // Vite will auto-chunk them correctly via dynamic imports.
         },
       },
     },
