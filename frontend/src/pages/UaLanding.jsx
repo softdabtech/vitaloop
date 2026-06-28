@@ -31,18 +31,18 @@ export const CTA_CLASS =
   'inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#0f766e_0%,#14b8a6_58%,#d4b483_135%)] px-5 py-3 text-center text-sm font-black leading-tight text-white shadow-[0_14px_34px_rgba(15,118,110,0.24)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,118,110,0.32)] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#0f766e]/20 sm:whitespace-nowrap'
 
 export const NAV_LINKS = [
-  { label: 'Самопочуття', id: 'wellbeing', path: '/samopochuttia' },
-  { label: 'Симптоми', id: 'symptoms', path: '/symptomy' },
-  { label: 'Аналізи', id: 'labs', path: '/analizy' },
-  { label: 'Лабораторії', id: 'laboratories', path: '/laboratorii' },
-  { label: 'Тарифи', id: 'pricing', path: '/tarify' },
+  { label: 'Як це працює', id: 'how', path: '/samopochuttia', anchor: 'how' },
+  { label: 'Симптоми', id: 'wellbeing', path: '/samopochuttia', anchor: 'wellbeing' },
+  { label: 'Аналізи', id: 'labs', path: '/analizy', anchor: 'laboratories' },
+  { label: 'Тарифи', id: 'pricing', path: '/tarify', anchor: 'pricing' },
+  { label: 'FAQ', id: 'faq', path: '/faq', anchor: 'faq' },
 ]
 
 const TRUST_CARDS = [
-  { title: 'Приватність даних', body: 'Коротко і без зайвих обіцянок: медична інформація має залишатися приватною.', icon: ShieldCheck },
-  { title: 'Симптоми + аналізи', body: 'Дивимось на стан комплексно, а не на один показник у бланку.', icon: BrainCircuit },
-  { title: 'Для родини', body: 'Зручно вести власні показники й стан близьких.', icon: HeartPulse },
-  { title: 'Зрозуміла мова', body: 'Пояснення без медичного туману і wellness-жаргону.', icon: MessageCircle },
+  { title: '95+ біомаркерів', body: 'Залізо, вітаміни, гормони, щитовидна залоза, глюкоза, запалення — повний профіль здоров\'я в одному місці.', icon: FlaskConical },
+  { title: '110 правил оцінки', body: 'База клінічних правил з\'єднує симптоми і аналізи і формує персональний підсумок для кожного випадку.', icon: BrainCircuit },
+  { title: 'Приватність', body: 'Медичні дані зберігаються зашифровано і ніколи не передаються третім особам. Відповідає GDPR.', icon: ShieldCheck },
+  { title: 'Зрозуміло і без жаргону', body: 'Пояснення кожного показника, питання до лікаря і наступний крок — без складних термінів.', icon: MessageCircle },
 ]
 
 const HERO_PROOFS = [
@@ -169,11 +169,26 @@ const PRIORITY_COPY = {
 }
 
 const FLOW_STEPS = [
-  { title: 'Опишіть симптоми', body: 'Почніть з того, що реально турбує: сон, енергія, волосся, травлення або стан дитини.', icon: MessageCircle },
-  { title: 'Отримайте напрямки аналізів', body: 'Vitaloop підкаже, які перевірки можуть мати сенс саме для вашої ситуації.', icon: SearchCheck },
-  { title: 'Завантажте результати', body: 'Додайте PDF або фото з лабораторії, щоб побачити показники в одному місці.', icon: FileSearch },
-  { title: 'Отримайте рекомендації', body: 'Сервіс формує персональний план дій, питання до лікаря і що відстежувати далі.', icon: ClipboardList },
-  { title: 'Відстежуйте прогрес', body: 'Порівнюйте самопочуття, показники і повторні перевірки в динаміці.', icon: BarChart3 },
+  {
+    title: 'Опишіть симптоми', icon: MessageCircle,
+    body: 'Оберіть 1–3 сигнали з 30 симптомних категорій: сон, енергія, волосся, метаболізм, гормони, травлення. AI-система одразу формує список ймовірних аналізів.',
+  },
+  {
+    title: 'Отримайте пріоритети аналізів', icon: SearchCheck,
+    body: 'База з 110 правил оцінки здоров\'я та 95+ біомаркерів підбирає перелік аналізів для вашої ситуації — з поясненням, чому кожен із них важливий.',
+  },
+  {
+    title: 'Завантажте результати лабораторії', icon: FileSearch,
+    body: 'PDF або фото бланка з будь-якої лабораторії. AI зчитує показники, одиниці і референси, порівнює з нормами та виділяє відхилення.',
+  },
+  {
+    title: 'Отримайте персональний підсумок', icon: ClipboardList,
+    body: 'Зрозумілий звіт: що в нормі, що потребує уваги, питання до лікаря і конкретний наступний крок — без медичного жаргону.',
+  },
+  {
+    title: 'Відстежуйте динаміку', icon: BarChart3,
+    body: 'Порівнюйте повторні аналізи, фіксуйте зміни самопочуття, перевіряйте ефективність дій у тижневому чек-іні.',
+  },
 ]
 
 const FAMILY_GROUPS = [
@@ -189,16 +204,32 @@ const PRIORITY_LEVELS = [
 ]
 
 const SCENARIOS = [
-  { title: 'Олена, 37 років', symptoms: 'втома, слабкість', direction: 'у підсумку побачила низький феритин як пріоритет', action: 'підготувала питання до лікаря і план повторної перевірки' },
-  { title: 'Максим, 42 роки', symptoms: 'поганий сон, низька енергія', direction: 'зібрав в одному місці симптоми, аналізи й можливі фактори', action: 'отримав короткий список напрямків для обговорення' },
-  { title: 'Мама дитини, 8 років', symptoms: 'швидка втомлюваність', direction: 'структурувала симптоми перед консультацією', action: 'зрозуміла, які результати варто взяти з собою до педіатра' },
+  {
+    title: 'Олена, 34 роки — постійна втома і випадіння волосся',
+    symptoms: 'Втома з ранку, поганий сон, активне випадіння волосся 3 місяці',
+    direction: 'Vitaloop виділив пріоритети: феритин < 30, вітамін D 14 нг/мл, ТТГ на верхній межі норми',
+    action: 'Пішла до лікаря з конкретними питаннями, почала корекцію — за 8 тижнів самопочуття покращилось',
+  },
+  {
+    title: 'Максим, 41 рік — зайва вага і тяга до солодкого',
+    symptoms: 'Набір ваги, постійна тяга до цукру, втома після обіду',
+    direction: 'Система запропонувала перевірити інсулін натщесерце, HOMA-IR, HbA1c — виявила переддіабет',
+    action: 'Зміна дієти і режиму + консультація ендокринолога — нормалізація глюкози за 3 місяці',
+  },
+  {
+    title: 'Наталія, 29 років — тривожність і перепади настрою',
+    symptoms: 'Тривожність, перепади настрою, ПМС, погана концентрація',
+    direction: 'Пріоритети: магній, вітамін D, прогестерон у лютеїновій фазі, В12',
+    action: 'Після корекції дефіцитів значне зменшення симптомів ПМС вже в наступному циклі',
+  },
 ]
 
 const RESULT_EXAMPLE = [
-  { label: 'Скарга', value: 'Постійна втома, поганий сон, низька енергія' },
-  { label: 'Можливий пріоритет', value: 'феритин, вітамін D, якість сну та відновлення' },
-  { label: 'Що перевірити', value: 'ЗАК, феритин, 25(OH)D, B12 — без зайвого списку “на все”' },
-  { label: 'Що обговорити з лікарем', value: 'динаміку симптомів, дефіцити, повторну перевірку і безпечний план дій' },
+  { label: 'Симптоми', value: 'Постійна втома, поганий сон, випадіння волосся, туман у голові' },
+  { label: 'Пріоритетні аналізи', value: 'Феритин + ЗЗЗЕ, ЗАК, 25(OH)D, ТТГ + вільний Т4, Вітамін B12' },
+  { label: 'Що виявили', value: 'Феритин 12 нг/мл (норма >30), Вітамін D 14 нг/мл (норма >30), ТТГ 3.8 (верхня межа)' },
+  { label: 'Питання до лікаря', value: 'Чи потрібен препарат заліза? Яка доза D3? Варто ретестувати ТТГ через 3 місяці?' },
+  { label: 'Наступний крок', value: 'Корекція феритину і вітаміну D → повторна перевірка через 8 тижнів → трекінг самопочуття' },
 ]
 
 const FAMILY_CHECKS = [
@@ -209,40 +240,58 @@ const FAMILY_CHECKS = [
 ]
 
 const EDUCATION_ARTICLES = [
-  { title: 'Що таке феритин?', path: '/ferytyn', body: 'Як низькі запаси заліза можуть бути повʼязані з втомою, волоссям і відновленням.' },
-  { title: 'Чому виникає втома?', path: '/vtoma', body: 'Як відокремити сон, дефіцити, стрес і навантаження перед наступним кроком.' },
-  { title: 'Як зрозуміти дефіцит вітаміну D?', path: '/vitamin-d', body: 'Що дивитися в результатах і чому важливий контекст самопочуття.' },
-  { title: 'Причини випадіння волосся', path: '/volossia', body: 'Які симптоми й аналізи варто структурувати перед консультацією.' },
-  { title: 'Як покращити сон', path: '/son', body: 'Як описати сон так, щоб план дій не зводився до загальних порад.' },
-  { title: 'Аналізи для дітей', path: '/dity-analizy', body: 'Як підготувати історію симптомів і результати для розмови з педіатром.' },
+  { title: 'Феритин і постійна втома', path: '/ferytyn', body: 'Як запаси заліза пов\'язані з енергією, волоссям і відновленням після хвороби.' },
+  { title: 'Вітамін D: що означають цифри?', path: '/vitamin-d', body: 'Норма, дефіцит, верхня межа і чому контекст важливіший за одне число.' },
+  { title: 'Щитовидна залоза і самопочуття', path: '/shchytovydna-zaloza', body: 'ТТГ, Т4, Т3 — що це, коли норма може не відповідати стану і що запитати у лікаря.' },
+  { title: 'Інсулінорезистентність без діабету', path: '/insulin', body: 'Чому HOMA-IR і глюкоза на верхній межі — це вже сигнал для дій.' },
+  { title: 'Причини випадіння волосся', path: '/volossia', body: 'Феритин, ТТГ, цинк і гормони — що часто пропускають при стандартних аналізах.' },
+  { title: 'Аналізи для дітей і підлітків', path: '/dity-analizy', body: 'Феритин, вітамін D і ЗАК — коли і навіщо перевіряти у звичайній ситуації.' },
 ]
 
 export const PRICING = [
   {
     name: 'Безкоштовно',
     price: '0 грн',
-    note: 'для старту',
-    description: 'Перший розбір стану, базові симптоми і короткий підсумок, щоб зрозуміти, з чого почати.',
-    features: ['Оцінка самопочуття', 'Базовий розбір симптомів', '1 активне завантаження аналізів', 'Короткий підсумок'],
+    note: 'для першого знайомства',
+    description: 'Оцініть свій стан, отримайте перший підсумок і зрозумійте, з чого варто починати.',
+    features: [
+      'AI-оцінка самопочуття (30 симптомів)',
+      '1 завантаження аналізів з лабораторії',
+      'Розбір до 10 біомаркерів',
+      'Короткий підсумок і пріоритети',
+      'Список питань до лікаря',
+    ],
     cta: 'Почати безкоштовно',
     featured: false,
   },
   {
-    name: 'Premium',
-    price: '399 грн/міс',
-    note: 'для регулярної роботи',
-    description: 'Більше завантажень, динаміка, повніші пояснення і пріоритети для наступних перевірок.',
-    features: ['Більше завантажень аналізів', 'Повний підсумок стану', 'Динаміка показників', 'Пріоритети і питання до лікаря'],
-    cta: 'Спробувати Premium',
+    name: 'Personal Pro',
+    price: '799 грн/міс',
+    note: 'для регулярного контролю',
+    description: 'Необмежені аналізи, AI-протокол, 95+ біомаркерів і щотижневий чек-ін стану здоров\'я.',
+    features: [
+      'Необмежені завантаження аналізів',
+      '95+ біомаркерів із поясненнями',
+      'Повний AI-підсумок і рекомендації',
+      'Динаміка показників у часі',
+      'Тижневий чек-ін самопочуття',
+      'Питання до лікаря + наступні кроки',
+    ],
+    cta: 'Спробувати 14 днів',
     featured: true,
   },
   {
-    name: 'Family',
+    name: 'Для нутриціолога',
     price: 'Очікується',
-    note: 'для сімейного контролю',
-    description: 'Окремі профілі для близьких, зручна історія показників і зрозумілі підсумки для батьків.',
-    features: ['Профілі членів родини', 'Дитячі сценарії', 'Спільна історія аналізів', 'Нагадування про динаміку'],
-    cta: 'Скоро',
+    note: 'для практикуючих спеціалістів',
+    description: 'Ведення клієнтів, порівняльний аналіз динаміки та персональні протоколи для кожного.',
+    features: [
+      'Профілі клієнтів і пацієнтів',
+      'Призначення аналізів і чек-ін',
+      'Порівняльна динаміка стану',
+      'Інтеграція з лабораторіями',
+    ],
+    cta: 'Залишити заявку',
     featured: false,
     comingSoon: true,
   },
@@ -251,27 +300,31 @@ export const PRICING = [
 const FAQ_ITEMS = [
   {
     question: 'Чи замінює Vitaloop лікаря?',
-    answer: 'Ні. Vitaloop не ставить діагноз і не призначає лікування. Він допомагає структурувати симптоми, аналізи і питання перед консультацією.',
+    answer: 'Ні. Vitaloop — освітній сервіс. Він допомагає структурувати симптоми, розуміти аналізи і підготувати конкретні питання до консультації. Діагнозів не ставить і лікування не призначає.',
+  },
+  {
+    question: 'Скільки біомаркерів аналізує Vitaloop?',
+    answer: 'Понад 95 біомаркерів: загальний аналіз крові, залізо, вітаміни (D, B12, A, E), щитовидна залоза, глюкоза і HbA1c, ліпідний профіль, гормони (тестостерон, естрадіол, прогестерон, кортизол), запальні маркери (СРБ, гомоцистеїн), нирки, печінка та ін.',
   },
   {
     question: 'Можна почати без аналізів?',
-    answer: 'Так. Почніть із симптомів і самопочуття. Аналізи можна додати пізніше, коли буде зрозуміло, що саме варто перевірити.',
+    answer: 'Так. Оцінка самопочуття доступна з першого кроку — оберіть 1–3 симптоми і отримайте список ймовірних пріоритетних аналізів. Результати лабораторії можна додати пізніше.',
   },
   {
-    question: 'Чи це тільки для дорослих?',
-    answer: 'Ні. Vitaloop можна використовувати для сімейного контролю стану, але будь-які дитячі питання потрібно обговорювати з педіатром.',
+    question: 'Які формати аналізів підтримуються?',
+    answer: 'PDF з лабораторного кабінету, фото або скан бланка. Підтримуються результати з Ukrainian популярних лабораторій: Synlab, Діла, Медлаб, CSD та ін. Якщо PDF чіткий — AI зчитає все автоматично.',
   },
   {
-    question: 'Чи є лабораторії партнерами?',
-    answer: 'Поки ми говоримо про підтримку форматів результатів з популярних лабораторій України. Партнерства будемо позначати окремо.',
+    question: 'Що таке 110 правил оцінки здоров\'я?',
+    answer: 'База знань Vitaloop містить 110 клінічних правил — це логічні зв\'язки між симптомами, показниками і рекомендаціями. Наприклад: "феритин < 30 + втома + випадіння волосся = пріоритет: обговорити із залізодефіцитом". Правила регулярно оновлюються медичним ревізором.',
   },
   {
-    question: 'Що таке індекс пріоритетів?',
-    answer: 'Це внутрішній індикатор Vitaloop, який допомагає побачити, які напрямки потребують уваги. Це не діагноз і не медичний висновок.',
+    question: 'Як Vitaloop захищає медичні дані?',
+    answer: 'Дані зберігаються зашифровано. Доступ — тільки через ваш акаунт. Vitaloop не продає і не передає медичні дані третім особам. Платформа відповідає GDPR і Закону України про захист персональних даних.',
   },
   {
-    question: 'Що входить у Premium?',
-    answer: 'Більше завантажень аналізів, повніший підсумок, динаміка стану, пріоритети і питання до лікаря.',
+    question: 'Чи можна використовувати для дітей?',
+    answer: 'Так, є окрема категорія симптомів для дитячого здоров\'я. Будь-які рішення щодо дитячого здоров\'я потрібно обговорювати з педіатром — Vitaloop допомагає структурувати спостереження і підготувати питання.',
   },
 ]
 
@@ -355,9 +408,15 @@ export function UaHeader() {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
 
-  const openPage = (path) => {
+  const openPage = (link) => {
     setOpen(false)
-    navigate(getUaPath(path))
+    // If on ua.vitaloop.today and has anchor → scroll to section
+    const isUaHost = typeof window !== 'undefined' && window.location.hostname.toLowerCase() === 'ua.vitaloop.today'
+    if (isUaHost && link.anchor && document.getElementById(link.anchor)) {
+      document.getElementById(link.anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      navigate(getUaPath(link.path))
+    }
   }
 
   return (
@@ -372,7 +431,7 @@ export function UaHeader() {
           {NAV_LINKS.map((link) => (
             <button
               key={link.id}
-              onClick={() => openPage(link.path)}
+              onClick={() => openPage(link)}
               className="rounded-full px-3.5 py-2 text-sm font-semibold text-[#4b5563] transition duration-200 hover:bg-[#f1fbf8] hover:text-[#0f766e]"
             >
               {link.label}
@@ -408,7 +467,7 @@ export function UaHeader() {
             {NAV_LINKS.map((link) => (
               <button
                 key={link.id}
-                onClick={() => openPage(link.path)}
+                onClick={() => openPage(link)}
                 className="rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#4b5563] transition hover:bg-[#f1fbf8] hover:text-[#0f766e]"
               >
                 {link.label}
@@ -592,20 +651,20 @@ function UaWellbeingModal({ open, initialSymptoms, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#0f172a]/55 px-4 py-4 backdrop-blur-sm sm:py-8" role="dialog" aria-modal="true" aria-label="Оцінка самопочуття">
-      <div className="mx-auto flex min-h-full w-full max-w-[980px] items-center">
-        <div className="relative w-full overflow-hidden rounded-[34px] border border-white/70 bg-[#f8f5f0] shadow-[0_34px_120px_rgba(15,23,42,0.38)]">
+    <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#0f172a]/60 px-2 py-3 backdrop-blur-sm sm:px-4 sm:py-8" role="dialog" aria-modal="true" aria-label="Оцінка самопочуття">
+      <div className="mx-auto flex min-h-full w-full max-w-[980px] items-start sm:items-center">
+        <div className="relative w-full overflow-hidden rounded-[24px] border border-white/70 bg-[#f8f5f0] shadow-[0_24px_80px_rgba(15,23,42,0.38)] sm:rounded-[34px]">
           <button
             type="button"
             onClick={onClose}
             aria-label="Закрити"
-            className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-[#e5dfd6] bg-white text-[#0f172a] shadow-sm transition hover:bg-[#f1fbf8] hover:text-[#0f766e]"
+            className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[#e5dfd6] bg-white text-[#0f172a] shadow-sm transition hover:bg-[#f1fbf8] hover:text-[#0f766e] sm:right-4 sm:top-4 sm:h-11 sm:w-11"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
 
           <div className="grid lg:grid-cols-[0.82fr_1.18fr]">
-            <aside className="relative overflow-hidden bg-[linear-gradient(145deg,#0f172a,#0f766e)] p-6 text-white sm:p-8">
+            <aside className="relative overflow-hidden bg-[linear-gradient(145deg,#0f172a,#0f766e)] p-5 text-white sm:p-8 lg:p-8">
               <div className="absolute inset-0 opacity-40">
                 <div className="absolute -left-24 top-10 h-48 w-48 rounded-full bg-[#14b8a6]/40 blur-3xl" />
                 <div className="absolute bottom-4 right-0 h-52 w-52 rounded-full bg-[#d4b483]/30 blur-3xl" />
@@ -632,7 +691,7 @@ function UaWellbeingModal({ open, initialSymptoms, onClose }) {
               </div>
             </aside>
 
-            <div className="bg-[#fbfaf7] p-5 sm:p-8">
+            <div className="bg-[#fbfaf7] p-4 sm:p-6 lg:p-8">
               {!result ? (
                 <>
                   <div className="mb-6 flex items-center gap-2">
@@ -649,7 +708,7 @@ function UaWellbeingModal({ open, initialSymptoms, onClose }) {
                         Оберіть один або кілька сигналів — Vitaloop підбере відповідні аналізи.
                         {symptoms.length > 0 && <span className="ml-2 rounded-full bg-[#f1fbf8] px-2 py-0.5 text-xs font-black text-[#0f766e]">{symptoms.length} обрано</span>}
                       </p>
-                      <div className="mt-4 max-h-[380px] overflow-y-auto pr-1 space-y-4 scrollbar-thin">
+                      <div className="mt-4 max-h-[calc(50vh)] overflow-y-auto pr-0.5 space-y-4 sm:max-h-[380px]">
                         {SYMPTOM_GROUPS.map((group) => (
                           <div key={group.label}>
                             <p className="mb-2 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-[#9ca3af]">
@@ -779,7 +838,7 @@ function UaWellbeingModal({ open, initialSymptoms, onClose }) {
                     </div>
                   )}
 
-                  <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+                  <div className="mt-6 flex flex-col-reverse gap-3 sm:mt-8 sm:flex-row sm:justify-between">
                     <button
                       type="button"
                       onClick={() => (step === 1 ? onClose() : setStep((value) => value - 1))}
@@ -884,18 +943,22 @@ function UaWellbeingModal({ open, initialSymptoms, onClose }) {
   )
 }
 
+const UA_MODAL_SESSION_KEY = 'vl_ua_wellbeing_shown'
+
 export default function UaLanding() {
   const navigate = useNavigate()
-  const [selectedSymptoms, setSelectedSymptoms] = useState(['Втома', 'Поганий сон'])
+  const [selectedSymptoms, setSelectedSymptoms] = useState([])
   const [showStickyCta, setShowStickyCta] = useState(false)
   const [showWellbeingModal, setShowWellbeingModal] = useState(false)
-  const [autoModalDismissed, setAutoModalDismissed] = useState(false)
+  // Persist "already shown" across page reloads within the same session
+  const [autoModalDismissed, setAutoModalDismissed] = useState(() => {
+    try { return sessionStorage.getItem(UA_MODAL_SESSION_KEY) === '1' } catch { return false }
+  })
 
   useEffect(() => {
     const updateStickyCta = () => {
       setShowStickyCta(window.scrollY > Math.max(520, window.innerHeight * 0.72))
     }
-
     updateStickyCta()
     window.addEventListener('scroll', updateStickyCta, { passive: true })
     window.addEventListener('resize', updateStickyCta)
@@ -908,16 +971,21 @@ export default function UaLanding() {
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
     if (showWellbeingModal || autoModalDismissed) return undefined
-
     const timer = window.setTimeout(() => {
       setShowWellbeingModal(true)
-    }, 10000)
-
+    }, 12000)
     return () => window.clearTimeout(timer)
   }, [autoModalDismissed, showWellbeingModal])
 
+  const dismissModal = () => {
+    try { sessionStorage.setItem(UA_MODAL_SESSION_KEY, '1') } catch {}
+    setAutoModalDismissed(true)
+    setShowWellbeingModal(false)
+  }
+
   const startSignup = () => navigate(getUaAuthPath({ signup: true }))
   const startWellbeingAssessment = () => {
+    try { sessionStorage.setItem(UA_MODAL_SESSION_KEY, '1') } catch {}
     setAutoModalDismissed(true)
     setShowWellbeingModal(true)
   }
@@ -1070,7 +1138,10 @@ export default function UaLanding() {
                 return (
                   <button
                     key={item.title}
-                    onClick={() => goPage(index === 2 ? '/analizy' : index === 1 ? '/symptomy' : '/samopochuttia')}
+                    onClick={() => {
+                      const anchors = ['wellbeing', 'wellbeing', 'laboratories', 'result-example', 'how']
+                      document.getElementById(anchors[index] || 'wellbeing')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }}
                     className="group block w-full border-b border-[#e5dfd6] bg-white px-5 py-5 text-left transition last:border-b-0 hover:bg-[#f1fbf8] sm:px-7 sm:py-6"
                   >
                     <div className="grid gap-4 sm:grid-cols-[64px_220px_1fr] sm:items-start">
@@ -1210,8 +1281,11 @@ export default function UaLanding() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => goPage('/analizy')} className="mt-8 inline-flex items-center gap-2 text-sm font-black text-[#0f766e] transition hover:gap-3">
-                Як працює розбір аналізів
+              <button
+                onClick={() => document.getElementById('result-example')?.scrollIntoView({ behavior: 'smooth' })}
+                className="mt-8 inline-flex items-center gap-2 text-sm font-black text-[#0f766e] transition hover:gap-3"
+              >
+                Переглянути приклад результату
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
@@ -1267,7 +1341,7 @@ export default function UaLanding() {
           </div>
         </section>
 
-        <section className="mx-auto w-full max-w-[920px] px-4 pb-12 sm:px-6 sm:pb-16 md:pb-20">
+        <section id="faq" className="mx-auto w-full max-w-[920px] px-4 pb-12 sm:px-6 sm:pb-16 md:pb-20">
           <SectionHeading center eyebrow="Питання" title="Коротко про важливе" />
           <div className="mt-7 divide-y divide-[#e5dfd6] overflow-hidden rounded-[26px] border border-[#e5dfd6] bg-white shadow-sm">
             {FAQ_ITEMS.map((item) => (
@@ -1310,10 +1384,7 @@ export default function UaLanding() {
       <UaWellbeingModal
         open={showWellbeingModal}
         initialSymptoms={selectedSymptoms}
-        onClose={() => {
-          setAutoModalDismissed(true)
-          setShowWellbeingModal(false)
-        }}
+        onClose={dismissModal}
       />
     </div>
   )
