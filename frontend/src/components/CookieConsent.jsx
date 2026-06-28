@@ -190,6 +190,9 @@ function SettingsPanel({ t, prefs, setPrefs, onSave, onAcceptAll, onBack }) {
 }
 
 export default function CookieConsent() {
+  // Vanilla JS in index.html handles consent before React loads.
+  // Avoid double banner: if the vanilla script is active, return null.
+  if (typeof window !== 'undefined' && window.__vlCookieHandledByVanilla) return null
   const [visible, setVisible] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [prefs, setPrefs] = useState({ analytics: true, marketing: true, functional: true })
