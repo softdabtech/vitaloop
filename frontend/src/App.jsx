@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
-import Landing from './pages/Landing.jsx'
-import NotFound from './pages/NotFound.jsx'
+// Landing is lazy — it's heavy (framer-motion) and never renders on ua.vitaloop.today
+const Landing = lazy(() => import('./pages/Landing.jsx'))
+// NotFound is rare — no reason to eager-load
+const NotFound = lazy(() => import('./pages/NotFound.jsx'))
 import AppLoadingScreen from './components/AppLoadingScreen.jsx'
 import { useAuth } from './hooks/useAuth.js'
 import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
