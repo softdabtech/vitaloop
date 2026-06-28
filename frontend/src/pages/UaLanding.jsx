@@ -58,16 +58,87 @@ const LAB_UPLOAD_POINTS = [
   { title: 'Українські одиниці та референси', body: 'Сервіс зберігає показники, одиниці й межі в одному зрозумілому вигляді.' },
 ]
 
-const SYMPTOM_OPTIONS = [
-  'Втома',
-  'Поганий сон',
-  'Низька енергія',
-  'Випадіння волосся',
-  'Тривожність',
-  'Проблеми з концентрацією',
-  'Часті застуди',
-  'Проблеми у дитини',
+// Expanded symptom groups — mapped to 95+ biomarkers from knowledge base
+const SYMPTOM_GROUPS = [
+  {
+    label: 'Енергія та відновлення', icon: '⚡',
+    items: ['Постійна втома', 'Поганий сон', 'Низька енергія', 'Довго прокидаюсь / важко вставати'],
+  },
+  {
+    label: 'Голова та настрій', icon: '🧠',
+    items: ['Туман у голові / brain fog', 'Тривожність / нервозність', 'Перепади настрою', 'Часті головні болі'],
+  },
+  {
+    label: 'Вага та метаболізм', icon: '⚖️',
+    items: ['Не можу схуднути', 'Набір ваги без видимої причини', 'Тяга до солодкого / цукру'],
+  },
+  {
+    label: 'Шкіра, волосся, нігті', icon: '💇',
+    items: ['Випадіння волосся', 'Ламкі нігті / суха шкіра', 'Висипання / акне', 'Повільне загоєння ран'],
+  },
+  {
+    label: 'М\'язи та суглоби', icon: '💪',
+    items: ['М\'язова слабкість', 'Болі в суглобах / м\'язах', 'Судоми в литках / м\'язах'],
+  },
+  {
+    label: 'Серце та судини', icon: '❤️',
+    items: ['Серцебиття / аритмія', 'Холодні руки і ноги', 'Набряки ніг або рук'],
+  },
+  {
+    label: 'Імунітет', icon: '🛡️',
+    items: ['Часті застуди / хвороби', 'Довге відновлення після хвороби', 'Алергія / підвищена реакція'],
+  },
+  {
+    label: 'Гормони та статеве здоров\'я', icon: '🔬',
+    items: ['Порушення менструального циклу', 'Зниження лібідо', 'Планую вагітність', 'ПМС / важка менструація'],
+  },
+  {
+    label: 'Травлення', icon: '🍃',
+    items: ['Здуття / дискомфорт після їжі', 'Нерегулярне травлення'],
+  },
+  {
+    label: 'Дитяче здоров\'я', icon: '👶',
+    items: ['Проблема у дитини (ріст, розвиток, імунітет)'],
+  },
 ]
+
+// Flatten for backward compat
+const SYMPTOM_OPTIONS = SYMPTOM_GROUPS.flatMap(g => g.items)
+
+// Symptom → relevant biomarkers (Ukrainian names for result display)
+const SYMPTOM_BIOMARKERS = {
+  'Постійна втома':                 ['Феритин', 'Вітамін D', 'Гемоглобін', 'ТТГ', 'Вітамін B12', 'Кортизол'],
+  'Поганий сон':                    ['Кортизол', 'Магній', 'ТТГ', 'Вітамін D'],
+  'Низька енергія':                 ['Феритин', 'Вітамін B12', 'Вітамін D', 'Глюкоза', 'ТТГ'],
+  'Довго прокидаюсь / важко вставати': ['Кортизол', 'ТТГ', 'Вітамін D', 'Феритин'],
+  'Туман у голові / brain fog':     ['Вітамін B12', 'Вітамін D', 'Глюкоза', 'ТТГ', 'Феритин'],
+  'Тривожність / нервозність':      ['Кортизол', 'Магній', 'Вітамін D', 'ТТГ'],
+  'Перепади настрою':               ['Вітамін D', 'Вітамін B12', 'Кортизол', 'Естрадіол', 'Прогестерон'],
+  'Часті головні болі':             ['Магній', 'Гомоцистеїн', 'Кортизол', 'АТ (тиск)'],
+  'Не можу схуднути':               ['Інсулін', 'HOMA-IR', 'ТТГ', 'Кортизол', 'ЛГ/ФСГ'],
+  'Набір ваги без видимої причини': ['ТТГ', 'Кортизол', 'Інсулін', 'Естрадіол'],
+  'Тяга до солодкого / цукру':      ['Глюкоза', 'HbA1c', 'Інсулін', 'Магній', 'Хром'],
+  'Випадіння волосся':              ['Феритин', 'ТТГ', 'Цинк', 'Селен', 'Тестостерон (для жінок)'],
+  'Ламкі нігті / суха шкіра':      ['Цинк', 'Вітамін A', 'Вітамін E', 'Селен', 'Залізо'],
+  'Висипання / акне':               ['Тестостерон', 'ДГЕА-С', 'Інсулін', 'Цинк', 'Вітамін A'],
+  'Повільне загоєння ран':          ['Цинк', 'Вітамін C', 'Вітамін D', 'Глюкоза'],
+  'М\'язова слабкість':             ['Вітамін D', 'Магній', 'Кортизол', 'Кальцій', 'КФК'],
+  'Болі в суглобах / м\'язах':      ['Вітамін D', 'Сечова кислота', 'СРБ', 'Гомоцистеїн'],
+  'Судоми в литках / м\'язах':      ['Магній', 'Кальцій', 'Калій', 'Вітамін D'],
+  'Серцебиття / аритмія':           ['Магній', 'Калій', 'ТТГ', 'Вільний T4', 'Феритин'],
+  'Холодні руки і ноги':            ['ТТГ', 'Гемоглобін', 'Феритин', 'Вільний T4'],
+  'Набряки ніг або рук':            ['Альбумін', 'Креатинін', 'ШКФ', 'Загальний білок'],
+  'Часті застуди / хвороби':        ['Вітамін D', 'Цинк', 'Селен', 'Феритин'],
+  'Довге відновлення після хвороби':['Вітамін D', 'Цинк', 'Вітамін C', 'Феритин'],
+  'Алергія / підвищена реакція':    ['Вітамін D', 'Еозинофіли', 'IgE загальний'],
+  'Порушення менструального циклу': ['Естрадіол', 'Прогестерон', 'ФСГ', 'ЛГ', 'АМГ', 'ТТГ'],
+  'Зниження лібідо':                ['Тестостерон', 'ДГЕА-С', 'Кортизол', 'ГСПГ', 'Естрадіол'],
+  'Планую вагітність':              ['АМГ', 'ФСГ', 'Прогестерон', 'Фолат', 'Вітамін D', 'ТТГ'],
+  'ПМС / важка менструація':        ['Прогестерон', 'Магній', 'Вітамін B6', 'Феритин'],
+  'Здуття / дискомфорт після їжі':  ['Глюкоза', 'Інсулін', 'Загальний аналіз крові'],
+  'Нерегулярне травлення':          ['Загальний аналіз крові', 'Вітамін B12', 'Феритин'],
+  'Проблема у дитини (ріст, розвиток, імунітет)': ['Вітамін D', 'Феритин', 'Цинк', 'Загальний аналіз крові'],
+}
 
 const DURATION_OPTIONS = [
   { value: 'до 2 тижнів', label: 'До 2 тижнів' },
@@ -76,13 +147,19 @@ const DURATION_OPTIONS = [
   { value: 'повертається хвилями', label: 'Повертається хвилями' },
 ]
 
-const AGE_OPTIONS = ['18-29', '30-44', '45-59', '60+']
+const AGE_OPTIONS = ['до 18', '18-29', '30-44', '45-59', '60+']
 
 const FAMILY_CONTEXT_OPTIONS = [
   'Для себе',
   'Для дитини',
   'Для партнера/партнерки',
   'Для батьків',
+]
+
+const HAS_LABS_OPTIONS = [
+  { value: 'yes', label: 'Так, є результати' },
+  { value: 'partial', label: 'Є деякі' },
+  { value: 'no', label: 'Ще немає' },
 ]
 
 const PRIORITY_COPY = {
@@ -426,11 +503,12 @@ function ChoiceButton({ active, children, onClick }) {
 function UaWellbeingModal({ open, initialSymptoms, onClose }) {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
-  const [symptoms, setSymptoms] = useState(initialSymptoms?.length ? initialSymptoms : ['Втома'])
+  const [symptoms, setSymptoms] = useState(initialSymptoms?.length ? initialSymptoms : [])
   const [duration, setDuration] = useState('2-8 тижнів')
   const [intensity, setIntensity] = useState(3)
   const [ageRange, setAgeRange] = useState('')
   const [familyContext, setFamilyContext] = useState('Для себе')
+  const [hasLabs, setHasLabs] = useState('')
   const [context, setContext] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
@@ -440,19 +518,26 @@ function UaWellbeingModal({ open, initialSymptoms, onClose }) {
   useEffect(() => {
     if (!open) return undefined
     setStep(1)
-    setSymptoms(initialSymptoms?.length ? initialSymptoms : ['Втома'])
+    setSymptoms(initialSymptoms?.length ? initialSymptoms : [])
     setDuration('2-8 тижнів')
     setIntensity(3)
     setAgeRange('')
     setFamilyContext('Для себе')
+    setHasLabs('')
     setContext('')
     setResult(null)
     setAssessmentId('')
     setError('')
     trackPublicFunnelEvent('ua_wellbeing_started', { source: 'ua_modal' })
     document.body.style.overflow = 'hidden'
+    // Hide cookie banner while modal is open
+    const banner = document.getElementById('vl-cookie-banner')
+    if (banner) banner.style.display = 'none'
     return () => {
       document.body.style.overflow = ''
+      // Restore cookie banner after modal closes
+      const b = document.getElementById('vl-cookie-banner')
+      if (b) b.style.display = ''
     }
   }, [open, initialSymptoms])
 
@@ -480,6 +565,8 @@ function UaWellbeingModal({ open, initialSymptoms, onClose }) {
         context: context.trim() || null,
         age_range: ageRange || null,
         family_context: familyContext || null,
+        has_labs: hasLabs || null,
+        relevant_biomarkers: [...new Set(symptoms.flatMap(s => SYMPTOM_BIOMARKERS[s] || []))].slice(0, 12),
         source: 'ua.vitaloop.today',
       })
       setResult(data?.result || null)
@@ -556,14 +643,26 @@ function UaWellbeingModal({ open, initialSymptoms, onClose }) {
 
                   {step === 1 && (
                     <div>
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0f766e]">Крок 1</p>
-                      <h3 className="mt-2 text-3xl font-black text-[#0f172a]">Що зараз турбує?</h3>
-                      <p className="mt-2 text-sm leading-6 text-[#4b5563]">Оберіть кілька сигналів. Вони стануть контекстом для AI-підсумку.</p>
-                      <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                        {SYMPTOM_OPTIONS.map((symptom) => (
-                          <ChoiceButton key={symptom} active={symptoms.includes(symptom)} onClick={() => toggleSymptom(symptom)}>
-                            {symptom}
-                          </ChoiceButton>
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0f766e]">Крок 1 з 3</p>
+                      <h3 className="mt-2 text-2xl font-black text-[#0f172a]">Що зараз турбує?</h3>
+                      <p className="mt-1.5 text-sm leading-6 text-[#4b5563]">
+                        Оберіть один або кілька сигналів — Vitaloop підбере відповідні аналізи.
+                        {symptoms.length > 0 && <span className="ml-2 rounded-full bg-[#f1fbf8] px-2 py-0.5 text-xs font-black text-[#0f766e]">{symptoms.length} обрано</span>}
+                      </p>
+                      <div className="mt-4 max-h-[380px] overflow-y-auto pr-1 space-y-4 scrollbar-thin">
+                        {SYMPTOM_GROUPS.map((group) => (
+                          <div key={group.label}>
+                            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-[#9ca3af]">
+                              <span>{group.icon}</span>{group.label}
+                            </p>
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              {group.items.map((symptom) => (
+                                <ChoiceButton key={symptom} active={symptoms.includes(symptom)} onClick={() => toggleSymptom(symptom)}>
+                                  {symptom}
+                                </ChoiceButton>
+                              ))}
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -603,33 +702,72 @@ function UaWellbeingModal({ open, initialSymptoms, onClose }) {
 
                   {step === 3 && (
                     <div>
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0f766e]">Крок 3</p>
-                      <h3 className="mt-2 text-3xl font-black text-[#0f172a]">Додайте контекст</h3>
-                      <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                        {FAMILY_CONTEXT_OPTIONS.map((item) => (
-                          <ChoiceButton key={item} active={familyContext === item} onClick={() => setFamilyContext(item)}>
-                            {item}
-                          </ChoiceButton>
-                        ))}
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0f766e]">Крок 3 з 3</p>
+                      <h3 className="mt-2 text-2xl font-black text-[#0f172a]">Контекст для точнішого підсумку</h3>
+
+                      {/* Biomarker hints based on symptoms */}
+                      {symptoms.length > 0 && (() => {
+                        const bms = [...new Set(symptoms.flatMap(s => SYMPTOM_BIOMARKERS[s] || []))].slice(0, 8)
+                        return bms.length > 0 ? (
+                          <div className="mt-3 rounded-[18px] border border-[#d1fae5] bg-[#f0fdf4] px-4 py-3">
+                            <p className="text-xs font-black text-[#0f766e]">🔬 Аналізи, що можуть бути важливими для ваших симптомів:</p>
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {bms.map(b => (
+                                <span key={b} className="rounded-full bg-white px-2.5 py-0.5 text-xs font-bold text-[#0f172a] ring-1 ring-[#bbf7d0]">{b}</span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null
+                      })()}
+
+                      {/* Has labs? */}
+                      <div className="mt-5">
+                        <p className="text-sm font-black text-[#0f172a]">Чи є у вас результати аналізів?</p>
+                        <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
+                          {HAS_LABS_OPTIONS.map(opt => (
+                            <ChoiceButton key={opt.value} active={hasLabs === opt.value} onClick={() => setHasLabs(opt.value)}>
+                              {opt.label}
+                            </ChoiceButton>
+                          ))}
+                        </div>
                       </div>
-                      <div className="mt-5 flex flex-wrap gap-2">
-                        {AGE_OPTIONS.map((item) => (
-                          <button
-                            key={item}
-                            type="button"
-                            onClick={() => setAgeRange(ageRange === item ? '' : item)}
-                            className={`rounded-full px-4 py-2 text-sm font-black ring-1 transition ${ageRange === item ? 'bg-[#0f766e] text-white ring-[#0f766e]' : 'bg-white text-[#0f172a] ring-[#e5dfd6] hover:text-[#0f766e]'}`}
-                          >
-                            {item}
-                          </button>
-                        ))}
+
+                      {/* Who is this for */}
+                      <div className="mt-5">
+                        <p className="text-sm font-black text-[#0f172a]">Для кого оцінка?</p>
+                        <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+                          {FAMILY_CONTEXT_OPTIONS.map((item) => (
+                            <ChoiceButton key={item} active={familyContext === item} onClick={() => setFamilyContext(item)}>
+                              {item}
+                            </ChoiceButton>
+                          ))}
+                        </div>
                       </div>
+
+                      {/* Age */}
+                      <div className="mt-5">
+                        <p className="text-sm font-black text-[#0f172a]">Вік (необов'язково)</p>
+                        <div className="mt-2.5 flex flex-wrap gap-2">
+                          {AGE_OPTIONS.map((item) => (
+                            <button
+                              key={item}
+                              type="button"
+                              onClick={() => setAgeRange(ageRange === item ? '' : item)}
+                              className={`rounded-full px-4 py-2 text-sm font-black ring-1 transition ${ageRange === item ? 'bg-[#0f766e] text-white ring-[#0f766e]' : 'bg-white text-[#0f172a] ring-[#e5dfd6] hover:text-[#0f766e]'}`}
+                            >
+                              {item}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Free text */}
                       <textarea
                         value={context}
                         onChange={(event) => setContext(event.target.value)}
-                        rows={4}
+                        rows={3}
                         maxLength={500}
-                        placeholder="Наприклад: гірше вранці, після стресу, після тренувань, у дитини після хвороби..."
+                        placeholder="Додаткова деталь: гірше вранці, після стресу, після тренувань, приймаю ліки..."
                         className="mt-5 w-full resize-none rounded-[22px] border border-[#e5dfd6] bg-white px-4 py-3 text-sm leading-6 text-[#0f172a] outline-none transition placeholder:text-[#9ca3af] focus:border-[#14b8a6] focus:ring-4 focus:ring-[#14b8a6]/10"
                       />
                     </div>
@@ -868,30 +1006,53 @@ export default function UaLanding() {
 
           <div className="rounded-[30px] bg-white/78 p-4 shadow-[0_24px_70px_rgba(15,23,42,0.08)] ring-1 ring-[#e5dfd6] backdrop-blur sm:p-5">
             <div className="flex items-center justify-between gap-4 border-b border-[#e5dfd6] pb-4">
-              <p className="text-sm font-black text-[#0f172a]">Обрано: {selectedSymptoms.length} симптоми</p>
-              <p className="text-xs font-bold text-[#6b7280]">1 хвилина</p>
+              <p className="text-sm font-black text-[#0f172a]">
+                {selectedSymptoms.length > 0
+                  ? <><span className="text-[#0f766e]">{selectedSymptoms.length}</span> симптомів обрано</>
+                  : 'Оберіть симптоми'}
+              </p>
+              <p className="text-xs font-bold text-[#6b7280]">〜1 хвилина</p>
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {SYMPTOM_OPTIONS.map((symptom) => {
-                const active = selectedSymptoms.includes(symptom)
-                return (
-                  <button
-                    key={symptom}
-                    onClick={() => toggleSymptom(symptom)}
-                    className={`flex items-center gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-black transition hover:-translate-y-0.5 ${active ? 'bg-[#0f766e] text-white shadow-[0_12px_30px_rgba(15,118,110,0.22)]' : 'bg-[#f8f5f0] text-[#0f172a] hover:bg-white hover:text-[#0f766e]'}`}
-                  >
-                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${active ? 'border-white/70 bg-white text-[#0f766e]' : 'border-[#d6d0c7] bg-white text-transparent'}`}>
-                      <Check className="h-3.5 w-3.5" />
-                    </span>
-                    {symptom}
-                  </button>
-                )
-              })}
+            {/* Quick-select: top 2 groups */}
+            <div className="mt-4 space-y-3">
+              {SYMPTOM_GROUPS.slice(0, 3).map((group) => (
+                <div key={group.label}>
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-[0.1em] text-[#9ca3af]">
+                    {group.icon} {group.label}
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {group.items.map((symptom) => {
+                      const active = selectedSymptoms.includes(symptom)
+                      return (
+                        <button
+                          key={symptom}
+                          onClick={() => toggleSymptom(symptom)}
+                          className={`flex items-center gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-black transition hover:-translate-y-0.5 ${active ? 'bg-[#0f766e] text-white shadow-[0_12px_30px_rgba(15,118,110,0.22)]' : 'bg-[#f8f5f0] text-[#0f172a] hover:bg-white hover:text-[#0f766e]'}`}
+                        >
+                          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${active ? 'border-white/70 bg-white text-[#0f766e]' : 'border-[#d6d0c7] bg-white text-transparent'}`}>
+                            <Check className="h-3.5 w-3.5" />
+                          </span>
+                          {symptom}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={startWellbeingAssessment}
+                className="w-full rounded-[18px] border border-dashed border-[#14b8a6]/40 bg-[#f1fbf8] px-4 py-2.5 text-center text-sm font-black text-[#0f766e] transition hover:bg-[#e6f9f5]"
+              >
+                + ще 7 груп симптомів у повній формі
+              </button>
             </div>
-            <div className="mt-5 rounded-[22px] bg-[#f8f5f0] p-4 text-sm leading-6 text-[#4b5563]">
-              <span className="font-black text-[#0f172a]">Попередній фокус:</span>{' '}
-              {selectedSymptoms.length ? selectedSymptoms.join(', ') : 'оберіть симптоми'} → можливі пріоритети для перевірки.
-            </div>
+            {selectedSymptoms.length > 0 && (
+              <div className="mt-4 rounded-[18px] bg-[#f0fdf4] p-3 text-xs leading-5 text-[#374151] ring-1 ring-[#bbf7d0]">
+                <span className="font-black text-[#0f766e]">Ймовірні аналізи: </span>
+                {[...new Set(selectedSymptoms.flatMap(s => SYMPTOM_BIOMARKERS[s] || []))].slice(0, 5).join(' · ')}
+                {[...new Set(selectedSymptoms.flatMap(s => SYMPTOM_BIOMARKERS[s] || []))].length > 5 && ' та інші'}
+              </div>
+            )}
           </div>
         </section>
 
