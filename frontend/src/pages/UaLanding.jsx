@@ -18,6 +18,21 @@ import {
   ShieldCheck,
   Sparkles,
   X,
+  Zap,
+  Moon,
+  Brain,
+  Scale,
+  Scissors,
+  HeartHandshake,
+  Thermometer,
+  Dumbbell,
+  Baby,
+  Leaf,
+  Wind,
+  Droplets,
+  TrendingDown,
+  Timer,
+  AlertCircle,
 } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
 import api from '../lib/api.js'
@@ -697,32 +712,102 @@ function UaWellbeingModal({ open, initialSymptoms, onClose }) {
             <div className="bg-[#fbfaf7] p-4 sm:p-6 lg:p-8">
               {!result ? (
                 <>
-                  <div className="mb-6 flex items-center gap-2">
+                  {/* Progress bar */}
+                  <div className="mb-5 flex items-center gap-1.5">
                     {[1, 2, 3].map((item) => (
-                      <span key={item} className={`h-2 flex-1 rounded-full ${step >= item ? 'bg-[#0f766e]' : 'bg-[#e5dfd6]'}`} />
+                      <div key={item} className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${step >= item ? 'bg-[#0f766e]' : 'bg-[#e5dfd6]'}`} />
                     ))}
                   </div>
 
+                  {/* ── STEP 1: Symptoms with icons ── */}
                   {step === 1 && (
                     <div>
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0f766e]">Крок 1 з 3</p>
-                      <h3 className="mt-2 text-2xl font-black text-[#0f172a]">Що зараз турбує?</h3>
-                      <p className="mt-1.5 text-sm leading-6 text-[#4b5563]">
-                        Оберіть один або кілька сигналів — Vitaloop підбере відповідні аналізи.
-                        {symptoms.length > 0 && <span className="ml-2 rounded-full bg-[#f1fbf8] px-2 py-0.5 text-xs font-black text-[#0f766e]">{symptoms.length} обрано</span>}
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#0f766e]">Крок 1</p>
+                      <h3 className="mt-1.5 text-[22px] font-black leading-tight text-[#0f172a]">Що зараз турбує?</h3>
+                      <p className="mt-1 text-sm text-[#64748b]">
+                        Оберіть симптоми — AI підбере аналізи
+                        {symptoms.length > 0 && <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#0f766e] text-[10px] font-black text-white">{symptoms.length}</span>}
                       </p>
-                      <div className="mt-4 max-h-[calc(50vh)] overflow-y-auto pr-0.5 space-y-4 sm:max-h-[380px]">
-                        {SYMPTOM_GROUPS.map((group) => (
+
+                      <div className="mt-4 max-h-[44vh] space-y-3 overflow-y-auto pr-0.5 sm:max-h-[360px]">
+                        {[
+                          {
+                            label: 'Енергія та сон', Icon: Zap, color: '#f59e0b',
+                            items: [
+                              { Icon: Zap, label: 'Постійна втома' },
+                              { Icon: Moon, label: 'Поганий сон' },
+                              { Icon: TrendingDown, label: 'Низька енергія' },
+                              { Icon: Timer, label: 'Важко прокидатись' },
+                            ],
+                          },
+                          {
+                            label: 'Голова та настрій', Icon: Brain, color: '#8b5cf6',
+                            items: [
+                              { Icon: Wind, label: 'Туман у голові' },
+                              { Icon: AlertCircle, label: 'Тривожність' },
+                              { Icon: Activity, label: 'Перепади настрою' },
+                              { Icon: Brain, label: 'Головні болі' },
+                            ],
+                          },
+                          {
+                            label: 'Вага та метаболізм', Icon: Scale, color: '#0ea5e9',
+                            items: [
+                              { Icon: Scale, label: 'Не можу схуднути' },
+                              { Icon: TrendingDown, label: 'Набір ваги' },
+                              { Icon: Droplets, label: 'Тяга до солодкого' },
+                            ],
+                          },
+                          {
+                            label: 'Шкіра та волосся', Icon: Scissors, color: '#ec4899',
+                            items: [
+                              { Icon: Scissors, label: 'Випадіння волосся' },
+                              { Icon: Leaf, label: 'Суха шкіра / нігті' },
+                              { Icon: Thermometer, label: 'Акне / висипання' },
+                            ],
+                          },
+                          {
+                            label: "М'язи та суглоби", Icon: Dumbbell, color: '#10b981',
+                            items: [
+                              { Icon: Dumbbell, label: "М'язова слабкість" },
+                              { Icon: Activity, label: 'Болі у суглобах' },
+                              { Icon: HeartPulse, label: "Судоми м'язів" },
+                            ],
+                          },
+                          {
+                            label: 'Гормони та цикл', Icon: HeartHandshake, color: '#f43f5e',
+                            items: [
+                              { Icon: HeartHandshake, label: 'Порушення циклу' },
+                              { Icon: HeartPulse, label: 'Зниження лібідо' },
+                              { Icon: Baby, label: 'Планую вагітність' },
+                            ],
+                          },
+                        ].map((group) => (
                           <div key={group.label}>
-                            <p className="mb-2 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-[#9ca3af]">
-                              <span>{group.icon}</span>{group.label}
+                            <p className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.1em] text-[#9ca3af]">
+                              <group.Icon className="h-3 w-3" style={{ color: group.color }} />
+                              {group.label}
                             </p>
-                            <div className="grid gap-2 sm:grid-cols-2">
-                              {group.items.map((symptom) => (
-                                <ChoiceButton key={symptom} active={symptoms.includes(symptom)} onClick={() => toggleSymptom(symptom)}>
-                                  {symptom}
-                                </ChoiceButton>
-                              ))}
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {group.items.map(({ Icon: ItemIcon, label }) => {
+                                const active = symptoms.includes(label)
+                                return (
+                                  <button
+                                    key={label}
+                                    type="button"
+                                    onClick={() => toggleSymptom(label)}
+                                    className={`flex items-center gap-2.5 rounded-2xl border px-3 py-2.5 text-left text-[13px] font-bold transition active:scale-[0.97] ${
+                                      active
+                                        ? 'border-[#0f766e] bg-[#0f766e] text-white shadow-[0_6px_20px_rgba(15,118,110,0.25)]'
+                                        : 'border-[#e5dfd6] bg-white text-[#0f172a] hover:border-[#14b8a6]/50'
+                                    }`}
+                                  >
+                                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${active ? 'bg-white/20' : 'bg-[#f0fdfa]'}`}>
+                                      <ItemIcon className={`h-3.5 w-3.5 ${active ? 'text-white' : 'text-[#0d9488]'}`} />
+                                    </span>
+                                    <span className="leading-tight">{label}</span>
+                                  </button>
+                                )
+                              })}
                             </div>
                           </div>
                         ))}
@@ -730,141 +815,218 @@ function UaWellbeingModal({ open, initialSymptoms, onClose }) {
                     </div>
                   )}
 
+                  {/* ── STEP 2: Duration + KB-linked impact questions ── */}
                   {step === 2 && (
                     <div>
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0f766e]">Крок 2</p>
-                      <h3 className="mt-2 text-3xl font-black text-[#0f172a]">Скільки це триває і наскільки заважає?</h3>
-                      <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                        {DURATION_OPTIONS.map((item) => (
-                          <ChoiceButton key={item.value} active={duration === item.value} onClick={() => setDuration(item.value)}>
-                            {item.label}
-                          </ChoiceButton>
-                        ))}
-                      </div>
-                      <div className="mt-6 rounded-[24px] border border-[#e5dfd6] bg-white p-5">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-black text-[#0f172a]">Інтенсивність</p>
-                          <p className="rounded-full bg-[#f1fbf8] px-3 py-1 text-sm font-black text-[#0f766e]">{intensity}/5</p>
-                        </div>
-                        <input
-                          type="range"
-                          min="1"
-                          max="5"
-                          value={intensity}
-                          onChange={(event) => setIntensity(Number(event.target.value))}
-                          className="mt-5 w-full accent-[#0f766e]"
-                        />
-                        <div className="mt-2 flex justify-between text-xs font-bold text-[#6b7280]">
-                          <span>Легко</span>
-                          <span>Сильно заважає</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#0f766e]">Крок 2</p>
+                      <h3 className="mt-1.5 text-[22px] font-black leading-tight text-[#0f172a]">Деталі для AI-аналізу</h3>
+                      <p className="mt-1 text-sm text-[#64748b]">Це допоможе точніше підібрати біомаркери</p>
 
-                  {step === 3 && (
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0f766e]">Крок 3 з 3</p>
-                      <h3 className="mt-2 text-2xl font-black text-[#0f172a]">Контекст для точнішого підсумку</h3>
-
-                      {/* Biomarker hints based on symptoms */}
-                      {symptoms.length > 0 && (() => {
-                        const bms = [...new Set(symptoms.flatMap(s => SYMPTOM_BIOMARKERS[s] || []))].slice(0, 8)
-                        return bms.length > 0 ? (
-                          <div className="mt-3 rounded-[18px] border border-[#d1fae5] bg-[#f0fdf4] px-4 py-3">
-                            <p className="text-xs font-black text-[#0f766e]">🔬 Аналізи, що можуть бути важливими для ваших симптомів:</p>
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                              {bms.map(b => (
-                                <span key={b} className="rounded-full bg-white px-2.5 py-0.5 text-xs font-bold text-[#0f172a] ring-1 ring-[#bbf7d0]">{b}</span>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null
-                      })()}
-
-                      {/* Has labs? */}
+                      {/* Duration */}
                       <div className="mt-5">
-                        <p className="text-sm font-black text-[#0f172a]">Чи є у вас результати аналізів?</p>
-                        <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
-                          {HAS_LABS_OPTIONS.map(opt => (
-                            <ChoiceButton key={opt.value} active={hasLabs === opt.value} onClick={() => setHasLabs(opt.value)}>
-                              {opt.label}
-                            </ChoiceButton>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Who is this for */}
-                      <div className="mt-5">
-                        <p className="text-sm font-black text-[#0f172a]">Для кого оцінка?</p>
-                        <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
-                          {FAMILY_CONTEXT_OPTIONS.map((item) => (
-                            <ChoiceButton key={item} active={familyContext === item} onClick={() => setFamilyContext(item)}>
-                              {item}
-                            </ChoiceButton>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Age */}
-                      <div className="mt-5">
-                        <p className="text-sm font-black text-[#0f172a]">Вік (необов'язково)</p>
-                        <div className="mt-2.5 flex flex-wrap gap-2">
-                          {AGE_OPTIONS.map((item) => (
+                        <p className="mb-2.5 text-sm font-black text-[#0f172a]">Як довго тривають симптоми?</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { value: 'до 2 тижнів', label: 'До 2 тижнів', hint: 'Гостре' },
+                            { value: '2-8 тижнів', label: '2–8 тижнів', hint: 'Підгостре' },
+                            { value: 'понад 2 місяці', label: 'Понад 2 місяці', hint: 'Хронічне' },
+                            { value: 'повертається хвилями', label: 'Хвилями', hint: 'Рецидивуюче' },
+                          ].map((item) => (
                             <button
-                              key={item}
+                              key={item.value}
                               type="button"
-                              onClick={() => setAgeRange(ageRange === item ? '' : item)}
-                              className={`rounded-full px-4 py-2 text-sm font-black ring-1 transition ${ageRange === item ? 'bg-[#0f766e] text-white ring-[#0f766e]' : 'bg-white text-[#0f172a] ring-[#e5dfd6] hover:text-[#0f766e]'}`}
+                              onClick={() => setDuration(item.value)}
+                              className={`flex flex-col rounded-2xl border p-3 text-left transition ${
+                                duration === item.value
+                                  ? 'border-[#0f766e] bg-[#0f766e] text-white'
+                                  : 'border-[#e5dfd6] bg-white text-[#0f172a] hover:border-[#14b8a6]/50'
+                              }`}
                             >
-                              {item}
+                              <span className="text-[13px] font-black">{item.label}</span>
+                              <span className={`text-[11px] ${duration === item.value ? 'text-white/70' : 'text-[#9ca3af]'}`}>{item.hint}</span>
                             </button>
                           ))}
                         </div>
                       </div>
 
-                      {/* Free text */}
+                      {/* Impact — visual 5-scale */}
+                      <div className="mt-5">
+                        <div className="mb-2.5 flex items-center justify-between">
+                          <p className="text-sm font-black text-[#0f172a]">Наскільки впливає на життя?</p>
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-black ${
+                            intensity <= 2 ? 'bg-emerald-100 text-emerald-700'
+                            : intensity === 3 ? 'bg-amber-100 text-amber-700'
+                            : 'bg-rose-100 text-rose-700'
+                          }`}>
+                            {['', 'Мінімально', 'Помірно', 'Відчутно', 'Сильно', 'Дуже сильно'][intensity]}
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          {[1, 2, 3, 4, 5].map((v) => (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => setIntensity(v)}
+                              className={`flex-1 rounded-xl py-3 text-sm font-black transition ${
+                                intensity === v
+                                  ? v <= 2 ? 'bg-emerald-500 text-white'
+                                    : v === 3 ? 'bg-amber-500 text-white'
+                                    : 'bg-rose-500 text-white'
+                                  : 'bg-white text-[#9ca3af] ring-1 ring-[#e5dfd6]'
+                              }`}
+                            >
+                              {v}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="mt-1.5 flex justify-between text-[10px] text-[#9ca3af]">
+                          <span>Майже не помічаю</span>
+                          <span>Заважає щодня</span>
+                        </div>
+                      </div>
+
+                      {/* KB-relevant biomarker preview */}
+                      {symptoms.length > 0 && (() => {
+                        const bms = [...new Set(symptoms.flatMap(s => SYMPTOM_BIOMARKERS[s] || []))].slice(0, 6)
+                        return bms.length > 0 ? (
+                          <div className="mt-5 rounded-2xl border border-[#d1fae5] bg-[#f0fdf4] p-4">
+                            <p className="mb-2.5 text-[11px] font-black uppercase tracking-[0.1em] text-[#0f766e]">
+                              🔬 Ймовірні пріоритетні аналізи
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {bms.map(b => (
+                                <span key={b} className="rounded-full bg-white px-2.5 py-1 text-[12px] font-bold text-[#0f172a] ring-1 ring-[#6ee7b7]">{b}</span>
+                              ))}
+                              {[...new Set(symptoms.flatMap(s => SYMPTOM_BIOMARKERS[s] || []))].length > 6 && (
+                                <span className="rounded-full bg-white px-2.5 py-1 text-[12px] font-bold text-[#9ca3af] ring-1 ring-[#e5dfd6]">
+                                  +{[...new Set(symptoms.flatMap(s => SYMPTOM_BIOMARKERS[s] || []))].length - 6} ще
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ) : null
+                      })()}
+                    </div>
+                  )}
+
+                  {/* ── STEP 3: Context ── */}
+                  {step === 3 && (
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#0f766e]">Крок 3</p>
+                      <h3 className="mt-1.5 text-[22px] font-black leading-tight text-[#0f172a]">Контекст</h3>
+                      <p className="mt-1 text-sm text-[#64748b]">Кілька деталей для точнішого підсумку</p>
+
+                      {/* Has labs */}
+                      <div className="mt-5">
+                        <p className="mb-2 text-[13px] font-black text-[#0f172a]">Є результати аналізів?</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { value: 'yes', label: 'Так', icon: '✅' },
+                            { value: 'partial', label: 'Частково', icon: '📋' },
+                            { value: 'no', label: 'Немає', icon: '➕' },
+                          ].map(opt => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setHasLabs(opt.value)}
+                              className={`flex flex-col items-center gap-1 rounded-2xl border py-3 text-center transition ${
+                                hasLabs === opt.value
+                                  ? 'border-[#0f766e] bg-[#0f766e] text-white'
+                                  : 'border-[#e5dfd6] bg-white text-[#0f172a]'
+                              }`}
+                            >
+                              <span className="text-lg">{opt.icon}</span>
+                              <span className="text-[12px] font-black">{opt.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Who + Age in one row */}
+                      <div className="mt-5 grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="mb-2 text-[13px] font-black text-[#0f172a]">Для кого?</p>
+                          <div className="space-y-1.5">
+                            {['Для себе', 'Для дитини', 'Для партнера', 'Для батьків'].map((item) => (
+                              <button
+                                key={item}
+                                type="button"
+                                onClick={() => setFamilyContext(item)}
+                                className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-[12px] font-bold transition ${
+                                  familyContext === item
+                                    ? 'border-[#0f766e] bg-[#0f766e] text-white'
+                                    : 'border-[#e5dfd6] bg-white text-[#0f172a]'
+                                }`}
+                              >
+                                {familyContext === item && <Check className="h-3 w-3 shrink-0" />}
+                                {item}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="mb-2 text-[13px] font-black text-[#0f172a]">Вікова група</p>
+                          <div className="space-y-1.5">
+                            {['до 18', '18–29', '30–44', '45–59', '60+'].map((item) => (
+                              <button
+                                key={item}
+                                type="button"
+                                onClick={() => setAgeRange(ageRange === item ? '' : item)}
+                                className={`flex w-full items-center justify-center rounded-xl border px-3 py-2 text-[12px] font-bold transition ${
+                                  ageRange === item
+                                    ? 'border-[#0f766e] bg-[#0f766e] text-white'
+                                    : 'border-[#e5dfd6] bg-white text-[#0f172a]'
+                                }`}
+                              >
+                                {item}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Optional note */}
                       <textarea
                         value={context}
                         onChange={(event) => setContext(event.target.value)}
-                        rows={3}
-                        maxLength={500}
-                        placeholder="Додаткова деталь: гірше вранці, після стресу, після тренувань, приймаю ліки..."
-                        className="mt-5 w-full resize-none rounded-[22px] border border-[#e5dfd6] bg-white px-4 py-3 text-sm leading-6 text-[#0f172a] outline-none transition placeholder:text-[#9ca3af] focus:border-[#14b8a6] focus:ring-4 focus:ring-[#14b8a6]/10"
+                        rows={2}
+                        maxLength={400}
+                        placeholder="Деталь: гірше вранці, після стресу, приймаю ліки..."
+                        className="mt-4 w-full resize-none rounded-2xl border border-[#e5dfd6] bg-white px-4 py-3 text-sm text-[#0f172a] outline-none transition placeholder:text-[#9ca3af] focus:border-[#14b8a6] focus:ring-4 focus:ring-[#14b8a6]/10"
                       />
                     </div>
                   )}
 
                   {error && (
-                    <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800">
+                    <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">
                       {error}
                     </div>
                   )}
 
-                  <div className="mt-6 flex flex-col-reverse gap-3 sm:mt-8 sm:flex-row sm:justify-between">
+                  {/* Navigation */}
+                  <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
                     <button
                       type="button"
-                      onClick={() => (step === 1 ? onClose() : setStep((value) => value - 1))}
-                      className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#e5dfd6] bg-white px-5 py-3 text-sm font-black text-[#0f172a] transition hover:bg-[#f1fbf8]"
+                      onClick={() => (step === 1 ? onClose() : setStep((v) => v - 1))}
+                      className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#e5dfd6] bg-white px-5 text-sm font-black text-[#0f172a] transition hover:bg-[#f1fbf8]"
                     >
-                      {step === 1 ? 'Закрити' : 'Назад'}
+                      {step === 1 ? 'Закрити' : '← Назад'}
                     </button>
                     {step < 3 ? (
                       <button
                         type="button"
                         disabled={step === 1 && symptoms.length === 0}
-                        onClick={() => setStep((value) => value + 1)}
-                        className={`${CTA_CLASS} disabled:pointer-events-none disabled:opacity-50`}
+                        onClick={() => setStep((v) => v + 1)}
+                        className={`${CTA_CLASS} disabled:pointer-events-none disabled:opacity-40`}
                       >
-                        Далі
-                        <ArrowRight className="h-4 w-4" />
+                        Далі <ArrowRight className="h-4 w-4" />
                       </button>
                     ) : (
                       <button
                         type="button"
                         disabled={!canContinue || loading}
                         onClick={submitAssessment}
-                        className={`${CTA_CLASS} disabled:pointer-events-none disabled:opacity-60`}
+                        className={`${CTA_CLASS} disabled:pointer-events-none disabled:opacity-50`}
                       >
                         {loading ? 'Формуємо підсумок...' : 'Сформувати AI-підсумок'}
                         {!loading && <ArrowRight className="h-4 w-4" />}
@@ -1016,99 +1178,73 @@ export default function UaLanding() {
         {/* ── HERO ── Mobile-first redesign ─────────────────────────────── */}
         <section className="relative overflow-hidden border-b border-[#e5dfd6]">
 
-          {/* ── MOBILE HERO — interactive symptom-first design ── */}
+          {/* ── MOBILE HERO — product showcase ── */}
           <div className="block sm:hidden">
-            {/* Background image with strong overlay */}
-            <div className="relative min-h-[100svh] overflow-hidden bg-[#0a1f1c]">
-              <img
-                src={HERO_IMAGE}
-                alt=""
-                fetchPriority="high"
-                decoding="async"
-                className="absolute inset-0 h-full w-full object-cover object-[62%_center] opacity-40"
-              />
-              {/* Gradient: dark top for text, lighter fade bottom */}
-              <div className="absolute inset-0 bg-[linear-gradient(170deg,rgba(8,28,24,0.92)_0%,rgba(10,30,26,0.82)_50%,rgba(8,28,24,0.94)_100%)]" />
-              {/* Teal glow accent */}
-              <div className="pointer-events-none absolute -right-16 top-20 h-56 w-56 rounded-full bg-[#0d9488]/25 blur-3xl" />
+            <div className="relative min-h-[100svh] overflow-hidden bg-[#071c18]">
+              {/* Background */}
+              <img src={HERO_IMAGE} alt="" fetchPriority="high" decoding="async"
+                className="absolute inset-0 h-full w-full object-cover object-[62%_30%] opacity-30" />
+              <div className="absolute inset-0 bg-[linear-gradient(160deg,rgba(6,20,17,0.96)_0%,rgba(8,28,24,0.88)_60%,rgba(6,20,17,0.97)_100%)]" />
+              <div className="pointer-events-none absolute -right-20 top-10 h-72 w-72 rounded-full bg-[#0d9488]/20 blur-3xl" />
+              <div className="pointer-events-none absolute -left-16 bottom-20 h-48 w-48 rounded-full bg-[#d4b483]/10 blur-3xl" />
 
-              {/* Content */}
-              <div className="relative flex min-h-[100svh] flex-col px-5 pb-8 pt-6">
-
-                {/* Top: badge */}
-                <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[#14b8a6]/30 bg-[#14b8a6]/10 px-3 py-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.12em] text-[#5eead4]">AI · Симптоми · Аналізи</span>
+              <div className="relative flex min-h-[100svh] flex-col px-5 pb-10 pt-7">
+                {/* Live badge */}
+                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#14b8a6]/25 bg-[#14b8a6]/8 px-3 py-1.5">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4ade80]" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#5eead4]">Vitaloop Ukraine</span>
                 </div>
 
-                {/* H1 */}
-                <h1 className="mt-5 text-[32px] font-black leading-[1.06] tracking-[-0.02em] text-white">
-                  Що зараз<br />турбує?
+                {/* Main headline */}
+                <h1 className="mt-5 text-[34px] font-black leading-[1.05] tracking-[-0.02em] text-white">
+                  Ваші аналізи<br />
+                  <span className="text-[#5eead4]">розшифровані.</span><br />
+                  Ваш план — готовий.
                 </h1>
-                <p className="mt-3 text-[14px] leading-[1.6] text-white/60">
-                  Оберіть симптоми — AI підбере можливі причини і пріоритетні аналізи.
+                <p className="mt-4 text-[14px] leading-[1.65] text-white/55">
+                  Описуєте симптоми або завантажуєте аналізи — AI аналізує 95+ біомаркерів і формує персональний план дій.
                 </p>
 
-                {/* Interactive symptom chips */}
-                <div className="mt-6 flex flex-col gap-2.5">
+                {/* 3 feature rows */}
+                <div className="mt-7 space-y-3">
                   {[
-                    { emoji: '⚡', label: 'Постійна втома' },
-                    { emoji: '🌙', label: 'Поганий сон' },
-                    { emoji: '🧠', label: 'Туман у голові' },
-                    { emoji: '⚖️', label: 'Не можу схуднути' },
-                    { emoji: '💇', label: 'Випадіння волосся' },
-                    { emoji: '😰', label: 'Тривожність' },
-                  ].map(({ emoji, label }) => {
-                    const active = selectedSymptoms.includes(label)
-                    return (
-                      <button
-                        key={label}
-                        type="button"
-                        onClick={() => toggleSymptom(label)}
-                        className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-all active:scale-[0.98] ${
-                          active
-                            ? 'border-[#14b8a6] bg-[#14b8a6]/15 shadow-[0_0_0_1px_#14b8a6]'
-                            : 'border-white/12 bg-white/6'
-                        }`}
-                      >
-                        <span className="text-[18px] leading-none">{emoji}</span>
-                        <span className={`text-[15px] font-bold ${active ? 'text-[#5eead4]' : 'text-white/85'}`}>
-                          {label}
-                        </span>
-                        {active && (
-                          <span className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#14b8a6]">
-                            <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 12 12">
-                              <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
+                    { Icon: Zap, title: 'Симптоми → пріоритети', desc: '30 категорій симптомів, 110 правил AI' },
+                    { Icon: FlaskConical, title: 'Аналізи → пояснення', desc: 'PDF або фото з будь-якої лабораторії' },
+                    { Icon: ClipboardList, title: 'Підсумок → наступний крок', desc: 'Питання до лікаря і план дій' },
+                  ].map(({ Icon, title, desc }) => (
+                    <div key={title} className="flex items-center gap-4 rounded-2xl border border-white/8 bg-white/5 px-4 py-3.5">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0d9488]/20">
+                        <Icon className="h-5 w-5 text-[#5eead4]" />
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-black text-white">{title}</p>
+                        <p className="text-[11px] text-white/45">{desc}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
-                {/* CTA — pushed to bottom */}
-                <div className="mt-auto pt-6">
-                  {selectedSymptoms.length > 0 && (
-                    <p className="mb-3 text-center text-[12px] font-bold text-[#5eead4]">
-                      Обрано: {selectedSymptoms.length} · Натисніть щоб побачити результат
-                    </p>
-                  )}
+                {/* CTA pushed to bottom */}
+                <div className="mt-auto pt-8">
                   <button
                     onClick={startWellbeingAssessment}
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#0f766e,#14b8a6)] py-4 text-[16px] font-black text-white shadow-[0_10px_32px_rgba(13,148,136,0.40)] transition active:scale-[0.98]"
+                    className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[linear-gradient(135deg,#0f766e_0%,#14b8a6_100%)] py-[18px] text-[16px] font-black text-white shadow-[0_12px_36px_rgba(13,148,136,0.38)] transition active:scale-[0.98]"
                   >
-                    {selectedSymptoms.length > 0 ? 'Отримати AI-підсумок' : 'Почати оцінку'}
-                    <ArrowRight className="h-5 w-5" />
+                    <Sparkles className="h-5 w-5" />
+                    Пройти чекап самопочуття
                   </button>
-
-                  {/* Micro trust */}
-                  <div className="mt-4 flex items-center justify-center gap-4 text-[11px] font-semibold text-white/40">
-                    <span>✓ Безкоштовно</span>
-                    <span>·</span>
-                    <span>✓ 2 хвилини</span>
-                    <span>·</span>
-                    <span>✓ Не діагноз</span>
+                  <button
+                    onClick={startSignup}
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 py-4 text-[14px] font-semibold text-white/65 transition active:scale-[0.98]"
+                  >
+                    Зареєструватись безкоштовно
+                  </button>
+                  <div className="mt-5 flex items-center justify-center gap-1 text-[11px] text-white/30">
+                    <Check className="h-3 w-3" /><span>Безкоштовно</span>
+                    <span className="mx-2 opacity-40">·</span>
+                    <Check className="h-3 w-3" /><span>2 хвилини</span>
+                    <span className="mx-2 opacity-40">·</span>
+                    <Check className="h-3 w-3" /><span>Не діагноз</span>
                   </div>
                 </div>
               </div>
