@@ -34,6 +34,9 @@ const MedicalReviewPolicy = lazy(() => import('./pages/MedicalReviewPolicy.jsx')
 const EditorialTeam = lazy(() => import('./pages/EditorialTeam.jsx'))
 const UaLanding = lazy(() => import('./pages/UaLanding.jsx'))
 const UaPage = lazy(() => import('./pages/UaPage.jsx'))
+const UaHealthHubHome = lazy(() => import('./pages/UaHealthHub.jsx').then(m => ({ default: m.UaHealthHubHome })))
+const UaHealthHubCluster = lazy(() => import('./pages/UaHealthHub.jsx').then(m => ({ default: m.UaHealthHubCluster })))
+const UaHealthHubArticle = lazy(() => import('./pages/UaHealthHub.jsx').then(m => ({ default: m.UaHealthHubArticle })))
 
 // UI components — lazy
 const SupportChat = lazy(() => import('./components/SupportChat.jsx'))
@@ -737,6 +740,11 @@ export default function App() {
           <Route path="/" element={isUaHost ? <UaLanding /> : <Landing />} />
           <Route path="/ua" element={<UaLanding />} />
           <Route path="/ua/:pageSlug" element={<UaPage />} />
+          {/* UA Health Hub */}
+          <Route path="/health-hub" element={isUaHost ? <UaHealthHubHome /> : <HealthHub />} />
+          <Route path="/health-hub/topics/:clusterSlug" element={isUaHost ? <UaHealthHubCluster /> : <HealthHubCluster />} />
+          <Route path="/health-hub/:articleSlug" element={isUaHost ? <UaHealthHubArticle /> : <HealthHubArticle />} />
+
           <Route path="/samopochuttia" element={isUaHost ? <UaPage pageSlug="samopochuttia" /> : <NotFound />} />
           <Route path="/symptomy" element={isUaHost ? <UaPage pageSlug="symptomy" /> : <NotFound />} />
           <Route path="/analizy" element={isUaHost ? <UaPage pageSlug="analizy" /> : <NotFound />} />
