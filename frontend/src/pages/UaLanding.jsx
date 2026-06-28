@@ -265,8 +265,8 @@ export const PRICING = [
     featured: false,
   },
   {
-    name: 'Personal Pro',
-    price: '799 грн/міс',
+    name: 'Premium',
+    price: '399 грн/міс',
     note: 'для регулярного контролю',
     description: 'Необмежені аналізи, AI-протокол, 95+ біомаркерів і щотижневий чек-ін стану здоров\'я.',
     features: [
@@ -277,7 +277,7 @@ export const PRICING = [
       'Тижневий чек-ін самопочуття',
       'Питання до лікаря + наступні кроки',
     ],
-    cta: 'Спробувати 14 днів',
+    cta: 'Спробувати Premium',
     featured: true,
   },
   {
@@ -513,6 +513,9 @@ export function UaFooter() {
                 {link.label}
               </button>
             ))}
+            <button onClick={() => navigate(getUaPath('/health-hub'))} className="w-fit text-left text-sm font-semibold text-[#4b5563] transition hover:text-[#0f766e]">
+              Health Hub
+            </button>
           </div>
         </div>
 
