@@ -1016,72 +1016,101 @@ export default function UaLanding() {
         {/* ── HERO ── Mobile-first redesign ─────────────────────────────── */}
         <section className="relative overflow-hidden border-b border-[#e5dfd6]">
 
-          {/* Mobile hero: dark teal gradient + clear text (no competing image) */}
+          {/* ── MOBILE HERO — interactive symptom-first design ── */}
           <div className="block sm:hidden">
-            <div className="relative bg-[linear-gradient(160deg,#0b2d2a_0%,#0f766e_55%,#155e4f_100%)] px-5 pt-10 pb-0">
-              {/* Subtle decorative circles */}
-              <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-[#14b8a6]/20 blur-3xl" />
-              <div className="pointer-events-none absolute -left-10 bottom-10 h-48 w-48 rounded-full bg-[#d4b483]/15 blur-3xl" />
-
-              {/* Badge */}
-              <div className="relative inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#a7f3d0]">
-                <Sparkles className="h-3 w-3" />
-                AI · Симптоми · Аналізи
-              </div>
-
-              {/* H1 */}
-              <h1 className="relative mt-5 text-[30px] font-black leading-[1.08] tracking-tight text-white">
-                Постійна втома?<br />Поганий сон?<br />
-                <span className="text-[#5eead4]">Знайдемо причину.</span>
-              </h1>
-
-              {/* Sub */}
-              <p className="relative mt-4 text-[14px] leading-6 text-[#d9fffb]/80">
-                Опишіть симптоми або завантажте аналізи — Vitaloop покаже пріоритети і наступний крок.
-              </p>
-
-              {/* Stats row */}
-              <div className="relative mt-5 flex items-center gap-4">
-                {[['95+', 'біомаркерів'], ['110', 'правил AI'], ['30', 'симптомів']].map(([n, l]) => (
-                  <div key={l} className="text-center">
-                    <div className="text-[18px] font-black leading-none text-white">{n}</div>
-                    <div className="mt-0.5 text-[10px] leading-none text-[#d9fffb]/60">{l}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* CTA */}
-              <div className="relative mt-6 pb-6">
-                <button
-                  onClick={startWellbeingAssessment}
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-white py-4 text-[15px] font-black text-[#0f766e] shadow-[0_8px_24px_rgba(15,23,42,0.22)] transition active:scale-[0.98]"
-                >
-                  Оцінити своє самопочуття
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={startSignup}
-                  className="mt-3 w-full rounded-full border border-white/25 py-3.5 text-[14px] font-bold text-white/80 transition"
-                >
-                  Зареєструватись безкоштовно
-                </button>
-              </div>
-            </div>
-
-            {/* Hero image below the text on mobile */}
-            <div className="relative h-[220px] overflow-hidden">
+            {/* Background image with strong overlay */}
+            <div className="relative min-h-[100svh] overflow-hidden bg-[#0a1f1c]">
               <img
                 src={HERO_IMAGE}
                 alt=""
                 fetchPriority="high"
                 decoding="async"
-                className="h-full w-full object-cover object-[60%_25%]"
+                className="absolute inset-0 h-full w-full object-cover object-[62%_center] opacity-40"
               />
-              <div className="absolute inset-0 bg-[linear-gradient(to_bottom,#0b2d2a_0%,transparent_30%,transparent_70%,#f8f5f0_100%)]" />
+              {/* Gradient: dark top for text, lighter fade bottom */}
+              <div className="absolute inset-0 bg-[linear-gradient(170deg,rgba(8,28,24,0.92)_0%,rgba(10,30,26,0.82)_50%,rgba(8,28,24,0.94)_100%)]" />
+              {/* Teal glow accent */}
+              <div className="pointer-events-none absolute -right-16 top-20 h-56 w-56 rounded-full bg-[#0d9488]/25 blur-3xl" />
 
-              {/* Social proof chip over image */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-[#e5dfd6] bg-white/90 px-4 py-2 text-[11px] font-bold text-[#0f172a] shadow-md backdrop-blur-sm">
-                ✓ Освітній підсумок · Не діагноз
+              {/* Content */}
+              <div className="relative flex min-h-[100svh] flex-col px-5 pb-8 pt-6">
+
+                {/* Top: badge */}
+                <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[#14b8a6]/30 bg-[#14b8a6]/10 px-3 py-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.12em] text-[#5eead4]">AI · Симптоми · Аналізи</span>
+                </div>
+
+                {/* H1 */}
+                <h1 className="mt-5 text-[32px] font-black leading-[1.06] tracking-[-0.02em] text-white">
+                  Що зараз<br />турбує?
+                </h1>
+                <p className="mt-3 text-[14px] leading-[1.6] text-white/60">
+                  Оберіть симптоми — AI підбере можливі причини і пріоритетні аналізи.
+                </p>
+
+                {/* Interactive symptom chips */}
+                <div className="mt-6 flex flex-col gap-2.5">
+                  {[
+                    { emoji: '⚡', label: 'Постійна втома' },
+                    { emoji: '🌙', label: 'Поганий сон' },
+                    { emoji: '🧠', label: 'Туман у голові' },
+                    { emoji: '⚖️', label: 'Не можу схуднути' },
+                    { emoji: '💇', label: 'Випадіння волосся' },
+                    { emoji: '😰', label: 'Тривожність' },
+                  ].map(({ emoji, label }) => {
+                    const active = selectedSymptoms.includes(label)
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => toggleSymptom(label)}
+                        className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-all active:scale-[0.98] ${
+                          active
+                            ? 'border-[#14b8a6] bg-[#14b8a6]/15 shadow-[0_0_0_1px_#14b8a6]'
+                            : 'border-white/12 bg-white/6'
+                        }`}
+                      >
+                        <span className="text-[18px] leading-none">{emoji}</span>
+                        <span className={`text-[15px] font-bold ${active ? 'text-[#5eead4]' : 'text-white/85'}`}>
+                          {label}
+                        </span>
+                        {active && (
+                          <span className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#14b8a6]">
+                            <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 12 12">
+                              <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* CTA — pushed to bottom */}
+                <div className="mt-auto pt-6">
+                  {selectedSymptoms.length > 0 && (
+                    <p className="mb-3 text-center text-[12px] font-bold text-[#5eead4]">
+                      Обрано: {selectedSymptoms.length} · Натисніть щоб побачити результат
+                    </p>
+                  )}
+                  <button
+                    onClick={startWellbeingAssessment}
+                    className="flex w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#0f766e,#14b8a6)] py-4 text-[16px] font-black text-white shadow-[0_10px_32px_rgba(13,148,136,0.40)] transition active:scale-[0.98]"
+                  >
+                    {selectedSymptoms.length > 0 ? 'Отримати AI-підсумок' : 'Почати оцінку'}
+                    <ArrowRight className="h-5 w-5" />
+                  </button>
+
+                  {/* Micro trust */}
+                  <div className="mt-4 flex items-center justify-center gap-4 text-[11px] font-semibold text-white/40">
+                    <span>✓ Безкоштовно</span>
+                    <span>·</span>
+                    <span>✓ 2 хвилини</span>
+                    <span>·</span>
+                    <span>✓ Не діагноз</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
