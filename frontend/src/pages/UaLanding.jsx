@@ -1013,34 +1013,109 @@ export default function UaLanding() {
       <UaHeader />
 
       <main>
-        <section className="relative overflow-hidden border-b border-[#e5dfd6] bg-[#f8f5f0]">
-          <img src={HERO_IMAGE} alt="" fetchPriority="high" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[57%_center] opacity-90 sm:object-center" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(248,245,240,0.20)_0%,rgba(248,245,240,0.48)_58%,rgba(248,245,240,0.96)_100%)] sm:bg-[linear-gradient(90deg,rgba(248,245,240,0.98)_0%,rgba(248,245,240,0.90)_42%,rgba(248,245,240,0.30)_78%,rgba(248,245,240,0.08)_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.62),transparent_32%)]" />
+        {/* ── HERO ── Mobile-first redesign ─────────────────────────────── */}
+        <section className="relative overflow-hidden border-b border-[#e5dfd6]">
 
-          <div className="relative mx-auto flex min-h-[690px] w-full max-w-[1200px] items-start px-4 pb-8 pt-[112px] sm:min-h-[calc(100svh-68px)] sm:items-center sm:px-6 sm:py-16">
-            <div className="max-w-2xl rounded-[32px] border border-white/80 bg-white/74 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-xl sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-0">
-              <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#e5dfd6] bg-white/88 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.10em] text-[#0f766e] shadow-sm sm:text-xs">
-                <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#14b8a6]" />
-                Симптоми · причини · план дій
+          {/* Mobile hero: dark teal gradient + clear text (no competing image) */}
+          <div className="block sm:hidden">
+            <div className="relative bg-[linear-gradient(160deg,#0b2d2a_0%,#0f766e_55%,#155e4f_100%)] px-5 pt-10 pb-0">
+              {/* Subtle decorative circles */}
+              <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-[#14b8a6]/20 blur-3xl" />
+              <div className="pointer-events-none absolute -left-10 bottom-10 h-48 w-48 rounded-full bg-[#d4b483]/15 blur-3xl" />
+
+              {/* Badge */}
+              <div className="relative inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#a7f3d0]">
+                <Sparkles className="h-3 w-3" />
+                AI · Симптоми · Аналізи
               </div>
-              <h1 className="mt-5 max-w-[680px] text-[34px] font-black leading-[1.05] tracking-tight text-[#0f172a] sm:mt-6 sm:text-[52px] lg:text-[66px]">
-                Постійна втома? Поганий сон? Низька енергія?
+
+              {/* H1 */}
+              <h1 className="relative mt-5 text-[30px] font-black leading-[1.08] tracking-tight text-white">
+                Постійна втома?<br />Поганий сон?<br />
+                <span className="text-[#5eead4]">Знайдемо причину.</span>
               </h1>
-              <p className="mt-5 max-w-xl text-[16px] leading-7 text-[#334155] sm:text-lg sm:leading-8">
-                Знайдіть можливу причину та отримайте персональний план дій. Почніть із симптомів або завантажте аналізи, якщо вони вже є.
+
+              {/* Sub */}
+              <p className="relative mt-4 text-[14px] leading-6 text-[#d9fffb]/80">
+                Опишіть симптоми або завантажте аналізи — Vitaloop покаже пріоритети і наступний крок.
               </p>
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <button onClick={startWellbeingAssessment} className={`${CTA_CLASS} w-full sm:w-auto`}>
-                  <span>Отримати персональну оцінку</span>
+
+              {/* Stats row */}
+              <div className="relative mt-5 flex items-center gap-4">
+                {[['95+', 'біомаркерів'], ['110', 'правил AI'], ['30', 'симптомів']].map(([n, l]) => (
+                  <div key={l} className="text-center">
+                    <div className="text-[18px] font-black leading-none text-white">{n}</div>
+                    <div className="mt-0.5 text-[10px] leading-none text-[#d9fffb]/60">{l}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <div className="relative mt-6 pb-6">
+                <button
+                  onClick={startWellbeingAssessment}
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-white py-4 text-[15px] font-black text-[#0f766e] shadow-[0_8px_24px_rgba(15,23,42,0.22)] transition active:scale-[0.98]"
+                >
+                  Оцінити своє самопочуття
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => scrollTo('result-example')}
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-[#e5dfd6] bg-white px-5 py-3 text-center text-sm font-black leading-tight text-[#0f172a] shadow-sm transition hover:-translate-y-0.5 hover:border-[#14b8a6]/45 hover:text-[#0f766e] sm:w-auto sm:whitespace-nowrap"
+                  onClick={startSignup}
+                  className="mt-3 w-full rounded-full border border-white/25 py-3.5 text-[14px] font-bold text-white/80 transition"
                 >
-                  Переглянути приклад
+                  Зареєструватись безкоштовно
                 </button>
+              </div>
+            </div>
+
+            {/* Hero image below the text on mobile */}
+            <div className="relative h-[220px] overflow-hidden">
+              <img
+                src={HERO_IMAGE}
+                alt=""
+                fetchPriority="high"
+                decoding="async"
+                className="h-full w-full object-cover object-[60%_25%]"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(to_bottom,#0b2d2a_0%,transparent_30%,transparent_70%,#f8f5f0_100%)]" />
+
+              {/* Social proof chip over image */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-[#e5dfd6] bg-white/90 px-4 py-2 text-[11px] font-bold text-[#0f172a] shadow-md backdrop-blur-sm">
+                ✓ Освітній підсумок · Не діагноз
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop hero: original layout (unchanged) */}
+          <div className="hidden sm:block">
+            <img src={HERO_IMAGE} alt="" fetchPriority="high" decoding="async" className="absolute inset-0 h-full w-full object-cover object-center opacity-90" />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(248,245,240,0.98)_0%,rgba(248,245,240,0.90)_42%,rgba(248,245,240,0.30)_78%,rgba(248,245,240,0.08)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.62),transparent_32%)]" />
+
+            <div className="relative mx-auto flex min-h-[calc(100svh-68px)] w-full max-w-[1200px] items-center px-6 py-16">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#e5dfd6] bg-white/88 px-3 py-1.5 text-xs font-black uppercase tracking-[0.10em] text-[#0f766e] shadow-sm">
+                  <Sparkles className="h-3.5 w-3.5 text-[#14b8a6]" />
+                  Симптоми · причини · план дій
+                </div>
+                <h1 className="mt-6 max-w-[640px] text-[52px] font-black leading-[1.05] tracking-tight text-[#0f172a] lg:text-[66px]">
+                  Постійна втома? Поганий сон? Низька енергія?
+                </h1>
+                <p className="mt-5 max-w-xl text-lg leading-8 text-[#334155]">
+                  Знайдіть можливу причину та отримайте персональний план дій. Почніть із симптомів або завантажте аналізи, якщо вони вже є.
+                </p>
+                <div className="mt-7 flex gap-3">
+                  <button onClick={startWellbeingAssessment} className={`${CTA_CLASS}`}>
+                    Отримати персональну оцінку
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => scrollTo('result-example')}
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#e5dfd6] bg-white px-5 py-3 text-sm font-black text-[#0f172a] shadow-sm transition hover:-translate-y-0.5 hover:border-[#14b8a6]/45 hover:text-[#0f766e] whitespace-nowrap"
+                  >
+                    Переглянути приклад
+                  </button>
+                </div>
               </div>
             </div>
           </div>
