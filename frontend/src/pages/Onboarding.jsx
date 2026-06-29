@@ -7,26 +7,209 @@ import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
 import { gaOnboardingComplete } from '../lib/analytics.js'
+import { isUkrainianLocale } from '../lib/locale.js'
 import toast from 'react-hot-toast'
 
-const INTENT_OPTIONS = [
-  { id: 'symptoms', label: 'I have symptoms and want to know what to check' },
-  { id: 'labs', label: 'I already have lab results' },
-  { id: 'baseline', label: 'I want a long-term health baseline' },
-  { id: 'practitioner', label: 'My practitioner invited me' },
-]
+// ── Localization ─────────────────────────────────────────────────────────────
+const T = {
+  en: {
+    intentOptions: [
+      { id: 'symptoms', label: 'I have symptoms and want to know what to check' },
+      { id: 'labs', label: 'I already have lab results' },
+      { id: 'baseline', label: 'I want a long-term health baseline' },
+      { id: 'practitioner', label: 'My practitioner invited me' },
+    ],
+    goalOptions: [
+      { id: 'energy', label: 'Energy and focus' },
+      { id: 'sleep', label: 'Sleep quality' },
+      { id: 'recovery', label: 'Recovery and resilience' },
+      { id: 'metabolic', label: 'Metabolic health' },
+      { id: 'hormonal', label: 'Hormonal balance' },
+      { id: 'prevention', label: 'Prevention and longevity' },
+    ],
+    bodyAreas: ['General', 'Head', 'Chest', 'Abdomen', t.back, 'Arms', 'Legs', 'Skin', 'Mood/Cognition'],
+    durationOptions: ['A few days', '1-2 weeks', '2-6 weeks', '2-6 months', 'More than 6 months'],
+    redFlagOptions: [
+      'Sudden severe symptom change',
+      'New chest pain or shortness of breath',
+      'Fainting, numbness, or weakness',
+      'High fever with rapid worsening',
+      'Recent injury with persistent pain',
+    ],
+    steps: ['Intent', 'Main context', t.followupTitle, t.safetyTitle, t.profileTitle, 'First action'],
+    headerTitle: t.headerTitle,
+    headerSub: t.headerSub,
+    headerDesc: 'Your answers help VITALOOP suggest useful labs, connect results to symptoms, and build safer recommendations.',
+    stepLabel: (n, t) => `STEP ${n} OF ${t}`,
+    intentTitle: t.intentTitle,
+    intentSub: t.intentSub,
+    contextTitle: 'What\'s your main concern right now?',
+    contextSub: t.contextSub,
+    contextLabel: t.contextLabel,
+    contextPlaceholder: 'e.g. I\'ve had low energy for 3 months, poor sleep, and some hair loss.',
+    durationLabel: t.durationLabel,
+    bodyAreaLabel: t.bodyAreaLabel,
+    triggersLabel: t.triggersLabel,
+    triggersPlaceholder: 'e.g. gets worse after eating, after stress, in the morning...',
+    symptomsLabel: t.symptomsLabel,
+    symptomsPlaceholder: 'e.g. brain fog, bloating, cold hands...',
+    triedLabel: t.triedLabel,
+    triedPlaceholder: 'e.g. sleep supplements, cut caffeine, vitamin D, saw a GP...',
+    followupTitle: t.followupTitle,
+    followupSub: t.followupSub,
+    severityLabel: t.severityLabel,
+    severityMin: t.severityMin,
+    severityMax: t.severityMax,
+    goalsLabel: t.goalsLabel,
+    safetyTitle: t.safetyTitle,
+    safetySub: t.safetySub,
+    medsLabel: t.medsLabel,
+    medsPlaceholder: 'e.g. levothyroxine 50mcg, metformin',
+    suppLabel: t.suppLabel,
+    suppPlaceholder: 'e.g. vitamin D 2000 IU, magnesium glycinate',
+    allergyLabel: t.allergyLabel,
+    allergyPlaceholder: 'e.g. penicillin, latex, gluten',
+    pregnancyLabel: t.pregnancyLabel,
+    pregnancyPlaceholder: 'e.g. 12 weeks pregnant, breastfeeding',
+    redFlagsLabel: t.redFlagsLabel,
+    profileTitle: t.profileTitle,
+    profileSub: t.profileSub,
+    firstNameLabel: t.firstNameLabel,
+    lastNameLabel: t.lastNameLabel,
+    heightLabel: t.heightLabel,
+    weightLabel: t.weightLabel,
+    countryLabel: t.countryLabel,
+    countryPlaceholder: 'e.g. Ukraine',
+    finalTitle: 'You\'re set up. Here\'s your first action:',
+    finalSymptoms: t.finalSymptoms,
+    finalLabs: t.finalLabs,
+    finalBaseline: t.finalBaseline,
+    finalPractitioner: t.finalPractitioner,
+    next: t.next,
+    back: t.back,
+    skip: t.skip,
+    complete: t.complete,
+    practitionerConfirmBtn: (confirmed) => confirmed ? 'Confirmed: my practitioner invited me' : 'Click to confirm practitioner invitation',
+    practitionerConfirmSub: t.practitionerConfirmSub,
+    hasLabsQuestion: t.hasLabsQuestion,
+    hasLabsYes: t.hasLabsYes,
+    hasLabsNo: t.hasLabsNo,
+    baselineFocusLabel: t.baselineFocusLabel,
+    orgTitle: t.orgTitle,
+    orgSub: t.orgSub,
+    orgNameLabel: t.orgNameLabel,
+    orgNamePlaceholder: 'e.g. Vitaloop Health Clinic',
+    orgSave: t.orgSave,
+    orgSaving: t.orgSaving,
+    toastSaved: 'Profile saved',
+    toastOrgCreated: (name) => `Organisation "${name}" created`,
+    toastError: 'Could not save — please try again.',
+    toastSelectIntent: 'Please select how you found us.',
+    toastDescribe: 'Please describe your concern first.',
+    toastConfirmPractitioner: 'Please confirm practitioner relationship to continue.',
+  },
+  uk: {
+    intentOptions: [
+      { id: 'symptoms', label: 'Маю симптоми і хочу знати, що перевірити' },
+      { id: 'labs', label: 'Вже є результати аналізів' },
+      { id: 'baseline', label: 'Хочу контролювати здоров\'я в динаміці' },
+      { id: 'practitioner', label: 'Мене запросив нутриціолог / лікар' },
+    ],
+    goalOptions: [
+      { id: 'energy', label: 'Енергія та концентрація' },
+      { id: 'sleep', label: 'Якість сну' },
+      { id: 'recovery', label: 'Відновлення та витривалість' },
+      { id: 'metabolic', label: 'Метаболічне здоров\'я' },
+      { id: 'hormonal', label: 'Гормональний баланс' },
+      { id: 'prevention', label: 'Профілактика та довголіття' },
+    ],
+    bodyAreas: ['Загальне', 'Голова', 'Грудна клітка', 'Живіт', 'Спина', 'Руки', 'Ноги', 'Шкіра', 'Настрій / когніція'],
+    durationOptions: ['Кілька днів', '1–2 тижні', '2–6 тижнів', '2–6 місяців', 'Понад 6 місяців'],
+    redFlagOptions: [
+      'Раптове сильне погіршення симптомів',
+      'Новий біль у грудях або задишка',
+      'Непритомність, оніміння або слабкість',
+      'Висока температура з швидким погіршенням',
+      'Нещодавня травма з постійним болем',
+    ],
+    steps: ['Мета', 'Скарга', 'Деталі', 'Безпека', 'Профіль', 'Перший крок'],
+    headerTitle: 'Налаштування',
+    headerSub: 'Розкажіть, що привело вас до Vitaloop.',
+    headerDesc: 'Ваші відповіді допоможуть Vitaloop підібрати відповідні аналізи, пов\'язати результати з симптомами і сформувати безпечні рекомендації.',
+    stepLabel: (n, t) => `КРОК ${n} З ${t}`,
+    intentTitle: 'Що привело вас до Vitaloop?',
+    intentSub: 'Оберіть один напрямок. Змінити можна будь-коли в розділі «Сьогодні».',
+    contextTitle: 'Що турбує найбільше?',
+    contextSub: 'Опишіть, що ви відчуваєте. Це допоможе Vitaloop зосередитись на потрібному напрямку.',
+    contextLabel: 'Опишіть вашу основну скаргу',
+    contextPlaceholder: 'напр.: Три місяці низька енергія, поганий сон і випадіння волосся.',
+    durationLabel: 'Як довго тривають ці симптоми?',
+    bodyAreaLabel: 'Яка ділянка тіла або система найбільше страждає?',
+    triggersLabel: 'Помічаєте тригери? (необов\'язково)',
+    triggersPlaceholder: 'напр.: гірше після їжі, після стресу, вранці...',
+    symptomsLabel: 'Супутні симптоми? (необов\'язково)',
+    symptomsPlaceholder: 'напр.: туман у голові, здуття, холодні руки...',
+    triedLabel: 'Що вже пробували? (необов\'язково)',
+    triedPlaceholder: 'напр.: добавки для сну, відмовились від кофеїну, вітамін D, консультація у лікаря...',
+    followupTitle: 'Уточнюючі питання',
+    followupSub: 'Кілька питань для кращого розуміння вашої ситуації.',
+    severityLabel: 'Наскільки це впливає на щоденне життя?',
+    severityMin: 'Мінімально',
+    severityMax: 'Дуже сильно',
+    goalsLabel: 'Головні цілі щодо здоров\'я? (оберіть до 3)',
+    safetyTitle: 'Безпека',
+    safetySub: 'Це допомагає уникнути небезпечних рекомендацій. Вся інформація залишається приватною.',
+    medsLabel: 'Поточні ліки (необов\'язково)',
+    medsPlaceholder: 'напр.: левотироксин 50 мкг, метформін',
+    suppLabel: 'Добавки (необов\'язково)',
+    suppPlaceholder: 'напр.: вітамін D 2000 МО, магній гліцинат',
+    allergyLabel: 'Відомі алергії або непереносимість (необов\'язково)',
+    allergyPlaceholder: 'напр.: пеніцилін, глютен',
+    pregnancyLabel: 'Вагітність або годування груддю (необов\'язково)',
+    pregnancyPlaceholder: 'напр.: 12 тижнів вагітності, годування груддю',
+    redFlagsLabel: 'Позначте термінові симптоми (якщо є)',
+    profileTitle: 'Базовий профіль',
+    profileSub: 'Використовується для персоналізації референсних меж і рекомендацій.',
+    firstNameLabel: 'Ім\'я',
+    lastNameLabel: 'Прізвище',
+    heightLabel: 'Зріст (см)',
+    weightLabel: 'Вага (кг)',
+    countryLabel: 'Країна (необов\'язково)',
+    countryPlaceholder: 'напр.: Україна',
+    finalTitle: 'Все готово. Ваш перший крок:',
+    finalSymptoms: 'Скарга збережена. Далі — Перевірка симптомів і вибір аналізів.',
+    finalLabs: 'Відмінно — перейдіть до Завантаження, щоб додати перший файл аналізів.',
+    finalBaseline: 'Ваш фокус зафіксований. Перейдіть до «Сьогодні», щоб побачити стартовий дашборд.',
+    finalPractitioner: 'Шлях через нутриціолога підтверджено. Продовжте в розділі завантаження.',
+    next: 'Далі',
+    back: 'Назад',
+    skip: 'Пропустити налаштування',
+    complete: 'Перейти до кабінету',
+    practitionerConfirmBtn: (confirmed) => confirmed ? 'Підтверджено: мене запросив нутриціолог' : 'Натисніть для підтвердження',
+    practitionerConfirmSub: 'Підтвердіть контекст нутриціолога для коректного налаштування завдань.',
+    hasLabsQuestion: 'Є результати аналізів для завантаження?',
+    hasLabsYes: 'Так — готовий завантажити',
+    hasLabsNo: 'Ні — завантажу пізніше',
+    baselineFocusLabel: 'Яку область хочете відстежувати першою?',
+    orgTitle: 'Налаштування організації',
+    orgSub: 'Як адміністратор організації, будь ласка, створіть свою організацію для продовження.',
+    orgNameLabel: 'Назва організації',
+    orgNamePlaceholder: 'напр.: Клініка здоров\'я',
+    orgSave: 'Створити організацію',
+    orgSaving: 'Створення...',
+    toastSaved: 'Профіль збережено',
+    toastOrgCreated: (name) => `Організацію "${name}" створено`,
+    toastError: 'Не вдалося зберегти — спробуйте ще раз.',
+    toastSelectIntent: 'Будь ласка, оберіть, що привело вас до Vitaloop.',
+    toastDescribe: 'Будь ласка, спочатку опишіть свою скаргу.',
+    toastConfirmPractitioner: 'Підтвердіть запрошення від нутриціолога для продовження.',
+  },
+}
 
-const GOAL_OPTIONS = [
-  { id: 'energy', label: 'Energy and focus' },
-  { id: 'sleep', label: 'Sleep quality' },
-  { id: 'recovery', label: 'Recovery and resilience' },
-  { id: 'metabolic', label: 'Metabolic health' },
-  { id: 'hormonal', label: 'Hormonal balance' },
-  { id: 'prevention', label: 'Prevention and longevity' },
-]
-
-const BODY_AREAS = ['General', 'Head', 'Chest', 'Abdomen', 'Back', 'Arms', 'Legs', 'Skin', 'Mood/Cognition']
-const DURATION_OPTIONS = ['A few days', '1-2 weeks', '2-6 weeks', '2-6 months', 'More than 6 months']
+const INTENT_OPTIONS = T.en.intentOptions
+const GOAL_OPTIONS = T.en.goalOptions
+const BODY_AREAS = T.en.bodyAreas
+const DURATION_OPTIONS = T.en.durationOptions
 
 function getViewportWidth() {
   if (typeof window === 'undefined') return 1024
@@ -103,6 +286,7 @@ const s = {
 export default function Onboarding() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const t = isUkrainianLocale() ? T.uk : T.en
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
   const [viewportWidth, setViewportWidth] = useState(getViewportWidth)
@@ -144,17 +328,9 @@ export default function Onboarding() {
     country: '',
   })
 
-  const redFlagOptions = useMemo(() => [
-    'Sudden severe symptom change',
-    'New chest pain or shortness of breath',
-    'Fainting, numbness, or weakness',
-    'High fever with rapid worsening',
-    'Recent injury with persistent pain',
-  ], [])
+  const redFlagOptions = useMemo(() => t.redFlagOptions, [t])
 
-  const steps = useMemo(() => {
-    return ['Intent', 'Main context', 'Smart follow-ups', 'Safety context', 'Profile basics', 'First action']
-  }, [])
+  const steps = useMemo(() => t.steps, [t])
 
   const TOTAL = steps.length
 
@@ -228,13 +404,13 @@ export default function Onboarding() {
 
   const validateCurrentStep = () => {
     if (step === 0 && !intent) {
-      toast.error('Select what brought you to VITALOOP today.')
+      toast.error(t.toastSelectIntent)
       return false
     }
 
     if (step === 1) {
       if (intent === 'symptoms' && !concern.summary.trim()) {
-        toast.error('Describe your main concern to continue.')
+        toast.error(t.toastDescribe)
         return false
       }
       if (intent === 'labs' && hasLabsNow === null) {
@@ -242,7 +418,7 @@ export default function Onboarding() {
         return false
       }
       if (intent === 'practitioner' && !practitionerConfirmed) {
-        toast.error('Please confirm practitioner relationship to continue.')
+        toast.error(t.toastConfirmPractitioner)
         return false
       }
       if (intent === 'baseline' && !baselineFocus.trim()) {
@@ -345,10 +521,10 @@ export default function Onboarding() {
         queryClient.invalidateQueries({ queryKey: ['health-score'] }),
       ])
 
-      toast.success('Your first health loop is ready. Continue in Today.')
+      toast.success(t.toastSaved)
       navigate('/dashboard', { replace: true })
     } catch {
-      toast.error('Failed to save onboarding details. Please try again.')
+      toast.error(t.toastError)
     } finally {
       setSaving(false)
     }
@@ -398,9 +574,9 @@ export default function Onboarding() {
     <div style={s.wrap}>
       <div style={{ width: '100%', maxWidth: 760 }}>
         <CabinetPageHeader
-          title="Onboarding"
-          subtitle="Let's understand what brought you here."
-          helper="Your answers help VITALOOP suggest useful labs, connect results to symptoms, and build safer recommendations."
+          title={t.headerTitle}
+          subtitle={t.headerSub}
+          helper={t.headerDesc}
         />
 
         <motion.div style={cardStyle} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
@@ -432,7 +608,7 @@ export default function Onboarding() {
                   />
                 </label>
                 <button type="submit" style={{ ...s.btnPrimary, marginTop: 16, opacity: orgSaving ? 0.6 : 1 }} disabled={orgSaving}>
-                  {orgSaving ? 'Creating...' : 'Create Organization'}
+                  {orgSaving ? t.orgSaving : 'Create Organization'}
                 </button>
               </form>
             </motion.div>
@@ -453,7 +629,7 @@ export default function Onboarding() {
                   <div style={s.title}><Sparkles size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />What brought you to VITALOOP today?</div>
                   <div style={s.sub}>Choose one starting path. You can refine it anytime in Today.</div>
                   <div style={{ display: 'grid', gap: 10 }}>
-                    {INTENT_OPTIONS.map((option) => (
+                    {t.intentOptions.map((option) => (
                       <button
                         key={option.id}
                         onClick={() => setIntent(option.id)}
@@ -545,7 +721,7 @@ export default function Onboarding() {
                           borderColor: practitionerConfirmed ? '#10b981' : 'rgba(15,23,42,0.12)',
                         }}
                       >
-                        {practitionerConfirmed ? 'Confirmed: my practitioner invited me' : 'Click to confirm practitioner invitation'}
+                        {t.practitionerConfirmBtn(practitionerConfirmed)}
                       </button>
                     </>
                   )}
@@ -566,7 +742,7 @@ export default function Onboarding() {
                         onChange={(e) => setConcern((prev) => ({ ...prev, duration: e.target.value }))}
                       >
                         <option value="">Select duration</option>
-                        {DURATION_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+                        {t.durationOptions.map((item) => <option key={item} value={item}>{item}</option>)}
                       </select>
                     </div>
                     <div>
@@ -590,7 +766,7 @@ export default function Onboarding() {
                         value={concern.body_area}
                         onChange={(e) => setConcern((prev) => ({ ...prev, body_area: e.target.value }))}
                       >
-                        {BODY_AREAS.map((item) => <option key={item} value={item}>{item}</option>)}
+                        {t.bodyAreas.map((item) => <option key={item} value={item}>{item}</option>)}
                       </select>
                     </div>
                     <div>
@@ -760,7 +936,7 @@ export default function Onboarding() {
                   <div style={{ marginTop: 14 }}>
                     <span style={s.label}>Secondary goals</span>
                     <div style={{ display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 10 }}>
-                      {GOAL_OPTIONS.map((goal) => (
+                      {t.goalOptions.map((goal) => (
                         <button
                           key={goal.id}
                           onClick={() => toggleGoal(goal.id)}
@@ -784,10 +960,10 @@ export default function Onboarding() {
                 <motion.div key="action" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   <div style={s.title}>Your first action</div>
                   <div style={s.sub}>
-                    {intent === 'symptoms' && 'Your concern is saved. Next, continue Symptom Check and finalize lab direction.'}
+                    {intent === 'symptoms' && t.finalSymptoms}
                     {intent === 'labs' && (hasLabsNow ? 'Great. Continue to Upload Results and connect your symptoms for a precise protocol.' : 'We will guide you through a practical lab direction before upload.')}
                     {intent === 'baseline' && 'Your baseline path is set. Continue to Lab Plan to build your first tracking panel.'}
-                    {intent === 'practitioner' && 'Practitioner path confirmed. Continue to assigned intake and upload flow.'}
+                    {intent === 'practitioner' && t.finalPractitioner}
                   </div>
                   <div style={{ padding: '14px 16px', borderRadius: 12, border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.06)', fontSize: 14, color: '#1e293b' }}>
                     VITALOOP is a decision-support tool and does not provide diagnosis.
