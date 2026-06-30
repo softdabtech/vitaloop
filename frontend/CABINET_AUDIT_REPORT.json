@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-05-18T07:10:45.329Z",
+  "timestamp": "2026-06-30T13:19:57.389Z",
   "structure": {},
   "pages": [
     {
@@ -8,7 +8,7 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": true,
-      "size": 17588
+      "size": 17412
     },
     {
       "file": "AssignmentDetails.jsx",
@@ -24,7 +24,7 @@
       "hasNavigation": true,
       "hasAPI": true,
       "hasState": true,
-      "size": 13821
+      "size": 13801
     },
     {
       "file": "Avatar.jsx",
@@ -40,7 +40,7 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": true,
-      "size": 5141
+      "size": 5679
     },
     {
       "file": "ClientAdmin.jsx",
@@ -51,20 +51,36 @@
       "size": 16384
     },
     {
+      "file": "EditorialPolicy.jsx",
+      "hasAuth": false,
+      "hasNavigation": false,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 4974
+    },
+    {
+      "file": "EditorialTeam.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 3065
+    },
+    {
       "file": "EmailConfirmation.jsx",
       "hasAuth": false,
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": true,
-      "size": 12916
+      "size": 13646
     },
     {
       "file": "ExampleReport.jsx",
       "hasAuth": false,
       "hasNavigation": true,
       "hasAPI": false,
-      "hasState": true,
-      "size": 12959
+      "hasState": false,
+      "size": 14582
     },
     {
       "file": "FAQ.jsx",
@@ -72,7 +88,7 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": true,
-      "size": 13339
+      "size": 13456
     },
     {
       "file": "Features.jsx",
@@ -80,7 +96,7 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": false,
-      "size": 8644
+      "size": 8690
     },
     {
       "file": "ForInvestors.jsx",
@@ -88,7 +104,7 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": false,
-      "size": 26197
+      "size": 26206
     },
     {
       "file": "ForNutritionists.jsx",
@@ -96,7 +112,31 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": false,
-      "size": 33492
+      "size": 33555
+    },
+    {
+      "file": "HealthHub.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 9751
+    },
+    {
+      "file": "HealthHubArticle.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 9638
+    },
+    {
+      "file": "HealthHubCluster.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 5809
     },
     {
       "file": "HealthProfile.jsx",
@@ -104,7 +144,7 @@
       "hasNavigation": false,
       "hasAPI": false,
       "hasState": true,
-      "size": 19366
+      "size": 19659
     },
     {
       "file": "Help.jsx",
@@ -112,7 +152,7 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": true,
-      "size": 26986
+      "size": 28234
     },
     {
       "file": "HowItWorks.jsx",
@@ -120,7 +160,7 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": false,
-      "size": 14456
+      "size": 14685
     },
     {
       "file": "Insights.jsx",
@@ -128,7 +168,7 @@
       "hasNavigation": false,
       "hasAPI": false,
       "hasState": true,
-      "size": 15976
+      "size": 15988
     },
     {
       "file": "Investors.jsx",
@@ -139,12 +179,20 @@
       "size": 219
     },
     {
+      "file": "LabPlan.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 7326
+    },
+    {
       "file": "LabResultsList.jsx",
       "hasAuth": true,
       "hasNavigation": true,
       "hasAPI": true,
       "hasState": true,
-      "size": 12840
+      "size": 13222
     },
     {
       "file": "Landing.jsx",
@@ -152,7 +200,7 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": true,
-      "size": 68216
+      "size": 70826
     },
     {
       "file": "Login.jsx",
@@ -160,7 +208,15 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": true,
-      "size": 35529
+      "size": 44550
+    },
+    {
+      "file": "MedicalReviewPolicy.jsx",
+      "hasAuth": false,
+      "hasNavigation": false,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 2734
     },
     {
       "file": "NotFound.jsx",
@@ -176,7 +232,7 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": true,
-      "size": 37702
+      "size": 35193
     },
     {
       "file": "Pricing.jsx",
@@ -184,7 +240,7 @@
       "hasNavigation": false,
       "hasAPI": false,
       "hasState": false,
-      "size": 213
+      "size": 354
     },
     {
       "file": "Privacy.jsx",
@@ -192,7 +248,7 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": false,
-      "size": 4016
+      "size": 8103
     },
     {
       "file": "Product.jsx",
@@ -206,17 +262,17 @@
       "file": "Progress.jsx",
       "hasAuth": false,
       "hasNavigation": true,
-      "hasAPI": false,
+      "hasAPI": true,
       "hasState": true,
-      "size": 11366
+      "size": 33222
     },
     {
       "file": "ProtocolPage.jsx",
-      "hasAuth": true,
+      "hasAuth": false,
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": true,
-      "size": 32982
+      "size": 30865
     },
     {
       "file": "Questionnaire.jsx",
@@ -224,15 +280,15 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": true,
-      "size": 14438
+      "size": 16440
     },
     {
       "file": "Results.jsx",
       "hasAuth": false,
       "hasNavigation": true,
-      "hasAPI": true,
+      "hasAPI": false,
       "hasState": true,
-      "size": 35003
+      "size": 28794
     },
     {
       "file": "Settings.jsx",
@@ -240,7 +296,15 @@
       "hasNavigation": false,
       "hasAPI": false,
       "hasState": true,
-      "size": 14081
+      "size": 14282
+    },
+    {
+      "file": "SiteMap.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 2990
     },
     {
       "file": "Stories.jsx",
@@ -256,7 +320,15 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": true,
-      "size": 21030
+      "size": 21353
+    },
+    {
+      "file": "SymptomIntake.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": true,
+      "size": 17978
     },
     {
       "file": "Terms.jsx",
@@ -264,7 +336,23 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": false,
-      "size": 4168
+      "size": 4172
+    },
+    {
+      "file": "UaLanding.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": true,
+      "hasState": true,
+      "size": 59364
+    },
+    {
+      "file": "UaPage.jsx",
+      "hasAuth": false,
+      "hasNavigation": true,
+      "hasAPI": false,
+      "hasState": false,
+      "size": 19001
     },
     {
       "file": "Upload.jsx",
@@ -272,7 +360,7 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": true,
-      "size": 19409
+      "size": 27922
     },
     {
       "file": "UserDashboard.jsx",
@@ -280,7 +368,7 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": false,
-      "size": 43705
+      "size": 10385
     },
     {
       "file": "WeeklyCheckIn.jsx",
@@ -288,11 +376,12 @@
       "hasNavigation": true,
       "hasAPI": false,
       "hasState": true,
-      "size": 11883
+      "size": 10136
     }
   ],
   "routes": [],
   "components": [
+    "AccessibleFormField.jsx",
     "AchievementBadge.jsx",
     "AchievementBadges.jsx",
     "AchievementShareModal.jsx",
@@ -309,6 +398,7 @@
     "Breadcrumb.jsx",
     "DisclaimerModal.jsx",
     "EmptyState.jsx",
+    "EmptyStateIllustration.jsx",
     "ErrorBoundary.jsx",
     "FeatureGate.jsx",
     "FriendComparison.jsx",
@@ -361,6 +451,7 @@
     "landing/AvatarExamples.jsx",
     "landing/AvatarSection.jsx",
     "landing/BodyAvatar.jsx",
+    "landing/BrandMark.jsx",
     "landing/ComparisonTable.jsx",
     "landing/FAQ.jsx",
     "landing/FinalCTA.jsx",
@@ -414,7 +505,7 @@
     },
     {
       "name": "Payments",
-      "implemented": false
+      "implemented": true
     },
     {
       "name": "Notifications",

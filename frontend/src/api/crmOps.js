@@ -9,3 +9,17 @@ export function getFunnelOverview(params = {}) {
   const suffix = query.toString() ? `?${query.toString()}` : ''
   return crmClient.get(`/admin/funnel-overview${suffix}`)
 }
+
+export function getClaudeUsage(params = {}) {
+  const query = new URLSearchParams()
+  if (params.days) query.set('days', String(params.days))
+  const suffix = query.toString() ? `?${query.toString()}` : ''
+  return crmClient.get(`/crm/ops/claude-usage${suffix}`)
+}
+
+export function getOpenAIUsage(params = {}) {
+  const query = new URLSearchParams()
+  if (params.days) query.set('days', String(params.days))
+  const suffix = query.toString() ? `?${query.toString()}` : ''
+  return crmClient.get(`/crm/ops/openai-usage${suffix}`)
+}

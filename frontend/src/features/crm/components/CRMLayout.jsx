@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../hooks/useAuth.js'
 import { useCRMRoleAccess } from '../../../hooks/useCRMRoleAccess.js'
 import RoleBadge from './RoleBadge.jsx'
+import OpenAISidebarWidget from './OpenAISidebarWidget.jsx'
 import '../../../styles/dashboard2026.css'
 
 const NAV_ITEMS = [
@@ -69,6 +70,10 @@ export default function CRMLayout({ title = 'CRM', children }) {
             >
               Sign out
             </button>
+          </div>
+
+          <div className="mt-4">
+            <OpenAISidebarWidget />
           </div>
 
           <div className="mt-4 text-xs text-slate-500">

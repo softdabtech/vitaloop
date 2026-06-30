@@ -381,6 +381,134 @@ async def get_claude_usage_metrics(
         )
 
 
+@router.get("/openai-usage", summary="Get OpenAI API token usage metrics")
+async def get_openai_usage_metrics(
+    days: int = 30,
+    user_context: UserContext = Depends(require_super_admin),
+) -> Dict[str, Any]:
+    """Get OpenAI usage statistics from llm_usage_events table (provider='openai' or 'openai-vision')"""
+    try:
+        sb = svc._get_supabase()
+        safe_days = max(1, min(days, 365))
+        since = (datetime.now(timezone.utc) - timedelta(days=safe_days)).isoformat()
+
+        try:
+            usage_resp = await svc._run(
+                lambda: sb.table("llm_usage_events")
+                .select("user_id,task_name,provider,model,prompt_tokens,completion_tokens,total_tokens,created_at")
+                .gte("created_at", since)
+                .in_("provider", ["openai", "openai-vision"])
+                .order("created_at", desc=True)
+                .limit(10000)
+                .execute()
+            )
+        except Exception as ex:
+            if _is_missing_table_error(ex, "llm_usage_events"):
+                return {
+                    "tracked": False,
+                    "window_days": safe_days,
+                    "totals": {
+                        "requests": 0,
+                        "prompt_tokens": 0,
+                        "completion_tokens": 0,
+                        "total_tokens": 0,
+                    },
+                    "by_model": [],
+                    "by_task": [],
+                    "note": "Token tracking table is not available yet.",
+                }
+            raise
+
+        rows = usage_resp.data or []
+        totals = {
+            "requests": len(rows),
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+        }
+        by_task: Dict[str, Dict[str, Any]] = {}
+        by_model: Dict[str, Dict[str, Any]] = {}
+
+        for row in rows:
+            task_name = str(row.get("task_name") or "unknown")
+            model = str(row.get("model") or "unknown")
+            prompt_tokens = int(row.get("prompt_tokens") or 0)
+            completion_tokens = int(row.get("completion_tokens") or 0)
+            total_tokens = int(row.get("total_tokens") or (prompt_tokens + completion_tokens))
+
+            totals["prompt_tokens"] += prompt_tokens
+            totals["completion_tokens"] += completion_tokens
+            totals["total_tokens"] += total_tokens
+
+            # By task
+            bucket_task = by_task.setdefault(task_name, {
+                "task_name": task_name,
+                "requests": 0,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+            })
+            bucket_task["requests"] += 1
+            bucket_task["prompt_tokens"] += prompt_tokens
+            bucket_task["completion_tokens"] += completion_tokens
+            bucket_task["total_tokens"] += total_tokens
+
+            # By model
+            bucket_model = by_model.setdefault(model, {
+                "model": model,
+                "requests": 0,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+            })
+            bucket_model["requests"] += 1
+            bucket_model["prompt_tokens"] += prompt_tokens
+            bucket_model["completion_tokens"] += completion_tokens
+            bucket_model["total_tokens"] += total_tokens
+
+        by_task_sorted = sorted(by_task.values(), key=lambda item: int(item.get("total_tokens") or 0), reverse=True)
+        by_model_sorted = sorted(by_model.values(), key=lambda item: int(item.get("total_tokens") or 0), reverse=True)
+
+        # Calculate cost estimation (rough pricing as of June 2024)
+        # GPT-4o-mini: $0.15 per 1M input tokens, $0.60 per 1M output tokens
+        # GPT-4o: $5 per 1M input tokens, $15 per 1M output tokens
+        input_cost = 0.0
+        output_cost = 0.0
+        for model_data in by_model_sorted:
+            model_name = model_data.get("model", "")
+            input_tokens = model_data.get("prompt_tokens", 0)
+            output_tokens = model_data.get("completion_tokens", 0)
+            
+            if "gpt-4o-mini" in model_name:
+                input_cost += (input_tokens / 1_000_000) * 0.15
+                output_cost += (output_tokens / 1_000_000) * 0.60
+            elif "gpt-4o" in model_name:
+                input_cost += (input_tokens / 1_000_000) * 5.0
+                output_cost += (output_tokens / 1_000_000) * 15.0
+
+        total_cost = input_cost + output_cost
+
+        return {
+            "tracked": True,
+            "window_days": safe_days,
+            "totals": totals,
+            "cost": {
+                "input_cost_usd": round(input_cost, 4),
+                "output_cost_usd": round(output_cost, 4),
+                "total_cost_usd": round(total_cost, 4),
+            },
+            "by_model": by_model_sorted,
+            "by_task": by_task_sorted,
+            "generated_by": str(user_context.user_id),
+        }
+    except Exception as e:
+        logger.error(f"OpenAI usage metrics retrieval failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve OpenAI usage metrics: {str(e)}"
+        )
+
+
 @router.get("/active-client-activity", summary="Get active client activity metrics")
 async def get_active_client_activity(
     days: int = 30,
