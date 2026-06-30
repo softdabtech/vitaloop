@@ -20,7 +20,6 @@ import {
 } from 'lucide-react'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { buildSubscriptionPath, getCabinetUpgradeTarget } from '../../lib/subscriptionFlow.js'
-import { CABINET_VERSION } from '../../lib/cabinetV511.js'
 import { isUkrainianLocale } from '../../lib/locale.js'
 import UserAvatar from '../UserAvatar.jsx'
 
@@ -104,7 +103,6 @@ export default function UserDashboardSidebar({
           {!collapsed && (
             <div>
               <div className="text-sm font-semibold tracking-tight text-slate-800">VITALOOP</div>
-              <div className="text-xs text-slate-400">Cabinet {CABINET_VERSION}</div>
             </div>
           )}
         </div>
