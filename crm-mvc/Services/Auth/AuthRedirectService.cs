@@ -38,6 +38,15 @@ public sealed class AuthRedirectService
             return "/practitioner/clients";
         }
 
+        // FIX: End-users or users with no CRM role should not be in CRM
+        // Return error or redirect to frontend instead of defaulting to /admin
+        if (!activeMembers.Any())
+        {
+            throw new InvalidOperationException(
+                $"User {ctx.UserId} (role: {ctx.GlobalRole}) has no active CRM role memberships. " +
+                "End-users should not access CRM - verify frontend post-login logic.");
+        }
+
         return "/admin";
     }
 }
