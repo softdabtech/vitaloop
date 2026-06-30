@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, Clock, XCircle, ArrowLeft, CreditCard } from 'lucide-react'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { ct } from '../lib/cabinetI18n.js'
 import { useAuth } from '../hooks/useAuth.js'
 import api from '../lib/api.js'
 import '../styles/dashboard2026.css'
@@ -41,9 +42,9 @@ export default function BillingHistory() {
   return (
     <>
       <CabinetPageHeader
-        title="Billing History"
-        subtitle="Your subscription timeline and plan changes"
-        helper="All subscription events are listed newest-first."
+        title={ct().billing.title}
+        subtitle={ct().billing.subtitle}
+        helper={ct().billing.helper}
       />
 
       <div className="grid gap-6">

@@ -10,6 +10,7 @@ import { useSubscription } from '../hooks/useSubscription.js'
 import { supabase } from '../lib/supabase.js'
 import api from '../lib/api.js'
 import { isUkrainianLocale } from '../lib/locale.js'
+import { ct } from '../lib/cabinetI18n.js'
 import '../styles/dashboard2026.css'
 
 const COOKIE_STORAGE_KEY = 'vitaloop-cookie-consent'
@@ -157,9 +158,9 @@ export default function Settings() {
   return (
     <>
       <CabinetPageHeader
-        title="Account"
-        subtitle="Manage credentials, notifications, and account-level controls."
-        helper="Notification labels are aligned with symptom-first workflow."
+        title={ct().settings.title}
+        subtitle={ct().settings.subtitle}
+        
       />
 
       <div className="grid gap-6 max-w-2xl">

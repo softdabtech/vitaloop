@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { CreditCard, CheckCircle2, AlertCircle, ArrowRight, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { ct } from '../lib/cabinetI18n.js'
 import { useAuth } from '../hooks/useAuth.js'
 import api from '../lib/api.js'
 import { SUBSCRIPTION_PLAN_IDS } from '../lib/subscriptionFlow.js'
@@ -281,9 +282,9 @@ export default function Subscription() {
     return (
       <>
         <CabinetPageHeader
-          title="Billing"
-          subtitle="Manage plan access across health loop stages."
-          helper="See which loop stages are unlocked and manage billing details."
+          title={ct().subscription.title}
+          subtitle={ct().subscription.subtitle}
+          helper={ct().subscription.helper}
         />
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
@@ -295,9 +296,9 @@ export default function Subscription() {
   return (
     <>
       <CabinetPageHeader
-        title="Billing"
-        subtitle="Manage plan access across health loop stages."
-        helper="See which loop stages are unlocked and manage billing details."
+        title={ct().subscription.title}
+        subtitle={ct().subscription.subtitle}
+        helper={ct().subscription.helper}
       />
 
       <div className="grid gap-8">

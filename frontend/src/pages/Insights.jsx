@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { Activity, Clock, RefreshCw, Sparkles, TrendingUp, TriangleAlert, Lightbulb, AlertCircle, BarChart3 } from 'lucide-react'
 import api from '../lib/api.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { ct } from '../lib/cabinetI18n.js'
 import toast from 'react-hot-toast'
 import BiomarkerAlertsDisplay from '../components/BiomarkerAlertsDisplay.jsx'
 import HealthTipsDisplay from '../components/HealthTipsDisplay.jsx'
@@ -85,9 +86,9 @@ export default function Insights() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <CabinetPageHeader
-        title="Insights"
-        subtitle="Interpretation layer for uploads, adherence, timeline, and follow-up signals."
-        helper="Upload a lab result and complete a weekly check-in to unlock personalized AI insights and trend analysis."
+        title={ct().insights.title}
+        subtitle={ct().insights.subtitle}
+        helper={ct().insights.helper}
         action={(
           <button onClick={generateInsights} disabled={loadingInsights} className="vtl-button-primary inline-flex items-center gap-2 px-4 text-sm disabled:opacity-60">
             <RefreshCw className="h-4 w-4" style={{ animation: loadingInsights ? 'spin 1s linear infinite' : 'none' }} />

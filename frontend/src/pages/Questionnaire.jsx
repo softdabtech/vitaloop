@@ -4,6 +4,7 @@ import { AlertTriangle, ClipboardList, Route, ShieldAlert, Stethoscope } from 'l
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { ct } from '../lib/cabinetI18n.js'
 import api from '../lib/api.js'
 
 const BODY_SYSTEMS = ['General', 'Neurological', 'Cardiometabolic', 'Hormonal', 'Digestive', 'Musculoskeletal', 'Recovery']
@@ -177,9 +178,9 @@ export default function Questionnaire() {
   return (
     <div className="space-y-6">
       <CabinetPageHeader
-        title="Symptom Check"
-        subtitle="Start with what you feel, then get structured context and next testing direction."
-        helper="Goal: turn a concern into a safer, clearer lab and protocol path."
+        title={ct().questionnaire.title}
+        subtitle={ct().questionnaire.subtitle}
+        helper={ct().questionnaire.helper}
       />
 
       {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}

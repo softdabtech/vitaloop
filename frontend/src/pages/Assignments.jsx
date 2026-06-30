@@ -6,6 +6,7 @@ import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import AssignmentCard from '../components/dashboard/AssignmentCard.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { ct } from '../lib/cabinetI18n.js'
 import { resolveAssignmentPath } from '../lib/assignmentRouting.js'
 import { enrichAssignments } from '../lib/assignmentScoring.js'
 import '../styles/dashboard2026.css'
@@ -139,9 +140,9 @@ export default function Assignments() {
         <CabinetPageHeader
           icon={ClipboardList}
           eyebrow="Action Plan"
-          title="Protocol"
-          subtitle="Actions grouped by stage: before labs, after labs, and follow-up."
-          helper="Use this page as your execution layer for the current protocol cycle."
+          title={ct().assignments.title}
+          subtitle={ct().assignments.subtitle}
+          helper={ct().assignments.helper}
           action={(
             <>
               <button

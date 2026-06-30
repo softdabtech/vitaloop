@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, ArrowRight, CheckCircle2, Circle, ClipboardCheck, Route, ShieldAlert, Sparkles, Upload } from 'lucide-react'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { ct } from '../lib/cabinetI18n.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useDashboardSummary } from '../hooks/useQueries.js'
 import { useQuestionnaireSession } from '../hooks/useQueries.js'
@@ -78,9 +79,9 @@ export default function UserDashboard() {
   return (
     <div className="space-y-6">
       <CabinetPageHeader
-        title={`Today${user?.email ? `, ${user.email.split('@')[0]}` : ''}`}
-        subtitle="One clear next action across your health loop."
-        helper="Symptom-first path: concern -> questions -> lab plan -> results -> protocol -> check-in -> retest."
+        title={ct().dashboard.title(user?.email?.split('@')[0])}
+        subtitle={ct().dashboard.subtitle}
+        helper={ct().dashboard.helper}
         action={(
           <button onClick={() => navigate(nextAction.path)} className="vtl-button-primary inline-flex items-center gap-2 px-4 text-sm">
             {nextAction.label}
