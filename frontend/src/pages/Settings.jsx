@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Mail, Bell, Lock, LogOut, AlertTriangle, Cookie, UserCircle2 } from 'lucide-react'
+import { Mail, Lock, LogOut, AlertTriangle, Cookie, UserCircle2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import NotificationPreferences from '../components/NotificationPreferences.jsx'
@@ -156,29 +156,22 @@ export default function Settings() {
   }
 
   return (
-    <>
+    <div className="space-y-6">
       <CabinetPageHeader
         title={ct().settings.title}
         subtitle={ct().settings.subtitle}
-        
       />
 
-      <div className="grid gap-6 max-w-2xl">
+      <div className="grid gap-6 lg:grid-cols-2">
 
-        {/* Avatar Upload */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}
-          style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 20, padding: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-            <span style={{ width: 36, height: 36, borderRadius: 10, background: '#f0fdfa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }} className="rounded-2xl border border-slate-200 bg-white p-6">
+          <div className="mb-5 flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50">
               <UserCircle2 size={18} color="#0d9488" />
             </span>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>
-                {isUkrainianLocale() ? 'Фото профілю' : 'Profile photo'}
-              </div>
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
-                {isUkrainianLocale() ? 'Відображається у кабінеті та сайдбарі' : 'Shown in cabinet and sidebar'}
-              </div>
+              <div className="text-sm font-bold text-slate-900">{isUkrainianLocale() ? 'Фото профілю' : 'Profile photo'}</div>
+              <div className="text-xs text-slate-500">{isUkrainianLocale() ? 'Відображається у кабінеті та сайдбарі' : 'Shown in cabinet and sidebar'}</div>
             </div>
           </div>
           <AvatarUpload
@@ -190,53 +183,44 @@ export default function Settings() {
               })
             }, [])}
           />
-        </motion.div>
+        </motion.section>
 
-        {/* Account Info */}
-        <motion.div
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0 }}
-          className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+          className="rounded-2xl border border-slate-200 bg-white p-6"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-            <Mail size={18} style={{ color: '#1d9e75' }} />
+          <div className="mb-5 flex items-center gap-3">
+            <Mail size={18} className="text-emerald-600" />
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>Email Address</div>
-              <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>Your account login email</div>
+              <div className="text-base font-semibold text-slate-900">Email address</div>
+              <div className="text-xs text-slate-500">Your account login email</div>
             </div>
           </div>
 
-          <div style={{
-            padding: '12px 14px',
-            background: '#f8fafc',
-            border: '1px solid rgba(15,23,42,0.12)',
-            borderRadius: 14,
-            color: '#0f172a',
-            fontSize: 15,
-          }}>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-900">
             {user?.email || 'No email'}
           </div>
 
-          <p style={{ fontSize: 12, color: '#64748b', marginTop: 10 }}>
+          <p className="mt-2 text-xs text-slate-500">
             Contact support@vitaloop.today to change your email address.
           </p>
-        </motion.div>
+        </motion.section>
 
-        {/* Password */}
-        <motion.div
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+          className="rounded-2xl border border-slate-200 bg-white p-6"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-            <Lock size={18} style={{ color: '#1d9e75' }} />
+          <div className="mb-5 flex items-center gap-3">
+            <Lock size={18} className="text-emerald-600" />
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>Password</div>
-              <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>Change your account password</div>
+              <div className="text-base font-semibold text-slate-900">Password</div>
+              <div className="text-xs text-slate-500">Change your account password</div>
             </div>
           </div>
 
@@ -273,15 +257,14 @@ export default function Settings() {
               {saving ? 'Updating...' : 'Update Password'}
             </button>
           </div>
-        </motion.div>
+        </motion.section>
 
-        {/* Notifications */}
-        <motion.div
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+          className="rounded-2xl border border-slate-200 bg-white p-6 lg:col-span-2"
         >
           <NotificationPreferences
             currentPreferences={notifications}
@@ -290,25 +273,47 @@ export default function Settings() {
               toast.success('Notification preferences updated!')
             }}
           />
-        </motion.div>
+        </motion.section>
 
-        {/* Danger Zone */}
-        <motion.div
+        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="rounded-2xl border border-slate-200 bg-white p-6 lg:col-span-2">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50">
+              <Cookie size={18} color="#0d9488" />
+            </span>
+            <div>
+              <div className="text-sm font-bold text-slate-900">Cookie Preferences</div>
+              <div className="text-xs text-slate-500">Manage what data we may collect</div>
+            </div>
+          </div>
+          <p className="mb-4 text-sm text-slate-600">
+            Review or update your consent for analytics, marketing and functional cookies. Essential cookies required for login and security cannot be disabled.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={resetCookieConsent} className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              Update Cookie Settings
+            </button>
+            <a href="/privacy-policy/#cookies" target="_blank" rel="noreferrer" className="rounded-full px-4 py-2 text-sm font-semibold text-emerald-700 underline underline-offset-4">
+              Cookie Policy ↗
+            </a>
+          </div>
+        </motion.section>
+
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="rounded-2xl border border-rose-200 bg-rose-50 p-6 sm:p-8"
+          className="rounded-2xl border border-rose-200 bg-rose-50 p-6 lg:col-span-2"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-            <AlertTriangle size={18} style={{ color: '#dc2626' }} />
+          <div className="mb-4 flex items-center gap-3">
+            <AlertTriangle size={18} className="text-rose-700" />
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#991b1b' }}>Danger Zone</div>
-              <div style={{ fontSize: 13, color: '#7f1d1d', marginTop: 2 }}>Irreversible actions</div>
+              <div className="text-base font-semibold text-rose-900">Danger zone</div>
+              <div className="text-xs text-rose-700">Irreversible actions</div>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gap: 12 }}>
+          <div className="grid gap-3">
             <div>
               <button
                 onClick={async () => {
@@ -317,15 +322,15 @@ export default function Settings() {
                 }}
                 className="w-full rounded-2xl border border-rose-300 bg-white px-6 py-3 text-center font-semibold text-rose-600 transition hover:bg-rose-50"
               >
-                Sign Out from All Devices
+                <span className="inline-flex items-center gap-2"><LogOut className="h-4 w-4" /> Sign Out from All Devices</span>
               </button>
-              <p style={{ fontSize: 12, color: '#7f1d1d', marginTop: 8 }}>
+              <p className="mt-2 text-xs text-rose-700">
                 Sign out of VITALOOP on all your devices. You'll need to log in again.
               </p>
             </div>
 
             {isPremium && (
-              <div style={{ borderTop: '1px solid rgba(220, 38, 38, 0.2)', paddingTop: 12 }}>
+              <div className="border-t border-rose-300/50 pt-3">
                 {!showCancelConfirm ? (
                   <>
                     <button
@@ -334,16 +339,16 @@ export default function Settings() {
                     >
                       Cancel Subscription
                     </button>
-                    <p style={{ fontSize: 12, color: '#7f1d1d', marginTop: 8 }}>
+                    <p className="mt-2 text-xs text-rose-700">
                       Cancel your premium subscription. You'll revert to the free plan.
                     </p>
                   </>
                 ) : (
-                  <div style={{ padding: '12px 14px', background: 'rgba(220, 38, 38, 0.1)', borderRadius: 12, borderLeft: '4px solid #dc2626' }}>
-                    <p style={{ fontSize: 13, fontWeight: 500, color: '#991b1b', marginBottom: 10 }}>
+                  <div className="rounded-xl border-l-4 border-red-600 bg-red-100/70 px-3 py-3">
+                    <p className="mb-2 text-sm font-medium text-red-900">
                       ⚠️ Are you sure? You'll lose access to premium features and revert to the free plan.
                     </p>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div className="flex gap-2">
                       <button
                         onClick={cancelSubscription}
                         disabled={canceling}
@@ -364,7 +369,7 @@ export default function Settings() {
               </div>
             )}
 
-            <div style={{ borderTop: '1px solid rgba(220, 38, 38, 0.2)', paddingTop: 12 }}>
+            <div className="border-t border-rose-300/50 pt-3">
               {!showDeleteConfirm ? (
                 <>
                   <button
@@ -373,16 +378,16 @@ export default function Settings() {
                   >
                     Delete Account Permanently
                   </button>
-                  <p style={{ fontSize: 12, color: '#7f1d1d', marginTop: 8 }}>
+                  <p className="mt-2 text-xs text-rose-700">
                     Permanently delete your account and all associated data. This cannot be undone.
                   </p>
                 </>
               ) : (
-                <div style={{ padding: '12px 14px', background: 'rgba(220, 38, 38, 0.1)', borderRadius: 12, borderLeft: '4px solid #991b1b' }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: '#991b1b', marginBottom: 10 }}>
+                <div className="rounded-xl border-l-4 border-rose-800 bg-red-100/80 px-3 py-3">
+                  <p className="mb-2 text-sm font-bold text-rose-900">
                     🚨 WARNING: This will permanently delete your account and all data. This action cannot be reversed!
                   </p>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div className="flex gap-2">
                     <button
                       onClick={deleteAccount}
                       disabled={deleting}
@@ -402,36 +407,8 @@ export default function Settings() {
               )}
             </div>
           </div>
-        {/* Cookie Preferences */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
-          style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <span style={{ width: 36, height: 36, borderRadius: 10, background: '#f0fdfa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Cookie size={18} color="#0d9488" />
-            </span>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>Cookie Preferences</div>
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>Manage what data we may collect</div>
-            </div>
-          </div>
-          <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.55, margin: '0 0 16px' }}>
-            Review or update your consent for analytics, marketing and functional cookies.
-            Essential cookies required for login and security cannot be disabled.
-          </p>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button onClick={resetCookieConsent}
-              style={{ padding: '10px 20px', borderRadius: 100, border: '1.5px solid #cbd5e1', background: 'transparent', cursor: 'pointer', fontWeight: 700, fontSize: 13, color: '#475569' }}>
-              Update Cookie Settings
-            </button>
-            <a href="/privacy-policy/#cookies" target="_blank" rel="noreferrer"
-              style={{ padding: '10px 20px', borderRadius: 100, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#0d9488', textDecoration: 'underline', textUnderlineOffset: 3, display: 'inline-flex', alignItems: 'center' }}>
-              Cookie Policy ↗
-            </a>
-          </div>
-        </motion.div>
-
-        </motion.div>
+        </motion.section>
       </div>
-    </>
+    </div>
   )
 }

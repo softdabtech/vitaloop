@@ -293,28 +293,37 @@ export default function Subscription() {
     )
   }
 
+  const timelineItems = Array.isArray(subscription?.timeline)
+    ? subscription.timeline
+    : [
+      {
+        date: subscription?.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString().slice(0, 10) : 'Current',
+        title: isPremium ? 'Premium access active' : 'Free plan active',
+        details: isPremium ? 'Renews automatically unless canceled.' : 'Upgrade anytime to unlock premium features.',
+      },
+    ]
+
   return (
-    <>
+    <div className="space-y-6">
       <CabinetPageHeader
         title={ct().subscription.title}
         subtitle={ct().subscription.subtitle}
         helper={ct().subscription.helper}
       />
 
-      <div className="grid gap-8">
-        {/* Current Status */}
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         {subscription && (
-          <motion.div
+          <motion.section
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0 }}
-            className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+            className="rounded-2xl border border-slate-200 bg-white p-6"
           >
-            <div className="flex items-start justify-between mb-6">
+            <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">Current Subscription</h3>
-                <div className="flex items-center gap-2 mb-4">
+                <h3 className="text-lg font-bold text-slate-900">Current subscription</h3>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold ${
                     planStatus === 'active'
                       ? 'bg-emerald-100 text-emerald-700'
@@ -327,11 +336,6 @@ export default function Subscription() {
                     {planStatus === 'active' && <CheckCircle2 className="w-4 h-4" />}
                     {planStatus === 'active' ? 'Active' : planStatus === 'paused' ? 'Paused' : planStatus === 'free' ? 'Free Plan' : 'Inactive'}
                   </div>
-                  {planStatus === 'free' && (
-                    <div className="flex items-center gap-1.5 text-blue-700 text-sm">
-                      <span className="text-xs font-medium">Standard free tier</span>
-                    </div>
-                  )}
                   {planStatus !== 'active' && planStatus !== 'free' && (
                     <div className="flex items-center gap-1.5 text-amber-700 text-sm">
                       <AlertCircle className="w-4 h-4" />
@@ -351,7 +355,7 @@ export default function Subscription() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-xl bg-slate-50 p-4 border border-slate-200">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Current Plan</div>
                 <div className="text-2xl font-bold text-slate-900">{PLANS[currentPlan]?.name || 'Free'}</div>
@@ -374,28 +378,47 @@ export default function Subscription() {
                 </div>
               </div>
 
-              <div className="rounded-xl bg-purple-50 p-4 border border-purple-200">
-                <div className="text-xs font-semibold uppercase tracking-wide text-purple-600 mb-2">Billing Status</div>
+              <div className="rounded-xl bg-indigo-50 p-4 border border-indigo-200">
+                <div className="text-xs font-semibold uppercase tracking-wide text-indigo-600 mb-2">Billing Status</div>
                 <div className={`text-sm font-bold capitalize ${
-                  planStatus === 'active' ? 'text-purple-900' :
+                  planStatus === 'active' ? 'text-indigo-900' :
                     planStatus === 'free' ? 'text-blue-900' :
                       'text-amber-900'
                 }`}>{planStatus === 'free' ? 'Free' : planStatus}</div>
               </div>
             </div>
-          </motion.div>
+          </motion.section>
         )}
 
-        {/* Usage Statistics */}
-        {subscription && (
-          <motion.div
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="rounded-2xl border border-slate-200 bg-white p-6"
+        >
+          <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-900"><CreditCard className="h-4 w-4 text-emerald-600" /> Subscription timeline</h3>
+          <div className="space-y-3">
+            {timelineItems.map((item, idx) => (
+              <div key={`${item.date}-${idx}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{item.date || '—'}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{item.title || 'Subscription event'}</p>
+                <p className="mt-1 text-xs text-slate-600">{item.details || item.description || 'No additional details.'}</p>
+              </div>
+            ))}
+          </div>
+        </motion.section>
+      </div>
+
+      {subscription && (
+          <motion.section
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="rounded-2xl border border-slate-200 bg-white p-6"
           >
-            <h3 className="text-lg font-bold text-slate-900 mb-6">Usage & Limits</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-6">Usage & limits</h3>
 
             <div className="space-y-4">
               <div>
@@ -432,17 +455,16 @@ export default function Subscription() {
                 </ul>
               </div>
             </div>
-          </motion.div>
-        )}
+          </motion.section>
+      )}
 
-        {/* Free Plan Info */}
-        {currentPlan === 'free' && (
-          <motion.div
+      {currentPlan === 'free' && (
+          <motion.section
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="rounded-2xl border border-blue-200 bg-blue-50 p-6 sm:p-8"
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="rounded-2xl border border-blue-200 bg-blue-50 p-6"
           >
             <h3 className="font-semibold text-blue-900 mb-3">💡 About Your Free Plan</h3>
             <div className="space-y-2 text-sm text-blue-800">
@@ -455,18 +477,17 @@ export default function Subscription() {
               </ul>
               <p className="pt-2 text-blue-900 font-medium">Upgrade to Premium to unlock unlimited uploads and AI-powered protocols.</p>
             </div>
-          </motion.div>
+          </motion.section>
         )}
 
-        {/* Plan Selection - only show for free users */}
         {currentPlan === 'free' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.3 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
           >
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Choose Your Plan</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Choose a plan</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {Object.entries(PLANS).map(([key, plan]) => (
                 <PlanCard
@@ -482,13 +503,12 @@ export default function Subscription() {
           </motion.div>
         )}
 
-        {/* Payment & Billing Info */}
         {isPremium && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.4 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
             className="rounded-2xl border border-blue-200 bg-blue-50 p-6 sm:p-8"
           >
             <div className="flex items-start gap-3">
@@ -515,12 +535,11 @@ export default function Subscription() {
           </motion.div>
         )}
 
-        {/* Need Help */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.5 }}
+          transition={{ duration: 0.5, delay: 0.6 }}
           className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
         >
           <h3 className="text-lg font-bold text-slate-900 mb-4">Questions About Your Plan?</h3>
@@ -535,7 +554,6 @@ export default function Subscription() {
             <ArrowRight className="w-4 h-4" />
           </a>
         </motion.div>
-      </div>
-    </>
+    </div>
   )
 }

@@ -81,17 +81,21 @@ export default function LabPlan() {
             <FlaskConical className="h-4 w-4 text-emerald-600" />
             <h3 className="text-base font-semibold text-slate-900">Core first-pass labs</h3>
           </div>
-          <div className="space-y-3">
-            {CORE_LABS.map((item) => (
-              <article key={item.name} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-slate-900">{item.name}</p>
-                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">{item.priority}</span>
-                </div>
-                <p className="text-sm text-slate-600">{item.why}</p>
-                <p className="mt-1 text-xs text-slate-500">Answers this question: {item.related}</p>
-              </article>
-            ))}
+          <div className="overflow-hidden rounded-xl border border-slate-200">
+            <div className="grid grid-cols-[0.9fr_1.2fr_1fr] bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <span>Lab</span>
+              <span>Why</span>
+              <span>Related symptoms</span>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {CORE_LABS.map((item) => (
+                <article key={item.name} className="grid grid-cols-1 gap-2 px-3 py-3 text-sm sm:grid-cols-[0.9fr_1.2fr_1fr]">
+                  <p className="font-semibold text-slate-900">{item.name}</p>
+                  <p className="text-slate-600">{item.why}</p>
+                  <p className="text-slate-500">{item.related}</p>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -109,7 +113,7 @@ export default function LabPlan() {
             </div>
             {OPTIONAL_LABS.map((item) => (
               <div key={item.name} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p className="text-sm font-semibold text-slate-900">{item.name}</p>
+                <p className="text-sm font-semibold text-slate-900">{item.name} <span className="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-600">Optional</span></p>
                 <p className="mt-1 text-xs text-slate-600">{item.why}</p>
               </div>
             ))}

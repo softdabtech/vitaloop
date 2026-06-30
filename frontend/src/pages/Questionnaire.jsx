@@ -15,6 +15,30 @@ function parseApiError(err, fallback) {
   return typeof detail === 'string' ? detail : fallback
 }
 
+function NumericScaleButtons({ value, onChange, label }) {
+  return (
+    <div>
+      <p className="text-sm font-medium text-slate-700">{label}: <span className="font-semibold text-slate-900">{value}/10</span></p>
+      <div className="mt-2 grid grid-cols-5 gap-2 sm:grid-cols-10">
+        {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+          <button
+            key={num}
+            type="button"
+            onClick={() => onChange(num)}
+            className={`rounded-lg border px-2 py-2 text-sm font-semibold transition ${
+              value === num
+                ? 'border-emerald-500 bg-emerald-500 text-white'
+                : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50'
+            }`}
+          >
+            {num}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function scoreReadiness({ concern, duration, severity, bodySystem, related, meds }) {
   let score = 20
   if (concern.trim().length >= 6) score += 20
@@ -210,9 +234,7 @@ export default function Questionnaire() {
                 </label>
               </div>
 
-              <label className="block text-sm text-slate-700">Severity: {severity}/10
-                <input type="range" min={1} max={10} value={severity} onChange={(e) => setSeverity(Number(e.target.value))} className="mt-2 w-full" />
-              </label>
+              <NumericScaleButtons value={severity} onChange={setSeverity} label="Severity" />
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <textarea value={relatedSymptoms} onChange={(e) => setRelatedSymptoms(e.target.value)} rows={3} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Related symptoms" />
@@ -258,9 +280,7 @@ export default function Questionnaire() {
               {nextQuestion ? (
                 <>
                   <p className="text-base font-semibold text-slate-900">{nextQuestion.text}</p>
-                  <label className="block text-sm text-slate-700">Answer value: {answerValue}/10
-                    <input type="range" min={1} max={10} value={answerValue} onChange={(e) => setAnswerValue(Number(e.target.value))} className="mt-2 w-full" />
-                  </label>
+                  <NumericScaleButtons value={answerValue} onChange={setAnswerValue} label="Answer value" />
                   <textarea value={answerText} onChange={(e) => setAnswerText(e.target.value)} rows={3} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Optional context" />
                   <button onClick={submitAnswer} disabled={saving} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">{saving ? 'Saving...' : 'Next question'}</button>
                 </>

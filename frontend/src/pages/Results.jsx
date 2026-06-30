@@ -349,8 +349,8 @@ export default function Results() {
   return (
     <div className="space-y-6">
       <CabinetPageHeader
-        title="Results & Interpretation"
-        subtitle="Priority markers, meaning, and next actions from your latest lab panel."
+        title="Results & Trends"
+        subtitle="What needs attention now, what is stable, and what to discuss next."
         action={(
           <div className="flex flex-wrap items-center gap-2">
             <button onClick={() => navigate('/lab-results')} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 inline-flex items-center gap-2">
@@ -421,6 +421,21 @@ export default function Results() {
             </div>
           </div>
         </motion.header>
+
+        <div className="mb-6 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Focus now</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{priorityMarkers[0] ? displayBiomarkerName(priorityMarkers[0], isUk) : 'No immediate out-of-range marker'}</p>
+          </div>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Watch list</p>
+            <p className="mt-1 text-sm font-semibold text-amber-900">{watchCount} marker{watchCount === 1 ? '' : 's'} near the border</p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Stable zone</p>
+            <p className="mt-1 text-sm font-semibold text-emerald-900">{optimalCount} marker{optimalCount === 1 ? '' : 's'} in range</p>
+          </div>
+        </div>
 
         {!!reportAlerts.length && (
           <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-900">
