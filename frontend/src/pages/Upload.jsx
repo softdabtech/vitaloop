@@ -6,7 +6,6 @@ import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import UploadZone from '../components/UploadZone.jsx'
-import SymptomSelector from '../components/SymptomSelector.jsx'
 import ManualBiomarkerEntry from '../components/ManualBiomarkerEntry.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import AnalysisProgressIndicator from '../components/AnalysisProgressIndicator.jsx'
@@ -28,8 +27,8 @@ const SUPPORTED_FILE_TYPES = {
 
 const UPLOAD_HINTS = [
   '📄 Upload your lab report PDF in the context of an active concern.',
-  '🧭 Link symptoms and concern context so the upload answers a specific question.',
-  '✅ After upload, open Results & Trends to see what changed and what to do next.',
+  '🧭 Keep report quality high: clear PDF with marker names, values, units, and ranges.',
+  '✅ After upload, open Results & Trends to see priorities and next actions.',
 ]
 
 const LOADING_MESSAGES = [
@@ -215,7 +214,6 @@ export default function Upload() {
   const { isPremium, uploadsRemaining, loading: subLoading } = useSubscription()
   const { show: showHints, dismiss: dismissHints } = useTourHints('upload')
   const [uploadMode, setUploadMode] = useState('pdf') // 'pdf' | 'manual'
-  const [symptoms, setSymptoms] = useState([])
   const [labName, setLabName] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -301,13 +299,11 @@ export default function Upload() {
       if (labName) {
         formData.append('lab_name', labName)
       }
-      symptoms.forEach((symptom) => formData.append('symptoms', symptom))
 
       const { data } = await api.post('/analyze/pdf', formData)
 
       trackFunnelEvent('funnel_first_upload_completed', 'User completed first lab upload analysis', {
         upload_id: data.upload_id,
-        symptoms_count: symptoms.length,
         has_lab_name: Boolean(labName),
       }, { oncePerSession: true })
       gaLabUpload()
@@ -390,11 +386,11 @@ export default function Upload() {
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> {copy.answerTitle}</div>
-            <p className="text-sm text-slate-500">{copy.answerBody}</p>
+            <p className="text-sm text-slate-500">{isUk ? 'Ключове питання: які маркери потребують уваги в першу чергу.' : 'Core question: which markers need attention first.'}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" /> {copy.nextTitle}</div>
-            <p className="text-sm text-slate-500">{copy.nextBody}</p>
+            <p className="text-sm text-slate-500">{isUk ? 'Далі: пріоритети, безпечні наступні кроки і план повторної перевірки.' : 'Then: priorities, safer next steps, and retest direction.'}</p>
           </div>
         </div>
 
@@ -480,7 +476,7 @@ export default function Upload() {
 
         {uploadMode === 'pdf' ? (
           <>
-            <div className="mb-6 grid gap-3 lg:grid-cols-3">
+            <div className="mb-4 grid gap-3 md:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> {isUk ? 'Безпечне завантаження' : 'Secure upload'}</div>
                 <p className="text-sm text-slate-500">{isUk ? 'PDF безпечно завантажується й аналізується для структурованого розбору показників.' : 'Your PDF is securely uploaded and analyzed to extract biomarker context.'}</p>
@@ -513,10 +509,6 @@ export default function Upload() {
               </div>
             )}
 
-            <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-              {isUk ? 'Порада: для найкращого розпізнавання завантажте чіткий повносторінковий PDF із кабінету лабораторії.' : 'Tip: upload a clear full-page PDF exported from your lab portal for best extraction quality.'}
-            </div>
-
             <div className="mb-6">
               <label className="mb-1 block text-sm font-medium text-slate-700">{isUk ? 'Назва лабораторії / клініки (необовʼязково)' : 'Lab / Clinic name (optional)'}</label>
               <input
@@ -531,8 +523,6 @@ export default function Upload() {
                 <span>{isUk ? '* Якщо лабораторії ще немає в базі, це нормально. Ви все одно можете завантажити PDF.' : '* If your clinic or lab is not recognized yet, it is still fine. Our lab database is still growing and more providers will be added soon.'}</span>
               </p>
             </div>
-
-            <SymptomSelector selected={symptoms} onChange={setSymptoms} />
 
             <div className="mt-6">
               {analyzing && (

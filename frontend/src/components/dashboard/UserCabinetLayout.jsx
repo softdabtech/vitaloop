@@ -11,7 +11,16 @@ import { isUkrainianLocale } from '../../lib/locale.js'
 import '../../styles/dashboard2026.css'
 
 const CRM_BASE_URL = (import.meta.env.VITE_CRM_BASE_URL || 'https://crm.vitaloop.today').replace(/\/$/, '')
-const CRM_ROLES = new Set(['super_admin', 'admin', 'org_admin', 'org_owner', 'client_admin', 'manager', 'practitioner'])
+
+const CRM_ROLES = new Set([
+  'super_admin',
+  'practitioner',
+  'doctor',
+  'nutritionist',
+  'support',
+  'admin',
+  'crm',
+])
 
 function isCrmRole(user) {
   if (!user) return false
@@ -136,7 +145,7 @@ export default function UserCabinetLayout({ children }) {
                 href="https://vitaloop.today"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="vtl-button-secondary inline-flex shrink-0 items-center gap-2 px-3 py-2 text-sm transition hover:bg-slate-700 hover:border-slate-500 hover:text-white"
+                className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
               >
                 <span className="hidden sm:inline">{isUk ? 'Сайт' : 'Website'}</span>
                 <span className="sm:hidden">↗</span>

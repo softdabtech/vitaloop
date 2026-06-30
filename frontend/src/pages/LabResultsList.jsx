@@ -280,8 +280,8 @@ export default function LabResultsList() {
                   <p className="mt-1 text-sm text-slate-700">Link these markers to symptoms and adjust protocol targets.</p>
                 </div>
                 <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-rose-700 font-semibold">Safety context</p>
-                  <p className="mt-1 text-sm text-slate-700">Review out-of-range markers with a qualified clinician when appropriate.</p>
+                  <p className="text-xs uppercase tracking-wide text-rose-700 font-semibold">Clinician review</p>
+                  <p className="mt-1 text-sm text-slate-700">Use priority markers and symptoms together when discussing next checks.</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                   <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Next step</p>

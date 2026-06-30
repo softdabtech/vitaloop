@@ -68,21 +68,6 @@ function Field({ label, children }) {
   )
 }
 
-function MetricTile({ label, value, tone = 'default' }) {
-  const themes = {
-    default: { bg: '#f8fafc', border: 'rgba(15,23,42,0.08)', title: '#64748b', value: '#0f172a' },
-    success: { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.18)', title: '#047857', value: '#065f46' },
-  }
-  const theme = themes[tone] || themes.default
-
-  return (
-    <div style={{ borderRadius: 18, padding: '16px 18px', background: theme.bg, border: `1px solid ${theme.border}` }}>
-      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: theme.title, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: theme.value }}>{value}</div>
-    </div>
-  )
-}
-
 function normalizeSexValue(value) {
   const normalized = String(value || '').trim().toLowerCase()
   if (normalized === 'm' || normalized === 'male') return 'male'
@@ -232,7 +217,7 @@ export default function HealthProfile() {
   }
 
   return (
-    <>
+    <div className="space-y-6">
       <CabinetPageHeader
         title={ct().healthProfile.title}
         subtitle={ct().healthProfile.subtitle}
@@ -240,298 +225,120 @@ export default function HealthProfile() {
       />
 
       {loading && (
-        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
           Loading saved profile details...
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="space-y-6">
-          {/* Main grid: Personal Info + Health Goals side by side */}
-          <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-            {/* Biometrics Section - Left Column */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-              <h3 className="mb-6 text-lg font-bold text-slate-900">Basics</h3>
-
-              <div className="space-y-5">
-                <Field label="Age">
-                  <input
-                    type="number"
-                    value={profile.age}
-                    onChange={(e) => setProfile({ ...profile, age: e.target.value })}
-                    placeholder="Enter your age"
-                    style={fieldStyle}
-                    min="0"
-                    max="150"
-                  />
-                </Field>
-
-                <Field label="Sex">
-                  <select
-                    value={profile.sex}
-                    onChange={(e) => setProfile({ ...profile, sex: e.target.value })}
-                    style={fieldStyle}
-                  >
-                    <option value="">Select sex</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                </Field>
-
-                <Field label="Height (cm)">
-                  <input
-                    type="number"
-                    value={profile.height_cm}
-                    onChange={(e) => setProfile({ ...profile, height_cm: e.target.value })}
-                    placeholder="e.g., 180"
-                    style={fieldStyle}
-                    min="0"
-                    max="300"
-                    step="0.1"
-                  />
-                </Field>
-
-                <Field label="Weight (kg)">
-                  <input
-                    type="number"
-                    value={profile.weight_kg}
-                    onChange={(e) => setProfile({ ...profile, weight_kg: e.target.value })}
-                    placeholder="e.g., 80"
-                    style={fieldStyle}
-                    min="0"
-                    max="500"
-                    step="0.1"
-                  />
-                </Field>
-
-                <Field label="Timezone">
-                  <select
-                    value={profile.timezone}
-                    onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
-                    style={fieldStyle}
-                  >
-                    {TIMEZONES.map((tz) => (
-                      <option key={tz} value={tz}>{tz}</option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-            </div>
-
-            {/* Health Goals - Right Column */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-              <h3 className="mb-6 text-lg font-bold text-slate-900">Goals</h3>
-              <p style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>
-                Select goals to personalize your protocol recommendations.
-              </p>
-
-              <div className="space-y-3">
-                {GOAL_OPTIONS.map((goal) => (
-                  <label key={goal} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '12px 14px',
-                    background: profile.goals.includes(goal) ? '#f0fdf4' : '#f8fafc',
-                    border: `1px solid ${profile.goals.includes(goal) ? '#dcfce7' : 'rgba(15,23,42,0.12)'}`,
-                    borderRadius: 14,
-                    cursor: 'pointer',
-                    transition: 'all 200ms',
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={profile.goals.includes(goal)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setProfile({ ...profile, goals: [...profile.goals, goal] })
-                        } else {
-                          setProfile({ ...profile, goals: profile.goals.filter((g) => g !== goal) })
-                        }
-                      }}
-                      style={{ cursor: 'pointer', width: 18, height: 18 }}
-                    />
-                    <span style={{ color: '#0f172a', fontSize: 14, fontWeight: 500 }}>{goal}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Medical Flags - Important Context */}
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 sm:p-8">
-            <h3 className="mb-6 text-lg font-bold text-rose-900">⚠️ Conditions & Contraindications</h3>
-            <p style={{ fontSize: 14, color: '#b91c1c', marginBottom: 20 }}>
-              This information helps us interpret biomarkers safely and avoid dangerous recommendations.
-            </p>
-
-            <div className="space-y-5">
-              <Field label="Current medications (if any)">
-                <textarea
-                  value={profile.medications}
-                  onChange={(e) => setProfile({ ...profile, medications: e.target.value })}
-                  placeholder="e.g., Aspirin 100mg daily, Vitamin D supplementation..."
-                  style={{
-                    ...fieldStyle,
-                    minHeight: 80,
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                  }}
-                />
-              </Field>
-
-              <Field label="Known allergies">
-                <textarea
-                  value={profile.allergies}
-                  onChange={(e) => setProfile({ ...profile, allergies: e.target.value })}
-                  placeholder="e.g., Shellfish, Penicillin, Nuts..."
-                  style={{
-                    ...fieldStyle,
-                    minHeight: 80,
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                  }}
-                />
-              </Field>
-
-              <Field label="Pregnancy / Breastfeeding status">
-                <select
-                  value={profile.pregnancy_status}
-                  onChange={(e) => setProfile({ ...profile, pregnancy_status: e.target.value })}
-                  style={fieldStyle}
-                >
-                  <option value="">Select status</option>
-                  <option value="pregnant">Currently pregnant</option>
-                  <option value="breastfeeding">Breastfeeding</option>
-                  <option value="planning">Planning to conceive</option>
-                  <option value="none">Not applicable</option>
-                </select>
-              </Field>
-
-              <Field label="Current supplements (comma-separated)">
-                <textarea
-                  value={profile.current_supplements}
-                  onChange={(e) => setProfile({ ...profile, current_supplements: e.target.value })}
-                  placeholder="e.g., Vitamin D 2000IU, Magnesium 400mg, Omega-3..."
-                  style={{
-                    ...fieldStyle,
-                    minHeight: 80,
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                  }}
-                />
-              </Field>
-
-              <Field label="Current prescribed medications (comma-separated)">
-                <textarea
-                  value={profile.current_medications}
-                  onChange={(e) => setProfile({ ...profile, current_medications: e.target.value })}
-                  placeholder="e.g., Metformin 500mg, Lisinopril 10mg..."
-                  style={{
-                    ...fieldStyle,
-                    minHeight: 80,
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                  }}
-                />
-              </Field>
-
-              <Field label="Prior diagnoses / chronic conditions">
-                <textarea
-                  value={profile.prior_diagnoses}
-                  onChange={(e) => setProfile({ ...profile, prior_diagnoses: e.target.value })}
-                  placeholder="e.g., Type 2 diabetes, Hypothyroidism, IBS..."
-                  style={{
-                    ...fieldStyle,
-                    minHeight: 80,
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                  }}
-                />
-              </Field>
-            </div>
-
-            <p style={{ fontSize: 12, color: '#b91c1c', marginTop: 16 }}>
-              ✓ Your medical information is kept private and only used to provide safe, personalized recommendations.
-            </p>
-          </div>
-
-          {/* Save Button */}
-          <button
-            onClick={saveProfile}
-            disabled={saving}
-            className="rounded-2xl bg-emerald-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Profile & Safety'}
-          </button>
+      <section className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><Activity className="h-3.5 w-3.5 text-emerald-600" /> Profile completion</div>
+          <p className="text-2xl font-bold text-slate-900">{profileCompletion}%</p>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${profileCompletion}%` }} /></div>
         </div>
-
-        {/* Right Sidebar */}
-        <div className="space-y-4">
-          {/* Completion */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Profile Completion</div>
-            <div style={{
-              width: '100%',
-              height: 6,
-              background: '#e2e8f0',
-              borderRadius: 99,
-              overflow: 'hidden',
-            }}>
-              <div style={{
-                height: '100%',
-                width: `${profileCompletion}%`,
-                background: '#10b981',
-                transition: 'width 300ms',
-              }} />
-            </div>
-            <div className="mt-2 text-center text-xl font-bold text-slate-900">{profileCompletion}%</div>
-          </div>
-
-          {/* Biometrics Display */}
-          {bmi && (
-            <MetricTile
-              label="BMI"
-              value={bmi}
-              tone={bmi < 25 ? 'success' : 'default'}
-            />
-          )}
-
-          {profile.age && (
-            <MetricTile
-              label="Age"
-              value={profile.age}
-            />
-          )}
-
-          {profile.weight_kg && (
-            <MetricTile
-              label="Weight"
-              value={`${profile.weight_kg} kg`}
-            />
-          )}
-
-          {profile.height_cm && (
-            <MetricTile
-              label="Height"
-              value={`${profile.height_cm} cm`}
-            />
-          )}
-
-          {/* Info Box */}
-          <div style={{
-            borderRadius: 18,
-            padding: 16,
-            background: '#f0fdf4',
-            border: '1px solid rgba(16,185,129,0.18)',
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#047857', marginBottom: 6 }}>💡 TIP</div>
-            <div style={{ fontSize: 13, color: '#065f46', lineHeight: 1.5 }}>
-              Your profile data is used to personalize supplement recommendations, nutrition guidance, and protocol timing. Keep it updated!
-            </div>
-          </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> BMI</div>
+          <p className="text-2xl font-bold text-slate-900">{bmi || '—'}</p>
+          <p className="mt-1 text-xs text-slate-500">Calculated from height and weight.</p>
         </div>
-      </div>
-    </>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><Target className="h-3.5 w-3.5 text-emerald-600" /> Active goals</div>
+          <p className="text-2xl font-bold text-slate-900">{Array.isArray(profile.goals) ? profile.goals.length : 0}</p>
+          <p className="mt-1 text-xs text-slate-500">Used to personalize recommendations.</p>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+        <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900"><User className="h-4 w-4 text-emerald-600" /> Basics</div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field label="Age">
+            <input type="number" value={profile.age} onChange={(e) => setProfile({ ...profile, age: e.target.value })} placeholder="Enter age" style={fieldStyle} min="0" max="150" />
+          </Field>
+          <Field label="Sex">
+            <select value={profile.sex} onChange={(e) => setProfile({ ...profile, sex: e.target.value })} style={fieldStyle}>
+              <option value="">Select sex</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </Field>
+          <Field label="Timezone">
+            <select value={profile.timezone} onChange={(e) => setProfile({ ...profile, timezone: e.target.value })} style={fieldStyle}>
+              {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+            </select>
+          </Field>
+          <Field label="Height (cm)">
+            <input type="number" value={profile.height_cm} onChange={(e) => setProfile({ ...profile, height_cm: e.target.value })} placeholder="e.g., 180" style={fieldStyle} min="0" max="300" step="0.1" />
+          </Field>
+          <Field label="Weight (kg)">
+            <input type="number" value={profile.weight_kg} onChange={(e) => setProfile({ ...profile, weight_kg: e.target.value })} placeholder="e.g., 80" style={fieldStyle} min="0" max="500" step="0.1" />
+          </Field>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Goals</h3>
+        <div className="flex flex-wrap gap-2">
+          {GOAL_OPTIONS.map((goal) => {
+            const selected = profile.goals.includes(goal)
+            return (
+              <button
+                key={goal}
+                type="button"
+                onClick={() => {
+                  if (selected) {
+                    setProfile({ ...profile, goals: profile.goals.filter((g) => g !== goal) })
+                  } else {
+                    setProfile({ ...profile, goals: [...profile.goals, goal] })
+                  }
+                }}
+                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${selected ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50'}`}
+              >
+                {goal}
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-rose-200 bg-rose-50 p-5 sm:p-6">
+        <h3 className="mb-1 text-base font-semibold text-rose-900">Safety context</h3>
+        <p className="mb-4 text-sm text-rose-700">Used to avoid unsafe suggestions and make recommendations more accurate.</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Current medications (if any)">
+            <textarea value={profile.medications} onChange={(e) => setProfile({ ...profile, medications: e.target.value })} rows={3} placeholder="e.g., Aspirin 100mg daily" style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
+          </Field>
+          <Field label="Known allergies">
+            <textarea value={profile.allergies} onChange={(e) => setProfile({ ...profile, allergies: e.target.value })} rows={3} placeholder="e.g., Penicillin" style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
+          </Field>
+          <Field label="Pregnancy / breastfeeding status">
+            <select value={profile.pregnancy_status} onChange={(e) => setProfile({ ...profile, pregnancy_status: e.target.value })} style={fieldStyle}>
+              <option value="">Select status</option>
+              <option value="pregnant">Currently pregnant</option>
+              <option value="breastfeeding">Breastfeeding</option>
+              <option value="planning">Planning to conceive</option>
+              <option value="none">Not applicable</option>
+            </select>
+          </Field>
+          <Field label="Current supplements (comma-separated)">
+            <textarea value={profile.current_supplements} onChange={(e) => setProfile({ ...profile, current_supplements: e.target.value })} rows={3} placeholder="e.g., Vitamin D, Magnesium" style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
+          </Field>
+          <Field label="Current prescribed medications (comma-separated)">
+            <textarea value={profile.current_medications} onChange={(e) => setProfile({ ...profile, current_medications: e.target.value })} rows={3} placeholder="e.g., Metformin, Lisinopril" style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
+          </Field>
+          <Field label="Prior diagnoses / chronic conditions">
+            <textarea value={profile.prior_diagnoses} onChange={(e) => setProfile({ ...profile, prior_diagnoses: e.target.value })} rows={3} placeholder="e.g., Hypothyroidism" style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
+          </Field>
+        </div>
+      </section>
+
+      <button
+        onClick={saveProfile}
+        disabled={saving}
+        className="w-full rounded-2xl bg-emerald-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50 sm:w-auto"
+      >
+        {saving ? 'Saving...' : 'Save Health Profile'}
+      </button>
+    </div>
   )
 }
