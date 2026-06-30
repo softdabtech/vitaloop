@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, Circle, ClipboardCheck, FlaskConical, Route, Upload } from 'lucide-react'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { ct } from '../lib/cabinetI18n.js'
 import { useQuestionnaireSession } from '../hooks/useQueries.js'
 
 const CORE_LABS = [
@@ -47,9 +48,9 @@ export default function LabPlan() {
   return (
     <div className="space-y-6">
       <CabinetPageHeader
-        title="Lab Plan"
-        subtitle={`Practical testing direction for: ${concern}`}
-        helper="Use this plan to decide what to check first and why before uploading results."
+        title={ct().labPlan.title}
+        subtitle={ct().labPlan.subtitle(concern)}
+        helper={ct().labPlan.helper}
         action={(
           <button
             onClick={() => navigate('/upload')}

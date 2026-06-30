@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import BodyAvatar from '../components/BodyAvatar.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { ct } from '../lib/cabinetI18n.js'
 import { useProgress } from '../hooks/useQueries.js'
 
 export default function Avatar() {
@@ -37,9 +38,9 @@ export default function Avatar() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <CabinetPageHeader
-        title="Digital Health Avatar"
-        subtitle="Tap a body zone to see connected biomarkers and protocol recommendations."
-        helper="This view translates your biomarker data into an interactive body map for faster interpretation."
+        title={ct().avatar.title}
+        subtitle={ct().avatar.subtitle}
+        helper={ct().avatar.helper}
       />
 
       <div className="grid gap-4 md:grid-cols-3">

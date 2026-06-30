@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { ct } from '../lib/cabinetI18n.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useQuestionnaireSession } from '../hooks/useQueries.js'
 import api from '../lib/api.js'
@@ -89,9 +90,9 @@ export default function WeeklyCheckIn() {
   return (
     <div className="space-y-6">
       <CabinetPageHeader
-        title="Check-in"
+        title={ct().checkin.title}
         subtitle={`Track whether protocol is working for: ${concern}`}
-        helper="Symptom severity + adherence + side effects + red flags -> next weekly adjustment."
+        helper={ct().checkin.helper}
       />
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">

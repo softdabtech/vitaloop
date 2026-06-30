@@ -5,6 +5,7 @@ import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useFeature } from '../hooks/useFeature.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { ct } from '../lib/cabinetI18n.js'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
@@ -138,9 +139,9 @@ export default function LabResultsList() {
     <div className="vtl-page px-4 py-8 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <CabinetPageHeader
-          title="Results & Trends"
-          subtitle="Interpret uploads, track marker movement, and connect findings to your active concern."
-          helper="Top cards explain what changed, what needs attention, and what to retest next."
+          title={ct().labResults.title}
+          subtitle={ct().labResults.subtitle}
+          helper={ct().labResults.helper}
           action={(
             <button
               onClick={() => navigate('/upload')}

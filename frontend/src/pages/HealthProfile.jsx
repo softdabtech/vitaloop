@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Target, User, Activity, TrendingUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { ct } from '../lib/cabinetI18n.js'
 import { useAuth } from '../hooks/useAuth.js'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
@@ -233,9 +234,9 @@ export default function HealthProfile() {
   return (
     <>
       <CabinetPageHeader
-        title="Profile & Safety"
-        subtitle="Medical context, goals, and constraints that improve personalization quality."
-        helper="Completing safety and context sections improves recommendation quality and reduces unsafe suggestions."
+        title={ct().healthProfile.title}
+        subtitle={ct().healthProfile.subtitle}
+        helper={ct().healthProfile.helper}
       />
 
       {loading && (
