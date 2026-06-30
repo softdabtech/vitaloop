@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import api from '../lib/api.js'
 import { useFeature } from '../hooks/useFeature.js'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
 import {
@@ -518,7 +519,7 @@ export default function ProtocolPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
+      <div className="rounded-2xl border border-slate-200 bg-white p-10">
         <div className="text-center space-y-3">
           <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-slate-500 text-sm">Loading your action plan…</p>
@@ -528,34 +529,32 @@ export default function ProtocolPage() {
   }
 
   return (
-    <div className="vtl-page w-full">
-      <div className="w-full">
-        {/* Top bar */}
-        <div className="sticky top-0 z-10 flex h-[76px] items-center justify-between gap-4 border-b border-slate-200 bg-white/90 backdrop-blur-sm px-4 sm:px-6 shadow-sm">
-          <div className="flex items-center gap-3">
+    <div className="space-y-6">
+      <CabinetPageHeader
+        title="Personal Action Plan"
+        subtitle="Prioritized nutrition, lifestyle, and follow-up actions based on your latest report."
+        action={(
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => navigate(`/results/${uploadId}`)}
-              className="vtl-focus-ring flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors rounded-lg px-2 py-1"
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 inline-flex items-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back to Results</span>
+              Back to Results
             </button>
-            <div className="h-5 w-px bg-slate-200" />
-            <h1 className="text-base sm:text-lg font-semibold text-slate-900">Personal Action Plan</h1>
+            <button
+              onClick={handleExportPdf}
+              disabled={!canExport || sortedProtocol.length === 0 || exporting}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:text-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="w-4 h-4" />
+              {exporting ? 'Exporting...' : 'Export PDF'}
+            </button>
           </div>
-          <button
-            onClick={handleExportPdf}
-            disabled={!canExport || sortedProtocol.length === 0 || exporting}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-800 hover:border-slate-300 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download className="w-4 h-4" />
-            {exporting ? 'Exporting...' : 'Export PDF'}
-          </button>
-        </div>
+        )}
+      />
 
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-auto">
-          <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 pb-16">
+      <div className="max-w-5xl space-y-6 pb-8">
 
             {showHints && (
               <HintBanner
@@ -759,8 +758,6 @@ export default function ProtocolPage() {
               </div>
             </motion.div>
 
-          </div>
-        </div>
       </div>
     </div>
   )

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Calendar, Target, Sparkles } from 'lucide-react'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { resolveAssignmentPath } from '../lib/assignmentRouting.js'
@@ -86,8 +87,8 @@ export default function AssignmentDetails() {
 
   if (loading) {
     return (
-      <div className="vtl-page min-h-screen p-6">
-        <div className="max-w-4xl mx-auto">
+      <div className="space-y-6">
+        <div className="max-w-4xl">
           <div className="animate-pulse h-8 w-64 bg-slate-200 rounded-xl mb-6" />
           <div className="animate-pulse h-40 bg-slate-100 rounded-xl" />
         </div>
@@ -96,8 +97,21 @@ export default function AssignmentDetails() {
   }
 
   return (
-    <div className="vtl-page min-h-screen p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="space-y-6">
+      <div className="max-w-4xl">
+        <CabinetPageHeader
+          title="Assignment"
+          subtitle="Task details, due date, and the quickest workflow to complete it."
+          action={(
+            <button
+              onClick={() => navigate('/assignments')}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Back to assignments
+            </button>
+          )}
+        />
+
         <button
           onClick={() => navigate('/assignments')}
           className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 transition mb-5"

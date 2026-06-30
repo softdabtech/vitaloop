@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import api from '../lib/api.js'
 import FeatureGate from '../components/FeatureGate.jsx'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
 import BiomarkerContextTooltip from '../components/BiomarkerContextTooltip.jsx'
@@ -322,7 +323,7 @@ export default function Results() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-500">
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
         {copy.loading}
       </div>
     )
@@ -330,9 +331,10 @@ export default function Results() {
 
   if (normalizedBiomarkers.length === 0) {
     return (
-      <div className="min-h-screen bg-slate-50 p-6">
-        <div className="mx-auto max-w-4xl">
-          <button onClick={() => navigate('/lab-results')} className="mb-8 inline-flex items-center gap-2 text-slate-600 transition hover:text-slate-900">
+      <div className="space-y-6">
+        <CabinetPageHeader title="Results & Interpretation" subtitle="No processed biomarkers yet." />
+        <div className="max-w-4xl">
+          <button onClick={() => navigate('/lab-results')} className="mb-6 inline-flex items-center gap-2 text-slate-600 transition hover:text-slate-900">
             <ArrowLeft className="h-4 w-4" />
             {copy.back}
           </button>
@@ -345,18 +347,25 @@ export default function Results() {
   }
 
   return (
-    <div className="vtl-page min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <button onClick={() => navigate('/lab-results')} className="inline-flex w-fit items-center gap-2 rounded-xl px-2 py-1 text-sm text-slate-600 transition hover:bg-white hover:text-slate-900">
-            <ArrowLeft className="h-4 w-4" />
-            {copy.back}
-          </button>
-          <button onClick={exportResultsAsPDF} className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700">
-            <Download className="h-4 w-4" />
-            {copy.export}
-          </button>
-        </div>
+    <div className="space-y-6">
+      <CabinetPageHeader
+        title="Results & Interpretation"
+        subtitle="Priority markers, meaning, and next actions from your latest lab panel."
+        action={(
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => navigate('/lab-results')} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 inline-flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              {copy.back}
+            </button>
+            <button onClick={exportResultsAsPDF} className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700">
+              <Download className="h-4 w-4" />
+              {copy.export}
+            </button>
+          </div>
+        )}
+      />
+
+      <div className="max-w-6xl">
 
         {showHints && <div className="mb-6"><HintBanner hints={copy.hints} onDone={dismissHints} /></div>}
 
