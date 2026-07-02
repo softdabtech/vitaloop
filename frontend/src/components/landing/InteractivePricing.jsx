@@ -137,8 +137,6 @@ export function InteractivePricing() {
                   ? 'bg-emerald-500 text-white'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
             >
               Monthly
             </motion.button>
@@ -149,8 +147,6 @@ export function InteractivePricing() {
                   ? 'bg-emerald-500 text-white'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
             >
               Annual
             </motion.button>
@@ -199,7 +195,6 @@ function PricingCard({ plan, index, isAnnual, onClick, isDisabled, isCurrentPlan
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: index * 0.1 }}
       viewport={{ once: true }}
-      whileHover={plan.featured ? { y: -8, boxShadow: '0 20px 25px -5px rgba(20, 184, 166, 0.2)' } : undefined}
       className={`relative rounded-2xl border transition-all ${
         plan.featured
           ? 'bg-gradient-to-br from-emerald-50 to-white border-emerald-300 shadow-lg'
@@ -244,8 +239,6 @@ function PricingCard({ plan, index, isAnnual, onClick, isDisabled, isCurrentPlan
         <motion.button
           type="button"
           onClick={onClick}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
           disabled={isDisabled}
           className={`w-full py-3 rounded-lg font-semibold mb-8 transition-all ${
             plan.featured
