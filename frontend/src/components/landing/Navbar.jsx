@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { EASE } from '../../lib/motion.js'
 import { useAuth } from '../../hooks/useAuth.js'
@@ -32,6 +32,7 @@ function LogoIcon() {
 
 export default function Navbar() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const reduced = useReducedMotion()
   const [scrolled, setScrolled]     = useState(false)
@@ -78,7 +79,18 @@ export default function Navbar() {
 
   const scrollTo = (href, page = false) => {
     setMobileOpen(false)
-    if (page) { navigate(href); return }
+    if (page) {
+      navigate(href)
+      return
+    }
+
+    // Hash links belong to landing sections. From non-landing routes (e.g. /help),
+    // route to landing with hash instead of trying to scroll current page.
+    if (location.pathname !== '/') {
+      navigate(`/${href}`)
+      return
+    }
+
     const el = document.getElementById(href.slice(1))
     el?.scrollIntoView({ behavior: 'smooth' })
   }
