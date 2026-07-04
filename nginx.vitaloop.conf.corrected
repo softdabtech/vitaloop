@@ -17,11 +17,13 @@ server {
     root /var/www/VITALOOP/frontend/dist;
     index index.html;
 
-    # Redirect legacy CRM entry paths to CRM app
+    # Keep the user cabinet on the frontend SPA. Historically this pointed to
+    # CRM post-login, which broke direct /dashboard entry.
     location = /dashboard {
-        return 302 https://crm.vitaloop.today/auth/post-login;
+        return 301 /dashboard/;
     }
 
+    # Redirect legacy CRM entry paths to CRM app
     location = /admin {
         return 302 https://crm.vitaloop.today/admin;
     }
