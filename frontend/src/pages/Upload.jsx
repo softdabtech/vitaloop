@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { AlertCircle, Building2, CheckCircle2, Route, Sparkles, UserCircle2 } from 'lucide-react'
-import HintBanner from '../components/tour/HintBanner.jsx'
-import { useTourHints } from '../hooks/useTourHints.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import UploadZone from '../components/UploadZone.jsx'
 import ManualBiomarkerEntry from '../components/ManualBiomarkerEntry.jsx'
@@ -25,12 +23,6 @@ const SUPPORTED_FILE_TYPES = {
   'application/pdf': ['.pdf'],
 }
 
-const UPLOAD_HINTS = [
-  '📄 Upload your lab report PDF in the context of an active concern.',
-  '🧭 Keep report quality high: clear PDF with marker names, values, units, and ranges.',
-  '✅ After upload, open Results & Trends to see priorities and next actions.',
-]
-
 const LOADING_MESSAGES = [
   '📤 Uploading your lab report...',
   '🧠 AI is analyzing your biomarkers...',
@@ -41,7 +33,6 @@ const LOADING_MESSAGES = [
 
 const UPLOAD_COPY = {
   en: {
-    hints: UPLOAD_HINTS,
     loadingMessages: LOADING_MESSAGES,
     profileIncomplete: 'Complete profile first',
     uploading: (name, kb) => `Uploading ${name}… (${kb}KB)`,
@@ -72,11 +63,6 @@ const UPLOAD_COPY = {
     nextBody: 'After analysis, open Results & Trends to prioritize markers and retest plan.',
   },
   uk: {
-    hints: [
-      '📄 Завантажте PDF з аналізами в контексті конкретної скарги або цілі.',
-      '🧭 Додайте симптоми, щоб аналіз відповідав на реальне питання, а не просто читав бланк.',
-      '✅ Після обробки відкрийте результати й динаміку: що важливо зараз і що перевірити повторно.',
-    ],
     loadingMessages: [
       '📤 Завантажуємо ваш PDF...',
       '🧠 AI аналізує показники...',
@@ -212,7 +198,6 @@ export default function Upload() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { isPremium, uploadsRemaining, loading: subLoading } = useSubscription()
-  const { show: showHints, dismiss: dismissHints } = useTourHints('upload')
   const [uploadMode, setUploadMode] = useState('pdf') // 'pdf' | 'manual'
   const [labName, setLabName] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
@@ -429,10 +414,6 @@ export default function Upload() {
             ✋ {isUk ? 'Ввести вручну' : 'Enter Manually'}
           </button>
         </div>
-
-        {showHints && (
-          <HintBanner hints={copy.hints} onDone={dismissHints} />
-        )}
 
         {uploadMode === 'pdf' && profileIncomplete && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5 text-sm">

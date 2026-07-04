@@ -6,8 +6,6 @@ import { useAuth } from '../hooks/useAuth.js'
 import { useFeature } from '../hooks/useFeature.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
-import HintBanner from '../components/tour/HintBanner.jsx'
-import { useTourHints } from '../hooks/useTourHints.js'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
 import '../styles/dashboard2026.css'
 
@@ -80,7 +78,6 @@ function triggerLabHistoryAccessPaywall() {
 export default function LabResultsList() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const { show: showHints, dismiss: dismissHints } = useTourHints('lab-results')
   const { hasAccess } = useFeature('progress')
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -152,17 +149,6 @@ export default function LabResultsList() {
             </button>
           )}
         />
-
-        {showHints && !loading && (
-          <HintBanner
-            hints={[
-              '🗂 This is your lab history — every upload you make is stored here with a biomarker quality snapshot.',
-              '📊 Each row shows how many markers are in range, worth watching, or ready for review. Click "Results" for the full breakdown.',
-              '📋 Open the action plan to see priorities, clinician discussion points, and retest direction.',
-            ]}
-            onDone={dismissHints}
-          />
-        )}
 
         {error && (
           <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
