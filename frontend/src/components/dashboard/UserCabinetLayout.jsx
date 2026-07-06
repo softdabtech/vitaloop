@@ -47,11 +47,12 @@ const PAGE_META = {
 }
 
 function resolvePageMeta(pathname, isUk = false) {
-  const direct = PAGE_META[pathname]
+  const normalizedPath = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+  const direct = PAGE_META[normalizedPath]
   if (direct) return { ...direct, title: isUk ? direct.ukTitle || direct.title : direct.title }
-  if (pathname.startsWith('/results/')) return { title: isUk ? 'Результати' : 'Results', subtitle: null }
-  if (pathname.startsWith('/protocol/')) return { title: isUk ? 'План дій' : 'Protocol', subtitle: null }
-  if (pathname.startsWith('/assignments/')) return { title: isUk ? 'Завдання' : 'Assignment', subtitle: null }
+  if (normalizedPath.startsWith('/results/')) return { title: isUk ? 'Результати' : 'Results', subtitle: null }
+  if (normalizedPath.startsWith('/protocol/')) return { title: isUk ? 'План дій' : 'Protocol', subtitle: null }
+  if (normalizedPath.startsWith('/assignments/')) return { title: isUk ? 'Завдання' : 'Assignment', subtitle: null }
   return { title: 'Vitaloop', subtitle: null }
 }
 
@@ -64,6 +65,7 @@ export default function UserCabinetLayout({ children }) {
   const isUk = isUkrainianLocale()
 
   const pageMeta = useMemo(() => resolvePageMeta(location.pathname, isUk), [location.pathname, isUk])
+  const isDashboardRoute = location.pathname === '/dashboard' || location.pathname === '/dashboard/'
 
   useEffect(() => {
     document.title = `${pageMeta.title} | VITALOOP`
@@ -165,7 +167,7 @@ export default function UserCabinetLayout({ children }) {
 
         <main className="flex-1 overflow-x-hidden">
           <div className="mx-auto w-full max-w-[1380px] px-3 py-5 pb-[calc(var(--vtl-bottom-bar-height)+20px)] sm:px-5 sm:py-7 md:pb-8 lg:px-6">
-            {location.pathname === '/dashboard' && <PWAInstallBanner />}
+            {isDashboardRoute && <PWAInstallBanner />}
             {children}
           </div>
         </main>

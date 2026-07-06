@@ -2,7 +2,7 @@
   "name": "VITALOOP — Health Cabinet",
   "short_name": "Vitaloop",
   "description": "AI-powered blood test analysis, personalized protocols, and biomarker tracking.",
-  "start_url": "/dashboard",
+  "start_url": "/dashboard/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -29,17 +29,32 @@
       "name": "Upload Labs",
       "short_name": "Upload",
       "description": "Upload a new lab report",
-      "url": "/upload",
+      "url": "/upload/",
       "icons": [{ "src": "/icons/icon-192.png?v=20260601-brand", "sizes": "192x192" }]
     },
     {
       "name": "Dashboard",
       "short_name": "Home",
       "description": "Open health dashboard",
-      "url": "/dashboard",
+      "url": "/dashboard/",
       "icons": [{ "src": "/icons/icon-192.png?v=20260601-brand", "sizes": "192x192" }]
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "/mockups/dashboard.png",
+      "sizes": "2560x1600",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Vitaloop health dashboard"
+    },
+    {
+      "src": "/mockups/example-report/dashboard.png",
+      "sizes": "1600x1000",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Vitaloop lab report insights"
+    }
+  ],
   "prefer_related_applications": false
 }
