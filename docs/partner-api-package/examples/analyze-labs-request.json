@@ -1,0 +1,33 @@
+{
+  "external_user_id": "partner-user-123",
+  "biomarkers": [
+    {
+      "name": "Ferritin",
+      "value": 12,
+      "unit": "ng/mL",
+      "reference_range": "30-150",
+      "collected_at": "2026-07-01T09:00:00Z",
+      "lab_name": "Partner Lab"
+    },
+    {
+      "name": "Glucose",
+      "value": 92,
+      "unit": "mg/dL",
+      "reference_range": "70-100"
+    }
+  ],
+  "symptoms": ["fatigue", "low energy"],
+  "questionnaire": {
+    "sleep_hours": 6,
+    "diet": "mixed"
+  },
+  "metadata": {
+    "source_lab": "partner_lab",
+    "integration_version": "pilot-v1",
+    "profile": {
+      "age": 38,
+      "sex": "female"
+    }
+  },
+  "idempotency_key": "partner-order-abc-001"
+}
