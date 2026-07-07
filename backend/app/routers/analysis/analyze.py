@@ -43,6 +43,7 @@ from app.services.biomarker_service import BiomarkerService
 from app.services.biomarker_reference import get_all_biomarkers
 from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
 from app.services.knowledge.report import build_knowledge_report
+from app.services.lab_analysis_pipeline import run_lab_analysis_pipeline
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
@@ -126,6 +127,11 @@ class AnalyzeResponse(BaseModel):
     biomarkers: List[dict]
     analysis_source: Optional[str] = None
     knowledge_evaluation: Optional[dict] = None
+    knowledge_report: Optional[dict] = None
+    protocol: Optional[Any] = None
+    retest_schedule: Optional[List[dict]] = None
+    summary: Optional[dict] = None
+    final_analysis: Optional[dict] = None
 
 
 def _resolve_response_locale(request: Request | None) -> str:
@@ -461,25 +467,25 @@ async def analyze_lab_file(
                 detail={"detail": "Could not save extracted biomarkers", "code": "BIOMARKER_SAVE_FAILED"},
             ) from exc
 
-        knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
+        pipeline_result = await run_lab_analysis_pipeline(
             biomarkers=saved_biomarkers,
             symptoms=symptoms,
             user_id=user_id,
-            upload_id=str(upload_id),
-        )
-        knowledge_report = build_knowledge_report(
-            biomarkers=saved_biomarkers,
-            knowledge_evaluation=knowledge_evaluation,
+            analysis_id=str(upload_id),
+            source_metadata={"source": "b2c_file", "file_type": file_ext, "analysis_method": analysis_method},
+            persist_knowledge=True,
             locale=response_locale,
         )
+        knowledge_evaluation = pipeline_result.get("knowledge_evaluation")
+        knowledge_report = pipeline_result.get("knowledge_report")
 
-        protocol = analysis.get("protocol", [])
+        protocol = pipeline_result.get("protocol", {})
         if protocol:
             try:
                 await save_protocol(
                     user_id=user_id,
                     upload_id=upload_id,
-                    recommendations=protocol,
+                    recommendations=pipeline_result.get("recommendations") or [],
                     prompt_version=prompt_version,
                 )
             except Exception as exc:
@@ -509,15 +515,16 @@ async def analyze_lab_file(
         return {
             "upload_id": upload_id,
             "biomarkers": saved_biomarkers,
-            "top_priority": analysis.get("top_priority", []),
+            "top_priority": pipeline_result.get("prioritized_biomarkers", []),
             "protocol": protocol,
-            "retest_schedule": analysis.get("retest_schedule", []),
-            "summary": analysis.get("summary", {}),
+            "retest_schedule": pipeline_result.get("retest_suggestions", []),
+            "summary": pipeline_result.get("health_summary", {}),
             "analysis_time": analysis.get("analysis_time", 0),
             "analysis_method": analysis.get("analysis_method", "openai_pdf"),
             "analysis_source": analysis_source,
             "knowledge_evaluation": knowledge_evaluation,
             "knowledge_report": knowledge_report,
+            "final_analysis": pipeline_result,
         }
     except HTTPException:
         if upload_id:
@@ -906,22 +913,26 @@ async def analyze_lab(
             # Timeline should not fail the request after successful biomarker persistence.
             logger.warning("analyze_timeline_event_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
 
-        knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
+        pipeline_result = await run_lab_analysis_pipeline(
             biomarkers=saved,
             symptoms=normalized_symptoms,
             user_id=user_id,
-            upload_id=str(upload_id),
+            analysis_id=str(upload_id),
+            source_metadata={"source": "b2c_text", "lab_name": normalized_lab_name},
+            persist_knowledge=True,
+            locale=_resolve_response_locale(request),
         )
+        knowledge_evaluation = pipeline_result.get("knowledge_evaluation")
         result = {
             "upload_id": upload_id,
             "biomarkers": saved,
             "analysis_source": analysis_source,
             "knowledge_evaluation": knowledge_evaluation,
-            "knowledge_report": build_knowledge_report(
-                biomarkers=saved,
-                knowledge_evaluation=knowledge_evaluation,
-                locale=_resolve_response_locale(request),
-            ),
+            "knowledge_report": pipeline_result.get("knowledge_report"),
+            "protocol": pipeline_result.get("protocol", {}),
+            "retest_schedule": pipeline_result.get("retest_suggestions", []),
+            "summary": pipeline_result.get("health_summary", {}),
+            "final_analysis": pipeline_result,
         }
         if normalized_key:
             await _complete_idempotency(user_id=user_id, idempotency_key=normalized_key, response=result)
@@ -1101,17 +1112,30 @@ async def analyze_manual_biomarkers(
         upload_id = upload_result["upload_id"]
         biomarkers_data = upload_result["biomarkers"]
 
-        # Generate protocol via Claude
-        protocol = await _generate_protocol_for_manual_entries(request, converted_entries)
+        pipeline_result = await run_lab_analysis_pipeline(
+            biomarkers=biomarkers_data,
+            symptoms=[],
+            user_id=user_id,
+            analysis_id=str(upload_id),
+            source_metadata={"source": "b2c_manual", "lab_name": request.lab_name},
+            persist_knowledge=True,
+        )
+        protocol = pipeline_result.get("protocol", {})
 
         # Save protocol
         if protocol:
-            await save_protocol_for_upload(user_id, upload_id, protocol)
+            await save_protocol_for_upload(user_id, upload_id, pipeline_result.get("recommendations") or [])
 
         return {
             "upload_id": upload_id,
             "biomarkers": biomarkers_data,
+            "analysis_source": _stable_analysis_source("llm" if is_llm_configured() else "fallback"),
+            "knowledge_evaluation": pipeline_result.get("knowledge_evaluation"),
+            "knowledge_report": pipeline_result.get("knowledge_report"),
             "protocol": protocol,
+            "retest_schedule": pipeline_result.get("retest_suggestions", []),
+            "summary": pipeline_result.get("health_summary", {}),
+            "final_analysis": pipeline_result,
         }
 
     except HTTPException:

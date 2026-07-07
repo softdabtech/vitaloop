@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     auth_rate_limit_per_minute: int = 60
     analyze_rate_limit_per_minute: int = 30
     protocol_rate_limit_per_minute: int = 30
+    b2b_partner_rate_limit_per_minute: int = 60
+    b2b_api_key_rate_limit_per_minute: int = 30
+    metrics_enabled: bool = True
+    metrics_bearer_token: str = ""
     lab_upload_raw_retention_days: int = 180
     lab_upload_retention_batch_size: int = 500
     retention_alert_email: str = ""

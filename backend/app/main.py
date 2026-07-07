@@ -85,6 +85,7 @@ from app.routers.partners import (
     partners_insights_router,
     partners_results_router,
 )
+from app.routers.b2b import analyze_labs as b2b_analyze_labs
 from app.routers import knowledge
 
 
@@ -224,4 +225,5 @@ app.include_router(partners_results_router)
 app.include_router(partners_embedded_router)
 app.include_router(partners_events_router)
 app.include_router(partners_insights_router)
+app.include_router(b2b_analyze_labs.router)
 app.include_router(knowledge.router)

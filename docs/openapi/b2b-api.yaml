@@ -1,0 +1,678 @@
+openapi: 3.0.3
+info:
+  title: VITALOOP B2B Analyze Labs API
+  version: 1.0.0
+  description: |
+    Production-quality OpenAPI specification for the controlled-pilot VITALOOP
+    B2B Analyze Labs API.
+
+    External platforms send parsed JSON biomarkers to VITALOOP. VITALOOP
+    normalizes biomarker names and units, runs the shared analysis pipeline,
+    applies the knowledge base, rules, safety flags, AI/fallback protocol
+    generation, retest suggestions, and returns a structured JSON result.
+
+    PHI/GDPR notes:
+    - Do not send `partner_id`; tenant identity is resolved from the API key.
+    - Raw payload storage is minimized for the pilot.
+    - Avoid sending unnecessary PHI in `metadata`.
+    - Use partner-scoped opaque `external_user_id` values where possible.
+    - Retention is controlled by partner configuration, defaulting to 90 days.
+    - Export/delete operations are operator-run during the pilot and are
+      documented in `docs/b2b-api.md`.
+servers:
+  - url: https://api.vitaloop.today
+    description: Production API gateway
+  - url: https://staging-api.vitaloop.today
+    description: Staging API gateway
+tags:
+  - name: B2B Labs
+    description: External partner lab analysis endpoints.
+security:
+  - PartnerApiKey: []
+paths:
+  /v1/b2b/analyze-labs:
+    post:
+      tags:
+        - B2B Labs
+      operationId: analyzeLabsV1
+      summary: Analyze parsed lab biomarkers
+      description: |
+        Primary versioned endpoint for B2B lab analysis.
+
+        Requires `X-Partner-Api-Key` with the `labs:analyze` scope. The client
+        must not send `partner_id`; VITALOOP resolves tenant identity from the
+        API key and enforces partner isolation server-side.
+
+        Cloudflare WAF and Redis-backed rate limiting should be enabled before
+        public launch. Partner IP allowlists may be configured during the pilot.
+      security:
+        - PartnerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeLabsRequest"
+            examples:
+              ferritinAndGlucose:
+                $ref: "#/components/examples/AnalyzeLabsRequestExample"
+      responses:
+        "200":
+          description: Structured analysis completed or replayed from idempotency cache.
+          headers:
+            X-RateLimit-Policy:
+              description: Optional deployment-specific rate limit policy description.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyzeLabsResponse"
+              examples:
+                completed:
+                  $ref: "#/components/examples/AnalyzeLabsResponseExample"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/IdempotentRequestInProgress"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /b2b/analyze-labs:
+    post:
+      tags:
+        - B2B Labs
+      operationId: analyzeLabsPilotAlias
+      summary: Analyze parsed lab biomarkers, pilot alias
+      deprecated: true
+      description: |
+        Pilot compatibility alias for `/v1/b2b/analyze-labs`.
+
+        This path is included for existing pilot integrations and should not be
+        advertised for new public integrations.
+      security:
+        - PartnerApiKey: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeLabsRequest"
+            examples:
+              ferritinAndGlucose:
+                $ref: "#/components/examples/AnalyzeLabsRequestExample"
+      responses:
+        "200":
+          description: Structured analysis completed or replayed from idempotency cache.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyzeLabsResponse"
+              examples:
+                completed:
+                  $ref: "#/components/examples/AnalyzeLabsResponseExample"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/IdempotentRequestInProgress"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+components:
+  securitySchemes:
+    PartnerApiKey:
+      type: apiKey
+      in: header
+      name: X-Partner-Api-Key
+      description: |
+        Partner API key. Required scope: `labs:analyze`.
+
+        Do not expose real keys in documentation, frontend code, logs, analytics,
+        or partner screenshots. Keys can be rotated by provisioning a new active
+        key and revoking the old key.
+  parameters:
+    IdempotencyKey:
+      name: X-Idempotency-Key
+      in: header
+      required: false
+      description: |
+        Optional client-provided idempotency key. VITALOOP scopes idempotency by
+        resolved partner, external user, idempotency key, and request hash.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 191
+        example: partner-order-abc-001
+  schemas:
+    AnalyzeLabsRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - external_user_id
+        - biomarkers
+      description: |
+        Request body for JSON biomarker analysis.
+
+        `partner_id` is intentionally not part of this schema. VITALOOP derives
+        tenant identity from `X-Partner-Api-Key`.
+      properties:
+        external_user_id:
+          type: string
+          minLength: 1
+          maxLength: 191
+          description: |
+            Partner-scoped external user identifier. Prefer opaque IDs instead
+            of direct PHI such as email or full name.
+          example: partner-user-123
+        biomarkers:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/BiomarkerInput"
+        symptoms:
+          type: array
+          maxItems: 100
+          description: Optional symptom strings used as clinical context.
+          items:
+            type: string
+            minLength: 1
+            maxLength: 160
+          example:
+            - fatigue
+            - low energy
+        questionnaire:
+          type: object
+          additionalProperties: true
+          description: Optional structured questionnaire context.
+          example:
+            sleep_hours: 6
+            diet: mixed
+        metadata:
+          type: object
+          additionalProperties: true
+          description: |
+            Optional safe integration metadata. Avoid unnecessary PHI. During
+            the pilot, VITALOOP minimizes raw payload storage and keeps only
+            biomarkers plus safe integration metadata in raw request storage.
+          example:
+            source_lab: partner_lab
+            integration_version: pilot-v1
+            profile:
+              age: 38
+              sex: female
+        idempotency_key:
+          type: string
+          nullable: true
+          maxLength: 191
+          description: Optional body-level idempotency key. Prefer the `X-Idempotency-Key` header.
+          example: partner-order-abc-001
+    BiomarkerInput:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - value
+        - unit
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+          description: Biomarker display name from the partner system.
+          example: Ferritin
+        value:
+          type: number
+          format: double
+          description: Numeric biomarker value.
+          example: 12
+        unit:
+          type: string
+          minLength: 1
+          maxLength: 40
+          description: |
+            Biomarker unit. Common supported units include `ng/mL`, `ug/L`,
+            `mg/dL`, `mmol/L`, `g/dL`, `U/L`, `IU/L`, `uIU/mL`, `%`, `pg/mL`,
+            and `nmol/L`.
+          example: ng/mL
+        reference_range:
+          type: string
+          nullable: true
+          maxLength: 120
+          description: Optional textual lab reference range.
+          example: 30-150
+        collected_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional timestamp when the sample was collected.
+          example: "2026-07-01T09:00:00Z"
+        lab_name:
+          type: string
+          nullable: true
+          maxLength: 120
+          description: Optional source lab name.
+          example: Partner Lab
+    AnalyzeLabsResponse:
+      type: object
+      required:
+        - analysis_id
+        - status
+        - health_summary
+        - prioritized_biomarkers
+        - risks_flags
+        - recommendations
+        - protocol
+        - retest_suggestions
+        - doctor_summary
+        - disclaimer
+        - metadata
+      properties:
+        analysis_id:
+          type: string
+          description: VITALOOP analysis identifier.
+          example: 1f7f2cb9-4d5a-40e7-8a9b-d5e3d8acaa73
+        status:
+          type: string
+          enum:
+            - completed
+          example: completed
+        health_summary:
+          type: object
+          additionalProperties: true
+          description: High-level structured health summary.
+        prioritized_biomarkers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrioritizedBiomarker"
+        risks_flags:
+          type: array
+          items:
+            $ref: "#/components/schemas/RiskFlag"
+        recommendations:
+          type: array
+          description: Rule and AI/fallback generated recommendation objects.
+          items:
+            type: object
+            additionalProperties: true
+        protocol:
+          $ref: "#/components/schemas/Protocol"
+        retest_suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RetestSuggestion"
+        doctor_summary:
+          type: string
+          description: Concise clinician discussion summary. Educational only; not a diagnosis.
+          example: Review Ferritin in the context of symptoms, medications, and recent diet/training.
+        knowledge_evaluation:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Knowledge base/rules evaluation details.
+        disclaimer:
+          type: string
+          description: Medical safety disclaimer.
+          example: This analysis is educational decision support and is not a diagnosis. Discuss abnormal, urgent, or concerning results with a qualified clinician.
+        metadata:
+          type: object
+          additionalProperties: true
+          description: |
+            Response metadata. May include resolved partner metadata for audit
+            traceability, request hash, idempotency replay marker, retention
+            days, API version, and non-secret key prefix.
+    PrioritizedBiomarker:
+      type: object
+      required:
+        - name
+        - canonical_name
+        - value
+        - unit
+        - status
+        - priority
+        - rationale
+      properties:
+        name:
+          type: string
+          example: Ferritin
+        canonical_name:
+          type: string
+          example: canonical_ferritin
+        value:
+          type: number
+          format: double
+          example: 12
+        unit:
+          type: string
+          example: ng/mL
+        status:
+          type: string
+          enum:
+            - DEFICIENT
+            - ELEVATED
+            - BORDERLINE
+            - OPTIMAL
+          example: DEFICIENT
+        category:
+          type: string
+          nullable: true
+          example: nutrients
+        priority:
+          type: string
+          enum:
+            - high
+            - medium
+            - low
+          example: high
+        rationale:
+          type: string
+          example: Prioritized because the value is outside or near the provided reference range.
+        reference_range:
+          type: string
+          nullable: true
+          example: 30-150
+    RiskFlag:
+      type: object
+      required:
+        - type
+        - severity
+        - title
+        - rationale
+        - requires_doctor
+      properties:
+        type:
+          type: string
+          example: biomarker_flag
+        severity:
+          type: string
+          example: high
+        title:
+          type: string
+          example: Ferritin is deficient
+        rationale:
+          type: string
+          example: Prioritized because the value is outside or near the provided reference range.
+        biomarker:
+          type: string
+          nullable: true
+          example: canonical_ferritin
+        requires_doctor:
+          type: boolean
+          example: true
+    Protocol:
+      type: object
+      required:
+        - nutrition
+        - supplements
+        - lifestyle
+        - training_recovery
+      properties:
+        nutrition:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        supplements:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        lifestyle:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        training_recovery:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    RetestSuggestion:
+      type: object
+      additionalProperties: true
+      properties:
+        marker:
+          type: string
+          example: Ferritin
+        timing:
+          type: string
+          example: 8-12 weeks
+        reason:
+          type: string
+          example: Ferritin is deficient and should be trended after intervention or clinical review.
+        priority:
+          type: string
+          example: high
+    ErrorResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        detail:
+          oneOf:
+            - type: string
+            - type: object
+              additionalProperties: true
+          example: Invalid partner API key
+        code:
+          type: string
+          nullable: true
+          example: RATE_LIMITED
+  responses:
+    Unauthorized:
+      description: Missing, invalid, or expired partner API key.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            missingKey:
+              value:
+                detail: Missing partner API key
+            invalidKey:
+              value:
+                detail: Invalid partner API key
+            expiredKey:
+              value:
+                detail: Expired partner API key
+    Forbidden:
+      description: Missing scope, inactive partner, Cloudflare requirement, or IP allowlist failure.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            missingScope:
+              value:
+                detail: "Missing required scope: labs:analyze"
+            cloudflareRequired:
+              value:
+                detail:
+                  detail: Cloudflare edge is required for this partner
+                  code: CLOUDFLARE_REQUIRED
+            ipNotAllowed:
+              value:
+                detail:
+                  detail: Client IP is not allowed for this partner
+                  code: IP_NOT_ALLOWED
+    IdempotentRequestInProgress:
+      description: Duplicate request exists, but the first response is still processing.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            detail:
+              detail: Duplicate request is still processing
+              code: IDEMPOTENT_REQUEST_IN_PROGRESS
+    ValidationError:
+      description: Request validation failed or biomarker unit is unsupported.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            invalidUnit:
+              value:
+                detail:
+                  detail: "Unsupported biomarker unit at index 1: bananas"
+                  code: INVALID_BIOMARKER_UNIT
+            schemaValidation:
+              value:
+                detail:
+                  - loc:
+                      - body
+                      - biomarkers
+                    msg: List should have at least 1 item
+                    type: too_short
+    RateLimited:
+      description: Partner or API key exceeded Redis-backed request limits.
+      headers:
+        Retry-After:
+          description: Seconds until the client should retry, when available.
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            partnerLimit:
+              value:
+                detail:
+                  detail: Partner rate limit exceeded
+                  code: RATE_LIMITED
+            apiKeyLimit:
+              value:
+                detail:
+                  detail: API key rate limit exceeded
+                  code: RATE_LIMITED
+    InternalError:
+      description: Internal server error while creating or processing the analysis.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            createFailed:
+              value:
+                detail:
+                  detail: Could not create B2B analysis record
+                  code: B2B_ANALYSIS_CREATE_FAILED
+    ServiceUnavailable:
+      description: Required infrastructure is unavailable, usually Redis rate limiter configuration.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            redisUnavailable:
+              value:
+                detail:
+                  detail: B2B Redis rate limiter is unavailable
+                  code: RATE_LIMITER_UNAVAILABLE
+  examples:
+    AnalyzeLabsRequestExample:
+      summary: Ferritin and glucose analysis request
+      value:
+        external_user_id: partner-user-123
+        biomarkers:
+          - name: Ferritin
+            value: 12
+            unit: ng/mL
+            reference_range: 30-150
+            collected_at: "2026-07-01T09:00:00Z"
+            lab_name: Partner Lab
+          - name: Glucose
+            value: 92
+            unit: mg/dL
+            reference_range: 70-100
+        symptoms:
+          - fatigue
+          - low energy
+        questionnaire:
+          sleep_hours: 6
+          diet: mixed
+        metadata:
+          source_lab: partner_lab
+          integration_version: pilot-v1
+          profile:
+            age: 38
+            sex: female
+        idempotency_key: partner-order-abc-001
+    AnalyzeLabsResponseExample:
+      summary: Completed analysis response
+      value:
+        analysis_id: 1f7f2cb9-4d5a-40e7-8a9b-d5e3d8acaa73
+        status: completed
+        health_summary:
+          headline: 2 biomarkers found. 1 need review, 1 are currently in range.
+          risk_level: needs_attention
+          confidence: 0.82
+          requires_doctor: false
+          disclaimer: This report is educational and is not a diagnosis. Discuss abnormal or concerning results with a qualified clinician.
+          what_was_found:
+            counts:
+              total: 2
+              optimal: 1
+              borderline: 0
+              deficient: 1
+              elevated: 0
+        prioritized_biomarkers:
+          - name: Ferritin
+            canonical_name: canonical_ferritin
+            value: 12
+            unit: ng/mL
+            status: DEFICIENT
+            category: nutrients
+            priority: high
+            rationale: Prioritized because the value is outside or near the provided reference range.
+            reference_range: 30-150
+        risks_flags:
+          - type: biomarker_flag
+            severity: high
+            title: Ferritin is deficient
+            rationale: Prioritized because the value is outside or near the provided reference range.
+            biomarker: canonical_ferritin
+            requires_doctor: true
+        recommendations: []
+        protocol:
+          nutrition: []
+          supplements: []
+          lifestyle: []
+          training_recovery: []
+        retest_suggestions:
+          - marker: Ferritin
+            timing: 8-12 weeks
+            reason: Ferritin is deficient and should be trended after intervention or clinical review.
+            priority: high
+        doctor_summary: Review Ferritin in the context of symptoms, medications, and recent diet/training.
+        knowledge_evaluation:
+          matched_rules: []
+        disclaimer: This analysis is educational decision support and is not a diagnosis. Discuss abnormal, urgent, or concerning results with a qualified clinician.
+        metadata:
+          partner_id: resolved-from-api-key
+          external_user_id: partner-user-123
+          request_hash: sha256
+          idempotency_key: partner-order-abc-001
+          retention_days: 90
+          api_version: v1
+          key_prefix: vlp_live_ab12
