@@ -23,7 +23,7 @@ flowchart LR
 - `examples/analyze-labs-response.json` - sample response.
 - `postman/vitaloop-b2b-api.postman_collection.json` - Postman smoke collection.
 - `brief/vitaloop-b2b-api-partner-brief.md` - short partner brief.
-- `brief/georgiana-demo-flow.md` - non-code demo flow.
+- `brief/capacity-lab-demo-flow.md` - non-code demo flow.
 - `staging-readiness.md` - staging deployment checklist.
 
 ## Endpoint

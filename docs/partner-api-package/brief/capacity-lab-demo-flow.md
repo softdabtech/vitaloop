@@ -1,31 +1,31 @@
-# Georgiana Demo Flow
+# Capacity Lab Demo Flow
 
 ## Message
 
-VITALOOP can act as a blood-analysis API provider behind Georgiana's platform.
+VITALOOP can act as a blood-analysis API provider behind Capacity Lab.
 
-Her users stay inside her product. Her platform sends parsed biomarker JSON to VITALOOP. VITALOOP returns structured analysis that her platform can display in its own UX.
+Capacity Lab users stay inside the Capacity Lab product. Capacity Lab sends parsed biomarker JSON to VITALOOP. VITALOOP returns structured analysis that Capacity Lab can display in its own UX.
 
 ## Simple Diagram
 
 ```mermaid
 sequenceDiagram
-  participant User as User in Georgiana's platform
-  participant Georgiana as Georgiana platform
+  participant User as User in Capacity Lab
+  participant CapacityLab as Capacity Lab
   participant Vitaloop as VITALOOP API
   participant Core as VITALOOP analysis core
 
-  User->>Georgiana: Uploads or enters lab results
-  Georgiana->>Vitaloop: POST /v1/b2b/analyze-labs
+  User->>CapacityLab: Uploads or enters lab results
+  CapacityLab->>Vitaloop: POST /v1/b2b/analyze-labs
   Vitaloop->>Core: Normalize biomarkers + run rules/AI
   Core-->>Vitaloop: Structured analysis
-  Vitaloop-->>Georgiana: JSON response
-  Georgiana-->>User: Displays health summary, flags, protocol, retest plan
+  Vitaloop-->>CapacityLab: JSON response
+  CapacityLab-->>User: Displays health summary, flags, protocol, retest plan
 ```
 
 ## What To Show
 
-1. Georgiana platform sends:
+1. Capacity Lab sends:
    - `external_user_id`
    - biomarkers JSON
    - optional symptoms/questionnaire
@@ -39,7 +39,7 @@ sequenceDiagram
    - doctor summary
    - disclaimer
 
-3. Georgiana keeps control of:
+3. Capacity Lab keeps control of:
    - user account
    - frontend UX
    - billing relationship
@@ -60,4 +60,4 @@ sequenceDiagram
 - Agree on one test data format.
 - Create one staging API key.
 - Run 5 smoke tests.
-- Render the returned JSON in Georgiana's product prototype.
+- Render the returned JSON in the Capacity Lab product prototype.
