@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>VITALOOP B2B Analyze Labs API - Partner Brief</title>
+    <style>
+      @page { margin: 22mm; }
+      body {
+        color: #102033;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      h1 {
+        color: #067a5b;
+        font-size: 28px;
+        margin: 0 0 8px;
+      }
+      h2 {
+        color: #102033;
+        font-size: 16px;
+        margin: 22px 0 8px;
+      }
+      p { margin: 0 0 10px; }
+      ul { margin: 8px 0 12px 20px; padding: 0; }
+      li { margin: 3px 0; }
+      .eyebrow {
+        color: #067a5b;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .12em;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+      }
+      .card {
+        border: 1px solid #d9e7e2;
+        border-radius: 8px;
+        margin: 14px 0;
+        padding: 14px 16px;
+      }
+      .flow {
+        background: #f5fbf8;
+        border: 1px solid #bfe5d8;
+        border-radius: 8px;
+        color: #0d513f;
+        font-weight: 700;
+        padding: 14px 16px;
+        text-align: center;
+      }
+      .muted { color: #5a6b7c; }
+      code {
+        background: #eef6f3;
+        border-radius: 4px;
+        color: #064d3a;
+        padding: 2px 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="eyebrow">Partner API Brief</div>
+    <h1>VITALOOP B2B Analyze Labs API</h1>
+    <p class="muted">Controlled-pilot API for external platforms that need structured blood test analysis.</p>
+
+    <div class="card">
+      <h2>What VITALOOP Provides</h2>
+      <p>
+        A partner platform sends parsed blood test biomarkers as JSON. VITALOOP normalizes the data,
+        applies its knowledge base, rules, safety evaluation, AI/fallback protocol generation, and returns
+        a structured analysis result the partner can render inside its own product.
+      </p>
+    </div>
+
+    <div class="flow">Partner platform -> VITALOOP API -> Structured blood analysis -> Partner platform</div>
+
+    <h2>Endpoint</h2>
+    <p><code>POST /v1/b2b/analyze-labs</code></p>
+
+    <h2>Input</h2>
+    <ul>
+      <li>Partner-scoped <code>external_user_id</code></li>
+      <li>Biomarker list as JSON</li>
+      <li>Optional symptoms and questionnaire data</li>
+      <li>Optional safe integration metadata</li>
+    </ul>
+
+    <h2>Output</h2>
+    <ul>
+      <li>Health summary and prioritized biomarkers</li>
+      <li>Risks and safety flags</li>
+      <li>Recommendations and protocol sections</li>
+      <li>Retest suggestions and doctor summary</li>
+      <li>Medical disclaimer and analysis metadata</li>
+    </ul>
+
+    <h2>Security</h2>
+    <ul>
+      <li>API key authentication via <code>X-Partner-Api-Key</code></li>
+      <li>Required scope: <code>labs:analyze</code></li>
+      <li>Tenant isolation by resolved partner key</li>
+      <li>Redis-backed rate limits by partner and API key</li>
+      <li>Optional IP allowlist and Cloudflare WAF for public launch</li>
+      <li>Idempotency via <code>X-Idempotency-Key</code></li>
+    </ul>
+
+    <h2>PHI/GDPR Notes</h2>
+    <ul>
+      <li>Use opaque external user IDs where possible.</li>
+      <li>Avoid unnecessary PHI in metadata.</li>
+      <li>Raw payload storage is minimized during the pilot.</li>
+      <li>Retention is partner-configurable.</li>
+      <li>Export/delete is operator-run during the pilot.</li>
+    </ul>
+
+    <h2>Pilot Readiness</h2>
+    <p>
+      Suitable for a controlled pilot with 1-2 trusted partners after staging deployment, SQL migration,
+      Redis rate limit configuration, Cloudflare rules, one test partner key, and smoke testing.
+    </p>
+  </body>
+</html>
