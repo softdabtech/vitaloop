@@ -15,7 +15,11 @@ class PartnerPrincipal(BaseModel):
     partner_id: str
     partner_slug: str
     key_id: str
+    key_prefix: str = ""
+    key_label: str = ""
     scopes: list[str] = []
+    allowed_ips: list[str] = []
+    require_cloudflare: bool = False
 
     def has_scope(self, scope: str) -> bool:
         normalized = (scope or "").strip().lower()
@@ -41,7 +45,7 @@ async def _fetch_partner_key_record(key_hash: str) -> Optional[Dict[str, Any]]:
     client = supabase._get_supabase()
     response = await supabase._run(
         lambda: client.table("partner_api_keys")
-        .select("id,partner_id,key_hash,status,expires_at,scopes")
+        .select("id,partner_id,key_hash,key_prefix,key_label,status,expires_at,scopes")
         .eq("key_hash", key_hash)
         .eq("status", "active")
         .limit(1)
@@ -55,7 +59,7 @@ async def _fetch_partner(partner_id: str) -> Optional[Dict[str, Any]]:
     client = supabase._get_supabase()
     response = await supabase._run(
         lambda: client.table("partners")
-        .select("id,slug,status")
+        .select("id,slug,status,b2b_allowed_ips,b2b_require_cloudflare")
         .eq("id", partner_id)
         .eq("status", "active")
         .limit(1)
@@ -92,7 +96,11 @@ async def resolve_partner_from_api_key(api_key: str) -> PartnerPrincipal:
         partner_id=str(partner["id"]),
         partner_slug=str(partner.get("slug") or ""),
         key_id=str(key_record["id"]),
+        key_prefix=str(key_record.get("key_prefix") or ""),
+        key_label=str(key_record.get("key_label") or ""),
         scopes=normalized_scopes,
+        allowed_ips=[str(item).strip() for item in (partner.get("b2b_allowed_ips") if isinstance(partner.get("b2b_allowed_ips"), list) else []) if str(item).strip()],
+        require_cloudflare=bool(partner.get("b2b_require_cloudflare")),
     )
 
 

@@ -1,11 +1,13 @@
 import asyncio
 import time
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Header, HTTPException
+from starlette.responses import PlainTextResponse
 from app.config import settings
 from app.services import supabase_service as svc
 from app.utils.build_info import get_build_info
 from app.utils.stripe_config import is_stripe_price_configured
+from app.services.b2b.analyze_labs import render_b2b_metrics
 import logging
 
 logger = logging.getLogger("vitaloop.health")
@@ -91,6 +93,22 @@ async def health_check():
         "timestamp": time.time(),
         "build": get_build_info(),
     }
+
+
+@router.get("/metrics", response_class=PlainTextResponse)
+async def metrics(authorization: str | None = Header(default=None, alias="Authorization")):
+    """Prometheus-compatible metrics endpoint.
+
+    Set METRICS_BEARER_TOKEN in public environments to require
+    Authorization: Bearer <token>.
+    """
+    if not settings.metrics_enabled:
+        raise HTTPException(status_code=404, detail="Metrics disabled")
+    if settings.metrics_bearer_token:
+        expected = f"Bearer {settings.metrics_bearer_token}"
+        if authorization != expected:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+    return PlainTextResponse(render_b2b_metrics(), media_type="text/plain; version=0.0.4")
 
 
 @router.get("/health/detailed")
