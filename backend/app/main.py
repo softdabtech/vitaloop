@@ -19,7 +19,7 @@ import logging
 from app.utils import checkin_reminder
 from app.utils.stripe_config import is_stripe_price_configured
 
-from app.services.claude_service import is_llm_configured
+from app.services.ai.openai_service import is_llm_configured
 
 try:
     import sentry_sdk

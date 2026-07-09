@@ -5,10 +5,12 @@ from datetime import date, datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
 
 from app.config import settings
-from app.services.claude_service import generate_protocol, is_llm_configured
+from app.services.ai.openai_service import generate_protocol, is_llm_configured
+from app.services.explainability import build_recommendation_explanations
 from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
 from app.services.knowledge.report import build_knowledge_report
 from app.services.lab_normalization.biomarker_mapping import infer_category, to_canonical_name
+from app.services.safety import validate_report
 
 
 DISCLAIMER = (
@@ -401,6 +403,7 @@ async def run_lab_analysis_pipeline(
     analysis_id: Optional[str] = None,
     source_metadata: Optional[Dict[str, Any]] = None,
     persist_knowledge: bool = False,
+    persist_report_version: bool = False,
     locale: str = "en",
     biomarker_name_aliases: Optional[Dict[str, str]] = None,
     generate_ai_protocol: bool = True,
@@ -436,6 +439,20 @@ async def run_lab_analysis_pipeline(
         *[{**item, "source": item.get("source") or "ai_protocol"} for item in ai_protocol if isinstance(item, dict)],
     ]
     protocol = _protocol_sections_from_ai_and_rules(rule_actions=rule_recommendations, ai_protocol=ai_protocol)
+    safety_result = validate_report(
+        biomarkers=normalized_biomarkers,
+        knowledge_report=knowledge_report,
+        protocol=protocol,
+        profile=user_profile,
+    )
+    explainability = build_recommendation_explanations(
+        biomarkers=normalized_biomarkers,
+        symptoms=normalized_symptoms,
+        profile=user_profile,
+        knowledge_evaluation=knowledge_evaluation,
+        recommendations=recommendations,
+        safety_result=safety_result,
+    )
     cost_metadata = _cost_metadata(
         biomarkers=normalized_biomarkers,
         symptoms=normalized_symptoms,
@@ -447,7 +464,7 @@ async def run_lab_analysis_pipeline(
         "what_was_found": knowledge_report.get("what_was_found") or {},
     }
 
-    return {
+    result = {
         "analysis_id": analysis_id or "",
         "status": "completed",
         "health_summary": health_summary,
@@ -460,6 +477,8 @@ async def run_lab_analysis_pipeline(
         "doctor_summary": " ".join(knowledge_report.get("doctor_discussion") or [])[:2000],
         "knowledge_evaluation": knowledge_evaluation,
         "knowledge_report": knowledge_report,
+        "safety_result": safety_result,
+        "explainability": explainability,
         "disclaimer": (knowledge_report.get("summary") or {}).get("disclaimer") or DISCLAIMER,
         "normalized_biomarkers": normalized_biomarkers,
         "cost_metadata": cost_metadata,
@@ -472,3 +491,37 @@ async def run_lab_analysis_pipeline(
             "analysis_core_version": "lab_analysis_pipeline_v1",
         },
     }
+
+    if persist_report_version and user_id and analysis_id:
+        try:
+            from app.services import supabase_service as supabase
+
+            report_version = await supabase.save_report_version(
+                user_id=user_id,
+                upload_id=analysis_id,
+                version="report_v1",
+                locale=locale,
+                input_snapshot={
+                    "biomarkers": normalized_biomarkers,
+                    "symptoms": normalized_symptoms,
+                    "profile_context_fields": result["metadata"]["profile_context_fields"],
+                    "source": source_metadata or {},
+                },
+                knowledge_report=knowledge_report,
+                protocol=protocol,
+                safety_result=safety_result,
+                explainability=explainability,
+                status="completed" if safety_result.get("status") != "blocked" else "blocked",
+            )
+            result["report_version"] = report_version
+            await supabase.save_safety_events(
+                user_id=user_id,
+                upload_id=analysis_id,
+                report_version_id=report_version.get("id"),
+                safety_events=safety_result.get("safety_events") or [],
+            )
+        except Exception:
+            # Report-version persistence must not break the existing analysis flow.
+            result["report_version"] = None
+
+    return result

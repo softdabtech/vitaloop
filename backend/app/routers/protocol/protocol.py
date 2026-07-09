@@ -6,7 +6,7 @@ from uuid import UUID
 import logging
 
 from app.dependencies import get_current_user, require_active_subscription
-from app.services.claude_service import generate_protocol, PROTOCOL_PROMPT_VERSION, is_llm_configured
+from app.services.ai.openai_service import generate_protocol, PROTOCOL_PROMPT_VERSION, is_llm_configured
 from app.services.supabase_service import (
     assert_upload_belongs_to_user,
     get_biomarkers_by_upload,
