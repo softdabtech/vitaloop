@@ -30,6 +30,31 @@ _STATUS_PRIORITY = {
     "OPTIMAL": 3,
 }
 
+_NAME_CATEGORY_KEYWORDS = {
+    "blood_count": [
+        "reticulocyte",
+        "erythrocyte",
+        "hemoglobin",
+        "hematocrit",
+        "spherical cell",
+        "cell volume",
+        "mcv",
+        "mch",
+        "rdw",
+        "rbc",
+        "wbc",
+        "platelet",
+    ],
+    "minerals": ["ferritin", "iron", "transferrin", "magnesium", "zinc", "selenium"],
+    "vitamins": ["vitamin", "b12", "folate", "folic"],
+    "thyroid": ["tsh", "thyroid", "t3", "t4"],
+    "lipids": ["cholesterol", "ldl", "hdl", "triglycer"],
+    "metabolic": ["glucose", "hba1c", "insulin"],
+    "liver": ["alt", "ast", "ggt", "bilirubin"],
+    "kidney": ["creatinine", "urea", "egfr"],
+    "inflammation": ["crp", "esr", "homocysteine"],
+}
+
 
 def _parse_reference_range(raw: Any) -> tuple[float | None, float | None]:
     if raw in (None, ""):
@@ -95,6 +120,15 @@ def _normalize_name(raw_name: str, name_aliases: Optional[Dict[str, str]] = None
     base_canonical = to_canonical_name(english_name)
     canonical = base_canonical if base_canonical.startswith("canonical_") else f"canonical_{base_canonical}"
     return display_name, canonical
+
+
+def _infer_category_from_name(display_name: str, canonical: str) -> str:
+    text = f"{display_name} {canonical}".lower()
+    for category, keywords in _NAME_CATEGORY_KEYWORDS.items():
+        if any(keyword in text for keyword in keywords):
+            return category
+    inferred = infer_category(canonical)
+    return inferred if inferred and inferred != "other" else "other"
 
 
 def _status_for_value(value: float, ref_low: float | None, ref_high: float | None, raw_status: Any = None) -> str:
@@ -166,7 +200,11 @@ def normalize_biomarkers(raw_biomarkers: Iterable[Dict[str, Any]], *, name_alias
                 "ref_low": ref_low,
                 "ref_high": ref_high,
                 "status": status,
-                "category": item.get("category") or infer_category(canonical) or "other",
+                "category": (
+                    _infer_category_from_name(display_name, canonical)
+                    if str(item.get("category") or "").lower() in {"", "other", "unknown"}
+                    else item.get("category")
+                ),
                 "reference_range": item.get("reference_range"),
                 "collected_at": _iso_or_none(item.get("collected_at")),
                 "lab_name": item.get("lab_name"),
@@ -365,6 +403,7 @@ async def run_lab_analysis_pipeline(
     persist_knowledge: bool = False,
     locale: str = "en",
     biomarker_name_aliases: Optional[Dict[str, str]] = None,
+    generate_ai_protocol: bool = True,
 ) -> Dict[str, Any]:
     normalized_biomarkers = normalize_biomarkers(biomarkers, name_aliases=biomarker_name_aliases)
     normalized_symptoms = [str(item).strip().lower() for item in (symptoms or []) if str(item).strip()]
@@ -383,12 +422,15 @@ async def run_lab_analysis_pipeline(
     )
     prioritized = _prioritize_biomarkers(normalized_biomarkers)
     rule_recommendations = knowledge_report.get("action_plan") or []
-    ai_protocol = await generate_protocol(
-        normalized_biomarkers,
-        normalized_symptoms,
-        user_id=user_id,
-        upload_id=analysis_id,
-    )
+    ai_protocol = []
+    if generate_ai_protocol:
+        ai_protocol = await generate_protocol(
+            normalized_biomarkers,
+            normalized_symptoms,
+            user_profile=user_profile,
+            user_id=user_id,
+            upload_id=analysis_id,
+        )
     recommendations = [
         *rule_recommendations,
         *[{**item, "source": item.get("source") or "ai_protocol"} for item in ai_protocol if isinstance(item, dict)],
@@ -425,6 +467,7 @@ async def run_lab_analysis_pipeline(
             "source": source_metadata or {},
             "questionnaire_present": bool(questionnaire),
             "profile_present": bool(user_profile),
+            "profile_context_fields": sorted([key for key, value in (user_profile or {}).items() if value not in (None, "", [])]),
             "biomarker_count": len(normalized_biomarkers),
             "analysis_core_version": "lab_analysis_pipeline_v1",
         },

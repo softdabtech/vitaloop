@@ -20,6 +20,7 @@ from app.services.supabase_service import (
     assert_upload_belongs_to_user,
     get_biomarkers_by_upload,
     get_protocol_by_upload,
+    get_user_profile,
     save_biomarkers,
     save_lab_upload,
     save_protocol,
@@ -56,6 +57,15 @@ _FAILED_LOAD_BIOMARKERS = "Failed to load biomarker options"
 _NO_VALID_BIOMARKERS = "No valid biomarkers provided"
 _UNAUTHORIZED_DETAIL = "Unauthorized"
 _ANALYSIS_FAILED = "Analysis failed"
+_ANALYSIS_PROFILE_REQUIRED_UK = (
+    "Перед аналізом заповніть медичний контекст: вік, стать, зріст і вагу. "
+    "Це потрібно, щоб коректно відрізняти дитячі й дорослі референси та не давати випадкові рекомендації."
+)
+_ANALYSIS_PROFILE_REQUIRED_EN = (
+    "Complete age, sex, height, and weight before analysis. "
+    "This is required to distinguish pediatric and adult context and avoid unsafe recommendations."
+)
+_REQUIRED_ANALYSIS_PROFILE_FIELDS = ("age", "sex", "height_cm", "weight_kg")
 
 _analyze_idempotency: dict[tuple[str, str], dict] = {}
 _analyze_idempotency_lock = asyncio.Lock()
@@ -158,6 +168,25 @@ def _stable_analysis_source(default: str = "fallback") -> str:
     if source in {"llm", "fallback"}:
         return source
     return default
+
+
+def _missing_analysis_profile_fields(profile: Dict[str, Any]) -> List[str]:
+    return [field for field in _REQUIRED_ANALYSIS_PROFILE_FIELDS if not profile.get(field)]
+
+
+async def _require_analysis_profile_context(user_id: str, locale: str) -> Dict[str, Any]:
+    profile = await get_user_profile(user_id) or {}
+    missing = _missing_analysis_profile_fields(profile)
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "detail": _ANALYSIS_PROFILE_REQUIRED_UK if locale == "uk" else _ANALYSIS_PROFILE_REQUIRED_EN,
+                "code": "PROFILE_CONTEXT_REQUIRED",
+                "missing_fields": missing,
+            },
+        )
+    return profile
 
 
 def _coerce_optional_float(value: Any) -> float | None:
@@ -326,6 +355,7 @@ async def analyze_lab_file(
     """
     user_id: str = current_user["sub"]
     response_locale = _resolve_response_locale(request)
+    user_profile = await _require_analysis_profile_context(user_id, response_locale)
 
     # Check quota (unified biomarker quota)
     quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "file")
@@ -470,6 +500,7 @@ async def analyze_lab_file(
         pipeline_result = await run_lab_analysis_pipeline(
             biomarkers=saved_biomarkers,
             symptoms=symptoms,
+            user_profile=user_profile,
             user_id=user_id,
             analysis_id=str(upload_id),
             source_metadata={"source": "b2c_file", "file_type": file_ext, "analysis_method": analysis_method},
@@ -662,6 +693,7 @@ async def analyze_lab(
         filename = (getattr(file, "filename", "") or "").lower()
         if filename.endswith(".pdf"):
             user_id: str = current_user["sub"]
+            await _require_analysis_profile_context(user_id, _resolve_response_locale(request))
             quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "pdf")
             if not quota_ok:
                 raise HTTPException(
@@ -731,6 +763,7 @@ async def analyze_lab(
                     os.remove(temp_path)
 
         return await analyze_lab_file(
+            request=request,
             file=file,
             lab_name=lab_name_form,
             symptoms=symptoms_form,
@@ -758,6 +791,7 @@ async def analyze_lab(
         ) from exc
 
     user_id: str = current_user["sub"]
+    user_profile = await _require_analysis_profile_context(user_id, _resolve_response_locale(request))
 
     # Check unified freemium biomarker quota (1 total entry for free users)
     quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "pdf")
@@ -916,6 +950,7 @@ async def analyze_lab(
         pipeline_result = await run_lab_analysis_pipeline(
             biomarkers=saved,
             symptoms=normalized_symptoms,
+            user_profile=user_profile,
             user_id=user_id,
             analysis_id=str(upload_id),
             source_metadata={"source": "b2c_text", "lab_name": normalized_lab_name},
@@ -962,35 +997,59 @@ async def get_results(
 
     # Get biomarkers
     biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
-
-    # Get protocol (if exists)
+    user_profile = await get_user_profile(user_id) or {}
     protocol = await get_protocol_by_upload(user_id, upload_id)
-    knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
+    protocol_recommendations = protocol.get("recommendations", []) if protocol else []
+
+    # Build the current report on read so older uploads are upgraded without re-uploading.
+    pipeline_result = await run_lab_analysis_pipeline(
         biomarkers=biomarkers,
         symptoms=[],
+        user_profile=user_profile,
         user_id=user_id,
-        upload_id=str(upload_id),
-        persist=False,
-    )
-    knowledge_report = build_knowledge_report(
-        biomarkers=biomarkers,
-        knowledge_evaluation=knowledge_evaluation,
+        analysis_id=str(upload_id),
+        source_metadata={"source": "results_read"},
+        persist_knowledge=False,
         locale=_resolve_response_locale(request),
+        generate_ai_protocol=not bool(protocol_recommendations),
     )
+    knowledge_evaluation = pipeline_result.get("knowledge_evaluation")
+    knowledge_report = pipeline_result.get("knowledge_report")
+
+    generated_recommendations = pipeline_result.get("recommendations") or []
+    if not protocol_recommendations and generated_recommendations:
+        try:
+            protocol = await save_protocol(
+                user_id=user_id,
+                upload_id=upload_id,
+                recommendations=generated_recommendations,
+                prompt_version="results_read_v2",
+            )
+            protocol_recommendations = protocol.get("recommendations", [])
+        except Exception as exc:
+            logger.warning(
+                "results_read_save_protocol_failed upload_id=%s user_id=%s error=%s",
+                upload_id,
+                user_id,
+                repr(exc),
+                exc_info=True,
+            )
 
     await write_audit_log(
         user_id=user_id,
         action="read",
         entity_type="results",
         entity_id=str(upload_id),
-        new_value={"biomarker_count": len(biomarkers), "has_protocol": protocol is not None},
+        new_value={"biomarker_count": len(biomarkers), "has_protocol": bool(protocol_recommendations)},
     )
 
     return {
+        "upload_id": upload_id,
         "biomarkers": biomarkers,
-        "protocol": protocol.get("recommendations", []) if protocol else [],
+        "protocol": protocol_recommendations,
         "knowledge_evaluation": knowledge_evaluation,
         "knowledge_report": knowledge_report,
+        "final_analysis": pipeline_result,
     }
 
 

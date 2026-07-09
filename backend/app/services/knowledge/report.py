@@ -48,6 +48,15 @@ REPORT_COPY = {
         "timing_urgent": "as soon as clinically appropriate",
         "safety_review": "Safety alert requires medical review.",
         "trend_reason": "{name} is {status} and should be trended after intervention or clinical review.",
+        "fallback_pattern_title": "This marker needs context, not an isolated conclusion",
+        "fallback_pattern_summary": "A lab marker is outside the provided reference range, but symptoms, age, sex, weight, height, medications, and history are needed for a reliable interpretation.",
+        "fallback_pattern_why": "Vitaloop uses this marker as a prioritization signal: connect it with how you feel, nutrition, medications, training load, and follow-up labs when appropriate.",
+        "nutrition_title": "Support nutrition basics before conclusions",
+        "nutrition_body": "Until this is clarified, prioritize regular meals with protein, iron/B12/folate food sources, vegetables, and hydration. This is not treatment; it supports clearer trend interpretation.",
+        "supplement_title": "Use supplements only after deficiency is confirmed",
+        "supplement_body": "Do not start iron, B12, folate, or high-dose vitamin D from one indirect marker alone. Discuss confirmatory tests and safe ranges for your age, sex, and context.",
+        "profile_title": "Complete anthropometrics for a more precise analysis",
+        "profile_body": "Add age, sex, height, weight, medications/supplements, and important conditions. Pediatric and adult reference interpretation can differ, so missing context limits the result.",
         "disclaimer": "This report is educational and is not a diagnosis. Discuss abnormal or concerning results with a qualified clinician.",
     },
     "uk": {
@@ -60,6 +69,15 @@ REPORT_COPY = {
         "timing_urgent": "якнайшвидше, коли це клінічно доречно",
         "safety_review": "Сигнал безпеки потребує медичного перегляду.",
         "trend_reason": "{name}: {status}. Показник варто відстежувати в динаміці після змін або консультації з лікарем.",
+        "fallback_pattern_title": "Показник потребує контексту, а не ізольованого висновку",
+        "fallback_pattern_summary": "Є відхилення у лабораторному показнику, але без симптомів, віку, статі, ваги, зросту й історії не можна коректно оцінити його значення.",
+        "fallback_pattern_why": "Vitaloop використовує цей маркер як пріоритет для уточнення: зіставити з самопочуттям, харчуванням, ліками, навантаженням і, за потреби, додатковими аналізами.",
+        "nutrition_title": "Підтримайте базу харчування перед висновками",
+        "nutrition_body": "До консультації сфокусуйтеся на регулярних прийомах їжі з білком, джерелами заліза, B12/фолату, овочами та достатньою гідратацією. Це не лікування, а база для коректної інтерпретації динаміки.",
+        "supplement_title": "БАДи лише після підтвердження дефіциту",
+        "supplement_body": "Не починайте залізо, B12, фолат або високі дози вітаміну D тільки за одним непрямим маркером. Обговоріть із лікарем підтверджувальні аналізи й безпечні діапазони саме для вашого віку, статі та стану.",
+        "profile_title": "Заповніть антропометрію для точнішого аналізу",
+        "profile_body": "Вкажіть вік, стать, зріст, вагу, поточні ліки/БАДи й важливі стани. Дитячі й дорослі референси можуть відрізнятися, тому без цих даних висновок обмежений.",
         "disclaimer": "Цей звіт має освітній характер і не є діагнозом. Обговоріть відхилення або тривожні результати з кваліфікованим лікарем.",
     },
 }
@@ -280,6 +298,37 @@ def _interpretation(knowledge_evaluation: Dict[str, Any], locale: str = "en") ->
     return items[:8]
 
 
+def _fallback_interpretation(flagged_markers: List[Dict[str, Any]], locale: str = "en") -> List[Dict[str, Any]]:
+    if not flagged_markers:
+        return []
+    if _locale(locale) == "uk":
+        return [
+            {
+                "rule_key": "fallback_context_required",
+                "title": _copy(locale, "fallback_pattern_title"),
+                "summary": _copy(locale, "fallback_pattern_summary"),
+                "why_it_matters": _copy(locale, "fallback_pattern_why"),
+                "severity": "moderate",
+                "confidence": 0.45,
+                "requires_doctor": False,
+                "source": "vitaloop_context_engine",
+            }
+        ]
+    first = flagged_markers[0]
+    return [
+        {
+            "rule_key": "fallback_context_required",
+            "title": "This marker needs context, not an isolated conclusion",
+            "summary": f"{first.get('name') or 'A marker'} is outside the provided reference range, but age, sex, symptoms, medications, and recent lifestyle matter.",
+            "why_it_matters": "VITALOOP uses this as a prioritization signal for follow-up questions, clinician discussion, and retesting rather than a diagnosis.",
+            "severity": "moderate",
+            "confidence": 0.45,
+            "requires_doctor": False,
+            "source": "vitaloop_context_engine",
+        }
+    ]
+
+
 def _discussion_points(knowledge_evaluation: Dict[str, Any], flagged_markers: List[Dict[str, Any]], locale: str = "en") -> List[str]:
     locale = _locale(locale)
     points: List[str] = []
@@ -383,6 +432,70 @@ def _action_plan(knowledge_evaluation: Dict[str, Any], locale: str = "en") -> Li
     return actions[:8]
 
 
+def _fallback_action_plan(flagged_markers: List[Dict[str, Any]], locale: str = "en") -> List[Dict[str, Any]]:
+    if not flagged_markers:
+        return []
+    if _locale(locale) == "uk":
+        return [
+            {
+                "key": "profile_required",
+                "title": _copy(locale, "profile_title"),
+                "body": _copy(locale, "profile_body"),
+                "category": "profile",
+                "priority": "high",
+                "requires_doctor": False,
+                "evidence_level": "context_required",
+            },
+            {
+                "key": "nutrition_foundation",
+                "title": _copy(locale, "nutrition_title"),
+                "body": _copy(locale, "nutrition_body"),
+                "category": "nutrition",
+                "priority": "medium",
+                "requires_doctor": False,
+                "evidence_level": "best_practice",
+            },
+            {
+                "key": "supplements_confirm_first",
+                "title": _copy(locale, "supplement_title"),
+                "body": _copy(locale, "supplement_body"),
+                "category": "supplement_safety",
+                "priority": "medium",
+                "requires_doctor": True,
+                "evidence_level": "safety",
+            },
+        ]
+    return [
+        {
+            "key": "profile_required",
+            "title": "Complete anthropometrics before final interpretation",
+            "body": "Add age, sex, height, weight, current medications and supplements. Pediatric and adult reference interpretation can differ.",
+            "category": "profile",
+            "priority": "high",
+            "requires_doctor": False,
+            "evidence_level": "context_required",
+        },
+        {
+            "key": "nutrition_foundation",
+            "title": "Stabilize nutrition basics before over-interpreting",
+            "body": "Prioritize regular meals with protein, iron/B12/folate food sources, vegetables, and hydration while you clarify the result.",
+            "category": "nutrition",
+            "priority": "medium",
+            "requires_doctor": False,
+            "evidence_level": "best_practice",
+        },
+        {
+            "key": "supplements_confirm_first",
+            "title": "Confirm deficiencies before supplements",
+            "body": "Do not start iron, B12, folate, or high-dose vitamin D from one indirect marker alone. Discuss confirmatory labs and safe ranges.",
+            "category": "supplement_safety",
+            "priority": "medium",
+            "requires_doctor": True,
+            "evidence_level": "safety",
+        },
+    ]
+
+
 def build_knowledge_report(
     *,
     biomarkers: List[Dict[str, Any]],
@@ -393,7 +506,11 @@ def build_knowledge_report(
     evaluation = knowledge_evaluation if isinstance(knowledge_evaluation, dict) else {}
     found = _what_found(biomarkers, locale=locale)
     interpretation = _interpretation(evaluation, locale=locale)
+    if not interpretation:
+        interpretation = _fallback_interpretation(found["flagged_markers"], locale=locale)
     actions = _action_plan(evaluation, locale=locale)
+    if not actions:
+        actions = _fallback_action_plan(found["flagged_markers"], locale=locale)
     safety_alerts = evaluation.get("safety_alerts") if isinstance(evaluation.get("safety_alerts"), list) else []
     requires_doctor = bool(evaluation.get("requires_doctor")) or bool(safety_alerts)
 

@@ -6,10 +6,11 @@ from app.services.supabase_service import (
     assert_upload_belongs_to_user,
     get_biomarkers_by_upload,
     get_protocol_by_upload,
+    get_user_profile,
     get_user_progress,
+    save_protocol,
 )
-from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
-from app.services.knowledge.report import build_knowledge_report
+from app.services.lab_analysis_pipeline import run_lab_analysis_pipeline
 
 router = APIRouter(tags=["protocol-compatibility"])
 _assignment_service = AssignmentService()
@@ -59,23 +60,37 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
     await assert_upload_belongs_to_user(upload_id, user_id)
     biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
     protocol_row = await get_protocol_by_upload(user_id, upload_id)
-    knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
+    protocol_recommendations = (protocol_row or {}).get("recommendations") or []
+    user_profile = await get_user_profile(user_id) or {}
+
+    pipeline_result = await run_lab_analysis_pipeline(
         biomarkers=biomarkers or [],
         symptoms=[],
+        user_profile=user_profile,
         user_id=user_id,
-        upload_id=str(upload_id),
-        persist=False,
-    )
-    knowledge_report = build_knowledge_report(
-        biomarkers=biomarkers or [],
-        knowledge_evaluation=knowledge_evaluation,
+        analysis_id=str(upload_id),
+        source_metadata={"source": "results_compatibility"},
+        persist_knowledge=False,
         locale=_resolve_response_locale(request),
+        generate_ai_protocol=not bool(protocol_recommendations),
     )
+    knowledge_evaluation = pipeline_result.get("knowledge_evaluation")
+    knowledge_report = pipeline_result.get("knowledge_report")
+    generated_recommendations = pipeline_result.get("recommendations") or []
+    if not protocol_recommendations and generated_recommendations:
+        protocol_row = await save_protocol(
+            user_id=user_id,
+            upload_id=upload_id,
+            recommendations=generated_recommendations,
+            prompt_version="results_compatibility_v2",
+        )
+        protocol_recommendations = (protocol_row or {}).get("recommendations") or []
 
     return {
         "upload_id": upload_id,
         "biomarkers": biomarkers or [],
-        "protocol": (protocol_row or {}).get("recommendations") or [],
+        "protocol": protocol_recommendations,
         "knowledge_evaluation": knowledge_evaluation,
         "knowledge_report": knowledge_report,
+        "final_analysis": pipeline_result,
     }
