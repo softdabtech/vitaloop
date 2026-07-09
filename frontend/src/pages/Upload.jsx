@@ -61,6 +61,18 @@ const UPLOAD_COPY = {
     answerBody: 'What biomarkers currently support or contradict your symptom hypothesis.',
     nextTitle: 'Next step clarity',
     nextBody: 'After analysis, open Results & Trends to prioritize markers and retest plan.',
+    reviewTitle: 'Review uncertain markers',
+    reviewBody: 'Some extracted values need a quick check before VITALOOP uses them in the final report.',
+    reviewConfirm: 'Confirm and rebuild report',
+    reviewSkip: 'Open report without changes',
+    reviewReject: 'Reject',
+    reviewKeep: 'Use',
+    reviewLow: 'low confidence',
+    reviewMedium: 'medium confidence',
+    reviewName: 'Marker',
+    reviewValue: 'Value',
+    reviewUnit: 'Unit',
+    reviewDone: 'Markers confirmed',
   },
   uk: {
     loadingMessages: [
@@ -97,6 +109,18 @@ const UPLOAD_COPY = {
     answerBody: 'Які показники підтримують або спростовують вашу поточну гіпотезу щодо симптомів.',
     nextTitle: 'Наступний крок',
     nextBody: 'Після аналізу відкрийте результати й динаміку, щоб побачити пріоритети та план повторної перевірки.',
+    reviewTitle: 'Перевірте непевні показники',
+    reviewBody: 'Деякі значення потребують швидкої перевірки перед тим, як VITALOOP використає їх у фінальному звіті.',
+    reviewConfirm: 'Підтвердити й оновити звіт',
+    reviewSkip: 'Відкрити звіт без змін',
+    reviewReject: 'Відхилити',
+    reviewKeep: 'Використати',
+    reviewLow: 'низька впевненість',
+    reviewMedium: 'середня впевненість',
+    reviewName: 'Показник',
+    reviewValue: 'Значення',
+    reviewUnit: 'Одиниця',
+    reviewDone: 'Показники підтверджено',
   },
 }
 
@@ -207,6 +231,8 @@ export default function Upload() {
   const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0])
   const [loadingWarning, setLoadingWarning] = useState('')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [candidateReview, setCandidateReview] = useState(null)
+  const [confirmingCandidates, setConfirmingCandidates] = useState(false)
   const isUk = isUkrainianLocale()
   const copy = isUk ? UPLOAD_COPY.uk : UPLOAD_COPY.en
 
@@ -303,6 +329,22 @@ export default function Upload() {
       ])
 
       toast.success(copy.analysisComplete)
+      const candidatesResponse = await api.get(`/analyze/${data.upload_id}/candidates`).catch(() => null)
+      const candidates = candidatesResponse?.data?.candidates || []
+      const reviewCandidates = candidates.filter(candidate => candidate.requires_confirmation || candidate.confidence_label === 'low')
+      if (reviewCandidates.length > 0) {
+        setCandidateReview({
+          uploadId: data.upload_id,
+          candidates: reviewCandidates.map(candidate => ({
+            ...candidate,
+            decision: 'confirmed',
+            raw_name: candidate.raw_name || '',
+            raw_value: candidate.raw_value ?? candidate.parsed_value ?? '',
+            raw_unit: candidate.raw_unit || '',
+          })),
+        })
+        return
+      }
       navigate(`/results/${data.upload_id}`)
     } catch (err) {
       const message = handleAnalysisError(err, copy)
@@ -352,6 +394,52 @@ export default function Upload() {
       setAnalyzing(true)
     } else {
       setAnalyzing(false)
+    }
+  }
+
+  function updateReviewCandidate(candidateId, patch) {
+    setCandidateReview(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        candidates: prev.candidates.map(candidate => (
+          candidate.id === candidateId ? { ...candidate, ...patch } : candidate
+        )),
+      }
+    })
+  }
+
+  async function confirmCandidateReview() {
+    if (!candidateReview || confirmingCandidates) return
+    setConfirmingCandidates(true)
+    try {
+      const decisions = candidateReview.candidates.map(candidate => ({
+        id: candidate.id,
+        status: candidate.decision === 'rejected' ? 'rejected' : 'corrected',
+        corrections: {
+          raw_name: candidate.raw_name,
+          raw_value: candidate.raw_value,
+          raw_unit: candidate.raw_unit,
+          parsed_value: Number(String(candidate.raw_value).replace(',', '.')),
+        },
+      }))
+      await api.post(`/analyze/${candidateReview.uploadId}/confirm-candidates`, { candidates: decisions })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+        queryClient.invalidateQueries({ queryKey: ['lab-results-list'] }),
+        queryClient.invalidateQueries({ queryKey: ['progress'] }),
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+        queryClient.invalidateQueries({ queryKey: ['insights'] }),
+        queryClient.invalidateQueries({ queryKey: ['health-score'] }),
+      ])
+      toast.success(copy.reviewDone)
+      navigate(`/results/${candidateReview.uploadId}`)
+    } catch (err) {
+      const message = handleAnalysisError(err, copy)
+      setErrorMessage(message)
+      toast.error(message)
+    } finally {
+      setConfirmingCandidates(false)
     }
   }
 
@@ -457,6 +545,98 @@ export default function Upload() {
 
         {uploadMode === 'pdf' ? (
           <>
+            {candidateReview && (
+              <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-950">{copy.reviewTitle}</h2>
+                    <p className="mt-1 text-sm text-amber-800">{copy.reviewBody}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/results/${candidateReview.uploadId}`)}
+                    className="rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-amber-100"
+                  >
+                    {copy.reviewSkip}
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {candidateReview.candidates.map(candidate => (
+                    <div key={candidate.id} className="rounded-xl border border-amber-200 bg-white p-3">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                          {candidate.confidence_label === 'medium' ? copy.reviewMedium : copy.reviewLow}
+                        </span>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => updateReviewCandidate(candidate.id, { decision: 'confirmed' })}
+                            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                              candidate.decision !== 'rejected'
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            {copy.reviewKeep}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateReviewCandidate(candidate.id, { decision: 'rejected' })}
+                            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                              candidate.decision === 'rejected'
+                                ? 'bg-rose-600 text-white'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            {copy.reviewReject}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <label className="text-xs font-semibold text-slate-600">
+                          {copy.reviewName}
+                          <input
+                            value={candidate.raw_name}
+                            disabled={candidate.decision === 'rejected'}
+                            onChange={(event) => updateReviewCandidate(candidate.id, { raw_name: event.target.value })}
+                            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600">
+                          {copy.reviewValue}
+                          <input
+                            value={candidate.raw_value}
+                            disabled={candidate.decision === 'rejected'}
+                            onChange={(event) => updateReviewCandidate(candidate.id, { raw_value: event.target.value })}
+                            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600">
+                          {copy.reviewUnit}
+                          <input
+                            value={candidate.raw_unit}
+                            disabled={candidate.decision === 'rejected'}
+                            onChange={(event) => updateReviewCandidate(candidate.id, { raw_unit: event.target.value })}
+                            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={confirmCandidateReview}
+                  disabled={confirmingCandidates}
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                >
+                  {confirmingCandidates ? (isUk ? 'Оновлюємо…' : 'Updating…') : copy.reviewConfirm}
+                </button>
+              </div>
+            )}
+
             <div className="mb-4 grid gap-3 md:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> {isUk ? 'Безпечне завантаження' : 'Secure upload'}</div>

@@ -317,6 +317,184 @@ async def save_biomarkers(upload_id: str, user_id: str, biomarkers: List[Dict]) 
     return resp.data
 
 
+async def save_biomarker_extraction_candidates(
+    *,
+    upload_id: str,
+    user_id: str,
+    candidates: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not candidates:
+        return []
+
+    supabase = _get_supabase()
+    rows = [
+        {
+            "upload_id": upload_id,
+            "user_id": user_id,
+            "source": item.get("source") or "ai",
+            "raw_name": item.get("raw_name"),
+            "raw_value": None if item.get("raw_value") is None else str(item.get("raw_value")),
+            "raw_unit": item.get("raw_unit"),
+            "raw_reference_range": item.get("raw_reference_range"),
+            "parsed_value": item.get("parsed_value"),
+            "confidence_score": item.get("confidence_score"),
+            "confidence_reasons": item.get("confidence_reasons") or [],
+            "status": item.get("status") or "pending",
+            "source_page": item.get("source_page"),
+            "source_row": None if item.get("source_row") is None else str(item.get("source_row")),
+        }
+        for item in candidates
+    ]
+    resp = await _run(lambda: supabase.table("biomarker_extraction_candidates").insert(rows).execute())
+    return resp.data or []
+
+
+async def get_biomarker_extraction_candidates(upload_id: str, user_id: str) -> List[Dict[str, Any]]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("biomarker_extraction_candidates")
+        .select("*")
+        .eq("upload_id", upload_id)
+        .eq("user_id", user_id)
+        .order("created_at")
+        .execute()
+    )
+    return resp.data or []
+
+
+async def update_biomarker_extraction_candidates(
+    *,
+    upload_id: str,
+    user_id: str,
+    decisions: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not decisions:
+        return []
+
+    supabase = _get_supabase()
+    updated_rows: List[Dict[str, Any]] = []
+    for decision in decisions:
+        candidate_id = decision.get("id")
+        if not candidate_id:
+            continue
+
+        patch: Dict[str, Any] = {
+            "status": decision.get("status") or "confirmed",
+        }
+        corrections = decision.get("corrections")
+        if isinstance(corrections, dict):
+            field_map = {
+                "raw_name": "raw_name",
+                "name": "raw_name",
+                "raw_value": "raw_value",
+                "value": "raw_value",
+                "raw_unit": "raw_unit",
+                "unit": "raw_unit",
+                "raw_reference_range": "raw_reference_range",
+                "reference_range": "raw_reference_range",
+                "parsed_value": "parsed_value",
+            }
+            for source_key, target_key in field_map.items():
+                if source_key in corrections:
+                    patch[target_key] = corrections[source_key]
+
+        resp = await _run(
+            lambda candidate_id=candidate_id, patch=patch: supabase.table("biomarker_extraction_candidates")
+            .update(patch)
+            .eq("id", candidate_id)
+            .eq("upload_id", upload_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        updated_rows.extend(resp.data or [])
+    return updated_rows
+
+
+async def save_report_version(
+    *,
+    user_id: str,
+    upload_id: str,
+    version: str,
+    locale: str,
+    input_snapshot: Dict[str, Any],
+    knowledge_report: Dict[str, Any],
+    protocol: Any,
+    safety_result: Dict[str, Any],
+    explainability: Dict[str, Any],
+    status: str = "completed",
+) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    payload = {
+        "user_id": user_id,
+        "upload_id": upload_id,
+        "version": version,
+        "locale": locale,
+        "input_snapshot": input_snapshot or {},
+        "knowledge_report": knowledge_report or {},
+        "protocol": protocol or {},
+        "safety_result": safety_result or {},
+        "explainability": explainability or {},
+        "status": status,
+    }
+    resp = await _run(lambda: supabase.table("report_versions").insert(payload).execute())
+    return (resp.data or [{}])[0]
+
+
+async def get_latest_report_version(upload_id: str, user_id: str, locale: str) -> Optional[Dict[str, Any]]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("report_versions")
+        .select("*")
+        .eq("upload_id", upload_id)
+        .eq("user_id", user_id)
+        .eq("locale", locale)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return (resp.data or [None])[0]
+
+
+async def get_report_version(report_version_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("report_versions")
+        .select("*")
+        .eq("id", report_version_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    return (resp.data or [None])[0]
+
+
+async def save_safety_events(
+    *,
+    user_id: str,
+    upload_id: str | None,
+    report_version_id: str | None,
+    safety_events: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not safety_events:
+        return []
+
+    supabase = _get_supabase()
+    rows = [
+        {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "report_version_id": report_version_id,
+            "rule_key": event.get("key"),
+            "severity": event.get("severity") or "medium",
+            "action": event.get("action") or "warn",
+            "input_snapshot": event,
+        }
+        for event in safety_events
+    ]
+    resp = await _run(lambda: supabase.table("safety_events").insert(rows).execute())
+    return resp.data or []
+
+
 async def update_lab_upload_status(upload_id: str, status: str) -> None:
     supabase = _get_supabase()
     await _run(

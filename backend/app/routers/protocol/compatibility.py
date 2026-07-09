@@ -11,24 +11,16 @@ from app.services.supabase_service import (
     save_protocol,
 )
 from app.services.lab_analysis_pipeline import run_lab_analysis_pipeline
+from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
+from app.services.knowledge.report import build_knowledge_report
+from app.utils.locale import resolve_locale
 
 router = APIRouter(tags=["protocol-compatibility"])
 _assignment_service = AssignmentService()
 
 
 def _resolve_response_locale(request: Request | None) -> str:
-    if request is None:
-        return "en"
-    explicit = str(request.headers.get("X-Vitaloop-Locale") or "").strip().lower()
-    if explicit.startswith("uk"):
-        return "uk"
-    accept_language = str(request.headers.get("Accept-Language") or "").strip().lower()
-    if accept_language.startswith("uk") or "uk-ua" in accept_language or ",uk" in accept_language:
-        return "uk"
-    origin = str(request.headers.get("Origin") or request.headers.get("Referer") or "").lower()
-    if "ua.vitaloop.today" in origin:
-        return "uk"
-    return "en"
+    return resolve_locale(request)
 
 
 @router.get("/lab-results")
@@ -62,6 +54,15 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
     protocol_row = await get_protocol_by_upload(user_id, upload_id)
     protocol_recommendations = (protocol_row or {}).get("recommendations") or []
     user_profile = await get_user_profile(user_id) or {}
+    locale = _resolve_response_locale(request)
+
+    compatibility_evaluation = await evaluate_biomarkers_with_knowledge(
+        biomarkers=biomarkers or [],
+        symptoms=[],
+        user_id=user_id,
+        upload_id=str(upload_id),
+        persist=False,
+    )
 
     pipeline_result = await run_lab_analysis_pipeline(
         biomarkers=biomarkers or [],
@@ -71,11 +72,15 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
         analysis_id=str(upload_id),
         source_metadata={"source": "results_compatibility"},
         persist_knowledge=False,
-        locale=_resolve_response_locale(request),
+        locale=locale,
         generate_ai_protocol=not bool(protocol_recommendations),
     )
-    knowledge_evaluation = pipeline_result.get("knowledge_evaluation")
-    knowledge_report = pipeline_result.get("knowledge_report")
+    knowledge_evaluation = compatibility_evaluation or pipeline_result.get("knowledge_evaluation")
+    knowledge_report = build_knowledge_report(
+        biomarkers=biomarkers or [],
+        knowledge_evaluation=knowledge_evaluation,
+        locale=locale,
+    )
     generated_recommendations = pipeline_result.get("recommendations") or []
     if not protocol_recommendations and generated_recommendations:
         protocol_row = await save_protocol(

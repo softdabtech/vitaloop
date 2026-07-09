@@ -16,7 +16,7 @@ router = APIRouter()
 
 def _llm_chat_completions_path() -> str:
     """Return chat completions path relative to the configured provider base URL."""
-    from app.services.claude_service import _chat_completions_path as _svc_path
+    from app.services.ai.openai_service import _chat_completions_path as _svc_path
 
     return _svc_path()
 
@@ -447,7 +447,7 @@ async def _synthetic_llm_call(timeout_seconds: float = 15.0) -> dict:
         result["reason"] = "missing_llm_configuration"
         return result
 
-    from app.services.claude_service import _chat_completions_path as _svc_path
+    from app.services.ai.openai_service import _chat_completions_path as _svc_path
 
     path = _svc_path()
     payload: dict = {

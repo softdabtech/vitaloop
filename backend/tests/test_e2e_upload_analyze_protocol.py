@@ -130,6 +130,9 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
             "metadata": metadata or {},
         }
 
+    async def fake_get_user_profile(_user_id):
+        return {"age": 35, "sex": "female", "height_cm": 170, "weight_kg": 65}
+
     async def fake_get_user_account(user_id):
         # Return account data with subscription info for quota check
         return {
@@ -143,6 +146,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
     monkeypatch.setattr(analyze_router, "extract_biomarkers", fake_extract_biomarkers)
     monkeypatch.setattr(analyze_router, "save_biomarkers", fake_save_biomarkers)
     monkeypatch.setattr(analyze_router, "save_timeline_event", fake_save_timeline_event)
+    monkeypatch.setattr(analyze_router, "get_user_profile", fake_get_user_profile)
 
     monkeypatch.setattr(protocol_router, "get_biomarkers_by_upload", fake_get_biomarkers_by_upload)
     monkeypatch.setattr(protocol_router, "get_protocol_by_upload", fake_get_protocol_by_upload)

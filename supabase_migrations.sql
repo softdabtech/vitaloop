@@ -513,3 +513,100 @@ CREATE INDEX idx_audit_logs_organization_id ON public.audit_logs(organization_id
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "AuditLogs: users can see own actions" ON public.audit_logs
   FOR SELECT USING (auth.uid() = user_id);
+
+-- 20. PHASE 1 HEALTH INTELLIGENCE TABLES
+CREATE TABLE IF NOT EXISTS public.biomarker_extraction_candidates (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  upload_id UUID REFERENCES public.lab_uploads(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  source TEXT NOT NULL DEFAULT 'ai'
+    CHECK (source IN ('regex', 'table', 'ai', 'manual')),
+  raw_name TEXT,
+  raw_value TEXT,
+  raw_unit TEXT,
+  raw_reference_range TEXT,
+  parsed_value DOUBLE PRECISION,
+  confidence_score DOUBLE PRECISION DEFAULT 0
+    CHECK (confidence_score >= 0 AND confidence_score <= 1),
+  confidence_reasons JSONB DEFAULT '[]',
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'confirmed', 'rejected', 'corrected')),
+  source_page INTEGER,
+  source_row TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_biomarker_extraction_candidates_upload_user
+  ON public.biomarker_extraction_candidates(upload_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_biomarker_extraction_candidates_status
+  ON public.biomarker_extraction_candidates(user_id, status, created_at DESC);
+
+ALTER TABLE public.biomarker_extraction_candidates ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "BiomarkerCandidates: users see own candidates" ON public.biomarker_extraction_candidates
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "BiomarkerCandidates: users update own candidates" ON public.biomarker_extraction_candidates
+  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE TABLE IF NOT EXISTS public.report_versions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  upload_id UUID REFERENCES public.lab_uploads(id) ON DELETE CASCADE NOT NULL,
+  version TEXT NOT NULL,
+  locale TEXT NOT NULL DEFAULT 'en',
+  input_snapshot JSONB DEFAULT '{}',
+  knowledge_report JSONB DEFAULT '{}',
+  protocol JSONB DEFAULT '{}',
+  safety_result JSONB DEFAULT '{}',
+  explainability JSONB DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'completed'
+    CHECK (status IN ('processing', 'completed', 'approved', 'approved_with_warnings', 'blocked', 'failed')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_report_versions_upload_user_locale
+  ON public.report_versions(upload_id, user_id, locale, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_report_versions_user_created
+  ON public.report_versions(user_id, created_at DESC);
+
+ALTER TABLE public.report_versions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "ReportVersions: users see own report versions" ON public.report_versions
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE TABLE IF NOT EXISTS public.safety_rules (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  key TEXT UNIQUE NOT NULL,
+  type TEXT NOT NULL,
+  conditions JSONB DEFAULT '{}',
+  action TEXT NOT NULL DEFAULT 'warn'
+    CHECK (action IN ('allow', 'warn', 'doctor_first', 'block', 'human_review')),
+  severity TEXT NOT NULL DEFAULT 'medium'
+    CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+  message_en TEXT,
+  message_uk TEXT,
+  evidence_source_id UUID,
+  active BOOLEAN DEFAULT TRUE,
+  version TEXT DEFAULT 'safety_v1',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_safety_rules_active_type ON public.safety_rules(active, type);
+ALTER TABLE public.safety_rules ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.safety_events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  upload_id UUID REFERENCES public.lab_uploads(id) ON DELETE SET NULL,
+  report_version_id UUID REFERENCES public.report_versions(id) ON DELETE SET NULL,
+  rule_key TEXT,
+  severity TEXT NOT NULL DEFAULT 'medium',
+  action TEXT NOT NULL DEFAULT 'warn',
+  input_snapshot JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_safety_events_user_created ON public.safety_events(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_safety_events_upload ON public.safety_events(upload_id);
+
+ALTER TABLE public.safety_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "SafetyEvents: users see own safety events" ON public.safety_events
+  FOR SELECT USING (auth.uid() = user_id);

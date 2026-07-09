@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from app.config import settings
 from app.dependencies import get_current_user
 from app.services import supabase_service as svc
-from app.services.claude_service import is_llm_configured
+from app.services.ai.openai_service import is_llm_configured
 from app.services.email_service import send_ops_alert_email
 from app.utils.stripe_config import is_stripe_price_configured
 
