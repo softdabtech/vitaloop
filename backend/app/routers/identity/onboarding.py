@@ -22,14 +22,11 @@ def _as_bool(value: Any) -> bool:
 
 
 def _has_profile_basics(profile: Dict[str, Any]) -> bool:
-    goals = profile.get("goals")
     return bool(
-        profile.get("height_cm")
-        or profile.get("weight_kg")
-        or (isinstance(goals, list) and len(goals) > 0)
-        or profile.get("prior_diagnoses")
-        or profile.get("current_supplements")
-        or profile.get("current_medications")
+        profile.get("age")
+        and profile.get("sex")
+        and profile.get("height_cm")
+        and profile.get("weight_kg")
     )
 
 

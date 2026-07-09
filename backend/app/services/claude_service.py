@@ -306,12 +306,35 @@ def _fallback_generate_protocol(biomarkers: List[Dict[str, Any]], symptoms: List
         symptom_hint = ", ".join(symptoms[:2]) if symptoms else "reported symptoms"
         recommendations.append(
             {
-                "supplement": "Comprehensive re-test plan",
-                "dosage": "Repeat labs in 6-8 weeks",
+                "supplement": "Health profile + confirmatory lab review",
+                "dosage": "Complete age, sex, height, weight, medications and supplements before final protocol",
                 "timing": "follow_up",
+                "priority": "HIGH",
+                "rationale": f"No safe supplement target can be selected from this marker set alone. Use symptoms ({symptom_hint}), anthropometrics, and confirmatory labs before choosing interventions.",
+                "iherb_search": "lab test preparation",
+                "category": "profile",
+            }
+        )
+        recommendations.append(
+            {
+                "supplement": "Nutrition foundation",
+                "dosage": "Each main meal: protein source + iron/B12/folate food source + vegetables; hydrate consistently",
+                "timing": "daily_with_meals",
                 "priority": "MEDIUM",
-                "rationale": f"Fallback mode detected no specific supplement target. Use symptoms ({symptom_hint}) and repeat labs to refine the protocol.",
-                "iherb_search": "electrolyte support",
+                "rationale": "Supports interpretation of blood-count related markers while avoiding premature supplementation.",
+                "iherb_search": "whole food multinutrient",
+                "category": "nutrition",
+            }
+        )
+        recommendations.append(
+            {
+                "supplement": "Targeted supplements only after confirmation",
+                "dosage": "Discuss iron, B12, folate, vitamin D or other dosing with a clinician after confirmatory labs",
+                "timing": "clinician_review",
+                "priority": "MEDIUM",
+                "rationale": "Dosing depends on age, sex, weight, pregnancy status, medications, baseline values and contraindications.",
+                "iherb_search": "iron b12 folate vitamin d",
+                "category": "supplement_safety",
             }
         )
 
@@ -557,6 +580,7 @@ async def generate_protocol(
     biomarkers: List[Dict],
     symptoms: List[str],
     *,
+    user_profile: Dict[str, Any] | None = None,
     user_id: str | None = None,
     upload_id: str | None = None,
 ) -> List[Dict[str, Any]]:
@@ -573,7 +597,13 @@ async def generate_protocol(
     started = time.perf_counter()
     symptoms_str = ", ".join(symptoms) if symptoms else "none reported"
     biomarkers_str = json.dumps(biomarkers, indent=2)
-    prompt = PROTOCOL_PROMPT.replace("{biomarkers}", biomarkers_str).replace("{symptoms}", symptoms_str)
+    profile_str = json.dumps(user_profile or {}, indent=2, ensure_ascii=False)
+    prompt = (
+        PROTOCOL_PROMPT
+        .replace("{biomarkers}", biomarkers_str)
+        .replace("{symptoms}", symptoms_str)
+        .replace("{user_profile}", profile_str)
+    )
     try:
         raw = _strip_code_block(
             await _chat_completion(
