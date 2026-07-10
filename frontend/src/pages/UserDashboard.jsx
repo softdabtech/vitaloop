@@ -1,73 +1,20 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, CheckCircle2, ChevronRight, ClipboardCheck, Route, ShieldAlert, Sparkles, Timer, TrendingUp } from 'lucide-react'
-import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { ArrowRight, Beaker, CalendarCheck2, CheckCircle2, ClipboardList, HelpCircle, MessageCircle, Route, Sparkles, Stethoscope, UploadCloud } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth.js'
-import { useDashboardSummary } from '../hooks/useQueries.js'
-import { useQuestionnaireSession } from '../hooks/useQueries.js'
+import { useDashboardSummary, useQuestionnaireSession } from '../hooks/useQueries.js'
 import { useSubscription } from '../hooks/useSubscription.js'
+import { CoachBadge, CoachButton, CoachCard, CoachProgress, CoachSkeleton, CoachTooltip, EmptyCoachState, InsightCard, KPIBlock } from '../components/coach/CoachUI.jsx'
 import { HEALTH_LOOP_STAGES, getHealthLoopStageIndex } from '../lib/cabinetV511.js'
 
-const STAGE_DETAILS = {
-  Concern: 'Define the primary symptom focus',
-  Questions: 'Answer guided context questions',
-  'Lab Plan': 'Get your recommended test set',
-  Results: 'Upload and parse biomarkers',
-  Protocol: 'Translate data into actions',
-  'Check-in': 'Track weekly symptom response',
-  Retest: 'Compare trends over time',
-}
-
-function Stepper({ stageIndex }) {
-  return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-7">
-      {HEALTH_LOOP_STAGES.map((stage, index) => {
-        const done = index < stageIndex
-        const active = index === stageIndex
-        return (
-          <div key={stage} className={`relative rounded-xl border px-3 py-3 text-xs ${active ? 'border-emerald-300 bg-emerald-50 text-emerald-800 shadow-sm' : done ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-slate-200 bg-white text-slate-500'}`}>
-            <div className="mb-1 flex items-center gap-2">
-              {done ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <span className={`inline-block h-2.5 w-2.5 rounded-full ${active ? 'bg-emerald-500' : 'bg-slate-300'}`} />}
-              <span className="font-semibold">{stage}</span>
-            </div>
-            <p className="line-clamp-2 text-[11px] leading-4 opacity-85">{STAGE_DETAILS[stage]}</p>
-            {active && <span className="absolute right-2 top-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Now</span>}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function CompactStepper({ stageIndex }) {
-  return (
-    <div className="space-y-2">
-      {HEALTH_LOOP_STAGES.map((stage, index) => {
-        const done = index < stageIndex
-        const active = index === stageIndex
-        return (
-          <div key={stage} className={`flex items-center justify-between rounded-xl border px-3 py-2 ${active ? 'border-emerald-300 bg-emerald-50' : done ? 'border-slate-200 bg-slate-50' : 'border-slate-200 bg-white'}`}>
-            <div className="flex items-center gap-2">
-              {done ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <span className={`inline-block h-2.5 w-2.5 rounded-full ${active ? 'bg-emerald-500' : 'bg-slate-300'}`} />}
-              <span className={`text-sm font-semibold ${active ? 'text-emerald-800' : 'text-slate-700'}`}>{stage}</span>
-            </div>
-            {active ? <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Now</span> : <ChevronRight className="h-3.5 w-3.5 text-slate-400" />}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function ScoreRow({ label, value }) {
-  const v = Math.max(0, Math.min(100, Number(value || 0)))
-  return (
-    <div>
-      <div className="mb-1 flex items-center justify-between text-xs text-slate-600"><span>{label}</span><span>{v}%</span></div>
-      <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${v}%` }} /></div>
-    </div>
-  )
-}
+const JOURNEY_STEPS = [
+  { label: 'Tell us how you feel', helper: 'Start with the symptom that matters most.', path: '/questionnaire', icon: Stethoscope },
+  { label: 'Prepare your lab plan', helper: 'See which tests matter for your concern.', path: '/lab-plan', icon: ClipboardList },
+  { label: 'Upload your labs', helper: 'Add PDF, images, spreadsheets, or manual values.', path: '/upload', icon: UploadCloud },
+  { label: 'Understand results', helper: 'See what may connect to your symptoms.', path: '/lab-results', icon: Beaker },
+  { label: 'Follow your plan', helper: 'Turn findings into practical next steps.', path: '/assignments', icon: Route },
+  { label: 'Track progress', helper: 'Check in and compare changes over time.', path: '/progress', icon: CalendarCheck2 },
+]
 
 function getStageEta(stage) {
   const byStage = {
@@ -82,18 +29,41 @@ function getStageEta(stage) {
   return byStage[stage] || '3-5 min'
 }
 
+function mapTechnicalStageToHumanIndex(stageIndex) {
+  if (stageIndex <= 1) return 0
+  if (stageIndex === 2) return 1
+  if (stageIndex === 3) return 2
+  if (stageIndex === 4) return 3
+  if (stageIndex === 5) return 4
+  return 5
+}
+
+function JourneyCard({ step, index, active, done, onClick }) {
+  const Icon = step.icon
+  return (
+    <button type="button" onClick={onClick} className={`coach-journey__step text-left ${active ? 'coach-journey__step--active' : ''}`}>
+      <div className="flex items-center justify-between gap-3">
+        <span className="coach-journey__number">{done ? <CheckCircle2 className="h-4 w-4" /> : String(index + 1).padStart(2, '0')}</span>
+        <Icon className={`h-5 w-5 ${active ? 'text-teal-600' : 'text-slate-400'}`} />
+      </div>
+      <h3>{step.label}</h3>
+      <p>{step.helper}</p>
+    </button>
+  )
+}
+
 export default function UserDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { data, isLoading, error } = useDashboardSummary()
-  const { isPremium, uploadCount } = useSubscription()
+  const { data: questionnaireSession } = useQuestionnaireSession()
+  const { isPremium } = useSubscription()
 
   const summary = data || {}
   const stats = summary?.stats || {}
   const latestCheckin = summary?.blocks?.latest_checkin || null
   const latestUpload = summary?.blocks?.latest_upload || null
   const assignments = Array.isArray(summary?.blocks?.assignments) ? summary.blocks.assignments : []
-  const { data: questionnaireSession } = useQuestionnaireSession()
   const sessionContext = questionnaireSession?.session_context || questionnaireSession?.session?.session_metadata || {}
   const concern = sessionContext?.active_concern || ''
   const concernSummary = sessionContext?.summary || null
@@ -106,244 +76,243 @@ export default function UserDashboard() {
   const hasCheckin = Boolean(latestCheckin)
 
   const stageIndex = getHealthLoopStageIndex({ hasConcern, hasQuestions, hasLabPlan, hasResults, hasProtocol, hasCheckin })
-
-  const nextAction = useMemo(() => {
-    if (!hasConcern) return { label: 'Start symptom check', path: '/questionnaire', reason: 'Set an active concern to drive your loop.' }
-    if (!hasLabPlan) return { label: 'Open lab plan', path: '/lab-plan', reason: 'Need plan readiness before upload.' }
-    if (!hasResults) return { label: 'Upload results', path: '/upload', reason: 'Upload labs linked to your concern.' }
-    if (!hasProtocol) return { label: 'Open protocol', path: '/assignments', reason: 'Translate results into actions.' }
-    if (!hasCheckin) return { label: 'Complete check-in', path: '/check-ins', reason: 'Measure symptom response this week.' }
-    return { label: 'Review results & trends', path: '/lab-results', reason: 'Track movement and retest timing.' }
-  }, [hasConcern, hasLabPlan, hasResults, hasProtocol, hasCheckin])
-
-  const protocolAdherence = Math.max(0, Math.min(100, Math.round((Number(stats.completed_tasks || 0) / Math.max(assignments.length, 1)) * 100)))
-  const symptomScore = concernSummary?.severity ? Math.max(0, 100 - concernSummary.severity * 9) : 42
-  const biomarkerScore = hasResults ? 70 : 25
-  const safetyScore = concernSummary?.urgency?.includes('No urgent') ? 85 : 45
-  const profileScore = Number(stats?.profile_completion || 50)
-  const labReadiness = Number(concernSummary?.readiness || 38)
-  const healthSignal = Math.round((symptomScore + biomarkerScore + protocolAdherence + profileScore) / 4)
+  const humanStageIndex = mapTechnicalStageToHumanIndex(stageIndex)
   const activeStage = HEALTH_LOOP_STAGES[stageIndex]
   const stageEta = getStageEta(activeStage)
-  const stageProgressPct = Math.round(((stageIndex + 1) / Math.max(HEALTH_LOOP_STAGES.length, 1)) * 100)
-  const requiresPremiumForNextStep = !isPremium && (nextAction.path === '/assignments' || nextAction.path === '/check-ins')
 
-  const stageActions = {
-    Concern: [
-      { label: 'Start symptom check', path: '/questionnaire' },
-      { label: 'Open profile', path: '/health-profile' },
-    ],
-    Questions: [
-      { label: 'Continue questions', path: '/questionnaire' },
-      { label: 'View lab plan', path: '/lab-plan' },
-    ],
-    'Lab Plan': [
-      { label: 'Review test list', path: '/lab-plan' },
-      { label: 'Upload lab file', path: '/upload' },
-    ],
-    Results: [
-      { label: 'Upload results', path: '/upload' },
-      { label: 'Open trends', path: '/lab-results' },
-    ],
-    Protocol: [
-      { label: 'Open protocol', path: '/assignments' },
-      { label: 'Check-in now', path: '/check-ins' },
-    ],
-    'Check-in': [
-      { label: 'Complete check-in', path: '/check-ins' },
-      { label: 'Open trends', path: '/lab-results' },
-    ],
-    Retest: [
-      { label: 'Review trends', path: '/lab-results' },
-      { label: 'Plan next upload', path: '/upload' },
-    ],
-  }
+  const nextAction = useMemo(() => {
+    if (!hasConcern) {
+      return {
+        label: 'Start Symptom Check',
+        path: '/questionnaire',
+        why: 'Your symptoms are the starting point. They tell VITALOOP which biomarkers and next questions matter first.',
+        outcome: 'You will leave with a clearer concern and a focused lab direction.',
+      }
+    }
+    if (!hasLabPlan) {
+      return {
+        label: 'Open Lab Plan',
+        path: '/lab-plan',
+        why: 'A focused lab plan prevents random testing and connects your symptoms to the markers worth checking.',
+        outcome: 'You will see core, recommended, and optional tests.',
+      }
+    }
+    if (!hasResults) {
+      return {
+        label: 'Upload Results',
+        path: '/upload',
+        why: 'Your lab values help explain what may be contributing to the symptoms you selected.',
+        outcome: 'You will get a plain-language summary and priority findings.',
+      }
+    }
+    if (!hasProtocol) {
+      return {
+        label: 'Open Action Plan',
+        path: latestUpload?.id ? `/protocol/${latestUpload.id}` : '/assignments',
+        why: 'The report becomes useful when it turns into what to do today, this week, and before retesting.',
+        outcome: 'You will get actions, doctor questions, and retest timing.',
+      }
+    }
+    if (!hasCheckin) {
+      return {
+        label: 'Complete Check-in',
+        path: '/check-ins',
+        why: 'Progress is measured by symptom response, not only by lab values.',
+        outcome: 'You will track what improved, what stayed the same, and what needs adjustment.',
+      }
+    }
+    return {
+      label: 'Review Progress',
+      path: '/progress',
+      why: 'Your loop is active. Review trends and plan the next retest window.',
+      outcome: 'You will see changes over time and what to watch next.',
+    }
+  }, [hasConcern, hasLabPlan, hasResults, hasProtocol, hasCheckin, latestUpload?.id])
 
-  const currentStageActions = stageActions[activeStage] || stageActions.Concern
-
-  const updates = [
+  const recentItems = [
     {
+      title: hasConcern ? 'Main concern is set' : 'No main concern yet',
+      body: hasConcern ? concern : 'Tell VITALOOP what feels off first.',
       done: hasConcern,
-      text: hasConcern ? 'Symptom check completed' : 'Answer symptom check to define your main concern',
-      actionLabel: hasConcern ? null : 'Start now',
-      actionPath: '/questionnaire',
+      action: hasConcern ? 'Review' : 'Start',
+      path: '/questionnaire',
     },
     {
-      done: hasLabPlan,
-      text: hasLabPlan ? 'Lab plan is ready' : 'Answer 3 short questions to generate your lab plan',
-      actionLabel: hasLabPlan ? null : 'Open lab plan',
-      actionPath: '/lab-plan',
-    },
-    {
+      title: latestUpload ? 'Latest lab upload is ready' : 'No lab upload yet',
+      body: latestUpload ? 'Your latest results are available for interpretation.' : 'Upload PDF, images, or enter values manually.',
       done: Boolean(latestUpload),
-      text: latestUpload ? 'Lab results uploaded and linked' : 'Upload your first lab file to unlock interpretation',
-      actionLabel: latestUpload ? null : 'Upload file',
-      actionPath: '/upload',
+      action: latestUpload ? 'Open results' : 'Upload',
+      path: latestUpload?.id ? `/results/${latestUpload.id}` : '/upload',
+    },
+    {
+      title: assignments.length ? 'Action items available' : 'No action plan yet',
+      body: assignments.length ? `${assignments.length} action item${assignments.length === 1 ? '' : 's'} are waiting.` : 'Generate a protocol after your results.',
+      done: Boolean(assignments.length),
+      action: assignments.length ? 'Open plan' : 'See journey',
+      path: assignments.length ? '/assignments' : '/lab-plan',
     },
   ]
 
+  if (isLoading) {
+    return <div className="coach-shell"><CoachSkeleton rows={3} /></div>
+  }
+
+  if (error) {
+    return (
+      <div className="coach-shell">
+        <EmptyCoachState
+          title="We could not load your dashboard"
+          body="Your account is safe. Try refreshing, or open your journey to continue from the last saved step."
+          actionLabel="Open journey"
+          onAction={() => navigate('/questionnaire')}
+        />
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-6">
-      <CabinetPageHeader
-        className="vtl-reveal"
-        title={`Your next best step${user?.email ? `, ${user.email.split('@')[0]}` : ''}`}
-        subtitle={nextAction.label}
-        helper={nextAction.reason}
-        action={(
-          <div className="flex flex-wrap items-center gap-2">
-            <button onClick={() => navigate(nextAction.path)} className="vtl-button-primary inline-flex items-center gap-2 px-4 text-sm">
-              {nextAction.label}
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => document.getElementById('why-this-step')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Why this step?
-            </button>
-          </div>
-        )}
-      />
-
-      {requiresPremiumForNextStep && (
-        <div className="vtl-reveal vtl-reveal-delay-1 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          This step is part of Premium. You can continue now and upgrade when prompted.
-        </div>
-      )}
-
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">Could not load Today data.</div>}
-      {isLoading && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-          <div className="h-4 w-44 animate-pulse rounded bg-slate-200" />
-          <div className="mt-3 h-3 w-full animate-pulse rounded bg-slate-100" />
-          <div className="mt-2 h-3 w-3/4 animate-pulse rounded bg-slate-100" />
-        </div>
-      )}
-
-      <section className="vtl-reveal vtl-reveal-delay-1 vtl-unified-card p-5 sm:p-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="coach-shell coach-grid">
+      <section className="coach-hero">
+        <div className="relative z-10 grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-center">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Health Loop Progress</p>
-            <p className="mt-1 text-sm font-semibold text-slate-900">You are in {activeStage}</p>
-            <p className="text-xs text-slate-500">Next milestone in about {stageEta}</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-right">
-            <p className="text-[11px] uppercase tracking-wide text-slate-500">Completion</p>
-            <p className="text-lg font-bold tracking-tight text-slate-900">{stageProgressPct}%</p>
-          </div>
-        </div>
-
-        <div className="mb-4 overflow-hidden rounded-full bg-slate-100">
-          <div
-            className="h-2.5 rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 transition-all duration-700"
-            style={{ width: `${stageProgressPct}%` }}
-          />
-        </div>
-
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
-          <Timer className="h-3.5 w-3.5 text-emerald-600" />
-          Estimated step time: {stageEta}
-        </div>
-
-        <div className="hidden lg:block">
-          <Stepper stageIndex={stageIndex} />
-        </div>
-        <div className="lg:hidden">
-          <CompactStepper stageIndex={stageIndex} />
-        </div>
-
-        <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
-              Weekly snapshot
-            </div>
-            <div className="space-y-2">
-              <ScoreRow label="Lab readiness" value={labReadiness} />
-              <ScoreRow label="Protocol adherence" value={protocolAdherence} />
-              <ScoreRow label="Safety confidence" value={safetyScore} />
-            </div>
-            <p className="mt-2 text-xs text-slate-500">Clear per-signal scale from 0 to 100.</p>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Suggested actions for this stage</p>
-            <div className="space-y-2">
-              {currentStageActions.map((item) => (
-                <button
-                  key={item.label}
-                  onClick={() => navigate(item.path)}
-                  className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
-                >
-                  <span>{item.label}</span>
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              ))}
+            <p className="coach-eyebrow">Your Next Best Step</p>
+            <h1 className="coach-title-xl">{nextAction.label}{user?.email ? `, ${user.email.split('@')[0]}` : ''}</h1>
+            <p className="coach-body mt-4 max-w-2xl">{nextAction.why}</p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <CoachButton onClick={() => navigate(nextAction.path)} trailingIcon={ArrowRight}>
+                {nextAction.label}
+              </CoachButton>
+              <CoachButton
+                variant="secondary"
+                icon={HelpCircle}
+                onClick={() => document.getElementById('why-this-step')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              >
+                Why this step?
+              </CoachButton>
             </div>
           </div>
-        </div>
-      </section>
 
-      <section id="why-this-step" className="vtl-reveal vtl-reveal-delay-2 vtl-unified-card p-5 sm:p-6">
-        <h3 className="text-base font-semibold text-slate-900">Why now</h3>
-        <p className="mt-2 text-sm text-slate-700">{nextAction.reason}</p>
-        <p className="mt-1 text-xs text-slate-500">{concern ? `Focus: ${concern}` : 'No active concern selected yet.'}</p>
-      </section>
-
-      <section className="vtl-reveal vtl-reveal-delay-2 grid gap-4 md:grid-cols-3">
-        <div className="vtl-unified-card p-5">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" /> Health signal</div>
-          <p className="text-3xl font-bold tracking-tight text-slate-900">{healthSignal}%</p>
-          <p className="mt-2 text-xs text-slate-500">Composite of symptoms, biomarkers, adherence, and profile status.</p>
-          <div className="mt-3">
-            <ScoreRow label="Readiness" value={labReadiness} />
-          </div>
-        </div>
-
-        <div className={`vtl-unified-card p-5 ${safetyScore >= 70 ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><ShieldAlert className={`h-4 w-4 ${safetyScore >= 70 ? 'text-emerald-600' : 'text-amber-600'}`} /> Safety status</div>
-          <p className="text-lg font-semibold text-slate-900">{safetyScore >= 70 ? 'Stable' : 'Needs attention'}</p>
-          <p className="mt-2 text-xs text-slate-600">{concernSummary?.urgency || 'No urgent red flags reported.'}</p>
-        </div>
-
-        <div className="vtl-unified-card p-5">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><ClipboardCheck className="h-4 w-4 text-emerald-600" /> Protocol day</div>
-          <p className="text-3xl font-bold tracking-tight text-slate-900">{Math.min(14, Math.max(1, (new Date().getDate() % 14) || 1))}/14</p>
-          <p className="mt-2 text-xs text-slate-600">Adherence {protocolAdherence}% · Uploads linked {uploadCount}</p>
-          <div className="mt-3 flex gap-2">
-            <button onClick={() => navigate('/assignments')} className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">Open protocol</button>
-            <button onClick={() => navigate('/check-ins')} className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">Check-in</button>
-          </div>
-        </div>
-      </section>
-
-      <section className="vtl-reveal vtl-reveal-delay-3 vtl-unified-card p-5 sm:p-6">
-        <div className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900"><Route className="h-4 w-4 text-emerald-600" /> Recent updates</div>
-        <div className="space-y-3">
-          {updates.map((item) => (
-            <div key={item.text} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-              <div className="flex items-center gap-2 text-sm text-slate-700">
-                <span className={`inline-block h-2.5 w-2.5 rounded-full ${item.done ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                {item.text}
+          <CoachCard className="p-5" tone="soft">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="coach-eyebrow">Next Action</p>
+                <h2 className="text-xl font-extrabold text-slate-950">{nextAction.label}</h2>
               </div>
-              {item.actionLabel ? (
-                <button onClick={() => navigate(item.actionPath)} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-                  {item.actionLabel}
-                </button>
-              ) : (
-                <span className="text-xs font-semibold text-emerald-700">Done</span>
-              )}
+              <CoachTooltip text="Estimated time is based on the current step, not a medical risk score.">
+                <CoachBadge tone="primary">{stageEta}</CoachBadge>
+              </CoachTooltip>
             </div>
-          ))}
+            <p className="mt-4 text-sm leading-6 text-slate-600">{nextAction.outcome}</p>
+            <div className="mt-5">
+              <CoachProgress value={Math.round(((humanStageIndex + 1) / JOURNEY_STEPS.length) * 100)} label="Journey progress" />
+            </div>
+          </CoachCard>
         </div>
       </section>
 
       {!isPremium && (
-        <section className="vtl-reveal vtl-reveal-delay-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 sm:p-6">
-          <p className="text-sm text-blue-800">Some advanced steps unlock when needed. Upgrade only when you reach them.</p>
-          <button onClick={() => navigate('/subscription')} className="mt-3 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700">View billing</button>
-        </section>
+        <CoachCard tone="attention" className="p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold text-amber-900">Premium unlocks deeper protocols, check-ins, and trend guidance when you reach those steps.</p>
+            <CoachButton variant="secondary" size="sm" onClick={() => navigate('/subscription')}>View plans</CoachButton>
+          </div>
+        </CoachCard>
       )}
+
+      <CoachCard className="p-5 sm:p-6">
+        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="coach-eyebrow">Health Journey</p>
+            <h2 className="coach-title-lg">From symptom chaos to a clear loop</h2>
+          </div>
+          <CoachBadge tone="neutral">Current: {JOURNEY_STEPS[humanStageIndex]?.label}</CoachBadge>
+        </div>
+        <div className="coach-journey">
+          {JOURNEY_STEPS.map((step, index) => (
+            <JourneyCard
+              key={step.label}
+              step={step}
+              index={index}
+              active={index === humanStageIndex}
+              done={index < humanStageIndex}
+              onClick={() => navigate(step.path)}
+            />
+          ))}
+        </div>
+      </CoachCard>
+
+      <div className="coach-grid coach-grid--2">
+        <CoachCard id="why-this-step" className="p-5 sm:p-6">
+          <p className="coach-eyebrow">Why This Matters</p>
+          <h2 className="coach-title-lg">VITALOOP explains what is happening, why it matters, and what to do next.</h2>
+          <div className="mt-5 grid gap-4">
+            <InsightCard
+              icon={Sparkles}
+              title="What is happening?"
+              body={concern ? `Your current focus is: ${concern}.` : 'Your symptom focus has not been set yet.'}
+              actionLabel={hasConcern ? 'Update symptoms' : 'Set concern'}
+              onAction={() => navigate('/questionnaire')}
+            />
+            <InsightCard
+              icon={MessageCircle}
+              title="Why does it matter?"
+              body="Symptoms are connected to biomarker patterns, safety context, and your profile. This keeps the report focused instead of generic."
+            />
+            <InsightCard
+              icon={Route}
+              title="What should I do next?"
+              body={nextAction.outcome}
+              actionLabel={nextAction.label}
+              onAction={() => navigate(nextAction.path)}
+            />
+          </div>
+        </CoachCard>
+
+        <div className="coach-grid">
+          <KPIBlock
+            icon={Stethoscope}
+            tone={hasConcern ? 'success' : 'warning'}
+            label="Symptom context"
+            value={hasConcern ? 'Ready' : 'Missing'}
+            helper={hasConcern ? concern : 'Start with the main concern.'}
+          />
+          <KPIBlock
+            icon={Beaker}
+            tone={latestUpload ? 'success' : 'warning'}
+            label="Lab context"
+            value={latestUpload ? 'Uploaded' : 'Not uploaded'}
+            helper={latestUpload ? 'Results are available for interpretation.' : 'Add labs when you have them.'}
+          />
+          <KPIBlock
+            icon={CalendarCheck2}
+            tone={hasCheckin ? 'success' : 'neutral'}
+            label="Progress tracking"
+            value={hasCheckin ? 'Active' : 'Not started'}
+            helper="Check-ins show whether actions are helping."
+          />
+        </div>
+      </div>
+
+      <CoachCard className="p-5 sm:p-6">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="coach-eyebrow">Recent Context</p>
+            <h2 className="coach-title-lg">Keep the loop moving</h2>
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {recentItems.map((item) => (
+            <CoachCard key={item.title} className="p-4" interactive>
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <CoachBadge tone={item.done ? 'success' : 'warning'}>{item.done ? 'Ready' : 'Next'}</CoachBadge>
+                <button type="button" onClick={() => navigate(item.path)} className="text-sm font-extrabold text-teal-700 hover:text-teal-900">{item.action}</button>
+              </div>
+              <h3 className="text-lg font-extrabold text-slate-950">{item.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{item.body}</p>
+            </CoachCard>
+          ))}
+        </div>
+      </CoachCard>
     </div>
   )
 }

@@ -23,6 +23,7 @@ import {
   Stethoscope,
 } from 'lucide-react'
 import { isUkrainianLocale } from '../lib/locale.js'
+import { CoachBadge, CoachCard, CoachButton } from '../components/coach/CoachUI.jsx'
 
 const STATUS_META = {
   DEFICIENT: { rank: 0, label: 'Below range', ukLabel: 'Нижче референсу', badge: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' },
@@ -102,6 +103,14 @@ const RESULTS_COPY = {
     export: 'Export summary',
     eyebrow: 'Lab report summary',
     fallbackHeadline: 'Your results are organized into clear priorities.',
+    healthSummary: 'Your Health Summary',
+    topFindings: 'Top Findings',
+    whyMatters: 'Why this matters',
+    doctorQuestions: 'Questions for your doctor',
+    evidence: 'Evidence & Sources',
+    today: 'Today',
+    thisWeek: 'This week',
+    thisMonth: 'This month',
     intro: 'VITALOOP groups your biomarkers into what looks stable, what is worth watching, and what may deserve a clinician’s review.',
     actionPlan: 'View personal action plan',
     checkIn: 'Start a check-in',
@@ -146,6 +155,14 @@ const RESULTS_COPY = {
     export: 'Експортувати підсумок',
     eyebrow: 'Підсумок аналізів',
     fallbackHeadline: 'Ваші результати зібрані в зрозумілі пріоритети.',
+    healthSummary: 'Підсумок здоровʼя',
+    topFindings: 'Головні знахідки',
+    whyMatters: 'Чому це важливо',
+    doctorQuestions: 'Питання до лікаря',
+    evidence: 'Докази й джерела',
+    today: 'Сьогодні',
+    thisWeek: 'Цього тижня',
+    thisMonth: 'Цього місяця',
     intro: 'VITALOOP групує показники: що виглядає стабільно, що варто відстежити і що краще обговорити з лікарем.',
     actionPlan: 'Переглянути план дій',
     checkIn: 'Почати чек-ін',
@@ -254,6 +271,8 @@ export default function Results() {
   const [biomarkers, setBiomarkers] = useState([])
   const [protocol, setProtocol] = useState([])
   const [knowledgeReport, setKnowledgeReport] = useState(null)
+  const [explainability, setExplainability] = useState(null)
+  const [safetyResult, setSafetyResult] = useState(null)
   const [loading, setLoading] = useState(true)
   const isUk = isUkrainianLocale()
   const copy = isUk ? RESULTS_COPY.uk : RESULTS_COPY.en
@@ -262,16 +281,23 @@ export default function Results() {
     let active = true
     async function load() {
       try {
-        const { data } = await api.get(`/results/${uploadId}`)
+        const [{ data }, analysisResponse] = await Promise.all([
+          api.get(`/results/${uploadId}`),
+          api.get(`/analyze/${uploadId}`).catch(() => null),
+        ])
         if (!active) return
         setBiomarkers(data.biomarkers ?? [])
         setProtocol(data.protocol ?? [])
-        setKnowledgeReport(data.knowledge_report ?? null)
+        setKnowledgeReport(analysisResponse?.data?.knowledge_report ?? data.knowledge_report ?? null)
+        setExplainability(analysisResponse?.data?.explainability ?? null)
+        setSafetyResult(analysisResponse?.data?.safety_result ?? null)
       } catch (_e) {
         if (!active) return
         setBiomarkers([])
         setProtocol([])
         setKnowledgeReport(null)
+        setExplainability(null)
+        setSafetyResult(null)
       } finally {
         if (active) setLoading(false)
       }
@@ -305,16 +331,63 @@ export default function Results() {
   const reportDiscussion = Array.isArray(knowledgeReport?.doctor_discussion) ? knowledgeReport.doctor_discussion : []
   const reportRetest = Array.isArray(knowledgeReport?.retest_plan) ? knowledgeReport.retest_plan : []
   const reportAlerts = Array.isArray(knowledgeReport?.safety_alerts) ? knowledgeReport.safety_alerts : []
+  const explanations = Array.isArray(explainability?.recommendations)
+    ? explainability.recommendations
+    : Array.isArray(explainability?.marker_explanations)
+      ? explainability.marker_explanations
+      : []
 
   async function exportResultsAsPDF() {
-    const node = document.querySelector('.vtl-page')
-    if (!node) return
     try {
-      const html2canvas = (await import('html2canvas')).default
       const jsPDF = (await import('jspdf')).jsPDF
-      const canvas = await html2canvas(node, { scale: 2 })
-      const pdf = new jsPDF({ orientation: 'p', unit: 'px', format: 'a4' })
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight())
+      const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' })
+      const margin = 44
+      const width = pdf.internal.pageSize.getWidth() - margin * 2
+      let y = 48
+      const addTitle = (text, size = 18) => {
+        if (y > 720) { pdf.addPage(); y = 48 }
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(size)
+        pdf.setTextColor(15, 23, 42)
+        pdf.text(text, margin, y)
+        y += size + 12
+      }
+      const addText = (text, size = 10) => {
+        if (!text) return
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(size)
+        pdf.setTextColor(71, 85, 105)
+        const lines = pdf.splitTextToSize(String(text), width)
+        lines.forEach((line) => {
+          if (y > 760) { pdf.addPage(); y = 48 }
+          pdf.text(line, margin, y)
+          y += size + 5
+        })
+        y += 4
+      }
+      const addList = (items = []) => {
+        items.filter(Boolean).slice(0, 10).forEach((item) => {
+          const text = typeof item === 'string' ? item : [item.title, item.body || item.summary || item.reason].filter(Boolean).join(' - ')
+          addText(`• ${text}`, 10)
+        })
+      }
+
+      addTitle('VITALOOP Health Report', 20)
+      addText(reportSummary?.headline || copy.fallbackHeadline, 12)
+      addTitle('1. Executive Summary', 14)
+      addText(reportFound?.summary || copy.intro)
+      addTitle('2. Findings', 14)
+      addList(priorityMarkers.slice(0, 5).map((b) => `${displayBiomarkerName(b, isUk)}: ${formatMetric(b)} (${formatRange(b, copy)})`))
+      addTitle('3. Action Plan', 14)
+      addList(reportActions.length ? reportActions : protocol)
+      addTitle('4. Doctor Questions', 14)
+      addList(reportDiscussion)
+      addTitle('5. Biomarkers', 14)
+      addList(rankedBiomarkers.map((b) => `${displayBiomarkerName(b, isUk)}: ${formatMetric(b)}; reference ${formatRange(b, copy)}; status ${b.status_normalized}`))
+      addTitle('6. Retest Plan', 14)
+      addList(reportRetest)
+      addTitle('7. Disclaimer', 14)
+      addText(reportSummary?.disclaimer || copy.disclaimer, 9)
       pdf.save('vitaloop-results.pdf')
     } catch (err) {
       console.error('Failed to export PDF', err)
@@ -349,8 +422,8 @@ export default function Results() {
   return (
     <div className="space-y-6">
       <CabinetPageHeader
-        title="Results & Trends"
-        subtitle="What needs attention now, what is stable, and what to discuss next."
+        title={copy.healthSummary}
+        subtitle="What is happening, why it matters, and what to do next."
         action={(
           <div className="flex flex-wrap items-center gap-2">
             <button onClick={() => navigate('/lab-results')} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 inline-flex items-center gap-2">
@@ -379,13 +452,13 @@ export default function Results() {
             <div className="p-6 sm:p-8">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
                 <HeartPulse className="h-3.5 w-3.5" />
-                {copy.eyebrow}
+                {copy.healthSummary}
               </div>
               <h1 className="max-w-3xl text-3xl font-bold leading-tight text-slate-950 sm:text-4xl">
-                {reportSummary?.headline || copy.fallbackHeadline}
+                {reportSummary?.headline || (priorityMarkers[0] ? `${displayBiomarkerName(priorityMarkers[0], isUk)} may need attention.` : copy.fallbackHeadline)}
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
-                {copy.intro}
+                {reportFound?.summary || copy.intro}
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button
@@ -452,10 +525,10 @@ export default function Results() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <SectionCard icon={ClipboardList} title={copy.priorityMarkers}>
+          <SectionCard icon={ClipboardList} title={copy.topFindings}>
             {priorityMarkers.length ? (
               <div className="space-y-3">
-                {priorityMarkers.map((b) => {
+                {priorityMarkers.slice(0, 3).map((b) => {
                   const meta = STATUS_META[b.status_normalized] || STATUS_META.BORDERLINE
                   return (
                     <div key={b.id || `${b.name_en}-${b.value}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
@@ -467,6 +540,13 @@ export default function Results() {
                             <BiomarkerContextTooltip biomarkerName={displayBiomarkerName(b, isUk)} value={b.value} status={b.status_normalized} size="sm" />
                           </div>
                           <p className="mt-1 text-sm text-slate-500">{formatMetric(b)} · {copy.reference} {formatRange(b, copy)}</p>
+                          <details className="mt-3 text-sm">
+                            <summary className="cursor-pointer font-semibold text-teal-700">Why this appears</summary>
+                            <p className="mt-2 leading-6 text-slate-600">
+                              {explanations.find((item) => String(item.triggered_biomarker || item.marker || '').toLowerCase().includes(String(displayBiomarkerName(b, false)).toLowerCase().split(' ')[0]))?.matched_rule_key
+                                || 'Based on extracted biomarker value, reference range, symptom context, and knowledge-base matching when available.'}
+                            </p>
+                          </details>
                         </div>
                         <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{isUk ? meta.ukLabel || meta.label : meta.label}</span>
                       </div>
@@ -481,7 +561,7 @@ export default function Results() {
             )}
           </SectionCard>
 
-          <SectionCard icon={Info} title={copy.meaning}>
+          <SectionCard icon={Info} title={copy.whyMatters}>
             {reportPatterns.length ? (
               <div className="space-y-3">
                 {reportPatterns.slice(0, 4).map((item, idx) => (
@@ -499,7 +579,7 @@ export default function Results() {
           </SectionCard>
         </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <div className="mt-6 grid gap-6 lg:grid-cols-4">
           <SectionCard icon={CheckCircle2} title={copy.nextSteps}>
             {reportActions.length ? (
               <ul className="space-y-3 text-sm leading-6 text-slate-700">
@@ -515,7 +595,15 @@ export default function Results() {
             )}
           </SectionCard>
 
-          <SectionCard icon={MessageCircle} title={copy.discuss}>
+          <SectionCard icon={ArrowRight} title={copy.today}>
+            <p className="text-sm leading-6 text-slate-600">{reportActions[0]?.body || reportActions[0]?.title || 'Review the top finding and avoid starting high-dose supplements from one marker alone.'}</p>
+          </SectionCard>
+
+          <SectionCard icon={RefreshCw} title={copy.thisMonth}>
+            <p className="text-sm leading-6 text-slate-600">{reportRetest[0]?.timing || 'Plan retesting based on symptoms, clinician guidance, and the marker involved.'}</p>
+          </SectionCard>
+
+          <SectionCard icon={MessageCircle} title={copy.doctorQuestions}>
             {reportDiscussion.length ? (
               <ul className="space-y-2 text-sm leading-6 text-slate-700">
                 {reportDiscussion.slice(0, 5).map((item, idx) => (
@@ -527,9 +615,27 @@ export default function Results() {
             )}
           </SectionCard>
 
-          <SectionCard icon={RefreshCw} title={copy.retest}>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <CoachCard className="p-5">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-slate-950">{copy.evidence}</h2>
+              <CoachBadge tone={safetyResult?.status === 'blocked' ? 'critical' : safetyResult?.status === 'approved_with_warnings' ? 'warning' : 'success'}>
+                {safetyResult?.status || 'educational'}
+              </CoachBadge>
+            </div>
+            <p className="text-sm leading-6 text-slate-600">
+              {explanations.length
+                ? 'Recommendations are connected to biomarker signals, symptom context, profile context, rule matching, confidence, and safety notes where available.'
+                : 'Evidence details will expand as more knowledge-base matches are available for this report.'}
+            </p>
+          </CoachCard>
+
+          <CoachCard className="p-5">
+            <h2 className="text-lg font-semibold text-slate-950">{copy.retest}</h2>
             {reportRetest.length ? (
-              <ul className="space-y-2 text-sm leading-6 text-slate-700">
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                 {reportRetest.slice(0, 5).map((item, idx) => (
                   <li key={`retest-${idx}`} className="rounded-xl bg-slate-50 px-3 py-2">
                     <span className="font-semibold text-slate-950">{item.marker}</span>
@@ -539,9 +645,9 @@ export default function Results() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm leading-6 text-slate-600">{copy.retestFallback}</p>
+              <p className="mt-3 text-sm leading-6 text-slate-600">{copy.retestFallback}</p>
             )}
-          </SectionCard>
+          </CoachCard>
         </div>
 
         <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
