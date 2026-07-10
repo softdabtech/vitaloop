@@ -28,4 +28,4 @@ async def test_active_free_subscription_resolves_as_free(monkeypatch):
     assert result["plan_key"] == "free"
     assert result["is_premium"] is False
     assert result["has_active_subscription"] is False
-
+    assert result["features"]["checkins"] is True

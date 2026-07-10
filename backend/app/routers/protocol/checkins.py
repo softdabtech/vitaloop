@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from datetime import date
 from typing import Optional
-from app.dependencies import get_current_user, require_active_subscription
+from app.dependencies import get_current_user
 from app.services import supabase_service as svc
 
 router = APIRouter()
@@ -23,7 +23,6 @@ class CheckinCreate(BaseModel):
 async def submit_checkin(
     body: CheckinCreate,
     current_user: dict = Depends(get_current_user),
-    _subscription_check: None = Depends(require_active_subscription),
 ):
     user_id = current_user["sub"]
     # mode="json" serializes date → ISO string for Supabase
@@ -34,7 +33,6 @@ async def submit_checkin(
 @router.get("/history")
 async def checkin_history(
     current_user: dict = Depends(get_current_user),
-    _subscription_check: None = Depends(require_active_subscription),
 ):
     user_id = current_user["sub"]
     return await svc.get_weekly_checkins(user_id)
