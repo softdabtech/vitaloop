@@ -74,7 +74,7 @@ async def resolve_user_entitlements(user_id: str, current_user: Optional[Dict[st
         'trend_analysis': bool(is_premium),
         'advanced_protocol': bool(is_premium),
         'symptom_lab_plan': True,
-        'checkins': bool(is_premium),
+        'checkins': True,
     }
 
     return {
