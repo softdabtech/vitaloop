@@ -298,6 +298,7 @@ const privateRoutes = [
   '/avatar',
   '/assignments',
   '/lab-results',
+  '/progress',
   '/settings',
   '/health-profile',
   '/subscription',

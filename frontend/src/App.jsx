@@ -54,6 +54,7 @@ const Results = lazy(() => import('./pages/Results.jsx'))
 const ProtocolPage = lazy(() => import('./pages/ProtocolPage.jsx'))
 const Insights = lazy(() => import('./pages/Insights.jsx'))
 const LabResultsList = lazy(() => import('./pages/LabResultsList.jsx'))
+const Progress = lazy(() => import('./pages/Progress.jsx'))
 const Assignments = lazy(() => import('./pages/Assignments.jsx'))
 const AssignmentDetails = lazy(() => import('./pages/AssignmentDetails.jsx'))
 const Avatar = lazy(() => import('./pages/Avatar.jsx'))
@@ -810,7 +811,8 @@ export default function App() {
           <Route path="/results/:uploadId" element={renderCabinetRoute(<Results />)} />
           <Route path="/protocol/:uploadId" element={renderCabinetRoute(<ProtocolPage />)} />
           <Route path="/avatar" element={renderCabinetRoute(<Avatar />)} />
-          <Route path="/progress" element={<Navigate to="/lab-results" replace />} />
+          <Route path="/progress" element={renderCabinetRoute(<Progress />, { allowBeforeOnboarding: true })} />
+          <Route path="/progress/" element={renderCabinetRoute(<Progress />, { allowBeforeOnboarding: true })} />
           <Route path="/assignments" element={renderCabinetRoute(<Assignments />, { allowBeforeOnboarding: true })} />
           <Route path="/assignments/:assignmentId" element={renderCabinetRoute(<AssignmentDetails />, { allowBeforeOnboarding: true })} />
           <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />, { allowBeforeOnboarding: true })} />

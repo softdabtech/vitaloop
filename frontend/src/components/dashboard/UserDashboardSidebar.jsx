@@ -1,21 +1,14 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   BarChart3,
-  ClipboardList,
   ChevronLeft,
-  Clock,
-  CreditCard,
   Crown,
   FileText,
-  Flame,
-  HelpCircle,
   Home,
   Route,
   Lock,
   LogOut,
   Settings,
-  Target,
-  Upload,
   User,
 } from 'lucide-react'
 import { useSubscription } from '../../hooks/useSubscription.js'
@@ -24,25 +17,19 @@ import { isUkrainianLocale } from '../../lib/locale.js'
 import UserAvatar from '../UserAvatar.jsx'
 
 const MENU_ITEMS = [
-  { icon: Home, label: 'Today', ukLabel: 'Сьогодні', path: '/dashboard', badge: null },
-  { icon: Target, label: 'Symptom Check', ukLabel: 'Симптоми', path: '/questionnaire', badge: null },
-  { icon: Route, label: 'Lab Plan', ukLabel: 'План аналізів', path: '/lab-plan', badge: null },
-  { icon: Upload, label: 'Upload Results', ukLabel: 'Завантажити', path: '/upload', badge: null },
-  { icon: FileText, label: 'Results & Trends', ukLabel: 'Результати', path: '/lab-results', badge: null },
-  { icon: ClipboardList, label: 'Protocol', ukLabel: 'План дій', path: '/assignments', badgeKey: 'pending_assignments', premium: true },
-  { icon: Clock, label: 'Check-in', ukLabel: 'Чек-ін', path: '/check-ins', badge: null, premium: true },
-  { icon: Flame, label: 'Profile & Safety', ukLabel: 'Профіль і безпека', path: '/health-profile', badge: null },
-  { icon: CreditCard, label: 'Billing', ukLabel: 'Оплата', path: '/subscription', badge: null },
-  { icon: Settings, label: 'Account', ukLabel: 'Акаунт', path: '/settings', badge: null },
-  { icon: HelpCircle, label: 'Help Center', ukLabel: 'Допомога', path: '/help-center', badge: null },
+  { icon: Home, label: 'Dashboard', ukLabel: 'Панель', path: '/dashboard', badge: null },
+  { icon: Route, label: 'Journey', ukLabel: 'Шлях', path: '/questionnaire', badge: null },
+  { icon: FileText, label: 'Results', ukLabel: 'Результати', path: '/lab-results', badge: null },
+  { icon: BarChart3, label: 'Progress', ukLabel: 'Прогрес', path: '/progress', badge: null },
+  { icon: User, label: 'Profile', ukLabel: 'Профіль', path: '/health-profile', badge: null },
 ]
 
 function isItemActive(currentPath, itemPath) {
   if (itemPath === '/lab-results') {
-    return currentPath === '/lab-results' || currentPath === '/progress' || currentPath.startsWith('/results/') || currentPath.startsWith('/protocol/')
+    return currentPath === '/lab-results' || currentPath.startsWith('/results/') || currentPath.startsWith('/protocol/')
   }
   if (itemPath === '/questionnaire') {
-    return currentPath === '/questionnaire'
+    return currentPath === '/questionnaire' || currentPath === '/lab-plan' || currentPath === '/upload' || currentPath === '/assignments' || currentPath.startsWith('/assignments/') || currentPath === '/check-ins'
   }
   if (itemPath === '/lab-plan') {
     return currentPath === '/lab-plan'
@@ -53,8 +40,11 @@ function isItemActive(currentPath, itemPath) {
   if (itemPath === '/check-ins') {
     return currentPath === '/check-ins' || currentPath === '/checkin'
   }
-  if (itemPath === '/settings' || itemPath === '/health-profile' || itemPath === '/subscription' || itemPath === '/upload') {
-    return currentPath === itemPath
+  if (itemPath === '/health-profile') {
+    return currentPath === '/health-profile' || currentPath === '/settings' || currentPath === '/subscription' || currentPath === '/billing-history' || currentPath === '/help-center'
+  }
+  if (itemPath === '/progress') {
+    return currentPath === '/progress' || currentPath === '/insights'
   }
   if (itemPath === '/dashboard') {
     return currentPath === '/dashboard'
@@ -217,6 +207,13 @@ export default function UserDashboardSidebar({
                   {user?.user_metadata?.full_name || user?.name || user?.email?.split('@')[0] || 'User'}
                 </p>
                 <p className="truncate text-xs text-slate-400">{user?.email || (isUk ? 'Email не вказано' : 'No email')}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <a href="/subscription" className="text-[11px] font-semibold text-slate-500 hover:text-emerald-700">{isUk ? 'Оплата' : 'Billing'}</a>
+                  <span className="text-[11px] text-slate-300">·</span>
+                  <a href="/settings" className="text-[11px] font-semibold text-slate-500 hover:text-emerald-700">{isUk ? 'Налаштування' : 'Settings'}</a>
+                  <span className="text-[11px] text-slate-300">·</span>
+                  <a href="/help-center" className="text-[11px] font-semibold text-slate-500 hover:text-emerald-700">{isUk ? 'Допомога' : 'Help'}</a>
+                </div>
               </div>
             )}
             {!collapsed && <Settings className="h-3.5 w-3.5 flex-shrink-0 text-slate-300" />}

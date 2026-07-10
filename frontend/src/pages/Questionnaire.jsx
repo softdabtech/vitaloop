@@ -1,51 +1,37 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, ClipboardList, Route, ShieldAlert, Stethoscope } from 'lucide-react'
+import { AlertTriangle, ArrowRight, CheckCircle2, ChevronLeft, ClipboardList, Pill, Route, ShieldAlert, Stethoscope } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
-import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
-import { ct } from '../lib/cabinetI18n.js'
+import { CoachBadge, CoachButton, CoachCard, CoachChip, CoachInput, CoachProgress, CoachSkeleton, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
 import api from '../lib/api.js'
 
 const BODY_SYSTEMS = ['General', 'Neurological', 'Cardiometabolic', 'Hormonal', 'Digestive', 'Musculoskeletal', 'Recovery']
 const DURATION_OPTIONS = ['< 1 week', '1-4 weeks', '1-3 months', '3-6 months', '6+ months']
+const RELATED_SYMPTOMS = ['Fatigue', 'Poor sleep', 'Brain fog', 'Hair shedding', 'Low mood', 'Digestive issues', 'Cravings', 'Low stamina']
+
+const WIZARD_STEPS = [
+  { title: 'Main concern', helper: 'Required', why: 'This anchors the analysis around what you actually want to improve.' },
+  { title: 'Duration', helper: 'Optional', why: 'Timing helps separate a new issue from a pattern that needs trend review.' },
+  { title: 'Related symptoms', helper: 'Choose what fits', why: 'Symptom clusters help prioritize the lab markers worth checking first.' },
+  { title: 'Medications & supplements', helper: 'Context', why: 'Some markers and recommendations depend on current medications or supplements.' },
+  { title: 'Safety questions', helper: 'Required', why: 'Red flags change the safest next step and may require clinician review.' },
+]
 
 function parseApiError(err, fallback) {
   const detail = err?.response?.data?.detail
-  return typeof detail === 'string' ? detail : fallback
-}
-
-function NumericScaleButtons({ value, onChange, label }) {
-  return (
-    <div>
-      <p className="text-sm font-medium text-slate-700">{label}: <span className="font-semibold text-slate-900">{value}/10</span></p>
-      <div className="mt-2 grid grid-cols-5 gap-2 sm:grid-cols-10">
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
-          <button
-            key={num}
-            type="button"
-            onClick={() => onChange(num)}
-            className={`rounded-lg border px-2 py-2 text-sm font-semibold transition ${
-              value === num
-                ? 'border-emerald-500 bg-emerald-500 text-white'
-                : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50'
-            }`}
-          >
-            {num}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
+  if (typeof detail === 'string') return detail
+  if (typeof detail?.detail === 'string') return detail.detail
+  return fallback
 }
 
 function scoreReadiness({ concern, duration, severity, bodySystem, related, meds }) {
   let score = 20
-  if (concern.trim().length >= 6) score += 20
-  if (duration) score += 12
-  if (severity >= 4) score += 12
-  if (bodySystem) score += 10
-  if (related.trim().length >= 4) score += 10
+  if (concern.trim().length >= 6) score += 24
+  if (duration) score += 10
+  if (severity >= 4) score += 10
+  if (bodySystem) score += 12
+  if (related.trim().length >= 4) score += 12
   if (meds.trim().length >= 3) score += 8
   return Math.max(20, Math.min(98, score))
 }
@@ -64,13 +50,40 @@ function saveConcernContext(payload) {
   })
 }
 
+function NumericScale({ value, onChange }) {
+  return (
+    <div className="grid gap-3">
+      <div className="flex items-center justify-between text-sm font-bold text-slate-700">
+        <span>Intensity</span>
+        <span>{value}/10</span>
+      </div>
+      <div className="grid grid-cols-5 gap-2 sm:grid-cols-10">
+        {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+          <button
+            key={num}
+            type="button"
+            onClick={() => onChange(num)}
+            className={`min-h-12 rounded-2xl border text-sm font-extrabold transition ${
+              value === num
+                ? 'border-teal-500 bg-teal-500 text-white shadow-lg shadow-teal-500/20'
+                : 'border-slate-200 bg-white text-slate-700 hover:border-teal-300 hover:bg-teal-50'
+            }`}
+          >
+            {num}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Questionnaire() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [step, setStep] = useState(0)
   const [nextQuestion, setNextQuestion] = useState(null)
   const [answeredCount, setAnsweredCount] = useState(0)
   const [remainingCount, setRemainingCount] = useState(0)
@@ -86,7 +99,6 @@ export default function Questionnaire() {
   const [whatTried, setWhatTried] = useState('')
   const [answerValue, setAnswerValue] = useState(5)
   const [answerText, setAnswerText] = useState('')
-  const [phase, setPhase] = useState('intake')
   const [redFlags, setRedFlags] = useState({
     severeOnset: false,
     fever: false,
@@ -97,13 +109,13 @@ export default function Questionnaire() {
     pregnancyContext: false,
   })
 
-  const totalCount = answeredCount + remainingCount
-  const progressPct = totalCount > 0 ? Math.round((answeredCount / totalCount) * 100) : 0
   const readiness = useMemo(
     () => scoreReadiness({ concern, duration, severity, bodySystem, related: relatedSymptoms, meds: medications }),
     [concern, duration, severity, bodySystem, relatedSymptoms, medications]
   )
   const urgency = useMemo(() => urgencyGuidance(redFlags), [redFlags])
+  const progress = Math.round(((step + 1) / WIZARD_STEPS.length) * 100)
+  const selectedRelated = relatedSymptoms.split(',').map((item) => item.trim()).filter(Boolean)
 
   async function loadSession() {
     setLoading(true)
@@ -114,9 +126,7 @@ export default function Questionnaire() {
       setAnsweredCount(Number(data?.answered_count || 0))
       setRemainingCount(Number(data?.remaining_count || 0))
       const sessionContext = data?.session_context || data?.session?.session_metadata || {}
-      if (sessionContext?.active_concern) {
-        setConcern(sessionContext.active_concern)
-      }
+      if (sessionContext?.active_concern) setConcern(sessionContext.active_concern)
       if (sessionContext?.summary) {
         const summary = sessionContext.summary || {}
         setDuration(summary.duration || '')
@@ -139,6 +149,62 @@ export default function Questionnaire() {
     loadSession()
   }, [])
 
+  function toggleRelated(label) {
+    const next = selectedRelated.includes(label)
+      ? selectedRelated.filter((item) => item !== label)
+      : [...selectedRelated, label]
+    setRelatedSymptoms(next.join(', '))
+  }
+
+  function canContinue() {
+    if (step === 0) return concern.trim().length >= 3
+    return true
+  }
+
+  async function saveWizardContext() {
+    await saveConcernContext({
+      concern,
+      duration,
+      severity,
+      bodySystem,
+      relatedSymptoms,
+      medications,
+      supplements,
+      whatTried,
+      readiness,
+      urgency,
+      redFlags,
+      linkedLabs: [],
+    })
+    await queryClient.invalidateQueries({ queryKey: ['questionnaire-session'] })
+    await queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
+  }
+
+  async function handleNext() {
+    if (!canContinue()) {
+      toast.error('Add your main concern before continuing.')
+      return
+    }
+    if (step < WIZARD_STEPS.length - 1) {
+      setStep((prev) => prev + 1)
+      return
+    }
+    setSaving(true)
+    try {
+      await saveWizardContext()
+      toast.success('Symptom context saved')
+      if (nextQuestion?.id) {
+        setStep(WIZARD_STEPS.length)
+      } else {
+        navigate('/lab-plan')
+      }
+    } catch (err) {
+      toast.error(parseApiError(err, 'Failed to save symptom context.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function submitAnswer() {
     if (!nextQuestion?.id) return
     setSaving(true)
@@ -154,7 +220,7 @@ export default function Questionnaire() {
       setAnswerValue(5)
       setAnswerText('')
 
-      if (data?.completed) {
+      if (data?.completed || !data?.next_question) {
         const completeResp = await api.post('/questionnaire/complete', { mark_onboarding_complete: true })
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['profile'] }),
@@ -163,8 +229,7 @@ export default function Questionnaire() {
           queryClient.invalidateQueries({ queryKey: ['insights'] }),
           queryClient.invalidateQueries({ queryKey: ['health-score'] }),
         ])
-        const completedSession = completeResp?.data?.session || {}
-        setResults(completedSession)
+        setResults(completeResp?.data?.session || {})
         toast.success('Symptom check completed')
       }
     } catch (err) {
@@ -174,81 +239,92 @@ export default function Questionnaire() {
     }
   }
 
-  function continueToQuestions() {
-    if (!concern.trim() || !duration || !bodySystem) {
-      toast.error('Please complete concern, duration, and body system before continuing.')
-      return
-    }
-    saveConcernContext({
-      concern,
-      duration,
-      severity,
-      bodySystem,
-      relatedSymptoms,
-      medications,
-      supplements,
-      whatTried,
-      readiness,
-      urgency,
-      linkedLabs: [],
-    })
-    setPhase('questions')
-  }
-
-  if (loading) {
-    return <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">Loading symptom check...</div>
+  if (loading) return <div className="coach-shell"><CoachSkeleton rows={4} /></div>
+  if (error) {
+    return (
+      <div className="coach-shell">
+        <EmptyCoachState title="Symptom check is unavailable" body={error} actionLabel="Try again" onAction={loadSession} />
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
-      <CabinetPageHeader
-        title={ct().questionnaire.title}
-        subtitle={ct().questionnaire.subtitle}
-        helper={ct().questionnaire.helper}
-      />
+    <div className="coach-shell coach-grid">
+      <section className="coach-hero">
+        <p className="coach-eyebrow">Symptom-first intake</p>
+        <h1 className="coach-title-xl">Tell VITALOOP what feels off.</h1>
+        <p className="coach-body mt-4 max-w-2xl">Low barrier first, precise context next. We use this to connect symptoms, labs, safety context, and your next step.</p>
+      </section>
 
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
-
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-          {phase === 'intake' && (
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm font-semibold text-slate-900">What is the main thing you want to understand or improve?</p>
-                <textarea value={concern} onChange={(e) => setConcern(e.target.value)} rows={3} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Example: Leg pain and fatigue for 6 weeks" />
+      <div className="coach-grid coach-grid--2">
+        <CoachCard className="p-5 sm:p-6">
+          {step < WIZARD_STEPS.length && (
+            <>
+              <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CoachBadge tone="primary">Step {step + 1} of {WIZARD_STEPS.length}</CoachBadge>
+                  <h2 className="coach-title-lg mt-3">{WIZARD_STEPS[step].title}</h2>
+                  <p className="mt-2 text-sm text-slate-600">{WIZARD_STEPS[step].helper}</p>
+                </div>
+                <div className="w-full sm:w-56">
+                  <CoachProgress value={progress} label="Progress" />
+                </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="text-sm text-slate-700">Duration
-                  <select value={duration} onChange={(e) => setDuration(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
-                    <option value="">Select duration</option>
-                    {DURATION_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
-                  </select>
-                </label>
+              {step === 0 && (
+                <div className="grid gap-5">
+                  <CoachInput label="What is the main thing you want to understand or improve?" helper="Example: fatigue and hair shedding for the last 2 months.">
+                    <textarea value={concern} onChange={(e) => setConcern(e.target.value)} placeholder="Describe the main concern" />
+                  </CoachInput>
+                  <NumericScale value={severity} onChange={setSeverity} />
+                </div>
+              )}
 
-                <label className="text-sm text-slate-700">Body system / area
-                  <select value={bodySystem} onChange={(e) => setBodySystem(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
-                    <option value="">Select area</option>
-                    {BODY_SYSTEMS.map((item) => <option key={item} value={item}>{item}</option>)}
-                  </select>
-                </label>
-              </div>
+              {step === 1 && (
+                <div className="grid gap-5">
+                  <CoachInput label="How long has this been going on?" helper="Optional, but useful for deciding if we should look at trends.">
+                    <select value={duration} onChange={(e) => setDuration(e.target.value)}>
+                      <option value="">Select duration</option>
+                      {DURATION_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+                    </select>
+                  </CoachInput>
+                  <CoachInput label="Body system or area" helper="Choose the closest fit.">
+                    <select value={bodySystem} onChange={(e) => setBodySystem(e.target.value)}>
+                      <option value="">Select area</option>
+                      {BODY_SYSTEMS.map((item) => <option key={item} value={item}>{item}</option>)}
+                    </select>
+                  </CoachInput>
+                </div>
+              )}
 
-              <NumericScaleButtons value={severity} onChange={setSeverity} label="Severity" />
+              {step === 2 && (
+                <div className="grid gap-5">
+                  <div className="flex flex-wrap gap-2">
+                    {RELATED_SYMPTOMS.map((label) => (
+                      <CoachChip key={label} active={selectedRelated.includes(label)} onClick={() => toggleRelated(label)}>
+                        {label}
+                      </CoachChip>
+                    ))}
+                  </div>
+                  <CoachInput label="Anything else?" helper="Optional free text for symptoms not listed above.">
+                    <textarea value={whatTried} onChange={(e) => setWhatTried(e.target.value)} placeholder="What changed recently? What did you already try?" />
+                  </CoachInput>
+                </div>
+              )}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <textarea value={relatedSymptoms} onChange={(e) => setRelatedSymptoms(e.target.value)} rows={3} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Related symptoms" />
-                <textarea value={whatTried} onChange={(e) => setWhatTried(e.target.value)} rows={3} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="What you already tried" />
-              </div>
+              {step === 3 && (
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <CoachInput label="Current medications" helper="Include dose if you know it.">
+                    <textarea value={medications} onChange={(e) => setMedications(e.target.value)} placeholder="Example: metformin, levothyroxine, antihistamines" />
+                  </CoachInput>
+                  <CoachInput label="Current supplements" helper="This helps avoid unsafe recommendations.">
+                    <textarea value={supplements} onChange={(e) => setSupplements(e.target.value)} placeholder="Example: vitamin D, iron, magnesium" />
+                  </CoachInput>
+                </div>
+              )}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <textarea value={medications} onChange={(e) => setMedications(e.target.value)} rows={2} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Current medications" />
-                <textarea value={supplements} onChange={(e) => setSupplements(e.target.value)} rows={2} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Current supplements" />
-              </div>
-
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-900"><ShieldAlert className="h-4 w-4" /> Safety screen</div>
-                <div className="grid gap-2 sm:grid-cols-2 text-sm text-amber-900">
+              {step === 4 && (
+                <div className="grid gap-3 sm:grid-cols-2">
                   {Object.entries({
                     severeOnset: 'Sudden severe onset',
                     fever: 'Fever',
@@ -258,83 +334,90 @@ export default function Questionnaire() {
                     trauma: 'Recent trauma',
                     pregnancyContext: 'Pregnancy context',
                   }).map(([key, label]) => (
-                    <label key={key} className="inline-flex items-center gap-2">
+                    <label key={key} className="flex min-h-12 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700">
                       <input type="checkbox" checked={Boolean(redFlags[key])} onChange={(e) => setRedFlags((prev) => ({ ...prev, [key]: e.target.checked }))} />
                       {label}
                     </label>
                   ))}
                 </div>
-              </div>
+              )}
 
-              <button onClick={continueToQuestions} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Continue symptom check</button>
-            </div>
+              <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+                <CoachButton variant="secondary" icon={ChevronLeft} disabled={step === 0 || saving} onClick={() => setStep((prev) => Math.max(0, prev - 1))}>
+                  Back
+                </CoachButton>
+                <CoachButton onClick={handleNext} disabled={saving} trailingIcon={ArrowRight}>
+                  {step === WIZARD_STEPS.length - 1 ? (saving ? 'Saving...' : 'Save and continue') : 'Continue'}
+                </CoachButton>
+              </div>
+            </>
           )}
 
-          {phase === 'questions' && !results && (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                <p className="font-semibold">Smart questions</p>
-                <p className="text-xs text-slate-500">Question {answeredCount + 1} of {totalCount || '?'}. {progressPct}% complete.</p>
-              </div>
-
+          {step >= WIZARD_STEPS.length && !results && (
+            <div className="grid gap-5">
+              <CoachBadge tone="primary">Smart follow-up</CoachBadge>
               {nextQuestion ? (
                 <>
-                  <p className="text-base font-semibold text-slate-900">{nextQuestion.text}</p>
-                  <NumericScaleButtons value={answerValue} onChange={setAnswerValue} label="Answer value" />
-                  <textarea value={answerText} onChange={(e) => setAnswerText(e.target.value)} rows={3} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Optional context" />
-                  <button onClick={submitAnswer} disabled={saving} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">{saving ? 'Saving...' : 'Next question'}</button>
+                  <h2 className="coach-title-lg">{nextQuestion.text}</h2>
+                  <NumericScale value={answerValue} onChange={setAnswerValue} />
+                  <CoachInput label="Optional context">
+                    <textarea value={answerText} onChange={(e) => setAnswerText(e.target.value)} placeholder="Add detail if it helps." />
+                  </CoachInput>
+                  <CoachButton onClick={submitAnswer} disabled={saving}>{saving ? 'Saving...' : 'Next question'}</CoachButton>
                 </>
               ) : (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">No pending smart questions right now.</div>
+                <EmptyCoachState title="Your symptom context is ready" body="Open your lab plan to see what is worth checking first." actionLabel="Open lab plan" onAction={() => navigate('/lab-plan')} />
               )}
             </div>
           )}
 
           {results && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-slate-900">Symptom Check Output</h3>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><p className="font-semibold">Possible contributing areas</p><p className="mt-1 text-slate-600">{bodySystem || 'General system imbalance'} and related recovery factors.</p></div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><p className="font-semibold">What to check next</p><p className="mt-1 text-slate-600">Open Lab Plan for core tests and discussion priorities.</p></div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><p className="font-semibold">Doctor direction</p><p className="mt-1 text-slate-600">Bring symptom timeline, severity trend, and current meds/supplements.</p></div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><p className="font-semibold">Urgency guidance</p><p className="mt-1 text-slate-600">{urgency}</p></div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => navigate('/lab-plan')} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">Open lab plan</button>
-                <button onClick={() => navigate('/upload')} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Upload results</button>
-              </div>
-            </div>
+            <EmptyCoachState
+              icon={CheckCircle2}
+              title="Symptom check completed"
+              body="Your answers are saved. Next, review the lab plan or upload existing results."
+              actionLabel="Open lab plan"
+              onAction={() => navigate('/lab-plan')}
+            />
           )}
-        </section>
+        </CoachCard>
 
-        <aside className="space-y-4">
-          <section className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Stethoscope className="h-4 w-4 text-emerald-600" /> Active concern</div>
-            <p className="text-sm text-slate-700">{concern || 'No concern entered yet'}</p>
-            <p className="mt-2 text-xs text-slate-500">Duration: {duration || 'Not set'} | Severity: {severity}/10</p>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Route className="h-4 w-4 text-emerald-600" /> Lab plan readiness</div>
-            <p className="text-2xl font-bold text-emerald-700">{readiness}%</p>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${readiness}%` }} /></div>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><AlertTriangle className="h-4 w-4 text-amber-500" /> Safety context</div>
-            <p className="text-sm text-slate-700">{urgency}</p>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><ClipboardList className="h-4 w-4 text-slate-600" /> What to track this week</div>
-            <ul className="list-disc pl-5 text-sm text-slate-600 space-y-1">
-              <li>Severity trend of main concern</li>
-              <li>Sleep, energy, mood, recovery</li>
-              <li>Adherence and side effects</li>
+        <aside className="coach-grid">
+          <InsightCard
+            icon={InfoIcon}
+            title="Why we ask this"
+            body={step < WIZARD_STEPS.length ? WIZARD_STEPS[step].why : 'Smart follow-up questions help reduce generic advice.'}
+          />
+          <InsightCard
+            icon={Route}
+            title="Lab plan readiness"
+            body={`Current readiness: ${readiness}%. More context means a more focused lab plan.`}
+            actionLabel="Open lab plan"
+            onAction={() => navigate('/lab-plan')}
+          />
+          <InsightCard
+            icon={AlertTriangle}
+            tone={Object.values(redFlags).some(Boolean) ? 'warning' : 'success'}
+            title="Safety context"
+            body={urgency}
+          />
+          <CoachCard className="p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-teal-600" />
+              <h3 className="text-lg font-extrabold text-slate-950">What to track this week</h3>
+            </div>
+            <ul className="space-y-2 text-sm leading-6 text-slate-600">
+              <li>Severity trend of the main concern</li>
+              <li>Sleep, energy, mood, and recovery</li>
+              <li>Medication, supplement, or food changes</li>
             </ul>
-          </section>
+          </CoachCard>
         </aside>
       </div>
     </div>
   )
+}
+
+function InfoIcon(props) {
+  return <Stethoscope {...props} />
 }
