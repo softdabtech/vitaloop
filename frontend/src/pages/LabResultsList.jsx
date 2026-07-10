@@ -197,11 +197,11 @@ export default function LabResultsList() {
                     key={uploadId || `${date}-${index}`}
                     className="vtl-light-card vtl-light-card-hover rounded-2xl px-4 py-3 transition"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <button
                         onClick={() => uploadId && navigate(`/results/${uploadId}`)}
                         disabled={!uploadId}
-                        className="flex-1 min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
+                        className="min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60 sm:flex-1"
                       >
                         <p className="truncate text-sm font-semibold text-slate-800">{item?.lab_name || `Lab Results #${sortedItems.length - index}`}</p>
                         <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
@@ -210,17 +210,17 @@ export default function LabResultsList() {
                         </p>
                       </button>
 
-                      <div className="flex items-center gap-2 text-xs">
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
                         <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">Optimal {optimal}</span>
                         <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">Warning {warning}</span>
                         <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">Review {critical}</span>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 sm:justify-end">
                         <button
                           onClick={() => uploadId && navigate(`/results/${uploadId}`)}
                           disabled={!uploadId}
-                          className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-40"
+                          className="inline-flex min-h-10 items-center gap-1 rounded-lg px-1 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-700 disabled:opacity-40"
                         >
                           View Results
                           <ChevronRight className="h-4 w-4" />

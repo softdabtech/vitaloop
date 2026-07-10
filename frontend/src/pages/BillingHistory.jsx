@@ -85,8 +85,9 @@ export default function BillingHistory() {
               </div>
             )}
 
-            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div className="overflow-x-auto">
+              <table className="min-w-[640px] w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50">
                     <th className="text-left px-6 py-4 font-semibold text-slate-600">Plan</th>
@@ -119,6 +120,7 @@ export default function BillingHistory() {
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         )}

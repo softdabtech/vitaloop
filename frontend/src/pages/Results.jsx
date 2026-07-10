@@ -4,8 +4,6 @@ import { motion } from 'framer-motion'
 import api from '../lib/api.js'
 import FeatureGate from '../components/FeatureGate.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
-import HintBanner from '../components/tour/HintBanner.jsx'
-import { useTourHints } from '../hooks/useTourHints.js'
 import BiomarkerContextTooltip from '../components/BiomarkerContextTooltip.jsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
 import {
@@ -267,7 +265,6 @@ function SectionCard({ icon: Icon, title, children, className = '' }) {
 export default function Results() {
   const { uploadId } = useParams()
   const navigate = useNavigate()
-  const { show: showHints, dismiss: dismissHints } = useTourHints('results')
   const [biomarkers, setBiomarkers] = useState([])
   const [protocol, setProtocol] = useState([])
   const [knowledgeReport, setKnowledgeReport] = useState(null)
@@ -439,9 +436,6 @@ export default function Results() {
       />
 
       <div className="max-w-6xl">
-
-        {showHints && <div className="mb-6"><HintBanner hints={copy.hints} onDone={dismissHints} /></div>}
-
         <motion.header
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
