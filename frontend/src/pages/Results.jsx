@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Download,
+  ExternalLink,
   FileText,
   HeartPulse,
   Info,
@@ -267,6 +268,7 @@ export default function Results() {
   const navigate = useNavigate()
   const [biomarkers, setBiomarkers] = useState([])
   const [protocol, setProtocol] = useState([])
+  const [shoppingLinks, setShoppingLinks] = useState([])
   const [knowledgeReport, setKnowledgeReport] = useState(null)
   const [explainability, setExplainability] = useState(null)
   const [safetyResult, setSafetyResult] = useState(null)
@@ -285,6 +287,13 @@ export default function Results() {
         if (!active) return
         setBiomarkers(data.biomarkers ?? [])
         setProtocol(data.protocol ?? [])
+        setShoppingLinks(
+          Array.isArray(data.shopping_links)
+            ? data.shopping_links
+            : Array.isArray(data.final_analysis?.shopping_links)
+              ? data.final_analysis.shopping_links
+              : []
+        )
         setKnowledgeReport(analysisResponse?.data?.knowledge_report ?? data.knowledge_report ?? null)
         setExplainability(analysisResponse?.data?.explainability ?? null)
         setSafetyResult(analysisResponse?.data?.safety_result ?? null)
@@ -292,6 +301,7 @@ export default function Results() {
         if (!active) return
         setBiomarkers([])
         setProtocol([])
+        setShoppingLinks([])
         setKnowledgeReport(null)
         setExplainability(null)
         setSafetyResult(null)
@@ -643,6 +653,41 @@ export default function Results() {
             )}
           </CoachCard>
         </div>
+
+        {!!shoppingLinks.length && (
+          <div className="mt-6 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">Suggested iHerb searches</p>
+              <h2 className="mt-1 text-lg font-semibold text-slate-950">Optional items to discuss before buying</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                These are educational search shortcuts based on your report context. Confirm supplement choice, dose, and interactions with a qualified clinician.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {shoppingLinks.slice(0, 6).map((item, idx) => (
+                <div key={`${item.search_query || item.label}-${idx}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="flex flex-col gap-2">
+                    <div>
+                      <h3 className="font-semibold text-slate-950">{item.label || item.search_query}</h3>
+                      {item.reason && <p className="mt-1 text-sm leading-6 text-slate-600">{item.reason}</p>}
+                    </div>
+                    {item.url && (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                      >
+                        Find on iHerb
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

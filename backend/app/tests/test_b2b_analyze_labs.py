@@ -287,6 +287,62 @@ async def test_output_contains_disclaimer(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_pipeline_fills_empty_protocol_sections_for_flagged_markers(monkeypatch):
+    async def fake_eval(**kwargs):
+        return {"matched_rules": [], "safety_alerts": [], "generated_recommendations": []}
+
+    monkeypatch.setattr("app.services.lab_analysis_pipeline.evaluate_biomarkers_with_knowledge", fake_eval)
+    result = await svc.run_lab_analysis_pipeline(
+        biomarkers=[{"name": "Ferritin", "value": 12, "unit": "ng/mL", "reference_range": "30-150"}],
+        symptoms=[],
+        analysis_id="analysis-1",
+        generate_ai_protocol=False,
+    )
+    assert result["protocol"]["nutrition"]
+    assert result["protocol"]["training_recovery"]
+    assert result["protocol"]["training_recovery"][0]["source"] == "vitaloop_analysis_core"
+    assert result["shopping_links"]
+    assert any("iherb.com/search" in item["url"] for item in result["shopping_links"])
+    assert any("clinician" in item["disclaimer"].lower() for item in result["shopping_links"])
+
+
+@pytest.mark.asyncio
+async def test_pipeline_strips_placeholder_source_urls(monkeypatch):
+    async def fake_eval(**kwargs):
+        return {
+            "matched_rules": [
+                {
+                    "rule_key": "rule_low_ferritin",
+                    "name": "Low ferritin",
+                    "summary": "Low ferritin should be reviewed.",
+                    "risk": "possible_low_iron_store_pattern",
+                    "severity": "moderate",
+                    "confidence": 0.7,
+                    "requires_doctor": False,
+                    "source": "clinical_guideline_placeholder",
+                    "source_url": "https://example.org/iron-context",
+                }
+            ],
+            "safety_alerts": [],
+            "generated_recommendations": [],
+            "source_references": [
+                {"source": "clinical_guideline_placeholder", "source_url": "https://example.org/iron-context"}
+            ],
+        }
+
+    monkeypatch.setattr("app.services.lab_analysis_pipeline.evaluate_biomarkers_with_knowledge", fake_eval)
+    result = await svc.run_lab_analysis_pipeline(
+        biomarkers=[{"name": "Ferritin", "value": 12, "unit": "ng/mL", "reference_range": "30-150"}],
+        symptoms=[],
+        analysis_id="analysis-1",
+        generate_ai_protocol=False,
+    )
+    assert result["knowledge_report"]["why_it_matters"][0]["source_url"] is None
+    assert result["knowledge_report"]["source_references"][0]["source_url"] is None
+    assert result["knowledge_evaluation"]["matched_rules"][0]["source_url"] is None
+
+
+@pytest.mark.asyncio
 async def test_b2c_pipeline_shape_not_broken(monkeypatch):
     async def fake_eval(**kwargs):
         return {"matched_rules": [], "safety_alerts": [], "generated_recommendations": []}

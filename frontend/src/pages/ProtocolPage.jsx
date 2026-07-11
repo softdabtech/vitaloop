@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CalendarClock, CheckCircle2, Download, FileText, MessageCircle, RefreshCw, ShieldAlert, Sparkles } from 'lucide-react'
+import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, FileText, MessageCircle, RefreshCw, ShieldAlert, Sparkles } from 'lucide-react'
 import api from '../lib/api.js'
 import { useFeature } from '../hooks/useFeature.js'
 import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
@@ -36,12 +36,18 @@ async function loadProtocolData(uploadId) {
   const doctorDiscussion = Array.isArray(data?.knowledge_report?.doctor_discussion) ? data.knowledge_report.doctor_discussion : []
   const retestPlan = Array.isArray(data?.knowledge_report?.retest_plan) ? data.knowledge_report.retest_plan : []
   const safetyAlerts = Array.isArray(data?.knowledge_report?.safety_alerts) ? data.knowledge_report.safety_alerts : []
+  const shoppingLinks = Array.isArray(data?.shopping_links)
+    ? data.shopping_links
+    : Array.isArray(data?.final_analysis?.shopping_links)
+      ? data.final_analysis.shopping_links
+      : []
   return {
     biomarkers,
     protocol: storedProtocol.length ? storedProtocol : actionPlan,
     doctorDiscussion,
     retestPlan,
     safetyAlerts,
+    shoppingLinks,
     knowledgeReport: data?.knowledge_report ?? null,
   }
 }
@@ -193,6 +199,7 @@ export default function ProtocolPage() {
   const [doctorDiscussion, setDoctorDiscussion] = useState([])
   const [retestPlan, setRetestPlan] = useState([])
   const [safetyAlerts, setSafetyAlerts] = useState([])
+  const [shoppingLinks, setShoppingLinks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [exporting, setExporting] = useState(false)
@@ -210,6 +217,7 @@ export default function ProtocolPage() {
         setDoctorDiscussion(data.doctorDiscussion)
         setRetestPlan(data.retestPlan)
         setSafetyAlerts(data.safetyAlerts)
+        setShoppingLinks(data.shoppingLinks)
       } catch (err) {
         if (!active) return
         const status = err?.response?.status
@@ -324,6 +332,43 @@ export default function ProtocolPage() {
           </div>
         </CoachCard>
       ))}
+
+      {!!shoppingLinks.length && (
+        <CoachCard className="p-5 sm:p-6">
+          <div className="mb-5">
+            <p className="coach-eyebrow">Suggested iHerb searches</p>
+            <h2 className="coach-title-lg">Optional shopping aids connected to this protocol.</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              These links are educational search shortcuts, not prescriptions. Confirm supplements, dosing, and interactions with a qualified clinician before use.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {shoppingLinks.slice(0, 6).map((item, index) => (
+              <div key={`${item.search_query || item.label}-${index}`} className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-extrabold text-slate-950">{item.label || item.search_query}</h3>
+                    {item.category && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-emerald-700">{item.category}</p>}
+                  </div>
+                  {item.priority && <CoachBadge tone={priorityTone(item.priority)}>{formatPriority(item.priority)}</CoachBadge>}
+                </div>
+                {item.reason && <p className="mt-3 text-sm leading-6 text-slate-600">{item.reason}</p>}
+                {item.url && (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700 sm:w-auto"
+                  >
+                    Find on iHerb
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </CoachCard>
+      )}
 
       <div className="coach-grid coach-grid--2">
         <CoachCard className="p-5">
