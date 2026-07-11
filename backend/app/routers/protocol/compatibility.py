@@ -11,8 +11,6 @@ from app.services.supabase_service import (
     save_protocol,
 )
 from app.services.lab_analysis_pipeline import run_lab_analysis_pipeline
-from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
-from app.services.knowledge.report import build_knowledge_report
 from app.utils.locale import resolve_locale
 
 router = APIRouter(tags=["protocol-compatibility"])
@@ -56,14 +54,6 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
     user_profile = await get_user_profile(user_id) or {}
     locale = _resolve_response_locale(request)
 
-    compatibility_evaluation = await evaluate_biomarkers_with_knowledge(
-        biomarkers=biomarkers or [],
-        symptoms=[],
-        user_id=user_id,
-        upload_id=str(upload_id),
-        persist=False,
-    )
-
     pipeline_result = await run_lab_analysis_pipeline(
         biomarkers=biomarkers or [],
         symptoms=[],
@@ -75,12 +65,8 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
         locale=locale,
         generate_ai_protocol=not bool(protocol_recommendations),
     )
-    knowledge_evaluation = compatibility_evaluation or pipeline_result.get("knowledge_evaluation")
-    knowledge_report = build_knowledge_report(
-        biomarkers=biomarkers or [],
-        knowledge_evaluation=knowledge_evaluation,
-        locale=locale,
-    )
+    knowledge_evaluation = pipeline_result.get("knowledge_evaluation")
+    knowledge_report = pipeline_result.get("knowledge_report")
     generated_recommendations = pipeline_result.get("recommendations") or []
     if not protocol_recommendations and generated_recommendations:
         protocol_row = await save_protocol(
