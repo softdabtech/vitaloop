@@ -5,6 +5,7 @@ from datetime import date, datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
 
 from app.config import settings
+from app.services.affiliate import build_iherb_url
 from app.services.ai.openai_service import generate_protocol, is_llm_configured
 from app.services.explainability import build_recommendation_explanations
 from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
@@ -32,6 +33,8 @@ _STATUS_PRIORITY = {
     "OPTIMAL": 3,
 }
 
+_PLACEHOLDER_SOURCE_HOSTS = ("example.org", "example.com")
+
 _NAME_CATEGORY_KEYWORDS = {
     "blood_count": [
         "reticulocyte",
@@ -56,6 +59,25 @@ _NAME_CATEGORY_KEYWORDS = {
     "kidney": ["creatinine", "urea", "egfr"],
     "inflammation": ["crp", "esr", "homocysteine"],
 }
+
+
+def _is_placeholder_source_url(value: Any) -> bool:
+    url = str(value or "").strip().lower()
+    return any(host in url for host in _PLACEHOLDER_SOURCE_HOSTS)
+
+
+def _strip_placeholder_source_urls(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_strip_placeholder_source_urls(item) for item in value]
+    if isinstance(value, dict):
+        cleaned: Dict[str, Any] = {}
+        for key, item in value.items():
+            if key == "source_url" and _is_placeholder_source_url(item):
+                cleaned[key] = None
+            else:
+                cleaned[key] = _strip_placeholder_source_urls(item)
+        return cleaned
+    return value
 
 
 def _parse_reference_range(raw: Any) -> tuple[float | None, float | None]:
@@ -393,6 +415,146 @@ def _protocol_sections_from_ai_and_rules(
     return protocol
 
 
+def _has_biomarker_family(biomarkers: List[Dict[str, Any]], keywords: Iterable[str]) -> bool:
+    lowered_keywords = [keyword.lower() for keyword in keywords]
+    for biomarker in biomarkers:
+        haystack = " ".join(
+            str(biomarker.get(key) or "")
+            for key in ("name", "canonical_name", "category")
+        ).lower()
+        if any(keyword in haystack for keyword in lowered_keywords):
+            return True
+    return False
+
+
+def _fill_protocol_section_fallbacks(
+    protocol: Dict[str, List[Dict[str, Any]]],
+    *,
+    biomarkers: List[Dict[str, Any]],
+    prioritized: List[Dict[str, Any]],
+) -> Dict[str, List[Dict[str, Any]]]:
+    if not prioritized:
+        return protocol
+
+    flagged_names = ", ".join(str(item.get("name") or "flagged marker") for item in prioritized[:3])
+    iron_related = _has_biomarker_family(biomarkers, ("ferritin", "iron", "transferrin", "hemoglobin", "hematocrit", "rbc"))
+
+    if not protocol.get("nutrition"):
+        body = (
+            "Use a food-first iron support pattern while confirming the cause: include protein at meals, "
+            "iron-rich foods, vitamin C with iron-containing meals, and avoid taking tea/coffee or calcium "
+            "right with the highest-iron meal. Do not start high-dose iron without clinician guidance."
+            if iron_related
+            else "Stabilize nutrition basics while this pattern is reviewed: regular protein-containing meals, vegetables, hydration, and enough total energy intake."
+        )
+        protocol["nutrition"] = [
+            {
+                "key": "nutrition_foundation_for_flagged_markers",
+                "title": "Support nutrition basics while reviewing flagged markers",
+                "body": body,
+                "category": "nutrition",
+                "priority": "medium",
+                "evidence_level": "clinical_context",
+                "requires_doctor": False,
+                "source": "vitaloop_analysis_core",
+            }
+        ]
+
+    if not protocol.get("training_recovery"):
+        protocol["training_recovery"] = [
+            {
+                "key": "training_recovery_context_for_flagged_markers",
+                "title": "Adjust training and recovery until follow-up is clear",
+                "body": f"Because {flagged_names} needs review, keep training moderate if you feel fatigued, dizzy, short of breath, or unusually weak. Prioritize sleep and recovery, and seek clinician guidance before intensifying training.",
+                "category": "training_recovery",
+                "priority": "medium",
+                "evidence_level": "clinical_context",
+                "requires_doctor": iron_related,
+                "source": "vitaloop_analysis_core",
+            }
+        ]
+
+    return protocol
+
+
+def _shopping_links(
+    *,
+    biomarkers: List[Dict[str, Any]],
+    prioritized: List[Dict[str, Any]],
+    ai_protocol: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    links: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def add(label: str, query: str, reason: str, priority: str = "medium", category: str = "supplement") -> None:
+        normalized_query = " ".join(str(query or "").lower().split())
+        if not normalized_query or normalized_query in seen:
+            return
+        seen.add(normalized_query)
+        links.append(
+            {
+                "label": label,
+                "search_query": query,
+                "reason": reason,
+                "priority": priority,
+                "category": category,
+                "url": build_iherb_url(query),
+                "disclaimer": "Educational shopping aid only. Confirm supplements, dosing, and interactions with a qualified clinician before use.",
+            }
+        )
+
+    for item in ai_protocol:
+        if not isinstance(item, dict):
+            continue
+        query = str(item.get("iherb_search") or item.get("supplement") or "").strip()
+        if not query:
+            continue
+        label = str(item.get("supplement") or item.get("title") or query).strip()
+        reason = str(item.get("rationale") or item.get("reason") or "Relevant to this protocol context.").strip()
+        add(label, query, reason, str(item.get("priority") or "medium").lower(), "supplement")
+
+    iron_related = _has_biomarker_family(biomarkers, ("ferritin", "iron", "transferrin", "hemoglobin", "hematocrit", "rbc"))
+    has_low_ferritin = any("ferritin" in str(item.get("canonical_name") or item.get("name") or "").lower() for item in prioritized)
+
+    if iron_related or has_low_ferritin:
+        add(
+            "Iron bisglycinate",
+            "iron bisglycinate",
+            "Relevant to low ferritin or iron-status context; confirm need and dose with a clinician.",
+            "high",
+        )
+        add(
+            "Vitamin C",
+            "vitamin c",
+            "Can support iron absorption when paired with iron-containing meals or clinician-approved iron supplementation.",
+            "medium",
+        )
+        add(
+            "B12 and folate support",
+            "vitamin b12 folate",
+            "Useful search context when reviewing iron, blood-count, or fatigue patterns with confirmatory labs.",
+            "medium",
+        )
+
+    if _has_biomarker_family(biomarkers, ("vitamin d", "25 oh vitamin d")):
+        add(
+            "Vitamin D3",
+            "vitamin d3",
+            "Relevant when vitamin D is flagged; confirm dose, follow-up interval, and contraindications.",
+            "medium",
+        )
+
+    if _has_biomarker_family(biomarkers, ("magnesium",)):
+        add(
+            "Magnesium glycinate",
+            "magnesium glycinate",
+            "Relevant when magnesium status or recovery context is flagged; check kidney disease and medication interactions.",
+            "medium",
+        )
+
+    return links[:8]
+
+
 async def run_lab_analysis_pipeline(
     *,
     biomarkers: List[Dict[str, Any]],
@@ -423,6 +585,8 @@ async def run_lab_analysis_pipeline(
         knowledge_evaluation=knowledge_evaluation,
         locale=locale,
     )
+    knowledge_report = _strip_placeholder_source_urls(knowledge_report)
+    knowledge_evaluation = _strip_placeholder_source_urls(knowledge_evaluation)
     prioritized = _prioritize_biomarkers(normalized_biomarkers)
     rule_recommendations = knowledge_report.get("action_plan") or []
     ai_protocol = []
@@ -439,6 +603,16 @@ async def run_lab_analysis_pipeline(
         *[{**item, "source": item.get("source") or "ai_protocol"} for item in ai_protocol if isinstance(item, dict)],
     ]
     protocol = _protocol_sections_from_ai_and_rules(rule_actions=rule_recommendations, ai_protocol=ai_protocol)
+    protocol = _fill_protocol_section_fallbacks(
+        protocol,
+        biomarkers=normalized_biomarkers,
+        prioritized=prioritized,
+    )
+    shopping_links = _shopping_links(
+        biomarkers=normalized_biomarkers,
+        prioritized=prioritized,
+        ai_protocol=ai_protocol,
+    )
     safety_result = validate_report(
         biomarkers=normalized_biomarkers,
         knowledge_report=knowledge_report,
@@ -473,6 +647,7 @@ async def run_lab_analysis_pipeline(
         "recommendations": recommendations,
         "protocol": protocol,
         "ai_protocol": ai_protocol,
+        "shopping_links": shopping_links,
         "retest_suggestions": knowledge_report.get("retest_plan") or [],
         "doctor_summary": " ".join(knowledge_report.get("doctor_discussion") or [])[:2000],
         "knowledge_evaluation": knowledge_evaluation,

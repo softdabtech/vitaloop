@@ -68,6 +68,16 @@ class B2BProtocolSection(BaseModel):
     training_recovery: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class ShoppingLink(BaseModel):
+    label: str
+    search_query: str
+    reason: str
+    priority: str = "medium"
+    category: str = "supplement"
+    url: str
+    disclaimer: str
+
+
 class B2BAnalyzeLabsResponse(BaseModel):
     analysis_id: str
     status: str
@@ -76,6 +86,7 @@ class B2BAnalyzeLabsResponse(BaseModel):
     risks_flags: List[RiskFlag] = Field(default_factory=list)
     recommendations: List[Dict[str, Any]] = Field(default_factory=list)
     protocol: B2BProtocolSection = Field(default_factory=B2BProtocolSection)
+    shopping_links: List[ShoppingLink] = Field(default_factory=list)
     retest_suggestions: List[Dict[str, Any]] = Field(default_factory=list)
     doctor_summary: str
     knowledge_evaluation: Optional[Dict[str, Any]] = None

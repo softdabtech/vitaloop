@@ -95,6 +95,7 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
         "upload_id": upload_id,
         "biomarkers": biomarkers or [],
         "protocol": protocol_recommendations,
+        "shopping_links": pipeline_result.get("shopping_links") or [],
         "knowledge_evaluation": knowledge_evaluation,
         "knowledge_report": knowledge_report,
         "final_analysis": pipeline_result,

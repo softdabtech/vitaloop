@@ -1336,6 +1336,7 @@ async def analyze_manual_biomarkers(
             "knowledge_evaluation": pipeline_result.get("knowledge_evaluation"),
             "knowledge_report": pipeline_result.get("knowledge_report"),
             "protocol": protocol_response,
+            "shopping_links": pipeline_result.get("shopping_links", []),
             "retest_schedule": pipeline_result.get("retest_suggestions", []),
             "summary": pipeline_result.get("health_summary", {}),
             "safety_result": pipeline_result.get("safety_result"),
