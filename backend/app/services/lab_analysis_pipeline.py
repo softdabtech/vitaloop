@@ -453,6 +453,33 @@ def _cost_metadata(
     }
 
 
+def _log_analysis_core_completion(result: Dict[str, Any]) -> None:
+    metadata = result.get("metadata") or {}
+    quality = result.get("quality_snapshot") or {}
+    coverage = quality.get("coverage") or {}
+    safety = quality.get("safety") or {}
+    ai = quality.get("ai") or {}
+    persisted_domains = ((result.get("health_states") or {}).get("domain_registry_version")) or ""
+    logger.info(
+        "analysis_core_completed analysis_id=%s source=%s biomarker_count=%s "
+        "registry_version=%s health_state_count=%s protocol_item_count=%s "
+        "trend_available=%s ai_source=%s ai_fallback=%s safety_status=%s "
+        "safety_events=%s doctor_discussion=%s",
+        result.get("analysis_id") or "",
+        (metadata.get("source") or {}).get("source") if isinstance(metadata.get("source"), dict) else "",
+        metadata.get("biomarker_count"),
+        persisted_domains,
+        coverage.get("health_state_count"),
+        coverage.get("protocol_item_count"),
+        coverage.get("trend_available"),
+        ai.get("analysis_source"),
+        ai.get("fallback_used"),
+        safety.get("status"),
+        safety.get("event_count"),
+        safety.get("doctor_discussion_required"),
+    )
+
+
 async def _load_historical_biomarkers(user_id: Optional[str]) -> List[Dict[str, Any]]:
     if not user_id:
         return []
@@ -881,4 +908,5 @@ async def run_lab_analysis_pipeline(
             # Report-version persistence must not break the existing analysis flow.
             result["report_version"] = None
 
+    _log_analysis_core_completion(result)
     return result
