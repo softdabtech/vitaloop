@@ -7,7 +7,69 @@ import { useFeature } from '../hooks/useFeature.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
+import { isUkrainianLocale } from '../lib/locale.js'
 import '../styles/dashboard2026.css'
+
+const LAB_RESULTS_COPY = {
+  en: {
+    uploadResults: 'Upload Results',
+    noResults: 'No results yet. Start symptom-first flow to build context, then upload labs linked to your concern.',
+    startSymptom: 'Start symptom check',
+    openLabPlan: 'Open lab plan',
+    uploads: 'Uploads',
+    mostRecent: 'Most recent lab',
+    uploadHistory: 'Upload history',
+    retestPlan: 'Retest plan',
+    reviewWindow: 'Review in 8-12 weeks',
+    labResults: (index) => `Lab Results #${index}`,
+    optimal: 'Optimal',
+    warning: 'Warning',
+    review: 'Review',
+    viewResults: 'View Results',
+    premiumTitle: 'Premium features available',
+    premiumBody: 'Upgrade to see your complete lab history, track trends over time, and keep action plans connected to follow-up check-ins.',
+    premiumCta: 'Upgrade for $19.99/month',
+    whatChanged: 'What changed',
+    whatChangedBody: 'Contextual review of priority markers and next retest direction.',
+    stableZone: 'Stable zone',
+    stableBody: 'Keep the routines that support markers currently in range.',
+    needsAttention: 'Needs attention',
+    needsBody: 'Link these markers to symptoms and adjust protocol targets.',
+    clinicianReview: 'Clinician review',
+    clinicianBody: 'Use priority markers and symptoms together when discussing next checks.',
+    nextStep: 'Next step',
+    nextBody: 'Open the action plan and use check-ins to track whether symptoms change.',
+  },
+  uk: {
+    uploadResults: 'Завантажити аналізи',
+    noResults: 'Результатів ще немає. Почніть із симптомів, щоб створити контекст, а потім завантажте аналізи, повʼязані зі скаргою.',
+    startSymptom: 'Почати перевірку симптомів',
+    openLabPlan: 'Відкрити план аналізів',
+    uploads: 'Завантаження',
+    mostRecent: 'Останній аналіз',
+    uploadHistory: 'Історія завантажень',
+    retestPlan: 'План повторної перевірки',
+    reviewWindow: 'Перегляд через 8-12 тижнів',
+    labResults: (index) => `Результати аналізів #${index}`,
+    optimal: 'У нормі',
+    warning: 'Спостерігати',
+    review: 'Перегляд',
+    viewResults: 'Переглянути',
+    premiumTitle: 'Доступні Premium-функції',
+    premiumBody: 'Оновіть тариф, щоб бачити повну історію аналізів, динаміку та повʼязувати плани дій із чек-інами.',
+    premiumCta: 'Оновити тариф',
+    whatChanged: 'Що змінилось',
+    whatChangedBody: 'Контекстний огляд пріоритетних маркерів і напрям повторної перевірки.',
+    stableZone: 'Стабільна зона',
+    stableBody: 'Зберігайте звички, які підтримують показники в межах референсу.',
+    needsAttention: 'Потребує уваги',
+    needsBody: 'Повʼяжіть ці маркери із симптомами й уточніть цілі плану дій.',
+    clinicianReview: 'Обговорити з фахівцем',
+    clinicianBody: 'Використовуйте пріоритетні маркери разом із симптомами під час консультації.',
+    nextStep: 'Наступний крок',
+    nextBody: 'Відкрийте план дій і використовуйте чек-іни, щоб відстежити зміни симптомів.',
+  },
+}
 
 function normalizeStatus(status) {
   const value = String(status || '').toLowerCase()
@@ -79,6 +141,8 @@ export default function LabResultsList() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { hasAccess } = useFeature('progress')
+  const isUk = isUkrainianLocale()
+  const copy = isUk ? LAB_RESULTS_COPY.uk : LAB_RESULTS_COPY.en
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -145,7 +209,7 @@ export default function LabResultsList() {
               className="vtl-button-primary inline-flex items-center justify-center gap-2 px-5 text-sm"
             >
               <Upload className="h-4 w-4" />
-              Upload Results
+              {copy.uploadResults}
             </button>
           )}
         />
@@ -159,11 +223,11 @@ export default function LabResultsList() {
         {sortedItems.length === 0 ? (
           <div className="space-y-4 py-8">
             <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-              No results yet. Start symptom-first flow to build context, then upload labs linked to your concern.
+              {copy.noResults}
             </div>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => navigate('/questionnaire')} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">Start symptom check</button>
-              <button onClick={() => navigate('/lab-plan')} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700">Open lab plan</button>
+              <button onClick={() => navigate('/questionnaire')} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">{copy.startSymptom}</button>
+              <button onClick={() => navigate('/lab-plan')} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700">{copy.openLabPlan}</button>
             </div>
             <div className="py-6">
               <EmptyStateIllustration type="upload" size="lg" />
@@ -174,16 +238,16 @@ export default function LabResultsList() {
             <div className="space-y-3">
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="vtl-light-card p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Uploads</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.uploads}</p>
                   <p className="mt-1 text-2xl font-bold text-slate-900">{sortedItems.length}</p>
                 </div>
                 <div className="vtl-light-card p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Most recent lab</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{sortedItems[0]?.lab_name || 'Upload history'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.mostRecent}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{sortedItems[0]?.lab_name || copy.uploadHistory}</p>
                 </div>
                 <div className="vtl-light-card p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Retest plan</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">Review in 8-12 weeks</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.retestPlan}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{copy.reviewWindow}</p>
                 </div>
               </div>
 
@@ -203,7 +267,7 @@ export default function LabResultsList() {
                         disabled={!uploadId}
                         className="min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60 sm:flex-1"
                       >
-                        <p className="truncate text-sm font-semibold text-slate-800">{item?.lab_name || `Lab Results #${sortedItems.length - index}`}</p>
+                        <p className="truncate text-sm font-semibold text-slate-800">{item?.lab_name || copy.labResults(sortedItems.length - index)}</p>
                         <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
                           <Calendar className="h-3 w-3" />
                           {date}
@@ -211,9 +275,9 @@ export default function LabResultsList() {
                       </button>
 
                       <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">Optimal {optimal}</span>
-                        <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">Warning {warning}</span>
-                        <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">Review {critical}</span>
+                        <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">{copy.optimal} {optimal}</span>
+                        <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">{copy.warning} {warning}</span>
+                        <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">{copy.review} {critical}</span>
                       </div>
 
                       <div className="flex items-center gap-2 sm:justify-end">
@@ -222,7 +286,7 @@ export default function LabResultsList() {
                           disabled={!uploadId}
                           className="inline-flex min-h-10 items-center gap-1 rounded-lg px-1 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-700 disabled:opacity-40"
                         >
-                          View Results
+                          {copy.viewResults}
                           <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>
@@ -237,15 +301,15 @@ export default function LabResultsList() {
                   <div className="flex items-start gap-3">
                     <Sparkles className="mt-0.5 h-5 w-5 text-amber-600" />
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-amber-800">Premium features available</p>
+                      <p className="text-sm font-semibold text-amber-800">{copy.premiumTitle}</p>
                       <p className="mt-1 text-sm text-amber-700">
-                        Upgrade to see your complete lab history, track trends over time, and keep action plans connected to follow-up check-ins.
+                        {copy.premiumBody}
                       </p>
                       <button
                         onClick={triggerLabHistoryAccessPaywall}
                         className="mt-3 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition"
                       >
-                        Upgrade for $19.99/month
+                        {copy.premiumCta}
                       </button>
                     </div>
                   </div>
@@ -254,24 +318,24 @@ export default function LabResultsList() {
             </div>
 
             <aside className="vtl-light-card h-fit p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">What changed</h3>
-              <p className="mt-3 text-sm text-slate-500">Contextual review of priority markers and next retest direction.</p>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{copy.whatChanged}</h3>
+              <p className="mt-3 text-sm text-slate-500">{copy.whatChangedBody}</p>
               <div className="mt-4 space-y-3">
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-emerald-700 font-semibold">Stable zone</p>
-                  <p className="mt-1 text-sm text-slate-700">Keep the routines that support markers currently in range.</p>
+                  <p className="text-xs uppercase tracking-wide text-emerald-700 font-semibold">{copy.stableZone}</p>
+                  <p className="mt-1 text-sm text-slate-700">{copy.stableBody}</p>
                 </div>
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">Needs attention</p>
-                  <p className="mt-1 text-sm text-slate-700">Link these markers to symptoms and adjust protocol targets.</p>
+                  <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">{copy.needsAttention}</p>
+                  <p className="mt-1 text-sm text-slate-700">{copy.needsBody}</p>
                 </div>
                 <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-rose-700 font-semibold">Clinician review</p>
-                  <p className="mt-1 text-sm text-slate-700">Use priority markers and symptoms together when discussing next checks.</p>
+                  <p className="text-xs uppercase tracking-wide text-rose-700 font-semibold">{copy.clinicianReview}</p>
+                  <p className="mt-1 text-sm text-slate-700">{copy.clinicianBody}</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Next step</p>
-                  <p className="mt-1 text-sm text-slate-700">Open the action plan and use check-ins to track whether symptoms change.</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{copy.nextStep}</p>
+                  <p className="mt-1 text-sm text-slate-700">{copy.nextBody}</p>
                 </div>
               </div>
             </aside>

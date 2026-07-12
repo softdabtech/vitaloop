@@ -66,6 +66,10 @@ export default function UserCabinetLayout({ children }) {
 
   const pageMeta = useMemo(() => resolvePageMeta(location.pathname, isUk), [location.pathname, isUk])
   const isDashboardRoute = location.pathname === '/dashboard' || location.pathname === '/dashboard/'
+  const siteHref = isUk ? 'https://ua.vitaloop.today' : 'https://vitaloop.today'
+  const shellBackground = isUk
+    ? 'radial-gradient(circle at top left, rgba(0, 87, 183, 0.13), transparent 24%), radial-gradient(circle at top right, rgba(255, 213, 0, 0.18), transparent 22%), linear-gradient(180deg, #f8fbff 0%, #eef6ff 48%, #fff9df 100%)'
+    : 'radial-gradient(circle at top left, rgba(var(--brand-rgb,29,158,117),0.1), transparent 20%), linear-gradient(180deg, #f8fafc 0%, #f3f7f5 100%)'
 
   useEffect(() => {
     document.title = `${pageMeta.title} | VITALOOP`
@@ -99,8 +103,9 @@ export default function UserCabinetLayout({ children }) {
   return (
     <div
       className="vtl-page flex min-h-[100svh] text-slate-900"
+      data-locale={isUk ? 'uk' : 'en'}
       style={{
-        background: 'radial-gradient(circle at top left, rgba(var(--brand-rgb,29,158,117),0.1), transparent 20%), linear-gradient(180deg, #f8fafc 0%, #f3f7f5 100%)',
+        background: shellBackground,
       }}
     >
       <div className="hidden md:sticky md:top-0 md:block md:self-start">
@@ -144,7 +149,7 @@ export default function UserCabinetLayout({ children }) {
 
             <div className="flex items-center gap-2 sm:gap-3">
               <a
-                href="https://vitaloop.today"
+                href={siteHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"

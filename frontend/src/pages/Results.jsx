@@ -142,6 +142,21 @@ const RESULTS_COPY = {
     openPlan: 'Open action plan',
     disclaimer: 'VITALOOP provides educational information and does not diagnose, treat, or replace professional medical advice.',
     noRange: 'No reference range',
+    emptyTitle: 'Results & Interpretation',
+    emptySubtitle: 'No processed biomarkers yet.',
+    focusNow: 'Focus now',
+    watchListLabel: 'Watch list',
+    noImmediate: 'No immediate out-of-range marker',
+    stableZone: 'Stable zone',
+    markersNearBorder: (count) => `${count} marker${count === 1 ? '' : 's'} near the border`,
+    markersInRange: (count) => `${count} marker${count === 1 ? '' : 's'} in range`,
+    whyThisAppears: 'Why this appears',
+    whyDefault: 'Based on extracted biomarker value, reference range, symptom context, and knowledge-base matching when available.',
+    reviewTopFinding: 'Review the top finding and avoid starting high-dose supplements from one marker alone.',
+    shoppingEyebrow: 'Suggested iHerb searches',
+    shoppingTitle: 'Optional items to discuss before buying',
+    shoppingBody: 'These are educational search shortcuts based on your report context. Confirm supplement choice, dose, and interactions with a qualified clinician.',
+    findIherb: 'Find on iHerb',
   },
   uk: {
     hints: [
@@ -194,6 +209,21 @@ const RESULTS_COPY = {
     openPlan: 'Відкрити план дій',
     disclaimer: 'VITALOOP надає освітню інформацію і не ставить діагноз, не лікує та не замінює професійну медичну консультацію.',
     noRange: 'Референс не вказано',
+    emptyTitle: 'Результати й інтерпретація',
+    emptySubtitle: 'Оброблених показників ще немає.',
+    focusNow: 'Фокус зараз',
+    watchListLabel: 'Спостереження',
+    noImmediate: 'Немає термінового показника поза референсом',
+    stableZone: 'Стабільна зона',
+    markersNearBorder: (count) => `${count} ${count === 1 ? 'показник біля межі' : 'показників біля межі'}`,
+    markersInRange: (count) => `${count} ${count === 1 ? 'показник у референсі' : 'показників у референсі'}`,
+    whyThisAppears: 'Чому це показано',
+    whyDefault: 'На основі розпізнаного значення, референсу, контексту симптомів і збігів у базі знань, якщо вони доступні.',
+    reviewTopFinding: 'Перегляньте головну знахідку й не починайте високі дози добавок лише за одним показником.',
+    shoppingEyebrow: 'Пошук на iHerb',
+    shoppingTitle: 'Опційні позиції для обговорення перед покупкою',
+    shoppingBody: 'Це освітні пошукові посилання на основі вашого звіту. Підтвердьте вибір добавки, дозу й взаємодії з кваліфікованим фахівцем.',
+    findIherb: 'Знайти на iHerb',
   },
 }
 
@@ -412,7 +442,7 @@ export default function Results() {
   if (normalizedBiomarkers.length === 0) {
     return (
       <div className="space-y-6">
-        <CabinetPageHeader title="Results & Interpretation" subtitle="No processed biomarkers yet." />
+        <CabinetPageHeader title={copy.emptyTitle} subtitle={copy.emptySubtitle} />
         <div className="max-w-4xl">
           <button onClick={() => navigate('/lab-results')} className="mb-6 inline-flex items-center gap-2 text-slate-600 transition hover:text-slate-900">
             <ArrowLeft className="h-4 w-4" />
@@ -501,16 +531,16 @@ export default function Results() {
 
         <div className="mb-6 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Focus now</p>
-            <p className="mt-1 text-sm font-semibold text-slate-900">{priorityMarkers[0] ? displayBiomarkerName(priorityMarkers[0], isUk) : 'No immediate out-of-range marker'}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.focusNow}</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{priorityMarkers[0] ? displayBiomarkerName(priorityMarkers[0], isUk) : copy.noImmediate}</p>
           </div>
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Watch list</p>
-            <p className="mt-1 text-sm font-semibold text-amber-900">{watchCount} marker{watchCount === 1 ? '' : 's'} near the border</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">{copy.watchListLabel}</p>
+            <p className="mt-1 text-sm font-semibold text-amber-900">{copy.markersNearBorder(watchCount)}</p>
           </div>
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Stable zone</p>
-            <p className="mt-1 text-sm font-semibold text-emerald-900">{optimalCount} marker{optimalCount === 1 ? '' : 's'} in range</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{copy.stableZone}</p>
+            <p className="mt-1 text-sm font-semibold text-emerald-900">{copy.markersInRange(optimalCount)}</p>
           </div>
         </div>
 
@@ -545,10 +575,10 @@ export default function Results() {
                           </div>
                           <p className="mt-1 text-sm text-slate-500">{formatMetric(b)} · {copy.reference} {formatRange(b, copy)}</p>
                           <details className="mt-3 text-sm">
-                            <summary className="cursor-pointer font-semibold text-teal-700">Why this appears</summary>
+                            <summary className="cursor-pointer font-semibold text-teal-700">{copy.whyThisAppears}</summary>
                             <p className="mt-2 leading-6 text-slate-600">
                               {explanations.find((item) => String(item.triggered_biomarker || item.marker || '').toLowerCase().includes(String(displayBiomarkerName(b, false)).toLowerCase().split(' ')[0]))?.matched_rule_key
-                                || 'Based on extracted biomarker value, reference range, symptom context, and knowledge-base matching when available.'}
+                                || copy.whyDefault}
                             </p>
                           </details>
                         </div>
@@ -600,7 +630,7 @@ export default function Results() {
           </SectionCard>
 
           <SectionCard icon={ArrowRight} title={copy.today}>
-            <p className="text-sm leading-6 text-slate-600">{reportActions[0]?.body || reportActions[0]?.title || 'Review the top finding and avoid starting high-dose supplements from one marker alone.'}</p>
+            <p className="text-sm leading-6 text-slate-600">{reportActions[0]?.body || reportActions[0]?.title || copy.reviewTopFinding}</p>
           </SectionCard>
 
           <SectionCard icon={RefreshCw} title={copy.thisMonth}>
@@ -657,10 +687,10 @@ export default function Results() {
         {!!shoppingLinks.length && (
           <div className="mt-6 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
             <div className="mb-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">Suggested iHerb searches</p>
-              <h2 className="mt-1 text-lg font-semibold text-slate-950">Optional items to discuss before buying</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">{copy.shoppingEyebrow}</p>
+              <h2 className="mt-1 text-lg font-semibold text-slate-950">{copy.shoppingTitle}</h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                These are educational search shortcuts based on your report context. Confirm supplement choice, dose, and interactions with a qualified clinician.
+                {copy.shoppingBody}
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -678,7 +708,7 @@ export default function Results() {
                         rel="noopener noreferrer"
                         className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
                       >
-                        Find on iHerb
+                        {copy.findIherb}
                         <ExternalLink className="h-4 w-4" />
                       </a>
                     )}
