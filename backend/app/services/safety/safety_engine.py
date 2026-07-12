@@ -34,6 +34,26 @@ def _add_event(events: List[Dict[str, Any]], *, key: str, severity: str, message
     events.append({"key": key, "severity": severity, "message": message, "item": item})
 
 
+def _value_present(value: Any) -> bool:
+    if isinstance(value, list):
+        return any(str(item).strip() for item in value)
+    if isinstance(value, dict):
+        return any(str(item).strip() for item in value.values())
+    return bool(str(value or "").strip())
+
+
+def _dedupe_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    deduped: List[Dict[str, Any]] = []
+    seen = set()
+    for event in events:
+        key = (event.get("key"), event.get("severity"), event.get("message"))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(event)
+    return deduped
+
+
 def _dangerous_lab_events(biomarkers: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
     events: List[Dict[str, Any]] = []
     for item in biomarkers or []:
@@ -68,6 +88,15 @@ def _profile_events(profile: Dict[str, Any] | None) -> List[Dict[str, Any]]:
     pregnancy = str(profile.get("pregnancy_status") or "").strip().lower()
     if pregnancy in {"pregnant", "yes", "true", "вагітна", "беременность", "pregnancy"}:
         _add_event(events, key="pregnancy_context", severity="high", message="Pregnancy context requires clinician-first recommendations.")
+    current_medications = profile.get("current_medications") or profile.get("medications")
+    if _value_present(current_medications):
+        _add_event(events, key="current_medications_context", severity="medium", message="Current medications require interaction review before supplement or lifestyle changes.")
+    if _value_present(profile.get("current_supplements")):
+        _add_event(events, key="current_supplements_context", severity="medium", message="Current supplement stack should be checked before adding new supplements.")
+    if _value_present(profile.get("allergies")):
+        _add_event(events, key="known_allergies_context", severity="medium", message="Known allergies require safety screening before recommendations.")
+    if _value_present(profile.get("prior_diagnoses")):
+        _add_event(events, key="prior_diagnoses_context", severity="medium", message="Prior diagnoses require clinician context when interpreting recommendations.")
     return events
 
 
@@ -138,7 +167,7 @@ def validate_recommendation(
         "warnings": warnings,
         "blocked_items": blocked_items,
         "doctor_discussion_required": bool(warnings or blocked_items or events),
-        "safety_events": events,
+        "safety_events": _dedupe_events(events),
     }
 
 
@@ -171,7 +200,7 @@ def validate_protocol(
         "warnings": warnings,
         "blocked_items": blocked_items,
         "doctor_discussion_required": bool(warnings or blocked_items or events),
-        "safety_events": events,
+        "safety_events": _dedupe_events(events),
     }
 
 
@@ -207,6 +236,5 @@ def validate_report(
         "warnings": warnings,
         "blocked_items": blocked_items,
         "doctor_discussion_required": bool(warnings or blocked_items or events),
-        "safety_events": events,
+        "safety_events": _dedupe_events(events),
     }
-

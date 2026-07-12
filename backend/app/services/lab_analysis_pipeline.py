@@ -625,6 +625,7 @@ async def run_lab_analysis_pipeline(
         symptoms=normalized_symptoms,
         user_id=user_id,
         upload_id=analysis_id,
+        user_profile=user_profile,
         persist=persist_knowledge,
     )
     knowledge_report = build_knowledge_report(

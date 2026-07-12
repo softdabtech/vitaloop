@@ -74,6 +74,31 @@ def test_safety_engine_flags_dangerous_values_and_sensitive_supplements():
     assert any(warning["key"] == "iron_safety_wording" for warning in result["warnings"])
 
 
+def test_safety_engine_uses_health_profile_safety_context():
+    result = validate_report(
+        biomarkers=[{"name": "LDL", "value": 170, "unit": "mg/dL"}],
+        knowledge_report={"summary": {"headline": "Educational report"}},
+        protocol={"supplements": [{"supplement": "Vitamin D3", "rationale": "Confirm dose with clinician."}]},
+        profile={
+            "age": 35,
+            "pregnancy_status": "pregnant",
+            "current_medications": ["metformin"],
+            "current_supplements": ["magnesium"],
+            "allergies": "penicillin",
+            "prior_diagnoses": "hypothyroidism",
+        },
+    )
+
+    event_keys = {event["key"] for event in result["safety_events"]}
+    assert result["status"] == "approved_with_warnings"
+    assert result["doctor_discussion_required"] is True
+    assert "pregnancy_context" in event_keys
+    assert "current_medications_context" in event_keys
+    assert "current_supplements_context" in event_keys
+    assert "known_allergies_context" in event_keys
+    assert "prior_diagnoses_context" in event_keys
+
+
 def test_safety_engine_blocks_diagnosis_like_wording():
     result = validate_protocol(
         [{"title": "You have anemia", "body": "Confirmed diagnosis."}],

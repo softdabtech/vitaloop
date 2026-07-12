@@ -711,7 +711,7 @@ async def analyze_lab(
         filename = (getattr(file, "filename", "") or "").lower()
         if filename.endswith(".pdf"):
             user_id: str = current_user["sub"]
-            await _require_analysis_profile_context(user_id, _resolve_response_locale(request))
+            user_profile = await _require_analysis_profile_context(user_id, _resolve_response_locale(request))
             quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "pdf")
             if not quota_ok:
                 raise HTTPException(
@@ -758,6 +758,7 @@ async def analyze_lab(
                     symptoms=symptoms_form,
                     user_id=user_id,
                     upload_id=str(upload_id),
+                    user_profile=user_profile,
                 )
                 await save_timeline_event(
                     user_id=user_id,
@@ -1312,10 +1313,12 @@ async def analyze_manual_biomarkers(
 
         upload_id = upload_result["upload_id"]
         biomarkers_data = upload_result["biomarkers"]
+        user_profile = await get_user_profile(user_id) or {}
 
         pipeline_result = await run_lab_analysis_pipeline(
             biomarkers=biomarkers_data,
             symptoms=[],
+            user_profile=user_profile,
             user_id=user_id,
             analysis_id=str(upload_id),
             source_metadata={"source": "b2c_manual", "lab_name": request.lab_name},
