@@ -365,6 +365,8 @@ async def test_b2c_pipeline_shape_not_broken(monkeypatch):
     assert result["normalized_biomarkers"][0]["canonical_name"] == "canonical_glucose"
     assert result["cost_metadata"]["estimated"] is True
     assert result["health_context"]["version"] == "health_context_v1"
+    assert result["health_states"]["version"] == "health_state_engine_v1"
+    assert result["health_summary"]["health_state_overview"]["version"] == "health_state_engine_v1"
     assert result["metadata"]["health_context_version"] == "health_context_v1"
     assert captured["kwargs"]["health_context"]["readiness"]["has_questionnaire"] is True
     assert captured["kwargs"]["health_context"]["readiness"]["has_safety_context"] is True
