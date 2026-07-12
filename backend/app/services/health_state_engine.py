@@ -68,11 +68,19 @@ def evaluate_health_states(
     symptoms: List[str],
     health_context: Dict[str, Any] | None = None,
     knowledge_report: Dict[str, Any] | None = None,
+    domain_definitions: List[Dict[str, Any]] | None = None,
 ) -> Dict[str, Any]:
     states: List[Dict[str, Any]] = []
     matched_rules = knowledge_report.get("why_it_matters") if isinstance(knowledge_report, dict) else []
 
-    for definition in list_domain_definitions():
+    definitions = domain_definitions or list_domain_definitions()
+    registry_version = (
+        str((definitions[0] or {}).get("registry_version") or DOMAIN_REGISTRY_VERSION)
+        if definitions
+        else DOMAIN_REGISTRY_VERSION
+    )
+
+    for definition in definitions:
         domain = str(definition.get("key") or "")
         aliases = set(definition.get("marker_aliases") or [])
         contributing = [item for item in biomarkers or [] if _matches_marker(item, aliases)]
@@ -134,7 +142,7 @@ def evaluate_health_states(
 
     return {
         "version": HEALTH_STATE_ENGINE_VERSION,
-        "domain_registry_version": DOMAIN_REGISTRY_VERSION,
+        "domain_registry_version": registry_version,
         "states": states,
         "top_priorities": top_priorities,
         "context_readiness": (health_context or {}).get("readiness") or {},

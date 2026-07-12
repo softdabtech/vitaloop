@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List
 
 DOMAIN_REGISTRY_VERSION = "knowledge_domain_registry_v1"
+MANAGED_DOMAIN_REGISTRY_TABLE = "knowledge_domain_registry"
+
+logger = logging.getLogger("uvicorn.error")
 
 _DOMAIN_REGISTRY: Dict[str, Dict[str, Any]] = {
     "iron_status": {
@@ -112,6 +116,63 @@ def list_domain_definitions() -> List[Dict[str, Any]]:
         {"key": key, **definition, "registry_version": DOMAIN_REGISTRY_VERSION}
         for key, definition in _DOMAIN_REGISTRY.items()
     ]
+
+
+def _normalize_managed_definition(row: Dict[str, Any]) -> Dict[str, Any] | None:
+    key = str(row.get("key") or "").strip()
+    if not key:
+        return None
+    return {
+        "key": key,
+        "label": str(row.get("label") or key.replace("_", " ").title()).strip(),
+        "marker_aliases": [str(item).strip() for item in (row.get("marker_aliases") or []) if str(item).strip()],
+        "symptom_aliases": [str(item).strip() for item in (row.get("symptom_aliases") or []) if str(item).strip()],
+        "required_markers": [str(item).strip() for item in (row.get("required_markers") or []) if str(item).strip()],
+        "retest_markers": [str(item).strip() for item in (row.get("retest_markers") or []) if str(item).strip()],
+        "protocol_sections": [str(item).strip() for item in (row.get("protocol_sections") or []) if str(item).strip()],
+        "expected_timeline": str(row.get("expected_timeline") or "").strip(),
+        "evidence_level": str(row.get("evidence_level") or "clinical_context").strip(),
+        "requires_doctor_if_flagged": bool(row.get("requires_doctor_if_flagged")),
+        "registry_version": str(row.get("version") or "managed_v1").strip(),
+        "source": "supabase",
+    }
+
+
+async def load_managed_domain_definitions() -> List[Dict[str, Any]]:
+    """Load active domain definitions from Supabase, falling back at caller level.
+
+    This intentionally does not raise when the table is absent. Phase 7 can be
+    deployed before the managed table exists, and analysis must remain available.
+    """
+    try:
+        from app.services import supabase_service as supabase
+
+        client = supabase._get_supabase()
+        response = await supabase._run(
+            lambda: client.table(MANAGED_DOMAIN_REGISTRY_TABLE)
+            .select(
+                "key,label,marker_aliases,symptom_aliases,required_markers,retest_markers,"
+                "protocol_sections,expected_timeline,evidence_level,requires_doctor_if_flagged,version"
+            )
+            .eq("active", True)
+            .eq("governance_status", "active")
+            .order("sort_order")
+            .execute()
+        )
+        definitions = [
+            item
+            for item in (_normalize_managed_definition(row) for row in (response.data or []))
+            if item is not None
+        ]
+        return definitions
+    except Exception as exc:
+        logger.info("knowledge_domain_registry_managed_unavailable error=%s", exc)
+        return []
+
+
+async def resolve_domain_definitions() -> List[Dict[str, Any]]:
+    managed = await load_managed_domain_definitions()
+    return managed or list_domain_definitions()
 
 
 def get_domain_definition(domain_key: str) -> Dict[str, Any] | None:

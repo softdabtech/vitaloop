@@ -141,12 +141,17 @@ def _retest_markers(section: str, item: Dict[str, Any], retest_suggestions: List
     return (prioritized or markers)[:4]
 
 
-def _domain_context(health_states: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _domain_context(health_states: Dict[str, Any], domain_definitions: List[Dict[str, Any]] | None = None) -> List[Dict[str, Any]]:
+    definitions_by_key = {
+        str(item.get("key") or ""): item
+        for item in (domain_definitions or [])
+        if isinstance(item, dict) and str(item.get("key") or "")
+    }
     contexts: List[Dict[str, Any]] = []
     for state in (health_states.get("top_priorities") or [])[:3]:
         if not isinstance(state, dict):
             continue
-        definition = get_domain_definition(str(state.get("domain") or ""))
+        definition = definitions_by_key.get(str(state.get("domain") or "")) or get_domain_definition(str(state.get("domain") or ""))
         if not definition:
             continue
         contexts.append(
@@ -191,9 +196,10 @@ def enrich_protocol(
     health_states: Dict[str, Any],
     trend_analysis: Dict[str, Any],
     retest_suggestions: List[Dict[str, Any]],
+    domain_definitions: List[Dict[str, Any]] | None = None,
 ) -> Dict[str, List[Dict[str, Any]]]:
     enriched: Dict[str, List[Dict[str, Any]]] = {}
-    domain_contexts = _domain_context(health_states)
+    domain_contexts = _domain_context(health_states, domain_definitions=domain_definitions)
     for section, items in (protocol or {}).items():
         enriched_items: List[Dict[str, Any]] = []
         for index, raw_item in enumerate(items or []):

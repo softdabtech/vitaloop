@@ -15,6 +15,7 @@ from app.services.health_context import build_health_context
 from app.services.health_state_engine import evaluate_health_states
 from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
 from app.services.knowledge.report import build_knowledge_report
+from app.services.knowledge.domain_registry import resolve_domain_definitions
 from app.services.lab_normalization.biomarker_mapping import infer_category, to_canonical_name
 from app.services.protocol_enrichment import enrich_protocol
 from app.services.safety import validate_report
@@ -672,11 +673,13 @@ async def run_lab_analysis_pipeline(
         historical_biomarkers=historical_biomarkers,
         current_upload_id=analysis_id,
     )
+    domain_definitions = await resolve_domain_definitions()
     health_states = evaluate_health_states(
         biomarkers=normalized_biomarkers,
         symptoms=normalized_symptoms,
         health_context=health_context,
         knowledge_report=knowledge_report,
+        domain_definitions=domain_definitions,
     )
     rule_recommendations = knowledge_report.get("action_plan") or []
     ai_protocol = []
@@ -725,6 +728,7 @@ async def run_lab_analysis_pipeline(
         health_states=health_states,
         trend_analysis=trend_analysis,
         retest_suggestions=retest_suggestions,
+        domain_definitions=domain_definitions,
     )
     safety_result = validate_report(
         biomarkers=normalized_biomarkers,
@@ -851,10 +855,15 @@ async def run_lab_analysis_pipeline(
                     "health_context": health_context,
                     "health_states": health_states,
                     "trend_analysis": trend_analysis,
-                    "ai_orchestration": ai_orchestration,
-                    "quality_snapshot": quality_snapshot,
-                    "cost_metadata": cost_metadata,
-                },
+            "ai_orchestration": ai_orchestration,
+            "quality_snapshot": quality_snapshot,
+            "cost_metadata": cost_metadata,
+            "knowledge_domain_definitions": {
+                "count": len(domain_definitions),
+                "registry_version": (domain_definitions[0] or {}).get("registry_version") if domain_definitions else None,
+                "domains": [item.get("key") for item in domain_definitions],
+            },
+        },
                 knowledge_report=knowledge_report,
                 protocol=protocol,
                 safety_result=safety_result,
