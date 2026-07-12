@@ -14,6 +14,7 @@ from app.services.health_state_engine import evaluate_health_states
 from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
 from app.services.knowledge.report import build_knowledge_report
 from app.services.lab_normalization.biomarker_mapping import infer_category, to_canonical_name
+from app.services.protocol_enrichment import enrich_protocol
 from app.services.safety import validate_report
 from app.services.trend_engine import evaluate_biomarker_trends
 
@@ -696,16 +697,32 @@ async def run_lab_analysis_pipeline(
         biomarkers=normalized_biomarkers,
         prioritized=prioritized,
     )
-    shopping_links = _shopping_links(
+    safety_result = validate_report(
+        biomarkers=normalized_biomarkers,
+        knowledge_report=knowledge_report,
+        protocol=protocol,
+        profile=user_profile,
+    )
+    retest_suggestions = knowledge_report.get("retest_plan") or []
+    protocol = enrich_protocol(
+        protocol,
         biomarkers=normalized_biomarkers,
         prioritized=prioritized,
-        ai_protocol=ai_protocol,
+        safety_result=safety_result,
+        health_states=health_states,
+        trend_analysis=trend_analysis,
+        retest_suggestions=retest_suggestions,
     )
     safety_result = validate_report(
         biomarkers=normalized_biomarkers,
         knowledge_report=knowledge_report,
         protocol=protocol,
         profile=user_profile,
+    )
+    shopping_links = _shopping_links(
+        biomarkers=normalized_biomarkers,
+        prioritized=prioritized,
+        ai_protocol=ai_protocol,
     )
     explainability = build_recommendation_explanations(
         biomarkers=normalized_biomarkers,
@@ -768,7 +785,7 @@ async def run_lab_analysis_pipeline(
         "protocol": protocol,
         "ai_protocol": ai_protocol,
         "shopping_links": shopping_links,
-        "retest_suggestions": knowledge_report.get("retest_plan") or [],
+        "retest_suggestions": retest_suggestions,
         "doctor_summary": " ".join(knowledge_report.get("doctor_discussion") or [])[:2000],
         "knowledge_evaluation": output_knowledge_evaluation,
         "knowledge_report": knowledge_report,
