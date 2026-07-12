@@ -301,6 +301,10 @@ async def test_pipeline_fills_empty_protocol_sections_for_flagged_markers(monkey
     assert result["protocol"]["nutrition"]
     assert result["protocol"]["training_recovery"]
     assert result["protocol"]["training_recovery"][0]["source"] == "vitaloop_analysis_core"
+    assert result["protocol"]["training_recovery"][0]["based_on"]["biomarkers"]
+    assert result["protocol"]["training_recovery"][0]["expected_timeline"]
+    assert result["protocol"]["training_recovery"][0]["retest_markers"]
+    assert result["protocol"]["training_recovery"][0]["protocol_enrichment_version"] == "protocol_enrichment_v1"
     assert result["shopping_links"]
     assert any("iherb.com/search" in item["url"] for item in result["shopping_links"])
     assert any("clinician" in item["disclaimer"].lower() for item in result["shopping_links"])
@@ -383,6 +387,7 @@ async def test_b2c_pipeline_shape_not_broken(monkeypatch):
     assert result["trend_analysis"]["available"] is True
     assert result["health_summary"]["trend_overview"]["version"] == "trend_engine_v1"
     assert result["health_summary"]["health_state_overview"]["version"] == "health_state_engine_v1"
+    assert result["protocol"]["nutrition"][0]["protocol_enrichment_version"] == "protocol_enrichment_v1"
     assert result["metadata"]["health_context_version"] == "health_context_v1"
     assert captured["kwargs"]["health_context"]["readiness"]["has_questionnaire"] is True
     assert captured["kwargs"]["health_context"]["readiness"]["has_safety_context"] is True
