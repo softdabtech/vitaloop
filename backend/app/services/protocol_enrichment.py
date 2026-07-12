@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List
 
+from app.services.knowledge.domain_registry import DOMAIN_REGISTRY_VERSION, get_domain_definition
+
 PROTOCOL_ENRICHMENT_VERSION = "protocol_enrichment_v1"
 
 _SECTION_DEFAULT_TIMELINES = {
@@ -139,6 +141,47 @@ def _retest_markers(section: str, item: Dict[str, Any], retest_suggestions: List
     return (prioritized or markers)[:4]
 
 
+def _domain_context(health_states: Dict[str, Any]) -> List[Dict[str, Any]]:
+    contexts: List[Dict[str, Any]] = []
+    for state in (health_states.get("top_priorities") or [])[:3]:
+        if not isinstance(state, dict):
+            continue
+        definition = get_domain_definition(str(state.get("domain") or ""))
+        if not definition:
+            continue
+        contexts.append(
+            {
+                "domain": state.get("domain"),
+                "label": definition.get("label"),
+                "evidence_level": definition.get("evidence_level"),
+                "expected_timeline": definition.get("expected_timeline"),
+                "retest_markers": definition.get("retest_markers") or [],
+                "protocol_sections": definition.get("protocol_sections") or [],
+                "requires_doctor_if_flagged": bool(definition.get("requires_doctor_if_flagged")),
+            }
+        )
+    return contexts
+
+
+def _expected_timeline(section: str, domain_contexts: List[Dict[str, Any]]) -> str:
+    for context in domain_contexts:
+        if section in (context.get("protocol_sections") or []) and context.get("expected_timeline"):
+            return str(context["expected_timeline"])
+    return _SECTION_DEFAULT_TIMELINES.get(section, "Reassess after 2-4 weeks.")
+
+
+def _domain_retest_markers(section: str, domain_contexts: List[Dict[str, Any]]) -> List[str]:
+    markers: List[str] = []
+    for context in domain_contexts:
+        if section not in (context.get("protocol_sections") or []):
+            continue
+        for marker in context.get("retest_markers") or []:
+            text = str(marker or "").strip()
+            if text and text not in markers:
+                markers.append(text)
+    return markers[:4]
+
+
 def enrich_protocol(
     protocol: Dict[str, List[Dict[str, Any]]],
     *,
@@ -150,6 +193,7 @@ def enrich_protocol(
     retest_suggestions: List[Dict[str, Any]],
 ) -> Dict[str, List[Dict[str, Any]]]:
     enriched: Dict[str, List[Dict[str, Any]]] = {}
+    domain_contexts = _domain_context(health_states)
     for section, items in (protocol or {}).items():
         enriched_items: List[Dict[str, Any]] = []
         for index, raw_item in enumerate(items or []):
@@ -178,8 +222,12 @@ def enrich_protocol(
                         trend_analysis=trend_analysis,
                     ),
                     "safety_notes": raw_item.get("safety_notes") or _safety_notes(raw_item, safety_result),
-                    "expected_timeline": raw_item.get("expected_timeline") or _SECTION_DEFAULT_TIMELINES.get(section, "Reassess after 2-4 weeks."),
-                    "retest_markers": raw_item.get("retest_markers") or _retest_markers(section, raw_item, retest_suggestions),
+                    "expected_timeline": raw_item.get("expected_timeline") or _expected_timeline(section, domain_contexts),
+                    "retest_markers": raw_item.get("retest_markers")
+                    or _domain_retest_markers(section, domain_contexts)
+                    or _retest_markers(section, raw_item, retest_suggestions),
+                    "knowledge_domain_context": domain_contexts,
+                    "knowledge_domain_registry_version": DOMAIN_REGISTRY_VERSION,
                     "protocol_enrichment_version": PROTOCOL_ENRICHMENT_VERSION,
                 }
             )

@@ -2,43 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from app.services.knowledge.domain_registry import DOMAIN_REGISTRY_VERSION, list_domain_definitions
+
 HEALTH_STATE_ENGINE_VERSION = "health_state_engine_v1"
-
-_DOMAIN_MARKERS = {
-    "iron_status": {"ferritin", "iron", "transferrin", "hemoglobin", "hematocrit", "rbc"},
-    "metabolic_health": {"glucose", "hba1c", "insulin"},
-    "cardiovascular": {"ldl", "hdl", "cholesterol", "triglyceride", "triglycerides", "homocysteine"},
-    "inflammation": {"crp", "esr", "homocysteine"},
-    "thyroid": {"tsh", "t3", "t4", "thyroid"},
-    "liver": {"alt", "ast", "ggt", "bilirubin"},
-    "kidney": {"creatinine", "urea", "egfr"},
-    "micronutrients": {"vitamin", "vitamin_d", "b12", "folate", "magnesium", "zinc", "selenium"},
-    "recovery_energy": {"ferritin", "vitamin", "b12", "folate", "magnesium", "tsh", "crp"},
-}
-
-_DOMAIN_SYMPTOMS = {
-    "iron_status": {"fatigue", "weakness", "dizziness", "shortness of breath", "втома", "слабкість"},
-    "metabolic_health": {"thirst", "cravings", "energy crash", "сонливість", "спрага"},
-    "cardiovascular": {"chest pain", "palpitations", "серцебиття"},
-    "inflammation": {"pain", "aches", "joint pain", "біль", "запалення"},
-    "thyroid": {"cold intolerance", "hair loss", "weight gain", "випадіння волосся"},
-    "liver": {"nausea", "right upper pain", "нудота"},
-    "kidney": {"swelling", "набряк"},
-    "micronutrients": {"fatigue", "brain fog", "втома", "туман"},
-    "recovery_energy": {"fatigue", "brain fog", "poor sleep", "low energy", "втома", "поганий сон"},
-}
-
-_REQUIRED_MARKERS = {
-    "iron_status": {"ferritin", "hemoglobin"},
-    "metabolic_health": {"glucose", "hba1c"},
-    "cardiovascular": {"ldl", "hdl", "triglyceride"},
-    "inflammation": {"crp"},
-    "thyroid": {"tsh"},
-    "liver": {"alt", "ast"},
-    "kidney": {"creatinine", "egfr"},
-    "micronutrients": {"vitamin_d", "b12", "folate", "magnesium"},
-    "recovery_energy": {"ferritin", "vitamin_d", "tsh", "crp"},
-}
 
 _STATUS_PENALTY = {
     "ELEVATED": 22,
@@ -106,10 +72,12 @@ def evaluate_health_states(
     states: List[Dict[str, Any]] = []
     matched_rules = knowledge_report.get("why_it_matters") if isinstance(knowledge_report, dict) else []
 
-    for domain, aliases in _DOMAIN_MARKERS.items():
+    for definition in list_domain_definitions():
+        domain = str(definition.get("key") or "")
+        aliases = set(definition.get("marker_aliases") or [])
         contributing = [item for item in biomarkers or [] if _matches_marker(item, aliases)]
-        matched_symptoms = _symptom_matches(symptoms, _DOMAIN_SYMPTOMS.get(domain, set()))
-        required = _REQUIRED_MARKERS.get(domain, set())
+        matched_symptoms = _symptom_matches(symptoms, set(definition.get("symptom_aliases") or []))
+        required = set(definition.get("required_markers") or [])
         missing_data = sorted(
             marker
             for marker in required
@@ -129,9 +97,12 @@ def evaluate_health_states(
         states.append(
             {
                 "domain": domain,
+                "label": definition.get("label"),
                 "score": score,
                 "risk_level": _risk_level(score) if contributing or matched_symptoms else "unknown",
                 "confidence": confidence,
+                "evidence_level": definition.get("evidence_level"),
+                "requires_doctor_if_flagged": bool(definition.get("requires_doctor_if_flagged")),
                 "contributing_biomarkers": [
                     {
                         "name": item.get("name"),
@@ -163,6 +134,7 @@ def evaluate_health_states(
 
     return {
         "version": HEALTH_STATE_ENGINE_VERSION,
+        "domain_registry_version": DOMAIN_REGISTRY_VERSION,
         "states": states,
         "top_priorities": top_priorities,
         "context_readiness": (health_context or {}).get("readiness") or {},

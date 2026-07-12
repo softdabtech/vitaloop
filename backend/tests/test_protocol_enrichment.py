@@ -72,5 +72,7 @@ def test_enrich_protocol_adds_explainability_safety_and_retest_fields():
     assert any("medication interactions" in note for note in item["safety_notes"])
     assert any("allergies" in note for note in item["safety_notes"])
     assert item["expected_timeline"]
-    assert item["retest_markers"] == ["Vitamin D"]
+    assert "Vitamin D" in item["retest_markers"]
+    assert item["knowledge_domain_registry_version"] == "knowledge_domain_registry_v1"
+    assert item["knowledge_domain_context"][0]["domain"] == "micronutrients"
     assert item["protocol_enrichment_version"] == "protocol_enrichment_v1"

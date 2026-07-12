@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+from app.services.knowledge.domain_registry import DOMAIN_REGISTRY_VERSION
+
 ANALYSIS_QUALITY_SNAPSHOT_VERSION = "analysis_quality_snapshot_v1"
 
 
@@ -55,6 +57,7 @@ def build_analysis_quality_snapshot(
             "health_states": (health_states or {}).get("version"),
             "trend_analysis": (trend_analysis or {}).get("version"),
             "ai_orchestration": (ai_orchestration or {}).get("version"),
+            "knowledge_domain_registry": DOMAIN_REGISTRY_VERSION,
         },
         "readiness": (health_context or {}).get("readiness") or {},
         "coverage": {
