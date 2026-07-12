@@ -58,6 +58,31 @@ def test_build_deidentified_person_avatar_uses_bands_only():
     assert "weight_kg" not in avatar
 
 
+def test_build_deidentified_safety_context_uses_flags_not_raw_phi():
+    context = integration.build_deidentified_safety_context(
+        {
+            "pregnancy_status": "pregnant",
+            "current_medications": ["metformin"],
+            "current_supplements": ["vitamin D"],
+            "allergies": "penicillin",
+            "prior_diagnoses": "hypothyroidism",
+        }
+    )
+
+    assert context == {
+        "pregnancy_status": "pregnant",
+        "has_current_medications": True,
+        "current_medication_count": 1,
+        "has_current_supplements": True,
+        "current_supplement_count": 1,
+        "has_known_allergies": True,
+        "has_prior_diagnoses": True,
+        "safety_context_present": True,
+    }
+    assert "metformin" not in str(context).lower()
+    assert "penicillin" not in str(context).lower()
+
+
 @pytest.mark.asyncio
 async def test_evaluate_biomarkers_with_knowledge_calls_evaluator(monkeypatch):
     captured = {}
@@ -97,6 +122,43 @@ async def test_evaluate_biomarkers_with_knowledge_calls_evaluator(monkeypatch):
     assert captured["payload"]["context"]["cohort_learning_allowed"] is True
     assert captured["user_id"] == "11111111-1111-1111-1111-111111111111"
     assert captured["persist"] is True
+
+
+@pytest.mark.asyncio
+async def test_evaluate_biomarkers_with_knowledge_accepts_pipeline_profile(monkeypatch):
+    captured = {}
+
+    async def _fake_evaluate_health_input(payload, *, user_id=None, persist=True):
+        captured["payload"] = payload
+        return {"matched_rules": []}
+
+    async def _unexpected_get_user_profile(_user_id):
+        raise AssertionError("profile should come from the shared analysis pipeline")
+
+    monkeypatch.setattr(integration, "evaluate_health_input", _fake_evaluate_health_input)
+    monkeypatch.setattr(integration.supabase, "get_user_profile", _unexpected_get_user_profile)
+
+    await integration.evaluate_biomarkers_with_knowledge(
+        biomarkers=[{"name": "Ferritin", "value": 18, "unit": "ng/mL"}],
+        symptoms=[],
+        user_id="11111111-1111-1111-1111-111111111111",
+        upload_id="upload-1",
+        user_profile={
+            "age": 37,
+            "pregnancy_status": "pregnant",
+            "current_medications": ["metformin"],
+            "allergies": "penicillin",
+        },
+    )
+
+    assert captured["payload"]["context"]["person_avatar"]["age_band"] == "30_39"
+    assert captured["payload"]["context"]["safety_context"] == {
+        "pregnancy_status": "pregnant",
+        "has_current_medications": True,
+        "current_medication_count": 1,
+        "has_known_allergies": True,
+        "safety_context_present": True,
+    }
 
 
 @pytest.mark.asyncio
