@@ -537,6 +537,30 @@ async def get_biomarkers_by_upload(upload_id: str, user_id: str) -> List[Dict]:
     return resp.data
 
 
+async def get_recent_biomarker_history(user_id: str, *, limit: int = 250) -> List[Dict[str, Any]]:
+    """Return recent biomarker rows for longitudinal trend analysis.
+
+    This is intentionally read-only and fail-open at the caller level; analysis
+    should still complete when historical data is unavailable.
+    """
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("biomarkers")
+        .select("id,upload_id,user_id,name,value,unit,status,category,created_at,lab_uploads(test_date,created_at)")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    rows = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="biomarkers",
+        details={"count": len(rows), "source": "trend_engine"},
+    )
+    return rows
+
+
 async def get_protocol_by_upload(user_id: str, upload_id: str) -> Optional[Dict]:
     _logger.debug("get_protocol_by_upload called")
     supabase = _get_supabase()

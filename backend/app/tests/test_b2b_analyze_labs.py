@@ -350,7 +350,20 @@ async def test_b2c_pipeline_shape_not_broken(monkeypatch):
         captured["kwargs"] = kwargs
         return {"matched_rules": [], "safety_alerts": [], "generated_recommendations": []}
 
+    async def fake_history(_user_id):
+        return [
+            {
+                "upload_id": "previous-upload",
+                "name": "Glucose",
+                "value": 82,
+                "unit": "mg/dL",
+                "status": "OPTIMAL",
+                "created_at": "2026-01-01T00:00:00Z",
+            }
+        ]
+
     monkeypatch.setattr("app.services.lab_analysis_pipeline.evaluate_biomarkers_with_knowledge", fake_eval)
+    monkeypatch.setattr("app.services.lab_analysis_pipeline._load_historical_biomarkers", fake_history)
     result = await svc.run_lab_analysis_pipeline(
         biomarkers=[{"name": "Glucose", "value": 92, "unit": "mg/dL", "status": "OPTIMAL"}],
         symptoms=["fatigue"],
@@ -366,6 +379,9 @@ async def test_b2c_pipeline_shape_not_broken(monkeypatch):
     assert result["cost_metadata"]["estimated"] is True
     assert result["health_context"]["version"] == "health_context_v1"
     assert result["health_states"]["version"] == "health_state_engine_v1"
+    assert result["trend_analysis"]["version"] == "trend_engine_v1"
+    assert result["trend_analysis"]["available"] is True
+    assert result["health_summary"]["trend_overview"]["version"] == "trend_engine_v1"
     assert result["health_summary"]["health_state_overview"]["version"] == "health_state_engine_v1"
     assert result["metadata"]["health_context_version"] == "health_context_v1"
     assert captured["kwargs"]["health_context"]["readiness"]["has_questionnaire"] is True

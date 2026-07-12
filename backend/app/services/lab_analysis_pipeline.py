@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from datetime import date, datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
+import logging
 
 from app.config import settings
 from app.services.affiliate import build_iherb_url
@@ -14,6 +15,9 @@ from app.services.knowledge.integration import evaluate_biomarkers_with_knowledg
 from app.services.knowledge.report import build_knowledge_report
 from app.services.lab_normalization.biomarker_mapping import infer_category, to_canonical_name
 from app.services.safety import validate_report
+from app.services.trend_engine import evaluate_biomarker_trends
+
+logger = logging.getLogger("uvicorn.error")
 
 
 DISCLAIMER = (
@@ -445,6 +449,18 @@ def _cost_metadata(
     }
 
 
+async def _load_historical_biomarkers(user_id: Optional[str]) -> List[Dict[str, Any]]:
+    if not user_id:
+        return []
+    try:
+        from app.services import supabase_service as supabase
+
+        return await supabase.get_recent_biomarker_history(user_id, limit=250)
+    except Exception as exc:
+        logger.warning("trend_history_unavailable user_id=%s error=%s", user_id, exc)
+        return []
+
+
 def _protocol_sections_from_ai_and_rules(
     *,
     rule_actions: List[Dict[str, Any]],
@@ -647,6 +663,12 @@ async def run_lab_analysis_pipeline(
     knowledge_report = _strip_placeholder_source_urls(knowledge_report)
     knowledge_evaluation = _strip_placeholder_source_urls(knowledge_evaluation)
     prioritized = _prioritize_biomarkers(normalized_biomarkers)
+    historical_biomarkers = await _load_historical_biomarkers(user_id)
+    trend_analysis = evaluate_biomarker_trends(
+        current_biomarkers=normalized_biomarkers,
+        historical_biomarkers=historical_biomarkers,
+        current_upload_id=analysis_id,
+    )
     health_states = evaluate_health_states(
         biomarkers=normalized_biomarkers,
         symptoms=normalized_symptoms,
@@ -707,6 +729,19 @@ async def run_lab_analysis_pipeline(
     health_summary = {
         **(knowledge_report.get("summary") or {}),
         "what_was_found": knowledge_report.get("what_was_found") or {},
+        "trend_overview": {
+            "version": trend_analysis.get("version"),
+            "available": trend_analysis.get("available"),
+            "priority_changes": [
+                {
+                    "name": item.get("name"),
+                    "direction": item.get("direction"),
+                    "percent_change": item.get("percent_change"),
+                    "interpretation": item.get("interpretation"),
+                }
+                for item in (trend_analysis.get("priority_changes") or [])[:5]
+            ],
+        },
         "health_state_overview": {
             "version": health_states.get("version"),
             "top_domains": [
@@ -725,6 +760,7 @@ async def run_lab_analysis_pipeline(
         "analysis_id": analysis_id or "",
         "status": "completed",
         "health_summary": health_summary,
+        "trend_analysis": trend_analysis,
         "health_states": health_states,
         "prioritized_biomarkers": prioritized,
         "risks_flags": _risk_flags(knowledge_report, prioritized),
