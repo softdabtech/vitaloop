@@ -8,6 +8,7 @@ from app.config import settings
 from app.services.affiliate import build_iherb_url
 from app.services.ai.openai_service import generate_protocol, is_llm_configured
 from app.services.explainability import build_recommendation_explanations
+from app.services.health_context import build_health_context
 from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
 from app.services.knowledge.report import build_knowledge_report
 from app.services.lab_normalization.biomarker_mapping import infer_category, to_canonical_name
@@ -619,6 +620,14 @@ async def run_lab_analysis_pipeline(
 ) -> Dict[str, Any]:
     normalized_biomarkers = normalize_biomarkers(biomarkers, name_aliases=biomarker_name_aliases)
     normalized_symptoms = [str(item).strip().lower() for item in (symptoms or []) if str(item).strip()]
+    health_context = build_health_context(
+        biomarkers=normalized_biomarkers,
+        symptoms=normalized_symptoms,
+        questionnaire=questionnaire,
+        user_profile=user_profile,
+        source_metadata=source_metadata,
+        locale=locale,
+    )
 
     knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
         biomarkers=normalized_biomarkers,
@@ -626,6 +635,7 @@ async def run_lab_analysis_pipeline(
         user_id=user_id,
         upload_id=analysis_id,
         user_profile=user_profile,
+        health_context=health_context,
         persist=persist_knowledge,
     )
     knowledge_report = build_knowledge_report(
@@ -711,11 +721,14 @@ async def run_lab_analysis_pipeline(
         "disclaimer": (knowledge_report.get("summary") or {}).get("disclaimer") or DISCLAIMER,
         "normalized_biomarkers": normalized_biomarkers,
         "cost_metadata": cost_metadata,
+        "health_context": health_context,
         "metadata": {
             "source": source_metadata or {},
             "questionnaire_present": bool(questionnaire),
             "profile_present": bool(user_profile),
             "profile_context_fields": sorted([key for key, value in (user_profile or {}).items() if value not in (None, "", [])]),
+            "health_context_version": health_context.get("version"),
+            "health_context_readiness": health_context.get("readiness") or {},
             "biomarker_count": len(normalized_biomarkers),
             "analysis_core_version": "lab_analysis_pipeline_v1",
         },

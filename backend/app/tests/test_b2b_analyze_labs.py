@@ -344,13 +344,18 @@ async def test_pipeline_strips_placeholder_source_urls(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_b2c_pipeline_shape_not_broken(monkeypatch):
+    captured = {}
+
     async def fake_eval(**kwargs):
+        captured["kwargs"] = kwargs
         return {"matched_rules": [], "safety_alerts": [], "generated_recommendations": []}
 
     monkeypatch.setattr("app.services.lab_analysis_pipeline.evaluate_biomarkers_with_knowledge", fake_eval)
     result = await svc.run_lab_analysis_pipeline(
         biomarkers=[{"name": "Glucose", "value": 92, "unit": "mg/dL", "status": "OPTIMAL"}],
-        symptoms=[],
+        symptoms=["fatigue"],
+        questionnaire={"domain_scores": {"sleep": 70}},
+        user_profile={"age": 37, "current_medications": ["metformin"]},
         user_id="user-1",
         analysis_id="upload-1",
     )
@@ -359,3 +364,7 @@ async def test_b2c_pipeline_shape_not_broken(monkeypatch):
     assert result["normalized_biomarkers"][0]["name"] == "Glucose"
     assert result["normalized_biomarkers"][0]["canonical_name"] == "canonical_glucose"
     assert result["cost_metadata"]["estimated"] is True
+    assert result["health_context"]["version"] == "health_context_v1"
+    assert result["metadata"]["health_context_version"] == "health_context_v1"
+    assert captured["kwargs"]["health_context"]["readiness"]["has_questionnaire"] is True
+    assert captured["kwargs"]["health_context"]["readiness"]["has_safety_context"] is True

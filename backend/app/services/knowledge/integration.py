@@ -160,6 +160,7 @@ async def evaluate_biomarkers_with_knowledge(
     user_id: str | None,
     upload_id: str | None,
     user_profile: Dict[str, Any] | None = None,
+    health_context: Dict[str, Any] | None = None,
     persist: bool = True,
 ) -> Dict[str, Any] | None:
     if not settings.knowledge_evaluation_after_analyze_enabled:
@@ -180,6 +181,18 @@ async def evaluate_biomarkers_with_knowledge(
                 exc,
             )
 
+    health_context = health_context if isinstance(health_context, dict) else {}
+    health_profile = (
+        ((health_context.get("inputs") or {}).get("profile") or {})
+        if isinstance(health_context.get("inputs"), dict)
+        else {}
+    )
+    person_avatar = health_profile.get("person_avatar") or build_deidentified_person_avatar(profile)
+    safety_context = health_profile.get("safety_context") or build_deidentified_safety_context(profile)
+    profile_context_fields = health_profile.get("fields") or sorted(
+        [key for key, value in profile.items() if value not in (None, "", [])]
+    )
+
     payload = {
         "lab_results": lab_results,
         "symptoms": symptoms or [],
@@ -187,11 +200,13 @@ async def evaluate_biomarkers_with_knowledge(
             "upload_id": upload_id,
             "source": "biomarker_analyzer",
             "data_age_days": 0,
-            "person_avatar": build_deidentified_person_avatar(profile),
-            "safety_context": build_deidentified_safety_context(profile),
-            "profile_context_fields": sorted(
-                [key for key, value in profile.items() if value not in (None, "", [])]
-            ),
+            "health_context_version": health_context.get("version"),
+            "health_context_readiness": health_context.get("readiness") or {},
+            "biomarker_summary": ((health_context.get("inputs") or {}).get("biomarkers") or {}),
+            "questionnaire_summary": ((health_context.get("inputs") or {}).get("questionnaire") or {}),
+            "person_avatar": person_avatar,
+            "safety_context": safety_context,
+            "profile_context_fields": profile_context_fields,
             "cohort_learning_allowed": bool(profile.get("knowledge_learning_consent")),
         },
     }
