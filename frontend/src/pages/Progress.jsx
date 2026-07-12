@@ -6,6 +6,7 @@ import api from '../lib/api.js'
 import { useProgress } from '../hooks/useQueries.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState, InsightCard, KPIBlock } from '../components/coach/CoachUI.jsx'
+import { isUkrainianLocale } from '../lib/locale.js'
 
 function toNumber(value) {
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -20,11 +21,11 @@ function normalizeName(name) {
   return String(name || '').replace(/\s+/g, ' ').trim()
 }
 
-function formatDate(value) {
-  if (!value) return 'Unknown date'
+function formatDate(value, isUk = false) {
+  if (!value) return isUk ? 'Дата невідома' : 'Unknown date'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value).slice(0, 10)
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  return date.toLocaleDateString(isUk ? 'uk-UA' : undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function buildSeries(uploads) {
@@ -69,15 +70,15 @@ function trendTone(state) {
   return 'neutral'
 }
 
-function trendLabel(trend) {
-  if (trend.state === 'baseline') return 'Baseline'
-  if (trend.state === 'stable') return 'Stable'
-  if (trend.state === 'increased') return 'Changed upward'
-  if (trend.state === 'decreased') return 'Changed downward'
-  return 'Trend'
+function trendLabel(trend, isUk = false) {
+  if (trend.state === 'baseline') return isUk ? 'Базова точка' : 'Baseline'
+  if (trend.state === 'stable') return isUk ? 'Стабільно' : 'Stable'
+  if (trend.state === 'increased') return isUk ? 'Зросло' : 'Changed upward'
+  if (trend.state === 'decreased') return isUk ? 'Знизилось' : 'Changed downward'
+  return isUk ? 'Тренд' : 'Trend'
 }
 
-function TrendCard({ trend }) {
+function TrendCard({ trend, isUk = false }) {
   const latest = trend.last || trend.points?.[trend.points.length - 1]
   const first = trend.first || trend.points?.[0]
   return (
@@ -85,19 +86,19 @@ function TrendCard({ trend }) {
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-extrabold text-slate-950">{trend.name}</h3>
-          <p className="mt-1 text-sm text-slate-500">{latest ? `${latest.value}${trend.unit ? ` ${trend.unit}` : ''}` : 'No value'}</p>
+          <p className="mt-1 text-sm text-slate-500">{latest ? `${latest.value}${trend.unit ? ` ${trend.unit}` : ''}` : (isUk ? 'Немає значення' : 'No value')}</p>
         </div>
-        <CoachBadge tone={trendTone(trend.state)}>{trendLabel(trend)}</CoachBadge>
+        <CoachBadge tone={trendTone(trend.state)}>{trendLabel(trend, isUk)}</CoachBadge>
       </div>
       {trend.state === 'baseline' ? (
-        <p className="text-sm leading-6 text-slate-600">One valid data point. Upload another test to compare direction over time.</p>
+        <p className="text-sm leading-6 text-slate-600">{isUk ? 'Є одна валідна точка даних. Завантажте ще один аналіз, щоб порівняти динаміку.' : 'One valid data point. Upload another test to compare direction over time.'}</p>
       ) : (
         <p className="text-sm leading-6 text-slate-600">
           {first?.value}{trend.unit ? ` ${trend.unit}` : ''} → {latest?.value}{trend.unit ? ` ${trend.unit}` : ''}
           {trend.pct != null ? ` (${trend.pct > 0 ? '+' : ''}${trend.pct}%)` : ''}
         </p>
       )}
-      <p className="mt-3 text-xs font-semibold text-slate-500">Since {formatDate(first?.date)}</p>
+      <p className="mt-3 text-xs font-semibold text-slate-500">{isUk ? 'Від' : 'Since'} {formatDate(first?.date, isUk)}</p>
     </CoachCard>
   )
 }
@@ -110,6 +111,7 @@ function triggerPaywall() {
 
 export default function Progress() {
   const navigate = useNavigate()
+  const isUk = isUkrainianLocale()
   const { isActive: hasPremium, loading: subscriptionLoading } = useSubscription()
   const { data = [], isLoading, isError, error, refetch } = useProgress()
   const { data: timeline = [], isError: timelineError } = useQuery({
@@ -170,9 +172,9 @@ export default function Progress() {
       <div className="coach-shell">
         <EmptyCoachState
           icon={isPaywall ? CalendarClock : AlertTriangle}
-          title={isPaywall ? 'Progress is a Premium feature' : 'Unable to load progress'}
-          body={isPaywall ? 'Unlock trend tracking, check-ins, and retest reminders.' : 'Please try again. Your uploads and reports are not changed.'}
-          actionLabel={isPaywall ? 'View Premium' : 'Retry'}
+          title={isPaywall ? (isUk ? 'Динаміка доступна в Premium' : 'Progress is a Premium feature') : (isUk ? 'Не вдалося завантажити динаміку' : 'Unable to load progress')}
+          body={isPaywall ? (isUk ? 'Відкрийте тренди, чек-іни та нагадування про повторні аналізи.' : 'Unlock trend tracking, check-ins, and retest reminders.') : (isUk ? 'Спробуйте ще раз. Ваші завантаження та звіти не змінено.' : 'Please try again. Your uploads and reports are not changed.')}
+          actionLabel={isPaywall ? (isUk ? 'Переглянути Premium' : 'View Premium') : (isUk ? 'Повторити' : 'Retry')}
           onAction={isPaywall ? triggerPaywall : refetch}
         />
       </div>
@@ -184,9 +186,9 @@ export default function Progress() {
       <div className="coach-shell">
         <EmptyCoachState
           icon={UploadCloud}
-          title="No progress data yet"
-          body="Upload your first lab result to create a baseline. VITALOOP will only show trends after there are at least two comparable data points."
-          actionLabel="Upload results"
+          title={isUk ? 'Даних для динаміки ще немає' : 'No progress data yet'}
+          body={isUk ? 'Завантажте перший результат аналізів, щоб створити базову точку. VITALOOP покаже тренди, коли буде щонайменше дві порівнювані точки.' : 'Upload your first lab result to create a baseline. VITALOOP will only show trends after there are at least two comparable data points.'}
+          actionLabel={isUk ? 'Завантажити результати' : 'Upload results'}
           onAction={() => navigate('/upload')}
         />
       </div>
@@ -198,25 +200,25 @@ export default function Progress() {
       <section className="coach-hero">
         <div className="relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div>
-            <p className="coach-eyebrow">Progress Summary</p>
-            <h1 className="coach-title-xl">What changed since your last checks?</h1>
+            <p className="coach-eyebrow">{isUk ? 'Підсумок динаміки' : 'Progress Summary'}</p>
+            <h1 className="coach-title-xl">{isUk ? 'Що змінилося після останніх перевірок?' : 'What changed since your last checks?'}</h1>
             <p className="coach-body mt-4 max-w-2xl">
-              Progress is based on real uploads and check-ins. Charts appear only when VITALOOP has at least two valid points to compare.
+              {isUk ? 'Динаміка базується на реальних завантаженнях і чек-інах. Графіки зʼявляються, коли VITALOOP має щонайменше дві валідні точки для порівняння.' : 'Progress is based on real uploads and check-ins. Charts appear only when VITALOOP has at least two valid points to compare.'}
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <CoachButton icon={UploadCloud} onClick={() => navigate('/upload')}>Upload new test</CoachButton>
-              <CoachButton variant="secondary" icon={CalendarClock} onClick={() => navigate('/check-ins')}>Check in</CoachButton>
+              <CoachButton icon={UploadCloud} onClick={() => navigate('/upload')}>{isUk ? 'Завантажити новий аналіз' : 'Upload new test'}</CoachButton>
+              <CoachButton variant="secondary" icon={CalendarClock} onClick={() => navigate('/check-ins')}>{isUk ? 'Чек-ін' : 'Check in'}</CoachButton>
             </div>
           </div>
           <CoachCard className="p-5" tone={retestOverdue ? 'attention' : 'soft'}>
-            <p className="coach-eyebrow">Next Recommended Action</p>
-            <h2 className="text-xl font-extrabold text-slate-950">{retestOverdue ? 'Plan a retest window' : multiplePointTrends.length ? 'Review changed markers' : 'Create your second data point'}</h2>
+            <p className="coach-eyebrow">{isUk ? 'Наступна рекомендована дія' : 'Next Recommended Action'}</p>
+            <h2 className="text-xl font-extrabold text-slate-950">{retestOverdue ? (isUk ? 'Заплануйте повторний аналіз' : 'Plan a retest window') : multiplePointTrends.length ? (isUk ? 'Перегляньте змінені маркери' : 'Review changed markers') : (isUk ? 'Створіть другу точку даних' : 'Create your second data point')}</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
               {retestOverdue
-                ? 'Your latest upload is 90+ days old. Retest timing should be confirmed with your clinician.'
+                ? (isUk ? 'Останнє завантаження було понад 90 днів тому. Час повторного аналізу варто підтвердити з лікарем.' : 'Your latest upload is 90+ days old. Retest timing should be confirmed with your clinician.')
                 : multiplePointTrends.length
-                  ? 'Open the markers with the biggest movement and compare them with symptoms.'
-                  : 'One upload is a baseline. A second upload unlocks trend direction.'}
+                  ? (isUk ? 'Відкрийте маркери з найбільшими змінами та зіставте їх із симптомами.' : 'Open the markers with the biggest movement and compare them with symptoms.')
+                  : (isUk ? 'Одне завантаження створює базову точку. Друге відкриває напрямок тренду.' : 'One upload is a baseline. A second upload unlocks trend direction.')}
             </p>
           </CoachCard>
         </div>
@@ -224,28 +226,28 @@ export default function Progress() {
 
       {partialFailure && (
         <CoachCard tone="attention" className="p-4">
-          <p className="text-sm font-semibold text-amber-900">Some supporting progress data could not load. Available sections below still use the data that loaded successfully.</p>
+          <p className="text-sm font-semibold text-amber-900">{isUk ? 'Частину допоміжних даних динаміки не вдалося завантажити. Доступні секції нижче використовують дані, які завантажилися успішно.' : 'Some supporting progress data could not load. Available sections below still use the data that loaded successfully.'}</p>
         </CoachCard>
       )}
 
       <div className="coach-grid coach-grid--3">
-        <KPIBlock label="Lab uploads" value={data.length} helper="Real uploaded reports." icon={UploadCloud} />
-        <KPIBlock label="Comparable trends" value={multiplePointTrends.length} helper="Markers with 2+ valid points." icon={TrendingUp} tone={multiplePointTrends.length ? 'success' : 'neutral'} />
-        <KPIBlock label="Check-ins" value={checkins.length} helper="Symptom follow-ups recorded." icon={CheckCircle2} tone={checkins.length ? 'success' : 'neutral'} />
+        <KPIBlock label={isUk ? 'Завантажені аналізи' : 'Lab uploads'} value={data.length} helper={isUk ? 'Реальні завантажені звіти.' : 'Real uploaded reports.'} icon={UploadCloud} />
+        <KPIBlock label={isUk ? 'Порівнювані тренди' : 'Comparable trends'} value={multiplePointTrends.length} helper={isUk ? 'Маркери з 2+ валідними точками.' : 'Markers with 2+ valid points.'} icon={TrendingUp} tone={multiplePointTrends.length ? 'success' : 'neutral'} />
+        <KPIBlock label={isUk ? 'Чек-іни' : 'Check-ins'} value={checkins.length} helper={isUk ? 'Записані перевірки симптомів.' : 'Symptom follow-ups recorded.'} icon={CheckCircle2} tone={checkins.length ? 'success' : 'neutral'} />
       </div>
 
       <CoachCard className="p-5 sm:p-6">
         <div className="mb-5">
-          <p className="coach-eyebrow">Biomarker Trends</p>
-          <h2 className="coach-title-lg">{multiplePointTrends.length ? 'Direction is available for comparable markers' : 'Baseline state'}</h2>
+          <p className="coach-eyebrow">{isUk ? 'Тренди біомаркерів' : 'Biomarker Trends'}</p>
+          <h2 className="coach-title-lg">{multiplePointTrends.length ? (isUk ? 'Напрямок доступний для порівнюваних маркерів' : 'Direction is available for comparable markers') : (isUk ? 'Базовий стан' : 'Baseline state')}</h2>
         </div>
         {multiplePointTrends.length ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {multiplePointTrends.slice(0, 9).map((trend) => <TrendCard key={trend.name} trend={trend} />)}
+            {multiplePointTrends.slice(0, 9).map((trend) => <TrendCard key={trend.name} trend={trend} isUk={isUk} />)}
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {baselineTrends.slice(0, 6).map((trend) => <TrendCard key={trend.name} trend={trend} />)}
+            {baselineTrends.slice(0, 6).map((trend) => <TrendCard key={trend.name} trend={trend} isUk={isUk} />)}
           </div>
         )}
       </CoachCard>
