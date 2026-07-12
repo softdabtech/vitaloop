@@ -256,25 +256,25 @@ export default function Progress() {
         <CoachCard className="p-5">
           <div className="mb-4 flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-teal-600" />
-            <h2 className="text-lg font-extrabold text-slate-950">Recent Improvements</h2>
+            <h2 className="text-lg font-extrabold text-slate-950">{isUk ? 'Нещодавні покращення' : 'Recent Improvements'}</h2>
           </div>
           {recentImprovements.length ? (
             <div className="space-y-3">
-              {recentImprovements.map((trend) => <TrendCard key={trend.name} trend={trend} />)}
+              {recentImprovements.map((trend) => <TrendCard key={trend.name} trend={trend} isUk={isUk} />)}
             </div>
-          ) : <p className="text-sm leading-6 text-slate-600">No comparable improvement trend yet. Upload another report or complete check-ins to track response.</p>}
+          ) : <p className="text-sm leading-6 text-slate-600">{isUk ? 'Порівнюваного тренду покращення ще немає. Завантажте ще один звіт або пройдіть чек-ін, щоб відстежити відповідь.' : 'No comparable improvement trend yet. Upload another report or complete check-ins to track response.'}</p>}
         </CoachCard>
 
         <CoachCard className="p-5">
           <div className="mb-4 flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-amber-600" />
-            <h2 className="text-lg font-extrabold text-slate-950">Needs Review</h2>
+            <h2 className="text-lg font-extrabold text-slate-950">{isUk ? 'Потребує перегляду' : 'Needs Review'}</h2>
           </div>
           {attentionTrends.length ? (
             <div className="space-y-3">
-              {attentionTrends.map((trend) => <TrendCard key={trend.name} trend={trend} />)}
+              {attentionTrends.map((trend) => <TrendCard key={trend.name} trend={trend} isUk={isUk} />)}
             </div>
-          ) : <p className="text-sm leading-6 text-slate-600">No worsening comparable biomarker trend is visible in the loaded data.</p>}
+          ) : <p className="text-sm leading-6 text-slate-600">{isUk ? 'У завантажених даних не видно погіршення порівнюваних біомаркерів.' : 'No worsening comparable biomarker trend is visible in the loaded data.'}</p>}
         </CoachCard>
       </div>
 
@@ -282,13 +282,13 @@ export default function Progress() {
         <CoachCard className="p-5">
           <div className="mb-4 flex items-center gap-2">
             <Route className="h-5 w-5 text-teal-600" />
-            <h2 className="text-lg font-extrabold text-slate-950">Timeline</h2>
+            <h2 className="text-lg font-extrabold text-slate-950">{isUk ? 'Хронологія' : 'Timeline'}</h2>
           </div>
           <div className="space-y-3">
             {(Array.isArray(timeline) && timeline.length ? timeline : data).slice(0, 8).map((item, index) => (
               <div key={item.id || index} className="rounded-2xl bg-slate-50 p-3">
-                <p className="font-bold text-slate-950">{item.title || item.lab_name || item.event_type || `Upload ${index + 1}`}</p>
-                <p className="mt-1 text-sm text-slate-600">{formatDate(item.created_at || item.test_date || item.date)}</p>
+                <p className="font-bold text-slate-950">{item.title || item.lab_name || item.event_type || (isUk ? `Завантаження ${index + 1}` : `Upload ${index + 1}`)}</p>
+                <p className="mt-1 text-sm text-slate-600">{formatDate(item.created_at || item.test_date || item.date, isUk)}</p>
               </div>
             ))}
           </div>
@@ -297,15 +297,15 @@ export default function Progress() {
         <CoachCard className="p-5">
           <div className="mb-4 flex items-center gap-2">
             <RefreshCw className="h-5 w-5 text-teal-600" />
-            <h2 className="text-lg font-extrabold text-slate-950">Retest Reminders</h2>
+            <h2 className="text-lg font-extrabold text-slate-950">{isUk ? 'Нагадування про повторні аналізи' : 'Retest Reminders'}</h2>
           </div>
           <p className="text-sm leading-6 text-slate-600">
             {latestDate
-              ? `Latest upload: ${formatDate(latestDate)}${daysSinceLatest != null ? ` (${daysSinceLatest} days ago).` : '.'}`
-              : 'No upload date is available.'}
+              ? (isUk ? `Останнє завантаження: ${formatDate(latestDate, isUk)}${daysSinceLatest != null ? ` (${daysSinceLatest} дн. тому).` : '.'}` : `Latest upload: ${formatDate(latestDate)}${daysSinceLatest != null ? ` (${daysSinceLatest} days ago).` : '.'}`)
+              : (isUk ? 'Дата завантаження недоступна.' : 'No upload date is available.')}
           </p>
           <CoachBadge tone={retestOverdue ? 'warning' : 'neutral'} className="mt-3">
-            {retestOverdue ? 'Retest window may be due' : 'Retest timing depends on context'}
+            {retestOverdue ? (isUk ? 'Може наставати час повторного аналізу' : 'Retest window may be due') : (isUk ? 'Час повторного аналізу залежить від контексту' : 'Retest timing depends on context')}
           </CoachBadge>
         </CoachCard>
       </div>
@@ -314,43 +314,43 @@ export default function Progress() {
         <CoachCard className="p-5">
           <div className="mb-4 flex items-center gap-2">
             <Clock className="h-5 w-5 text-teal-600" />
-            <h2 className="text-lg font-extrabold text-slate-950">Check-In History</h2>
+            <h2 className="text-lg font-extrabold text-slate-950">{isUk ? 'Історія чек-інів' : 'Check-In History'}</h2>
           </div>
           {checkins.length ? (
             <div className="space-y-3">
               {checkins.slice(0, 6).map((item, index) => (
                 <div key={item.id || index} className="rounded-2xl bg-slate-50 p-3">
-                  <p className="font-bold text-slate-950">{formatDate(item.created_at || item.date)}</p>
-                  <p className="mt-1 text-sm text-slate-600">{item.summary || item.note || item.status || 'Check-in recorded.'}</p>
+                  <p className="font-bold text-slate-950">{formatDate(item.created_at || item.date, isUk)}</p>
+                  <p className="mt-1 text-sm text-slate-600">{item.summary || item.note || item.status || (isUk ? 'Чек-ін записано.' : 'Check-in recorded.')}</p>
                 </div>
               ))}
             </div>
-          ) : <p className="text-sm leading-6 text-slate-600">No check-ins yet. Add one to connect symptoms with lab trends.</p>}
+          ) : <p className="text-sm leading-6 text-slate-600">{isUk ? 'Чек-інів ще немає. Додайте один, щоб повʼязати симптоми з динамікою аналізів.' : 'No check-ins yet. Add one to connect symptoms with lab trends.'}</p>}
         </CoachCard>
 
         <CoachCard className="p-5">
           <div className="mb-4 flex items-center gap-2">
             <SparkIcon />
-            <h2 className="text-lg font-extrabold text-slate-950">Insights</h2>
+            <h2 className="text-lg font-extrabold text-slate-950">{isUk ? 'Інсайти' : 'Insights'}</h2>
           </div>
           {Array.isArray(insights) && insights.length ? (
             <div className="space-y-3">
               {insights.slice(0, 5).map((item, index) => (
                 <div key={item.id || index} className="rounded-2xl bg-slate-50 p-3">
-                  <p className="font-bold text-slate-950">{item.title || item.type || 'Insight'}</p>
-                  <p className="mt-1 text-sm text-slate-600">{item.body || item.summary || item.description || 'Review this insight in context.'}</p>
+                  <p className="font-bold text-slate-950">{item.title || item.type || (isUk ? 'Інсайт' : 'Insight')}</p>
+                  <p className="mt-1 text-sm text-slate-600">{item.body || item.summary || item.description || (isUk ? 'Перегляньте цей інсайт у контексті.' : 'Review this insight in context.')}</p>
                 </div>
               ))}
             </div>
-          ) : <p className="text-sm leading-6 text-slate-600">No generated insights yet. Insights appear after uploads, check-ins, and trendable data.</p>}
+          ) : <p className="text-sm leading-6 text-slate-600">{isUk ? 'Згенерованих інсайтів ще немає. Вони зʼявляться після завантажень, чек-інів і даних для динаміки.' : 'No generated insights yet. Insights appear after uploads, check-ins, and trendable data.'}</p>}
         </CoachCard>
       </div>
 
       <InsightCard
         icon={CalendarClock}
-        title="What should I do next?"
-        body={multiplePointTrends.length ? 'Review changed markers and complete a check-in so symptoms and biomarkers can be interpreted together.' : 'Upload another comparable lab report when appropriate to move from baseline to trend.'}
-        actionLabel={multiplePointTrends.length ? 'Start check-in' : 'Upload result'}
+        title={isUk ? 'Що робити далі?' : 'What should I do next?'}
+        body={multiplePointTrends.length ? (isUk ? 'Перегляньте змінені маркери та пройдіть чек-ін, щоб симптоми й біомаркери можна було інтерпретувати разом.' : 'Review changed markers and complete a check-in so symptoms and biomarkers can be interpreted together.') : (isUk ? 'Коли буде доречно, завантажте ще один порівнюваний звіт, щоб перейти від базової точки до тренду.' : 'Upload another comparable lab report when appropriate to move from baseline to trend.')}
+        actionLabel={multiplePointTrends.length ? (isUk ? 'Почати чек-ін' : 'Start check-in') : (isUk ? 'Завантажити результат' : 'Upload result')}
         onAction={() => navigate(multiplePointTrends.length ? '/check-ins' : '/upload')}
       />
     </div>
