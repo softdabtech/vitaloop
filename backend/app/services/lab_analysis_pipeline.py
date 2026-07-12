@@ -336,6 +336,53 @@ def _risk_flags(knowledge_report: Dict[str, Any], prioritized: List[Dict[str, An
     return flags[:10]
 
 
+def _localized_knowledge_evaluation_for_response(
+    knowledge_evaluation: Dict[str, Any],
+    knowledge_report: Dict[str, Any],
+    locale: str,
+) -> Dict[str, Any]:
+    if not str(locale or "").lower().startswith("uk"):
+        return knowledge_evaluation
+
+    localized = dict(knowledge_evaluation or {})
+    report_rules = {
+        str(item.get("rule_key") or ""): item
+        for item in (knowledge_report.get("why_it_matters") or [])
+        if isinstance(item, dict)
+    }
+    localized_rules = []
+    for rule in localized.get("matched_rules") or []:
+        if not isinstance(rule, dict):
+            continue
+        updated = dict(rule)
+        report_rule = report_rules.get(str(updated.get("rule_key") or ""))
+        if report_rule:
+            updated["name"] = report_rule.get("title") or updated.get("name")
+            updated["description"] = report_rule.get("summary") or updated.get("description")
+            updated["summary"] = report_rule.get("summary") or updated.get("summary")
+            updated["explanation"] = report_rule.get("why_it_matters") or updated.get("explanation")
+        localized_rules.append(updated)
+    localized["matched_rules"] = localized_rules
+
+    report_actions = {
+        str(item.get("key") or ""): item
+        for item in (knowledge_report.get("action_plan") or [])
+        if isinstance(item, dict)
+    }
+    localized_recommendations = []
+    for rec in localized.get("generated_recommendations") or []:
+        if not isinstance(rec, dict):
+            continue
+        updated = dict(rec)
+        report_action = report_actions.get(str(updated.get("key") or ""))
+        if report_action:
+            updated["title"] = report_action.get("title") or updated.get("title")
+            updated["body"] = report_action.get("body") or updated.get("body")
+        localized_recommendations.append(updated)
+    localized["generated_recommendations"] = localized_recommendations
+    return localized
+
+
 def _protocol_from_actions(actions: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
     protocol = {
         "nutrition": [],
@@ -590,7 +637,8 @@ async def run_lab_analysis_pipeline(
     prioritized = _prioritize_biomarkers(normalized_biomarkers)
     rule_recommendations = knowledge_report.get("action_plan") or []
     ai_protocol = []
-    if generate_ai_protocol:
+    effective_generate_ai_protocol = generate_ai_protocol and not str(locale or "").lower().startswith("uk")
+    if effective_generate_ai_protocol:
         ai_protocol = await generate_protocol(
             normalized_biomarkers,
             normalized_symptoms,
@@ -627,6 +675,11 @@ async def run_lab_analysis_pipeline(
         recommendations=recommendations,
         safety_result=safety_result,
     )
+    output_knowledge_evaluation = _localized_knowledge_evaluation_for_response(
+        knowledge_evaluation,
+        knowledge_report,
+        locale,
+    )
     cost_metadata = _cost_metadata(
         biomarkers=normalized_biomarkers,
         symptoms=normalized_symptoms,
@@ -650,7 +703,7 @@ async def run_lab_analysis_pipeline(
         "shopping_links": shopping_links,
         "retest_suggestions": knowledge_report.get("retest_plan") or [],
         "doctor_summary": " ".join(knowledge_report.get("doctor_discussion") or [])[:2000],
-        "knowledge_evaluation": knowledge_evaluation,
+        "knowledge_evaluation": output_knowledge_evaluation,
         "knowledge_report": knowledge_report,
         "safety_result": safety_result,
         "explainability": explainability,

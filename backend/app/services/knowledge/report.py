@@ -37,6 +37,25 @@ STATUS_LABELS = {
     },
 }
 
+MARKER_LABELS_UK = {
+    "ferritin": "Феритин",
+    "glucose": "Глюкоза",
+    "glucose (fasting)": "Глюкоза натще",
+    "hemoglobin": "Гемоглобін",
+    "hemoglobin a1c": "HbA1c",
+    "total cholesterol": "Загальний холестерин",
+    "ldl cholesterol": "LDL холестерин",
+    "hdl cholesterol": "HDL холестерин",
+    "tsh": "ТТГ",
+    "tsh (thyroid stimulating hormone)": "ТТГ",
+    "vitamin d": "Вітамін D",
+    "vitamin b12": "Вітамін B12",
+    "white blood cells (wbc)": "Лейкоцити",
+    "red blood cells (rbc)": "Еритроцити",
+    "platelets": "Тромбоцити",
+    "hematocrit": "Гематокрит",
+}
+
 REPORT_COPY = {
     "en": {
         "unknown_marker": "Unknown marker",
@@ -88,6 +107,11 @@ RULE_TRANSLATIONS_UK = {
         "summary": "Низький феритин разом із втомою може вказувати на можливий дефіцит запасів заліза.",
         "why_it_matters": "Феритин відображає запаси заліза. Якщо він низький і є втома, це варто обговорити з лікарем та розглянути додаткові показники заліза.",
     },
+    "rule_low_ferritin_without_symptom": {
+        "title": "Низький феритин",
+        "summary": "Феритин може вказувати на знижені запаси заліза й потребує перегляду в клінічному контексті.",
+        "why_it_matters": "Феритин нижче референсу може вказувати на знижені запаси заліза. Оцінюйте його разом із загальним аналізом крові, показниками заліза, CRP, симптомами та клінічним контекстом.",
+    },
     "rule_vitamin_d_low": {
         "title": "Можлива недостатність вітаміну D",
         "summary": "Низький 25-OH вітамін D може бути повʼязаний із самопочуттям, імунною відповіддю та відновленням.",
@@ -114,6 +138,10 @@ RECOMMENDATION_TRANSLATIONS_UK = {
     "iron_followup_discussion": {
         "title": "Обговоріть подальшу перевірку статусу заліза",
         "body": "Низький феритин разом із втомою може вказувати на можливий дефіцит запасів заліза. Варто обговорити з лікарем розширені показники заліза та план повторної перевірки.",
+    },
+    "iron_panel_context_review": {
+        "title": "Перегляньте статус заліза в контексті",
+        "body": "Низький феритин варто інтерпретувати разом із загальним аналізом крові, сироватковим залізом, насиченням трансферину, CRP, симптомами, харчуванням, ризиком крововтрати та ліками. Обговоріть, чи потрібні додаткові показники заліза або консультація лікаря.",
     },
     "vitamin_d_lifestyle_and_followup": {
         "title": "Розберіть можливу недостатність вітаміну D",
@@ -172,7 +200,10 @@ def _format_value(item: Dict[str, Any]) -> str:
 
 def _marker_label(item: Dict[str, Any], locale: str = "en") -> str:
     fallback = _copy(locale, "unknown_marker")
-    return str(item.get("name") or item.get("source_name") or fallback).strip()
+    label = str(item.get("name") or item.get("source_name") or fallback).strip()
+    if _locale(locale) == "uk":
+        return MARKER_LABELS_UK.get(label.lower(), label)
+    return label
 
 
 def _sort_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
