@@ -26,6 +26,7 @@ def test_build_analysis_quality_snapshot_compacts_core_artifacts():
 
     assert snapshot["version"] == "analysis_quality_snapshot_v1"
     assert snapshot["core_versions"]["health_context"] == "health_context_v1"
+    assert snapshot["core_versions"]["knowledge_domain_registry"] == "knowledge_domain_registry_v1"
     assert snapshot["coverage"]["protocol_item_count"] == 2
     assert snapshot["coverage"]["trend_available"] is True
     assert snapshot["top_health_domains"][0]["domain"] == "iron_status"

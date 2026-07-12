@@ -35,12 +35,15 @@ def test_evaluate_health_states_prioritizes_domains_from_biomarkers_and_symptoms
     )
 
     assert result["version"] == "health_state_engine_v1"
+    assert result["domain_registry_version"] == "knowledge_domain_registry_v1"
     iron = next(item for item in result["states"] if item["domain"] == "iron_status")
     metabolic = next(item for item in result["states"] if item["domain"] == "metabolic_health")
 
     assert iron["score"] < metabolic["score"]
     assert iron["risk_level"] == "needs_attention"
     assert iron["confidence"] == "high"
+    assert iron["label"] == "Iron status"
+    assert iron["evidence_level"] == "clinical_context"
     assert iron["symptom_signals"] == ["fatigue"]
     assert result["top_priorities"][0]["domain"] == "iron_status"
     assert result["context_readiness"]["has_profile"] is True
