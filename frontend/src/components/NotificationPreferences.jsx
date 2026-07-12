@@ -315,11 +315,6 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
               </div>
               </div>
 
-              {isEnabled && (
-                <div className="mt-2 text-[11px] font-semibold text-slate-600 whitespace-nowrap">
-                  {isUk ? 'УВІМКНЕНО' : 'ON'}
-                </div>
-              )}
             </div>
           )
         })}
