@@ -7,7 +7,8 @@ import logging
 
 from app.config import settings
 from app.services.affiliate import build_iherb_url
-from app.services.ai.openai_service import generate_protocol, is_llm_configured
+from app.services.ai.openai_service import is_llm_configured
+from app.services.ai_orchestrator import generate_ai_protocol_orchestrated
 from app.services.explainability import build_recommendation_explanations
 from app.services.health_context import build_health_context
 from app.services.health_state_engine import evaluate_health_states
@@ -678,15 +679,26 @@ async def run_lab_analysis_pipeline(
     )
     rule_recommendations = knowledge_report.get("action_plan") or []
     ai_protocol = []
+    ai_orchestration = {
+        "version": "ai_orchestration_v1",
+        "status": "skipped",
+        "items": [],
+        "metadata": {"reason": "generate_ai_protocol_disabled"},
+    }
     if generate_ai_protocol:
-        ai_protocol = await generate_protocol(
-            normalized_biomarkers,
-            normalized_symptoms,
+        ai_orchestration = await generate_ai_protocol_orchestrated(
+            biomarkers=normalized_biomarkers,
+            symptoms=normalized_symptoms,
             user_profile=user_profile,
             user_id=user_id,
             upload_id=analysis_id,
             locale=locale,
+            health_context=health_context,
+            knowledge_report=knowledge_report,
+            health_states=health_states,
+            trend_analysis=trend_analysis,
         )
+        ai_protocol = ai_orchestration.get("items") or []
     recommendations = [
         *rule_recommendations,
         *[{**item, "source": item.get("source") or "ai_protocol"} for item in ai_protocol if isinstance(item, dict)],
@@ -784,6 +796,7 @@ async def run_lab_analysis_pipeline(
         "recommendations": recommendations,
         "protocol": protocol,
         "ai_protocol": ai_protocol,
+        "ai_orchestration": ai_orchestration,
         "shopping_links": shopping_links,
         "retest_suggestions": retest_suggestions,
         "doctor_summary": " ".join(knowledge_report.get("doctor_discussion") or [])[:2000],
@@ -802,6 +815,8 @@ async def run_lab_analysis_pipeline(
             "profile_context_fields": sorted([key for key, value in (user_profile or {}).items() if value not in (None, "", [])]),
             "health_context_version": health_context.get("version"),
             "health_context_readiness": health_context.get("readiness") or {},
+            "ai_orchestration_version": ai_orchestration.get("version"),
+            "ai_analysis_source": (ai_orchestration.get("metadata") or {}).get("analysis_source"),
             "biomarker_count": len(normalized_biomarkers),
             "analysis_core_version": "lab_analysis_pipeline_v1",
         },
