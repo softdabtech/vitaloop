@@ -375,11 +375,29 @@ async def test_b2c_pipeline_shape_not_broken(monkeypatch):
             "metadata": {"analysis_source": "llm", "fallback_used": False},
         }
 
+    async def fake_domain_definitions():
+        return [
+            {
+                "key": "metabolic_health",
+                "label": "Managed metabolic health",
+                "marker_aliases": ["glucose"],
+                "symptom_aliases": ["fatigue"],
+                "required_markers": ["glucose"],
+                "retest_markers": ["Glucose"],
+                "protocol_sections": ["supplements", "nutrition"],
+                "expected_timeline": "Managed timeline.",
+                "evidence_level": "managed_context",
+                "requires_doctor_if_flagged": False,
+                "registry_version": "managed_v1",
+            }
+        ]
+
     monkeypatch.setattr("app.services.lab_analysis_pipeline.evaluate_biomarkers_with_knowledge", fake_eval)
     monkeypatch.setattr("app.services.lab_analysis_pipeline._load_historical_biomarkers", fake_history)
     monkeypatch.setattr("app.services.lab_analysis_pipeline.generate_ai_protocol_orchestrated", fake_ai_orchestration)
+    monkeypatch.setattr("app.services.lab_analysis_pipeline.resolve_domain_definitions", fake_domain_definitions)
     result = await svc.run_lab_analysis_pipeline(
-        biomarkers=[{"name": "Glucose", "value": 92, "unit": "mg/dL", "status": "OPTIMAL"}],
+        biomarkers=[{"name": "Glucose", "value": 126, "unit": "mg/dL", "status": "ELEVATED"}],
         symptoms=["fatigue"],
         questionnaire={"domain_scores": {"sleep": 70}},
         user_profile={"age": 37, "current_medications": ["metformin"]},
@@ -393,11 +411,14 @@ async def test_b2c_pipeline_shape_not_broken(monkeypatch):
     assert result["cost_metadata"]["estimated"] is True
     assert result["health_context"]["version"] == "health_context_v1"
     assert result["health_states"]["version"] == "health_state_engine_v1"
+    assert result["health_states"]["domain_registry_version"] == "managed_v1"
     assert result["trend_analysis"]["version"] == "trend_engine_v1"
     assert result["trend_analysis"]["available"] is True
     assert result["health_summary"]["trend_overview"]["version"] == "trend_engine_v1"
     assert result["health_summary"]["health_state_overview"]["version"] == "health_state_engine_v1"
     assert result["protocol"]["supplements"][0]["protocol_enrichment_version"] == "protocol_enrichment_v1"
+    assert result["protocol"]["supplements"][0]["knowledge_domain_registry_version"] == "knowledge_domain_registry_v1"
+    assert result["protocol"]["supplements"][0]["knowledge_domain_context"][0]["label"] == "Managed metabolic health"
     assert result["ai_orchestration"]["version"] == "ai_orchestration_v1"
     assert result["metadata"]["ai_orchestration_version"] == "ai_orchestration_v1"
     assert result["quality_snapshot"]["version"] == "analysis_quality_snapshot_v1"
