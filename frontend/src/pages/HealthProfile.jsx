@@ -6,6 +6,7 @@ import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
 import { useAuth } from '../hooks/useAuth.js'
 import api from '../lib/api.js'
+import { isUkrainianLocale } from '../lib/locale.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
 import { gaEvent } from '../lib/analytics.js'
 import '../styles/dashboard2026.css'
@@ -28,6 +29,17 @@ const GOAL_OPTIONS = [
   'Sports performance',
   'Healthy aging',
 ]
+
+const GOAL_LABELS_UK = {
+  'More energy': 'Більше енергії',
+  'Better sleep': 'Кращий сон',
+  'Hormone balance': 'Баланс гормонів',
+  'Improve digestion': 'Покращити травлення',
+  'Cardiometabolic health': 'Кардіометаболічне здоровʼя',
+  'Reduce inflammation': 'Зменшити запалення',
+  'Sports performance': 'Спортивна продуктивність',
+  'Healthy aging': 'Здорове старіння',
+}
 
 const DEFAULT_PROFILE = {
   age: '',
@@ -139,6 +151,7 @@ function buildProfileUpdatePayload(profile) {
 export default function HealthProfile() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const isUk = isUkrainianLocale()
   const [profile, setProfile] = useState(DEFAULT_PROFILE)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -207,9 +220,9 @@ export default function HealthProfile() {
         queryClient.invalidateQueries({ queryKey: ['insights'] }),
         queryClient.invalidateQueries({ queryKey: ['health-score'] }),
       ])
-      toast.success('Profile & Safety updated!')
+      toast.success(isUk ? 'Профіль і контекст безпеки оновлено' : 'Profile & Safety updated!')
     } catch (error) {
-      toast.error('Failed to save profile')
+      toast.error(isUk ? 'Не вдалося зберегти профіль' : 'Failed to save profile')
       console.error(error)
     } finally {
       setSaving(false)
@@ -226,58 +239,58 @@ export default function HealthProfile() {
 
       {loading && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-          Loading saved profile details...
+          {isUk ? 'Завантажуємо збережений профіль...' : 'Loading saved profile details...'}
         </div>
       )}
 
       <section className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><Activity className="h-3.5 w-3.5 text-emerald-600" /> Profile completion</div>
+          <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><Activity className="h-3.5 w-3.5 text-emerald-600" /> {isUk ? 'Заповнення профілю' : 'Profile completion'}</div>
           <p className="text-2xl font-bold text-slate-900">{profileCompletion}%</p>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${profileCompletion}%` }} /></div>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> BMI</div>
           <p className="text-2xl font-bold text-slate-900">{bmi || '—'}</p>
-          <p className="mt-1 text-xs text-slate-500">Calculated from height and weight.</p>
+          <p className="mt-1 text-xs text-slate-500">{isUk ? 'Розраховано за зростом і вагою.' : 'Calculated from height and weight.'}</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><Target className="h-3.5 w-3.5 text-emerald-600" /> Active goals</div>
+          <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><Target className="h-3.5 w-3.5 text-emerald-600" /> {isUk ? 'Активні цілі' : 'Active goals'}</div>
           <p className="text-2xl font-bold text-slate-900">{Array.isArray(profile.goals) ? profile.goals.length : 0}</p>
-          <p className="mt-1 text-xs text-slate-500">Used to personalize recommendations.</p>
+          <p className="mt-1 text-xs text-slate-500">{isUk ? 'Використовується для персоналізації рекомендацій.' : 'Used to personalize recommendations.'}</p>
         </div>
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-        <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900"><User className="h-4 w-4 text-emerald-600" /> Basics</div>
+        <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900"><User className="h-4 w-4 text-emerald-600" /> {isUk ? 'Основні дані' : 'Basics'}</div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Age">
-            <input type="number" value={profile.age} onChange={(e) => setProfile({ ...profile, age: e.target.value })} placeholder="Enter age" style={fieldStyle} min="0" max="150" />
+          <Field label={isUk ? 'Вік' : 'Age'}>
+            <input type="number" value={profile.age} onChange={(e) => setProfile({ ...profile, age: e.target.value })} placeholder={isUk ? 'Вкажіть вік' : 'Enter age'} style={fieldStyle} min="0" max="150" />
           </Field>
-          <Field label="Sex">
+          <Field label={isUk ? 'Стать' : 'Sex'}>
             <select value={profile.sex} onChange={(e) => setProfile({ ...profile, sex: e.target.value })} style={fieldStyle}>
-              <option value="">Select sex</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
+              <option value="">{isUk ? 'Оберіть стать' : 'Select sex'}</option>
+              <option value="male">{isUk ? 'Чоловіча' : 'Male'}</option>
+              <option value="female">{isUk ? 'Жіноча' : 'Female'}</option>
+              <option value="other">{isUk ? 'Інше' : 'Other'}</option>
             </select>
           </Field>
-          <Field label="Timezone">
+          <Field label={isUk ? 'Часовий пояс' : 'Timezone'}>
             <select value={profile.timezone} onChange={(e) => setProfile({ ...profile, timezone: e.target.value })} style={fieldStyle}>
               {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
             </select>
           </Field>
-          <Field label="Height (cm)">
-            <input type="number" value={profile.height_cm} onChange={(e) => setProfile({ ...profile, height_cm: e.target.value })} placeholder="e.g., 180" style={fieldStyle} min="0" max="300" step="0.1" />
+          <Field label={isUk ? 'Зріст (см)' : 'Height (cm)'}>
+            <input type="number" value={profile.height_cm} onChange={(e) => setProfile({ ...profile, height_cm: e.target.value })} placeholder={isUk ? 'наприклад, 180' : 'e.g., 180'} style={fieldStyle} min="0" max="300" step="0.1" />
           </Field>
-          <Field label="Weight (kg)">
-            <input type="number" value={profile.weight_kg} onChange={(e) => setProfile({ ...profile, weight_kg: e.target.value })} placeholder="e.g., 80" style={fieldStyle} min="0" max="500" step="0.1" />
+          <Field label={isUk ? 'Вага (кг)' : 'Weight (kg)'}>
+            <input type="number" value={profile.weight_kg} onChange={(e) => setProfile({ ...profile, weight_kg: e.target.value })} placeholder={isUk ? 'наприклад, 80' : 'e.g., 80'} style={fieldStyle} min="0" max="500" step="0.1" />
           </Field>
         </div>
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Goals</h3>
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{isUk ? 'Цілі' : 'Goals'}</h3>
         <div className="flex flex-wrap gap-2">
           {GOAL_OPTIONS.map((goal) => {
             const selected = profile.goals.includes(goal)
@@ -294,7 +307,7 @@ export default function HealthProfile() {
                 }}
                 className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${selected ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50'}`}
               >
-                {goal}
+                {isUk ? (GOAL_LABELS_UK[goal] || goal) : goal}
               </button>
             )
           })}
@@ -302,32 +315,32 @@ export default function HealthProfile() {
       </section>
 
       <section className="rounded-2xl border border-rose-200 bg-rose-50 p-5 sm:p-6">
-        <h3 className="mb-1 text-base font-semibold text-rose-900">Safety context</h3>
-        <p className="mb-4 text-sm text-rose-700">Used to avoid unsafe suggestions and make recommendations more accurate.</p>
+        <h3 className="mb-1 text-base font-semibold text-rose-900">{isUk ? 'Контекст безпеки' : 'Safety context'}</h3>
+        <p className="mb-4 text-sm text-rose-700">{isUk ? 'Допомагає уникати небезпечних порад і робити рекомендації точнішими.' : 'Used to avoid unsafe suggestions and make recommendations more accurate.'}</p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Current medications (if any)">
-            <textarea value={profile.medications} onChange={(e) => setProfile({ ...profile, medications: e.target.value })} rows={3} placeholder="e.g., Aspirin 100mg daily" style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
+          <Field label={isUk ? 'Поточні ліки (якщо є)' : 'Current medications (if any)'}>
+            <textarea value={profile.medications} onChange={(e) => setProfile({ ...profile, medications: e.target.value })} rows={3} placeholder={isUk ? 'наприклад, аспірин 100 мг щодня' : 'e.g., Aspirin 100mg daily'} style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
           </Field>
-          <Field label="Known allergies">
-            <textarea value={profile.allergies} onChange={(e) => setProfile({ ...profile, allergies: e.target.value })} rows={3} placeholder="e.g., Penicillin" style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
+          <Field label={isUk ? 'Відомі алергії' : 'Known allergies'}>
+            <textarea value={profile.allergies} onChange={(e) => setProfile({ ...profile, allergies: e.target.value })} rows={3} placeholder={isUk ? 'наприклад, пеніцилін' : 'e.g., Penicillin'} style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
           </Field>
-          <Field label="Pregnancy / breastfeeding status">
+          <Field label={isUk ? 'Вагітність / грудне вигодовування' : 'Pregnancy / breastfeeding status'}>
             <select value={profile.pregnancy_status} onChange={(e) => setProfile({ ...profile, pregnancy_status: e.target.value })} style={fieldStyle}>
-              <option value="">Select status</option>
-              <option value="pregnant">Currently pregnant</option>
-              <option value="breastfeeding">Breastfeeding</option>
-              <option value="planning">Planning to conceive</option>
-              <option value="none">Not applicable</option>
+              <option value="">{isUk ? 'Оберіть статус' : 'Select status'}</option>
+              <option value="pregnant">{isUk ? 'Зараз вагітна' : 'Currently pregnant'}</option>
+              <option value="breastfeeding">{isUk ? 'Грудне вигодовування' : 'Breastfeeding'}</option>
+              <option value="planning">{isUk ? 'Планування вагітності' : 'Planning to conceive'}</option>
+              <option value="none">{isUk ? 'Не стосується' : 'Not applicable'}</option>
             </select>
           </Field>
-          <Field label="Current supplements (comma-separated)">
-            <textarea value={profile.current_supplements} onChange={(e) => setProfile({ ...profile, current_supplements: e.target.value })} rows={3} placeholder="e.g., Vitamin D, Magnesium" style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
+          <Field label={isUk ? 'Поточні добавки (через кому)' : 'Current supplements (comma-separated)'}>
+            <textarea value={profile.current_supplements} onChange={(e) => setProfile({ ...profile, current_supplements: e.target.value })} rows={3} placeholder={isUk ? 'наприклад, вітамін D, магній' : 'e.g., Vitamin D, Magnesium'} style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
           </Field>
-          <Field label="Current prescribed medications (comma-separated)">
-            <textarea value={profile.current_medications} onChange={(e) => setProfile({ ...profile, current_medications: e.target.value })} rows={3} placeholder="e.g., Metformin, Lisinopril" style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
+          <Field label={isUk ? 'Призначені ліки (через кому)' : 'Current prescribed medications (comma-separated)'}>
+            <textarea value={profile.current_medications} onChange={(e) => setProfile({ ...profile, current_medications: e.target.value })} rows={3} placeholder={isUk ? 'наприклад, метформін, лізиноприл' : 'e.g., Metformin, Lisinopril'} style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
           </Field>
-          <Field label="Prior diagnoses / chronic conditions">
-            <textarea value={profile.prior_diagnoses} onChange={(e) => setProfile({ ...profile, prior_diagnoses: e.target.value })} rows={3} placeholder="e.g., Hypothyroidism" style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
+          <Field label={isUk ? 'Попередні діагнози / хронічні стани' : 'Prior diagnoses / chronic conditions'}>
+            <textarea value={profile.prior_diagnoses} onChange={(e) => setProfile({ ...profile, prior_diagnoses: e.target.value })} rows={3} placeholder={isUk ? 'наприклад, гіпотиреоз' : 'e.g., Hypothyroidism'} style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
           </Field>
         </div>
       </section>
@@ -337,7 +350,7 @@ export default function HealthProfile() {
         disabled={saving}
         className="w-full rounded-2xl bg-emerald-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50 sm:w-auto"
       >
-        {saving ? 'Saving...' : 'Save Health Profile'}
+        {saving ? (isUk ? 'Збереження...' : 'Saving...') : (isUk ? 'Зберегти профіль здоровʼя' : 'Save Health Profile')}
       </button>
     </div>
   )

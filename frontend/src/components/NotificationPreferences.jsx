@@ -2,6 +2,7 @@ import { Mail, Zap, Calendar, AlertCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../lib/api.js'
+import { isUkrainianLocale } from '../lib/locale.js'
 import {
   getPushStatus,
   isPushSupported,
@@ -69,7 +70,43 @@ const NOTIFICATION_TYPES = {
   },
 }
 
+const NOTIFICATION_TYPES_UK = {
+  weekly_checkin: {
+    label: 'Щотижневий чек-ін',
+    description: 'Пʼятниця 18:00 - нагадати пройти перевірку симптомів',
+  },
+  assignment_due: {
+    label: 'Активне завдання',
+    description: 'Нагадування, коли завдання довго залишаються невиконаними',
+  },
+  retest_reminder: {
+    label: 'Нагадування про повторні аналізи',
+    description: 'Приблизно через 10 тижнів після останнього аналізу',
+  },
+  streak_reminder: {
+    label: 'Нагадування про серію',
+    description: 'Щоденний поштовх у вибраний час, щоб не втрачати ритм',
+  },
+  weekly_digest: {
+    label: 'Щотижневий дайджест',
+    description: 'Неділя ввечері - підсумок вашого тижня',
+  },
+  achievement_unlock: {
+    label: 'Нове досягнення',
+    description: 'Сповіщення, коли відкриваєте нові бейджі',
+  },
+  biomarker_alert: {
+    label: 'Важливі маркери',
+    description: 'Суттєві зміни показників або контекст безпеки',
+  },
+  insight_published: {
+    label: 'Нова рекомендація',
+    description: 'Сповіщення, коли зʼявляється наступний крок',
+  },
+}
+
 export default function NotificationPreferences({ currentPreferences = {}, onSave }) {
+  const isUk = isUkrainianLocale()
   const [preferences, setPreferences] = useState(currentPreferences)
   const [saving, setSaving] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
@@ -118,9 +155,9 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
     try {
       await api.patch('/settings/notifications', preferences)
       if (onSave) onSave(preferences)
-      toast.success('Notification preferences saved!')
+      toast.success(isUk ? 'Налаштування сповіщень збережено' : 'Notification preferences saved!')
     } catch (error) {
-      toast.error('Failed to save preferences')
+      toast.error(isUk ? 'Не вдалося зберегти налаштування' : 'Failed to save preferences')
       console.error(error)
     } finally {
       setSaving(false)
@@ -132,7 +169,7 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
     try {
       const ok = await subscribeToPush()
       if (!ok) {
-        toast.error('Push permission not granted or VAPID key is missing')
+        toast.error(isUk ? 'Дозвіл на push не надано або VAPID-ключ відсутній' : 'Push permission not granted or VAPID key is missing')
         return
       }
 
@@ -140,9 +177,9 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
       const status = await getPushStatus()
       setPushCount(Number(status.count || 0))
       await sendTestPush()
-      toast.success('Push notifications enabled for this device')
+      toast.success(isUk ? 'Push-сповіщення ввімкнено для цього пристрою' : 'Push notifications enabled for this device')
     } catch (error) {
-      toast.error('Failed to enable push notifications')
+      toast.error(isUk ? 'Не вдалося ввімкнути push-сповіщення' : 'Failed to enable push notifications')
       console.error(error)
     } finally {
       setPushBusy(false)
@@ -155,9 +192,9 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
       await unsubscribeFromPush()
       setPushEnabled(false)
       setPushCount(0)
-      toast.success('Push notifications disabled on this device')
+      toast.success(isUk ? 'Push-сповіщення вимкнено на цьому пристрої' : 'Push notifications disabled on this device')
     } catch (error) {
-      toast.error('Failed to disable push notifications')
+      toast.error(isUk ? 'Не вдалося вимкнути push-сповіщення' : 'Failed to disable push notifications')
       console.error(error)
     } finally {
       setPushBusy(false)
@@ -169,12 +206,12 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
     try {
       const sent = await sendTestPush()
       if (sent > 0) {
-        toast.success('Test push sent')
+        toast.success(isUk ? 'Тестове push-сповіщення надіслано' : 'Test push sent')
       } else {
-        toast.error('No active push subscription for this device')
+        toast.error(isUk ? 'На цьому пристрої немає активної push-підписки' : 'No active push subscription for this device')
       }
     } catch (error) {
-      toast.error('Failed to send test push')
+      toast.error(isUk ? 'Не вдалося надіслати тестове push-сповіщення' : 'Failed to send test push')
       console.error(error)
     } finally {
       setPushBusy(false)
@@ -182,22 +219,24 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-bold text-slate-900 mb-2">Notification Preferences</h3>
-        <p className="text-sm text-slate-600">
-          Choose which notifications keep you engaged and motivated
+        <h3 className="text-base font-bold text-slate-900 mb-1">{isUk ? 'Налаштування сповіщень' : 'Notification Preferences'}</h3>
+        <p className="text-xs text-slate-600">
+          {isUk ? 'Оберіть, які сповіщення допомагатимуть тримати ритм' : 'Choose which notifications keep you engaged and motivated'}
         </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-slate-900">Browser & Mobile Push</p>
+            <p className="text-sm font-semibold text-slate-900">{isUk ? 'Push у браузері та на мобільному' : 'Browser & Mobile Push'}</p>
             <p className="text-xs text-slate-600 mt-1">
               {isPushSupported()
-                ? (pushEnabled ? `Enabled on ${pushCount} device(s)` : 'Disabled on this device')
-                : 'Push is not supported in this browser'}
+                ? (pushEnabled
+                  ? (isUk ? `Увімкнено на ${pushCount} пристрої(ях)` : `Enabled on ${pushCount} device(s)`)
+                  : (isUk ? 'Вимкнено на цьому пристрої' : 'Disabled on this device'))
+                : (isUk ? 'Цей браузер не підтримує push' : 'Push is not supported in this browser')}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -207,7 +246,7 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
                 disabled={pushBusy || !isPushSupported()}
                 className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
               >
-                Enable Push
+                {isUk ? 'Увімкнути push' : 'Enable Push'}
               </button>
             ) : (
               <>
@@ -216,14 +255,14 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
                   disabled={pushBusy}
                   className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
                 >
-                  Send Test
+                  {isUk ? 'Надіслати тест' : 'Send Test'}
                 </button>
                 <button
                   onClick={disablePush}
                   disabled={pushBusy}
                   className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
                 >
-                  Disable Push
+                  {isUk ? 'Вимкнути push' : 'Disable Push'}
                 </button>
               </>
             )}
@@ -232,8 +271,9 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
       </div>
 
       {/* Notifications List */}
-      <div className="space-y-3">
+      <div className="grid gap-2 md:grid-cols-2">
         {Object.entries(NOTIFICATION_TYPES).map(([key, notification]) => {
+          const localized = isUk ? { ...notification, ...(NOTIFICATION_TYPES_UK[key] || {}) } : notification
           const Icon = notification.icon
           const colorClasses = {
             purple: 'border-purple-200 bg-purple-50',
@@ -248,34 +288,36 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
           return (
             <div
               key={key}
-              className={`rounded-2xl border-2 p-4 flex items-start gap-4 transition ${
+              className={`rounded-xl border p-3 transition ${
                 isEnabled
                   ? colorClasses[notification.color]
                   : 'border-slate-200 bg-slate-50'
               }`}
             >
-              <div className="pt-1">
+              <div className="flex items-start gap-3">
+                <div className="pt-0.5">
                 <input
                   type="checkbox"
                   checked={isEnabled}
                   onChange={() => handleToggle(key)}
-                  className="w-5 h-5 rounded cursor-pointer"
+                  className="h-4 w-4 rounded cursor-pointer"
                 />
-              </div>
+                </div>
 
-              <div className="flex-1 min-w-0">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <Icon className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <Icon className="mt-0.5 h-4 w-4 flex-shrink-0" />
                   <div>
-                    <p className="font-semibold text-sm text-slate-900">{notification.label}</p>
-                    <p className="text-xs text-slate-600 mt-1">{notification.description}</p>
+                    <p className="font-semibold text-sm text-slate-900">{localized.label}</p>
+                    <p className="mt-0.5 text-xs text-slate-600">{localized.description}</p>
                   </div>
                 </label>
               </div>
+              </div>
 
               {isEnabled && (
-                <div className="text-sm font-semibold text-slate-600 whitespace-nowrap">
-                  ON
+                <div className="mt-2 text-[11px] font-semibold text-slate-600 whitespace-nowrap">
+                  {isUk ? 'УВІМКНЕНО' : 'ON'}
                 </div>
               )}
             </div>
@@ -287,20 +329,20 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
       <button
         onClick={handleSave}
         disabled={saving}
-        className="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 transition disabled:opacity-50"
+        className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
       >
-        {saving ? 'Saving...' : 'Save Notification Preferences'}
+        {saving ? (isUk ? 'Збереження...' : 'Saving...') : (isUk ? 'Зберегти налаштування сповіщень' : 'Save Notification Preferences')}
       </button>
 
       {/* Info */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-xs font-semibold text-slate-600 mb-2">💡 HOW WE NOTIFY:</p>
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <p className="text-xs font-semibold text-slate-600 mb-2">{isUk ? 'ЯК МИ СПОВІЩАЄМО:' : 'HOW WE NOTIFY:'}</p>
         <ul className="text-xs text-slate-600 space-y-1">
-          <li>✓ In-app notifications appear while you use the app</li>
-          <li>✓ Browser/mobile push works after you enable permission on this device</li>
-          <li>✓ Email reminders sent to your registered email</li>
-          <li>✓ No spam - we respect your time</li>
-          <li>✓ You control everything here</li>
+          <li>{isUk ? 'Сповіщення в кабінеті зʼявляються під час користування сервісом' : 'In-app notifications appear while you use the app'}</li>
+          <li>{isUk ? 'Push у браузері або на мобільному працює після дозволу на цьому пристрої' : 'Browser/mobile push works after you enable permission on this device'}</li>
+          <li>{isUk ? 'Email-нагадування надсилаються на зареєстровану адресу' : 'Email reminders sent to your registered email'}</li>
+          <li>{isUk ? 'Без спаму - ми поважаємо ваш час' : 'No spam - we respect your time'}</li>
+          <li>{isUk ? 'Усі налаштування під вашим контролем' : 'You control everything here'}</li>
         </ul>
       </div>
     </div>

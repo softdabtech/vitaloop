@@ -637,14 +637,14 @@ async def run_lab_analysis_pipeline(
     prioritized = _prioritize_biomarkers(normalized_biomarkers)
     rule_recommendations = knowledge_report.get("action_plan") or []
     ai_protocol = []
-    effective_generate_ai_protocol = generate_ai_protocol and not str(locale or "").lower().startswith("uk")
-    if effective_generate_ai_protocol:
+    if generate_ai_protocol:
         ai_protocol = await generate_protocol(
             normalized_biomarkers,
             normalized_symptoms,
             user_profile=user_profile,
             user_id=user_id,
             upload_id=analysis_id,
+            locale=locale,
         )
     recommendations = [
         *rule_recommendations,

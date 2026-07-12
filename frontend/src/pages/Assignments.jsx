@@ -9,6 +9,7 @@ import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
 import { resolveAssignmentPath } from '../lib/assignmentRouting.js'
 import { enrichAssignments } from '../lib/assignmentScoring.js'
+import { isUkrainianLocale } from '../lib/locale.js'
 import '../styles/dashboard2026.css'
 
 const FILTERS = [
@@ -18,6 +19,14 @@ const FILTERS = [
   { key: 'completed', label: 'Completed' },
   { key: 'overdue', label: 'Overdue' },
 ]
+
+const FILTER_LABELS_UK = {
+  all: 'Усі',
+  pending: 'Очікують',
+  in_progress: 'В роботі',
+  completed: 'Завершені',
+  overdue: 'Прострочені',
+}
 
 function normalizeAssignmentsPayload(data) {
   if (Array.isArray(data)) return data
@@ -72,6 +81,7 @@ function toggleIdInSet(sourceSet, id) {
 export default function Assignments() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const isUk = isUkrainianLocale()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -92,7 +102,7 @@ export default function Assignments() {
       })
       .catch(() => {
         if (!active) return
-        setError('Could not load assignments.')
+        setError(isUk ? 'Не вдалося завантажити завдання.' : 'Could not load assignments.')
       })
       .finally(() => {
         if (!active) return
@@ -129,7 +139,7 @@ export default function Assignments() {
   if (loading) {
     return (
       <div className="min-h-[50vh] grid place-items-center text-slate-500">
-        Loading assignments...
+        {isUk ? 'Завантажуємо завдання...' : 'Loading assignments...'}
       </div>
     )
   }
@@ -139,7 +149,7 @@ export default function Assignments() {
       <div className="mx-auto max-w-6xl">
         <CabinetPageHeader
           icon={ClipboardList}
-          eyebrow="Action Plan"
+          eyebrow={isUk ? 'План дій' : 'Action Plan'}
           title={ct().assignments.title}
           subtitle={ct().assignments.subtitle}
           helper={ct().assignments.helper}
@@ -149,19 +159,21 @@ export default function Assignments() {
                 onClick={() => navigate('/questionnaire')}
                 className="vtl-button-primary px-4 text-sm"
               >
-                Open Symptom Check
+                {isUk ? 'Відкрити перевірку симптомів' : 'Open Symptom Check'}
               </button>
               <button
                 onClick={() => navigate('/check-ins')}
                 className="vtl-button-secondary px-4 text-sm"
               >
-                Check-in
+                {isUk ? 'Чек-ін' : 'Check-in'}
               </button>
             </>
           )}
         />
 
-        <div className="-mt-2 mb-6 text-xs text-emerald-600">Sorted by Health Impact Score and mapped to protocol stage.</div>
+        <div className="-mt-2 mb-6 text-xs text-emerald-600">
+          {isUk ? 'Відсортовано за впливом на здоровʼя та привʼязано до етапу протоколу.' : 'Sorted by Health Impact Score and mapped to protocol stage.'}
+        </div>
 
         {/* Today's Checklist */}
         {todayItems.length > 0 && (
@@ -174,12 +186,14 @@ export default function Assignments() {
           >
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-emerald-900">✅ Today's Checklist</h3>
-                <p className="text-sm text-emerald-700 mt-1">{todayItems.length} task{todayItems.length > 1 ? 's' : ''} for today</p>
+                <h3 className="text-lg font-bold text-emerald-900">{isUk ? 'Список на сьогодні' : "Today's Checklist"}</h3>
+                <p className="text-sm text-emerald-700 mt-1">
+                  {isUk ? `${todayItems.length} завдань на сьогодні` : `${todayItems.length} task${todayItems.length > 1 ? 's' : ''} for today`}
+                </p>
               </div>
               <div className="text-right">
                 <div className="text-3xl font-bold text-emerald-600">{todayCompleted}/{todayItems.length}</div>
-                <p className="text-xs text-emerald-600 font-semibold">completed</p>
+                <p className="text-xs text-emerald-600 font-semibold">{isUk ? 'завершено' : 'completed'}</p>
               </div>
             </div>
 
@@ -214,7 +228,7 @@ export default function Assignments() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-medium ${isCompleted ? 'line-through opacity-60' : ''}`}>
-                        {item.title || 'Untitled task'}
+                        {item.title || (isUk ? 'Завдання без назви' : 'Untitled task')}
                       </p>
                     </div>
                     {item?.priority?.score > 75 && !isCompleted && (
@@ -225,7 +239,7 @@ export default function Assignments() {
               })}
               {todayItems.length > 5 && (
                 <p className="text-xs text-emerald-600 text-center pt-2">
-                  +{todayItems.length - 5} more in the full list
+                  {isUk ? `+${todayItems.length - 5} ще у повному списку` : `+${todayItems.length - 5} more in the full list`}
                 </p>
               )}
             </div>
@@ -233,7 +247,7 @@ export default function Assignments() {
             {todayCompleted === todayItems.length && todayItems.length > 0 && (
               <div className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-emerald-100 py-2 px-3">
                 <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                <p className="text-sm font-semibold text-emerald-700">🎉 All done for today! Great job!</p>
+                <p className="text-sm font-semibold text-emerald-700">{isUk ? 'Усе на сьогодні виконано.' : 'All done for today! Great job!'}</p>
               </div>
             )}
           </motion.div>
@@ -259,7 +273,7 @@ export default function Assignments() {
             whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
             className="vtl-light-card p-4 transition-all"
           >
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Pending</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{isUk ? 'Очікують' : 'Pending'}</p>
             <p className="mt-1 text-2xl font-bold text-amber-600">{summary.pending}</p>
           </motion.div>
           <motion.div
@@ -270,7 +284,7 @@ export default function Assignments() {
             whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
             className="vtl-light-card p-4 transition-all"
           >
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">In Progress</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{isUk ? 'В роботі' : 'In Progress'}</p>
             <p className="mt-1 text-2xl font-bold text-blue-600">{summary.in_progress}</p>
           </motion.div>
           <motion.div
@@ -281,7 +295,7 @@ export default function Assignments() {
             whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
             className="vtl-light-card p-4 transition-all"
           >
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Completed</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{isUk ? 'Завершені' : 'Completed'}</p>
             <p className="mt-1 text-2xl font-bold text-emerald-600">{summary.completed}</p>
           </motion.div>
           <motion.div
@@ -292,7 +306,7 @@ export default function Assignments() {
             whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
             className="vtl-light-card p-4 transition-all"
           >
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Overdue</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{isUk ? 'Прострочені' : 'Overdue'}</p>
             <p className="mt-1 text-2xl font-bold text-rose-600">{summary.overdue}</p>
           </motion.div>
         </motion.div>
@@ -309,7 +323,7 @@ export default function Assignments() {
                   : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'
               }`}
             >
-              {item.label}
+              {isUk ? (FILTER_LABELS_UK[item.key] || item.label) : item.label}
             </button>
           ))}
         </div>
@@ -323,8 +337,8 @@ export default function Assignments() {
             ) : (
               <Clock3 className="mx-auto mb-3 h-10 w-10 text-slate-300" />
             )}
-            <p className="mb-1 font-semibold text-slate-800">No assignments in this filter</p>
-            <p className="text-sm text-slate-500">Try another filter or complete Symptom Check to refresh your action plan.</p>
+            <p className="mb-1 font-semibold text-slate-800">{isUk ? 'У цьому фільтрі немає завдань' : 'No assignments in this filter'}</p>
+            <p className="text-sm text-slate-500">{isUk ? 'Спробуйте інший фільтр або пройдіть перевірку симптомів, щоб оновити план дій.' : 'Try another filter or complete Symptom Check to refresh your action plan.'}</p>
           </div>
         ) : (
           <motion.div
