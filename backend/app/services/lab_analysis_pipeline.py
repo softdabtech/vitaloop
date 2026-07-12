@@ -9,6 +9,7 @@ from app.services.affiliate import build_iherb_url
 from app.services.ai.openai_service import generate_protocol, is_llm_configured
 from app.services.explainability import build_recommendation_explanations
 from app.services.health_context import build_health_context
+from app.services.health_state_engine import evaluate_health_states
 from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
 from app.services.knowledge.report import build_knowledge_report
 from app.services.lab_normalization.biomarker_mapping import infer_category, to_canonical_name
@@ -646,6 +647,12 @@ async def run_lab_analysis_pipeline(
     knowledge_report = _strip_placeholder_source_urls(knowledge_report)
     knowledge_evaluation = _strip_placeholder_source_urls(knowledge_evaluation)
     prioritized = _prioritize_biomarkers(normalized_biomarkers)
+    health_states = evaluate_health_states(
+        biomarkers=normalized_biomarkers,
+        symptoms=normalized_symptoms,
+        health_context=health_context,
+        knowledge_report=knowledge_report,
+    )
     rule_recommendations = knowledge_report.get("action_plan") or []
     ai_protocol = []
     if generate_ai_protocol:
@@ -700,12 +707,25 @@ async def run_lab_analysis_pipeline(
     health_summary = {
         **(knowledge_report.get("summary") or {}),
         "what_was_found": knowledge_report.get("what_was_found") or {},
+        "health_state_overview": {
+            "version": health_states.get("version"),
+            "top_domains": [
+                {
+                    "domain": item.get("domain"),
+                    "score": item.get("score"),
+                    "risk_level": item.get("risk_level"),
+                    "confidence": item.get("confidence"),
+                }
+                for item in (health_states.get("top_priorities") or [])[:5]
+            ],
+        },
     }
 
     result = {
         "analysis_id": analysis_id or "",
         "status": "completed",
         "health_summary": health_summary,
+        "health_states": health_states,
         "prioritized_biomarkers": prioritized,
         "risks_flags": _risk_flags(knowledge_report, prioritized),
         "recommendations": recommendations,
