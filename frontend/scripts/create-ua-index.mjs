@@ -1,6 +1,8 @@
 import { readFile, writeFile } from 'node:fs/promises'
+import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { UA_HUB_ARTICLES, UA_HUB_CLUSTERS } from '../src/data/uaHealthHubContent.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const distDir = path.resolve(__dirname, '../dist')
@@ -15,6 +17,166 @@ const UA = {
   image: 'https://ua.vitaloop.today/images/ua-og-preview-20260604.png',
   imageAlt: 'Vitaloop Ukraine — персональна оцінка симптомів, аналізів і плану дій',
 }
+
+const UA_PUBLIC_ROUTES = [
+  {
+    path: '/',
+    title: UA.title,
+    description: UA.description,
+    text: [
+      'Vitaloop Ukraine допомагає структурувати симптоми, аналізи й наступні кроки українською мовою.',
+      'Почніть із самопочуття або завантажте результати аналізів, якщо вони вже є.',
+    ],
+    priority: '1.0',
+    changefreq: 'weekly',
+  },
+  {
+    path: '/samopochuttia',
+    title: 'Самопочуття — персональна оцінка симптомів | Vitaloop Ukraine',
+    description: 'Опишіть втому, сон, енергію та інші сигнали, щоб отримати структурований підсумок і зрозумілий наступний крок.',
+    text: ['Почніть із того, що відчуваєте. Vitaloop структурує симптоми й допомагає підготувати питання до лікаря.'],
+    priority: '0.9',
+    changefreq: 'weekly',
+  },
+  {
+    path: '/symptomy',
+    title: 'Розбір симптомів українською | Vitaloop Ukraine',
+    description: 'Зберіть симптоми в одну картину: що турбує, як давно, що впливає і які питання варто поставити спеціалісту.',
+    text: ['Розбір симптомів без паніки: тривалість, частота, звʼязок зі сном, стресом, харчуванням і ліками.'],
+    priority: '0.9',
+    changefreq: 'weekly',
+  },
+  {
+    path: '/analizy',
+    title: 'Аналізи крові українською | Vitaloop Ukraine',
+    description: 'Завантажте PDF або фото аналізів і отримайте зрозумілий розбір показників, референсів, пріоритетів і повторної перевірки.',
+    text: ['Vitaloop пояснює показники аналізів українською мовою й не замінює консультацію лікаря.'],
+    priority: '0.9',
+    changefreq: 'weekly',
+  },
+  {
+    path: '/laboratorii',
+    title: 'Завантаження аналізів з лабораторій | Vitaloop Ukraine',
+    description: 'Vitaloop працює з PDF, фото або сканом результатів. Важлива якість файлу, видимі назви, значення, одиниці й референси.',
+    text: ['Додавайте результати з вашої лабораторії, щоб отримати структурований підсумок у кабінеті.'],
+    priority: '0.8',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/tarify',
+    title: 'Тарифи Free та Premium | Vitaloop Ukraine',
+    description: 'Почніть безкоштовно. Premium відкриває більше аналізів, динаміку, повніші пояснення й регулярну роботу зі станом.',
+    text: ['Free підходить для старту, Premium — для регулярної роботи з аналізами й динамікою.'],
+    priority: '0.7',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/ferytyn',
+    title: 'Феритин: що означає показник | Vitaloop Ukraine',
+    description: 'Феритин показує запаси заліза. Дізнайтеся, чому його оцінюють при втомі, випадінні волосся і слабкості.',
+    text: ['Феритин варто оцінювати разом із симптомами, загальним аналізом крові, харчуванням і клінічним контекстом.'],
+    priority: '0.8',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/vtoma',
+    title: 'Постійна втома: можливі причини | Vitaloop Ukraine',
+    description: 'Втома може бути повʼязана зі сном, дефіцитами, стресом, навантаженням або кількома факторами одночасно.',
+    text: ['Vitaloop допомагає структурувати втому й визначити, які дані варто зібрати перед консультацією.'],
+    priority: '0.8',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/vitamin-d',
+    title: 'Вітамін D: як читати результат | Vitaloop Ukraine',
+    description: 'Результат вітаміну D потрібно читати в контексті одиниць, сезону, симптомів, способу життя й повторної перевірки.',
+    text: ['Окреме число в бланку не пояснює весь стан. Потрібен контекст і безпечний план обговорення.'],
+    priority: '0.8',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/volossia',
+    title: 'Випадіння волосся: симптоми й аналізи | Vitaloop Ukraine',
+    description: 'Феритин, ТТГ, вітамін D, цинк і гормональний контекст можуть бути частиною розмови про випадіння волосся.',
+    text: ['Vitaloop допомагає зібрати симптоми, аналізи й питання до спеціаліста в одному місці.'],
+    priority: '0.8',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/son',
+    title: 'Сон і відновлення: що відстежувати | Vitaloop Ukraine',
+    description: 'Опишіть засинання, пробудження, ранкову енергію, стрес і навантаження, щоб отримати більш точний наступний крок.',
+    text: ['Сон варто описувати конкретно: якість, тривалість, пробудження, кофеїн, стрес і відновлення.'],
+    priority: '0.8',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/dity-analizy',
+    title: 'Аналізи для дітей: як підготувати питання | Vitaloop Ukraine',
+    description: 'Для дитячих питань важливо не робити висновки самостійно, а підготувати симптоми й результати до розмови з педіатром.',
+    text: ['Vitaloop структурує інформацію, але рішення щодо дітей завжди має залишатися за лікарем.'],
+    priority: '0.6',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/health-hub',
+    title: 'Центр знань — статті про аналізи й симптоми | Vitaloop Ukraine',
+    description: 'Докладні пояснення аналізів крові, симптомів і біомаркерів українською мовою: феритин, вітамін D, ТТГ та інші показники.',
+    text: ['Українська бібліотека матеріалів про симптоми, аналізи крові та підготовку до розмови з лікарем.'],
+    priority: '0.9',
+    changefreq: 'weekly',
+  },
+]
+
+for (const cluster of UA_HUB_CLUSTERS) {
+  UA_PUBLIC_ROUTES.push({
+    path: `/health-hub/topics/${cluster.slug}`,
+    title: `${cluster.title} — Центр знань | Vitaloop Ukraine`,
+    description: cluster.description,
+    text: [cluster.description],
+    priority: '0.8',
+    changefreq: 'monthly',
+  })
+}
+
+for (const article of UA_HUB_ARTICLES) {
+  UA_PUBLIC_ROUTES.push({
+    path: `/health-hub/${article.slug}`,
+    title: `${article.title} | Vitaloop Ukraine Центр знань`,
+    description: article.description,
+    text: [article.description, ...(article.keyPoints || [])],
+    priority: '0.8',
+    changefreq: 'monthly',
+  })
+}
+
+const UA_PRIVATE_ROUTES = [
+  '/login',
+  '/dashboard',
+  '/upload',
+  '/lab-plan',
+  '/avatar',
+  '/assignments',
+  '/lab-results',
+  '/results',
+  '/protocol',
+  '/progress',
+  '/settings',
+  '/health-profile',
+  '/subscription',
+  '/billing-history',
+  '/help-center',
+  '/onboarding',
+  '/questionnaire',
+  '/check-ins',
+  '/insights',
+  '/ops',
+  '/admin/dashboard',
+  '/crm/programs',
+  '/crm/clients',
+  '/crm/practitioners',
+  '/crm/activity',
+]
 
 const uaRootFallback = `<div id="root"><main data-crawler-content="true" style="min-height: 100vh; font-family: Inter, Arial, sans-serif; color: #0f172a; background: #f8f5f0;">
       <header style="position: sticky; top: 0; z-index: 2; height: 68px; border-bottom: 1px solid #e5dfd6; background: rgba(255,255,255,0.96); box-shadow: 0 10px 30px rgba(15,23,42,0.06);">
@@ -176,5 +338,157 @@ html = html.replace(
   `\n    <script>\n      if ('serviceWorker' in navigator) {\n        navigator.serviceWorker.getRegistrations().then(function (registrations) {\n          registrations.forEach(function (registration) { registration.unregister(); });\n        });\n      }\n      if ('caches' in window) {\n        caches.keys().then(function (keys) {\n          keys.forEach(function (key) { caches.delete(key); });\n        });\n      }\n    </script>\n  </body>`,
 )
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+}
+
+function canonicalPath(pathname) {
+  return pathname === '/' ? '/' : `${pathname.replace(/\/+$/, '')}/`
+}
+
+function routeUrl(pathname) {
+  return `https://ua.vitaloop.today${canonicalPath(pathname)}`
+}
+
+function writeRouteFile(pathname, contents) {
+  if (pathname === '/') {
+    return writeFile(indexPath, contents)
+  }
+  const routeDir = path.join(distDir, pathname.replace(/^\//, '').replace(/\/+$/, ''))
+  mkdirSync(routeDir, { recursive: true })
+  return writeFile(path.join(routeDir, 'index.html'), contents)
+}
+
+function renderCrawlerRoot(route, { privatePage = false } = {}) {
+  if (route.path === '/' && !privatePage) return uaRootFallback
+  const heading = privatePage ? 'Приватна сторінка VITALOOP' : route.title.replace(' | Vitaloop Ukraine', '').replace(' | Vitaloop Ukraine Health Hub', '')
+  const lead = privatePage
+    ? 'Ця сторінка доступна після входу в акаунт VITALOOP Ukraine.'
+    : route.description
+  const paragraphs = (route.text || [])
+    .slice(0, 6)
+    .map((item) => `<p>${escapeHtml(item)}</p>`)
+    .join('\n          ')
+  return `<div id="root"><main data-crawler-content="true" style="min-height:100vh;font-family:Inter,Arial,sans-serif;color:#0f172a;background:#f8f5f0;padding:48px 20px;">
+        <section style="max-width:880px;margin:0 auto;background:#fff;border:1px solid #e5dfd6;border-radius:28px;padding:32px;box-shadow:0 20px 60px rgba(15,23,42,0.08);">
+          <p style="margin:0 0 14px;color:#0f766e;font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;">VITALOOP Ukraine</p>
+          <h1 style="margin:0;font-size:42px;line-height:1.08;font-weight:900;">${escapeHtml(heading)}</h1>
+          <p style="margin:18px 0 0;font-size:18px;line-height:1.7;color:#475569;">${escapeHtml(lead)}</p>
+          ${paragraphs}
+          <nav aria-label="Навігація" style="margin-top:28px;display:flex;gap:12px;flex-wrap:wrap;">
+            <a href="/" style="color:#0f766e;font-weight:800;">Головна</a>
+            <a href="/health-hub/" style="color:#0f766e;font-weight:800;">Центр знань</a>
+            <a href="/login/?locale=uk" style="color:#0f766e;font-weight:800;">Увійти</a>
+          </nav>
+        </section>
+      </main></div>`
+}
+
+function renderUaRoute(route, { noindex = false, privatePage = false } = {}) {
+  const canonical = routeUrl(route.path)
+  let pageHtml = html
+  pageHtml = pageHtml.replace(/<html\b[^>]*>/i, '<html lang="uk" prefix="og: https://ogp.me/ns#">')
+  pageHtml = replaceTag(pageHtml, /<title>[\s\S]*?<\/title>/, `<title>${escapeHtml(route.title)}</title>`)
+  pageHtml = replaceTag(pageHtml, /<meta name="description" content="[^"]*"[^>]*\/>/, `<meta name="description" content="${escapeHtml(route.description)}" data-rh="true" />`)
+  pageHtml = replaceTag(pageHtml, /<meta name="robots" content="[^"]*"[^>]*\/>/, `<meta name="robots" content="${noindex ? 'noindex,nofollow' : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1'}" data-rh="true" />`)
+  pageHtml = replaceTag(pageHtml, /<link rel="canonical" href="[^"]*"[^>]*\/>/, `<link rel="canonical" href="${canonical}" data-rh="true" />`)
+  pageHtml = replaceTag(pageHtml, /<meta property="og:title" content="[^"]*"[^>]*\/>/, `<meta property="og:title" content="${escapeHtml(route.title)}" data-rh="true" />`)
+  pageHtml = replaceTag(pageHtml, /<meta property="og:description" content="[^"]*"[^>]*\/>/, `<meta property="og:description" content="${escapeHtml(route.description)}" data-rh="true" />`)
+  pageHtml = replaceTag(pageHtml, /<meta property="og:url" content="[^"]*"[^>]*\/>/, `<meta property="og:url" content="${canonical}" data-rh="true" />`)
+  pageHtml = replaceTag(pageHtml, /<meta name="twitter:title" content="[^"]*"[^>]*\/>/, `<meta name="twitter:title" content="${escapeHtml(route.title)}" data-rh="true" />`)
+  pageHtml = replaceTag(pageHtml, /<meta name="twitter:description" content="[^"]*"[^>]*\/>/, `<meta name="twitter:description" content="${escapeHtml(route.description)}" data-rh="true" />`)
+  pageHtml = pageHtml.replace(/\s*<link rel="alternate" hreflang="[^"]+" href="[^"]*" \/>/g, '')
+  if (!noindex) {
+    pageHtml = upsertAfter(
+      pageHtml,
+      /<link rel="canonical" href="[^"]*"[^>]*\/>/,
+      `hreflang="uk-UA" href="${canonical}"`,
+      `<link rel="alternate" hreflang="uk-UA" href="${canonical}" />
+    <link rel="alternate" hreflang="en" href="https://vitaloop.today${canonicalPath(route.path)}" />
+    <link rel="alternate" hreflang="x-default" href="https://vitaloop.today${canonicalPath(route.path)}" />`,
+    )
+  }
+  pageHtml = pageHtml.replace(/<div id="root">[\s\S]*?<\/div>\s*(?=<script|<\/body>|$)/, renderCrawlerRoot(route, { privatePage }))
+  return pageHtml
+}
+
+for (const route of UA_PUBLIC_ROUTES) {
+  await writeRouteFile(route.path, renderUaRoute(route))
+}
+
+for (const privatePath of UA_PRIVATE_ROUTES) {
+  await writeRouteFile(privatePath, renderUaRoute({
+    path: privatePath,
+    title: 'Приватна сторінка VITALOOP Ukraine',
+    description: 'Ця сторінка кабінету VITALOOP Ukraine доступна після входу в акаунт.',
+    text: ['Увійдіть, щоб переглянути персональний кабінет, аналізи, рекомендації та прогрес.'],
+  }, { noindex: true, privatePage: true }))
+}
+
+const today = new Date().toISOString().slice(0, 10)
+const sitemapUrls = UA_PUBLIC_ROUTES.map((route) => `  <url>
+    <loc>${routeUrl(route.path)}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${route.changefreq}</changefreq>
+    <priority>${route.priority}</priority>
+  </url>`).join('\n')
+
+await writeFile(path.join(distDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${sitemapUrls}
+</urlset>
+`)
+
+await writeFile(path.join(distDir, 'robots.txt'), `User-agent: *
+Allow: /
+
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /upload
+Disallow: /lab-plan
+Disallow: /avatar
+Disallow: /lab-results
+Disallow: /lab-results/
+Disallow: /results/
+Disallow: /protocol/
+Disallow: /settings
+Disallow: /assignments
+Disallow: /check-ins
+Disallow: /insights
+Disallow: /health-profile
+Disallow: /billing-history
+Disallow: /help-center
+Disallow: /subscription
+Disallow: /onboarding
+Disallow: /questionnaire
+Disallow: /admin
+Disallow: /ops
+Disallow: /crm
+Disallow: /login
+Disallow: /auth/confirmation
+
+Sitemap: https://ua.vitaloop.today/sitemap.xml
+`)
+
+await writeFile(path.join(distDir, 'llms.txt'), `# VITALOOP Ukraine
+
+> VITALOOP Ukraine — україномовний health intelligence сервіс для структурування симптомів, аналізів, пояснень біомаркерів, рекомендацій і динаміки стану.
+
+## Офіційні URL
+- Сайт: https://ua.vitaloop.today/
+- Аналізи: https://ua.vitaloop.today/analizy/
+- Симптоми: https://ua.vitaloop.today/symptomy/
+- Центр знань: https://ua.vitaloop.today/health-hub/
+- Тарифи: https://ua.vitaloop.today/tarify/
+
+## Безпека
+VITALOOP Ukraine має освітній характер і не є діагностичним інструментом. Відхилення або тривожні результати потрібно обговорювати з кваліфікованим лікарем.
+`)
+
 await writeFile(uaIndexPath, html)
-console.log(`Created ${path.relative(process.cwd(), uaIndexPath)}`)
+console.log(`Created ${path.relative(process.cwd(), uaIndexPath)} and ${UA_PUBLIC_ROUTES.length} UA crawler routes`)

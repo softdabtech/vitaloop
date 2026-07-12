@@ -1270,6 +1270,7 @@ async def _generate_protocol_for_manual_entries(request: ManualAnalysisRequest, 
 )
 async def analyze_manual_biomarkers(
     request: ManualAnalysisRequest,
+    http_request: Request,
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -1297,6 +1298,7 @@ async def analyze_manual_biomarkers(
         raise HTTPException(status_code=401, detail=_UNAUTHORIZED_DETAIL)
 
     try:
+        response_locale = _resolve_response_locale(http_request)
         converted_entries = await _check_and_validate_manual_entries(user_id, request)
 
         # Create upload record in database
@@ -1319,9 +1321,14 @@ async def analyze_manual_biomarkers(
             source_metadata={"source": "b2c_manual", "lab_name": request.lab_name},
             persist_knowledge=True,
             persist_report_version=True,
+            locale=response_locale,
         )
         protocol = pipeline_result.get("protocol", {})
-        legacy_manual_recommendations = await _generate_protocol_for_manual_entries(request, converted_entries)
+        legacy_manual_recommendations = (
+            []
+            if response_locale == "uk"
+            else await _generate_protocol_for_manual_entries(request, converted_entries)
+        )
         recommendations_to_save = legacy_manual_recommendations or pipeline_result.get("recommendations") or []
         protocol_response = legacy_manual_recommendations or protocol
 
