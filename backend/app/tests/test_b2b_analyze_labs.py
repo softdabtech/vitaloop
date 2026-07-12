@@ -400,6 +400,96 @@ async def test_b2c_pipeline_shape_not_broken(monkeypatch):
     assert result["protocol"]["supplements"][0]["protocol_enrichment_version"] == "protocol_enrichment_v1"
     assert result["ai_orchestration"]["version"] == "ai_orchestration_v1"
     assert result["metadata"]["ai_orchestration_version"] == "ai_orchestration_v1"
+    assert result["quality_snapshot"]["version"] == "analysis_quality_snapshot_v1"
+    assert result["metadata"]["quality_snapshot_version"] == "analysis_quality_snapshot_v1"
+    assert result["quality_snapshot"]["coverage"]["protocol_item_count"] >= 1
     assert result["metadata"]["health_context_version"] == "health_context_v1"
     assert captured["kwargs"]["health_context"]["readiness"]["has_questionnaire"] is True
     assert captured["kwargs"]["health_context"]["readiness"]["has_safety_context"] is True
+
+
+@pytest.mark.asyncio
+async def test_pipeline_persists_core_artifacts_in_report_version(monkeypatch):
+    captured = {}
+
+    async def fake_eval(**_kwargs):
+        return {"matched_rules": [], "safety_alerts": [], "generated_recommendations": []}
+
+    async def fake_history(_user_id):
+        return []
+
+    async def fake_ai_orchestration(**_kwargs):
+        return {
+            "version": "ai_orchestration_v1",
+            "status": "completed",
+            "items": [],
+            "metadata": {"analysis_source": "fallback", "fallback_used": True, "item_count": 0},
+        }
+
+    async def fake_save_report_version(**kwargs):
+        captured["report_version"] = kwargs
+        return {"id": "report-1"}
+
+    async def fake_save_safety_events(**kwargs):
+        captured["safety_events"] = kwargs
+
+    monkeypatch.setattr("app.services.lab_analysis_pipeline.evaluate_biomarkers_with_knowledge", fake_eval)
+    monkeypatch.setattr("app.services.lab_analysis_pipeline._load_historical_biomarkers", fake_history)
+    monkeypatch.setattr("app.services.lab_analysis_pipeline.generate_ai_protocol_orchestrated", fake_ai_orchestration)
+    monkeypatch.setattr("app.services.supabase_service.save_report_version", fake_save_report_version)
+    monkeypatch.setattr("app.services.supabase_service.save_safety_events", fake_save_safety_events)
+
+    result = await svc.run_lab_analysis_pipeline(
+        biomarkers=[{"name": "Ferritin", "value": 12, "unit": "ng/mL", "reference_range": "30-150"}],
+        symptoms=["fatigue"],
+        user_profile={"age": 37},
+        user_id="user-1",
+        analysis_id="upload-1",
+        persist_report_version=True,
+        generate_ai_protocol=True,
+    )
+
+    snapshot = captured["report_version"]["input_snapshot"]
+    assert result["report_version"] == {"id": "report-1"}
+    assert snapshot["health_context"]["version"] == "health_context_v1"
+    assert snapshot["health_states"]["version"] == "health_state_engine_v1"
+    assert snapshot["trend_analysis"]["version"] == "trend_engine_v1"
+    assert snapshot["ai_orchestration"]["version"] == "ai_orchestration_v1"
+    assert snapshot["quality_snapshot"]["version"] == "analysis_quality_snapshot_v1"
+
+
+@pytest.mark.asyncio
+async def test_b2b_usage_tracks_quality_snapshot(monkeypatch):
+    captured = {}
+
+    class _Table:
+        def insert(self, row):
+            captured["row"] = row
+            return self
+
+        def execute(self):
+            return type("Resp", (), {"data": [captured["row"]]})()
+
+    class _Client:
+        def table(self, name):
+            captured["table"] = name
+            return _Table()
+
+    async def fake_run(fn):
+        return fn()
+
+    monkeypatch.setattr(svc.supabase, "_get_supabase", lambda: _Client())
+    monkeypatch.setattr(svc.supabase, "_run", fake_run)
+
+    await svc._track_usage(
+        partner_id="partner-1",
+        api_key_id="key-1",
+        partner_lab_result_id="lab-1",
+        cost_metadata={"ai_prompt_tokens": 10, "ai_completion_tokens": 20, "estimated_cost_usd": 0.001},
+        quality_snapshot={"version": "analysis_quality_snapshot_v1"},
+        biomarker_count=2,
+        request_hash="hash-1",
+    )
+
+    assert captured["table"] == "partner_usage_events"
+    assert captured["row"]["metadata"]["quality_snapshot"]["version"] == "analysis_quality_snapshot_v1"

@@ -397,6 +397,7 @@ async def _track_usage(
     api_key_id: str,
     partner_lab_result_id: str,
     cost_metadata: Dict[str, Any],
+    quality_snapshot: Dict[str, Any],
     biomarker_count: int,
     request_hash: str,
 ) -> None:
@@ -412,7 +413,12 @@ async def _track_usage(
         "ai_completion_tokens": completion_tokens,
         "estimated_cost_usd": float(cost_metadata.get("estimated_cost_usd") or 0),
         "estimated": bool(cost_metadata.get("estimated", True)),
-        "metadata": {"request_hash": request_hash, "source": "b2b_analyze_labs", "cost": cost_metadata},
+        "metadata": {
+            "request_hash": request_hash,
+            "source": "b2b_analyze_labs",
+            "cost": cost_metadata,
+            "quality_snapshot": quality_snapshot,
+        },
     }
     client = supabase._get_supabase()
     try:
@@ -610,6 +616,7 @@ async def analyze_labs_for_partner(
 
         normalized_biomarkers = pipeline_result.pop("normalized_biomarkers", [])
         cost_metadata = pipeline_result.get("cost_metadata") or {}
+        quality_snapshot = pipeline_result.get("quality_snapshot") or {}
         response_payload = {
             **pipeline_result,
             "analysis_id": partner_lab_result_id,
@@ -643,10 +650,20 @@ async def analyze_labs_for_partner(
             api_key_id=principal.key_id,
             partner_lab_result_id=partner_lab_result_id,
             cost_metadata=cost_metadata,
+            quality_snapshot=quality_snapshot,
             biomarker_count=len(normalized_biomarkers),
             request_hash=request_hash,
         )
-        await _write_b2b_audit(principal=principal, action="request_completed", entity_id=partner_lab_result_id, new_value={"request_hash": request_hash, "cost_metadata": cost_metadata})
+        await _write_b2b_audit(
+            principal=principal,
+            action="request_completed",
+            entity_id=partner_lab_result_id,
+            new_value={
+                "request_hash": request_hash,
+                "cost_metadata": cost_metadata,
+                "quality_snapshot": quality_snapshot,
+            },
+        )
         record_b2b_metric("completed", partner_id=principal.partner_id)
     except Exception as exc:
         await _mark_partner_lab_result_failed(partner_lab_result_id, error=exc)

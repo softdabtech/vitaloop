@@ -9,6 +9,7 @@ from app.config import settings
 from app.services.affiliate import build_iherb_url
 from app.services.ai.openai_service import is_llm_configured
 from app.services.ai_orchestrator import generate_ai_protocol_orchestrated
+from app.services.analysis_quality_snapshot import build_analysis_quality_snapshot
 from app.services.explainability import build_recommendation_explanations
 from app.services.health_context import build_health_context
 from app.services.health_state_engine import evaluate_health_states
@@ -755,6 +756,15 @@ async def run_lab_analysis_pipeline(
         ai_protocol=ai_protocol,
         used_llm=is_llm_configured(),
     )
+    quality_snapshot = build_analysis_quality_snapshot(
+        health_context=health_context,
+        health_states=health_states,
+        trend_analysis=trend_analysis,
+        ai_orchestration=ai_orchestration,
+        protocol=protocol,
+        safety_result=safety_result,
+        cost_metadata=cost_metadata,
+    )
     health_summary = {
         **(knowledge_report.get("summary") or {}),
         "what_was_found": knowledge_report.get("what_was_found") or {},
@@ -807,6 +817,7 @@ async def run_lab_analysis_pipeline(
         "disclaimer": (knowledge_report.get("summary") or {}).get("disclaimer") or DISCLAIMER,
         "normalized_biomarkers": normalized_biomarkers,
         "cost_metadata": cost_metadata,
+        "quality_snapshot": quality_snapshot,
         "health_context": health_context,
         "metadata": {
             "source": source_metadata or {},
@@ -817,6 +828,7 @@ async def run_lab_analysis_pipeline(
             "health_context_readiness": health_context.get("readiness") or {},
             "ai_orchestration_version": ai_orchestration.get("version"),
             "ai_analysis_source": (ai_orchestration.get("metadata") or {}).get("analysis_source"),
+            "quality_snapshot_version": quality_snapshot.get("version"),
             "biomarker_count": len(normalized_biomarkers),
             "analysis_core_version": "lab_analysis_pipeline_v1",
         },
@@ -836,6 +848,12 @@ async def run_lab_analysis_pipeline(
                     "symptoms": normalized_symptoms,
                     "profile_context_fields": result["metadata"]["profile_context_fields"],
                     "source": source_metadata or {},
+                    "health_context": health_context,
+                    "health_states": health_states,
+                    "trend_analysis": trend_analysis,
+                    "ai_orchestration": ai_orchestration,
+                    "quality_snapshot": quality_snapshot,
+                    "cost_metadata": cost_metadata,
                 },
                 knowledge_report=knowledge_report,
                 protocol=protocol,
