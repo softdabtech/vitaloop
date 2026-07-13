@@ -12,8 +12,8 @@ cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST || [])
 
 const navigationHandler = new NetworkFirst({
-  cacheName: 'navigation-shell',
-  networkTimeoutSeconds: 3,
+  cacheName: 'navigation-shell-v20260713-wellbeing',
+  networkTimeoutSeconds: 8,
   plugins: [
     new CacheableResponsePlugin({ statuses: [0, 200] }),
   ],
