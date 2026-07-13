@@ -1,7 +1,14 @@
 # VITALOOP Lab Analysis, Validation, Reporting, and Prediction Logic
 
-Last updated: 2026-07-09  
+Last updated: 2026-07-13
 Source: current repository implementation in `/Users/oleksii/projects/vitaloop`
+
+Architecture version: Shared Analysis Core V2
+Production rollout date: 2026-07-12
+Migration / commit reference:
+
+- Supabase migration: `backend/migrations/20260712225326_create_knowledge_domain_registry.sql`
+- Core rollout commits: `74fb8a5c`, `c0472820`, `c7ea8bc3`, `be0b98c8`
 
 ## 1. Purpose
 
