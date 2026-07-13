@@ -14,6 +14,13 @@ _SECTION_DEFAULT_TIMELINES = {
     "training_recovery": "Adjust immediately if symptoms are present; reassess weekly.",
 }
 
+_SECTION_DEFAULT_TIMELINES_UK = {
+    "nutrition": "Почніть цього тижня; оцініть сталість змін через 2-4 тижні.",
+    "supplements": "Спочатку підтвердьте безпечність; повторно оцініть після рекомендованого інтервалу контролю.",
+    "lifestyle": "Почніть з невеликих щоденних змін; оцініть динаміку через 2-4 тижні.",
+    "training_recovery": "Коригуйте одразу, якщо є симптоми; оцінюйте самопочуття щотижня.",
+}
+
 _SECTION_RETEST_MARKERS = {
     "nutrition": ["Ferritin", "Glucose", "Vitamin D"],
     "supplements": ["Ferritin", "Vitamin D", "B12", "Magnesium"],
@@ -28,6 +35,39 @@ _SAFETY_HINTS = {
     "prior_diagnoses_context": "Interpret this recommendation in the context of prior diagnoses.",
     "pregnancy_context": "Use clinician-first guidance during pregnancy, planning, or lactation.",
     "pediatric_context": "Use pediatric clinician guidance before applying this recommendation.",
+}
+
+_SAFETY_HINTS_UK = {
+    "current_medications_context": "Перевірте можливі взаємодії з ліками перед зміною добавок або інтенсивності тренувань.",
+    "current_supplements_context": "Перевірте поточний набір добавок, щоб не дублювати активні речовини.",
+    "known_allergies_context": "Звірте інгредієнти та допоміжні речовини з відомими алергіями.",
+    "prior_diagnoses_context": "Інтерпретуйте цю рекомендацію з урахуванням попередніх діагнозів.",
+    "pregnancy_context": "Під час вагітності, планування або лактації спочатку узгодьте дії з лікарем.",
+    "pediatric_context": "Для дітей застосовуйте цю рекомендацію лише після консультації з педіатричним спеціалістом.",
+}
+
+_DOMAIN_LABELS_UK = {
+    "iron_status": "Статус заліза",
+    "metabolic_health": "Метаболічне здоров'я",
+    "cardiovascular": "Серцево-судинний ризик",
+    "inflammation": "Запальне навантаження",
+    "thyroid": "Контекст щитоподібної залози",
+    "liver": "Навантаження на печінку",
+    "kidney": "Функція нирок",
+    "micronutrients": "Статус мікронутрієнтів",
+    "recovery_energy": "Відновлення та енергія",
+}
+
+_EXPECTED_TIMELINES_UK = {
+    "iron_status": "Спочатку перевірте безпечність; оцініть симптоми через 2-4 тижні, а лабораторні показники - у рекомендований інтервал повторного тестування.",
+    "metabolic_health": "Почніть з режиму харчування, руху, сну та медичного супроводу за потреби; оцініть тренди через 8-12 тижнів.",
+    "cardiovascular": "Розглядайте це як патерн ризику, а не діагноз; узгодьте харчування, активність і медичний огляд з повторною ліпідограмою.",
+    "inflammation": "Зменшіть керовані стресори та повторіть аналізи після гострої хвороби, важких тренувань або за планом лікаря.",
+    "thyroid": "Інтерпретуйте разом із симптомами, ліками, контекстом вагітності та рекомендаціями лікаря перед змінами добавок.",
+    "liver": "Перегляньте алкоголь, ліки, добавки, хвороби та тренувальне навантаження; повторіть аналізи за рекомендацією лікаря.",
+    "kidney": "Перевірте гідратацію, ліки, добавки, білкове навантаження та рекомендації лікаря перед зміною протоколів.",
+    "micronutrients": "Підтвердьте дозування і безпечність, потім повторіть відповідні маркери після рекомендованого інтервалу.",
+    "recovery_energy": "Використовуйте симптоми та тренувальне навантаження для негайної корекції відновлення; підтверджуйте зміни повторними маркерами за потреби.",
 }
 
 
@@ -115,14 +155,23 @@ def _fallback_based_on(
     }
 
 
-def _safety_notes(item: Dict[str, Any], safety_result: Dict[str, Any]) -> List[str]:
+def _is_uk(locale: str | None) -> bool:
+    return str(locale or "").lower().startswith("uk")
+
+
+def _safety_notes(item: Dict[str, Any], safety_result: Dict[str, Any], *, locale: str = "en") -> List[str]:
     notes: List[str] = []
     if item.get("requires_doctor"):
-        notes.append("Discuss this recommendation with a qualified clinician before implementation.")
+        notes.append(
+            "Обговоріть цю рекомендацію з кваліфікованим лікарем перед впровадженням."
+            if _is_uk(locale)
+            else "Discuss this recommendation with a qualified clinician before implementation."
+        )
     for event in safety_result.get("safety_events") or []:
         if not isinstance(event, dict):
             continue
-        hint = _SAFETY_HINTS.get(str(event.get("key") or ""))
+        hints = _SAFETY_HINTS_UK if _is_uk(locale) else _SAFETY_HINTS
+        hint = hints.get(str(event.get("key") or ""))
         if hint and hint not in notes:
             notes.append(hint)
     return notes[:6]
@@ -141,7 +190,12 @@ def _retest_markers(section: str, item: Dict[str, Any], retest_suggestions: List
     return (prioritized or markers)[:4]
 
 
-def _domain_context(health_states: Dict[str, Any], domain_definitions: List[Dict[str, Any]] | None = None) -> List[Dict[str, Any]]:
+def _domain_context(
+    health_states: Dict[str, Any],
+    domain_definitions: List[Dict[str, Any]] | None = None,
+    *,
+    locale: str = "en",
+) -> List[Dict[str, Any]]:
     definitions_by_key = {
         str(item.get("key") or ""): item
         for item in (domain_definitions or [])
@@ -154,12 +208,15 @@ def _domain_context(health_states: Dict[str, Any], domain_definitions: List[Dict
         definition = definitions_by_key.get(str(state.get("domain") or "")) or get_domain_definition(str(state.get("domain") or ""))
         if not definition:
             continue
+        domain = str(state.get("domain") or "")
         contexts.append(
             {
-                "domain": state.get("domain"),
-                "label": definition.get("label"),
+                "domain": domain,
+                "label": _DOMAIN_LABELS_UK.get(domain, definition.get("label")) if _is_uk(locale) else definition.get("label"),
                 "evidence_level": definition.get("evidence_level"),
-                "expected_timeline": definition.get("expected_timeline"),
+                "expected_timeline": _EXPECTED_TIMELINES_UK.get(domain, definition.get("expected_timeline"))
+                if _is_uk(locale)
+                else definition.get("expected_timeline"),
                 "retest_markers": definition.get("retest_markers") or [],
                 "protocol_sections": definition.get("protocol_sections") or [],
                 "requires_doctor_if_flagged": bool(definition.get("requires_doctor_if_flagged")),
@@ -168,10 +225,12 @@ def _domain_context(health_states: Dict[str, Any], domain_definitions: List[Dict
     return contexts
 
 
-def _expected_timeline(section: str, domain_contexts: List[Dict[str, Any]]) -> str:
+def _expected_timeline(section: str, domain_contexts: List[Dict[str, Any]], *, locale: str = "en") -> str:
     for context in domain_contexts:
         if section in (context.get("protocol_sections") or []) and context.get("expected_timeline"):
             return str(context["expected_timeline"])
+    if _is_uk(locale):
+        return _SECTION_DEFAULT_TIMELINES_UK.get(section, "Оцініть динаміку через 2-4 тижні.")
     return _SECTION_DEFAULT_TIMELINES.get(section, "Reassess after 2-4 weeks.")
 
 
@@ -197,9 +256,10 @@ def enrich_protocol(
     trend_analysis: Dict[str, Any],
     retest_suggestions: List[Dict[str, Any]],
     domain_definitions: List[Dict[str, Any]] | None = None,
+    locale: str = "en",
 ) -> Dict[str, List[Dict[str, Any]]]:
     enriched: Dict[str, List[Dict[str, Any]]] = {}
-    domain_contexts = _domain_context(health_states, domain_definitions=domain_definitions)
+    domain_contexts = _domain_context(health_states, domain_definitions=domain_definitions, locale=locale)
     for section, items in (protocol or {}).items():
         enriched_items: List[Dict[str, Any]] = []
         for index, raw_item in enumerate(items or []):
@@ -227,8 +287,8 @@ def enrich_protocol(
                         health_states=health_states,
                         trend_analysis=trend_analysis,
                     ),
-                    "safety_notes": raw_item.get("safety_notes") or _safety_notes(raw_item, safety_result),
-                    "expected_timeline": raw_item.get("expected_timeline") or _expected_timeline(section, domain_contexts),
+                    "safety_notes": raw_item.get("safety_notes") or _safety_notes(raw_item, safety_result, locale=locale),
+                    "expected_timeline": raw_item.get("expected_timeline") or _expected_timeline(section, domain_contexts, locale=locale),
                     "retest_markers": raw_item.get("retest_markers")
                     or _domain_retest_markers(section, domain_contexts)
                     or _retest_markers(section, raw_item, retest_suggestions),

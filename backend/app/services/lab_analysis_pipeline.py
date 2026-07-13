@@ -756,6 +756,7 @@ async def run_lab_analysis_pipeline(
         trend_analysis=trend_analysis,
         retest_suggestions=retest_suggestions,
         domain_definitions=domain_definitions,
+        locale=locale,
     )
     safety_result = validate_report(
         biomarkers=normalized_biomarkers,

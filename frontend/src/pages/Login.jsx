@@ -1027,11 +1027,15 @@ export default function Login() {
               {copy.resetSuccess}
             </div>
           )}
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <form
+            onSubmit={handleSubmit}
+            data-testid="auth-form"
+            style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+          >
             {/* Google reCAPTCHA (only for sign up) — удалено */}
 
             {authAlert && (
-              <div className="ua-alert" style={{
+              <div className="ua-alert" data-testid="auth-alert" style={{
                 background: 'rgba(255,99,71,0.12)',
                 border: '0.5px solid rgba(255,99,71,0.35)',
                 borderRadius: 12,
@@ -1067,6 +1071,8 @@ export default function Login() {
             {/* Honeypot - invisible to users, visible to bots */}
             <input
               type="text"
+              name="company"
+              data-testid="auth-honeypot"
               value={honeypot}
               onChange={(e) => setHoneypot(e.target.value)}
               style={{ position: 'absolute', left: '-9999px', opacity: 0 }}
@@ -1084,6 +1090,8 @@ export default function Login() {
               <input
                 type="email"
                 required
+                name="email"
+                data-testid="auth-email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -1112,6 +1120,8 @@ export default function Login() {
                     type={showPass ? 'text' : 'password'}
                     required
                     minLength={8}
+                    name="password"
+                    data-testid="auth-password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -1160,6 +1170,7 @@ export default function Login() {
             {/* Submit */}
             <button
               type="submit"
+              data-testid="auth-submit"
               disabled={loading}
               style={{
                 width: '100%', background: loading ? '#085041' : '#1D9E75',

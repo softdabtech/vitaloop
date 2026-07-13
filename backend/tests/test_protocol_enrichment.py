@@ -76,3 +76,48 @@ def test_enrich_protocol_adds_explainability_safety_and_retest_fields():
     assert item["knowledge_domain_registry_version"] == "knowledge_domain_registry_v1"
     assert item["knowledge_domain_context"][0]["domain"] == "micronutrients"
     assert item["protocol_enrichment_version"] == "protocol_enrichment_v1"
+
+
+def test_enrich_protocol_localizes_core_v2_artifacts_for_ukrainian_locale():
+    enriched = enrich_protocol(
+        {
+            "nutrition": [
+                {
+                    "title": "Balance iron intake",
+                    "body": "Pair iron-rich meals with vitamin C.",
+                    "requires_doctor": True,
+                }
+            ],
+            "supplements": [],
+            "lifestyle": [],
+            "training_recovery": [],
+        },
+        biomarkers=[{"name": "Ferritin", "canonical_name": "canonical_ferritin", "status": "LOW"}],
+        prioritized=[{"name": "Ferritin", "canonical_name": "canonical_ferritin", "status": "LOW"}],
+        safety_result={
+            "safety_events": [
+                {"key": "current_medications_context", "severity": "medium"},
+                {"key": "known_allergies_context", "severity": "medium"},
+            ]
+        },
+        health_states={
+            "top_priorities": [
+                {
+                    "domain": "iron_status",
+                    "score": 72,
+                    "risk_level": "needs_attention",
+                    "confidence": "medium",
+                }
+            ]
+        },
+        trend_analysis={"priority_changes": []},
+        retest_suggestions=[{"marker": "Ferritin", "timeframe": "8-12 weeks"}],
+        locale="uk",
+    )
+
+    item = enriched["nutrition"][0]
+    assert "Обговоріть" in item["safety_notes"][0]
+    assert any("ліками" in note for note in item["safety_notes"])
+    assert "2-4 тижні" in item["expected_timeline"]
+    assert item["knowledge_domain_context"][0]["label"] == "Статус заліза"
+    assert "Review safety first" not in item["expected_timeline"]
