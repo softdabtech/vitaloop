@@ -43,6 +43,7 @@ const UaHealthHubArticle = lazy(() => import('./pages/UaHealthHub.jsx').then(m =
 // UI components — lazy
 const SupportChat = lazy(() => import('./components/SupportChat.jsx'))
 const PaywallModal = lazy(() => import('./components/PaywallModal.jsx'))
+const WellbeingCheckModal = lazy(() => import('./components/landing/WellbeingCheckModal.jsx'))
 // CookieConsent is handled by vanilla JS in index.html (loads before React bundle).
 // const CookieConsent = lazy(() => import('./components/CookieConsent.jsx'))
 
@@ -607,7 +608,6 @@ const SYMPTOM_PROMPT_DELAY_MS = 10000
 
 function PublicSymptomPrompt({ disabled = false }) {
   const location = useLocation()
-  const navigate = useNavigate()
   const { user, loading } = useAuth()
   const [visible, setVisible] = useState(false)
 
@@ -665,70 +665,11 @@ function PublicSymptomPrompt({ disabled = false }) {
   if (!visible) return null
 
   const closePrompt = () => setVisible(false)
-  const startIntake = () => {
-    setVisible(false)
-    navigate('/symptom-intake')
-  }
 
   return (
-    <div className="fixed inset-0 z-[11000] flex items-end justify-center bg-slate-950/40 px-3 pb-3 pt-8 backdrop-blur-sm sm:items-center sm:px-6 sm:pb-8">
-      <div className="w-full max-w-[480px] overflow-hidden rounded-3xl border border-white/70 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.28)] ring-1 ring-slate-900/5">
-        <div className="relative px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_78%_8%,rgba(20,184,166,0.18),transparent_36%),linear-gradient(180deg,rgba(240,253,250,0.9),rgba(255,255,255,0))]" />
-          <button
-            type="button"
-            onClick={closePrompt}
-            aria-label="Close symptom check prompt"
-            className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-lg font-semibold leading-none text-slate-500 shadow-sm transition hover:border-slate-300 hover:bg-white hover:text-slate-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200"
-          >
-            ×
-          </button>
-
-          <div className="relative pr-12">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Quick symptom check
-            </div>
-            <h2 className="mt-4 max-w-[360px] text-[27px] font-bold leading-[1.08] tracking-tight text-slate-950 sm:text-[32px]">
-              Feel off, but not sure what to check?
-            </h2>
-            <p className="mt-3 max-w-[390px] text-[15px] leading-6 text-slate-600">
-              Answer a few guided questions and get a safe lab discussion list before creating an account.
-            </p>
-          </div>
-        </div>
-
-        <div className="px-5 pb-5 sm:px-6 sm:pb-6">
-          <div className="grid gap-2.5 text-sm text-slate-700">
-            <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-3.5 py-3">
-              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-emerald-700 shadow-sm ring-1 ring-emerald-100">✓</span>
-              <span className="font-semibold">No login required</span>
-            </div>
-            <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-3.5 py-3">
-              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-emerald-700 shadow-sm ring-1 ring-emerald-100">1</span>
-              <span className="font-semibold">Takes about one minute</span>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-2.5 sm:grid-cols-[1fr_auto]">
-            <button
-              type="button"
-              onClick={startIntake}
-              className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white shadow-[0_12px_26px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-[0_16px_30px_rgba(16,185,129,0.24)] focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200"
-            >
-              Start symptom check
-            </button>
-            <button
-              type="button"
-              onClick={closePrompt}
-              className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-200"
-            >
-              Maybe later
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Suspense fallback={null}>
+      <WellbeingCheckModal open={visible} onClose={closePrompt} />
+    </Suspense>
   )
 }
 
