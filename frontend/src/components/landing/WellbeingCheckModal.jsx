@@ -151,7 +151,7 @@ export default function WellbeingCheckModal({ open, onClose }) {
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[120] overflow-y-auto bg-slate-950/60 px-2 py-3 backdrop-blur-sm sm:px-4 sm:py-8" role="dialog" aria-modal="true" aria-label="AI wellbeing check">
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/60 px-2 py-3 backdrop-blur-sm sm:px-4 sm:py-8" role="dialog" aria-modal="true" aria-label="AI wellbeing check">
       <div className="mx-auto flex min-h-full w-full max-w-[1180px] items-start sm:items-center">
         <div className="relative w-full overflow-hidden rounded-[24px] border border-white/70 bg-[#f8f5f0] shadow-[0_24px_90px_rgba(15,23,42,0.42)] sm:rounded-[34px]">
           <button
