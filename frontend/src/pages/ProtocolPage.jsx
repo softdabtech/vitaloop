@@ -177,10 +177,31 @@ function sortProtocolByPriority(protocol) {
   return [...protocol].sort((a, b) => (PRIORITY_ORDER[formatPriority(a.priority)] ?? 9) - (PRIORITY_ORDER[formatPriority(b.priority)] ?? 9))
 }
 
+function normalizeProtocolRows(protocol) {
+  if (Array.isArray(protocol)) return protocol
+  if (!protocol || typeof protocol !== 'object') return []
+  const sectionOrder = ['nutrition', 'supplements', 'lifestyle', 'training_recovery', 'trainingRecovery']
+  const rows = []
+  const seenSections = new Set()
+  sectionOrder.forEach((section) => {
+    seenSections.add(section)
+    const items = protocol[section]
+    if (Array.isArray(items)) {
+      items.forEach((item) => rows.push({ section, ...(item || {}) }))
+    }
+  })
+  Object.entries(protocol).forEach(([section, items]) => {
+    if (seenSections.has(section) || !Array.isArray(items)) return
+    items.forEach((item) => rows.push({ section, ...(item || {}) }))
+  })
+  return rows
+}
+
 async function loadProtocolData(uploadId) {
   const { data } = await api.get(`/results/${uploadId}`)
   const biomarkers = data?.biomarkers ?? []
-  const storedProtocol = Array.isArray(data?.protocol) ? data.protocol : []
+  const coreProtocol = normalizeProtocolRows(data?.final_analysis?.protocol)
+  const storedProtocol = normalizeProtocolRows(data?.protocol)
   const actionPlan = Array.isArray(data?.knowledge_report?.action_plan) ? data.knowledge_report.action_plan : []
   const doctorDiscussion = Array.isArray(data?.knowledge_report?.doctor_discussion) ? data.knowledge_report.doctor_discussion : []
   const retestPlan = Array.isArray(data?.knowledge_report?.retest_plan) ? data.knowledge_report.retest_plan : []
@@ -192,7 +213,7 @@ async function loadProtocolData(uploadId) {
       : []
   return {
     biomarkers,
-    protocol: storedProtocol.length ? storedProtocol : actionPlan,
+    protocol: coreProtocol.length ? coreProtocol : storedProtocol.length ? storedProtocol : actionPlan,
     doctorDiscussion,
     retestPlan,
     safetyAlerts,
