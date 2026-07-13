@@ -22,6 +22,7 @@ import {
   Stethoscope,
 } from 'lucide-react'
 import { isUkrainianLocale } from '../lib/locale.js'
+import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
 import { CoachBadge, CoachCard, CoachButton } from '../components/coach/CoachUI.jsx'
 
 const STATUS_META = {
@@ -152,6 +153,7 @@ const RESULTS_COPY = {
     markersInRange: (count) => `${count} marker${count === 1 ? '' : 's'} in range`,
     whyThisAppears: 'Why this appears',
     whyDefault: 'Based on extracted biomarker value, reference range, symptom context, and knowledge-base matching when available.',
+    evidenceSummary: 'Connected to report signals and knowledge-base context. This is not a diagnosis.',
     reviewTopFinding: 'Review the top finding and avoid starting high-dose supplements from one marker alone.',
     shoppingEyebrow: 'Suggested iHerb searches',
     shoppingTitle: 'Optional items to discuss before buying',
@@ -234,6 +236,7 @@ const RESULTS_COPY = {
     markersInRange: (count) => `${count} ${count === 1 ? 'показник у референсі' : 'показників у референсі'}`,
     whyThisAppears: 'Чому це показано',
     whyDefault: 'На основі розпізнаного значення, референсу, контексту симптомів і збігів у базі знань, якщо вони доступні.',
+    evidenceSummary: 'Повʼязано із сигналами звіту та контекстом бази знань. Це не діагноз.',
     reviewTopFinding: 'Перегляньте головну знахідку й не починайте високі дози добавок лише за одним показником.',
     shoppingEyebrow: 'Пошук на iHerb',
     shoppingTitle: 'Опційні позиції для обговорення перед покупкою',
@@ -316,8 +319,10 @@ function formatRange(biomarker, copy = RESULTS_COPY.en) {
 
 function displayBiomarkerName(biomarker, isUk) {
   if (!biomarker) return '—'
-  if (isUk) return biomarker.name || biomarker.source_name || biomarker.name_en || '—'
-  return biomarker.name_en || biomarker.name || biomarker.source_name || '—'
+  const value = isUk
+    ? biomarker.canonical_name || biomarker.name || biomarker.source_name || biomarker.name_en
+    : biomarker.name_en || biomarker.canonical_name || biomarker.name || biomarker.source_name
+  return biomarkerDisplayName(value, isUk) || '—'
 }
 
 function triggerSubscriptionRequiredPaywall() {
@@ -378,7 +383,7 @@ function HealthDomainCard({ state, copy }) {
     : state?.label || state?.domain_label || state?.domain || state?.key || 'Health domain'
   const label = localizeDomainLabel(labelSource, copy)
   const score = Number(state?.score ?? state?.health_score)
-  const risk = state?.risk_level || state?.status || state?.state
+  const risk = riskDisplayLabel(state?.risk_level || state?.status || state?.state, copy === RESULTS_COPY.uk)
   const confidence = formatPercent(state?.confidence)
   const dataUsed = asTextList(state?.used_biomarkers || state?.biomarkers || state?.contributing_biomarkers || state?.matched_biomarkers).slice(0, 5)
   const missing = asTextList(state?.missing_data || state?.missing_markers).slice(0, 4)
@@ -763,8 +768,10 @@ export default function Results() {
                           <details className="mt-3 text-sm">
                             <summary className="cursor-pointer font-semibold text-teal-700">{copy.whyThisAppears}</summary>
                             <p className="mt-2 leading-6 text-slate-600">
-                              {explanations.find((item) => String(item.triggered_biomarker || item.marker || '').toLowerCase().includes(String(displayBiomarkerName(b, false)).toLowerCase().split(' ')[0]))?.matched_rule_key
-                                || copy.whyDefault}
+                              {(() => {
+                                const explanation = explanations.find((item) => String(item.triggered_biomarker || item.marker || '').toLowerCase().includes(String(displayBiomarkerName(b, false)).toLowerCase().split(' ')[0]))
+                                return explanation?.explanation || explanation?.reason || explanation?.summary || explanation?.why || copy.whyDefault
+                              })()}
                             </p>
                           </details>
                         </div>
@@ -846,9 +853,7 @@ export default function Results() {
               </CoachBadge>
             </div>
             <p className="text-sm leading-6 text-slate-600">
-              {explanations.length
-                ? 'Recommendations are connected to biomarker signals, symptom context, profile context, rule matching, confidence, and safety notes where available.'
-                : 'Evidence details will expand as more knowledge-base matches are available for this report.'}
+              {explanations.length ? copy.evidenceSummary : copy.whyDefault}
             </p>
           </CoachCard>
 

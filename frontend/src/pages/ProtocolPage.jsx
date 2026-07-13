@@ -5,6 +5,7 @@ import api from '../lib/api.js'
 import { useFeature } from '../hooks/useFeature.js'
 import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
 import { isUkrainianLocale } from '../lib/locale.js'
+import { biomarkerDisplayName, evidenceDisplayLabel } from '../lib/biomarker-display.js'
 
 const PRIORITY_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 }
 const TIMING_LABELS = {
@@ -83,6 +84,7 @@ const PROTOCOL_COPY = {
     retestMarkers: 'Retest markers',
     safetyNotes: 'Safety notes',
     kbContext: 'Knowledge-base context',
+    technicalDetails: 'Analysis details',
     pdfTitle: 'VITALOOP Action Protocol',
     pdfUpload: 'Upload',
     pdfGenerated: 'Generated',
@@ -141,6 +143,7 @@ const PROTOCOL_COPY = {
     retestMarkers: 'Повторні аналізи',
     safetyNotes: 'Примітки безпеки',
     kbContext: 'Контекст бази знань',
+    technicalDetails: 'Деталі аналізу',
     pdfTitle: 'VITALOOP План дій',
     pdfUpload: 'Завантаження',
     pdfGenerated: 'Сформовано',
@@ -286,6 +289,14 @@ function basedOnList(item) {
   ].slice(0, 6)
 }
 
+function displayEvidence(value, isUk) {
+  return evidenceDisplayLabel(value, isUk)
+}
+
+function displayBiomarker(value, isUk) {
+  return biomarkerDisplayName(value, isUk) || String(value || '')
+}
+
 function healthDomainList(item) {
   return asTextList(
     item?.knowledge_domain_context
@@ -342,9 +353,9 @@ function ActionCard({ item, copy, isUk }) {
   const category = protocolCategory(item)
   const effort = effortLabel(item)
   const outcome = outcomeLabel(item)
-  const evidence = evidenceLabel(item)
+  const evidence = displayEvidence(evidenceLabel(item), isUk)
   const safety = safetyLabel(item)
-  const basedOn = basedOnList(item)
+  const basedOn = basedOnList(item).map((value) => displayBiomarker(value, isUk))
   const domains = healthDomainList(item).map((domain) => localizeDomainLabel(domain, isUk))
   const safetyNotes = safetyNotesList(item)
   const retestMarkers = retestMarkersList(item)
@@ -366,12 +377,15 @@ function ActionCard({ item, copy, isUk }) {
       </div>
       {outcome && <p className="mt-3 text-sm font-semibold text-slate-700">{copy.outcome}: <span className="font-normal text-slate-600">{outcome}</span></p>}
       {(basedOn.length || domains.length || expectedTimeline || retestMarkers.length) && (
-        <div className="mt-4 grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-3 text-sm leading-6 text-slate-600">
-          {!!basedOn.length && <p><span className="font-semibold text-slate-800">{copy.basedOn}:</span> {basedOn.join(', ')}</p>}
-          {!!domains.length && <p><span className="font-semibold text-slate-800">{copy.healthDomains}:</span> {domains.join(', ')}</p>}
-          {expectedTimeline && <p><span className="font-semibold text-slate-800">{copy.expectedTimeline}:</span> {expectedTimeline}</p>}
-          {!!retestMarkers.length && <p><span className="font-semibold text-slate-800">{copy.retestMarkers}:</span> {retestMarkers.join(', ')}</p>}
-        </div>
+        <details className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-3 text-sm leading-6 text-slate-600">
+          <summary className="cursor-pointer font-semibold text-slate-800">{copy.technicalDetails}</summary>
+          <div className="mt-3 grid gap-2">
+            {!!basedOn.length && <p><span className="font-semibold text-slate-800">{copy.basedOn}:</span> {basedOn.join(', ')}</p>}
+            {!!domains.length && <p><span className="font-semibold text-slate-800">{copy.healthDomains}:</span> {domains.join(', ')}</p>}
+            {expectedTimeline && <p><span className="font-semibold text-slate-800">{copy.expectedTimeline}:</span> {expectedTimeline}</p>}
+            {!!retestMarkers.length && <p><span className="font-semibold text-slate-800">{copy.retestMarkers}:</span> {retestMarkers.map((value) => displayBiomarker(value, isUk)).join(', ')}</p>}
+          </div>
+        </details>
       )}
       {(safety || safetyNotes.length) && (
         <div className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
@@ -626,7 +640,7 @@ export default function ProtocolPage() {
             <div className="space-y-3">
               {retestPlan.slice(0, 6).map((item, index) => (
                 <div key={index} className="rounded-2xl bg-slate-50 p-3">
-                  <p className="font-bold text-slate-950">{item.marker || copy.marker}</p>
+                  <p className="font-bold text-slate-950">{displayBiomarker(item.marker, isUk) || copy.marker}</p>
                   <p className="mt-1 text-sm text-slate-600">{item.timing || item.reason || copy.discussTiming}</p>
                 </div>
               ))}
