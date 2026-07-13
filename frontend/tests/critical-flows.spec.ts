@@ -4,9 +4,10 @@ test.describe('Critical User Flows', () => {
   test('signup → onboarding → upload', async ({ page }) => {
     // Signup
     await page.goto('/login?signup=true')
-    await page.fill('input[type="email"]', `test-${Date.now()}@example.com`)
-    await page.fill('input[type="password"]', 'TestPassword123!')
-    await page.click('button:has-text("Sign up")')
+    await expect(page.getByTestId('auth-honeypot')).toBeHidden()
+    await page.getByTestId('auth-email').fill(`test-${Date.now()}@example.com`)
+    await page.getByTestId('auth-password').fill('TestPassword123!')
+    await page.getByTestId('auth-submit').click()
     await page.waitForNavigation()
 
     // Should be on onboarding

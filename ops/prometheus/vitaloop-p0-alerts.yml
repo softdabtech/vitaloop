@@ -1,0 +1,52 @@
+groups:
+  - name: vitaloop-p0
+    rules:
+      - alert: VitaloopApiUnavailable
+        expr: probe_success{job="vitaloop_api_health"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          owner: backend
+        annotations:
+          summary: "VITALOOP API health check is unavailable"
+          description: "The public API health probe has failed for more than 2 minutes."
+
+      - alert: VitaloopApiHealthLatencyHigh
+        expr: probe_duration_seconds{job="vitaloop_api_health"} > 3
+        for: 5m
+        labels:
+          severity: high
+          owner: backend
+        annotations:
+          summary: "VITALOOP API health latency is high"
+          description: "API health probe duration is above 3 seconds for more than 5 minutes."
+
+      - alert: VitaloopB2BAnalyzeFailureSpike
+        expr: sum(increase(vitaloop_b2b_requests_total{event="request_failed"}[15m])) >= 3
+        for: 1m
+        labels:
+          severity: high
+          owner: backend
+        annotations:
+          summary: "B2B Analyze Labs failures increased"
+          description: "At least 3 B2B analysis failures were recorded in 15 minutes."
+
+      - alert: VitaloopB2BRateLimitSpike
+        expr: sum(increase(vitaloop_b2b_requests_total{event="rate_limited"}[15m])) >= 10
+        for: 1m
+        labels:
+          severity: medium
+          owner: backend
+        annotations:
+          summary: "B2B API rate limit spike"
+          description: "At least 10 B2B requests were rate-limited in 15 minutes."
+
+      - alert: VitaloopB2BAnalyzeLatencyP95High
+        expr: histogram_quantile(0.95, sum by (le) (rate(vitaloop_b2b_request_latency_seconds_bucket[10m]))) > 30
+        for: 10m
+        labels:
+          severity: medium
+          owner: backend
+        annotations:
+          summary: "B2B Analyze Labs p95 latency is high"
+          description: "B2B Analyze Labs p95 latency is above 30 seconds for 10 minutes."
