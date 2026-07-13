@@ -8,6 +8,8 @@ Use this checklist before giving a partner a staging API key.
 - [ ] OpenAPI validates.
 - [ ] Backend tests pass.
 - [ ] B2B endpoint is available at `/v1/b2b/analyze-labs`.
+- [ ] Public pilot payload limits are documented and covered by tests.
+- [ ] Legacy `/b2b/analyze-labs` is treated as deprecated compatibility only.
 
 ## Database
 
@@ -41,6 +43,7 @@ Use this checklist before giving a partner a staging API key.
 - [ ] Set non-secret `key_prefix`.
 - [ ] Send raw key to partner through secure channel only.
 - [ ] Confirm `last_used_at` updates after a request.
+- [ ] Confirm rotation path: create new active key, validate smoke, revoke old key.
 
 ## Smoke Tests
 
@@ -50,6 +53,8 @@ Use this checklist before giving a partner a staging API key.
 - [ ] wrong unit
 - [ ] rate limit
 - [ ] `/v1/b2b/analyze-labs` path
+- [ ] response includes `X-Vitaloop-API-Version: v1`
+- [ ] legacy alias returns deprecation headers when tested with a valid key
 
 ## Monitoring
 

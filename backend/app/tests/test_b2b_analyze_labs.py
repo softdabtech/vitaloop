@@ -1,7 +1,12 @@
 import pytest
 from fastapi import HTTPException
+from starlette.responses import Response
 
 from app.schemas.b2b.analyze_labs import B2BAnalyzeLabsRequest
+from app.routers.b2b.analyze_labs import (
+    B2B_LEGACY_ALIAS_SUNSET,
+    _set_b2b_response_headers,
+)
 from app.services.b2b import analyze_labs as svc
 from app.services.partners.auth import PartnerPrincipal, require_scope, resolve_partner_from_api_key
 
@@ -137,6 +142,35 @@ def test_missing_labs_analyze_scope():
     with pytest.raises(HTTPException) as exc:
         require_scope(_principal(scopes=["results:write"]), "labs:analyze")
     assert exc.value.status_code == 403
+
+
+def test_request_schema_limits_biomarker_count():
+    biomarkers = [{"name": f"Marker {idx}", "value": idx, "unit": "ng/mL"} for idx in range(101)]
+    with pytest.raises(ValueError):
+        _payload(biomarkers=biomarkers)
+
+
+def test_request_schema_strips_empty_symptoms_and_rejects_long_symptom():
+    payload = _payload(symptoms=[" fatigue ", "", "  low energy"])
+    assert payload.symptoms == ["fatigue", "low energy"]
+
+    with pytest.raises(ValueError):
+        _payload(symptoms=["x" * 161])
+
+
+def test_b2b_response_headers_mark_version_and_legacy_alias():
+    response = Response()
+    _set_b2b_response_headers(response)
+    assert response.headers["X-Vitaloop-API-Version"] == "v1"
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert "Deprecation" not in response.headers
+
+    legacy_response = Response()
+    _set_b2b_response_headers(legacy_response, legacy_alias=True)
+    assert legacy_response.headers["Deprecation"] == "true"
+    assert legacy_response.headers["Sunset"] == B2B_LEGACY_ALIAS_SUNSET
+    assert legacy_response.headers["Link"] == '</v1/b2b/analyze-labs>; rel="successor-version"'
 
 
 @pytest.mark.asyncio

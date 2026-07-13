@@ -6,13 +6,24 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+B2B_MAX_EXTERNAL_USER_ID_LENGTH = 191
+B2B_MAX_IDEMPOTENCY_KEY_LENGTH = 191
+B2B_MAX_BIOMARKERS = 100
+B2B_MAX_SYMPTOMS = 100
+B2B_MAX_SYMPTOM_LENGTH = 160
+B2B_MAX_BIOMARKER_NAME_LENGTH = 160
+B2B_MAX_BIOMARKER_UNIT_LENGTH = 40
+B2B_MAX_REFERENCE_RANGE_LENGTH = 120
+B2B_MAX_LAB_NAME_LENGTH = 120
+
+
 class B2BBiomarkerInput(BaseModel):
-    name: str = Field(..., min_length=1, max_length=160)
+    name: str = Field(..., min_length=1, max_length=B2B_MAX_BIOMARKER_NAME_LENGTH)
     value: float
-    unit: str = Field(..., min_length=1, max_length=40)
-    reference_range: Optional[str] = Field(default=None, max_length=120)
+    unit: str = Field(..., min_length=1, max_length=B2B_MAX_BIOMARKER_UNIT_LENGTH)
+    reference_range: Optional[str] = Field(default=None, max_length=B2B_MAX_REFERENCE_RANGE_LENGTH)
     collected_at: Optional[datetime | date] = None
-    lab_name: Optional[str] = Field(default=None, max_length=120)
+    lab_name: Optional[str] = Field(default=None, max_length=B2B_MAX_LAB_NAME_LENGTH)
 
     @field_validator("name", "unit", "reference_range", "lab_name")
     @classmethod
@@ -24,12 +35,12 @@ class B2BBiomarkerInput(BaseModel):
 
 
 class B2BAnalyzeLabsRequest(BaseModel):
-    external_user_id: str = Field(..., min_length=1, max_length=191)
-    biomarkers: List[B2BBiomarkerInput] = Field(..., min_length=1, max_length=100)
-    symptoms: List[str] = Field(default_factory=list, max_length=100)
+    external_user_id: str = Field(..., min_length=1, max_length=B2B_MAX_EXTERNAL_USER_ID_LENGTH)
+    biomarkers: List[B2BBiomarkerInput] = Field(..., min_length=1, max_length=B2B_MAX_BIOMARKERS)
+    symptoms: List[str] = Field(default_factory=list, max_length=B2B_MAX_SYMPTOMS)
     questionnaire: Dict[str, Any] = Field(default_factory=dict)
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    idempotency_key: Optional[str] = Field(default=None, max_length=191)
+    idempotency_key: Optional[str] = Field(default=None, max_length=B2B_MAX_IDEMPOTENCY_KEY_LENGTH)
 
     @field_validator("external_user_id", "idempotency_key")
     @classmethod
@@ -38,6 +49,19 @@ class B2BAnalyzeLabsRequest(BaseModel):
             return None
         stripped = value.strip()
         return stripped or None
+
+    @field_validator("symptoms")
+    @classmethod
+    def _strip_symptoms(cls, value: List[str]) -> List[str]:
+        cleaned = []
+        for item in value or []:
+            stripped = str(item).strip()
+            if not stripped:
+                continue
+            if len(stripped) > B2B_MAX_SYMPTOM_LENGTH:
+                raise ValueError(f"Symptom exceeds {B2B_MAX_SYMPTOM_LENGTH} characters")
+            cleaned.append(stripped)
+        return cleaned
 
 
 class PrioritizedBiomarker(BaseModel):

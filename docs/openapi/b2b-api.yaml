@@ -2,6 +2,9 @@ openapi: 3.0.3
 info:
   title: VITALOOP B2B Analyze Labs API
   version: 1.0.0
+  license:
+    name: Proprietary
+    url: https://vitaloop.today
   description: |
     Production-quality OpenAPI specification for the controlled-pilot VITALOOP
     B2B Analyze Labs API.
@@ -62,6 +65,21 @@ paths:
         "200":
           description: Structured analysis completed or replayed from idempotency cache.
           headers:
+            X-Vitaloop-API-Version:
+              description: Active API contract version used for this response.
+              schema:
+                type: string
+                example: v1
+            Cache-Control:
+              description: B2B analysis responses are not cacheable by shared/public caches.
+              schema:
+                type: string
+                example: no-store
+            X-Content-Type-Options:
+              description: Browser/client hardening header.
+              schema:
+                type: string
+                example: nosniff
             X-RateLimit-Policy:
               description: Optional deployment-specific rate limit policy description.
               schema:
@@ -115,6 +133,37 @@ paths:
       responses:
         "200":
           description: Structured analysis completed or replayed from idempotency cache.
+          headers:
+            X-Vitaloop-API-Version:
+              description: Active API contract version used for this response.
+              schema:
+                type: string
+                example: v1
+            Cache-Control:
+              description: B2B analysis responses are not cacheable by shared/public caches.
+              schema:
+                type: string
+                example: no-store
+            X-Content-Type-Options:
+              description: Browser/client hardening header.
+              schema:
+                type: string
+                example: nosniff
+            Deprecation:
+              description: Indicates that the unversioned pilot alias is deprecated.
+              schema:
+                type: string
+                example: "true"
+            Sunset:
+              description: Planned sunset date for the unversioned pilot alias.
+              schema:
+                type: string
+                example: Wed, 30 Sep 2026 00:00:00 GMT
+            Link:
+              description: Successor versioned endpoint.
+              schema:
+                type: string
+                example: '</v1/b2b/analyze-labs>; rel="successor-version"'
           content:
             application/json:
               schema:
@@ -186,12 +235,13 @@ components:
           type: array
           minItems: 1
           maxItems: 100
+          description: Maximum 100 biomarkers per request for the public pilot contract.
           items:
             $ref: "#/components/schemas/BiomarkerInput"
         symptoms:
           type: array
           maxItems: 100
-          description: Optional symptom strings used as clinical context.
+          description: Optional symptom strings used as clinical context. Empty strings are ignored.
           items:
             type: string
             minLength: 1
@@ -470,6 +520,10 @@ components:
             - type: string
             - type: object
               additionalProperties: true
+            - type: array
+              items:
+                type: object
+                additionalProperties: true
           example: Invalid partner API key
         code:
           type: string

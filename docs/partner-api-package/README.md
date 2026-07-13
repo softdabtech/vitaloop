@@ -63,6 +63,7 @@ Do not send `partner_id`. VITALOOP resolves the partner tenant from the API key.
 4. Check the example response: [`examples/analyze-labs-response.json`](examples/analyze-labs-response.json)
 5. Run the Postman collection: [`postman/vitaloop-b2b-api.postman_collection.json`](postman/vitaloop-b2b-api.postman_collection.json)
 6. Follow the smoke test guide: [`smoke-test-guide.md`](smoke-test-guide.md)
+7. For a new partner, follow the onboarding checklist: [`additional-partner-onboarding.md`](additional-partner-onboarding.md)
 
 ## Files In This Package
 
@@ -77,6 +78,7 @@ Do not send `partner_id`. VITALOOP resolves the partner tenant from the API key.
 | [`examples/analyze-labs-response.json`](examples/analyze-labs-response.json) | Example response body. |
 | [`postman/vitaloop-b2b-api.postman_collection.json`](postman/vitaloop-b2b-api.postman_collection.json) | Postman collection for developers. |
 | [`smoke-test-guide.md`](smoke-test-guide.md) | Step-by-step technical smoke test. |
+| [`additional-partner-onboarding.md`](additional-partner-onboarding.md) | Repeatable checklist for adding another B2B partner. |
 | [`staging-readiness.md`](staging-readiness.md) | Checklist before giving a staging key to a partner. |
 | [`scalar-publishing.md`](scalar-publishing.md) | Optional Scalar publishing notes. Scalar is not required. |
 
@@ -126,6 +128,8 @@ The pilot API includes:
 - partner API keys;
 - required `labs:analyze` scope;
 - tenant isolation by API key;
+- versioned `/v1/b2b/analyze-labs` endpoint;
+- public pilot request limits;
 - optional partner IP allowlist;
 - optional Cloudflare-required mode;
 - Redis-backed rate limiting;
