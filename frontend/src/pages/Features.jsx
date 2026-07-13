@@ -27,15 +27,15 @@ const FEATURES = [
   },
   {
     icon: TrendingUp,
-    title: 'Lab Direction Framework',
-    description: 'Get a practical map of what may be useful to check next and why it matters before your next discussion with a clinician.',
-    details: ['Biomarker category guidance', 'Priority ordering', 'Question prep for appointments', 'Action-ready summaries'],
+    title: 'Shared Analysis Core V2',
+    description: 'Run symptoms, biomarkers, safety context, trends, and retest logic through one versioned analysis path used by the user product and partner API.',
+    details: ['Knowledge Base rules', 'Safety flags', 'Trend context', 'B2C/B2B output reuse'],
   },
   {
     icon: Sparkles,
     title: 'Personalized Action Plan',
-    description: 'Turn symptom and biomarker context into organized nutrition, supplement, lifestyle, and retest discussion points.',
-    details: ['Prioritized actions', 'Plain-language rationale', 'Adherence tracking', 'Retest planning'],
+    description: 'Turn symptom and biomarker context into organized nutrition, supplement, lifestyle, training/recovery, and retest discussion points.',
+    details: ['Prioritized actions', 'Plain-language rationale', 'Safety notes', 'Retest planning'],
   },
   {
     icon: HeartPulse,
@@ -52,8 +52,8 @@ const FEATURES = [
   {
     icon: Zap,
     title: 'Contextual AI Guidance',
-    description: 'Ask questions about your results and receive educational explanations grounded in your available symptom and lab context.',
-    details: ['Natural-language Q&A', 'Biomarker context', 'Educational explanations', 'Safety reminders'],
+    description: 'Ask questions about your results and receive educational explanations grounded in available symptoms, biomarkers, Knowledge Base context, and safety limits.',
+    details: ['Natural-language Q&A', 'Biomarker context', 'Evidence-aware explanations', 'Safety reminders'],
   },
   {
     icon: BarChart3,
@@ -70,8 +70,8 @@ const FEATURES = [
   {
     icon: FileText,
     title: 'Structured Reports',
-    description: 'Review normalized values, priority markers, explanations, and next-step questions in a consistent report format.',
-    details: ['Normalized values', 'Priority findings', 'Trend visualizations', 'Discussion points'],
+    description: 'Review normalized values, priority markers, why the system reached a conclusion, what data was used, safety notes, and next-step questions.',
+    details: ['Normalized values', 'Priority findings', 'Quality snapshot', 'Discussion points'],
   },
   {
     icon: Users,
@@ -99,8 +99,8 @@ export default function Features() {
   return (
     <>
       <Seo
-        title="AI Blood Test Analysis Features | VITALOOP"
-        description="Explore symptom intake, AI blood test analysis, biomarker explanations, personalized action plans, weekly check-ins, and progress tracking."
+        title="Health Intelligence Features | VITALOOP Shared Analysis Core"
+        description="Explore symptom intake, Shared Analysis Core V2, Knowledge Base biomarker reasoning, safety notes, personalized action plans, weekly check-ins, and progress tracking."
         path="/features"
       />
 
@@ -128,13 +128,13 @@ export default function Features() {
           >
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2">
               <Sparkles size={16} className="text-emerald-600" />
-              <span className="text-sm font-semibold text-slate-900">One Connected Health Workflow</span>
+              <span className="text-sm font-semibold text-slate-900">Shared Analysis Core V2</span>
             </div>
             <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 mb-6 leading-tight">
-              Understand Symptoms and Blood Tests in One Place
+              Understand Symptoms, Blood Tests, Trends, and Next Steps in One Place
             </h1>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Organize how you feel, understand blood test results, prepare better questions, and track what changes over time.
+              Organize how you feel, understand blood test results through governed Knowledge Base logic, prepare better questions, and track what changes over time.
             </p>
           </motion.div>
         </div>

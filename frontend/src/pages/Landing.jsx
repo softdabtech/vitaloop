@@ -42,6 +42,7 @@ const NAV_LINKS = [
   { id: 'problem', label: 'How it works' },
   { id: 'example-report', label: 'Example report', route: '/example-report' },
   { id: 'pricing', label: 'Pricing' },
+  { id: 'about', label: 'About', route: '/about' },
   { id: 'for-nutritionists', label: 'For professionals', route: '/for-nutritionists' },
 ]
 
@@ -56,14 +57,14 @@ const STEPS = [
   { icon: HeartPulse, title: 'Start with symptoms', body: 'Describe what you feel and for how long' },
   { icon: BrainCircuit, title: 'Answer follow-ups', body: 'Smart questions organize your context' },
   { icon: FlaskConical, title: 'Get lab direction', body: 'See what may be useful to check next' },
-  { icon: Upload, title: 'Upload results', body: 'Analyze 85+ biomarkers after testing' },
+  { icon: Upload, title: 'Upload results', body: 'Normalize biomarkers and run them through Shared Analysis Core V2' },
   { icon: Sparkles, title: 'Run and refine', body: 'Weekly check-ins adapt your protocol' },
 ]
 
 const BENEFITS = [
   {
     title: 'Explainable, not generic AI',
-    body: 'Each report is grounded in governed Knowledge Base rules, marker context, and safety-aware wording instead of loose chatbot guesses.',
+    body: 'Each report runs through Shared Analysis Core V2: governed Knowledge Base rules, biomarker context, safety flags, and traceable reasoning instead of loose chatbot guesses.',
     icon: BrainCircuit,
     stat: 'KB',
     label: 'Explainable logic'
@@ -84,7 +85,7 @@ const BENEFITS = [
   },
   {
     title: 'Built for repeat cycles',
-    body: 'Each upload, check-in, and retest adds structure for the next decision instead of treating every report as a one-off PDF.',
+    body: 'Each upload, check-in, trend, and retest adds versioned context for the next decision instead of treating every report as a one-off PDF.',
     icon: TrendingUp,
     stat: 'Progress',
     label: 'Retest learning'
@@ -94,7 +95,7 @@ const BENEFITS = [
 const PREMIUM_FEATURES = [
   {
     title: 'Full Knowledge report',
-    body: 'Explainable biomarker patterns, source-backed reasoning, doctor discussion points, and safety-aware summaries.',
+    body: 'Explainable biomarker patterns, Knowledge Base reasoning, doctor discussion points, safety notes, and quality context.',
     icon: BrainCircuit,
   },
   {
@@ -109,7 +110,7 @@ const PREMIUM_FEATURES = [
   },
   {
     title: 'Progress and retest tracking',
-    body: 'Compare uploads and retest cycles instead of reading each lab report in isolation.',
+    body: 'Compare uploads, trends, expected timelines, and retest cycles instead of reading each lab report in isolation.',
     icon: Upload,
   },
 ]
@@ -168,7 +169,7 @@ const HERO_TRUST_SIGNALS = [
   },
   {
     title: 'Privacy-first architecture',
-    body: 'Strict auth controls and secure processing for sensitive lab data.',
+    body: 'Strict auth controls, tenant-aware processing, and protected metrics for sensitive lab data.',
     icon: Lock,
   },
   {
@@ -193,7 +194,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'What do I get after uploading lab results?',
-    answer: 'You receive normalized biomarker interpretation, prioritized issues, and a structured protocol you can follow and refine over time.',
+    answer: 'You receive normalized biomarker interpretation, prioritized issues, safety notes, clinician discussion points, protocol sections, trends when available, and retest timing.',
   },
   {
     question: 'Can practitioners use VITALOOP with clients?',
@@ -201,7 +202,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'How is this different from generic AI chat?',
-    answer: 'VITALOOP keeps your structured health context over time and connects symptom intake, lab normalization, and weekly feedback into one continuous workflow.',
+    answer: 'VITALOOP runs structured symptoms and biomarkers through a governed analysis core with Knowledge Base rules, safety context, trend logic, and reusable outputs instead of producing a one-off chat reply.',
   },
   {
     question: 'How much does VITALOOP cost?',
@@ -701,8 +702,8 @@ export default function Landing() {
   return (
     <div className={rootClasses}>
       <Seo
-        title="AI Blood Test Analysis & Symptom Checker | VITALOOP"
-        description="Start with symptoms or upload blood test results. Get clear biomarker explanations, lab discussion guidance, and a health action plan you can track."
+        title="Health Intelligence for Symptoms, Blood Tests & Retests | VITALOOP"
+        description="Start with symptoms or upload blood test results. Get Knowledge Base biomarker reasoning, safety notes, priorities, clinician discussion guidance, protocol actions, trends, and retest timing."
         path="/"
         schemas={[SCHEMA_HOWTO, SCHEMA_FAQ]}
       />
@@ -1236,7 +1237,7 @@ export default function Landing() {
                 </h2>
                 <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-200 md:text-base">
                   Use VITALOOP for client workflows, lab-result interpretation, embedded insights, and follow-up loops.
-                  The consumer product and B2B product share the same Knowledge Base foundation.
+                  The consumer app, practitioner cabinet, and B2B API reuse the same Knowledge Base, safety flags, protocol generation, retest logic, and structured output path.
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row md:flex-col">

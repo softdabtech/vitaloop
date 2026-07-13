@@ -416,7 +416,7 @@ function MedicalPanel({ side, signup = false }) {
       }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em',
           color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', marginBottom: 6 }}>
-          {isLeft ? 'Your biology,\ndecoded.' : 'HIPAA-ready\narchitecture.'}
+          {isLeft ? 'Your biology,\ndecoded.' : 'Privacy-first\narchitecture.'}
         </div>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.18)', lineHeight: 1.5 }}>
           {isLeft
