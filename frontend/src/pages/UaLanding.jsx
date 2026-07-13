@@ -49,6 +49,7 @@ export const NAV_LINKS = [
   { label: 'Як це працює', id: 'how', path: '/samopochuttia', anchor: 'how' },
   { label: 'Симптоми', id: 'wellbeing', path: '/samopochuttia', anchor: 'wellbeing' },
   { label: 'Аналізи', id: 'labs', path: '/analizy', anchor: 'laboratories' },
+  { label: 'Статті', id: 'articles', path: '/health-hub', anchor: null },
   { label: 'Тарифи', id: 'pricing', path: '/tarify', anchor: 'pricing' },
   { label: 'FAQ', id: 'faq', path: '/faq', anchor: 'faq' },
 ]
@@ -255,12 +256,12 @@ const FAMILY_CHECKS = [
 ]
 
 const EDUCATION_ARTICLES = [
-  { title: 'Феритин і постійна втома', path: '/ferytyn', body: 'Як запаси заліза пов\'язані з енергією, волоссям і відновленням після хвороби.' },
-  { title: 'Вітамін D: що означають цифри?', path: '/vitamin-d', body: 'Норма, дефіцит, верхня межа і чому контекст важливіший за одне число.' },
-  { title: 'Щитовидна залоза і самопочуття', path: '/shchytovydna-zaloza', body: 'ТТГ, Т4, Т3 — що це, коли норма може не відповідати стану і що запитати у лікаря.' },
-  { title: 'Інсулінорезистентність без діабету', path: '/insulin', body: 'Чому HOMA-IR і глюкоза на верхній межі — це вже сигнал для дій.' },
-  { title: 'Причини випадіння волосся', path: '/volossia', body: 'Феритин, ТТГ, цинк і гормони — що часто пропускають при стандартних аналізах.' },
-  { title: 'Аналізи для дітей і підлітків', path: '/dity-analizy', body: 'Феритин, вітамін D і ЗАК — коли і навіщо перевіряти у звичайній ситуації.' },
+  { title: 'Постійна втома: з чого почати', path: '/health-hub/postiyna-vtoma', body: 'Симптоми, аналізи першої лінії і питання до лікаря.' },
+  { title: 'Феритин і втома', path: '/health-hub/ferytyn-ta-vtoma', body: 'Як запаси заліза пов\'язані з енергією, волоссям і відновленням.' },
+  { title: 'Вітамін D: що означають цифри', path: '/health-hub/vitamin-d-vtoma', body: 'Норма, дефіцит, одиниці виміру і безпечна корекція.' },
+  { title: 'ТТГ і щитоподібна залоза', path: '/health-hub/shchytovydna-zaloza-tsh', body: 'Коли одного ТТГ недостатньо і що обговорити з лікарем.' },
+  { title: 'Інсулін, вага і тяга до солодкого', path: '/health-hub/insulin-i-vaga', body: 'Метаболічні сигнали до діабету і корисні аналізи.' },
+  { title: 'Випадіння волосся: які аналізи', path: '/health-hub/volossia-ta-analizy', body: 'Феритин, щитоподібна, дефіцити і гормональний контекст.' },
 ]
 
 export const PRICING = [
@@ -529,7 +530,7 @@ export function UaFooter() {
               </button>
             ))}
             <button onClick={() => navigate(getUaPath('/health-hub'))} className="w-fit text-left text-sm font-semibold text-[#4b5563] transition hover:text-[#0f766e]">
-              Health Hub
+              Статті про здоровʼя
             </button>
           </div>
         </div>
@@ -1175,174 +1176,141 @@ export default function UaLanding() {
       <UaHeader />
 
       <main>
-        {/* ── HERO ── Mobile-first redesign ─────────────────────────────── */}
-        <section className="relative overflow-hidden border-b border-[#e5dfd6]">
-
-          {/* ── MOBILE HERO — product showcase ── */}
-          <div className="block sm:hidden">
-            <div className="relative min-h-[100svh] overflow-hidden bg-[#071c18]">
-              {/* Background */}
-              <img src={HERO_IMAGE} alt="" fetchPriority="high" decoding="async"
-                className="absolute inset-0 h-full w-full object-cover object-[62%_30%] opacity-30" />
-              <div className="absolute inset-0 bg-[linear-gradient(160deg,rgba(6,20,17,0.96)_0%,rgba(8,28,24,0.88)_60%,rgba(6,20,17,0.97)_100%)]" />
-              <div className="pointer-events-none absolute -right-20 top-10 h-72 w-72 rounded-full bg-[#0d9488]/20 blur-3xl" />
-              <div className="pointer-events-none absolute -left-16 bottom-20 h-48 w-48 rounded-full bg-[#d4b483]/10 blur-3xl" />
-
-              <div className="relative flex min-h-[100svh] flex-col px-5 pb-10 pt-7">
-                {/* Live badge */}
-                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#14b8a6]/25 bg-[#14b8a6]/8 px-3 py-1.5">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4ade80]" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#5eead4]">Vitaloop Ukraine</span>
+        <section className="relative isolate overflow-hidden bg-[#fbfaf7]">
+          <img
+            src={HERO_IMAGE}
+            alt=""
+            fetchPriority="high"
+            decoding="async"
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-[58%_34%] opacity-[0.38] sm:object-center sm:opacity-[0.48]"
+          />
+          <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(251,250,247,0.94)_0%,rgba(251,250,247,0.76)_48%,rgba(251,250,247,0.38)_100%)]" />
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_12%_12%,rgba(20,184,166,0.18),transparent_34%),radial-gradient(circle_at_82%_8%,rgba(212,180,131,0.18),transparent_28%)]" />
+          <div className="mx-auto grid min-h-[calc(100svh-68px)] w-full max-w-[1240px] gap-7 px-4 py-8 sm:gap-10 sm:px-6 sm:py-16 lg:grid-cols-[0.9fr_0.62fr] lg:items-center lg:py-20">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#cdeee7] bg-white/80 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-[#0f766e] shadow-sm">
+                <Sparkles className="h-3.5 w-3.5 text-[#14b8a6]" />
+                Українська оцінка самопочуття
+              </div>
+              <h1 className="mt-5 max-w-[720px] text-[30px] font-bold leading-[1.12] tracking-[-0.018em] text-[#0f172a] sm:mt-6 sm:text-[46px] sm:leading-[1.06] lg:text-[54px]">
+                Самопочуття й аналізи в одній зрозумілій картині.
+              </h1>
+              <p className="mt-4 max-w-2xl text-[15px] leading-7 text-[#42526b] sm:mt-6 sm:text-lg sm:leading-8">
+                Vitaloop допомагає українською описати симптоми, розібрати лабораторні показники, побачити пріоритети й підготувати питання до сімейного лікаря, нутриціолога або ендокринолога.
+              </p>
+              <div className="mt-5 rounded-3xl border border-[#dcefe9] bg-white/86 p-4 shadow-[0_18px_46px_rgba(15,23,42,0.08)] backdrop-blur sm:hidden">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.13em] text-[#0f766e]">Карта уваги</p>
+                    <p className="mt-1 text-[15px] font-black leading-snug text-[#0f172a]">Сон, енергія, дефіцити</p>
+                  </div>
+                  <span className="rounded-full bg-[#ecfdf5] px-2.5 py-1 text-[10px] font-black text-[#047857]">освітньо</span>
                 </div>
-
-                {/* Main headline */}
-                <h1 className="mt-5 text-[34px] font-black leading-[1.05] tracking-[-0.02em] text-white">
-                  Ваші аналізи<br />
-                  <span className="text-[#5eead4]">розшифровані.</span><br />
-                  Ваш план — готовий.
-                </h1>
-                <p className="mt-4 text-[14px] leading-[1.65] text-white/55">
-                  Описуєте симптоми або завантажуєте аналізи — AI аналізує 95+ біомаркерів і формує персональний план дій.
-                </p>
-
-                {/* 3 feature rows */}
-                <div className="mt-7 space-y-3">
+                <div className="mt-3 grid grid-cols-3 gap-2">
                   {[
-                    { Icon: Zap, title: 'Симптоми → пріоритети', desc: '30 категорій симптомів, 110 правил AI' },
-                    { Icon: FlaskConical, title: 'Аналізи → пояснення', desc: 'PDF або фото з будь-якої лабораторії' },
-                    { Icon: ClipboardList, title: 'Підсумок → наступний крок', desc: 'Питання до лікаря і план дій' },
-                  ].map(({ Icon, title, desc }) => (
-                    <div key={title} className="flex items-center gap-4 rounded-2xl border border-white/8 bg-white/5 px-4 py-3.5">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0d9488]/20">
-                        <Icon className="h-5 w-5 text-[#5eead4]" />
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-black text-white">{title}</p>
-                        <p className="text-[11px] text-white/45">{desc}</p>
-                      </div>
+                    ['Феритин', 'залізо'],
+                    ['D', 'вітамін'],
+                    ['ТТГ', 'щитоп.'],
+                  ].map(([value, label]) => (
+                    <div key={value} className="rounded-2xl bg-[#f8f5f0] px-2 py-2 text-center ring-1 ring-[#eee7dc]">
+                      <p className="text-sm font-black text-[#0f172a]">{value}</p>
+                      <p className="mt-0.5 text-[10px] font-bold text-[#64748b]">{label}</p>
                     </div>
                   ))}
                 </div>
-
-                {/* CTA pushed to bottom */}
-                <div className="mt-auto pt-8">
-                  <button
-                    onClick={startWellbeingAssessment}
-                    className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[linear-gradient(135deg,#0f766e_0%,#14b8a6_100%)] py-[18px] text-[16px] font-black text-white shadow-[0_12px_36px_rgba(13,148,136,0.38)] transition active:scale-[0.98]"
-                  >
-                    <Sparkles className="h-5 w-5" />
-                    Пройти чекап самопочуття
-                  </button>
-                  <button
-                    onClick={startSignup}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 py-4 text-[14px] font-semibold text-white/65 transition active:scale-[0.98]"
-                  >
-                    Зареєструватись безкоштовно
-                  </button>
-                  <div className="mt-5 flex items-center justify-center gap-1 text-[11px] text-white/30">
-                    <Check className="h-3 w-3" /><span>Безкоштовно</span>
-                    <span className="mx-2 opacity-40">·</span>
-                    <Check className="h-3 w-3" /><span>2 хвилини</span>
-                    <span className="mx-2 opacity-40">·</span>
-                    <Check className="h-3 w-3" /><span>Не діагноз</span>
-                  </div>
-                </div>
+              </div>
+              <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row">
+                <button onClick={startWellbeingAssessment} className={`${CTA_CLASS} w-full sm:w-auto`}>
+                  Описати самопочуття
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+                <button onClick={() => scrollTo('result-example')} className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#d8d1c8] bg-white px-5 py-3 text-sm font-black text-[#0f172a] shadow-sm transition hover:-translate-y-0.5 hover:border-[#14b8a6]/50 hover:text-[#0f766e]">
+                  Подивитися приклад
+                </button>
+              </div>
+              <div className="mt-5 hidden flex-wrap gap-x-4 gap-y-2 text-[13px] font-bold text-[#5b677a] sm:mt-7 sm:flex sm:gap-x-5 sm:text-sm">
+                {['Без діагнозів', 'Працює з PDF і фото', 'Українські назви показників', 'Приватність даних'].map((item) => (
+                  <span key={item} className="inline-flex items-center gap-2">
+                    <Check className="h-4 w-4 text-[#0f766e]" />
+                    {item}
+                  </span>
+                ))}
               </div>
             </div>
-          </div>
 
-          {/* Desktop hero: original layout (unchanged) */}
-          <div className="hidden sm:block">
-            <img src={HERO_IMAGE} alt="" fetchPriority="high" decoding="async" className="absolute inset-0 h-full w-full object-cover object-center opacity-90" />
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(248,245,240,0.98)_0%,rgba(248,245,240,0.90)_42%,rgba(248,245,240,0.30)_78%,rgba(248,245,240,0.08)_100%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(255,255,255,0.62),transparent_32%)]" />
-
-            <div className="relative mx-auto flex min-h-[calc(100svh-68px)] w-full max-w-[1200px] items-center px-6 py-16">
-              <div className="max-w-2xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#e5dfd6] bg-white/88 px-3 py-1.5 text-xs font-black uppercase tracking-[0.10em] text-[#0f766e] shadow-sm">
-                  <Sparkles className="h-3.5 w-3.5 text-[#14b8a6]" />
-                  Симптоми · причини · план дій
+            <div className="hidden lg:block">
+              <div className="ml-auto max-w-[430px] rounded-[34px] border border-white/70 bg-white/58 p-5 shadow-[0_28px_80px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+                <div className="rounded-[26px] bg-[#0f766e] p-5 text-white shadow-[0_20px_54px_rgba(15,118,110,0.24)]">
+                  <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#b7fff6]">Освітній підсумок</p>
+                  <h2 className="mt-3 text-3xl font-black leading-tight">Втома, сон, дефіцити</h2>
+                  <p className="mt-3 text-sm leading-6 text-white/76">Сервіс збирає симптоми, аналізи й динаміку в одну карту уваги перед консультацією.</p>
                 </div>
-                <h1 className="mt-6 max-w-[640px] text-[52px] font-black leading-[1.05] tracking-tight text-[#0f172a] lg:text-[66px]">
-                  Постійна втома? Поганий сон? Низька енергія?
-                </h1>
-                <p className="mt-5 max-w-xl text-lg leading-8 text-[#334155]">
-                  Знайдіть можливу причину та отримайте персональний план дій. Почніть із симптомів або завантажте аналізи, якщо вони вже є.
-                </p>
-                <div className="mt-7 flex gap-3">
-                  <button onClick={startWellbeingAssessment} className={`${CTA_CLASS}`}>
-                    Отримати персональну оцінку
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => scrollTo('result-example')}
-                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#e5dfd6] bg-white px-5 py-3 text-sm font-black text-[#0f172a] shadow-sm transition hover:-translate-y-0.5 hover:border-[#14b8a6]/45 hover:text-[#0f766e] whitespace-nowrap"
-                  >
-                    Переглянути приклад
-                  </button>
+                <div className="mt-4 grid gap-3">
+                  {[
+                    ['Симптоми', 'контекст перед аналізом'],
+                    ['Біомаркери', 'пріоритети й причини'],
+                    ['Динаміка', 'повторні перевірки'],
+                  ].map(([title, body]) => (
+                    <div key={title} className="rounded-2xl border border-[#e5dfd6]/80 bg-white/72 px-4 py-3">
+                      <p className="text-sm font-black text-[#0f172a]">{title}</p>
+                      <p className="mt-1 text-xs leading-5 text-[#64748b]">{body}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section id="trust" className="bg-white py-10 sm:py-12">
-          <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-6">
-            <div className="grid gap-8 border-y border-[#e5dfd6] py-8 md:grid-cols-[1.05fr_1fr] md:items-center">
-              <p className="max-w-2xl text-[20px] font-black leading-9 text-[#0f172a]">
-                VITALOOP збирає симптоми, аналізи й динаміку в одну зрозумілу картину. Без діагнозів, без гучних обіцянок, без медичного туману.
-              </p>
-              <div className="grid overflow-hidden rounded-[22px] border border-[#e5dfd6] bg-[#fbfaf7] text-sm font-black text-[#334155] sm:grid-cols-2">
-                <span className="border-b border-[#e5dfd6] px-5 py-4 sm:border-r">Приватність даних</span>
-                <span className="border-b border-[#e5dfd6] px-5 py-4">Симптоми + аналізи</span>
-                <span className="border-b border-[#e5dfd6] px-5 py-4 sm:border-b-0 sm:border-r">Для всієї родини</span>
-                <span className="px-5 py-4">Українські формати</span>
-              </div>
+        <section id="trust" className="border-y border-[#e5dfd6] bg-white">
+          <div className="mx-auto grid w-full max-w-[1240px] gap-8 px-4 py-9 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+            <p className="max-w-3xl text-[23px] font-black leading-tight tracking-[-0.018em] text-[#0f172a] sm:text-[28px] lg:text-[31px]">
+              Не AI-чат, а зрозумілий маршрут: симптоми, аналізи й наступні кроки.
+            </p>
+            <div className="grid gap-3 text-sm font-bold text-[#42526b] sm:grid-cols-2">
+              {HERO_PROOFS.map((item) => (
+                <div key={item} className="flex items-center gap-3 border-t border-[#e5dfd6] py-3">
+                  <span className="h-2 w-2 rounded-full bg-[#0f766e]" />
+                  {item}
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        <section id="wellbeing" className="mx-auto grid w-full max-w-[1200px] gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
-          <div>
+        <section id="wellbeing" className="mx-auto grid w-full max-w-[1240px] gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+          <div className="lg:sticky lg:top-24">
             <SectionHeading
-              eyebrow="Короткий тест"
-              title="Що вас турбує?"
-              body="Оберіть кілька сигналів. Vitaloop покаже, які напрямки варто розглянути першими і що може бути повʼязано між собою."
+              eyebrow="Почніть без аналізів"
+              title="Спочатку опишіть, що відбувається з тілом."
+              body="Втома, сон, волосся, вага, настрій, щитоподібна, дитячі питання. Vitaloop перетворює розрізнені скарги на карту уваги і підказує, які аналізи можуть бути корисними для обговорення."
             />
             <button onClick={startWellbeingAssessment} className={`${CTA_CLASS} mt-7 w-full sm:w-auto`}>
-              Побачити мої пріоритети
+              Відкрити AI-оцінку
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="rounded-[30px] bg-white/78 p-4 shadow-[0_24px_70px_rgba(15,23,42,0.08)] ring-1 ring-[#e5dfd6] backdrop-blur sm:p-5">
-            <div className="flex items-center justify-between gap-4 border-b border-[#e5dfd6] pb-4">
+          <div className="overflow-hidden rounded-[34px] border border-[#e5dfd6] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+            <div className="border-b border-[#e5dfd6] bg-[#fbfaf7] px-5 py-5 sm:px-7">
               <p className="text-sm font-black text-[#0f172a]">
-                {selectedSymptoms.length > 0
-                  ? <><span className="text-[#0f766e]">{selectedSymptoms.length}</span> симптомів обрано</>
-                  : 'Оберіть симптоми'}
+                {selectedSymptoms.length > 0 ? <><span className="text-[#0f766e]">{selectedSymptoms.length}</span> симптомів обрано</> : 'Оберіть кілька сигналів'}
               </p>
-              <p className="text-xs font-bold text-[#6b7280]">〜1 хвилина</p>
+              <p className="mt-1 text-xs font-bold text-[#64748b]">Повна форма відкриється в модальному вікні.</p>
             </div>
-            {/* Quick-select: top 2 groups */}
-            <div className="mt-4 space-y-3">
-              {SYMPTOM_GROUPS.slice(0, 3).map((group) => (
-                <div key={group.label}>
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-[0.1em] text-[#9ca3af]">
-                    {group.icon} {group.label}
-                  </p>
-                  <div className="grid gap-2 sm:grid-cols-2">
+            <div className="divide-y divide-[#eee7dc]">
+              {SYMPTOM_GROUPS.slice(0, 4).map((group) => (
+                <div key={group.label} className="grid gap-3 px-5 py-5 sm:grid-cols-[180px_1fr] sm:px-7">
+                  <p className="text-sm font-black text-[#0f172a]">{group.icon} {group.label}</p>
+                  <div className="flex flex-wrap gap-2">
                     {group.items.map((symptom) => {
                       const active = selectedSymptoms.includes(symptom)
                       return (
                         <button
                           key={symptom}
                           onClick={() => toggleSymptom(symptom)}
-                          className={`flex items-center gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-black transition hover:-translate-y-0.5 ${active ? 'bg-[#0f766e] text-white shadow-[0_12px_30px_rgba(15,118,110,0.22)]' : 'bg-[#f8f5f0] text-[#0f172a] hover:bg-white hover:text-[#0f766e]'}`}
+                          className={`rounded-full px-3.5 py-2 text-sm font-bold transition ${active ? 'bg-[#0f766e] text-white shadow-[0_10px_24px_rgba(15,118,110,0.22)]' : 'bg-[#f8f5f0] text-[#42526b] hover:bg-[#f1fbf8] hover:text-[#0f766e]'}`}
                         >
-                          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${active ? 'border-white/70 bg-white text-[#0f766e]' : 'border-[#d6d0c7] bg-white text-transparent'}`}>
-                            <Check className="h-3.5 w-3.5" />
-                          </span>
                           {symptom}
                         </button>
                       )
@@ -1350,32 +1318,27 @@ export default function UaLanding() {
                   </div>
                 </div>
               ))}
-              <button
-                onClick={startWellbeingAssessment}
-                className="w-full rounded-[18px] border border-dashed border-[#14b8a6]/40 bg-[#f1fbf8] px-4 py-2.5 text-center text-sm font-black text-[#0f766e] transition hover:bg-[#e6f9f5]"
-              >
-                + ще 7 груп симптомів у повній формі
-              </button>
             </div>
-            {selectedSymptoms.length > 0 && (
-              <div className="mt-4 rounded-[18px] bg-[#f0fdf4] p-3 text-xs leading-5 text-[#374151] ring-1 ring-[#bbf7d0]">
-                <span className="font-black text-[#0f766e]">Ймовірні аналізи: </span>
-                {[...new Set(selectedSymptoms.flatMap(s => SYMPTOM_BIOMARKERS[s] || []))].slice(0, 5).join(' · ')}
-                {[...new Set(selectedSymptoms.flatMap(s => SYMPTOM_BIOMARKERS[s] || []))].length > 5 && ' та інші'}
-              </div>
-            )}
+            <div className="border-t border-[#e5dfd6] bg-[#fbfaf7] px-5 py-5 sm:px-7">
+              {selectedSymptoms.length > 0 ? (
+                <p className="text-sm leading-7 text-[#42526b]">
+                  <span className="font-black text-[#0f766e]">Ймовірні напрямки аналізів: </span>
+                  {[...new Set(selectedSymptoms.flatMap(s => SYMPTOM_BIOMARKERS[s] || []))].slice(0, 7).join(' · ')}
+                </p>
+              ) : (
+                <p className="text-sm leading-7 text-[#42526b]">Оберіть симптоми або відкрийте повну AI-оцінку, щоб отримати освітню карту уваги.</p>
+              )}
+            </div>
           </div>
         </section>
 
-        <section id="how" className="bg-white py-14 sm:py-20">
-          <div className="mx-auto w-full max-w-[1080px] px-4 sm:px-6">
-            <SectionHeading
-              center
-              eyebrow="Як це працює"
-              title="Від скарг до плану дій"
-              body="Кожен крок зберігає контекст попереднього: симптоми, аналізи, підсумок і динаміка не розʼїжджаються по різних місцях."
-            />
-            <div className="mt-10 overflow-hidden rounded-[30px] border border-[#e5dfd6] bg-[#fbfaf7] shadow-[0_22px_70px_rgba(15,23,42,0.06)]">
+        <section id="how" className="bg-[#0f172a] py-16 text-white sm:py-24">
+          <div className="mx-auto w-full max-w-[1120px] px-4 sm:px-6">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#5eead4]">Маршрут Vitaloop</p>
+            <h2 className="mt-4 max-w-4xl text-[34px] font-black leading-tight tracking-[-0.02em] sm:text-[52px]">
+              Від “я не розумію, що зі мною” до конкретного наступного кроку.
+            </h2>
+            <div className="mt-10 divide-y divide-white/10 border-y border-white/10">
               {FLOW_STEPS.map((item, index) => {
                 const Icon = item.icon
                 return (
@@ -1385,19 +1348,13 @@ export default function UaLanding() {
                       const anchors = ['wellbeing', 'wellbeing', 'laboratories', 'result-example', 'how']
                       document.getElementById(anchors[index] || 'wellbeing')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                     }}
-                    className="group block w-full border-b border-[#e5dfd6] bg-white px-5 py-5 text-left transition last:border-b-0 hover:bg-[#f1fbf8] sm:px-7 sm:py-6"
+                    className="group grid w-full gap-4 py-6 text-left transition hover:bg-white/[0.03] sm:grid-cols-[72px_0.55fr_1fr] sm:items-start"
                   >
-                    <div className="grid gap-4 sm:grid-cols-[64px_220px_1fr] sm:items-start">
-                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f1fbf8] text-[#0f766e] ring-1 ring-[#dcefe9] transition group-hover:bg-[#0f766e] group-hover:text-white">
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <div>
-                        <h3 className="text-xl font-black leading-snug text-[#0f172a]">{item.title}</h3>
-                      </div>
-                      <div>
-                        <p className="text-sm leading-7 text-[#4b5563] sm:text-[15px]">{item.body}</p>
-                      </div>
-                    </div>
+                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/8 text-[#5eead4] ring-1 ring-white/12 transition group-hover:bg-[#5eead4] group-hover:text-[#0f172a]">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <h3 className="text-xl font-black leading-snug">{item.title}</h3>
+                    <p className="text-sm leading-7 text-slate-300 sm:text-[15px]">{item.body}</p>
                   </button>
                 )
               })}
@@ -1405,151 +1362,107 @@ export default function UaLanding() {
           </div>
         </section>
 
-        <section id="result-example" className="mx-auto w-full max-w-[1120px] px-4 py-14 sm:px-6 sm:py-20">
-          <div className="grid gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
-            <SectionHeading
-              eyebrow="Приклад результату"
-              title="Що ви отримаєте після оцінки"
-              body="Після короткого тесту або завантаження аналізів Vitaloop показує не просто список показників, а зрозумілий наступний крок."
-            />
-
-            <div className="overflow-hidden rounded-[32px] bg-white shadow-[0_28px_90px_rgba(15,23,42,0.10)] ring-1 ring-[#e5dfd6]">
-              <div className="border-b border-[#e5dfd6] bg-[#fbfaf7] px-5 py-5 sm:px-7">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0f766e]">Приклад</p>
-                <h3 className="mt-2 text-2xl font-black text-[#0f172a]">Що буде в підсумку</h3>
+        <section id="result-example" className="mx-auto grid w-full max-w-[1240px] gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[0.86fr_1.14fr] lg:items-center">
+          <SectionHeading
+            eyebrow="Результат"
+            title="Підсумок, який можна реально використати."
+            body="Замість сухого списку показників користувач отримує пояснення, що стабільне, що варто відстежити, які питання поставити спеціалісту і коли повертатися до повторних аналізів."
+          />
+          <div className="overflow-hidden rounded-[34px] border border-[#e5dfd6] bg-white shadow-[0_28px_90px_rgba(15,23,42,0.10)]">
+            {RESULT_EXAMPLE.map((item) => (
+              <div key={item.label} className="grid gap-2 border-b border-[#eee7dc] px-5 py-5 last:border-0 sm:grid-cols-[190px_1fr] sm:px-7">
+                <p className="text-sm font-black text-[#0f172a]">{item.label}</p>
+                <p className="text-sm leading-7 text-[#42526b]">{item.value}</p>
               </div>
-
-              <div className="grid">
-                {RESULT_EXAMPLE.map((item) => (
-                  <div key={item.label} className="grid gap-2 border-b border-[#eee7dc] px-5 py-4 last:border-0 sm:grid-cols-[170px_1fr] sm:px-7">
-                    <p className="text-sm font-black text-[#0f172a]">{item.label}</p>
-                    <p className="text-sm leading-7 text-[#4b5563]">{item.value}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t border-[#e5dfd6] bg-[#fbfaf7] px-5 py-5 sm:px-7">
-                <button onClick={startWellbeingAssessment} className={`${CTA_CLASS} w-full sm:w-auto`}>
-                  Отримати такий підсумок
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-[linear-gradient(180deg,#f8f5f0,#efebe5)] py-14 sm:py-20">
-          <div className="mx-auto grid w-full max-w-[1120px] gap-8 px-4 sm:px-6 lg:grid-cols-2 lg:items-start">
-            <div className="rounded-[32px] border border-[#e5dfd6] bg-white/68 p-6 shadow-[0_22px_70px_rgba(15,23,42,0.05)] sm:p-8">
-              <SectionHeading
-                eyebrow="Родина"
-                title="Здоровʼя дорослих і дітей в одному контексті"
-                body="Батькам важливо бачити не тільки окремий показник, а стан, динаміку і питання, з якими варто йти до лікаря."
-              />
-              <div className="mt-8 grid overflow-hidden rounded-[24px] border border-[#e5dfd6] bg-white sm:grid-cols-3">
-                {FAMILY_GROUPS.map((group) => (
-                  <div key={group.title} className="border-b border-[#e5dfd6] p-5 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0">
-                    <h3 className="text-base font-black text-[#0f172a]">{group.title}</h3>
-                    <p className="mt-3 text-sm leading-7 text-[#4b5563]">{group.body.join(' · ')}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 rounded-[24px] bg-[#f8f5f0] p-5 ring-1 ring-[#e5dfd6]">
-                <p className="text-sm font-black text-[#0f172a]">Для дітей часто починають з:</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {FAMILY_CHECKS.map((item) => (
-                    <span key={item} className="inline-flex items-center gap-2 rounded-full bg-[#f8f5f0] px-3 py-2 text-sm font-bold text-[#4b5563]">
-                      <Check className="h-3.5 w-3.5 text-[#0f766e]" />
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-[32px] border border-[#e5dfd6] bg-white/68 p-6 shadow-[0_22px_70px_rgba(15,23,42,0.05)] sm:p-8">
-              <SectionHeading
-                eyebrow="Пріоритети"
-                title="Не оцінка здоровʼя, а карта уваги"
-                body="Індекс пріоритетів допомагає зрозуміти, що варто перевірити або обговорити першим. Це не діагноз і не медичний висновок."
-              />
-              <div className="mt-8 divide-y divide-[#d9d1c5] overflow-hidden rounded-[24px] border border-[#e5dfd6] bg-white">
-                {PRIORITY_LEVELS.map((level) => (
-                  <div key={level.title} className="grid gap-2 p-5 sm:grid-cols-[160px_1fr] sm:items-start">
-                    <p className="text-base font-black text-[#0f172a]">{level.title}</p>
-                    <p className="text-sm leading-6 text-[#4b5563]">{level.body}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="laboratories" className="mx-auto w-full max-w-[1120px] px-4 py-14 sm:px-6 sm:py-20">
-          <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-stretch">
-            <div className="rounded-[32px] border border-[#e5dfd6] bg-white p-6 shadow-[0_22px_70px_rgba(15,23,42,0.05)] sm:p-8">
-              <SectionHeading
-                eyebrow="Відгуки"
-                title="Типові історії користувачів"
-                body="Це узагальнені приклади відгуків про сценарії, з яких люди починають. Не діагноз і не обіцянка результату."
-              />
-              <div className="mt-8 divide-y divide-[#e5dfd6]">
-                {SCENARIOS.map((item) => (
-                  <div key={item.title} className="py-5 first:pt-0 last:pb-0">
-                    <h3 className="text-lg font-black text-[#0f172a]">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-7 text-[#4b5563]">
-                      {item.symptoms} → {item.direction} → {item.action}.
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[32px] border border-[#e5dfd6] bg-white p-6 shadow-[0_22px_70px_rgba(15,23,42,0.05)] sm:p-8">
-              <SectionHeading
-                eyebrow="Лабораторії"
-                title="Завантажуйте аналізи з вашої лабораторії"
-                body="Не потрібно шукати назву лабораторії в списку. Якщо у вас є PDF, фото або скан з результатами, ви можете спокійно завантажити їх у Vitaloop і зібрати показники в одному місці."
-              />
-              <div className="mt-8 grid gap-3">
-                {LAB_UPLOAD_POINTS.map((point) => (
-                  <div key={point.title} className="flex gap-4 rounded-[22px] border border-[#e5dfd6] bg-[#fbfaf7] p-4">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#f1fbf8] text-[#0f766e]">
-                      <Layers3 className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <h3 className="text-sm font-black text-[#0f172a]">{point.title}</h3>
-                      <p className="mt-1 text-sm leading-6 text-[#4b5563]">{point.body}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button
-                onClick={() => document.getElementById('result-example')?.scrollIntoView({ behavior: 'smooth' })}
-                className="mt-8 inline-flex items-center gap-2 text-sm font-black text-[#0f766e] transition hover:gap-3"
-              >
-                Переглянути приклад результату
+            ))}
+            <div className="bg-[#f1fbf8] px-5 py-5 sm:px-7">
+              <button onClick={startWellbeingAssessment} className={`${CTA_CLASS} w-full sm:w-auto`}>
+                Отримати освітній підсумок
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
           </div>
         </section>
 
-        <section className="bg-white py-14 sm:py-20">
-          <div className="mx-auto w-full max-w-[1120px] px-4 sm:px-6">
-            <SectionHeading center eyebrow="Корисні матеріали" title="Питання, з яких часто починають" />
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {EDUCATION_ARTICLES.slice(0, 4).map((article) => (
-                <button key={article.title} onClick={() => goPage(article.path)} className="flex h-full min-h-[148px] flex-col rounded-[22px] border border-[#eee7dc] bg-[#f8f5f0] p-5 text-left transition hover:-translate-y-0.5 hover:bg-[#f1fbf8] hover:text-[#0f766e]">
-                  <span className="text-base font-black text-[#0f172a]">{article.title}</span>
-                  <span className="mt-3 text-sm font-semibold leading-6 text-[#4b5563]">{article.body}</span>
-                </button>
+        <section className="bg-white py-16 sm:py-24">
+          <div className="mx-auto grid w-full max-w-[1240px] gap-12 px-4 sm:px-6 lg:grid-cols-2">
+            <div>
+              <SectionHeading
+                eyebrow="Для України"
+                title="Працює з українськими лабораторними форматами."
+                body="PDF з кабінету лабораторії, фото бланка, українські назви, одиниці й референси зберігаються в одному зрозумілому вигляді."
+              />
+              <div className="mt-8 divide-y divide-[#e5dfd6] border-y border-[#e5dfd6]">
+                {LAB_UPLOAD_POINTS.map((point) => (
+                  <div key={point.title} className="grid gap-2 py-5 sm:grid-cols-[180px_1fr]">
+                    <h3 className="text-sm font-black text-[#0f172a]">{point.title}</h3>
+                    <p className="text-sm leading-7 text-[#42526b]">{point.body}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <SectionHeading
+                eyebrow="Родина"
+                title="Підходить для дорослих, дітей і батьків."
+                body="Vitaloop допомагає зберігати контекст: самопочуття, аналізи, питання до лікаря, повторні перевірки."
+              />
+              <div className="mt-8 divide-y divide-[#e5dfd6] border-y border-[#e5dfd6]">
+                {FAMILY_GROUPS.map((group) => (
+                  <div key={group.title} className="grid gap-2 py-5 sm:grid-cols-[180px_1fr]">
+                    <h3 className="text-sm font-black text-[#0f172a]">{group.title}</h3>
+                    <p className="text-sm leading-7 text-[#42526b]">{group.body.join(' · ')}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {FAMILY_CHECKS.map((item) => (
+                  <span key={item} className="rounded-full bg-[#f8f5f0] px-3 py-2 text-sm font-bold text-[#42526b] ring-1 ring-[#e5dfd6]">{item}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="laboratories" className="mx-auto w-full max-w-[1240px] px-4 py-16 sm:px-6 sm:py-24">
+          <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr]">
+            <SectionHeading
+              eyebrow="Типові сценарії"
+              title="З чого найчастіше починають українські користувачі."
+              body="Це узагальнені освітні сценарії. Вони не є діагнозом і не обіцяють результату, але добре показують, як сервіс допомагає структурувати питання."
+            />
+            <div className="divide-y divide-[#e5dfd6] border-y border-[#e5dfd6]">
+              {SCENARIOS.map((item) => (
+                <div key={item.title} className="py-6">
+                  <h3 className="text-xl font-black text-[#0f172a]">{item.title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-[#42526b]">{item.symptoms} → {item.direction} → {item.action}.</p>
+                </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="pricing" className="mx-auto w-full max-w-[1200px] px-4 py-12 sm:px-6 sm:py-16 md:py-20">
+        <section className="bg-[#fbfaf7] py-16 sm:py-24">
+          <div className="mx-auto w-full max-w-[1120px] px-4 sm:px-6">
+            <SectionHeading center eyebrow="Корисні матеріали" title="Питання, з яких варто почати" />
+            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {EDUCATION_ARTICLES.slice(0, 4).map((article) => (
+                <button key={article.title} onClick={() => goPage(article.path)} className="min-h-[154px] rounded-[24px] border border-[#e5dfd6] bg-white p-5 text-left transition hover:-translate-y-0.5 hover:border-[#14b8a6]/45 hover:text-[#0f766e]">
+                  <span className="text-base font-black text-[#0f172a]">{article.title}</span>
+                  <span className="mt-3 block text-sm font-semibold leading-6 text-[#42526b]">{article.body}</span>
+                </button>
+              ))}
+            </div>
+            <div className="mt-8 flex justify-center">
+              <button onClick={() => goPage('/health-hub')} className="inline-flex items-center gap-2 rounded-full border border-[#d8d1c8] bg-white px-5 py-3 text-sm font-black text-[#0f172a] shadow-sm transition hover:-translate-y-0.5 hover:border-[#14b8a6]/50 hover:text-[#0f766e]">
+                Відкрити всі статті
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section id="pricing" className="mx-auto w-full max-w-[1200px] px-4 py-16 sm:px-6 sm:py-24">
           <SectionHeading center eyebrow="Тарифи" title="Почніть безкоштовно, масштабуйте за потребою" body="Для першої оцінки достатньо безкоштовного старту. Premium потрібен для регулярної роботи з аналізами й динамікою." />
           <div className="mx-auto mt-8 grid max-w-[1100px] gap-4 lg:grid-cols-3">
             {PRICING.map((plan) => (
@@ -1557,22 +1470,18 @@ export default function UaLanding() {
                 key={plan.name}
                 className={`relative flex h-full flex-col rounded-[28px] border p-6 shadow-sm ${plan.featured ? 'border-[#0f766e] bg-[#0f172a] text-white shadow-[0_28px_80px_rgba(15,23,42,0.24)]' : plan.comingSoon ? 'border-[#e5dfd6] bg-[#f8f5f0] text-[#0f172a]' : 'border-[#e5dfd6] bg-white text-[#0f172a]'}`}
               >
-                {plan.featured && (
-                  <span className="absolute right-5 top-5 rounded-full bg-[#d4b483] px-3 py-1 text-xs font-black text-[#111111]">
-                    Найкращий вибір
-                  </span>
-                )}
+                {plan.featured && <span className="absolute right-5 top-5 rounded-full bg-[#d4b483] px-3 py-1 text-xs font-black text-[#111111]">Найкращий вибір</span>}
                 <p className={`text-sm font-black uppercase tracking-[0.14em] ${plan.featured ? 'text-[#5eead4]' : 'text-[#0f766e]'}`}>{plan.name}</p>
                 <h3 className="mt-3 text-4xl font-black">{plan.price}</h3>
                 <p className={`mt-1 text-sm ${plan.featured ? 'text-[#cbd5e1]' : 'text-[#6b7280]'}`}>{plan.note}</p>
-                <p className={`mt-5 text-sm leading-7 ${plan.featured ? 'text-[#e2e8f0]' : 'text-[#4b5563]'}`}>{plan.description}</p>
+                <p className={`mt-5 text-sm leading-7 ${plan.featured ? 'text-[#e2e8f0]' : 'text-[#42526b]'}`}>{plan.description}</p>
                 <div className="mt-6 grid flex-1 content-start gap-3">
                   {plan.features.map((feature) => (
                     <div key={feature} className="flex items-start gap-3">
                       <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${plan.featured ? 'bg-white text-[#0f172a]' : 'bg-[#f1fbf8] text-[#0f766e]'}`}>
                         <Check className="h-3.5 w-3.5" />
                       </span>
-                      <span className={`text-sm leading-6 ${plan.featured ? 'text-white' : 'text-[#4b5563]'}`}>{feature}</span>
+                      <span className={`text-sm leading-6 ${plan.featured ? 'text-white' : 'text-[#42526b]'}`}>{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -1584,7 +1493,7 @@ export default function UaLanding() {
           </div>
         </section>
 
-        <section id="faq" className="mx-auto w-full max-w-[920px] px-4 pb-12 sm:px-6 sm:pb-16 md:pb-20">
+        <section id="faq" className="mx-auto w-full max-w-[920px] px-4 pb-16 sm:px-6 sm:pb-24">
           <SectionHeading center eyebrow="Питання" title="Коротко про важливе" />
           <div className="mt-7 divide-y divide-[#e5dfd6] overflow-hidden rounded-[26px] border border-[#e5dfd6] bg-white shadow-sm">
             {FAQ_ITEMS.map((item) => (
@@ -1593,22 +1502,20 @@ export default function UaLanding() {
                   {item.question}
                   <ChevronDown className="h-5 w-5 shrink-0 text-[#6b7280] transition group-open:rotate-180" />
                 </summary>
-                <p className="mt-3 max-w-3xl text-sm leading-7 text-[#4b5563]">{item.answer}</p>
+                <p className="mt-3 max-w-3xl text-sm leading-7 text-[#42526b]">{item.answer}</p>
               </details>
             ))}
           </div>
         </section>
 
-        <section className="border-t border-[#e5dfd6] bg-[linear-gradient(145deg,#0f172a,#0f766e)] py-12 text-white sm:py-16">
-          <div className="mx-auto flex w-full max-w-[1200px] flex-col items-start justify-between gap-5 px-4 sm:px-6 md:flex-row md:items-center">
+        <section className="bg-[linear-gradient(145deg,#0f172a,#0f766e)] py-14 text-white sm:py-20">
+          <div className="mx-auto grid w-full max-w-[1200px] gap-6 px-4 sm:px-6 md:grid-cols-[1fr_auto] md:items-center">
             <div>
-              <h2 className="max-w-3xl text-[30px] font-black leading-tight tracking-tight sm:text-[44px]">Почніть краще розуміти своє здоровʼя вже сьогодні</h2>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-[#d9fffb] sm:text-base">
-                Не чекайте, поки симптоми стануть проблемою. Почніть із короткої оцінки стану.
-              </p>
+              <h2 className="max-w-3xl text-[32px] font-black leading-tight tracking-tight sm:text-[48px]">Почніть із того, що відчуваєте сьогодні.</h2>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-[#d9fffb] sm:text-base">Vitaloop допоможе перетворити симптоми й аналізи на зрозумілий освітній план наступних кроків.</p>
             </div>
-            <button onClick={startWellbeingAssessment} className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-black text-[#0f172a] shadow-[0_18px_42px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5">
-              Отримати персональну оцінку
+            <button onClick={startWellbeingAssessment} className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-[#0f172a] shadow-[0_18px_42px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5">
+              Пройти чекап
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
