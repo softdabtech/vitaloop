@@ -36,6 +36,7 @@ import { AnimatedFAQ } from '../components/landing/AnimatedFAQ.jsx'
 import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx'
 import Footer from '../components/landing/Footer.jsx'
 import BrandMark from '../components/landing/BrandMark.jsx'
+import WellbeingCheckModal from '../components/landing/WellbeingCheckModal.jsx'
 import { trackPublicFunnelEvent } from '../lib/publicFunnel.js'
 
 const NAV_LINKS = [
@@ -666,6 +667,7 @@ export default function Landing() {
   const reduced = useReducedMotion()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showBackToTop, setShowBackToTop] = useState(false)
+  const [wellbeingOpen, setWellbeingOpen] = useState(false)
   const { user, loading: authLoading } = useAuth()
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
@@ -1350,7 +1352,7 @@ export default function Landing() {
               Move from uncertainty to a clear plan with symptom intake, lab interpretation, and adaptive weekly execution.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <button onClick={() => navigate('/login?signup=true')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+              <button onClick={() => setWellbeingOpen(true)} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                 Start with symptoms
               </button>
               <button onClick={() => navigate('/example-report')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
@@ -1369,6 +1371,7 @@ export default function Landing() {
         <AnimatedFAQ />
       </main>
 
+      <WellbeingCheckModal open={wellbeingOpen} onClose={() => setWellbeingOpen(false)} />
       <Footer />
     </div>
   )
