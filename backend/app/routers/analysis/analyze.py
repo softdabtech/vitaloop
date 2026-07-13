@@ -1194,6 +1194,60 @@ async def get_results(
     }
 
 
+@router.post("/{upload_id}/regenerate", response_model=AnalyzeResponse)
+async def regenerate_results(
+    upload_id: str,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    """Regenerate and persist a locale-specific report without re-running OCR."""
+    user_id = current_user.get("sub")
+    await assert_upload_belongs_to_user(upload_id, user_id)
+
+    locale = _resolve_response_locale(request)
+    biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
+    user_profile = await get_user_profile(user_id) or {}
+    protocol = await get_protocol_by_upload(user_id, upload_id)
+    protocol_recommendations = protocol.get("recommendations", []) if protocol else []
+
+    pipeline_result = await run_lab_analysis_pipeline(
+        biomarkers=biomarkers,
+        symptoms=[],
+        user_profile=user_profile,
+        user_id=user_id,
+        analysis_id=str(upload_id),
+        source_metadata={"source": "report_regeneration", "locale": locale},
+        persist_knowledge=False,
+        persist_report_version=True,
+        locale=locale,
+        generate_ai_protocol=not bool(protocol_recommendations),
+    )
+
+    await write_audit_log(
+        user_id=user_id,
+        action="regenerate",
+        entity_type="results",
+        entity_id=str(upload_id),
+        new_value={
+            "locale": locale,
+            "report_version_id": (pipeline_result.get("report_version") or {}).get("id"),
+            "biomarker_count": len(biomarkers),
+        },
+    )
+
+    return {
+        "upload_id": upload_id,
+        "biomarkers": biomarkers,
+        "protocol": protocol_recommendations or pipeline_result.get("recommendations") or [],
+        "knowledge_evaluation": pipeline_result.get("knowledge_evaluation"),
+        "knowledge_report": pipeline_result.get("knowledge_report"),
+        "safety_result": pipeline_result.get("safety_result"),
+        "explainability": pipeline_result.get("explainability"),
+        "report_version": pipeline_result.get("report_version"),
+        "final_analysis": pipeline_result,
+    }
+
+
 @router.get(
     "/biomarkers/options",
     response_model=List[BiomarkerOption],

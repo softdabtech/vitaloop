@@ -8,6 +8,7 @@ from app.services import supabase_service as svc
 from app.utils.build_info import get_build_info
 from app.utils.stripe_config import is_stripe_price_configured
 from app.services.b2b.analyze_labs import render_b2b_metrics
+from app.services.cost_analytics import render_cost_metrics
 import logging
 
 logger = logging.getLogger("vitaloop.health")
@@ -108,7 +109,7 @@ async def metrics(authorization: str | None = Header(default=None, alias="Author
         expected = f"Bearer {settings.metrics_bearer_token}"
         if authorization != expected:
             raise HTTPException(status_code=401, detail="Unauthorized")
-    return PlainTextResponse(render_b2b_metrics(), media_type="text/plain; version=0.0.4")
+    return PlainTextResponse(render_b2b_metrics() + render_cost_metrics(), media_type="text/plain; version=0.0.4")
 
 
 @router.get("/health/detailed")

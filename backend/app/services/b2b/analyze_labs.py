@@ -604,6 +604,7 @@ async def analyze_labs_for_partner(
             analysis_id=partner_lab_result_id,
             source_metadata={
                 **(request.metadata or {}),
+                "source": "b2b_analyze_labs",
                 "partner_id": principal.partner_id,
                 "api_key_id": principal.key_id,
                 "external_user_id": request.external_user_id,
