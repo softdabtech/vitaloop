@@ -8,6 +8,7 @@ from app.main import app
 from app.routers.analysis import analyze as analyze_router
 from app.services import supabase_service
 from app.services.analysis_candidates import candidate_to_biomarker, score_biomarker_candidate
+from app.services.cost_analytics import record_analysis_cost, render_cost_metrics
 from app.services.safety.safety_engine import validate_protocol, validate_report
 from app.utils.locale import resolve_locale
 
@@ -233,3 +234,87 @@ async def test_confirm_candidates_endpoint_saves_confirmed_biomarkers(monkeypatc
     assert response.status_code == 200
     assert saved_state["biomarkers"][0]["name"] == "Ferritin"
     assert response.json()["knowledge_report"]["locale"] == "uk"
+
+
+@pytest.mark.asyncio
+async def test_regenerate_results_persists_requested_locale(monkeypatch):
+    user_id = "11111111-1111-1111-1111-111111111111"
+    upload_id = str(uuid.uuid4())
+    captured = {}
+
+    async def fake_assert_upload_belongs_to_user(_upload_id, _user_id):
+        assert _upload_id == upload_id
+        assert _user_id == user_id
+        return {"id": upload_id, "user_id": user_id}
+
+    async def fake_get_biomarkers_by_upload(_upload_id, _user_id):
+        return [{"name": "Ferritin", "value": 12.0, "unit": "ng/mL", "status": "DEFICIENT"}]
+
+    async def fake_get_user_profile(_user_id):
+        return {"age": 35, "sex": "female", "height_cm": 170, "weight_kg": 65}
+
+    async def fake_get_protocol_by_upload(_user_id, _upload_id):
+        return {"recommendations": []}
+
+    async def fake_write_audit_log(**kwargs):
+        captured["audit"] = kwargs
+
+    async def fake_pipeline(**kwargs):
+        captured["pipeline"] = kwargs
+        return {
+            "recommendations": [{"title": "План харчування"}],
+            "knowledge_evaluation": {"matched_rules": []},
+            "knowledge_report": {"locale": kwargs["locale"]},
+            "protocol": {"nutrition": []},
+            "safety_result": {"status": "approved"},
+            "explainability": {"version": "explainability_v1"},
+            "report_version": {"id": "report-uk-1", "locale": kwargs["locale"]},
+        }
+
+    monkeypatch.setattr(analyze_router, "assert_upload_belongs_to_user", fake_assert_upload_belongs_to_user)
+    monkeypatch.setattr(analyze_router, "get_biomarkers_by_upload", fake_get_biomarkers_by_upload)
+    monkeypatch.setattr(analyze_router, "get_user_profile", fake_get_user_profile)
+    monkeypatch.setattr(analyze_router, "get_protocol_by_upload", fake_get_protocol_by_upload)
+    monkeypatch.setattr(analyze_router, "write_audit_log", fake_write_audit_log)
+    monkeypatch.setattr(analyze_router, "run_lab_analysis_pipeline", fake_pipeline)
+    app.dependency_overrides[get_current_user] = lambda: {"sub": user_id}
+
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                f"/analyze/{upload_id}/regenerate",
+                headers={"X-Vitaloop-Locale": "uk"},
+            )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert captured["pipeline"]["locale"] == "uk"
+    assert captured["pipeline"]["persist_report_version"] is True
+    assert captured["pipeline"]["source_metadata"]["source"] == "report_regeneration"
+    assert response.json()["knowledge_report"]["locale"] == "uk"
+    assert response.json()["report_version"]["id"] == "report-uk-1"
+    assert captured["audit"]["new_value"]["locale"] == "uk"
+
+
+def test_cost_analytics_renders_prometheus_metrics():
+    record_analysis_cost(
+        source="report_regeneration",
+        locale="uk",
+        analysis_id="analysis-cost-test",
+        cost_metadata={
+            "ai_prompt_tokens": 100,
+            "ai_completion_tokens": 50,
+            "ai_total_tokens": 150,
+            "estimated_cost_usd": 0.001,
+            "estimated": True,
+            "model": "gpt-4o-mini",
+        },
+    )
+
+    metrics = render_cost_metrics()
+    assert "vitaloop_analysis_cost_estimated_usd_total" in metrics
+    assert 'source="report_regeneration"' in metrics
+    assert 'locale="uk"' in metrics
+    assert "analysis-cost-test" in metrics

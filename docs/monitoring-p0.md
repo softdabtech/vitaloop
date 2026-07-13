@@ -48,6 +48,10 @@ probe_success
 probe_duration_seconds
 vitaloop_b2b_requests_total
 vitaloop_b2b_request_latency_seconds_bucket
+vitaloop_analysis_cost_estimated_usd_total
+vitaloop_analysis_cost_tokens_total
+vitaloop_analysis_cost_prompt_tokens_total
+vitaloop_analysis_cost_completion_tokens_total
 ```
 
 ## Alerts
@@ -65,6 +69,10 @@ Alerts included:
 - `VitaloopB2BAnalyzeFailureSpike`
 - `VitaloopB2BRateLimitSpike`
 - `VitaloopB2BAnalyzeLatencyP95High`
+- `VitaloopAnalysisCostSpike`
+- `VitaloopAnalysisTokenSpike`
+- `VitaloopLlmSyntheticUnavailable`
+- `VitaloopSentryDsnMissing`
 
 ## SLO Baseline
 
@@ -75,6 +83,65 @@ Alerts included:
 | B2B analyze latency | p95 < 30s during controlled pilot |
 | B2B failure spike | < 3 failures / 15 min |
 | Rate limit spike | Investigate at >= 10 limited requests / 15 min |
+| AI cost | Investigate if estimated cost > $5 / 1h |
+| AI tokens | Investigate if estimated/exact tokens > 1M / 1h |
+
+## P1 Cost Analytics
+
+The Shared Analysis Core records per-analysis cost counters into `/metrics`:
+
+```text
+vitaloop_analysis_cost_analyses_total
+vitaloop_analysis_cost_tokens_total
+vitaloop_analysis_cost_prompt_tokens_total
+vitaloop_analysis_cost_completion_tokens_total
+vitaloop_analysis_cost_estimated_usd_total
+vitaloop_analysis_cost_last_analysis_estimated_usd
+```
+
+Labels:
+
+- `source`: `results_read`, `report_regeneration`, `b2b_analyze_labs`, upload/manual sources.
+- `locale`: `en`, `uk`, or `unset`.
+- `model`: active LLM model.
+- `estimated`: `true` when exact provider token/cost data was not available.
+
+## P1 Report Regeneration Per Locale
+
+Endpoint:
+
+```http
+POST /analyze/{upload_id}/regenerate
+X-Vitaloop-Locale: uk
+Authorization: Bearer <user-token>
+```
+
+Behavior:
+
+- Reuses existing normalized biomarkers for the upload.
+- Does not re-run PDF/OCR extraction.
+- Runs Shared Analysis Core V2 with the requested locale.
+- Persists a new `report_versions` row for that locale.
+- Emits cost analytics with `source="report_regeneration"`.
+
+Use this when a report was originally generated in EN but must be regenerated as UA.
+
+## P1 Sentry/Grafana Alerts
+
+Sentry:
+
+- `SENTRY_DSN` should be configured in production.
+- Backend captures 5xx exceptions through FastAPI/Starlette integrations.
+- Sentry alerts should notify on new issue, high error count, and regression.
+
+Grafana/Prometheus:
+
+- Import `ops/grafana/vitaloop-p0-dashboard.json`.
+- Load `ops/prometheus/vitaloop-p0-alerts.yml`.
+- Configure blackbox jobs:
+  - `vitaloop_api_health` -> `https://api.vitaloop.today/health`
+  - `vitaloop_llm_synthetic` -> `https://api.vitaloop.today/ops/llm/synthetic-check`
+  - `vitaloop_health_detailed_sentry` -> `https://api.vitaloop.today/health/detailed`, with expected Sentry status `ok` in the probe layer.
 
 ## Operational Notes
 

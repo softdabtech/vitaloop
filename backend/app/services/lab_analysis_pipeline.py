@@ -10,6 +10,7 @@ from app.services.affiliate import build_iherb_url
 from app.services.ai.openai_service import is_llm_configured
 from app.services.ai_orchestrator import generate_ai_protocol_orchestrated
 from app.services.analysis_quality_snapshot import build_analysis_quality_snapshot
+from app.services.cost_analytics import record_analysis_cost
 from app.services.explainability import build_recommendation_explanations
 from app.services.health_context import build_health_context
 from app.services.health_state_engine import evaluate_health_states
@@ -909,5 +910,12 @@ async def run_lab_analysis_pipeline(
             # Report-version persistence must not break the existing analysis flow.
             result["report_version"] = None
 
+    source_value = result["metadata"].get("source") or {}
+    record_analysis_cost(
+        source=source_value.get("source") if isinstance(source_value, dict) else source_value,
+        cost_metadata=cost_metadata,
+        analysis_id=analysis_id,
+        locale=locale,
+    )
     _log_analysis_core_completion(result)
     return result

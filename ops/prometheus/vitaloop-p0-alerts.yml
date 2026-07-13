@@ -50,3 +50,43 @@ groups:
         annotations:
           summary: "B2B Analyze Labs p95 latency is high"
           description: "B2B Analyze Labs p95 latency is above 30 seconds for 10 minutes."
+
+      - alert: VitaloopAnalysisCostSpike
+        expr: sum(increase(vitaloop_analysis_cost_estimated_usd_total[1h])) > 5
+        for: 5m
+        labels:
+          severity: medium
+          owner: backend
+        annotations:
+          summary: "VITALOOP estimated AI cost spike"
+          description: "Estimated AI cost exceeded $5 over 1 hour. Review source and locale breakdown in Grafana."
+
+      - alert: VitaloopAnalysisTokenSpike
+        expr: sum(increase(vitaloop_analysis_cost_tokens_total[1h])) > 1000000
+        for: 5m
+        labels:
+          severity: medium
+          owner: backend
+        annotations:
+          summary: "VITALOOP AI token spike"
+          description: "Estimated or exact AI token usage exceeded 1M tokens over 1 hour."
+
+      - alert: VitaloopLlmSyntheticUnavailable
+        expr: probe_success{job="vitaloop_llm_synthetic"} == 0
+        for: 10m
+        labels:
+          severity: high
+          owner: backend
+        annotations:
+          summary: "VITALOOP LLM synthetic check unavailable"
+          description: "The LLM synthetic probe has failed for more than 10 minutes."
+
+      - alert: VitaloopSentryDsnMissing
+        expr: probe_success{job="vitaloop_health_detailed_sentry"} == 0
+        for: 30m
+        labels:
+          severity: medium
+          owner: backend
+        annotations:
+          summary: "VITALOOP Sentry health probe failing"
+          description: "The detailed health/Sentry configuration probe has failed or reports missing Sentry configuration."
