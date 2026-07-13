@@ -76,6 +76,13 @@ const PROTOCOL_COPY = {
     effort: 'Effort',
     evidence: 'Evidence',
     outcome: 'Intended outcome',
+    basedOn: 'Based on',
+    dataUsed: 'Data used',
+    healthDomains: 'Health domains',
+    expectedTimeline: 'Expected timeline',
+    retestMarkers: 'Retest markers',
+    safetyNotes: 'Safety notes',
+    kbContext: 'Knowledge-base context',
     pdfTitle: 'VITALOOP Action Protocol',
     pdfUpload: 'Upload',
     pdfGenerated: 'Generated',
@@ -127,6 +134,13 @@ const PROTOCOL_COPY = {
     effort: 'Зусилля',
     evidence: 'Доказовість',
     outcome: 'Очікуваний результат',
+    basedOn: 'На основі',
+    dataUsed: 'Використані дані',
+    healthDomains: 'Домени здоровʼя',
+    expectedTimeline: 'Очікуваний строк',
+    retestMarkers: 'Повторні аналізи',
+    safetyNotes: 'Примітки безпеки',
+    kbContext: 'Контекст бази знань',
     pdfTitle: 'VITALOOP План дій',
     pdfUpload: 'Завантаження',
     pdfGenerated: 'Сформовано',
@@ -138,6 +152,18 @@ const PROTOCOL_COPY = {
     pdfDisclaimer: '5. Дисклеймер',
     disclaimer: 'VITALOOP надає лише освітню інформацію. Він не ставить діагноз, не лікує, не призначає терапію і не замінює професійну медичну консультацію.',
   },
+}
+
+const HEALTH_DOMAIN_LABELS_UK = {
+  iron_status: 'Статус заліза',
+  metabolic_health: 'Метаболічне здоровʼя',
+  cardiovascular: 'Серцево-судинний профіль',
+  inflammation: 'Запалення',
+  thyroid: 'Щитоподібна залоза',
+  liver: 'Печінка',
+  kidney: 'Нирки',
+  micronutrients: 'Мікронутрієнти',
+  recovery_energy: 'Відновлення й енергія',
 }
 
 function formatPriority(priority, isUk = false) {
@@ -209,6 +235,55 @@ function safetyLabel(item) {
   return item?.safety_note || item?.warning || item?.clinician_note || null
 }
 
+function asTextList(value) {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((item) => {
+        if (!item) return []
+        if (typeof item === 'string') return [item]
+        if (typeof item !== 'object') return [String(item)]
+        return [item.label || item.name || item.marker || item.biomarker || item.domain || item.key || item.reason || item.summary || item.title || ''].filter(Boolean)
+      })
+      .filter(Boolean)
+  }
+  if (typeof value === 'object') return Object.values(value).flatMap(asTextList).filter(Boolean)
+  return [String(value)]
+}
+
+function basedOnList(item) {
+  const basedOn = item?.based_on || {}
+  return [
+    ...asTextList(basedOn.biomarkers || basedOn.markers || item?.biomarkers),
+    ...asTextList(basedOn.symptoms || item?.symptoms),
+    ...asTextList(basedOn.rules || basedOn.knowledge_rules),
+  ].slice(0, 6)
+}
+
+function healthDomainList(item) {
+  return asTextList(
+    item?.knowledge_domain_context
+    || item?.health_domains
+    || item?.based_on?.health_domains
+    || item?.based_on?.domains
+  ).slice(0, 5)
+}
+
+function safetyNotesList(item) {
+  return asTextList(item?.safety_notes || item?.safety_note || item?.warnings || item?.warning).slice(0, 4)
+}
+
+function retestMarkersList(item) {
+  return asTextList(item?.retest_markers || item?.retest_marker || item?.follow_up_markers).slice(0, 5)
+}
+
+function localizeDomainLabel(value, isUk) {
+  const raw = String(value || '').trim()
+  if (!raw || !isUk) return raw
+  const key = raw.toLowerCase().replace(/\s+/g, '_')
+  return HEALTH_DOMAIN_LABELS_UK[key] || raw
+}
+
 function groupProtocol(rows) {
   const groups = {
     today: [],
@@ -242,6 +317,11 @@ function ActionCard({ item, copy, isUk }) {
   const outcome = outcomeLabel(item)
   const evidence = evidenceLabel(item)
   const safety = safetyLabel(item)
+  const basedOn = basedOnList(item)
+  const domains = healthDomainList(item).map((domain) => localizeDomainLabel(domain, isUk))
+  const safetyNotes = safetyNotesList(item)
+  const retestMarkers = retestMarkersList(item)
+  const expectedTimeline = item?.expected_timeline || item?.timeline || item?.expected_timeframe || null
   return (
     <CoachCard className="p-4" interactive>
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -258,7 +338,20 @@ function ActionCard({ item, copy, isUk }) {
         {evidence && <CoachBadge tone="neutral">{copy.evidence}: {evidence}</CoachBadge>}
       </div>
       {outcome && <p className="mt-3 text-sm font-semibold text-slate-700">{copy.outcome}: <span className="font-normal text-slate-600">{outcome}</span></p>}
-      {safety && <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">{safety}</p>}
+      {(basedOn.length || domains.length || expectedTimeline || retestMarkers.length) && (
+        <div className="mt-4 grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-3 text-sm leading-6 text-slate-600">
+          {!!basedOn.length && <p><span className="font-semibold text-slate-800">{copy.basedOn}:</span> {basedOn.join(', ')}</p>}
+          {!!domains.length && <p><span className="font-semibold text-slate-800">{copy.healthDomains}:</span> {domains.join(', ')}</p>}
+          {expectedTimeline && <p><span className="font-semibold text-slate-800">{copy.expectedTimeline}:</span> {expectedTimeline}</p>}
+          {!!retestMarkers.length && <p><span className="font-semibold text-slate-800">{copy.retestMarkers}:</span> {retestMarkers.join(', ')}</p>}
+        </div>
+      )}
+      {(safety || safetyNotes.length) && (
+        <div className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
+          <span className="font-semibold">{copy.safetyNotes}: </span>
+          {[safety, ...safetyNotes].filter(Boolean).join(' ')}
+        </div>
+      )}
     </CoachCard>
   )
 }

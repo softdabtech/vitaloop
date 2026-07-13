@@ -157,6 +157,21 @@ const RESULTS_COPY = {
     shoppingTitle: 'Optional items to discuss before buying',
     shoppingBody: 'These are educational search shortcuts based on your report context. Confirm supplement choice, dose, and interactions with a qualified clinician.',
     findIherb: 'Find on iHerb',
+    v2Eyebrow: 'Shared Analysis Core V2',
+    domainsTitle: 'Health domain states',
+    domainsBody: 'Domain-level interpretation from biomarkers, symptoms, profile context, and knowledge-base rules.',
+    whyConclusion: 'Why this conclusion',
+    dataUsed: 'Data used',
+    analysisQuality: 'Analysis quality',
+    trends: 'Trends',
+    noTrendData: 'No prior comparable upload yet. Trends will appear after the next result.',
+    expectedTimeline: 'Expected timeline',
+    safetyNotes: 'Safety notes',
+    completeness: 'Completeness',
+    sourceVersion: 'Core version',
+    missingData: 'Missing data',
+    score: 'score',
+    confidence: 'confidence',
   },
   uk: {
     hints: [
@@ -224,7 +239,34 @@ const RESULTS_COPY = {
     shoppingTitle: 'Опційні позиції для обговорення перед покупкою',
     shoppingBody: 'Це освітні пошукові посилання на основі вашого звіту. Підтвердьте вибір добавки, дозу й взаємодії з кваліфікованим фахівцем.',
     findIherb: 'Знайти на iHerb',
+    v2Eyebrow: 'Shared Analysis Core V2',
+    domainsTitle: 'Доменний стан здоровʼя',
+    domainsBody: 'Доменна інтерпретація на основі біомаркерів, симптомів, профілю та правил бази знань.',
+    whyConclusion: 'Чому зроблено висновок',
+    dataUsed: 'Які дані використані',
+    analysisQuality: 'Якість аналізу',
+    trends: 'Тренди',
+    noTrendData: 'Попереднього порівнянного завантаження ще немає. Тренди зʼявляться після наступного результату.',
+    expectedTimeline: 'Очікуваний строк',
+    safetyNotes: 'Примітки безпеки',
+    completeness: 'Повнота',
+    sourceVersion: 'Версія ядра',
+    missingData: 'Бракує даних',
+    score: 'оцінка',
+    confidence: 'впевненість',
   },
+}
+
+const HEALTH_DOMAIN_LABELS_UK = {
+  iron_status: 'Статус заліза',
+  metabolic_health: 'Метаболічне здоровʼя',
+  cardiovascular: 'Серцево-судинний профіль',
+  inflammation: 'Запалення',
+  thyroid: 'Щитоподібна залоза',
+  liver: 'Печінка',
+  kidney: 'Нирки',
+  micronutrients: 'Мікронутрієнти',
+  recovery_energy: 'Відновлення й енергія',
 }
 
 function toEnglishBiomarkerName(name) {
@@ -293,6 +335,128 @@ function SectionCard({ icon: Icon, title, children, className = '' }) {
   )
 }
 
+function asTextList(value) {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === 'string') return item
+        if (!item || typeof item !== 'object') return String(item)
+        return item.label || item.name || item.marker || item.biomarker || item.reason || item.summary || item.key || ''
+      })
+      .filter(Boolean)
+  }
+  if (typeof value === 'object') return Object.values(value).flatMap(asTextList).filter(Boolean)
+  return [String(value)]
+}
+
+function formatPercent(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return null
+  return `${Math.round(number * (number <= 1 ? 100 : 1))}%`
+}
+
+function localizeDomainLabel(value, copy) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  if (copy === RESULTS_COPY.uk) {
+    const key = raw.toLowerCase().replace(/\s+/g, '_')
+    return HEALTH_DOMAIN_LABELS_UK[key] || raw
+  }
+  return raw
+}
+
+function HealthDomainCard({ state, copy }) {
+  const label = localizeDomainLabel(state?.label || state?.domain_label || state?.domain || state?.key || 'Health domain', copy)
+  const score = Number(state?.score ?? state?.health_score)
+  const risk = state?.risk_level || state?.status || state?.state
+  const confidence = formatPercent(state?.confidence)
+  const reasons = asTextList(state?.why || state?.reasons || state?.matched_signals || state?.evidence).slice(0, 3)
+  const dataUsed = asTextList(state?.used_biomarkers || state?.biomarkers || state?.contributing_biomarkers || state?.matched_biomarkers).slice(0, 5)
+  const missing = asTextList(state?.missing_data || state?.missing_markers).slice(0, 4)
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold text-slate-950">{label}</h3>
+          <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {[risk, Number.isFinite(score) ? `${copy.score} ${Math.round(score)}` : null, confidence ? `${confidence} ${copy.confidence}` : null].filter(Boolean).join(' · ')}
+          </p>
+        </div>
+      </div>
+      {!!reasons.length && (
+        <div className="mt-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.whyConclusion}</p>
+          <ul className="mt-1 space-y-1 text-sm leading-5 text-slate-600">
+            {reasons.map((item, index) => <li key={index}>{item}</li>)}
+          </ul>
+        </div>
+      )}
+      {!!dataUsed.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.dataUsed}:</span> {dataUsed.join(', ')}
+        </p>
+      )}
+      {!!missing.length && (
+        <p className="mt-2 text-sm leading-5 text-amber-800">
+          <span className="font-semibold">{copy.missingData}:</span> {missing.join(', ')}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function AnalysisCoreV2Panel({ finalAnalysis, copy }) {
+  if (!finalAnalysis) return null
+  const healthStates = finalAnalysis.health_states || {}
+  const quality = finalAnalysis.quality_snapshot || {}
+  const trends = finalAnalysis.trend_analysis || {}
+  const metadata = finalAnalysis.metadata || {}
+  const states = Array.isArray(healthStates.top_priorities) && healthStates.top_priorities.length
+    ? healthStates.top_priorities
+    : Array.isArray(healthStates.states)
+      ? healthStates.states
+      : []
+  const trendRows = asTextList(trends.priority_changes || trends.changes || trends.summary || trends.signals).slice(0, 4)
+  const completeness = formatPercent(quality?.coverage?.completeness ?? quality?.coverage?.analysis_completeness ?? quality?.completeness)
+  const topDomains = asTextList(quality.top_health_domains).slice(0, 4).map((item) => localizeDomainLabel(item, copy))
+
+  if (!states.length && !Object.keys(quality).length && !Object.keys(trends).length) return null
+
+  return (
+    <SectionCard icon={HeartPulse} title={copy.domainsTitle} className="mb-6">
+      <div className="mb-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">{copy.v2Eyebrow}</p>
+        <p className="mt-1 text-sm leading-6 text-slate-600">{copy.domainsBody}</p>
+      </div>
+      {!!states.length && (
+        <div className="grid gap-3 md:grid-cols-2">
+          {states.slice(0, 6).map((state, index) => <HealthDomainCard key={state?.key || state?.domain || index} state={state} copy={copy} />)}
+        </div>
+      )}
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.analysisQuality}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">
+            {[completeness ? `${copy.completeness}: ${completeness}` : null, quality.version, metadata.analysis_core_version].filter(Boolean).join(' · ') || copy.sourceVersion}
+          </p>
+          {!!topDomains.length && <p className="mt-2 text-xs leading-5 text-slate-500">{topDomains.join(', ')}</p>}
+        </div>
+        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.trends}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">{trendRows.length ? trendRows.join(' · ') : copy.noTrendData}</p>
+        </div>
+        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.sourceVersion}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">
+            {[healthStates.version, healthStates.domain_registry_version, metadata.health_context_version].filter(Boolean).join(' · ') || 'V2'}
+          </p>
+        </div>
+      </div>
+    </SectionCard>
+  )
+}
+
 export default function Results() {
   const { uploadId } = useParams()
   const navigate = useNavigate()
@@ -300,6 +464,7 @@ export default function Results() {
   const [protocol, setProtocol] = useState([])
   const [shoppingLinks, setShoppingLinks] = useState([])
   const [knowledgeReport, setKnowledgeReport] = useState(null)
+  const [finalAnalysis, setFinalAnalysis] = useState(null)
   const [explainability, setExplainability] = useState(null)
   const [safetyResult, setSafetyResult] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -325,6 +490,7 @@ export default function Results() {
               : []
         )
         setKnowledgeReport(analysisResponse?.data?.knowledge_report ?? data.knowledge_report ?? null)
+        setFinalAnalysis(analysisResponse?.data?.final_analysis ?? data.final_analysis ?? null)
         setExplainability(analysisResponse?.data?.explainability ?? null)
         setSafetyResult(analysisResponse?.data?.safety_result ?? null)
       } catch (_e) {
@@ -333,6 +499,7 @@ export default function Results() {
         setProtocol([])
         setShoppingLinks([])
         setKnowledgeReport(null)
+        setFinalAnalysis(null)
         setExplainability(null)
         setSafetyResult(null)
       } finally {
@@ -543,6 +710,8 @@ export default function Results() {
             <p className="mt-1 text-sm font-semibold text-emerald-900">{copy.markersInRange(optimalCount)}</p>
           </div>
         </div>
+
+        <AnalysisCoreV2Panel finalAnalysis={finalAnalysis} copy={copy} />
 
         {!!reportAlerts.length && (
           <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-900">
