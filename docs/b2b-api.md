@@ -26,6 +26,13 @@ Production pilot requirement: configure Redis-backed rate limiting with `RATE_LI
 
 For public launch, put Cloudflare WAF in front of the API and route B2B traffic through Cloudflare. Partners can be configured with `b2b_require_cloudflare=true`; those requests must include Cloudflare edge headers such as `CF-Ray` and `CF-Connecting-IP`.
 
+Response hardening:
+
+- successful B2B responses include `X-Vitaloop-API-Version: v1`;
+- successful B2B responses include `Cache-Control: no-store`;
+- successful B2B responses include `X-Content-Type-Options: nosniff`;
+- the unversioned pilot alias returns deprecation headers and should not be used for new integrations.
+
 ## Endpoint
 
 ```http
@@ -89,6 +96,7 @@ Notes:
 - `external_user_id` is partner-scoped.
 - `partner_id` is ignored if present in metadata and is always resolved from the API key.
 - MVP accepts parsed JSON biomarkers only. PDF/file ingestion is intentionally not part of this endpoint yet.
+- Public pilot limits: maximum 100 biomarkers per request, maximum 100 symptoms per request, maximum 160 characters per symptom.
 - Supported common units include `ng/mL`, `ug/L`, `mg/dL`, `mmol/L`, `g/dL`, `U/L`, `IU/L`, `uIU/mL`, `%`, `pg/mL`, and `nmol/L`.
 - Raw request storage is minimized for the pilot. VITALOOP stores biomarkers and safe integration metadata, but avoids persisting arbitrary profile/metadata fields in `raw_payload`.
 - Partner-specific biomarker mappings can be configured in `partners.b2b_biomarker_mappings`, for example `{ "Ferritin Serum": "ferritin" }`. Built-in default aliases still apply.
@@ -200,6 +208,23 @@ Notes:
 9. VITALOOP runs the shared lab analysis pipeline with knowledge/rules evaluation, safety flags, AI protocol generation, retest suggestions, and doctor summary.
 10. VITALOOP stores normalized biomarkers, final response, status, and usage metadata.
 11. VITALOOP returns the structured JSON response.
+
+## Additional Partner Onboarding
+
+Use this sequence for every additional B2B partner:
+
+1. Create or confirm an active `partners` row with a stable slug.
+2. Configure `b2b_retention_days` for the partner.
+3. Configure `b2b_biomarker_mappings` for partner-specific biomarker names.
+4. Configure `b2b_allowed_ips` when the partner can provide static egress IPs.
+5. Set `b2b_require_cloudflare=true` for production partner traffic.
+6. Provision a new `partner_api_keys` row with only the hashed key stored.
+7. Give the raw key to the partner through a secure channel only once.
+8. Run the partner smoke checklist before enabling real user traffic.
+
+Key rotation is handled by provisioning a new active key, validating smoke tests
+with the partner, then revoking or disabling the old key. Do not reuse raw keys
+between partners or environments.
 
 ## Audit Events
 
