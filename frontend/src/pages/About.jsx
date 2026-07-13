@@ -100,7 +100,7 @@ export default function About() {
     <>
       <Seo
         title="About VITALOOP | Symptom & Lab Health Intelligence"
-        description="Learn why VITALOOP connects symptom intake, AI blood test analysis, biomarker explanations, and longitudinal progress in one health workflow."
+        description="Learn why VITALOOP connects symptom intake, biomarker analysis, Knowledge Base reasoning, safety context, and longitudinal progress in one health workflow."
         path="/about"
       />
 
