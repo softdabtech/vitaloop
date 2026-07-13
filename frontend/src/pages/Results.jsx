@@ -259,14 +259,19 @@ const RESULTS_COPY = {
 
 const HEALTH_DOMAIN_LABELS_UK = {
   iron_status: 'Статус заліза',
+  'iron status': 'Статус заліза',
   metabolic_health: 'Метаболічне здоровʼя',
+  'metabolic health': 'Метаболічне здоровʼя',
   cardiovascular: 'Серцево-судинний профіль',
+  'cardiovascular risk context': 'Серцево-судинний профіль',
   inflammation: 'Запалення',
   thyroid: 'Щитоподібна залоза',
   liver: 'Печінка',
+  'liver stress context': 'Печінка',
   kidney: 'Нирки',
   micronutrients: 'Мікронутрієнти',
   recovery_energy: 'Відновлення й енергія',
+  'recovery and energy': 'Відновлення й енергія',
 }
 
 function toEnglishBiomarkerName(name) {
@@ -361,19 +366,28 @@ function localizeDomainLabel(value, copy) {
   if (!raw) return ''
   if (copy === RESULTS_COPY.uk) {
     const key = raw.toLowerCase().replace(/\s+/g, '_')
-    return HEALTH_DOMAIN_LABELS_UK[key] || raw
+    const textKey = raw.toLowerCase()
+    return HEALTH_DOMAIN_LABELS_UK[key] || HEALTH_DOMAIN_LABELS_UK[textKey] || raw
   }
   return raw
 }
 
 function HealthDomainCard({ state, copy }) {
-  const label = localizeDomainLabel(state?.label || state?.domain_label || state?.domain || state?.key || 'Health domain', copy)
+  const label = localizeDomainLabel(state?.domain || state?.key || state?.label || state?.domain_label || 'Health domain', copy)
   const score = Number(state?.score ?? state?.health_score)
   const risk = state?.risk_level || state?.status || state?.state
   const confidence = formatPercent(state?.confidence)
-  const reasons = asTextList(state?.why || state?.reasons || state?.matched_signals || state?.evidence).slice(0, 3)
   const dataUsed = asTextList(state?.used_biomarkers || state?.biomarkers || state?.contributing_biomarkers || state?.matched_biomarkers).slice(0, 5)
   const missing = asTextList(state?.missing_data || state?.missing_markers).slice(0, 4)
+  const reasons = asTextList(state?.why || state?.reasons || state?.matched_signals || state?.evidence).slice(0, 3)
+  if (!reasons.length) {
+    const parts = [
+      risk ? `risk: ${risk}` : null,
+      Number.isFinite(score) ? `${copy.score}: ${Math.round(score)}` : null,
+      dataUsed.length ? `${copy.dataUsed.toLowerCase()}: ${dataUsed.join(', ')}` : null,
+    ].filter(Boolean)
+    if (parts.length) reasons.push(parts.join(' · '))
+  }
   return (
     <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">

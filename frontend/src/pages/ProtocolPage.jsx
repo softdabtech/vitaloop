@@ -156,14 +156,19 @@ const PROTOCOL_COPY = {
 
 const HEALTH_DOMAIN_LABELS_UK = {
   iron_status: 'Статус заліза',
+  'iron status': 'Статус заліза',
   metabolic_health: 'Метаболічне здоровʼя',
+  'metabolic health': 'Метаболічне здоровʼя',
   cardiovascular: 'Серцево-судинний профіль',
+  'cardiovascular risk context': 'Серцево-судинний профіль',
   inflammation: 'Запалення',
   thyroid: 'Щитоподібна залоза',
   liver: 'Печінка',
+  'liver stress context': 'Печінка',
   kidney: 'Нирки',
   micronutrients: 'Мікронутрієнти',
   recovery_energy: 'Відновлення й енергія',
+  'recovery and energy': 'Відновлення й енергія',
 }
 
 function formatPriority(priority, isUk = false) {
@@ -302,7 +307,8 @@ function localizeDomainLabel(value, isUk) {
   const raw = String(value || '').trim()
   if (!raw || !isUk) return raw
   const key = raw.toLowerCase().replace(/\s+/g, '_')
-  return HEALTH_DOMAIN_LABELS_UK[key] || raw
+  const textKey = raw.toLowerCase()
+  return HEALTH_DOMAIN_LABELS_UK[key] || HEALTH_DOMAIN_LABELS_UK[textKey] || raw
 }
 
 function groupProtocol(rows) {
