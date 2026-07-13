@@ -1,5 +1,7 @@
 import { ChevronRight, FileText, ListChecks, ShieldCheck, Sparkles } from 'lucide-react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import WellbeingCheckModal from './WellbeingCheckModal.jsx'
 
 const HERO_SCREENS = [
   {
@@ -28,6 +30,7 @@ const TRUST_CHIPS = [
 
 export function LightHero() {
   const navigate = useNavigate()
+  const [wellbeingOpen, setWellbeingOpen] = useState(false)
 
   return (
     <section className="relative overflow-hidden bg-white py-10 sm:py-16 lg:py-24">
@@ -63,7 +66,7 @@ export function LightHero() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <button
-                onClick={() => navigate('/symptom-intake')}
+                onClick={() => setWellbeingOpen(true)}
                 className="group px-8 py-4 bg-teal-500 hover:bg-teal-600 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
               >
                 Start with symptoms
@@ -177,6 +180,7 @@ export function LightHero() {
       {/* Background accent */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-teal-50 rounded-full opacity-30 blur-3xl -z-10" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-50 rounded-full opacity-20 blur-3xl -z-10" />
+      <WellbeingCheckModal open={wellbeingOpen} onClose={() => setWellbeingOpen(false)} />
     </section>
   )
 }
