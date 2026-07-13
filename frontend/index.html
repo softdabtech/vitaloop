@@ -257,8 +257,9 @@
 
   function isUk() {
     var h = (window.location.hostname || '').toLowerCase();
+    var p = (window.location.pathname || '').toLowerCase();
     var s = (window.location.search || '');
-    return h === 'ua.vitaloop.today' || s.indexOf('lang=uk') !== -1;
+    return h === 'ua.vitaloop.today' || p === '/ua' || p.indexOf('/ua/') === 0 || p === '/uk' || p.indexOf('/uk/') === 0 || s.indexOf('lang=uk') !== -1;
   }
 
   function isCabinetRoute() {
@@ -451,20 +452,20 @@
   function buildBanner(container) {
     container.innerHTML = '';
     var inner = document.createElement('div');
-    inner.style.cssText = 'pointer-events:auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;box-shadow:0 -4px 6px rgba(0,0,0,.04),0 20px 60px rgba(15,23,42,.18);padding:20px 24px;width:100%;max-width:740px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box;';
+    inner.style.cssText = 'pointer-events:auto;background:rgba(255,255,255,.96);border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 -4px 6px rgba(0,0,0,.04),0 20px 60px rgba(15,23,42,.18);padding:14px;width:100%;max-width:680px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;backdrop-filter:blur(14px);';
 
     var top = document.createElement('div');
-    top.style.cssText = 'display:flex;align-items:flex-start;gap:14px;';
+    top.style.cssText = 'display:flex;align-items:flex-start;gap:10px;';
     var emoji = document.createElement('span');
     emoji.textContent = '🍪';
-    emoji.style.cssText = 'font-size:28px;line-height:1;flex-shrink:0;margin-top:2px;';
+    emoji.style.cssText = 'font-size:20px;line-height:1;flex-shrink:0;margin-top:2px;';
     var textBlock = document.createElement('div');
     textBlock.style.flex = '1';
     var h2 = document.createElement('h2');
     h2.textContent = L.title;
-    h2.style.cssText = 'margin:0;font-size:16px;font-weight:800;color:#0f172a;letter-spacing:-.01em;';
+    h2.style.cssText = 'margin:0;font-size:14px;font-weight:800;color:#0f172a;letter-spacing:-.01em;';
     var p = document.createElement('p');
-    p.style.cssText = 'margin:6px 0 0;font-size:13.5px;color:#475569;line-height:1.55;max-width:520px;';
+    p.style.cssText = 'margin:4px 0 0;font-size:12px;color:#475569;line-height:1.45;max-width:560px;';
     p.textContent = L.text + ' ';
     var privA = document.createElement('a');
     privA.href = '/privacy-policy/'; privA.target = '_blank'; privA.rel = 'noreferrer';
@@ -480,7 +481,7 @@
     top.appendChild(emoji); top.appendChild(textBlock);
 
     var btns = document.createElement('div');
-    btns.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;align-items:center;';
+    btns.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center;';
 
     var aBtn = document.createElement('button'); aBtn.textContent = L.acceptAll; aBtn.style.cssText = PRIMARY_BTN;
     aBtn.addEventListener('click', acceptAll);
@@ -494,10 +495,10 @@
     container.appendChild(inner);
   }
 
-  var PRIMARY_BTN = 'padding:10px 22px;border-radius:100px;border:none;cursor:pointer;background:linear-gradient(135deg,#0f766e 0%,#14b8a6 100%);color:#fff;font-weight:700;font-size:13.5px;box-shadow:0 4px 14px rgba(15,118,110,.30);transition:opacity .15s;white-space:nowrap;font-family:inherit;';
-  var SECONDARY_BTN = 'padding:10px 22px;border-radius:100px;border:none;cursor:pointer;background:#0f172a;color:#fff;font-weight:700;font-size:13.5px;box-shadow:0 4px 14px rgba(15,23,42,.20);white-space:nowrap;font-family:inherit;';
-  var OUTLINE_BTN = 'padding:10px 22px;border-radius:100px;cursor:pointer;background:transparent;border:1.5px solid #cbd5e1;color:#475569;font-weight:700;font-size:13.5px;white-space:nowrap;font-family:inherit;';
-  var GHOST_BTN = 'padding:10px 16px;border-radius:100px;border:none;cursor:pointer;background:transparent;color:#94a3b8;font-weight:600;font-size:13px;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;font-family:inherit;';
+  var PRIMARY_BTN = 'min-height:42px;padding:9px 16px;border-radius:14px;border:none;cursor:pointer;background:linear-gradient(135deg,#0f766e 0%,#14b8a6 100%);color:#fff;font-weight:800;font-size:13px;box-shadow:0 4px 14px rgba(15,118,110,.26);transition:opacity .15s;white-space:nowrap;font-family:inherit;';
+  var SECONDARY_BTN = 'min-height:42px;padding:9px 16px;border-radius:14px;border:none;cursor:pointer;background:#0f172a;color:#fff;font-weight:800;font-size:13px;box-shadow:0 4px 14px rgba(15,23,42,.18);white-space:nowrap;font-family:inherit;';
+  var OUTLINE_BTN = 'min-height:42px;padding:9px 16px;border-radius:14px;cursor:pointer;background:#fff;border:1.5px solid #cbd5e1;color:#475569;font-weight:800;font-size:13px;white-space:nowrap;font-family:inherit;';
+  var GHOST_BTN = 'grid-column:1 / -1;min-height:32px;padding:4px 10px;border-radius:10px;border:none;cursor:pointer;background:transparent;color:#64748b;font-weight:700;font-size:12px;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;font-family:inherit;';
 
   if (stored() || isCabinetRoute()) return; // Already decided or inside the app — don't show
 
@@ -505,7 +506,7 @@
     if (isCabinetRoute()) return;
     var wrap = document.createElement('div');
     wrap.id = 'vl-cookie-banner';
-    wrap.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:10000;padding:0 16px 20px;display:flex;justify-content:center;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+    wrap.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:10000;padding:0 10px max(10px,env(safe-area-inset-bottom));display:flex;justify-content:center;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
     buildBanner(wrap);
     document.body.appendChild(wrap);
   }
