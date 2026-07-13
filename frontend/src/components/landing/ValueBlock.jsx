@@ -6,7 +6,7 @@ const CARDS = [
   {
     Icon: BarChart2,
     title: 'Deeper insights',
-    body: 'More actionable than any generic AI tool — 50+ biomarkers with context, flags, and personalized protocols.',
+    body: 'More actionable than a generic AI reply: structured biomarkers, symptom context, Knowledge Base reasoning, safety flags, and personalized protocol sections.',
   },
   {
     Icon: Clock,

@@ -6,10 +6,11 @@ const ITEMS = [
   'Sarah M. — Vitamin D +89% in 90 days',
   'James K. — Fixed iron deficiency',
   'Available worldwide',
-  'HIPAA-ready',
-  '50+ biomarkers tracked',
+  'Privacy-first architecture',
+  'Shared Analysis Core V2',
+  'Safety notes and retest timing',
   'iHerb · Amazon · Thorne · Solgar',
-  'Results with comprehensive AI analysis',
+  'Results with Knowledge Base reasoning',
 ]
 
 export default function SocialProofTicker() {

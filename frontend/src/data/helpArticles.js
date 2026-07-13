@@ -94,7 +94,7 @@ export const HELP_ARTICLES = {
     content: [
       {
         type: 'intro',
-        text: 'VITALOOP is an AI-powered health intelligence platform that transforms your blood test results into a clear, personalized action plan — with exact supplement dosages, lifestyle guidance, and a retest schedule.',
+        text: 'VITALOOP is a health intelligence platform that connects symptoms, biomarkers, Knowledge Base reasoning, safety context, protocol sections, trends, and retest timing into one structured workflow.',
       },
       {
         type: 'heading',
@@ -116,12 +116,12 @@ export const HELP_ARTICLES = {
       {
         type: 'feature-grid',
         items: [
-          { icon: '📤', title: 'Upload any lab PDF', desc: 'Quest, LabCorp, or any other format — 50+ lab providers supported.' },
-          { icon: '🧠', title: 'AI analyzes 85+ biomarkers', desc: 'With comprehensive analysis of values, units, and reference ranges.' },
-          { icon: '⚠️', title: 'Ranked by severity', desc: 'Top 3 problems highlighted. You know what to fix first.' },
-          { icon: '💊', title: 'Exact protocols', desc: 'Not "take iron" — Ferrous Bisglycinate 25mg, morning, 8 weeks.' },
-          { icon: '📈', title: 'Longitudinal tracking', desc: 'Compare multiple tests over time. See what\'s improving.' },
-          { icon: '✅', title: 'Weekly check-ins', desc: 'Track symptoms and adherence. Protocol adapts to your progress.' },
+          { icon: '📤', title: 'Upload or enter lab data', desc: 'Use PDF/image uploads, manual biomarker entry, and structured lab inputs supported by the product flow.' },
+          { icon: '🧠', title: 'Shared Analysis Core V2', desc: 'Names, values, units, ranges, symptoms, safety context, and trends are processed through one structured path.' },
+          { icon: '⚠️', title: 'Prioritized and safety-aware', desc: 'Important findings, safety notes, and clinician discussion points are surfaced clearly.' },
+          { icon: '💊', title: 'Structured protocol sections', desc: 'Nutrition, supplements, lifestyle, training/recovery, adherence, and retest suggestions are organized for review.' },
+          { icon: '📈', title: 'Longitudinal tracking', desc: 'Compare multiple tests and check-ins over time. See what is changing.' },
+          { icon: '✅', title: 'Weekly check-ins', desc: 'Track symptoms and adherence so every cycle has better context.' },
         ],
       },
       {
@@ -749,8 +749,8 @@ export const HELP_ARTICLES = {
             color: '#64748b',
             features: [
               '1 active lab upload',
-              'All 85+ biomarkers analyzed',
-              'Top 3 problems identified',
+              'Structured biomarker summary',
+              'Priority findings identified',
               'Basic dashboard',
               'Standard analysis',
             ],
@@ -1241,8 +1241,8 @@ export const HELP_ARTICLES = {
           '**Structured protocol, not a chat reply.** VITALOOP gives you a formatted, prioritized action plan — not a wall of text to interpret.',
           '**Longitudinal tracking.** VITALOOP stores your results and shows trends over time. ChatGPT has no memory of your previous uploads.',
           '**Weekly check-ins.** VITALOOP asks follow-up questions and adapts. ChatGPT gives a one-time answer.',
-          '**Purpose-built for bloodwork.** VITALOOP knows 85+ biomarker names, units, and reference ranges. ChatGPT may hallucinate values or use outdated norms.',
-          '**Not a replacement for either.** You can use ChatGPT for general health questions. Use VITALOOP for systematic, repeatable lab analysis.',
+          '**Purpose-built for structured health context.** VITALOOP normalizes biomarker names, units, ranges, symptoms, safety context, trends, and retest logic. Generic chat may ignore structure or invent unsupported certainty.',
+          '**Not a replacement for care.** You can use ChatGPT for general health questions. Use VITALOOP for systematic, repeatable lab analysis and clinician discussion preparation.',
         ],
       },
     ],
@@ -1264,8 +1264,8 @@ export const HELP_ARTICLES = {
         items: [
           '**Kantesti** is an enterprise B2B tool built for NHS, hospitals, and clinical networks — not for individuals or small practitioners.',
           '**VITALOOP** is built for health-conscious individuals and independent practitioners who want to track their own or clients\' results over time.',
-          'Kantesti provides interpretation only — upload → report → done.',
-          'VITALOOP provides execution: upload → protocol → check-ins → adapt → retest. It\'s a continuous loop, not a one-off report.',
+          'Some tools focus on interpretation only: upload → report → done.',
+          'VITALOOP provides a reusable execution loop: symptoms → labs → shared analysis core → protocol → check-ins → trends → retest.',
         ],
       },
     ],

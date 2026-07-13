@@ -20,10 +20,10 @@ const HERO_SCREENS = [
 ]
 
 const TRUST_CHIPS = [
-  { icon: FileText, label: 'PDF/image lab upload' },
-  { icon: Sparkles, label: 'Explainable Knowledge Base' },
-  { icon: ListChecks, label: 'Priority report and retest plan' },
-  { icon: ShieldCheck, label: 'Privacy-first flow' },
+  { icon: FileText, label: 'PDF, image, manual, CSV/XLS input' },
+  { icon: Sparkles, label: 'Shared Analysis Core V2' },
+  { icon: ListChecks, label: 'Priorities, safety notes, retest plan' },
+  { icon: ShieldCheck, label: 'Privacy-first, tenant-aware flow' },
 ]
 
 export function LightHero() {
@@ -54,9 +54,9 @@ export function LightHero() {
             {/* Subheadline */}
             <p className="text-lg text-slate-600 leading-relaxed max-w-xl space-y-3">
               <span className="block">Start with symptoms. Upload labs when you have them.</span>
-              <span className="block font-semibold text-slate-900">From scattered signals to an explainable health report.</span>
+              <span className="block font-semibold text-slate-900">From scattered signals to an explainable, versioned health report.</span>
               <span className="block text-base text-slate-500">
-                VITALOOP explains biomarker results in plain language and organizes priority findings, clinician discussion points, retest timing, and weekly follow-through.
+                VITALOOP connects biomarker results with symptom context, Knowledge Base rules, safety notes, trends, clinician discussion points, retest timing, and weekly follow-through.
               </span>
             </p>
 
@@ -97,8 +97,8 @@ export function LightHero() {
                 <div className="text-sm text-slate-600">Premium plan</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-slate-900">85+</div>
-                <div className="text-sm text-slate-600">Biomarkers analyzed</div>
+                <div className="text-2xl font-bold text-slate-900">Core V2</div>
+                <div className="text-sm text-slate-600">Shared B2C and B2B analysis engine</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-emerald-600">1 upload</div>
@@ -158,7 +158,7 @@ export function LightHero() {
 
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   {[
-                    ['85+', 'biomarkers'],
+                    ['Core V2', 'analysis'],
                     ['Clear', 'priority report'],
                     ['Weekly', 'progress loop'],
                   ].map(([value, label]) => (
