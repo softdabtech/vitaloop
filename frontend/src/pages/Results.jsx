@@ -373,7 +373,10 @@ function localizeDomainLabel(value, copy) {
 }
 
 function HealthDomainCard({ state, copy }) {
-  const label = localizeDomainLabel(state?.domain || state?.key || state?.label || state?.domain_label || 'Health domain', copy)
+  const labelSource = copy === RESULTS_COPY.uk
+    ? state?.domain || state?.key || state?.label || state?.domain_label || 'Health domain'
+    : state?.label || state?.domain_label || state?.domain || state?.key || 'Health domain'
+  const label = localizeDomainLabel(labelSource, copy)
   const score = Number(state?.score ?? state?.health_score)
   const risk = state?.risk_level || state?.status || state?.state
   const confidence = formatPercent(state?.confidence)
