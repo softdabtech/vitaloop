@@ -8,6 +8,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const distDir = path.resolve(__dirname, '../dist')
 const indexPath = path.join(distDir, 'index.html')
 const uaIndexPath = path.join(distDir, 'ua-index.html')
+const uaStaticDir = path.join(distDir, 'ua-static')
+
+mkdirSync(uaStaticDir, { recursive: true })
 
 const UA = {
   title: 'Vitaloop Ukraine — персональна оцінка симптомів і аналізів',
@@ -356,9 +359,9 @@ function routeUrl(pathname) {
 
 function writeRouteFile(pathname, contents) {
   if (pathname === '/') {
-    return writeFile(indexPath, contents)
+    return writeFile(path.join(uaStaticDir, 'index.html'), contents)
   }
-  const routeDir = path.join(distDir, pathname.replace(/^\//, '').replace(/\/+$/, ''))
+  const routeDir = path.join(uaStaticDir, pathname.replace(/^\//, '').replace(/\/+$/, ''))
   mkdirSync(routeDir, { recursive: true })
   return writeFile(path.join(routeDir, 'index.html'), contents)
 }
@@ -437,13 +440,13 @@ const sitemapUrls = UA_PUBLIC_ROUTES.map((route) => `  <url>
     <priority>${route.priority}</priority>
   </url>`).join('\n')
 
-await writeFile(path.join(distDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
+await writeFile(path.join(distDir, 'ua-sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${sitemapUrls}
 </urlset>
 `)
 
-await writeFile(path.join(distDir, 'robots.txt'), `User-agent: *
+await writeFile(path.join(distDir, 'ua-robots.txt'), `User-agent: *
 Allow: /
 
 Disallow: /api/
@@ -475,7 +478,7 @@ Disallow: /auth/confirmation
 Sitemap: https://ua.vitaloop.today/sitemap.xml
 `)
 
-await writeFile(path.join(distDir, 'llms.txt'), `# VITALOOP Ukraine
+await writeFile(path.join(distDir, 'ua-llms.txt'), `# VITALOOP Ukraine
 
 > VITALOOP Ukraine — україномовний health intelligence сервіс для структурування симптомів, аналізів, пояснень біомаркерів, рекомендацій і динаміки стану.
 
@@ -491,4 +494,4 @@ VITALOOP Ukraine має освітній характер і не є діагн�
 `)
 
 await writeFile(uaIndexPath, html)
-console.log(`Created ${path.relative(process.cwd(), uaIndexPath)} and ${UA_PUBLIC_ROUTES.length} UA crawler routes`)
+console.log(`Created ${path.relative(process.cwd(), uaIndexPath)} and ${UA_PUBLIC_ROUTES.length} UA crawler routes in ${path.relative(process.cwd(), uaStaticDir)}`)

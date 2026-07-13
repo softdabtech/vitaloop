@@ -21,7 +21,13 @@ if [[ ! -f "$LOCAL_DIST_DIR/ua-index.html" ]]; then
 fi
 
 rsync -a --delete "$LOCAL_DIST_DIR/" "$TMP_DIR/"
+if [[ -d "$TMP_DIR/ua-static" ]]; then
+  rsync -a "$TMP_DIR/ua-static/" "$TMP_DIR/"
+fi
 cp "$TMP_DIR/ua-index.html" "$TMP_DIR/index.html"
+[[ -f "$TMP_DIR/ua-sitemap.xml" ]] && cp "$TMP_DIR/ua-sitemap.xml" "$TMP_DIR/sitemap.xml"
+[[ -f "$TMP_DIR/ua-robots.txt" ]] && cp "$TMP_DIR/ua-robots.txt" "$TMP_DIR/robots.txt"
+[[ -f "$TMP_DIR/ua-llms.txt" ]] && cp "$TMP_DIR/ua-llms.txt" "$TMP_DIR/llms.txt"
 
 ssh -i ~/.ssh/softdab_new "$REMOTE_HOST" "mkdir -p '$REMOTE_DIST_DIR'"
 rsync -az --delete -e "ssh -i ~/.ssh/softdab_new" "$TMP_DIR/" "$REMOTE_HOST:$REMOTE_DIST_DIR"
