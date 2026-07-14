@@ -39,6 +39,9 @@ const UaPage = lazy(() => import('./pages/UaPage.jsx'))
 const UaHealthHubHome = lazy(() => import('./pages/UaHealthHub.jsx').then(m => ({ default: m.UaHealthHubHome })))
 const UaHealthHubCluster = lazy(() => import('./pages/UaHealthHub.jsx').then(m => ({ default: m.UaHealthHubCluster })))
 const UaHealthHubArticle = lazy(() => import('./pages/UaHealthHub.jsx').then(m => ({ default: m.UaHealthHubArticle })))
+const UaAbout = lazy(() => import('./pages/UaLegal.jsx').then(m => ({ default: m.UaAbout })))
+const UaPrivacy = lazy(() => import('./pages/UaLegal.jsx').then(m => ({ default: m.UaPrivacy })))
+const UaTerms = lazy(() => import('./pages/UaLegal.jsx').then(m => ({ default: m.UaTerms })))
 
 // UI components — lazy
 const SupportChat = lazy(() => import('./components/SupportChat.jsx'))
@@ -698,6 +701,12 @@ export default function App() {
         <Routes>
           <Route path="/" element={isUaHost ? <UaLanding /> : <Landing />} />
           <Route path="/ua" element={<UaLanding />} />
+          <Route path="/ua/about" element={<UaAbout />} />
+          <Route path="/ua/privacy-policy" element={<UaPrivacy />} />
+          <Route path="/ua/terms" element={<UaTerms />} />
+          <Route path="/ua/health-hub" element={<UaHealthHubHome />} />
+          <Route path="/ua/health-hub/topics/:clusterSlug" element={<UaHealthHubCluster />} />
+          <Route path="/ua/health-hub/:articleSlug" element={<UaHealthHubArticle />} />
           <Route path="/ua/:pageSlug" element={<UaPage />} />
           {/* UA Health Hub */}
           <Route path="/health-hub" element={isUaHost ? <UaHealthHubHome /> : <HealthHub />} />
@@ -723,12 +732,12 @@ export default function App() {
           <Route path="/faq" element={<FAQ />} />
           <Route path="/example-report" element={<ExampleReport />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/about" element={<About />} />
+          <Route path="/about" element={isUaHost ? <UaAbout /> : <About />} />
           <Route path="/for-investors" element={<ForInvestors />} />
           <Route path="/for-nutritionists" element={<ForNutritionists />} />
           <Route path="/privacy" element={<Navigate to="/privacy-policy" replace />} />
-          <Route path="/privacy-policy" element={<Privacy />} />
-          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy-policy" element={isUaHost ? <UaPrivacy /> : <Privacy />} />
+          <Route path="/terms" element={isUaHost ? <UaTerms /> : <Terms />} />
           <Route path="/help" element={<Help />} />
           <Route path="/help/section/:sectionId" element={<Help />} />
           <Route path="/help/:articleId" element={<Help />} />
