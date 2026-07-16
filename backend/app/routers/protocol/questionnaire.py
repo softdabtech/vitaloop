@@ -149,6 +149,16 @@ async def _get_or_create_active_session(user_id: str) -> Dict[str, Any]:
     return create.data[0]
 
 
+async def _get_latest_session(user_id: str) -> Optional[Dict[str, Any]]:
+    sb = svc._get_supabase()
+    resp = await svc._run(
+        lambda: sb.table("questionnaire_sessions")
+        .select("*").eq("user_id", user_id)
+        .order("created_at", desc=True).limit(1).execute()
+    )
+    return resp.data[0] if resp.data else None
+
+
 async def _get_session_answers(session_id: str) -> List[Dict[str, Any]]:
     sb = svc._get_supabase()
     resp = await svc._run(
@@ -219,12 +229,15 @@ async def create_questionnaire(
 async def get_questionnaire_session(current_user: dict = Depends(get_current_user)):
     user_id = current_user.get("sub")
     try:
-        session = await _get_or_create_active_session(user_id)
+        session = await _get_latest_session(user_id)
+        if not session:
+            session = await _get_or_create_active_session(user_id)
         answers = await _get_session_answers(session["id"])
         answered_ids = {str(a.get("question_id")) for a in answers if a.get("question_id")}
         answer_map = {str(a.get("question_id")): int(a.get("answer_value") or 0) for a in answers}
         pending_followups = session.get("pending_followups") or []
-        next_question = _get_next_question(answered_ids, answer_map, pending_followups)
+        is_completed_session = str(session.get("status") or "").lower() == "completed"
+        next_question = None if is_completed_session else _get_next_question(answered_ids, answer_map, pending_followups)
         total = len(QUESTION_BANK) + len(pending_followups)
         answered_count = len(answers)
         await svc.write_audit_log(
@@ -238,7 +251,7 @@ async def get_questionnaire_session(current_user: dict = Depends(get_current_use
             "answered_count": answered_count,
             "remaining_count": max(0, total - answered_count),
             "next_question": next_question,
-            "completed": next_question is None,
+            "completed": is_completed_session or next_question is None,
         }
     except HTTPException:
         raise

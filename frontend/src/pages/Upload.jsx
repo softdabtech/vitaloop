@@ -227,6 +227,11 @@ function handleAnalysisError(err, copy = UPLOAD_COPY.en) {
   return resolveAnalysisErrorMessage({ status, errorCode, errorDetail, usedBy, copy })
 }
 
+function resolveUploadId(data) {
+  const value = data?.upload_id || data?.uploadId || data?.id
+  return typeof value === 'string' && value.trim() ? value.trim() : ''
+}
+
 export default function Upload() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -322,8 +327,13 @@ export default function Upload() {
 
       const { data } = await api.post('/analyze/pdf', formData)
 
+      const uploadId = resolveUploadId(data)
+      if (!uploadId) {
+        throw new Error(copy.fallbackError)
+      }
+
       trackFunnelEvent('funnel_first_upload_completed', 'User completed first lab upload analysis', {
-        upload_id: data.upload_id,
+        upload_id: uploadId,
         has_lab_name: Boolean(labName),
       }, { oncePerSession: true })
       gaLabUpload()
@@ -338,12 +348,12 @@ export default function Upload() {
       ])
 
       toast.success(copy.analysisComplete)
-      const candidatesResponse = await api.get(`/analyze/${data.upload_id}/candidates`).catch(() => null)
+      const candidatesResponse = await api.get(`/analyze/${uploadId}/candidates`).catch(() => null)
       const candidates = candidatesResponse?.data?.candidates || []
       const reviewCandidates = candidates.filter(candidate => candidate.requires_confirmation || candidate.confidence_label === 'low')
       if (reviewCandidates.length > 0) {
         setCandidateReview({
-          uploadId: data.upload_id,
+          uploadId,
           candidates: reviewCandidates.map(candidate => ({
             ...candidate,
             decision: 'confirmed',
@@ -354,7 +364,7 @@ export default function Upload() {
         })
         return
       }
-      navigate(`/results/${data.upload_id}`)
+      navigate(`/results/${uploadId}`)
     } catch (err) {
       const message = handleAnalysisError(err, copy)
       setErrorMessage(message)
