@@ -349,7 +349,7 @@ export default function Upload() {
       }, { oncePerSession: true })
       gaLabUpload()
 
-      await Promise.all([
+      void Promise.allSettled([
         queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
         queryClient.invalidateQueries({ queryKey: ['lab-results-list'] }),
         queryClient.invalidateQueries({ queryKey: ['progress'] }),
