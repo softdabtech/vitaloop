@@ -18,6 +18,7 @@ import { CoachBadge, CoachCard, CoachProgress } from '../components/coach/CoachU
 import '../styles/dashboard2026.css'
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
+const ANALYSIS_UPLOAD_TIMEOUT_MS = 180000
 
 const SUPPORTED_FILE_TYPES = {
   'application/pdf': ['.pdf'],
@@ -335,7 +336,7 @@ export default function Upload() {
         formData.append('lab_name', labName)
       }
 
-      const { data } = await api.post('/analyze/pdf', formData)
+      const { data } = await api.post('/analyze/pdf', formData, { timeout: ANALYSIS_UPLOAD_TIMEOUT_MS })
 
       const uploadId = resolveUploadId(data)
       if (!uploadId) {
