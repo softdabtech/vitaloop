@@ -233,16 +233,6 @@ function resolveUploadId(data) {
   return typeof value === 'string' && value.trim() ? value.trim() : ''
 }
 
-async function loadReviewCandidates(uploadId) {
-  try {
-    const { data } = await api.get(`/analyze/${uploadId}/candidates`, { timeout: 3500 })
-    const candidates = data?.candidates || []
-    return candidates.filter(candidate => candidate.requires_confirmation || candidate.confidence_label === 'low')
-  } catch {
-    return []
-  }
-}
-
 export default function Upload() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -359,20 +349,6 @@ export default function Upload() {
       ])
 
       toast.success(copy.analysisComplete)
-      const reviewCandidates = await loadReviewCandidates(uploadId)
-      if (reviewCandidates.length > 0) {
-        setCandidateReview({
-          uploadId,
-          candidates: reviewCandidates.map(candidate => ({
-            ...candidate,
-            decision: 'confirmed',
-            raw_name: candidate.raw_name || '',
-            raw_value: candidate.raw_value ?? candidate.parsed_value ?? '',
-            raw_unit: candidate.raw_unit || '',
-          })),
-        })
-        return
-      }
       navigate(`/results/${uploadId}`)
     } catch (err) {
       const message = handleAnalysisError(err, copy)
