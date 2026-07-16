@@ -73,6 +73,7 @@ def _stub_audit_and_timeline(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_get_session_returns_first_question(monkeypatch):
+    monkeypatch.setattr(q, "_get_latest_session", lambda _uid: coro(_ACTIVE_SESSION))
     monkeypatch.setattr(q, "_get_or_create_active_session", lambda _uid: coro(_ACTIVE_SESSION))
     monkeypatch.setattr(q, "_get_session_answers", lambda _sid: coro([]))
 
@@ -91,6 +92,7 @@ async def test_get_session_reports_completed_when_all_answered(monkeypatch):
         _make_answer(qid, 7, i + 1)
         for i, qid in enumerate(q.QUESTION_INDEX)
     ]
+    monkeypatch.setattr(q, "_get_latest_session", lambda _uid: coro(_ACTIVE_SESSION))
     monkeypatch.setattr(q, "_get_or_create_active_session", lambda _uid: coro(_ACTIVE_SESSION))
     monkeypatch.setattr(q, "_get_session_answers", lambda _sid: coro(all_answers))
 
@@ -105,12 +107,30 @@ async def test_get_session_missing_tables_raises_503(monkeypatch):
     async def boom(_uid):
         raise Exception("PGRST205 relation questionnaire_sessions does not exist")
 
+    monkeypatch.setattr(q, "_get_latest_session", boom)
     monkeypatch.setattr(q, "_get_or_create_active_session", boom)
 
     with pytest.raises(HTTPException) as exc:
         await q.get_questionnaire_session(current_user={"sub": USER_ID})
 
     assert exc.value.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_get_session_does_not_create_new_session_when_latest_is_completed(monkeypatch):
+    completed_session = {**_ACTIVE_SESSION, "status": "completed"}
+
+    async def fail_create(_uid):
+        raise AssertionError("completed session reads must not create a new active session")
+
+    monkeypatch.setattr(q, "_get_latest_session", lambda _uid: coro(completed_session))
+    monkeypatch.setattr(q, "_get_or_create_active_session", fail_create)
+    monkeypatch.setattr(q, "_get_session_answers", lambda _sid: coro([]))
+
+    result = await q.get_questionnaire_session(current_user={"sub": USER_ID})
+
+    assert result["completed"] is True
+    assert result["next_question"] is None
 
 
 # ===========================================================================

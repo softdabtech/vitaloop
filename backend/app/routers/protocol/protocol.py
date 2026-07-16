@@ -143,3 +143,16 @@ async def create_protocol(
     )
 
     return protocol
+
+
+@router.get("/{upload_id}", response_model=ProtocolResponse)
+async def get_or_create_protocol(
+    upload_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    _subscription_check: None = Depends(require_active_subscription),
+):
+    return await create_protocol(
+        ProtocolRequest(upload_id=upload_id, symptoms=[]),
+        current_user=current_user,
+        _subscription_check=_subscription_check,
+    )
