@@ -28,7 +28,7 @@ const LAB_RESULTS_COPY = {
     viewResults: 'View Results',
     premiumTitle: 'Premium features available',
     premiumBody: 'Upgrade to see your complete lab history, track trends over time, and keep action plans connected to follow-up check-ins.',
-    premiumCta: 'Upgrade for $19.99/month',
+    premiumCta: 'Upgrade for $4.99/month',
     whatChanged: 'What changed',
     whatChangedBody: 'Contextual review of priority markers and next retest direction.',
     stableZone: 'Stable zone',

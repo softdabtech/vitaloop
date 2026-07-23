@@ -30,7 +30,7 @@ const COMPARISON_ROWS = [
   {
     feature: 'Cost',
     doctor: '$200-500 for test + consultation time + multiple appointments.',
-    vitaloop: 'You already paid for the test. $19.99/mo unlocks full protocol & accountability.',
+    vitaloop: 'You already paid for the test. $4.99/mo unlocks full protocol & accountability.',
   },
 ]
 

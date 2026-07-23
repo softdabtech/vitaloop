@@ -248,7 +248,7 @@ const PRICING = {
     },
     {
       name: 'Premium',
-      price: '$19.99',
+      price: '$4.99',
       period: '/month',
       points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
       cta: 'Upgrade',
@@ -274,7 +274,7 @@ const PRICING = {
     },
     {
       name: 'Premium',
-      price: '$199',
+      price: '$49.99',
       period: '/year',
       points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
       cta: 'Upgrade',

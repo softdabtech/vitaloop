@@ -27,7 +27,7 @@ const PLANS = {
   },
   basic: {
     name: 'Premium',
-    price: '$19.99',
+    price: '$4.99',
     period: '/month',
     description: 'Most popular',
     features: [
@@ -40,7 +40,7 @@ const PLANS = {
       'Practitioner sharing readiness',
     ],
     color: 'emerald',
-    yearly: '$199/year (save 17%)',
+    yearly: '$49.99/year',
     cta: 'Get Started'
   },
   pro: {
