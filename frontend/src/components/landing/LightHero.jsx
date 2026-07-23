@@ -96,7 +96,7 @@ export function LightHero() {
             {/* Key stats */}
             <div className="hidden grid-cols-2 gap-6 border-t border-slate-200 pt-8 sm:grid">
               <div>
-                <div className="text-2xl font-bold text-slate-900">$19.99/mo</div>
+                <div className="text-2xl font-bold text-slate-900">$4.99/mo</div>
                 <div className="text-sm text-slate-600">Premium plan</div>
               </div>
               <div>

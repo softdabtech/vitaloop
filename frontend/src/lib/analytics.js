@@ -96,13 +96,13 @@ export function gaLogin(method = 'email') {
 export function gaBeginCheckout(priceLabel = null) {
   gaEvent('begin_checkout', {
     currency: 'USD',
-    value: 19.99,
+    value: 4.99,
     items: [
       {
         item_id: 'vitaloop_premium',
         item_name: 'VITALOOP Premium',
         item_category: 'subscription',
-        price: 19.99,
+        price: 4.99,
         quantity: 1,
       },
     ],
@@ -110,11 +110,11 @@ export function gaBeginCheckout(priceLabel = null) {
   })
   fbqTrack('InitiateCheckout', {
     currency: 'USD',
-    value: 19.99,
+    value: 4.99,
   })
   fbqTrack('AddPaymentInfo', {
     currency: 'USD',
-    value: 19.99,
+    value: 4.99,
   })
 }
 
@@ -122,7 +122,7 @@ export function gaBeginCheckout(priceLabel = null) {
  * Fire on a confirmed purchase / successful Stripe checkout return.
  * Pass the Stripe session / transaction ID if available.
  */
-export function gaPurchase(transactionId, value = 19.99) {
+export function gaPurchase(transactionId, value = 4.99) {
   gaEvent('purchase', {
     transaction_id: transactionId || `vtl_${Date.now()}`,
     currency: 'USD',

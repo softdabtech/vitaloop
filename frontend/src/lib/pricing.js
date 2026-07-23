@@ -27,10 +27,10 @@ export const LANDING_PRICING_PLANS = [
   {
     id: PRICING_PLAN_IDS.PERSONAL,
     name: 'Premium',
-    monthly: '$19.99',
-    yearly: '$199',
+    monthly: '$4.99',
+    yearly: '$49.99',
     period: '/mo',
-    annualNote: 'Save 17% on yearly billing',
+    annualNote: 'Save with annual billing',
     desc: 'Full blood test analysis, personalized protocol, and weekly check-ins.',
     badge: 'MOST POPULAR',
     dark: false,
@@ -87,5 +87,5 @@ export const LANDING_PRICING_PLANS = [
 ]
 
 export const CLIENT_PREMIUM_PLAN = LANDING_PRICING_PLANS.find((plan) => plan.id === PRICING_PLAN_IDS.PERSONAL)
-export const PREMIUM_MONTHLY_PRICE = 19.99
+export const PREMIUM_MONTHLY_PRICE = 4.99
 export const PREMIUM_PRICE_LABEL = `${CLIENT_PREMIUM_PLAN.monthly} / month`

@@ -757,7 +757,7 @@ export const HELP_ARTICLES = {
           },
           {
             name: 'Premium',
-            price: '$19.99/month',
+            price: '$4.99/month',
             color: '#1d9e75',
             badge: 'Most popular',
             features: [
@@ -805,7 +805,7 @@ export const HELP_ARTICLES = {
         type: 'steps',
         items: [
           { title: 'Open the Subscription page', body: 'Go to Settings → Subscription, or click the **"Upgrade"** button that appears when you try to access a Premium feature.' },
-          { title: 'Choose your plan', body: 'Select Premium ($19.99/month). Annual billing option available at a discount.' },
+          { title: 'Choose your plan', body: 'Select Premium ($4.99/month). Annual billing option available at $49.99/year.' },
           { title: 'Enter payment details', body: 'Payments are processed securely by Stripe. VITALOOP never sees or stores your card number.' },
           { title: 'Access unlocked immediately', body: 'Your Premium features are active as soon as payment is confirmed.' },
         ],

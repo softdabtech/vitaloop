@@ -345,7 +345,7 @@ const uaJsonLd = [
     description: UA.description,
     offers: [
       { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: 'UAH' },
-      { '@type': 'Offer', name: 'Premium', price: '399', priceCurrency: 'UAH' },
+      { '@type': 'Offer', name: 'Premium', price: '199', priceCurrency: 'UAH' },
     ],
     publisher: { '@id': 'https://ua.vitaloop.today/#organization' },
   },

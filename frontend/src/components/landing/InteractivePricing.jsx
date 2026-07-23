@@ -19,7 +19,7 @@ const PRICING = {
     },
     {
       name: 'Premium',
-      price: '$19.99',
+      price: '$4.99',
       period: '/month',
       description: 'For people actively tracking labs, symptoms, and protocol response',
       points: ['Unlimited uploads and retests', 'Full explainable Knowledge report', 'Priority action and retest plan', 'Weekly symptom check-ins', 'Progress and trend tracking', 'Protocol adaptation across cycles'],
@@ -48,10 +48,10 @@ const PRICING = {
     },
     {
       name: 'Premium',
-      price: '$199',
+      price: '$49.99',
       period: '/year',
       description: 'For people actively tracking labs, symptoms, and protocol response',
-      points: ['Unlimited uploads and retests', 'Full explainable Knowledge report', 'Priority action and retest plan', 'Weekly symptom check-ins', 'Progress and trend tracking', 'Save 17% vs monthly'],
+      points: ['Unlimited uploads and retests', 'Full explainable Knowledge report', 'Priority action and retest plan', 'Weekly symptom check-ins', 'Progress and trend tracking', 'Save with annual billing'],
       cta: 'Upgrade',
       featured: true,
     },

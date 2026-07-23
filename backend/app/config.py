@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_price_id: str = ""  # Legacy fallback (same as stripe_price_id_personal)
-    stripe_price_id_personal: str = ""  # Premium $19.99/mo
+    stripe_price_id_personal: str = ""  # Premium $4.99/mo
     stripe_price_id_practitioner: str = ""  # Practitioner Premium $29/mo
     stripe_price_id_personal_monthly: str = ""  # Preferred personal monthly price ID
     stripe_price_id_personal_yearly: str = ""  # Personal yearly price ID
