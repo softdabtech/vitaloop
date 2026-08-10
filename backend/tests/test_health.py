@@ -112,6 +112,24 @@ async def test_detailed_health_marks_stripe_configured_with_new_price_ids(monkey
     assert payload["services"]["stripe"]["status"] == "ok"
 
 
+@pytest.mark.asyncio
+async def test_readiness_returns_503_when_supabase_unavailable(monkeypatch):
+    async def _raise_supabase(*_args, **_kwargs):
+        raise RuntimeError("temporary outage")
+
+    monkeypatch.setattr(health.svc, "_run", _raise_supabase)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.get("/health/ready")
+
+    assert resp.status_code == 503
+    payload = resp.json()
+    assert payload["ready"] is False
+    assert payload["reason"].startswith("supabase_unavailable")
+    assert payload["checks"]["supabase"] == "failed"
+
+
 # ---------------------------------------------------------------------------
 # /ops/llm/synthetic-check tests
 # ---------------------------------------------------------------------------
