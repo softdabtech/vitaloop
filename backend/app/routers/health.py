@@ -2,7 +2,7 @@ import asyncio
 import time
 import httpx
 from fastapi import APIRouter, Header, HTTPException
-from starlette.responses import PlainTextResponse
+from starlette.responses import JSONResponse, PlainTextResponse
 from app.config import settings
 from app.services import supabase_service as svc
 from app.utils.build_info import get_build_info
@@ -232,7 +232,10 @@ async def readiness_check():
             "readiness_check failed: supabase unavailable",
             extra={"error": str(e)[:100]},
         )
-        return {"ready": False, "reason": checks["reason"], "status_code": 503}
+        return JSONResponse(
+            status_code=503,
+            content={"ready": False, "reason": checks["reason"], "checks": checks["checks"]},
+        )
 
     # 2. Check required configuration
     required_env = {
@@ -249,7 +252,10 @@ async def readiness_check():
                 "readiness_check failed: missing required config",
                 extra={"missing": env_name},
             )
-            return {"ready": False, "reason": checks["reason"], "status_code": 503}
+            return JSONResponse(
+                status_code=503,
+                content={"ready": False, "reason": checks["reason"], "checks": checks["checks"]},
+            )
         checks["checks"][env_name] = "ok"
 
     logger.info("readiness_check passed", extra={"checks": checks["checks"]})
