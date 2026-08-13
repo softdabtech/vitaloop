@@ -421,16 +421,23 @@ async def save_report_version(
     protocol: Any,
     safety_result: Dict[str, Any],
     explainability: Dict[str, Any],
+    interpreted_report: Dict[str, Any] | None = None,
     status: str = "completed",
 ) -> Dict[str, Any]:
     supabase = _get_supabase()
+    knowledge_payload = knowledge_report or {}
+    if interpreted_report:
+        knowledge_payload = {
+            **knowledge_payload,
+            "interpreted_report": interpreted_report,
+        }
     payload = {
         "user_id": user_id,
         "upload_id": upload_id,
         "version": version,
         "locale": locale,
         "input_snapshot": input_snapshot or {},
-        "knowledge_report": knowledge_report or {},
+        "knowledge_report": knowledge_payload,
         "protocol": protocol or {},
         "safety_result": safety_result or {},
         "explainability": explainability or {},

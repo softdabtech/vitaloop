@@ -6,6 +6,14 @@ import { HEALTH_HUB_ARTICLES, HEALTH_HUB_CLUSTERS } from '../src/data/healthHubC
 const DIST_DIR = path.resolve(process.cwd(), 'dist')
 const BASE_URL = 'https://vitaloop.today'
 const DEFAULT_IMAGE = `${BASE_URL}/vitaloop-social-preview-2026-06.png`
+const UA_ALTERNATE_BY_EN_PATH = {
+  '/': 'https://ua.vitaloop.today/',
+  '/symptom-intake/': 'https://ua.vitaloop.today/samopochuttia/',
+  '/about/': 'https://ua.vitaloop.today/about/',
+  '/privacy-policy/': 'https://ua.vitaloop.today/privacy-policy/',
+  '/terms/': 'https://ua.vitaloop.today/terms/',
+  '/health-hub/': 'https://ua.vitaloop.today/health-hub/',
+}
 
 const routes = [
   {
@@ -298,6 +306,8 @@ const privateRoutes = [
   '/avatar',
   '/assignments',
   '/lab-results',
+  '/results',
+  '/protocol',
   '/progress',
   '/settings',
   '/health-profile',
@@ -371,7 +381,13 @@ function renderHtml(baseHtml, route, { noindex = false } = {}) {
   html = upsertTag(html, /<meta\s+name="twitter:description"\s+content="[^"]*"[^>]*\/?>/i, `<meta name="twitter:description" content="${escapeHtml(route.description)}" data-rh="true" />`)
   if (route.path !== '/') {
     html = html.replace(/\s*<link\s+rel="alternate"\s+hreflang="[^"]+"\s+href="[^"]*"\s*\/?>/gi, '')
-    html = html.replace('</head>', `    <link rel="alternate" hreflang="en" href="${canonical}" />\n  </head>`)
+    const uaAlternate = UA_ALTERNATE_BY_EN_PATH[canonicalPath]
+    const alternates = [
+      `<link rel="alternate" hreflang="en" href="${canonical}" />`,
+      uaAlternate ? `<link rel="alternate" hreflang="uk-UA" href="${uaAlternate}" />` : null,
+      uaAlternate ? `<link rel="alternate" hreflang="x-default" href="${canonical}" />` : null,
+    ].filter(Boolean).join('\n    ')
+    html = html.replace('</head>', `    ${alternates}\n  </head>`)
   }
   html = html.replace(/<div id="root"><\/div>/i, renderStaticRoot(route))
   return html
@@ -473,15 +489,17 @@ ${urls}
 > VITALOOP is a symptom-first HealthTech platform that helps people connect symptoms, lab direction, biomarker results, personalized recommendations, and progress tracking.
 
 ## Official URLs
-- Website: ${BASE_URL}/
-- How it works: ${BASE_URL}/how-it-works/
-- Features: ${BASE_URL}/features/
-- Symptom intake: ${BASE_URL}/symptom-intake/
-- Example report: ${BASE_URL}/example-report/
-- FAQ: ${BASE_URL}/faq/
-- Practitioners: ${BASE_URL}/for-nutritionists/
-- Privacy policy: ${BASE_URL}/privacy-policy/
-- Terms: ${BASE_URL}/terms/
+- [Website](${BASE_URL}/)
+- [How it works](${BASE_URL}/how-it-works/)
+- [Features](${BASE_URL}/features/)
+- [Symptom intake](${BASE_URL}/symptom-intake/)
+- [Example report](${BASE_URL}/example-report/)
+- [FAQ](${BASE_URL}/faq/)
+- [Practitioners](${BASE_URL}/for-nutritionists/)
+- [Privacy policy](${BASE_URL}/privacy-policy/)
+- [Terms](${BASE_URL}/terms/)
+- [Sitemap](${BASE_URL}/sitemap.xml)
+- [Robots](${BASE_URL}/robots.txt)
 
 ## What VITALOOP does
 - Starts with symptoms and health context.

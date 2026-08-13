@@ -5,25 +5,25 @@ import WellbeingCheckModal from './WellbeingCheckModal.jsx'
 
 const HERO_SCREENS = [
   {
-    src: '/mockups/cabinet-real/upload-results.webp',
-    alt: 'VITALOOP upload results cabinet screen',
-    label: 'Upload results',
+    src: '/mockups/cabinet-live/results-clean.webp?v=20260812',
+    alt: 'VITALOOP results screen showing a health summary, flagged markers, extraction quality, and next actions',
+    label: 'Results summary',
   },
   {
-    src: '/mockups/example-report/lab-results.webp',
-    alt: 'VITALOOP lab results table with biomarker status and ranges',
-    label: 'Lab results',
+    src: '/mockups/cabinet-live/upload-clean.webp?v=20260812',
+    alt: 'VITALOOP upload screen with file, image, spreadsheet, and manual entry flow',
+    label: 'Upload flow',
   },
   {
-    src: '/mockups/example-report/check-in.webp',
-    alt: 'VITALOOP weekly check-in screen',
-    label: 'Weekly check-in',
+    src: '/mockups/cabinet-live/lab-results-clean.webp?v=20260812',
+    alt: 'VITALOOP lab results list with marker status summary and retest plan',
+    label: 'Lab history',
   },
 ]
 
 const TRUST_CHIPS = [
   { icon: FileText, label: 'PDF, image, manual, CSV/XLS input' },
-  { icon: Sparkles, label: 'Shared Analysis Core V2' },
+  { icon: Sparkles, label: 'Knowledge Base reasoning' },
   { icon: ListChecks, label: 'Priorities, safety notes, retest plan' },
   { icon: ShieldCheck, label: 'Privacy-first, tenant-aware flow' },
 ]
@@ -57,7 +57,7 @@ export function LightHero() {
             {/* Subheadline */}
             <p className="text-lg text-slate-600 leading-relaxed max-w-xl space-y-3">
               <span className="block">Start with symptoms. Upload labs when you have them.</span>
-              <span className="block font-semibold text-slate-900">From scattered signals to an explainable, versioned health report.</span>
+              <span className="block font-semibold text-slate-900">From scattered signals to an explainable health report.</span>
               <span className="block text-base text-slate-500">
                 VITALOOP connects biomarker results with symptom context, Knowledge Base rules, safety notes, trends, clinician discussion points, retest timing, and weekly follow-through.
               </span>
@@ -96,12 +96,12 @@ export function LightHero() {
             {/* Key stats */}
             <div className="hidden grid-cols-2 gap-6 border-t border-slate-200 pt-8 sm:grid">
               <div>
-                <div className="text-2xl font-bold text-slate-900">$19.99/mo</div>
+                <div className="text-2xl font-bold text-slate-900">$4.99/mo</div>
                 <div className="text-sm text-slate-600">Premium plan</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-slate-900">Core V2</div>
-                <div className="text-sm text-slate-600">Shared B2C and B2B analysis engine</div>
+                <div className="text-2xl font-bold text-slate-900">KB + safety</div>
+                <div className="text-sm text-slate-600">Rules, context, and review guardrails</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-emerald-600">1 upload</div>
@@ -122,7 +122,7 @@ export function LightHero() {
                 <div className="mb-3 flex items-center justify-between gap-4 px-1 sm:mb-4 sm:px-2">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">Live product flow</p>
-                    <p className="mt-1 text-xs font-semibold leading-5 text-slate-900 sm:text-base">Upload → Results → Weekly follow-through</p>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-slate-900 sm:text-base">Upload → Health summary → Next actions</p>
                   </div>
                   <span className="hidden rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 sm:inline-flex">Real product screens</span>
                 </div>
@@ -161,9 +161,9 @@ export function LightHero() {
 
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   {[
-                    ['Core V2', 'analysis'],
-                    ['Clear', 'priority report'],
-                    ['Weekly', 'progress loop'],
+                    ['Context', 'symptoms + biomarkers'],
+                    ['Safety', 'guardrails and gaps'],
+                    ['Retest', 'next lab timing'],
                   ].map(([value, label]) => (
                     <div key={label} className="rounded-xl bg-slate-50 px-2 py-3 text-center">
                       <p className="text-sm font-black text-slate-900 sm:text-base">{value}</p>

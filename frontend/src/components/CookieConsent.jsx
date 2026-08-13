@@ -90,7 +90,9 @@ function saveConsent(prefs) {
   const record = { ...prefs, version: CONSENT_VERSION, timestamp: new Date().toISOString() }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(record))
-  } catch {}
+  } catch {
+    return record
+  }
   // Notify analytics loader
   if (typeof window.loadVitaloopAnalytics === 'function') {
     window.loadVitaloopAnalytics(record)

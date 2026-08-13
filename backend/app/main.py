@@ -7,6 +7,7 @@ from app.errors import http_exception_handler, validation_exception_handler
 from app.config import settings
 from app.middleware.request_context import RequestContextMiddleware
 from app.middleware.logging import StructuredLoggingMiddleware
+from app.middleware.ops_alerts import OpsAlertMiddleware
 from app.middleware.security import (
     InMemoryRateLimiterBackend,
     PathRateLimitMiddleware,
@@ -69,7 +70,7 @@ elif settings.sentry_dsn and sentry_sdk is None:
     logger.warning("sentry_dsn_set_but_sdk_missing")
 else:
     logger.info("sentry_disabled dsn_empty=%s", not settings.sentry_dsn)
-from app.routers import health, llm_consult, emergency_fixes, assessment
+from app.routers import health, llm_consult, emergency_fixes, assessment, monitoring
 from app.routers.identity import auth, profile, onboarding, settings as settings_router
 from app.routers.analysis import analyze, insights, red_flags, timeline, dashboard, uploads
 from app.routers.protocol import protocol, progress, symptoms, checkins, questionnaire, assignments, compatibility
@@ -133,6 +134,9 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 app.add_middleware(RequestContextMiddleware)
 
+# Rate-limited email alerts for critical production route failures.
+app.add_middleware(OpsAlertMiddleware)
+
 # Add structured logging middleware
 app.add_middleware(StructuredLoggingMiddleware)
 
@@ -188,6 +192,7 @@ app.add_middleware(
 )
 
 app.include_router(health.router, tags=["health"])
+app.include_router(monitoring.router, tags=["monitoring"])
 if settings.emergency_fixes_enabled:
     app.include_router(emergency_fixes.router, tags=["emergency-fixes"])
 app.include_router(analyze.router, prefix="/analyze", tags=["analyze"])

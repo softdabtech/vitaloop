@@ -46,7 +46,7 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.js',
       registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      injectRegister: null,
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
       manifest: false, // we use our own /public/manifest.json
       injectManifest: {
@@ -98,4 +98,3 @@ export default defineConfig({
     port: 5173,
   },
 })
-

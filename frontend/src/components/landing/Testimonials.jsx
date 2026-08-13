@@ -33,7 +33,7 @@ const TESTIMONIALS = [
     initials: 'SA',
   },
   {
-    quote: 'What looked like stress was a biomarker imbalance. The protocol made progress visible within weeks.',
+    quote: 'The report helped me prepare better questions for my clinician instead of guessing from isolated lab values.',
     name: 'Dmitri', age: 33, tag: 'Stress · Iron',
     initials: 'DM',
   },

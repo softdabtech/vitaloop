@@ -3,6 +3,9 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, Iterable, List
 
+
+SAFETY_ENGINE_VERSION = "safety_engine_v1"
+
 _DIAGNOSIS_PATTERNS = [
     r"\byou have\b",
     r"\bdiagnosed with\b",
@@ -17,6 +20,17 @@ _SENSITIVE_SUPPLEMENTS = {
     "b12": ["b12", "б12"],
     "folate": ["folate", "folic", "фолат", "фоліє", "фолиев"],
 }
+
+_DOSAGE_PATTERN = re.compile(
+    r"\b\d+(?:[.,]\d+)?\s*(?:mg|mcg|µg|ug|g|iu|мг|мкг|мо|од\.?)\b",
+    re.IGNORECASE,
+)
+
+_DOSING_FREQUENCY_PATTERN = re.compile(
+    r"\b(?:tid|bid|qid|qd|q\.d\.|b\.i\.d\.|t\.i\.d\.)\b|"
+    r"\b(?:daily|per day|/day|на добу|щодня)\b",
+    re.IGNORECASE,
+)
 
 
 def _num(value: Any) -> float | None:
@@ -111,6 +125,34 @@ def _contains_sensitive_supplement(item: Dict[str, Any]) -> str | None:
     return None
 
 
+def _profile_age(profile: Dict[str, Any] | None) -> float | None:
+    profile = profile if isinstance(profile, dict) else {}
+    return _num(profile.get("age"))
+
+
+def _is_pediatric_profile(profile: Dict[str, Any] | None) -> bool:
+    age = _profile_age(profile)
+    return age is not None and age < 18
+
+
+def _is_pregnancy_profile(profile: Dict[str, Any] | None) -> bool:
+    profile = profile if isinstance(profile, dict) else {}
+    pregnancy = str(profile.get("pregnancy_status") or "").strip().lower()
+    return pregnancy in {"pregnant", "yes", "true", "вагітна", "беременность", "pregnancy"}
+
+
+def _contains_explicit_dosage(item: Dict[str, Any]) -> bool:
+    dosage = str(item.get("dosage") or "").strip()
+    if dosage and (_DOSAGE_PATTERN.search(dosage) or _DOSING_FREQUENCY_PATTERN.search(dosage)):
+        return True
+
+    text = " ".join(str(item.get(key) or "") for key in ("body", "rationale", "instructions", "supplement"))
+    has_amount = bool(_DOSAGE_PATTERN.search(text))
+    if not has_amount:
+        return False
+    return bool(_DOSING_FREQUENCY_PATTERN.search(text) or re.search(r"\b(?:take|use|start|dose|dosage|приймай|вживай|доз)\b", text, re.IGNORECASE))
+
+
 def _has_safety_wording(item: Dict[str, Any]) -> bool:
     text = " ".join(str(value or "") for value in item.values()).lower()
     safe_terms = [
@@ -143,6 +185,7 @@ def validate_recommendation(
     events = _profile_events(profile)
 
     supplement_key = _contains_sensitive_supplement(recommendation)
+    has_explicit_dosage = _contains_explicit_dosage(recommendation)
     if supplement_key and not _has_safety_wording(recommendation):
         warning = {
             "key": f"{supplement_key}_safety_wording",
@@ -151,6 +194,24 @@ def validate_recommendation(
         }
         warnings.append(warning)
         _add_event(events, key=warning["key"], severity="medium", message=warning["message"], item=recommendation)
+
+    if supplement_key and has_explicit_dosage:
+        warning = {
+            "key": f"{supplement_key}_dosage_requires_clinician_review",
+            "message": "Explicit supplement dosage requires clinician review and must not be presented as self-directed advice.",
+            "item": recommendation,
+        }
+        warnings.append(warning)
+        _add_event(events, key=warning["key"], severity="high", message=warning["message"], item=recommendation)
+
+    if supplement_key and has_explicit_dosage and (_is_pediatric_profile(profile) or _is_pregnancy_profile(profile)):
+        blocked = {
+            "key": f"{supplement_key}_dosage_blocked_for_sensitive_context",
+            "message": "Explicit supplement dosage is blocked for pediatric or pregnancy context.",
+            "item": recommendation,
+        }
+        blocked_items.append(blocked)
+        _add_event(events, key=blocked["key"], severity="high", message=blocked["message"], item=recommendation)
 
     if any(_diagnosis_like_text(value) for value in recommendation.values()):
         blocked = {

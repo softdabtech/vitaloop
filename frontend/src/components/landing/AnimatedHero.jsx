@@ -72,7 +72,7 @@ export function AnimatedHero() {
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-8 border-t border-slate-700">
-              <StatBox value="$19.99" label="Premium plan /month" delay={0.5} />
+              <StatBox value="$4.99" label="Premium plan /month" delay={0.5} />
               <StatBox value="85+" label="Biomarkers analyzed" delay={0.6} />
               <StatBox value="1 upload" label="Included in Free plan" delay={0.7} />
               <StatBox value="Weekly" label="Check-ins on paid plans" delay={0.8} />

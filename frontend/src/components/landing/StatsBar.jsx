@@ -13,8 +13,8 @@ const STATS = [
   },
   {
     icon: FileSearch,
-    number: 'Core V2',
-    label: 'Shared analysis path for user and partner flows'
+    number: 'KB + safety',
+    label: 'Knowledge Base logic with safety guardrails'
   },
   {
     icon: Repeat2,

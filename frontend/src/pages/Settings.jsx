@@ -15,7 +15,11 @@ import '../styles/dashboard2026.css'
 
 const COOKIE_STORAGE_KEY = 'vitaloop-cookie-consent'
 function resetCookieConsent() {
-  try { localStorage.removeItem(COOKIE_STORAGE_KEY) } catch {}
+  try {
+    localStorage.removeItem(COOKIE_STORAGE_KEY)
+  } catch {
+    // Continue to reload so the user can retry consent setup even if storage is blocked.
+  }
   window.location.reload()
 }
 

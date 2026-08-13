@@ -307,7 +307,7 @@ export default function WellbeingCheckModal({ open, onClose }) {
                     <p className="text-[11px] font-black uppercase tracking-[0.18em] text-teal-700">Step 3</p>
                     <h3 className="mt-2 text-[26px] font-black leading-tight text-slate-900">Your attention map</h3>
                     <p className="mt-2 text-sm leading-6 text-slate-500">
-                      This is a lightweight preview. A full VITALOOP report uses your uploaded labs, reference ranges, safety context, and Core V2 rules.
+                      This is a lightweight preview. A full VITALOOP report uses your uploaded labs, reference ranges, safety context, and Knowledge Base rules.
                     </p>
 
                     <div className="mt-5 grid gap-3">

@@ -27,7 +27,7 @@
     <!-- Primary SEO -->
     <title>AI Blood Test Analysis & Symptom Checker | VITALOOP</title>
     <meta name="description" content="Start with symptoms or upload blood test results. Get clear biomarker explanations, lab discussion guidance, and a health action plan you can track." data-rh="true" />
-    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" data-rh="true" />
+    <meta name="robots" content="noindex,nofollow" data-rh="true" />
     <meta name="author" content="VITALOOP" />
     <meta name="theme-color" content="#10b981" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0A0F1C" media="(prefers-color-scheme: dark)" />
@@ -70,9 +70,9 @@
     <link rel="alternate" hreflang="uk-UA" href="https://ua.vitaloop.today/" />
     <link rel="alternate" hreflang="x-default" href="https://vitaloop.today/" />
 
-    <!-- Performance: preconnect -->
-    <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
-    <link rel="preconnect" href="https://www.google-analytics.com" crossorigin />
+    <!-- Performance: keep third-party hints cheap; analytics load only after consent. -->
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="https://www.google-analytics.com" />
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
 
     <!-- JSON-LD: Organization -->
@@ -138,11 +138,11 @@
         {
           "@type": "Offer",
           "name": "Personal Pro",
-          "price": "19.99",
+          "price": "4.99",
           "priceCurrency": "USD",
           "priceSpecification": {
             "@type": "UnitPriceSpecification",
-            "price": "19.99",
+            "price": "4.99",
             "priceCurrency": "USD",
             "unitText": "MONTH"
           },
@@ -162,7 +162,7 @@
       window.gtag = gtag;
       gtag('js', new Date());
       /* send_page_view: false — SPA page views are tracked manually via GAPageTracker in App.jsx */
-      gtag('config', 'G-LG0BCMBJJE', { send_page_view: false, cookie_domain: 'vitaloop.today', cookie_flags: 'SameSite=None;Secure' });
+      window.__vitaloopGaConfigured = false;
 
       if (!window.__fbPixelInit) {
         window.__fbPixelInit = true;
@@ -172,8 +172,7 @@
         window.fbq.loaded = true;
         window.fbq.version = '2.0';
         window.fbq.queue = window.fbq.queue || [];
-        fbq('init', '1703367347333580', {}, { cookieDomain: 'vitaloop.today' });
-        fbq('track', 'PageView');
+        window.__vitaloopFbConfigured = false;
       }
 
       // Analytics loader — called by React CookieConsent after consent decision.
@@ -187,12 +186,21 @@
         if (consent.analytics !== false) {
           scripts.push('https://www.googletagmanager.com/gtag/js?id=G-LG0BCMBJJE');
           scripts.push('https://t.contentsquare.net/uxa/e823a98ecd1a5.js');
+          if (!window.__vitaloopGaConfigured) {
+            window.__vitaloopGaConfigured = true;
+            gtag('config', 'G-LG0BCMBJJE', { send_page_view: false, cookie_domain: 'vitaloop.today', cookie_flags: 'SameSite=None;Secure' });
+          }
         } else {
           // GA opt-out
           window['ga-disable-G-LG0BCMBJJE'] = true;
         }
         if (consent.marketing !== false) {
           scripts.push('https://connect.facebook.net/en_US/fbevents.js');
+          if (!window.__vitaloopFbConfigured && window.fbq) {
+            window.__vitaloopFbConfigured = true;
+            fbq('init', '1703367347333580', {}, { cookieDomain: 'vitaloop.today' });
+            fbq('track', 'PageView');
+          }
         } else {
           // Disable FB pixel tracking
           if (window.fbq) { window.fbq = function(){}; }
@@ -229,6 +237,8 @@
 (function(){
   var STORAGE_KEY = 'vitaloop-cookie-consent';
   var CONSENT_VERSION = '1';
+  var COOKIE_BANNER_DELAY_MS = 10000;
+  var COOKIE_BANNER_SCROLL_DELAY_MS = 2500;
 
   function stored() {
     try {
@@ -510,9 +520,25 @@
     if (existing) return existing;
     var wrap = document.createElement('div');
     wrap.id = 'vl-cookie-banner';
-    wrap.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:10000;padding:0 10px max(10px,env(safe-area-inset-bottom));display:flex;justify-content:center;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+    var isMobile = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+    wrap.style.cssText = isMobile
+      ? 'position:fixed;bottom:0;left:0;right:0;z-index:10000;padding:0 10px max(10px,env(safe-area-inset-bottom));display:flex;justify-content:center;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'
+      : 'position:fixed;right:24px;bottom:24px;z-index:10000;width:min(520px,calc(100vw - 48px));display:flex;justify-content:flex-end;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
     document.body.appendChild(wrap);
     return wrap;
+  }
+
+  function hasVisibleModalBlocker() {
+    var blockers = document.querySelectorAll('[data-vl-cookie-modal-blocker="true"], [aria-modal="true"]');
+    for (var i = 0; i < blockers.length; i += 1) {
+      var el = blockers[i];
+      var style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+      var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : { width: 0, height: 0 };
+      if (style && style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0' && rect.width > 0 && rect.height > 0) {
+        return true;
+      }
+    }
+    return false;
   }
 
   window.openVitaloopCookieSettings = function() {
@@ -526,16 +552,56 @@
 
   function init() {
     if (isCabinetRoute()) return;
+    if (hasVisibleModalBlocker()) {
+      setTimeout(init, 3000);
+      return;
+    }
     var wrap = createWrap();
     buildBanner(wrap);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 800); });
-  } else {
-    setTimeout(init, 800);
+  function scheduleInit() {
+    var fired = false;
+    var startedAt = Date.now();
+    var timer = setTimeout(showOnce, COOKIE_BANNER_DELAY_MS);
+
+    function cleanup() {
+      window.removeEventListener('scroll', onScroll);
+    }
+
+    function showOnce() {
+      if (fired) return;
+      fired = true;
+      clearTimeout(timer);
+      cleanup();
+      init();
+    }
+
+    function onScroll() {
+      if (fired || window.scrollY < 80) return;
+      var remaining = Math.max(0, COOKIE_BANNER_SCROLL_DELAY_MS - (Date.now() - startedAt));
+      clearTimeout(timer);
+      timer = setTimeout(showOnce, remaining);
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
   }
+
+  scheduleInit();
 })();
+</script>
+
+<script>
+  window.addEventListener('load', function () {
+    if (!('serviceWorker' in navigator)) return;
+    window.setTimeout(function () {
+      navigator.serviceWorker.register('/sw.js').catch(function (error) {
+        if (window.console && console.warn) {
+          console.warn('VITALOOP service worker registration skipped', error);
+        }
+      });
+    }, 2500);
+  });
 </script>
 
 </body>

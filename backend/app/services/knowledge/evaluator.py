@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Tuple
 from uuid import UUID
 
 from app.services import supabase_service as supabase
+from app.services.knowledge.nutrition_algorithms import build_nutrition_kb_context
 
 
 FORBIDDEN_PHRASES = ["confirmed diagnosis"]
@@ -584,6 +585,7 @@ async def evaluate_health_input(
 
     rules = await _load_active_rules()
     evaluated = evaluate_input_with_rules(input_data, rules)
+    nutrition_context = build_nutrition_kb_context(input_data)
 
     recommendations_map = await _load_recommendations(evaluated["recommendation_keys"])
     generated_recommendations: List[Dict[str, Any]] = []
@@ -610,6 +612,18 @@ async def evaluate_health_input(
 
         source = str(row.get("source") or "").strip()
         source_url = str(row.get("source_url") or "").strip()
+        ref_key = (source, source_url)
+        if source or source_url:
+            if ref_key not in seen_refs:
+                seen_refs.add(ref_key)
+                recommendation_refs.append({"source": source, "source_url": source_url})
+
+    for item in nutrition_context.get("generated_recommendations") or []:
+        if not isinstance(item, dict):
+            continue
+        generated_recommendations.append(item)
+        source = str(item.get("source") or "").strip()
+        source_url = str(item.get("source_url") or "").strip()
         ref_key = (source, source_url)
         if source or source_url:
             if ref_key not in seen_refs:
@@ -670,6 +684,7 @@ async def evaluate_health_input(
         "safety_alerts": safety_alerts,
         "source_references": deduped_source_references,
         "rule_evaluation_ids": evaluation_ids,
+        "nutrition_context": nutrition_context,
     }
 
     if persist:
