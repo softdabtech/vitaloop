@@ -323,3 +323,64 @@ async def test_onboarding_state_contract(monkeypatch):
             assert "checklist" in data
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_onboarding_state_tolerates_optional_location_failure(monkeypatch):
+    user_id = str(uuid.uuid4())
+
+    async def fake_get_user_account(_user_id):
+        return {"id": user_id, "global_role": "end_user"}
+
+    async def fake_get_user_profile(_user_id):
+        return {"onboarding_complete": False}
+
+    async def failing_get_user_location(_user_id):
+        raise RuntimeError("transient supabase protocol error")
+
+    class _Q:
+        def __init__(self, data):
+            self._data = data
+
+        def select(self, *_args, **_kwargs):
+            return self
+
+        def eq(self, *_args, **_kwargs):
+            return self
+
+        def limit(self, *_args, **_kwargs):
+            return self
+
+        def execute(self):
+            return SimpleNamespace(data=self._data)
+
+    class _SB:
+        def table(self, name):
+            rows = {
+                "recurring_complaints": [],
+                "lab_uploads": [],
+                "questionnaire_sessions": [],
+            }
+            return _Q(rows.get(name, []))
+
+    monkeypatch.setattr(svc, "get_user_account", fake_get_user_account)
+    monkeypatch.setattr(svc, "get_user_profile", fake_get_user_profile)
+    monkeypatch.setattr(svc, "get_user_location", failing_get_user_location)
+    monkeypatch.setattr(svc, "_get_supabase", lambda: _SB())
+
+    async def fake_write_audit_log(**_kwargs):
+        return None
+
+    monkeypatch.setattr(svc, "write_audit_log", fake_write_audit_log)
+
+    app.dependency_overrides[get_current_user] = lambda: {"sub": user_id}
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/auth/onboarding/state")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["checklist"]["location"] is False
+            assert data["current_stage"] in {"profile", "location"}
+    finally:
+        app.dependency_overrides.clear()
