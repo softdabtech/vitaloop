@@ -21,6 +21,15 @@ const UA = {
   imageAlt: 'Vitaloop Ukraine — персональна оцінка симптомів, аналізів і плану дій',
 }
 
+const EN_ALTERNATE_BY_UA_PATH = {
+  '/': '/',
+  '/samopochuttia': '/symptom-intake/',
+  '/about': '/about/',
+  '/privacy-policy': '/privacy-policy/',
+  '/terms': '/terms/',
+  '/health-hub': '/health-hub/',
+}
+
 const UA_PUBLIC_ROUTES = [
   {
     path: '/',
@@ -179,6 +188,8 @@ for (const article of UA_HUB_ARTICLES) {
 
 const UA_PRIVATE_ROUTES = [
   '/login',
+  '/register',
+  '/auth/confirmation',
   '/dashboard',
   '/upload',
   '/lab-plan',
@@ -210,8 +221,7 @@ const uaRootFallback = `<div id="root"><main data-crawler-content="true" style="
         <div style="width: min(1200px, 100%); height: 100%; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box;">
           <div style="display: inline-flex; align-items: center; gap: 8px;">
             <span style="display: inline-flex; width: 36px; height: 36px; align-items: center; justify-content: center; border-radius: 12px; background: #fff;"><img src="/images/ua-vitaloop-mark-160-20260606.png" alt="" style="width: 32px; height: 32px; object-fit: contain;" /></span>
-            <span style="font-size: 21px; font-weight: 900; letter-spacing: 0.02em;"><span style="color: #1f6ed4;">VITA</span><span style="color: #f4c542;">LOOP</span></span>
-            <span style="display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center; border: 1px solid #e5dfd6; border-radius: 999px; background: #fff; box-shadow: 0 2px 8px rgba(15,23,42,0.08);">🇺🇦</span>
+            <span style="font-size: 21px; font-weight: 900; letter-spacing: 0.02em;">VITALOOP</span>
           </div>
           <span style="display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; border: 1px solid #e5dfd6; border-radius: 999px; background: #fff; color: #0f172a; font-size: 28px; line-height: 1;">≡</span>
         </div>
@@ -229,6 +239,28 @@ const uaRootFallback = `<div id="root"><main data-crawler-content="true" style="
               <a href="#result-example" style="display: inline-flex; min-height: 44px; align-items: center; justify-content: center; border: 1px solid #e5dfd6; border-radius: 999px; background: #fff; padding: 12px 20px; color: #0f172a; text-decoration: none; font-size: 15px; font-weight: 900;">Переглянути приклад</a>
             </div>
           </section>
+        </div>
+      </section>
+      <section style="padding: 56px 20px; background: #fff;">
+        <div style="width: min(1120px, 100%); margin: 0 auto; display: grid; gap: 24px;">
+          <div>
+            <p style="margin: 0 0 10px; color: #0f766e; font-size: 12px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase;">Як працює Vitaloop</p>
+            <h2 style="margin: 0; font-size: clamp(28px, 5vw, 44px); line-height: 1.1;">Від симптомів і аналізів до зрозумілої карти наступних кроків</h2>
+            <p style="margin: 16px 0 0; max-width: 760px; color: #475569; font-size: 17px; line-height: 1.7;">Vitaloop структурує самопочуття, приймає PDF або фото лабораторних аналізів, пояснює біомаркери простою мовою та формує освітній план дій. Сервіс не ставить діагнози й не замінює лікаря.</p>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px;">
+            <article style="border: 1px solid #e5dfd6; border-radius: 20px; padding: 18px;"><h3 style="margin: 0 0 8px; font-size: 18px;">1. Симптоми</h3><p style="margin: 0; color: #475569; line-height: 1.6;">Опишіть втому, сон, енергію, концентрацію, травлення або інші сигнали.</p></article>
+            <article style="border: 1px solid #e5dfd6; border-radius: 20px; padding: 18px;"><h3 style="margin: 0 0 8px; font-size: 18px;">2. Аналізи</h3><p style="margin: 0; color: #475569; line-height: 1.6;">Завантажте результати з лабораторії або почніть із ручного введення показників.</p></article>
+            <article style="border: 1px solid #e5dfd6; border-radius: 20px; padding: 18px;"><h3 style="margin: 0 0 8px; font-size: 18px;">3. AI-огляд</h3><p style="margin: 0; color: #475569; line-height: 1.6;">Система пов’язує симптоми, біомаркери, контекст профілю та базу знань.</p></article>
+            <article style="border: 1px solid #e5dfd6; border-radius: 20px; padding: 18px;"><h3 style="margin: 0 0 8px; font-size: 18px;">4. План</h3><p style="margin: 0; color: #475569; line-height: 1.6;">Отримайте пріоритети, питання для лікаря, план повторних аналізів і трекінг прогресу.</p></article>
+          </div>
+          <nav aria-label="Публічні сторінки Vitaloop" style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="/samopochuttia/" style="color:#0f766e;font-weight:800;">Самопочуття</a>
+            <a href="/symptomy/" style="color:#0f766e;font-weight:800;">Симптоми</a>
+            <a href="/analizy/" style="color:#0f766e;font-weight:800;">Аналізи</a>
+            <a href="/health-hub/" style="color:#0f766e;font-weight:800;">Центр знань</a>
+            <a href="/privacy-policy/" style="color:#0f766e;font-weight:800;">Політика приватності</a>
+          </nav>
         </div>
       </section>
     </main></div>`
@@ -345,7 +377,7 @@ const uaJsonLd = [
     description: UA.description,
     offers: [
       { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: 'UAH' },
-      { '@type': 'Offer', name: 'Premium', price: '399', priceCurrency: 'UAH' },
+      { '@type': 'Offer', name: 'Premium', price: '199', priceCurrency: 'UAH' },
     ],
     publisher: { '@id': 'https://ua.vitaloop.today/#organization' },
   },
@@ -417,6 +449,8 @@ function renderCrawlerRoot(route, { privatePage = false } = {}) {
 
 function renderUaRoute(route, { noindex = false, privatePage = false } = {}) {
   const canonical = routeUrl(route.path)
+  const enAlternatePath = EN_ALTERNATE_BY_UA_PATH[canonicalPath(route.path).replace(/\/$/, '')] || EN_ALTERNATE_BY_UA_PATH[canonicalPath(route.path)]
+  const enAlternate = enAlternatePath ? `https://vitaloop.today${enAlternatePath}` : null
   let pageHtml = html
   pageHtml = pageHtml.replace(/<html\b[^>]*>/i, '<html lang="uk" prefix="og: https://ogp.me/ns#">')
   pageHtml = replaceTag(pageHtml, /<title>[\s\S]*?<\/title>/, `<title>${escapeHtml(route.title)}</title>`)
@@ -430,14 +464,12 @@ function renderUaRoute(route, { noindex = false, privatePage = false } = {}) {
   pageHtml = replaceTag(pageHtml, /<meta name="twitter:description" content="[^"]*"[^>]*\/>/, `<meta name="twitter:description" content="${escapeHtml(route.description)}" data-rh="true" />`)
   pageHtml = pageHtml.replace(/\s*<link rel="alternate" hreflang="[^"]+" href="[^"]*" \/>/g, '')
   if (!noindex) {
-    pageHtml = upsertAfter(
-      pageHtml,
-      /<link rel="canonical" href="[^"]*"[^>]*\/>/,
-      `hreflang="uk-UA" href="${canonical}"`,
-      `<link rel="alternate" hreflang="uk-UA" href="${canonical}" />
-    <link rel="alternate" hreflang="en" href="https://vitaloop.today${canonicalPath(route.path)}" />
-    <link rel="alternate" hreflang="x-default" href="https://vitaloop.today${canonicalPath(route.path)}" />`,
-    )
+    const alternates = [
+      `<link rel="alternate" hreflang="uk-UA" href="${canonical}" />`,
+      enAlternate ? `<link rel="alternate" hreflang="en" href="${enAlternate}" />` : null,
+      enAlternate ? `<link rel="alternate" hreflang="x-default" href="${enAlternate}" />` : null,
+    ].filter(Boolean).join('\n    ')
+    pageHtml = upsertAfter(pageHtml, /<link rel="canonical" href="[^"]*"[^>]*\/>/, `hreflang="uk-UA" href="${canonical}"`, alternates)
   }
   pageHtml = pageHtml.replace(/<div id="root">[\s\S]*?<\/div>\s*(?=<script|<\/body>|$)/, renderCrawlerRoot(route, { privatePage }))
   return pageHtml
@@ -507,15 +539,27 @@ await writeFile(path.join(distDir, 'ua-llms.txt'), `# VITALOOP Ukraine
 > VITALOOP Ukraine — україномовний health intelligence сервіс для структурування симптомів, аналізів, пояснень біомаркерів, рекомендацій і динаміки стану.
 
 ## Офіційні URL
-- Сайт: https://ua.vitaloop.today/
-- Аналізи: https://ua.vitaloop.today/analizy/
-- Симптоми: https://ua.vitaloop.today/symptomy/
-- Центр знань: https://ua.vitaloop.today/health-hub/
-- Тарифи: https://ua.vitaloop.today/tarify/
+- [Сайт](https://ua.vitaloop.today/)
+- [Аналізи](https://ua.vitaloop.today/analizy/)
+- [Симптоми](https://ua.vitaloop.today/symptomy/)
+- [Центр знань](https://ua.vitaloop.today/health-hub/)
+- [Тарифи](https://ua.vitaloop.today/tarify/)
+- [Sitemap](https://ua.vitaloop.today/sitemap.xml)
+- [Robots](https://ua.vitaloop.today/robots.txt)
 
 ## Безпека
 VITALOOP Ukraine має освітній характер і не є діагностичним інструментом. Відхилення або тривожні результати потрібно обговорювати з кваліфікованим лікарем.
 `)
+
+await writeFile(path.join(uaStaticDir, '404.html'), renderUaRoute({
+  path: '/404.html',
+  title: 'Сторінку не знайдено | Vitaloop Ukraine',
+  description: 'Запитану сторінку Vitaloop Ukraine не знайдено.',
+  text: [
+    'Перевірте адресу або перейдіть на головну сторінку Vitaloop Ukraine.',
+    'Публічні сторінки доступні через головну, центр знань, розділи про симптоми та аналізи.',
+  ],
+}, { noindex: true }))
 
 await writeFile(uaIndexPath, html)
 console.log(`Created ${path.relative(process.cwd(), uaIndexPath)} and ${UA_PUBLIC_ROUTES.length} UA crawler routes in ${path.relative(process.cwd(), uaStaticDir)}`)

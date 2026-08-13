@@ -127,8 +127,8 @@ const AUTH_COPY = {
     defaultAuthError: 'Could not sign in. Try again.',
   },
   uk: {
-    seoTitle: 'Увійти або створити акаунт | VITALOOP Ukraine',
-    seoDescription: 'Увійдіть у VITALOOP Ukraine або створіть акаунт, щоб почати з симптомів, аналізів і персонального плану дій.',
+    seoTitle: 'Увійти або створити акаунт | VITALOOP Україна',
+    seoDescription: 'Увійдіть у VITALOOP Україна або створіть акаунт, щоб почати з симптомів, аналізів і персонального плану дій.',
     backToSite: 'На сайт',
     resetTitle: 'Відновити пароль',
     signupTitle: 'Створити акаунт',
@@ -442,7 +442,7 @@ function AbstractPanel({ side, variant = 'signin' }) {
 function UaHeroPanel({ isSignUp }) {
   const taglines = isSignUp
     ? {
-        badge: '🇺🇦 Vitaloop Ukraine',
+        badge: '🇺🇦 VITALOOP Україна',
         title: 'Ваше здоров\'я — ваш пріоритет',
         sub: 'Завантажте аналізи або почніть із симптомів. Отримайте персональний план дій.',
         stats: [
@@ -452,7 +452,7 @@ function UaHeroPanel({ isSignUp }) {
         ],
       }
     : {
-        badge: '🇺🇦 Vitaloop Ukraine',
+        badge: '🇺🇦 VITALOOP Україна',
         title: 'Розумійте своє здоров\'я глибше',
         sub: 'AI-аналіз аналізів крові, симптомів і персональний план дій українською.',
         stats: [
@@ -502,7 +502,7 @@ function UaHeroPanel({ isSignUp }) {
           }}>
             <span style={{ fontSize: 14 }}>🇺🇦</span>
             <span style={{ fontSize: 12, fontWeight: 800, color: '#fff', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              Vitaloop Ukraine
+              VITALOOP Україна
             </span>
           </div>
         </div>
@@ -517,7 +517,7 @@ function UaHeroPanel({ isSignUp }) {
           }}>
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }}/>
             <span style={{ fontSize: 11, fontWeight: 700, color: '#a7f3d0', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              AI аналіз · персональний план
+              AI-аналіз · персональний план
             </span>
           </div>
 
@@ -989,7 +989,7 @@ export default function Login() {
             {isUaAuth && (
               <div className="ua-auth-badge" style={{ marginBottom: 18 }}>
                 <span aria-hidden="true">🇺🇦</span>
-                Vitaloop Ukraine
+                VITALOOP Україна
               </div>
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -1083,11 +1083,12 @@ export default function Login() {
 
             {/* Email */}
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)',
+              <label htmlFor="auth-email" style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)',
                 letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
                 {copy.emailLabel}
               </label>
               <input
+                id="auth-email"
                 type="email"
                 required
                 name="email"
@@ -1111,13 +1112,14 @@ export default function Login() {
             {/* Password */}
             {!isForgot && (
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)',
+                <label htmlFor="auth-password" style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)',
                   letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
                   {copy.passwordLabel}
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showPass ? 'text' : 'password'}
+                    id="auth-password"
                     required
                     minLength={8}
                     name="password"

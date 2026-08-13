@@ -30,7 +30,6 @@ import {
 import Seo from '../components/Seo.jsx'
 import { LightHero } from '../components/landing/LightHero.jsx'
 import { StatsBar } from '../components/landing/StatsBar.jsx'
-import { TrustedServicesSection } from '../components/landing/TrustedServicesSection.jsx'
 import { InteractivePricing } from '../components/landing/InteractivePricing.jsx'
 import { AnimatedFAQ } from '../components/landing/AnimatedFAQ.jsx'
 import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx'
@@ -58,14 +57,14 @@ const STEPS = [
   { icon: HeartPulse, title: 'Start with symptoms', body: 'Describe what you feel and for how long' },
   { icon: BrainCircuit, title: 'Answer follow-ups', body: 'Smart questions organize your context' },
   { icon: FlaskConical, title: 'Get lab direction', body: 'See what may be useful to check next' },
-  { icon: Upload, title: 'Upload results', body: 'Normalize biomarkers and run them through Shared Analysis Core V2' },
+  { icon: Upload, title: 'Upload results', body: 'Normalize biomarkers and connect them with symptoms, safety checks, and Knowledge Base rules' },
   { icon: Sparkles, title: 'Run and refine', body: 'Weekly check-ins adapt your protocol' },
 ]
 
 const BENEFITS = [
   {
     title: 'Explainable, not generic AI',
-    body: 'Each report runs through Shared Analysis Core V2: governed Knowledge Base rules, biomarker context, safety flags, and traceable reasoning instead of loose chatbot guesses.',
+    body: 'Each report runs through a structured analysis layer: biomarker context, Knowledge Base rules, safety flags, and traceable reasoning instead of loose chatbot guesses.',
     icon: BrainCircuit,
     stat: 'KB',
     label: 'Explainable logic'
@@ -248,7 +247,7 @@ const PRICING = {
     },
     {
       name: 'Premium',
-      price: '$19.99',
+      price: '$4.99',
       period: '/month',
       points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
       cta: 'Upgrade',
@@ -274,7 +273,7 @@ const PRICING = {
     },
     {
       name: 'Premium',
-      price: '$199',
+      price: '$49.99',
       period: '/year',
       points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
       cta: 'Upgrade',
@@ -956,8 +955,8 @@ export default function Landing() {
               What you get after uploading labs
             </h2>
             <p className="mx-auto mt-4 max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
-              VITALOOP turns a PDF or image into a structured report: biomarkers found, what needs review,
-              why it matters, what to discuss, and when to retest.
+              VITALOOP turns a lab file, spreadsheet, or manual entry into a structured report:
+              what is outside range, what context is missing, what to discuss, and when to retest.
             </p>
           </motion.div>
 
@@ -969,7 +968,7 @@ export default function Landing() {
               <div className="mb-4 flex items-center justify-between px-2">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Example report</p>
-                  <p className="text-sm font-semibold text-slate-700">Real cabinet screens and biomarker flow</p>
+                  <p className="text-sm font-semibold text-slate-700">Real cabinet screen with anonymized sample data</p>
                 </div>
                 <button
                   onClick={() => navigate('/example-report')}
@@ -980,8 +979,10 @@ export default function Landing() {
                 </button>
               </div>
               <img
-                src="/mockups/example-report/dashboard.webp?v=20260606"
-                alt="VITALOOP cabinet dashboard preview"
+                src="/mockups/cabinet-live/results-clean.webp?v=20260812"
+                alt="VITALOOP results screen with health summary, flagged markers, context gaps, safety notes, and next actions"
+                width="1110"
+                height="700"
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 object-cover shadow-xl"
                 loading="eager"
               />
@@ -990,23 +991,23 @@ export default function Landing() {
             <div className="grid gap-3">
               {[
                 {
-                  title: 'Biomarkers found',
-                  body: 'Values, units, statuses, and reference ranges are normalized into a readable table.',
+                  title: 'Markers read',
+                  body: 'Values, units, statuses, and reference ranges are extracted into a structured view.',
                   icon: FileSearch,
                 },
                 {
-                  title: 'Why it matters',
-                  body: 'Matched Knowledge Base rules explain possible patterns without claiming a diagnosis.',
+                  title: 'Context gaps',
+                  body: 'The report shows which markers or profile details are missing before stronger conclusions.',
                   icon: Sparkles,
                 },
                 {
                   title: 'What to discuss',
-                  body: 'Doctor/nutritionist discussion points are generated from flagged markers and matched rules.',
+                  body: 'Clinician discussion points are derived from flagged markers, safety context, and available rules.',
                   icon: MessageSquareText,
                 },
                 {
                   title: 'Retest plan',
-                  body: 'The report suggests what to monitor again and when, based on marker category and urgency.',
+                  body: 'Retest timing is shown conservatively when the current data supports a follow-up window.',
                   icon: Repeat2,
                 },
               ].map((item, index) => {

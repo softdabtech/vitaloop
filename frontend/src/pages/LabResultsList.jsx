@@ -28,7 +28,7 @@ const LAB_RESULTS_COPY = {
     viewResults: 'View Results',
     premiumTitle: 'Premium features available',
     premiumBody: 'Upgrade to see your complete lab history, track trends over time, and keep action plans connected to follow-up check-ins.',
-    premiumCta: 'Upgrade for $19.99/month',
+    premiumCta: 'Upgrade for $4.99/month',
     whatChanged: 'What changed',
     whatChangedBody: 'Contextual review of priority markers and next retest direction.',
     stableZone: 'Stable zone',
@@ -86,8 +86,15 @@ function normalizeProgressPayload(payload) {
   return []
 }
 
-function getItemDate(item) {
-  return item?.test_date || item?.created_at?.slice(0, 10) || 'Unknown date'
+function getItemDate(item, isUk = false) {
+  return item?.test_date || item?.created_at?.slice(0, 10) || (isUk ? 'Дата не вказана' : 'Unknown date')
+}
+
+function displayLabName(item, fallback, isUk) {
+  const raw = String(item?.lab_name || '').trim()
+  if (!raw) return fallback
+  if (isUk && raw.toLowerCase() === 'manual entry') return 'Ручне введення'
+  return raw
 }
 
 function getBiomarkerCounts(item) {
@@ -241,9 +248,14 @@ export default function LabResultsList() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.uploads}</p>
                   <p className="mt-1 text-2xl font-bold text-slate-900">{sortedItems.length}</p>
                 </div>
-                <div className="vtl-light-card p-4">
+                <div className="vtl-light-card min-w-0 p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.mostRecent}</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{sortedItems[0]?.lab_name || copy.uploadHistory}</p>
+                  <p
+                    className="mt-1 block max-w-full truncate text-sm font-semibold text-slate-900"
+                    title={displayLabName(sortedItems[0], copy.uploadHistory, isUk)}
+                  >
+                    {displayLabName(sortedItems[0], copy.uploadHistory, isUk)}
+                  </p>
                 </div>
                 <div className="vtl-light-card p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.retestPlan}</p>
@@ -252,7 +264,7 @@ export default function LabResultsList() {
               </div>
 
               {sortedItems.map((item, index) => {
-                const date = getItemDate(item)
+                const date = getItemDate(item, isUk)
                 const { optimal, warning, critical } = getBiomarkerCounts(item)
                 const uploadId = item?.upload_id || item?.id
 
@@ -261,13 +273,14 @@ export default function LabResultsList() {
                     key={uploadId || `${date}-${index}`}
                     className="vtl-light-card vtl-light-card-hover rounded-2xl px-4 py-3 transition"
                   >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <button
                         onClick={() => uploadId && navigate(`/results/${uploadId}`)}
                         disabled={!uploadId}
                         className="min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60 sm:flex-1"
+                        title={displayLabName(item, copy.labResults(sortedItems.length - index), isUk)}
                       >
-                        <p className="truncate text-sm font-semibold text-slate-800">{item?.lab_name || copy.labResults(sortedItems.length - index)}</p>
+                        <p className="block max-w-full truncate text-sm font-semibold text-slate-800">{displayLabName(item, copy.labResults(sortedItems.length - index), isUk)}</p>
                         <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
                           <Calendar className="h-3 w-3" />
                           {date}

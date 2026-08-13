@@ -13,9 +13,9 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Any, Dict
 import logging
 
-from app.dependencies import require_freemium_analyze, get_current_user
+from app.dependencies import get_current_user
 from app.services.ai.openai_service import extract_biomarkers, EXTRACT_PROMPT_VERSION, is_llm_configured, get_analysis_source
-from app.services.claude_pdf_analyzer import OpenAIPDFAnalyzer, create_file_analyzer
+from app.services.ai.openai_pdf_analyzer import OpenAIPDFAnalyzer, create_file_analyzer
 from app.services.supabase_service import (
     assert_upload_belongs_to_user,
     get_biomarker_extraction_candidates,
@@ -144,12 +144,16 @@ class AnalyzeResponse(BaseModel):
     analysis_source: Optional[str] = None
     knowledge_evaluation: Optional[dict] = None
     knowledge_report: Optional[dict] = None
+    interpreted_report: Optional[dict] = None
     protocol: Optional[Any] = None
     retest_schedule: Optional[List[dict]] = None
     summary: Optional[dict] = None
     final_analysis: Optional[dict] = None
     safety_result: Optional[dict] = None
     explainability: Optional[dict] = None
+    analysis_input_quality_gate: Optional[dict] = None
+    clinical_data_integrity: Optional[dict] = None
+    evidence_gaps: Optional[dict] = None
     report_version: Optional[dict] = None
 
 
@@ -250,6 +254,15 @@ def _normalize_biomarker_category(category: Any, name: str = "") -> str:
     return "other"
 
 
+def _normalize_reference_bounds(
+    ref_low: float | None,
+    ref_high: float | None,
+) -> tuple[float | None, float | None]:
+    if ref_low is not None and ref_high is not None and ref_low > ref_high:
+        return None, ref_high
+    return ref_low, ref_high
+
+
 def _unique_biomarker_name(name: str, unit: str, seen_names: set[str]) -> str | None:
     base_name = str(name or "").strip()
     if not base_name:
@@ -319,6 +332,7 @@ def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dic
             range_low, range_high = _extract_reference_bounds(raw.get("reference_range"))
             ref_low = ref_low if ref_low is not None else range_low
             ref_high = ref_high if ref_high is not None else range_high
+        ref_low, ref_high = _normalize_reference_bounds(ref_low, ref_high)
 
         sanitized.append(
             {
@@ -347,7 +361,6 @@ async def analyze_lab_file(
     lab_name: Optional[str] = Form(default=None),
     symptoms: List[str] = Form(default_factory=list),
     current_user: dict = Depends(get_current_user),
-    _freemium_check: None = Depends(require_freemium_analyze),
 ):
     """
     Universal file analyzer for all lab report formats.
@@ -517,7 +530,12 @@ async def analyze_lab_file(
             user_profile=user_profile,
             user_id=user_id,
             analysis_id=str(upload_id),
-            source_metadata={"source": "b2c_file", "file_type": file_ext, "analysis_method": analysis_method},
+            source_metadata={
+                "source": "b2c_file",
+                "file_type": file_ext,
+                "analysis_method": analysis_method,
+                "candidates": candidates,
+            },
             persist_knowledge=True,
             persist_report_version=True,
             locale=response_locale,
@@ -570,6 +588,10 @@ async def analyze_lab_file(
             "analysis_source": analysis_source,
             "knowledge_evaluation": knowledge_evaluation,
             "knowledge_report": knowledge_report,
+            "interpreted_report": pipeline_result.get("interpreted_report"),
+            "analysis_input_quality_gate": pipeline_result.get("analysis_input_quality_gate"),
+            "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+            "evidence_gaps": pipeline_result.get("evidence_gaps"),
             "safety_result": pipeline_result.get("safety_result"),
             "explainability": pipeline_result.get("explainability"),
             "report_version": pipeline_result.get("report_version"),
@@ -689,7 +711,6 @@ async def _drop_idempotency(*, user_id: str, idempotency_key: str) -> None:
 async def analyze_lab(
     request: Request,
     current_user: dict = Depends(get_current_user),
-    _freemium_check: None = Depends(require_freemium_analyze),
     idempotency_key: Optional[str] = Header(default=None, alias="X-Idempotency-Key"),
 ):
     content_type = (request.headers.get("content-type") or "").lower()
@@ -753,12 +774,16 @@ async def analyze_lab(
                 upload_id = upload["id"]
 
                 saved_biomarkers = await save_biomarkers(upload_id=upload_id, user_id=user_id, biomarkers=biomarkers)
-                knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
+                pipeline_result = await run_lab_analysis_pipeline(
                     biomarkers=saved_biomarkers,
                     symptoms=symptoms_form,
-                    user_id=user_id,
-                    upload_id=str(upload_id),
                     user_profile=user_profile,
+                    user_id=user_id,
+                    analysis_id=str(upload_id),
+                    source_metadata={"source": "legacy_multipart_pdf", "analysis_method": "legacy_pdf"},
+                    persist_knowledge=True,
+                    persist_report_version=True,
+                    locale=_resolve_response_locale(request),
                 )
                 await save_timeline_event(
                     user_id=user_id,
@@ -771,7 +796,19 @@ async def analyze_lab(
                     "upload_id": upload_id,
                     "biomarkers": saved_biomarkers,
                     "analysis_source": _stable_analysis_source("fallback"),
-                    "knowledge_evaluation": knowledge_evaluation,
+                    "knowledge_evaluation": pipeline_result.get("knowledge_evaluation"),
+                    "knowledge_report": pipeline_result.get("knowledge_report"),
+                    "interpreted_report": pipeline_result.get("interpreted_report"),
+                    "protocol": pipeline_result.get("protocol", {}),
+                    "retest_schedule": pipeline_result.get("retest_suggestions", []),
+                    "summary": pipeline_result.get("health_summary", {}),
+                    "analysis_input_quality_gate": pipeline_result.get("analysis_input_quality_gate"),
+                    "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+                    "evidence_gaps": pipeline_result.get("evidence_gaps"),
+                    "safety_result": pipeline_result.get("safety_result"),
+                    "explainability": pipeline_result.get("explainability"),
+                    "report_version": pipeline_result.get("report_version"),
+                    "final_analysis": pipeline_result,
                 }
             finally:
                 try:
@@ -787,7 +824,6 @@ async def analyze_lab(
             lab_name=lab_name_form,
             symptoms=symptoms_form,
             current_user=current_user,
-            _freemium_check=None,
         )
 
     try:
@@ -993,9 +1029,13 @@ async def analyze_lab(
             "analysis_source": analysis_source,
             "knowledge_evaluation": knowledge_evaluation,
             "knowledge_report": pipeline_result.get("knowledge_report"),
+            "interpreted_report": pipeline_result.get("interpreted_report"),
             "protocol": pipeline_result.get("protocol", {}),
             "retest_schedule": pipeline_result.get("retest_suggestions", []),
             "summary": pipeline_result.get("health_summary", {}),
+            "analysis_input_quality_gate": pipeline_result.get("analysis_input_quality_gate"),
+            "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+            "evidence_gaps": pipeline_result.get("evidence_gaps"),
             "safety_result": pipeline_result.get("safety_result"),
             "explainability": pipeline_result.get("explainability"),
             "report_version": pipeline_result.get("report_version"),
@@ -1036,12 +1076,31 @@ async def get_upload_candidates(
     user_id = current_user.get("sub")
     await assert_upload_belongs_to_user(upload_id, user_id)
     candidates = await get_biomarker_extraction_candidates(upload_id, user_id)
+    biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
+    user_profile = await get_user_profile(user_id) or {}
+    pipeline_result = await run_lab_analysis_pipeline(
+        biomarkers=biomarkers,
+        symptoms=[],
+        user_profile=user_profile,
+        user_id=user_id,
+        analysis_id=str(upload_id),
+        source_metadata={"source": "candidate_quality_review", "candidates": candidates},
+        persist_knowledge=False,
+        persist_report_version=False,
+        generate_ai_protocol=False,
+    )
+    quality_gate = pipeline_result.get("analysis_input_quality_gate") or {}
+    gate_requires_confirmation = bool(quality_gate.get("requires_confirmation"))
     return {
         "upload_id": upload_id,
+        "analysis_input_quality_gate": quality_gate,
+        "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+        "evidence_gaps": pipeline_result.get("evidence_gaps"),
+        "requires_confirmation": gate_requires_confirmation,
         "candidates": [
             {
                 **candidate,
-                "requires_confirmation": float(candidate.get("confidence_score") or 0) < 0.55,
+                "requires_confirmation": gate_requires_confirmation or float(candidate.get("confidence_score") or 0) < 0.80,
                 "confidence_label": (
                     "high"
                     if float(candidate.get("confidence_score") or 0) >= 0.80
@@ -1107,7 +1166,11 @@ async def confirm_upload_candidates(
         "biomarkers": saved,
         "candidates": updated,
         "knowledge_report": pipeline_result.get("knowledge_report"),
+        "interpreted_report": pipeline_result.get("interpreted_report"),
         "protocol": protocol,
+        "analysis_input_quality_gate": pipeline_result.get("analysis_input_quality_gate"),
+        "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+        "evidence_gaps": pipeline_result.get("evidence_gaps"),
         "safety_result": pipeline_result.get("safety_result"),
         "explainability": pipeline_result.get("explainability"),
         "report_version": pipeline_result.get("report_version"),
@@ -1187,6 +1250,10 @@ async def get_results(
         "protocol": protocol_recommendations,
         "knowledge_evaluation": knowledge_evaluation,
         "knowledge_report": knowledge_report,
+        "interpreted_report": pipeline_result.get("interpreted_report"),
+        "analysis_input_quality_gate": pipeline_result.get("analysis_input_quality_gate"),
+        "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+        "evidence_gaps": pipeline_result.get("evidence_gaps"),
         "safety_result": pipeline_result.get("safety_result"),
         "explainability": pipeline_result.get("explainability"),
         "report_version": report_version,
@@ -1241,6 +1308,10 @@ async def regenerate_results(
         "protocol": protocol_recommendations or pipeline_result.get("recommendations") or [],
         "knowledge_evaluation": pipeline_result.get("knowledge_evaluation"),
         "knowledge_report": pipeline_result.get("knowledge_report"),
+        "interpreted_report": pipeline_result.get("interpreted_report"),
+        "analysis_input_quality_gate": pipeline_result.get("analysis_input_quality_gate"),
+        "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+        "evidence_gaps": pipeline_result.get("evidence_gaps"),
         "safety_result": pipeline_result.get("safety_result"),
         "explainability": pipeline_result.get("explainability"),
         "report_version": pipeline_result.get("report_version"),
@@ -1399,6 +1470,10 @@ async def analyze_manual_biomarkers(
             "analysis_source": _stable_analysis_source("llm" if is_llm_configured() else "fallback"),
             "knowledge_evaluation": pipeline_result.get("knowledge_evaluation"),
             "knowledge_report": pipeline_result.get("knowledge_report"),
+            "interpreted_report": pipeline_result.get("interpreted_report"),
+            "analysis_input_quality_gate": pipeline_result.get("analysis_input_quality_gate"),
+            "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+            "evidence_gaps": pipeline_result.get("evidence_gaps"),
             "protocol": protocol_response,
             "shopping_links": pipeline_result.get("shopping_links", []),
             "retest_schedule": pipeline_result.get("retest_suggestions", []),

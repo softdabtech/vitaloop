@@ -8,6 +8,7 @@ import { HelmetProvider } from 'react-helmet-async'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import * as Sentry from '@sentry/react'
+import { installGlobalErrorReporting } from './lib/errorReporter.js'
 
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN
 if (sentryDsn) {
@@ -19,6 +20,8 @@ if (sentryDsn) {
     integrations: [],
   })
 }
+
+installGlobalErrorReporting()
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -6,9 +6,13 @@ from httpx import ASGITransport, AsyncClient
 from app.dependencies import get_current_user
 from app.main import app
 from app.routers.analysis import analyze as analyze_router
+from app.services import lab_analysis_pipeline
 from app.services import supabase_service
+from app.services.analysis_quality_gate import build_analysis_input_quality_gate
 from app.services.analysis_candidates import candidate_to_biomarker, score_biomarker_candidate
+from app.services.clinical_data_integrity import validate_clinical_data_integrity
 from app.services.cost_analytics import record_analysis_cost, render_cost_metrics
+from app.services.evidence_gaps import build_evidence_gaps
 from app.services.safety.safety_engine import validate_protocol, validate_report
 from app.utils.locale import resolve_locale
 
@@ -55,6 +59,167 @@ def test_candidate_to_biomarker_converts_confirmed_row():
     assert biomarker["unit"] == "ng/mL"
 
 
+def test_clinical_data_integrity_flags_unknown_unit_and_profile_gap():
+    result = validate_clinical_data_integrity(
+        biomarkers=[
+            {
+                "name": "Ferritin",
+                "canonical_name": "canonical_ferritin",
+                "value": 15,
+                "unit": "mg/mL",
+                "ref_low": 30,
+                "ref_high": 150,
+            }
+        ],
+        profile={"age": 8, "sex": "male"},
+    )
+
+    assert result["version"] == "clinical_data_integrity_v1"
+    assert result["status"] == "pass_with_warnings"
+    issue_keys = {item["key"] for item in result["issues"]}
+    assert "unknown_unit" in issue_keys
+    assert "profile_context_incomplete" in issue_keys
+    assert "pediatric_context" in issue_keys
+    assert result["markers"][0]["reference_source"] == "lab_provided"
+
+
+def test_analysis_input_quality_gate_requires_confirmation_for_weak_context():
+    clinical_integrity = validate_clinical_data_integrity(
+        biomarkers=[
+            {
+                "name": "Unknown",
+                "canonical_name": "canonical_unknown",
+                "value": 12,
+                "unit": "weird",
+            }
+        ],
+        profile={},
+    )
+    result = build_analysis_input_quality_gate(
+        biomarkers=[{"name": "Unknown", "value": 12, "unit": "weird"}],
+        candidates=[{"confidence_score": 0.4}],
+        clinical_integrity=clinical_integrity,
+        health_context={"readiness": {"has_biomarkers": True, "has_profile": False}},
+        source_metadata={"source": "test"},
+    )
+
+    assert result["version"] == "analysis_input_quality_gate_v1"
+    assert result["requires_confirmation"] is True
+    assert result["decision"] in {"confirm", "block_or_confirm"}
+    assert result["candidate_summary"]["low_count"] == 1
+
+
+def test_analysis_input_quality_gate_high_confidence_auto_continues():
+    clinical_integrity = validate_clinical_data_integrity(
+        biomarkers=[
+            {
+                "name": "Ferritin",
+                "canonical_name": "canonical_ferritin",
+                "value": 80,
+                "unit": "ng/mL",
+                "ref_low": 30,
+                "ref_high": 150,
+            }
+        ],
+        profile={"age": 35, "sex": "female", "height_cm": 170, "weight_kg": 65},
+    )
+    result = build_analysis_input_quality_gate(
+        biomarkers=[{"name": "Ferritin", "value": 80, "unit": "ng/mL"}],
+        candidates=[{"confidence_score": 0.96}],
+        clinical_integrity=clinical_integrity,
+        health_context={
+            "readiness": {
+                "has_biomarkers": True,
+                "has_profile": True,
+                "has_symptoms": True,
+                "has_questionnaire": True,
+                "has_safety_context": True,
+            }
+        },
+        source_metadata={"source": "test"},
+    )
+
+    assert result["label"] == "high"
+    assert result["decision"] == "auto_continue"
+    assert result["requires_confirmation"] is False
+
+
+def test_analysis_input_quality_gate_medium_requires_confirmation_not_block():
+    clinical_integrity = validate_clinical_data_integrity(
+        biomarkers=[
+            {
+                "name": "Ferritin",
+                "canonical_name": "canonical_ferritin",
+                "value": 80,
+                "unit": "ng/mL",
+                "ref_low": 30,
+                "ref_high": 150,
+            }
+        ],
+        profile={"age": 35, "sex": "female", "height_cm": 170, "weight_kg": 65},
+    )
+    result = build_analysis_input_quality_gate(
+        biomarkers=[{"name": "Ferritin", "value": 80, "unit": "ng/mL"}],
+        candidates=[{"confidence_score": 0.65}],
+        clinical_integrity=clinical_integrity,
+        health_context={"readiness": {"has_biomarkers": True, "has_profile": True}},
+        source_metadata={"source": "test"},
+    )
+
+    assert result["label"] == "medium"
+    assert result["decision"] == "confirm"
+    assert result["requires_confirmation"] is True
+
+
+def test_analysis_input_quality_gate_blocks_unit_conflict_and_pediatric_profile_gap():
+    clinical_integrity = validate_clinical_data_integrity(
+        biomarkers=[
+            {
+                "name": "Ferritin",
+                "canonical_name": "canonical_ferritin",
+                "value": 80,
+                "unit": "mg/mL",
+                "ref_low": 30,
+                "ref_high": 150,
+            }
+        ],
+        profile={"age": 8, "sex": "male"},
+    )
+    result = build_analysis_input_quality_gate(
+        biomarkers=[{"name": "Ferritin", "value": 80, "unit": "mg/mL"}],
+        candidates=[{"confidence_score": 0.92}],
+        clinical_integrity=clinical_integrity,
+        health_context={"readiness": {"has_biomarkers": True, "has_profile": False}},
+        source_metadata={"source": "test"},
+    )
+
+    blocker_keys = {item["key"] for item in result["blockers"]}
+    assert result["decision"] == "block_or_confirm"
+    assert "unit_or_plausibility_conflict" in blocker_keys
+    assert "pediatric_profile_safety_gap" in blocker_keys
+
+
+def test_evidence_gaps_identifies_missing_domain_markers():
+    result = build_evidence_gaps(
+        biomarkers=[
+            {
+                "name": "Mean Reticulocyte Volume",
+                "canonical_name": "canonical_mean_reticulocyte_volume",
+                "value": 91.9,
+                "unit": "fL",
+            }
+        ],
+        health_states={"states": [{"domain": "blood_count", "score": 56, "risk_level": "monitor"}]},
+        interpreted_report={"patterns": [{"domain": "blood_count", "missing_context": ["CBC context"]}]},
+        clinical_integrity={"issues": []},
+    )
+
+    assert result["version"] == "evidence_gaps_v1"
+    missing_markers = {item["missing_marker"] for item in result["gaps"]}
+    assert "hemoglobin" in missing_markers
+    assert result["summary"]["gap_count"] >= 1
+
+
 def test_safety_engine_flags_dangerous_values_and_sensitive_supplements():
     result = validate_report(
         biomarkers=[
@@ -73,6 +238,96 @@ def test_safety_engine_flags_dangerous_values_and_sensitive_supplements():
     assert result["doctor_discussion_required"] is True
     assert any(event["key"] == "dangerous_glucose" for event in result["safety_events"])
     assert any(warning["key"] == "iron_safety_wording" for warning in result["warnings"])
+
+
+@pytest.mark.asyncio
+async def test_pipeline_emits_quality_gate_integrity_evidence_gaps_and_provenance(monkeypatch):
+    async def fake_evaluate_biomarkers_with_knowledge(**kwargs):
+        return {
+            "version": "knowledge_evaluation_test_v1",
+            "matched_rules": [],
+            "nutrition_context": {"version": "nutrition_algorithms_test_v1"},
+        }
+
+    def fake_build_knowledge_report(**kwargs):
+        return {
+            "version": "knowledge_report_test_v1",
+            "summary": {"headline": "Educational report", "disclaimer": "Educational only."},
+            "action_plan": [],
+            "retest_plan": [],
+            "doctor_discussion": [],
+            "why_it_matters": [],
+        }
+
+    async def fake_resolve_domain_definitions():
+        return [{"key": "blood_count", "registry_version": "domain_registry_test_v1"}]
+
+    def fake_evaluate_health_states(**kwargs):
+        return {
+            "version": "health_states_test_v1",
+            "domain_registry_version": "domain_registry_test_v1",
+            "states": [{"domain": "blood_count", "score": 56, "risk_level": "monitor", "confidence": 0.6}],
+            "top_priorities": [{"domain": "blood_count", "score": 56, "risk_level": "monitor", "confidence": 0.6}],
+        }
+
+    def fake_trends(**kwargs):
+        return {"version": "trend_test_v1", "available": False, "priority_changes": []}
+
+    async def fake_ai_protocol(**kwargs):
+        return {
+            "version": "ai_orchestration_test_v1",
+            "status": "skipped",
+            "items": [],
+            "metadata": {"prompt_version": "protocol_test_v1", "model": "gpt-test"},
+        }
+
+    async def fake_load_historical_biomarkers(user_id):
+        return []
+
+    monkeypatch.setattr(lab_analysis_pipeline, "evaluate_biomarkers_with_knowledge", fake_evaluate_biomarkers_with_knowledge)
+    monkeypatch.setattr(lab_analysis_pipeline, "build_knowledge_report", fake_build_knowledge_report)
+    monkeypatch.setattr(lab_analysis_pipeline, "resolve_domain_definitions", fake_resolve_domain_definitions)
+    monkeypatch.setattr(lab_analysis_pipeline, "evaluate_health_states", fake_evaluate_health_states)
+    monkeypatch.setattr(lab_analysis_pipeline, "evaluate_biomarker_trends", fake_trends)
+    monkeypatch.setattr(lab_analysis_pipeline, "generate_ai_protocol_orchestrated", fake_ai_protocol)
+    monkeypatch.setattr(lab_analysis_pipeline, "_load_historical_biomarkers", fake_load_historical_biomarkers)
+    monkeypatch.setattr(lab_analysis_pipeline, "record_analysis_cost", lambda **kwargs: None)
+
+    result = await lab_analysis_pipeline.run_lab_analysis_pipeline(
+        biomarkers=[
+            {
+                "name": "Mean Reticulocyte Volume",
+                "value": 91.9,
+                "unit": "fL",
+                "reference_range": "92.7 - 112.1",
+            },
+            {
+                "name": "Mean Spherical Cell Volume",
+                "value": 66.6,
+                "unit": "fL",
+                "reference_range": "72.8 - 87.3",
+            },
+        ],
+        user_profile={"age": 8, "sex": "male", "height_cm": 140, "weight_kg": 35},
+        symptoms=["fatigue"],
+        analysis_id="analysis-test",
+        source_metadata={"source": "unit_test"},
+        locale="uk",
+        persist_knowledge=False,
+        persist_report_version=False,
+    )
+
+    assert result["analysis_input_quality_gate"]["version"] == "analysis_input_quality_gate_v1"
+    assert result["clinical_data_integrity"]["version"] == "clinical_data_integrity_v1"
+    assert result["evidence_gaps"]["version"] == "evidence_gaps_v1"
+    assert result["metadata"]["analysis_core_version"] == "lab_analysis_pipeline_v2"
+    provenance = result["metadata"]["version_provenance"]
+    assert provenance["pipeline_version"] == "lab_analysis_pipeline_v2"
+    assert provenance["kb_version"] == "knowledge_report_test_v1"
+    assert provenance["domain_registry_version"] == "domain_registry_test_v1"
+    assert provenance["nutrition_rules_version"] == "nutrition_algorithms_test_v1"
+    assert provenance["prompt_version"] == "protocol_test_v1"
+    assert provenance["locale"] == "uk"
 
 
 def test_safety_engine_uses_health_profile_safety_context():
@@ -98,6 +353,29 @@ def test_safety_engine_uses_health_profile_safety_context():
     assert "current_supplements_context" in event_keys
     assert "known_allergies_context" in event_keys
     assert "prior_diagnoses_context" in event_keys
+
+
+def test_safety_engine_does_not_treat_iron_panel_as_dosage_for_child():
+    result = validate_report(
+        biomarkers=[
+            {"name": "Mean Reticulocyte Volume", "value": 91.9, "unit": "fL", "status": "DEFICIENT"},
+        ],
+        knowledge_report={"summary": {"headline": "Educational report"}},
+        protocol={
+            "next": [
+                {
+                    "title": "Repeat Iron Panel",
+                    "body": "Request CBC, iron panel, ferritin, B12, folate and reticulocyte count to clarify the pattern before treatment.",
+                    "requires_doctor": True,
+                }
+            ]
+        },
+        profile={"age": 8, "sex": "male"},
+    )
+
+    assert result["status"] == "approved_with_warnings"
+    assert not result["blocked_items"]
+    assert not any("dosage" in item["key"] for item in result["warnings"])
 
 
 def test_safety_engine_blocks_diagnosis_like_wording():
@@ -154,11 +432,15 @@ async def test_save_report_version_persists_expected_payload(monkeypatch):
         protocol={"nutrition": []},
         safety_result={"status": "approved"},
         explainability={"version": "explainability_v1"},
+        interpreted_report={"version": "interpreted_report_v1"},
     )
 
     assert captured["table"] == "report_versions"
     assert captured["payload"]["locale"] == "uk"
-    assert captured["payload"]["knowledge_report"] == {"summary": {}}
+    assert captured["payload"]["knowledge_report"] == {
+        "summary": {},
+        "interpreted_report": {"version": "interpreted_report_v1"},
+    }
     assert result["id"] == "report-1"
 
 

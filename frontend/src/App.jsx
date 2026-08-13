@@ -12,6 +12,7 @@ import { useOnboardingState } from './hooks/useOnboardingState.js'
 import { gaPageView, gaPurchase } from './lib/analytics.js'
 import { trackPublicFunnelEvent } from './lib/publicFunnel.js'
 import { isUkrainianLocale } from './lib/locale.js'
+import { reportClientActivity } from './lib/errorReporter.js'
 
 // Marketing pages — lazy
 const Features = lazy(() => import('./pages/Features.jsx'))
@@ -120,7 +121,15 @@ function ScrollToTop() {
 function GAPageTracker() {
   const location = useLocation()
   useEffect(() => {
-    gaPageView(location.pathname + location.search)
+    const route = location.pathname + location.search
+    gaPageView(route)
+    reportClientActivity({
+      type: 'route_view',
+      route,
+      metadata: {
+        hash: location.hash || null,
+      },
+    })
 
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(location.search)

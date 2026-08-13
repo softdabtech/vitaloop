@@ -191,7 +191,7 @@ async def onboarding_create_organization(
                 "user_id": user_id,
                 "role": "org_owner",
                 "status": "active",
-                "joined_at": now,
+                "created_at": now,
                 "updated_at": now,
             },
             on_conflict="organization_id,user_id",

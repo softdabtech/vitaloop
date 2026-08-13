@@ -241,7 +241,7 @@ export const PRICING = [
   },
   {
     name: 'Premium',
-    price: '399 грн/міс',
+    price: '199 грн/міс',
     note: 'для регулярного контролю',
     description: 'Необмежені аналізи, AI-протокол, 95+ біомаркерів і щотижневий чек-ін стану здоров\'я.',
     features: [
@@ -324,7 +324,7 @@ const SCHEMA_SOFTWARE = {
   description: 'Vitaloop допомагає почати з симптомів, зрозуміти можливі причини, підібрати доречні аналізи і сформувати персональний план дій.',
   offers: [
     { '@type': 'Offer', name: 'Безкоштовно', price: '0', priceCurrency: 'UAH' },
-    { '@type': 'Offer', name: 'Premium', price: '399', priceCurrency: 'UAH' },
+    { '@type': 'Offer', name: 'Premium', price: '199', priceCurrency: 'UAH' },
   ],
 }
 

@@ -9,20 +9,28 @@ from app.config import settings
 from app.services.affiliate import build_iherb_url
 from app.services.ai.openai_service import is_llm_configured
 from app.services.ai_orchestrator import generate_ai_protocol_orchestrated
+from app.services.analysis_quality_gate import build_analysis_input_quality_gate
 from app.services.analysis_quality_snapshot import build_analysis_quality_snapshot
+from app.services.clinical_data_integrity import validate_clinical_data_integrity
 from app.services.cost_analytics import record_analysis_cost
+from app.services.evidence_gaps import build_evidence_gaps
 from app.services.explainability import build_recommendation_explanations
 from app.services.health_context import build_health_context
 from app.services.health_state_engine import evaluate_health_states
+from app.services.knowledge.domain_registry import DOMAIN_REGISTRY_VERSION, resolve_domain_definitions
 from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
+from app.services.knowledge.nutrition_algorithms import NUTRITION_ALGORITHMS_VERSION
 from app.services.knowledge.report import build_knowledge_report
-from app.services.knowledge.domain_registry import resolve_domain_definitions
 from app.services.lab_normalization.biomarker_mapping import infer_category, to_canonical_name
 from app.services.protocol_enrichment import enrich_protocol
+from app.services.report_interpretation import REPORT_INTERPRETATION_VERSION, build_interpreted_report
 from app.services.safety import validate_report
+from app.services.safety.safety_engine import SAFETY_ENGINE_VERSION
 from app.services.trend_engine import evaluate_biomarker_trends
 
 logger = logging.getLogger("uvicorn.error")
+
+LAB_ANALYSIS_PIPELINE_VERSION = "lab_analysis_pipeline_v2"
 
 
 DISCLAIMER = (
@@ -668,6 +676,10 @@ async def run_lab_analysis_pipeline(
     generate_ai_protocol: bool = True,
 ) -> Dict[str, Any]:
     normalized_biomarkers = normalize_biomarkers(biomarkers, name_aliases=biomarker_name_aliases)
+    clinical_integrity = validate_clinical_data_integrity(
+        biomarkers=normalized_biomarkers,
+        profile=user_profile,
+    )
     normalized_symptoms = [str(item).strip().lower() for item in (symptoms or []) if str(item).strip()]
     health_context = build_health_context(
         biomarkers=normalized_biomarkers,
@@ -676,6 +688,13 @@ async def run_lab_analysis_pipeline(
         user_profile=user_profile,
         source_metadata=source_metadata,
         locale=locale,
+    )
+    analysis_input_quality_gate = build_analysis_input_quality_gate(
+        biomarkers=normalized_biomarkers,
+        candidates=(source_metadata or {}).get("candidates") if isinstance(source_metadata, dict) else None,
+        clinical_integrity=clinical_integrity,
+        health_context=health_context,
+        source_metadata=source_metadata,
     )
 
     knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
@@ -687,6 +706,7 @@ async def run_lab_analysis_pipeline(
         health_context=health_context,
         persist=persist_knowledge,
     )
+    knowledge_evaluation = knowledge_evaluation if isinstance(knowledge_evaluation, dict) else {}
     knowledge_report = build_knowledge_report(
         biomarkers=normalized_biomarkers,
         knowledge_evaluation=knowledge_evaluation,
@@ -778,6 +798,22 @@ async def run_lab_analysis_pipeline(
         recommendations=recommendations,
         safety_result=safety_result,
     )
+    interpreted_report = build_interpreted_report(
+        biomarkers=normalized_biomarkers,
+        knowledge_report=knowledge_report,
+        health_states=health_states,
+        explainability=explainability,
+        safety_result=safety_result,
+        health_context=health_context,
+        profile=user_profile,
+        locale=locale,
+    )
+    evidence_gaps = build_evidence_gaps(
+        biomarkers=normalized_biomarkers,
+        health_states=health_states,
+        interpreted_report=interpreted_report,
+        clinical_integrity=clinical_integrity,
+    )
     output_knowledge_evaluation = _localized_knowledge_evaluation_for_response(
         knowledge_evaluation,
         knowledge_report,
@@ -827,6 +863,31 @@ async def run_lab_analysis_pipeline(
             ],
         },
     }
+    version_provenance = {
+        "pipeline_version": LAB_ANALYSIS_PIPELINE_VERSION,
+        "kb_version": knowledge_report.get("version") or knowledge_evaluation.get("version"),
+        "domain_registry_version": (
+            (domain_definitions[0] or {}).get("registry_version")
+            if domain_definitions
+            else DOMAIN_REGISTRY_VERSION
+        ),
+        "nutrition_rules_version": (
+            ((knowledge_evaluation.get("nutrition_context") or {}).get("version"))
+            or NUTRITION_ALGORITHMS_VERSION
+        ),
+        "safety_engine_version": SAFETY_ENGINE_VERSION,
+        "prompt_version": (ai_orchestration.get("metadata") or {}).get("prompt_version"),
+        "model": (
+            (ai_orchestration.get("metadata") or {}).get("model")
+            or (ai_orchestration.get("metadata") or {}).get("llm_model")
+            or getattr(settings, "active_llm_model", None)
+        ),
+        "locale": locale,
+        "report_interpretation_version": REPORT_INTERPRETATION_VERSION,
+        "analysis_input_quality_gate_version": analysis_input_quality_gate.get("version"),
+        "clinical_data_integrity_version": clinical_integrity.get("version"),
+        "evidence_gaps_version": evidence_gaps.get("version"),
+    }
 
     result = {
         "analysis_id": analysis_id or "",
@@ -845,6 +906,10 @@ async def run_lab_analysis_pipeline(
         "doctor_summary": " ".join(knowledge_report.get("doctor_discussion") or [])[:2000],
         "knowledge_evaluation": output_knowledge_evaluation,
         "knowledge_report": knowledge_report,
+        "interpreted_report": interpreted_report,
+        "analysis_input_quality_gate": analysis_input_quality_gate,
+        "clinical_data_integrity": clinical_integrity,
+        "evidence_gaps": evidence_gaps,
         "safety_result": safety_result,
         "explainability": explainability,
         "disclaimer": (knowledge_report.get("summary") or {}).get("disclaimer") or DISCLAIMER,
@@ -863,7 +928,8 @@ async def run_lab_analysis_pipeline(
             "ai_analysis_source": (ai_orchestration.get("metadata") or {}).get("analysis_source"),
             "quality_snapshot_version": quality_snapshot.get("version"),
             "biomarker_count": len(normalized_biomarkers),
-            "analysis_core_version": "lab_analysis_pipeline_v1",
+            "analysis_core_version": LAB_ANALYSIS_PIPELINE_VERSION,
+            "version_provenance": version_provenance,
         },
     }
 
@@ -882,21 +948,30 @@ async def run_lab_analysis_pipeline(
                     "profile_context_fields": result["metadata"]["profile_context_fields"],
                     "source": source_metadata or {},
                     "health_context": health_context,
+                    "analysis_input_quality_gate": analysis_input_quality_gate,
+                    "clinical_data_integrity": clinical_integrity,
                     "health_states": health_states,
                     "trend_analysis": trend_analysis,
-            "ai_orchestration": ai_orchestration,
-            "quality_snapshot": quality_snapshot,
-            "cost_metadata": cost_metadata,
-            "knowledge_domain_definitions": {
-                "count": len(domain_definitions),
-                "registry_version": (domain_definitions[0] or {}).get("registry_version") if domain_definitions else None,
-                "domains": [item.get("key") for item in domain_definitions],
-            },
-        },
+                    "evidence_gaps": evidence_gaps,
+                    "version_provenance": version_provenance,
+                    "ai_orchestration": ai_orchestration,
+                    "quality_snapshot": quality_snapshot,
+                    "cost_metadata": cost_metadata,
+                    "knowledge_domain_definitions": {
+                        "count": len(domain_definitions),
+                        "registry_version": (domain_definitions[0] or {}).get("registry_version") if domain_definitions else None,
+                        "domains": [item.get("key") for item in domain_definitions],
+                    },
+                },
                 knowledge_report=knowledge_report,
                 protocol=protocol,
                 safety_result=safety_result,
-                explainability=explainability,
+                explainability={
+                    **(explainability or {}),
+                    "evidence_gaps": evidence_gaps,
+                    "version_provenance": version_provenance,
+                },
+                interpreted_report=interpreted_report,
                 status="completed" if safety_result.get("status") != "blocked" else "blocked",
             )
             result["report_version"] = report_version

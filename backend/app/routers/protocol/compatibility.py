@@ -84,5 +84,6 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
         "shopping_links": pipeline_result.get("shopping_links") or [],
         "knowledge_evaluation": knowledge_evaluation,
         "knowledge_report": knowledge_report,
+        "interpreted_report": pipeline_result.get("interpreted_report"),
         "final_analysis": pipeline_result,
     }

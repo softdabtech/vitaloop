@@ -136,9 +136,13 @@ async def test_questionnaire_session_contract(monkeypatch):
     async def fake_get_or_create(_user_id):
         return {"id": "sess_1", "status": "active", "session_metadata": {"active_concern": "energy"}}
 
+    async def fake_get_latest(_user_id):
+        return {"id": "sess_1", "status": "active", "session_metadata": {"active_concern": "energy"}}
+
     async def fake_answers(_session_id):
         return []
 
+    monkeypatch.setattr(questionnaire_router, "_get_latest_session", fake_get_latest)
     monkeypatch.setattr(questionnaire_router, "_get_or_create_active_session", fake_get_or_create)
     monkeypatch.setattr(questionnaire_router, "_get_session_answers", fake_answers)
     async def fake_write_audit_log(**_kwargs):

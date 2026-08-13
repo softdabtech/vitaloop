@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_price_id: str = ""  # Legacy fallback (same as stripe_price_id_personal)
-    stripe_price_id_personal: str = ""  # Premium $19.99/mo
+    stripe_price_id_personal: str = ""  # Premium $4.99/mo
     stripe_price_id_practitioner: str = ""  # Practitioner Premium $29/mo
     stripe_price_id_personal_monthly: str = ""  # Preferred personal monthly price ID
     stripe_price_id_personal_yearly: str = ""  # Personal yearly price ID
@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     sendgrid_api_key: str = ""
     sendgrid_from_email: str = "VITALOOP <noreply@vitaloop.today>"
     registration_alert_email: str = "info@softdab.tech"
+    ops_alert_email: str = "info@softdab.tech"
+    ops_alerts_enabled: bool = True
+    ops_alerts_max_emails_per_day: int = 2
+    ops_alert_state_file: str = "/tmp/vitaloop_ops_alerts.json"
     sentry_dsn: str = ""
     sentry_traces_sample_rate: float = 0.1
     frontend_base_url: str = "https://vitaloop.today"

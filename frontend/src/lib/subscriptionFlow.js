@@ -47,8 +47,9 @@ export function buildSignupRedirect({ planId = null, billingCycle = 'monthly' } 
   return buildSignupPath({ returnUrl: buildSubscriptionPath({ planId, billingCycle }) })
 }
 
-export function getCabinetUpgradeTarget(planName, isPremium = false) {
+export function getCabinetUpgradeTarget(planName, isPremium = false, locale = 'en') {
   const normalizedPlan = normalizePlanName(planName)
+  const isUk = String(locale || '').toLowerCase().startsWith('uk')
 
   if (normalizedPlan === SUBSCRIPTION_PLAN_IDS.PRACTITIONER) {
     return null
@@ -57,12 +58,12 @@ export function getCabinetUpgradeTarget(planName, isPremium = false) {
   if (normalizedPlan === SUBSCRIPTION_PLAN_IDS.PERSONAL || isPremium) {
     return {
       planId: SUBSCRIPTION_PLAN_IDS.PRACTITIONER,
-      label: 'Upgrade to Pro Premium',
+      label: isUk ? 'Перейти на Pro Premium' : 'Upgrade to Pro Premium',
     }
   }
 
   return {
     planId: SUBSCRIPTION_PLAN_IDS.PERSONAL,
-    label: 'Upgrade to Premium',
+    label: isUk ? 'Перейти на Premium' : 'Upgrade to Premium',
   }
 }

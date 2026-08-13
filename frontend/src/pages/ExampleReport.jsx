@@ -153,6 +153,8 @@ export default function ExampleReport() {
               <img
                 src="/mockups/example-report/dashboard.webp"
                 alt="VITALOOP dashboard preview"
+                width="1600"
+                height="1000"
                 className="aspect-[16/10] w-full object-cover object-top"
               />
             </div>
@@ -200,7 +202,7 @@ export default function ExampleReport() {
                     </div>
                   </div>
                   <div className="border-t border-slate-100 bg-slate-100 p-2">
-                    <img src={image} alt={alt} className="aspect-[16/10] w-full rounded-[18px] object-cover object-top" loading="lazy" />
+                    <img src={image} alt={alt} width="1600" height="1000" className="aspect-[16/10] w-full rounded-[18px] object-cover object-top" loading="lazy" />
                   </div>
                 </motion.article>
               ))}

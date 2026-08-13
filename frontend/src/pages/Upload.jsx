@@ -44,6 +44,18 @@ const UPLOAD_COPY = {
   en: {
     loadingMessages: LOADING_MESSAGES,
     profileIncomplete: 'Complete profile first',
+    profileRequiredTitle: 'Complete health profile before analysis',
+    profileRequiredBody: 'Age, sex, height, and weight are required before lab analysis. This helps VITALOOP distinguish pediatric and adult reference context and avoid unsafe recommendations.',
+    profileRequiredUploadError: 'Complete age, sex, height, and weight before uploading lab results.',
+    profileChecking: 'Checking health profile…',
+    profileRequiredCta: 'Complete profile',
+    missingFieldsPrefix: 'Missing',
+    missingFields: {
+      age: 'age',
+      sex: 'sex',
+      height_cm: 'height',
+      weight_kg: 'weight',
+    },
     uploading: (name, kb) => `Uploading ${name}… (${kb}KB)`,
     analysisComplete: 'Analysis complete!',
     longerWarning: 'This is taking longer than usual. Large files may take 1-2 minutes.',
@@ -72,8 +84,9 @@ const UPLOAD_COPY = {
     nextBody: 'After analysis, open Results & Trends to prioritize markers and retest plan.',
     reviewTitle: 'Review uncertain markers',
     reviewBody: 'Some extracted values need a quick check before VITALOOP uses them in the final report.',
+    reviewQuality: (score, decision) => `Input quality: ${score}% · ${decision === 'confirm' ? 'confirmation required' : 'review required'}`,
+    reviewReasonTitle: 'Why this review is needed',
     reviewConfirm: 'Confirm and rebuild report',
-    reviewSkip: 'Open report without changes',
     reviewReject: 'Reject',
     reviewKeep: 'Use',
     reviewLow: 'low confidence',
@@ -92,6 +105,18 @@ const UPLOAD_COPY = {
       '✅ Майже готово...',
     ],
     profileIncomplete: 'Спочатку заповніть профіль',
+    profileRequiredTitle: 'Спочатку заповніть профіль здоровʼя',
+    profileRequiredBody: 'Перед аналізом потрібні вік, стать, зріст і вага. Для дитячих аналізів це критично: VITALOOP має відрізнити дитячий і дорослий контекст референсів та не давати випадкові рекомендації.',
+    profileRequiredUploadError: 'Перед завантаженням аналізів заповніть вік, стать, зріст і вагу.',
+    profileChecking: 'Перевіряємо профіль здоровʼя…',
+    profileRequiredCta: 'Заповнити профіль',
+    missingFieldsPrefix: 'Не заповнено',
+    missingFields: {
+      age: 'вік',
+      sex: 'стать',
+      height_cm: 'зріст',
+      weight_kg: 'вага',
+    },
     uploading: (name, kb) => `Завантажуємо ${name}… (${kb}KB)`,
     analysisComplete: 'Аналіз готовий!',
     longerWarning: 'Обробка триває довше, ніж зазвичай. Великі файли можуть займати 1-2 хвилини.',
@@ -120,8 +145,9 @@ const UPLOAD_COPY = {
     nextBody: 'Після аналізу відкрийте результати й динаміку, щоб побачити пріоритети та план повторної перевірки.',
     reviewTitle: 'Перевірте непевні показники',
     reviewBody: 'Деякі значення потребують швидкої перевірки перед тим, як VITALOOP використає їх у фінальному звіті.',
+    reviewQuality: (score, decision) => `Якість розпізнавання: ${score}% · ${decision === 'confirm' ? 'потрібно підтвердити' : 'потрібен перегляд'}`,
+    reviewReasonTitle: 'Чому потрібна перевірка',
     reviewConfirm: 'Підтвердити й оновити звіт',
-    reviewSkip: 'Відкрити звіт без змін',
     reviewReject: 'Відхилити',
     reviewKeep: 'Використати',
     reviewLow: 'низька впевненість',
@@ -192,6 +218,9 @@ function resolveAnalysisErrorMessage({ status, errorCode, errorDetail, usedBy, c
   }
 
   if (status === 422) {
+    if (errorCode === 'PROFILE_CONTEXT_REQUIRED') {
+      return errorDetail || copy.profileRequiredUploadError
+    }
     if (errorCode === 'BIOMARKERS_NOT_EXTRACTED') {
       return copy.biomarkersNotExtracted
     }
@@ -227,6 +256,22 @@ function handleAnalysisError(err, copy = UPLOAD_COPY.en) {
   return resolveAnalysisErrorMessage({ status, errorCode, errorDetail, usedBy, copy })
 }
 
+function resolveUploadId(data) {
+  const value = data?.upload_id || data?.uploadId || data?.id
+  return typeof value === 'string' && value.trim() ? value.trim() : ''
+}
+
+function getMissingAnalysisProfileFields(profile = {}) {
+  return ['age', 'sex', 'height_cm', 'weight_kg'].filter(field => {
+    const value = profile[field]
+    return value === undefined || value === null || String(value).trim() === ''
+  })
+}
+
+function formatMissingProfileFields(fields, copy) {
+  return fields.map(field => copy.missingFields[field] || field).join(', ')
+}
+
 export default function Upload() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -236,7 +281,9 @@ export default function Upload() {
   const [analyzing, setAnalyzing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [selectedFileName, setSelectedFileName] = useState('')
+  const [profileChecking, setProfileChecking] = useState(true)
   const [profileIncomplete, setProfileIncomplete] = useState(false)
+  const [missingProfileFields, setMissingProfileFields] = useState([])
   const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0])
   const [loadingWarning, setLoadingWarning] = useState('')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -250,16 +297,39 @@ export default function Upload() {
   const activeConcern = sessionContext?.active_concern || ''
 
   useEffect(() => {
-    api.get('/auth/onboarding/state').then(r => {
-      const checklist = r.data?.checklist || {}
-      const isComplete = r.data?.completed === true
-      if (!isComplete && !checklist.profile_basics) {
-        setProfileIncomplete(true)
+    let active = true
+    Promise.allSettled([
+      api.get('/profile'),
+      api.get('/auth/onboarding/state'),
+    ]).then(([profileResult, onboardingResult]) => {
+      if (!active) return
+
+      const profileData = profileResult.status === 'fulfilled' ? profileResult.value?.data || {} : {}
+      const profile = profileData.profile || profileData
+      const missing = getMissingAnalysisProfileFields(profile)
+      const checklist = onboardingResult.status === 'fulfilled' ? onboardingResult.value?.data?.checklist || {} : {}
+      const onboardingComplete = onboardingResult.status === 'fulfilled' && onboardingResult.value?.data?.completed === true
+      const basicsMissing = !onboardingComplete && !checklist.profile_basics
+
+      setMissingProfileFields(missing)
+      setProfileIncomplete(missing.length > 0 || basicsMissing)
+      setProfileChecking(false)
+
+      if (profileResult.status === 'rejected') {
+        console.error('Failed to load profile:', profileResult.reason)
       }
-    }).catch((err) => {
-      console.error('Failed to load onboarding state:', err)
-      // Continue without blocking - onboarding check is optional
+      if (onboardingResult.status === 'rejected') {
+        console.error('Failed to load onboarding state:', onboardingResult.reason)
+      }
+    }).catch(() => {
+      if (!active) return
+      setProfileChecking(false)
+      setProfileIncomplete(true)
     })
+
+    return () => {
+      active = false
+    }
   }, [])
 
   const isBusy = analyzing
@@ -298,6 +368,14 @@ export default function Upload() {
   async function handleFile(file) {
     if (isBusy) return
 
+    if (profileChecking || profileIncomplete) {
+      const missing = missingProfileFields.length ? ` ${copy.missingFieldsPrefix}: ${formatMissingProfileFields(missingProfileFields, copy)}.` : ''
+      const message = profileChecking ? copy.profileChecking : `${copy.profileRequiredUploadError}${missing}`
+      setErrorMessage(message)
+      toast.error(message)
+      return
+    }
+
     const validationError = validateFileInput(file, copy)
     if (validationError) {
       setErrorMessage(validationError)
@@ -322,8 +400,13 @@ export default function Upload() {
 
       const { data } = await api.post('/analyze/pdf', formData)
 
+      const uploadId = resolveUploadId(data)
+      if (!uploadId) {
+        throw new Error(copy.fallbackError)
+      }
+
       trackFunnelEvent('funnel_first_upload_completed', 'User completed first lab upload analysis', {
-        upload_id: data.upload_id,
+        upload_id: uploadId,
         has_lab_name: Boolean(labName),
       }, { oncePerSession: true })
       gaLabUpload()
@@ -338,13 +421,16 @@ export default function Upload() {
       ])
 
       toast.success(copy.analysisComplete)
-      const candidatesResponse = await api.get(`/analyze/${data.upload_id}/candidates`).catch(() => null)
+      const candidatesResponse = await api.get(`/analyze/${uploadId}/candidates`).catch(() => null)
       const candidates = candidatesResponse?.data?.candidates || []
+      const qualityGate = candidatesResponse?.data?.analysis_input_quality_gate || data.analysis_input_quality_gate || data.final_analysis?.analysis_input_quality_gate || null
+      const gateRequiresConfirmation = Boolean(candidatesResponse?.data?.requires_confirmation || qualityGate?.requires_confirmation)
       const reviewCandidates = candidates.filter(candidate => candidate.requires_confirmation || candidate.confidence_label === 'low')
-      if (reviewCandidates.length > 0) {
+      if ((gateRequiresConfirmation || reviewCandidates.length > 0) && candidates.length > 0) {
         setCandidateReview({
-          uploadId: data.upload_id,
-          candidates: reviewCandidates.map(candidate => ({
+          uploadId,
+          qualityGate,
+          candidates: (reviewCandidates.length ? reviewCandidates : candidates).map(candidate => ({
             ...candidate,
             decision: 'confirmed',
             raw_name: candidate.raw_name || '',
@@ -354,7 +440,7 @@ export default function Upload() {
         })
         return
       }
-      navigate(`/results/${data.upload_id}`)
+      navigate(`/results/${uploadId}`)
     } catch (err) {
       const message = handleAnalysisError(err, copy)
       setErrorMessage(message)
@@ -544,18 +630,21 @@ export default function Upload() {
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5 text-sm">
             <UserCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
             <div className="flex-1">
-              <p className="font-semibold text-blue-800">{isUk ? 'Профіль здоровʼя не заповнений' : 'Your health profile is incomplete'}</p>
+              <p className="font-semibold text-blue-800">{copy.profileRequiredTitle}</p>
               <p className="mt-0.5 text-blue-700">
-                {isUk
-                  ? 'Профіль із віком, вагою, цілями та ліками допомагає зробити аналіз точнішим. Ви можете завантажити файл зараз, але профіль краще заповнити.'
-                  : 'A complete profile (height, weight, goals, medications) helps the AI and nutritionist give you more accurate, personalized analysis. You can still upload, but completing your profile first is recommended.'}
+                {copy.profileRequiredBody}
               </p>
+              {missingProfileFields.length > 0 && (
+                <p className="mt-1 text-xs font-semibold text-blue-800">
+                  {copy.missingFieldsPrefix}: {formatMissingProfileFields(missingProfileFields, copy)}.
+                </p>
+              )}
             </div>
             <button
               onClick={() => navigate('/onboarding')}
               className="ml-1 shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition"
             >
-              {isUk ? 'Заповнити профіль' : 'Complete profile'}
+              {copy.profileRequiredCta}
             </button>
           </div>
         )}
@@ -585,18 +674,29 @@ export default function Upload() {
             {candidateReview && (
               <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-950">{copy.reviewTitle}</h2>
-                    <p className="mt-1 text-sm text-amber-800">{copy.reviewBody}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/results/${candidateReview.uploadId}`)}
-                    className="rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-amber-100"
-                  >
-                    {copy.reviewSkip}
-                  </button>
-                </div>
+	                  <div>
+	                    <h2 className="text-lg font-semibold text-slate-950">{copy.reviewTitle}</h2>
+	                    <p className="mt-1 text-sm text-amber-800">{copy.reviewBody}</p>
+	                    {candidateReview.qualityGate && (
+	                      <p className="mt-2 inline-flex rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-bold text-amber-900">
+	                        {copy.reviewQuality(Math.round((candidateReview.qualityGate.score || 0) * 100), candidateReview.qualityGate.decision)}
+	                      </p>
+	                    )}
+	                    {candidateReview.qualityGate && (
+	                      <div className="mt-3 rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs text-amber-900">
+	                        <p className="font-black uppercase tracking-wide">{copy.reviewReasonTitle}</p>
+	                        <ul className="mt-1 space-y-1">
+	                          {[...(candidateReview.qualityGate.blockers || []), ...(candidateReview.qualityGate.warnings || [])].slice(0, 4).map((item, index) => (
+	                            <li key={`${item.key || 'reason'}-${index}`} className="flex gap-2">
+	                              <span aria-hidden="true">•</span>
+	                              <span>{item.message || item.key || (isUk ? 'Потрібна ручна перевірка даних.' : 'Manual data review is needed.')}</span>
+	                            </li>
+	                          ))}
+	                        </ul>
+	                      </div>
+	                    )}
+		                  </div>
+	                </div>
 
                 <div className="space-y-3">
                   {candidateReview.candidates.map(candidate => (
@@ -755,7 +855,7 @@ export default function Upload() {
                 </div>
               )}
 
-              {!analyzing && <UploadZone onFile={handleFile} onError={handleUploadZoneError} disabled={isBusy} />}
+              {!analyzing && <UploadZone onFile={handleFile} onError={handleUploadZoneError} disabled={isBusy || profileChecking || profileIncomplete} />}
             </div>
           </>
         ) : (

@@ -562,5 +562,6 @@ def build_knowledge_report(
         "doctor_discussion": _discussion_points(evaluation, found["flagged_markers"], locale=locale),
         "retest_plan": _retest_plan(biomarkers, evaluation, locale=locale),
         "safety_alerts": safety_alerts,
+        "nutrition_context": evaluation.get("nutrition_context") if isinstance(evaluation.get("nutrition_context"), dict) else {},
         "source_references": evaluation.get("source_references") if isinstance(evaluation.get("source_references"), list) else [],
     }

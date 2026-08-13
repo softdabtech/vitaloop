@@ -2,6 +2,7 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import { supabase, hasSupabaseConfig } from '../lib/supabase.js'
 import { getAcceptLanguage, getCurrentLocale } from '../lib/locale.js'
+import { reportClientError } from '../lib/errorReporter.js'
 
 const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ||
@@ -79,6 +80,18 @@ api.interceptors.response.use(
     // Log errors for debugging
     if (shouldLogServerError) {
       console.error(`[API ${status}] ${method} ${requestUrl}`, { code, detail })
+      reportClientError({
+        type: 'api_error',
+        severity: status >= 500 ? 'error' : 'warning',
+        code: code || `API_${status}`,
+        message: typeof detail === 'string' ? detail : `API request failed with ${status}`,
+        endpoint: requestUrl,
+        method,
+        status,
+        metadata: {
+          response_code: code,
+        },
+      })
     }
 
     const isPassiveCabinetRequest = [

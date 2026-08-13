@@ -89,6 +89,57 @@ public class UsersController : Controller
         }
     }
 
+    /// <summary>Open a read/edit profile page for a team member.</summary>
+    [HttpGet("{userId}/profile")]
+    [RequireOrgRole("org_owner", "client_admin", "manager")]
+    public async Task<IActionResult> Profile(Guid userId, CancellationToken ct)
+    {
+        var userCtx = await EnsureActiveOrganization(await _userContextAccessor.GetOrThrow(ct), ct);
+
+        if (!userCtx.ActiveOrganizationId.HasValue)
+        {
+            TempData["ErrorMessage"] = "No active organization selected.";
+            return RedirectToAction("Index", "Organizations");
+        }
+
+        try
+        {
+            var members = await _membershipService.GetMembers(userCtx, userCtx.ActiveOrganizationId.Value, ct);
+            var member = members.FirstOrDefault(m => m.UserId == userId);
+            if (member is null)
+            {
+                TempData["ErrorMessage"] = "Member profile was not found in the active organization.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var model = new MemberViewModel
+            {
+                UserId = member.UserId,
+                Email = member.Email,
+                FullName = member.FullName,
+                Age = member.Age,
+                Sex = member.Sex,
+                GlobalRole = member.GlobalRole,
+                OrgRole = member.OrgRole,
+                MembershipStatus = member.MembershipStatus,
+                SubscriptionStatus = member.SubscriptionStatus,
+            };
+
+            return View(model);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            TempData["ErrorMessage"] = "Insufficient permissions.";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading member profile");
+            TempData["ErrorMessage"] = "Failed to load member profile.";
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
     /// <summary>Change member role (org admin only).</summary>
     [HttpPost("{userId}/role")]
     [RequireOrgRole("org_owner", "client_admin")]

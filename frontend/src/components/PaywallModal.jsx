@@ -12,20 +12,53 @@ import api from '../lib/api.js'
 import toast from 'react-hot-toast'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import { useUserEntitlements } from '../hooks/useQueries.js'
+import { isUkrainianLocale } from '../lib/locale.js'
 
-const FEATURES = [
+const COPY = {
+  en: {
+    title: 'Vitaloop Premium',
+    features: [
   'Unlimited lab uploads and manual entries',
   'Personal action plans after each report',
   'Biomarker trend tracking and progress charts',
   'Longitudinal history across uploads',
   'Follow-up check-ins and retest planning',
   'Exportable summaries for clinician visits',
-]
-
-const REASON_MESSAGES = {
-  UPLOAD_LIMIT_REACHED: 'Free plan includes 1 analysis total (PDF upload or manual entry). Upgrade for unlimited analyses.',
-  BIOMARKER_QUOTA_EXCEEDED: 'Free plan includes 1 analysis total (PDF upload or manual entry). Upgrade to continue.',
-  SUBSCRIPTION_REQUIRED: 'This feature is available with Vitaloop Premium.',
+    ],
+    reasons: {
+      UPLOAD_LIMIT_REACHED: 'Free plan includes 1 analysis total (PDF upload or manual entry). Upgrade for unlimited analyses.',
+      BIOMARKER_QUOTA_EXCEEDED: 'Free plan includes 1 analysis total (PDF upload or manual entry). Upgrade to continue.',
+      SUBSCRIPTION_REQUIRED: 'This feature is available with Vitaloop Premium.',
+    },
+    fallback: 'Unlock unlimited analyses, action plans, and longitudinal tracking.',
+    checkoutError: 'Could not start checkout. Please try again.',
+    redirecting: 'Redirecting to Stripe…',
+    continue: 'Continue',
+    footer: 'Cancel anytime · Secure checkout via Stripe',
+    close: 'Close',
+  },
+  uk: {
+    title: 'VITALOOP Premium',
+    features: [
+      'Необмежені завантаження аналізів і ручне введення',
+      'Персональний план дій після кожного звіту',
+      'Динаміка біомаркерів і графіки прогресу',
+      'Історія результатів у часі',
+      'Чек-іни, план повторних аналізів і нагадування',
+      'Експорт підсумків для консультації з лікарем',
+    ],
+    reasons: {
+      UPLOAD_LIMIT_REACHED: 'Безкоштовний план включає 1 аналіз: PDF, фото або ручне введення. Premium відкриває необмежені аналізи.',
+      BIOMARKER_QUOTA_EXCEEDED: 'Безкоштовний план включає 1 аналіз. Перейдіть на Premium, щоб продовжити.',
+      SUBSCRIPTION_REQUIRED: 'Ця функція доступна у VITALOOP Premium.',
+    },
+    fallback: 'Відкрийте необмежені аналізи, плани дій і відстеження динаміки.',
+    checkoutError: 'Не вдалося перейти до оплати. Спробуйте ще раз.',
+    redirecting: 'Переходимо до Stripe…',
+    continue: 'Продовжити',
+    footer: 'Скасувати можна будь-коли · Безпечна оплата через Stripe',
+    close: 'Закрити',
+  },
 }
 
 export default function PaywallModal({ open: controlledOpen, onClose }) {
@@ -33,6 +66,7 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
   const [reason, setReason] = useState(null)
   const [loading, setLoading] = useState(false)
   const { data: entitlements, isLoading: entitlementsLoading } = useUserEntitlements()
+  const copy = isUkrainianLocale() ? COPY.uk : COPY.en
 
   // Listen for global paywall events
   useEffect(() => {
@@ -67,14 +101,14 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
       const { data } = await api.post('/stripe/checkout')
       window.location.href = data.checkout_url
     } catch {
-      toast.error('Could not start checkout. Please try again.')
+      toast.error(copy.checkoutError)
       setLoading(false)
     }
   }
 
   if (!isVisible) return null
 
-  const message = REASON_MESSAGES[reason] ?? 'Unlock unlimited analyses, action plans, and longitudinal tracking.'
+  const message = copy.reasons[reason] ?? copy.fallback
 
   return (
     <div
@@ -88,14 +122,14 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
         {/* Header */}
         <div className="bg-gradient-to-br from-emerald-500 to-teal-600 px-6 pt-8 pb-6 text-white text-center">
           <div className="text-4xl mb-2">✓</div>
-          <h2 className="text-xl font-bold">Vitaloop Premium</h2>
+          <h2 className="text-xl font-bold">{copy.title}</h2>
           <p className="mt-1 text-sm text-emerald-100">{message}</p>
         </div>
 
         {/* Features list */}
         <div className="px-6 py-5">
           <ul className="space-y-2.5 mb-6">
-            {FEATURES.map((f) => (
+            {copy.features.map((f) => (
               <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
                 <span className="text-emerald-500 font-bold">✓</span>
                 {f}
@@ -108,10 +142,10 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
             disabled={loading}
             className="w-full rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-semibold py-3.5 transition"
           >
-            {loading ? 'Redirecting to Stripe…' : `Continue — ${PREMIUM_PRICE_LABEL}`}
+            {loading ? copy.redirecting : `${copy.continue} — ${PREMIUM_PRICE_LABEL}`}
           </button>
           <p className="mt-2 text-center text-xs text-slate-400">
-            Cancel anytime · Secure checkout via Stripe
+            {copy.footer}
           </p>
         </div>
 
@@ -119,7 +153,7 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
         <button
           onClick={handleClose}
           className="absolute top-3 right-3 text-white/70 hover:text-white text-xl leading-none"
-          aria-label="Close"
+          aria-label={copy.close}
         >
           ✕
         </button>
