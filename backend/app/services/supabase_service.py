@@ -502,6 +502,92 @@ async def save_safety_events(
     return resp.data or []
 
 
+async def save_analysis_intelligence_artifacts(
+    *,
+    user_id: str,
+    upload_id: str,
+    analysis_input_quality_gate: Dict[str, Any] | None = None,
+    clinical_data_integrity: Dict[str, Any] | None = None,
+    evidence_gaps: Dict[str, Any] | None = None,
+    health_states: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """Persist internal intelligence artifacts for observability and audit.
+
+    These rows are intentionally separate from the user-visible report version.
+    Callers should treat this as best-effort persistence and alert on failures
+    without blocking the analysis result.
+    """
+
+    supabase = _get_supabase()
+    persisted: Dict[str, Any] = {}
+
+    if analysis_input_quality_gate:
+        gate = analysis_input_quality_gate or {}
+        payload = {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "decision": gate.get("decision") or "unknown",
+            "label": gate.get("label"),
+            "score": gate.get("score"),
+            "requires_confirmation": bool(gate.get("requires_confirmation")),
+            "components": gate.get("components") or {},
+            "candidate_summary": gate.get("candidate_summary") or {},
+            "warnings": gate.get("warnings") or [],
+            "blockers": gate.get("blockers") or [],
+            "reasons": gate.get("reasons") or [],
+            "source": gate.get("source") or {},
+            "gate_version": gate.get("version"),
+            "status": "recorded",
+        }
+        resp = await _run(lambda: supabase.table("analysis_quality_gates").insert(payload).execute())
+        persisted["analysis_quality_gate"] = (resp.data or [{}])[0]
+
+    if clinical_data_integrity:
+        integrity = clinical_data_integrity or {}
+        payload = {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "status": integrity.get("status") or "unknown",
+            "integrity_version": integrity.get("version"),
+            "summary": integrity.get("summary") or {},
+            "issues": integrity.get("issues") or [],
+            "profile": integrity.get("profile") or {},
+            "markers": integrity.get("markers") or [],
+        }
+        resp = await _run(lambda: supabase.table("clinical_data_integrity_events").insert(payload).execute())
+        persisted["clinical_data_integrity"] = (resp.data or [{}])[0]
+
+    if evidence_gaps:
+        gaps = evidence_gaps or {}
+        payload = {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "evidence_gaps_version": gaps.get("version"),
+            "gaps": gaps.get("gaps") or [],
+            "summary": gaps.get("summary") or {},
+            "status": "recorded",
+        }
+        resp = await _run(lambda: supabase.table("evidence_gaps").insert(payload).execute())
+        persisted["evidence_gaps"] = (resp.data or [{}])[0]
+
+    if health_states:
+        states = health_states or {}
+        payload = {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "health_state_version": states.get("version"),
+            "domain_registry_version": states.get("domain_registry_version"),
+            "states": states.get("states") or [],
+            "top_priorities": states.get("top_priorities") or [],
+            "summary": states.get("summary") or {},
+            "status": "recorded",
+        }
+        resp = await _run(lambda: supabase.table("health_state_versions").insert(payload).execute())
+        persisted["health_states"] = (resp.data or [{}])[0]
+
+    return persisted
+
+
 async def update_lab_upload_status(upload_id: str, status: str) -> None:
     supabase = _get_supabase()
     await _run(

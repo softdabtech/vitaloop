@@ -981,9 +981,61 @@ async def run_lab_analysis_pipeline(
                 report_version_id=report_version.get("id"),
                 safety_events=safety_result.get("safety_events") or [],
             )
+            try:
+                result["analysis_intelligence_artifacts"] = await supabase.save_analysis_intelligence_artifacts(
+                    user_id=user_id,
+                    upload_id=analysis_id,
+                    analysis_input_quality_gate=analysis_input_quality_gate,
+                    clinical_data_integrity=clinical_integrity,
+                    evidence_gaps=evidence_gaps,
+                    health_states=health_states,
+                )
+            except Exception as exc:
+                result["analysis_intelligence_artifacts"] = {
+                    "persisted": False,
+                    "error": type(exc).__name__,
+                }
+                try:
+                    from app.services.ops_alerts import send_ops_alert
+
+                    await send_ops_alert(
+                        code="ANALYSIS_INTELLIGENCE_ARTIFACT_PERSISTENCE_FAILED",
+                        title="Analysis intelligence artifact persistence failed",
+                        severity="error",
+                        source="backend.analysis",
+                        details={
+                            "user_id": user_id,
+                            "upload_id": analysis_id,
+                            "error_type": type(exc).__name__,
+                            "error": str(exc)[:500],
+                            "pipeline_version": LAB_ANALYSIS_PIPELINE_VERSION,
+                            "quality_gate_decision": analysis_input_quality_gate.get("decision"),
+                            "clinical_integrity_status": clinical_integrity.get("status"),
+                            "evidence_gap_count": (evidence_gaps.get("summary") or {}).get("gap_count"),
+                            "health_state_count": len(health_states.get("states") or []),
+                        },
+                    )
+                except Exception:
+                    pass
         except Exception:
             # Report-version persistence must not break the existing analysis flow.
             result["report_version"] = None
+            try:
+                from app.services.ops_alerts import send_ops_alert
+
+                await send_ops_alert(
+                    code="REPORT_VERSION_PERSISTENCE_FAILED",
+                    title="Report version persistence failed",
+                    severity="error",
+                    source="backend.analysis",
+                    details={
+                        "user_id": user_id,
+                        "upload_id": analysis_id,
+                        "pipeline_version": LAB_ANALYSIS_PIPELINE_VERSION,
+                    },
+                )
+            except Exception:
+                pass
 
     source_value = result["metadata"].get("source") or {}
     record_analysis_cost(

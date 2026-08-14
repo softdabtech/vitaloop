@@ -445,6 +445,171 @@ async def test_save_report_version_persists_expected_payload(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_save_analysis_intelligence_artifacts_persists_expected_tables(monkeypatch):
+    captured = []
+
+    class _Table:
+        def __init__(self, name):
+            self.name = name
+
+        def insert(self, payload):
+            captured.append((self.name, payload))
+            self.payload = payload
+            return self
+
+        def execute(self):
+            return type("Resp", (), {"data": [{"id": f"{self.name}-1", **self.payload}]})()
+
+    class _Client:
+        def table(self, name):
+            return _Table(name)
+
+    async def fake_run(fn):
+        return fn()
+
+    monkeypatch.setattr(supabase_service, "_get_supabase", lambda: _Client())
+    monkeypatch.setattr(supabase_service, "_run", fake_run)
+
+    result = await supabase_service.save_analysis_intelligence_artifacts(
+        user_id="11111111-1111-1111-1111-111111111111",
+        upload_id="22222222-2222-2222-2222-222222222222",
+        analysis_input_quality_gate={
+            "version": "analysis_input_quality_gate_v1",
+            "decision": "confirm",
+            "label": "medium",
+            "score": 0.72,
+            "requires_confirmation": True,
+            "components": {"clinical_integrity": 0.15},
+            "candidate_summary": {"medium_count": 1},
+            "warnings": [{"key": "medium_confidence_candidates"}],
+            "blockers": [],
+            "reasons": ["candidate_confidence_available"],
+            "source": {"source": "unit_test"},
+        },
+        clinical_data_integrity={
+            "version": "clinical_data_integrity_v1",
+            "status": "pass_with_warnings",
+            "summary": {"medium_issue_count": 1},
+            "issues": [{"key": "profile_context_incomplete"}],
+            "profile": {"complete": False},
+            "markers": [{"name": "Ferritin"}],
+        },
+        evidence_gaps={
+            "version": "evidence_gaps_v1",
+            "gaps": [{"domain": "iron_status", "missing_marker": "ferritin"}],
+            "summary": {"gap_count": 1},
+        },
+        health_states={
+            "version": "health_state_engine_v1",
+            "domain_registry_version": "managed_v1",
+            "states": [{"domain": "iron_status"}],
+            "top_priorities": [{"domain": "iron_status"}],
+            "summary": {"state_count": 1},
+        },
+    )
+
+    tables = [name for name, _payload in captured]
+    assert tables == [
+        "analysis_quality_gates",
+        "clinical_data_integrity_events",
+        "evidence_gaps",
+        "health_state_versions",
+    ]
+    assert result["analysis_quality_gate"]["decision"] == "confirm"
+    assert result["clinical_data_integrity"]["status"] == "pass_with_warnings"
+    assert result["evidence_gaps"]["summary"]["gap_count"] == 1
+    assert result["health_states"]["domain_registry_version"] == "managed_v1"
+
+
+@pytest.mark.asyncio
+async def test_pipeline_alerts_when_analysis_artifact_persistence_fails(monkeypatch):
+    alerts = []
+
+    async def fake_evaluate_biomarkers_with_knowledge(**kwargs):
+        return {
+            "version": "knowledge_evaluation_test_v1",
+            "matched_rules": [],
+            "nutrition_context": {"version": "nutrition_algorithms_test_v1"},
+        }
+
+    def fake_build_knowledge_report(**kwargs):
+        return {
+            "version": "knowledge_report_test_v1",
+            "summary": {"headline": "Educational report", "disclaimer": "Educational only."},
+            "action_plan": [],
+            "retest_plan": [],
+            "doctor_discussion": [],
+            "why_it_matters": [],
+        }
+
+    async def fake_resolve_domain_definitions():
+        return [{"key": "blood_count", "registry_version": "domain_registry_test_v1"}]
+
+    def fake_evaluate_health_states(**kwargs):
+        return {
+            "version": "health_state_engine_v1",
+            "domain_registry_version": "managed_v1",
+            "states": [{"domain": "blood_count", "score": 56, "risk_level": "monitor", "confidence": 0.6}],
+            "top_priorities": [{"domain": "blood_count", "score": 56, "risk_level": "monitor", "confidence": 0.6}],
+        }
+
+    async def fake_ai_protocol(**kwargs):
+        return {
+            "version": "ai_orchestration_test_v1",
+            "status": "skipped",
+            "items": [],
+            "metadata": {"prompt_version": "protocol_test_v1", "model": "gpt-test"},
+        }
+
+    async def fake_save_report_version(**kwargs):
+        return {"id": "report-version-1"}
+
+    async def fake_save_safety_events(**kwargs):
+        return []
+
+    async def failing_save_artifacts(**kwargs):
+        raise RuntimeError("stage25 table unavailable")
+
+    async def fake_send_ops_alert(**kwargs):
+        alerts.append(kwargs)
+        return True
+
+    async def fake_load_historical_biomarkers(_user_id):
+        return []
+
+    monkeypatch.setattr(lab_analysis_pipeline, "evaluate_biomarkers_with_knowledge", fake_evaluate_biomarkers_with_knowledge)
+    monkeypatch.setattr(lab_analysis_pipeline, "build_knowledge_report", fake_build_knowledge_report)
+    monkeypatch.setattr(lab_analysis_pipeline, "resolve_domain_definitions", fake_resolve_domain_definitions)
+    monkeypatch.setattr(lab_analysis_pipeline, "evaluate_health_states", fake_evaluate_health_states)
+    monkeypatch.setattr(lab_analysis_pipeline, "evaluate_biomarker_trends", lambda **kwargs: {"version": "trend_test_v1", "available": False, "priority_changes": []})
+    monkeypatch.setattr(lab_analysis_pipeline, "generate_ai_protocol_orchestrated", fake_ai_protocol)
+    monkeypatch.setattr(lab_analysis_pipeline, "_load_historical_biomarkers", fake_load_historical_biomarkers)
+    monkeypatch.setattr(lab_analysis_pipeline, "record_analysis_cost", lambda **kwargs: None)
+    monkeypatch.setattr(supabase_service, "save_report_version", fake_save_report_version)
+    monkeypatch.setattr(supabase_service, "save_safety_events", fake_save_safety_events)
+    monkeypatch.setattr(supabase_service, "save_analysis_intelligence_artifacts", failing_save_artifacts)
+    monkeypatch.setattr("app.services.ops_alerts.send_ops_alert", fake_send_ops_alert)
+
+    result = await lab_analysis_pipeline.run_lab_analysis_pipeline(
+        biomarkers=[{"name": "Ferritin", "value": 12, "unit": "ng/mL", "reference_range": "30 - 150"}],
+        user_profile={"age": 35, "sex": "female", "height_cm": 170, "weight_kg": 65},
+        symptoms=["fatigue"],
+        user_id="11111111-1111-1111-1111-111111111111",
+        analysis_id="22222222-2222-2222-2222-222222222222",
+        source_metadata={"source": "unit_test"},
+        locale="en",
+        persist_knowledge=False,
+        persist_report_version=True,
+    )
+
+    assert result["status"] == "completed"
+    assert result["report_version"]["id"] == "report-version-1"
+    assert result["analysis_intelligence_artifacts"]["persisted"] is False
+    assert alerts[0]["code"] == "ANALYSIS_INTELLIGENCE_ARTIFACT_PERSISTENCE_FAILED"
+    assert alerts[0]["details"]["upload_id"] == "22222222-2222-2222-2222-222222222222"
+
+
+@pytest.mark.asyncio
 async def test_confirm_candidates_endpoint_saves_confirmed_biomarkers(monkeypatch):
     user_id = "11111111-1111-1111-1111-111111111111"
     upload_id = str(uuid.uuid4())
