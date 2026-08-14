@@ -232,8 +232,8 @@ export default function ExampleReport() {
   return (
     <div className="min-h-screen bg-[#f7fbfa] text-slate-900">
       <Seo
-        title="Example Health Intelligence Report | VITALOOP"
-        description="See how VITALOOP turns lab results into a clear educational report with findings, context gaps, next actions, doctor questions, retest planning, and biomarker details."
+        title="Example Blood Test Analysis Report | VITALOOP"
+        description="See a sample VITALOOP report with blood test markers, reference ranges, health summary, missing context, doctor questions, retest planning, and next steps."
         path="/example-report"
         image="https://vitaloop.today/mockups/cabinet-live/results-clean.webp?v=20260814"
         imageAlt="VITALOOP example health intelligence report screen"
