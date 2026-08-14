@@ -22,10 +22,10 @@ import Footer from '../components/landing/Footer.jsx'
 import { PageHeader } from '../components/landing/PageHeader.jsx'
 
 const REPORT_STATS = [
-  { label: 'Markers reviewed', value: '7', tone: 'bg-white text-slate-950' },
-  { label: 'Need context', value: '2', tone: 'bg-rose-50 text-rose-700' },
-  { label: 'Stable markers', value: '5', tone: 'bg-emerald-50 text-emerald-700' },
-  { label: 'Confidence', value: '69%', tone: 'bg-amber-50 text-amber-800' },
+  { label: 'Markers reviewed', value: '7', tone: 'bg-white text-slate-950', note: 'How much structured data VITALOOP could safely read from the file.' },
+  { label: 'Need context', value: '2', tone: 'bg-rose-50 text-rose-700', note: 'Signals that are not enough for a strong conclusion without additional markers or profile data.' },
+  { label: 'Stable markers', value: '5', tone: 'bg-emerald-50 text-emerald-700', note: 'Values that appear inside the provided lab reference range and support the broader picture.' },
+  { label: 'Confidence', value: '69%', tone: 'bg-amber-50 text-amber-800', note: 'A practical quality indicator: useful signal exists, but important context is still missing.' },
 ]
 
 const SUMMARY_SIGNALS = [
@@ -133,6 +133,57 @@ const CABINET_SCREENS = [
     body: 'Past uploads remain accessible for comparison, protocol planning and future retest loops.',
     image: '/mockups/cabinet-live/lab-results-clean.webp?v=20260814',
     alt: 'VITALOOP lab results history screen',
+  },
+]
+
+const REPORT_BLOCKS = [
+  {
+    title: 'Health summary',
+    body: 'A plain-language overview that answers what seems to be happening without forcing a diagnosis. This is the first block a parent, patient, or clinician should read.',
+    output: 'Possible pattern, confidence boundary, and safest interpretation.',
+    icon: HeartPulse,
+  },
+  {
+    title: 'Report quality',
+    body: 'Shows whether the upload contains enough reliable information. This prevents the product from sounding more certain than the data allows.',
+    output: 'Extraction quality, missing context, and whether the result is ready for action or needs confirmation.',
+    icon: ShieldCheck,
+  },
+  {
+    title: 'Top findings',
+    body: 'Prioritizes the few signals that matter instead of pushing a long biomarker table to the top. Each marker is shown with value, range, status and distance from the reference interval.',
+    output: 'Flagged markers, visual range position, and short interpretation.',
+    icon: FlaskConical,
+  },
+  {
+    title: 'Missing evidence',
+    body: 'Explains what VITALOOP still needs before making a stronger educational interpretation. This is where uncertainty becomes useful.',
+    output: 'Missing markers, profile gaps, safety context and why they matter.',
+    icon: Info,
+  },
+  {
+    title: 'Action plan',
+    body: 'Separates what can be done now from what should wait for medical context. It is designed to reduce anxiety and prevent unsafe self-treatment.',
+    output: 'Today, this week, retest timing, and priority next step.',
+    icon: ClipboardList,
+  },
+  {
+    title: 'Questions for your doctor',
+    body: 'Turns a confusing report into a better appointment agenda. This is especially useful for parents and non-medical users.',
+    output: 'Specific, non-diagnostic questions based on flagged markers and missing context.',
+    icon: MessageSquareText,
+  },
+  {
+    title: 'Biomarker details',
+    body: 'Keeps the raw structured numbers available for transparency, export and clinician review without making them the main user experience.',
+    output: 'Marker, value, unit, lab reference and status.',
+    icon: FileText,
+  },
+  {
+    title: 'How VITALOOP reached this view',
+    body: 'Shows the reasoning ingredients: extraction, normalization, Knowledge Base matching, safety checks and conservative interpretation.',
+    output: 'Explainability, safety boundary, evidence and retest logic.',
+    icon: Sparkles,
   },
 ]
 
@@ -253,6 +304,33 @@ export default function ExampleReport() {
               <motion.article key={stat.label} {...fadeUp()} className={`rounded-lg border border-slate-200 p-5 shadow-sm ${stat.tone}`}>
                 <p className="text-3xl font-black">{stat.value}</p>
                 <p className="mt-1 text-sm font-semibold text-slate-600">{stat.label}</p>
+                <p className="mt-3 text-xs leading-5 text-slate-500">{stat.note}</p>
+              </motion.article>
+            ))}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-[1240px] px-4 pb-12 sm:px-6">
+          <motion.div {...fadeUp()} className="mb-6 max-w-3xl">
+            <p className="text-xs font-bold uppercase text-emerald-700">Report anatomy</p>
+            <h2 className="mt-2 text-3xl font-black text-slate-950">What each block is responsible for</h2>
+            <p className="mt-3 text-base leading-7 text-slate-600">
+              A strong health report should not only show values. It should explain significance, uncertainty, safety boundaries and the next practical step. This is how the VITALOOP report is organized.
+            </p>
+          </motion.div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {REPORT_BLOCKS.map(({ title, body, output, icon: Icon }, index) => (
+              <motion.article key={title} {...fadeUp(index * 0.02)} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <h3 className="mt-4 text-lg font-black text-slate-950">{title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
+                <div className="mt-4 rounded-lg bg-slate-50 p-3">
+                  <p className="text-[11px] font-black uppercase text-slate-500">What it gives you</p>
+                  <p className="mt-1 text-sm font-semibold leading-5 text-slate-800">{output}</p>
+                </div>
               </motion.article>
             ))}
           </div>
@@ -269,6 +347,12 @@ export default function ExampleReport() {
                 <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
                   Mean Reticulocyte Volume and Mean Spherical Cell Volume are below the laboratory reference range, while available reticulocyte counts are within range. VITALOOP treats this as a context-required signal rather than a diagnosis.
                 </p>
+                <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-black uppercase text-slate-500">Why this block matters</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-700">
+                    The summary is written for a non-medical reader first. It should tell a mother, a busy adult, or a clinician what the system noticed, how cautious the conclusion should be, and what information is still needed.
+                  </p>
+                </div>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <button
                     onClick={() => navigate('/login?signup=true')}
@@ -289,6 +373,12 @@ export default function ExampleReport() {
                 <p className="mt-2 text-sm leading-6 text-emerald-900">
                   Useful signal found, but stronger interpretation requires missing CBC, iron, B12, folate and profile context.
                 </p>
+                <div className="mt-4 rounded-lg border border-emerald-200 bg-white p-4">
+                  <p className="text-sm font-bold text-slate-950">What this score means</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    It is not a health score. It is a report-readiness signal: how much confidence the platform has that the available data is enough for a useful explanation.
+                  </p>
+                </div>
                 <div className="mt-5 rounded-lg border border-emerald-200 bg-white p-4">
                   <p className="text-sm font-bold text-slate-950">Safety boundary</p>
                   <p className="mt-1 text-sm leading-6 text-slate-600">
@@ -330,6 +420,9 @@ export default function ExampleReport() {
                 <h2 className="text-2xl font-black text-slate-950">What was outside the lab reference range</h2>
               </div>
             </div>
+            <p className="mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+              This block answers: “Which exact markers should I pay attention to first?” It avoids making the full table the main story and focuses the user on the signals that changed the interpretation.
+            </p>
 
             <div className="grid gap-4">
               {FINDINGS.map((finding) => (
@@ -369,6 +462,12 @@ export default function ExampleReport() {
                 </li>
               ))}
             </ul>
+            <div className="mt-5 rounded-lg border border-amber-200 bg-white p-4">
+              <p className="text-sm font-bold text-slate-950">Why this is valuable</p>
+              <p className="mt-1 text-sm leading-6 text-slate-700">
+                Missing evidence is the difference between a generic AI answer and a medically cautious workflow. It tells the user what would reduce uncertainty instead of pretending the uploaded file is complete.
+              </p>
+            </div>
           </motion.div>
         </section>
 
@@ -379,6 +478,9 @@ export default function ExampleReport() {
               <h2 className="mt-2 text-3xl font-black text-slate-950">The report turns uncertainty into the next useful step.</h2>
               <p className="mt-3 text-base leading-7 text-slate-600">
                 VITALOOP does not pretend the answer is stronger than the data. It separates immediate caution, this-week preparation, and retest timing.
+              </p>
+              <p className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">
+                The purpose is not to prescribe. The purpose is to organize the next safe step: what to review today, what context to gather this week, and when retesting becomes meaningful.
               </p>
             </motion.div>
 
@@ -409,6 +511,9 @@ export default function ExampleReport() {
                 </p>
               ))}
             </div>
+            <p className="mt-5 rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">
+              These questions are generated from the flagged markers and evidence gaps, so the user leaves with a concrete conversation plan instead of vague concern.
+            </p>
           </motion.div>
 
           <motion.div {...fadeUp(0.05)} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
@@ -445,6 +550,9 @@ export default function ExampleReport() {
                 </tbody>
               </table>
             </div>
+            <p className="mt-4 text-sm leading-6 text-slate-600">
+              The full table remains visible for transparency and export. It supports clinician review, but it is intentionally placed after the summary, findings and next-step logic.
+            </p>
           </motion.div>
         </section>
 
@@ -462,6 +570,9 @@ export default function ExampleReport() {
               </div>
               <StatusPill tone="amber">Approved with caution</StatusPill>
             </div>
+            <p className="mt-4 max-w-4xl text-sm leading-6 text-slate-600">
+              This block is the explainability layer. It shows that the final report is not a black-box paragraph: extracted values, reference ranges, profile context, Knowledge Base matches and safety checks all contribute to the final wording.
+            </p>
 
             <div className="mt-5 grid gap-4 lg:grid-cols-4">
               {[
