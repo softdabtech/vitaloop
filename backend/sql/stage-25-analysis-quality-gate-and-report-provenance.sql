@@ -116,4 +116,122 @@ create policy "Users can read own safety events"
   for select
   using (auth.uid() = user_id);
 
+create table if not exists public.analysis_quality_gates (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  upload_id uuid not null,
+  decision text not null,
+  label text,
+  score double precision,
+  requires_confirmation boolean not null default false,
+  components jsonb not null default '{}'::jsonb,
+  candidate_summary jsonb not null default '{}'::jsonb,
+  warnings jsonb not null default '[]'::jsonb,
+  blockers jsonb not null default '[]'::jsonb,
+  reasons jsonb not null default '[]'::jsonb,
+  source jsonb not null default '{}'::jsonb,
+  gate_version text,
+  status text not null default 'recorded',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_analysis_quality_gates_upload_user_created
+  on public.analysis_quality_gates(upload_id, user_id, created_at desc);
+
+create index if not exists idx_analysis_quality_gates_user_created
+  on public.analysis_quality_gates(user_id, created_at desc);
+
+create index if not exists idx_analysis_quality_gates_decision
+  on public.analysis_quality_gates(decision);
+
+alter table public.analysis_quality_gates enable row level security;
+
+drop policy if exists "Users can read own analysis quality gates" on public.analysis_quality_gates;
+create policy "Users can read own analysis quality gates"
+  on public.analysis_quality_gates
+  for select
+  using (auth.uid() = user_id);
+
+create table if not exists public.clinical_data_integrity_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  upload_id uuid not null,
+  status text not null,
+  integrity_version text,
+  summary jsonb not null default '{}'::jsonb,
+  issues jsonb not null default '[]'::jsonb,
+  profile jsonb not null default '{}'::jsonb,
+  markers jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_clinical_data_integrity_events_upload_user_created
+  on public.clinical_data_integrity_events(upload_id, user_id, created_at desc);
+
+create index if not exists idx_clinical_data_integrity_events_user_created
+  on public.clinical_data_integrity_events(user_id, created_at desc);
+
+create index if not exists idx_clinical_data_integrity_events_status
+  on public.clinical_data_integrity_events(status);
+
+alter table public.clinical_data_integrity_events enable row level security;
+
+drop policy if exists "Users can read own clinical data integrity events" on public.clinical_data_integrity_events;
+create policy "Users can read own clinical data integrity events"
+  on public.clinical_data_integrity_events
+  for select
+  using (auth.uid() = user_id);
+
+create table if not exists public.evidence_gaps (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  upload_id uuid not null,
+  evidence_gaps_version text,
+  gaps jsonb not null default '[]'::jsonb,
+  summary jsonb not null default '{}'::jsonb,
+  status text not null default 'recorded',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_evidence_gaps_upload_user_created
+  on public.evidence_gaps(upload_id, user_id, created_at desc);
+
+create index if not exists idx_evidence_gaps_user_created
+  on public.evidence_gaps(user_id, created_at desc);
+
+alter table public.evidence_gaps enable row level security;
+
+drop policy if exists "Users can read own evidence gaps" on public.evidence_gaps;
+create policy "Users can read own evidence gaps"
+  on public.evidence_gaps
+  for select
+  using (auth.uid() = user_id);
+
+create table if not exists public.health_state_versions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  upload_id uuid not null,
+  health_state_version text,
+  domain_registry_version text,
+  states jsonb not null default '[]'::jsonb,
+  top_priorities jsonb not null default '[]'::jsonb,
+  summary jsonb not null default '{}'::jsonb,
+  status text not null default 'recorded',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_health_state_versions_upload_user_created
+  on public.health_state_versions(upload_id, user_id, created_at desc);
+
+create index if not exists idx_health_state_versions_user_created
+  on public.health_state_versions(user_id, created_at desc);
+
+alter table public.health_state_versions enable row level security;
+
+drop policy if exists "Users can read own health state versions" on public.health_state_versions;
+create policy "Users can read own health state versions"
+  on public.health_state_versions
+  for select
+  using (auth.uid() = user_id);
+
 commit;
