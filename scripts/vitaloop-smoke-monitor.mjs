@@ -32,6 +32,7 @@ const CONFIG = {
   fixturePdf: process.env.VITALOOP_SMOKE_PDF || '/Users/oleksii/projects/vitaloop/scripts/smoke-fixtures/lab_ocr_test_big.pdf',
   fixtureImage: process.env.VITALOOP_SMOKE_IMAGE || '',
   uploadEnabled: process.env.VITALOOP_SMOKE_UPLOAD === '1',
+  browserChecksDisabled: process.env.VITALOOP_SMOKE_DISABLE_BROWSER === '1',
   timeoutMs: Number(process.env.VITALOOP_SMOKE_TIMEOUT_MS || 30000),
 }
 
@@ -70,6 +71,30 @@ function assertOk(condition, failure) {
   if (!condition) failures.push(failure)
 }
 
+export function isMissingPlaywrightError(error) {
+  return error?.code === 'ERR_MODULE_NOT_FOUND'
+    && /Cannot find package ['"]playwright['"]/.test(String(error?.message || ''))
+}
+
+async function loadChromium() {
+  if (CONFIG.browserChecksDisabled) return null
+  try {
+    const { chromium } = await import('playwright')
+    return chromium
+  } catch (error) {
+    if (isMissingPlaywrightError(error)) {
+      console.warn(JSON.stringify({
+        ok: true,
+        warning: 'Playwright is not installed; running HTTP-only smoke checks.',
+        code: 'SMOKE_BROWSER_CHECKS_SKIPPED',
+        checked_at: new Date().toISOString(),
+      }))
+      return null
+    }
+    throw error
+  }
+}
+
 export function endpointFailureMessage(path, status, data, body) {
   if (data && typeof data === 'object') {
     const state = Object.prototype.hasOwnProperty.call(data, 'ready') ? ` ready=${data.ready}` : ''
@@ -100,6 +125,48 @@ async function checkJsonEndpoint(path, predicate = (data) => data) {
       message: error.message,
       endpoint,
     })
+  }
+}
+
+async function checkTextPage(label, url, expectedText) {
+  try {
+    const res = await fetch(url, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(CONFIG.timeoutMs),
+    })
+    const body = await res.text()
+    assertOk(res.status < 500 && (!expectedText || body.includes(expectedText)), {
+      code: `SMOKE_PAGE_${label}`,
+      message: `${label} page failed HTTP-only expectation`,
+      route: url,
+      status: res.status,
+      body: body.slice(0, 500),
+    })
+  } catch (error) {
+    failures.push({ code: `SMOKE_PAGE_${label}_EXCEPTION`, message: error.message, route: url })
+  }
+}
+
+async function checkRedirect(label, url, expectedPrefix) {
+  try {
+    const res = await fetch(url, {
+      redirect: 'manual',
+      signal: AbortSignal.timeout(CONFIG.timeoutMs),
+    })
+    const location = res.headers.get('location') || ''
+    const absoluteLocation = location.startsWith('http') ? location : new URL(location || '/', url).toString()
+    assertOk(
+      [301, 302, 303, 307, 308].includes(res.status) && absoluteLocation.startsWith(expectedPrefix),
+      {
+        code: `SMOKE_${label}`,
+        message: `${label} redirect failed HTTP-only expectation`,
+        route: url,
+        status: res.status,
+        metadata: { location: redact(absoluteLocation) },
+      },
+    )
+  } catch (error) {
+    failures.push({ code: `SMOKE_${label}_EXCEPTION`, message: error.message, route: url })
   }
 }
 
@@ -168,7 +235,30 @@ async function main() {
   await checkJsonEndpoint('/health/ready', (data) => data?.ready === true)
   await checkAuthApi()
 
-  const { chromium } = await import('playwright')
+  const chromium = await loadChromium()
+  if (!chromium) {
+    await checkTextPage('EN_LANDING', CONFIG.appBaseUrl, 'VITALOOP')
+    await checkTextPage('UA_LANDING', CONFIG.uaBaseUrl, 'VITALOOP')
+    await checkRedirect(
+      'CRM_AUTH_REDIRECT',
+      `${CONFIG.crmBaseUrl.replace(/\/$/, '')}/auth/login`,
+      `${CONFIG.appBaseUrl.replace(/\/$/, '')}/login`,
+    )
+
+    for (const failure of failures) {
+      await reportFailure(failure)
+    }
+
+    console.log(JSON.stringify({
+      ok: failures.length === 0,
+      mode: 'http-only',
+      failures,
+      checked_at: new Date().toISOString(),
+    }, null, 2))
+
+    process.exit(failures.length ? 1 : 0)
+  }
+
   const browser = await chromium.launch({ headless: true })
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
   const browserErrors = []
