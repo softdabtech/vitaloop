@@ -185,6 +185,7 @@ export default function Subscription() {
   const uploadLimit = subscription?.upload_limit ?? null  // null means unlimited (premium)
   const isPremium = subscription?.is_premium ?? false
   const hasStripeCustomer = subscription?.has_stripe_customer ?? false
+  const isManualPremium = isPremium && !hasStripeCustomer
 
   useEffect(() => {
     loadSubscription()
@@ -355,6 +356,15 @@ export default function Subscription() {
               )}
             </div>
 
+            {isManualPremium && (
+              <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                <div className="font-semibold">Premium access is active.</div>
+                <p className="mt-1 text-emerald-800">
+                  This account is enabled without a Stripe billing customer, so the billing portal is not available. Feature access, uploads, reports, protocols, progress, and check-ins continue to work as Premium.
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-xl bg-slate-50 p-4 border border-slate-200">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Current Plan</div>
@@ -515,12 +525,12 @@ export default function Subscription() {
               <CreditCard className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-semibold text-blue-900 mb-1">
-                  {hasStripeCustomer ? 'Manage Payment Method & Billing' : 'Billing History'}
+                  {hasStripeCustomer ? 'Manage Payment Method & Billing' : 'Premium Access & Billing History'}
                 </h4>
                 <p className="text-sm text-blue-800 mb-4">
                   {hasStripeCustomer
                     ? 'Update your billing address, payment method, view invoices, and manage your subscription renewal.'
-                    : 'View your subscription timeline and plan change history.'}
+                    : 'Your Premium access is active. Stripe portal management is available only for Stripe-managed subscriptions; billing history remains available for audit and support.'}
                 </p>
                 <button
                   onClick={openBillingPortal}
