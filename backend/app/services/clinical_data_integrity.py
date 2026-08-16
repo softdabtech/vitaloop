@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List
+
+from app.services.biomarker_reference import BIOMARKER_DATABASE
 
 
 CLINICAL_DATA_INTEGRITY_VERSION = "clinical_data_integrity_v1"
@@ -28,6 +31,28 @@ _KNOWN_UNIT_FAMILIES = {
     "x10^6/uL": "cell_count",
     "x10^6/µL": "cell_count",
     "x10^12/L": "cell_count",
+    "ng/dL": "mass_concentration",
+    "pmol/L": "molar_concentration",
+    "µmol/L": "molar_concentration",
+    "umol/L": "molar_concentration",
+    "µg/dL": "mass_concentration",
+    "ug/dL": "mass_concentration",
+    "µg/L": "mass_concentration",
+    "mEq/L": "electrolyte_concentration",
+    "meq/L": "electrolyte_concentration",
+    "mg/L": "mass_concentration",
+    "L/L": "fraction",
+    "mmol/mol": "ratio",
+    "µkat/L": "enzyme_activity",
+    "ukat/L": "enzyme_activity",
+    "mL/min/1.73m²": "filtration_rate",
+    "mL/min/1.73m2": "filtration_rate",
+}
+
+_REFERENCE_UNIT_FAMILIES = {
+    unit: _KNOWN_UNIT_FAMILIES.get(unit) or _KNOWN_UNIT_FAMILIES.get(unit.lower()) or "reference_defined"
+    for biomarker in BIOMARKER_DATABASE.values()
+    for unit in (biomarker.get("units") or {})
 }
 
 _PLAUSIBLE_LIMITS = {
@@ -47,7 +72,30 @@ _PLAUSIBLE_LIMITS = {
 
 def _unit_key(value: Any) -> str:
     raw = str(value or "").strip()
-    return raw.replace("μ", "µ")
+    return (
+        raw.replace("μ", "µ")
+        .replace("㎍", "µg")
+        .replace("㎎", "mg")
+        .replace("⁄", "/")
+    )
+
+
+def _unit_lookup_key(value: Any) -> str:
+    raw = _unit_key(value)
+    return re.sub(r"\s+", "", raw).replace("²", "2")
+
+
+def _known_unit_family(unit: str) -> str | None:
+    lookup = _unit_lookup_key(unit)
+    candidates = {**_KNOWN_UNIT_FAMILIES, **_REFERENCE_UNIT_FAMILIES}
+    for key, family in candidates.items():
+        if lookup == _unit_lookup_key(key):
+            return family
+    lowered = lookup.lower()
+    for key, family in candidates.items():
+        if lowered == _unit_lookup_key(key).lower():
+            return family
+    return None
 
 
 def _to_float(value: Any) -> float | None:
@@ -106,7 +154,7 @@ def validate_clinical_data_integrity(
         duplicate_keys[canonical or name.lower()] = duplicate_keys.get(canonical or name.lower(), 0) + 1
 
         marker_issues: List[str] = []
-        unit_family = _KNOWN_UNIT_FAMILIES.get(unit) or _KNOWN_UNIT_FAMILIES.get(unit.lower())
+        unit_family = _known_unit_family(unit)
         if not unit_family:
             marker_issues.append("unknown_unit")
             issues.append({"key": "unknown_unit", "severity": "medium", "marker": name, "unit": unit})

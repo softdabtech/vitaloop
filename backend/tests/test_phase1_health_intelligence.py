@@ -13,7 +13,7 @@ from app.services.analysis_candidates import candidate_to_biomarker, score_bioma
 from app.services.clinical_data_integrity import validate_clinical_data_integrity
 from app.services.cost_analytics import record_analysis_cost, render_cost_metrics
 from app.services.evidence_gaps import build_evidence_gaps
-from app.services.safety.safety_engine import validate_protocol, validate_report
+from app.services.safety.safety_engine import sanitize_protocol_for_safety, validate_protocol, validate_report
 from app.utils.locale import resolve_locale
 
 
@@ -36,11 +36,46 @@ def test_score_biomarker_candidate_high_confidence():
     assert "recognized_unit" in result["reasons"]
 
 
+def test_score_biomarker_candidate_recognizes_reference_database_units():
+    for unit in ("ng/dL", "mEq/L", "mL/min/1.73m²", "µg/dL", "mg/L"):
+        result = score_biomarker_candidate(
+            {
+                "raw_name": "Free T4" if unit == "ng/dL" else "Iron",
+                "raw_value": "12",
+                "raw_unit": unit,
+                "raw_reference_range": "1 - 20",
+                "deterministic_ai_agreement": True,
+            }
+        )
+        assert "recognized_unit" in result["reasons"]
+
+
 def test_score_biomarker_candidate_low_confidence():
     result = score_biomarker_candidate({"raw_name": "Unknown marker", "raw_value": "abc"})
 
     assert result["score"] < 0.55
     assert result["label"] == "low"
+
+
+def test_manual_candidate_payloads_are_confirmed_high_confidence():
+    from app.services.analysis_candidates import build_candidate_payloads
+
+    candidates = build_candidate_payloads(
+        biomarkers=[
+            {
+                "name": "Ferritin",
+                "value": 14,
+                "unit": "ng/mL",
+                "ref_low": 30,
+                "ref_high": 400,
+            }
+        ],
+        source="manual",
+    )
+
+    assert candidates[0]["status"] == "confirmed"
+    assert candidates[0]["confidence_score"] == 1.0
+    assert "manual_user_confirmed" in candidates[0]["confidence_reasons"]
 
 
 def test_candidate_to_biomarker_converts_confirmed_row():
@@ -81,6 +116,22 @@ def test_clinical_data_integrity_flags_unknown_unit_and_profile_gap():
     assert "profile_context_incomplete" in issue_keys
     assert "pediatric_context" in issue_keys
     assert result["markers"][0]["reference_source"] == "lab_provided"
+
+
+def test_clinical_data_integrity_accepts_reference_database_units():
+    result = validate_clinical_data_integrity(
+        biomarkers=[
+            {"name": "Free T4", "canonical_name": "canonical_free_t4", "value": 0.9, "unit": "ng/dL", "ref_low": 0.8, "ref_high": 1.8},
+            {"name": "Potassium", "canonical_name": "canonical_potassium", "value": 4.2, "unit": "mEq/L", "ref_low": 3.5, "ref_high": 5.0},
+            {"name": "eGFR", "canonical_name": "canonical_egfr", "value": 92, "unit": "mL/min/1.73m²", "ref_low": 60, "ref_high": 1000},
+            {"name": "Iron", "canonical_name": "canonical_iron", "value": 80, "unit": "µg/dL", "ref_low": 60, "ref_high": 170},
+            {"name": "CRP", "canonical_name": "canonical_crp", "value": 1.2, "unit": "mg/L", "ref_low": 0, "ref_high": 3},
+        ],
+        profile={"age": 35, "sex": "female", "height_cm": 170, "weight_kg": 65},
+    )
+
+    assert result["status"] == "pass"
+    assert "unknown_unit" not in {item["key"] for item in result["issues"]}
 
 
 def test_analysis_input_quality_gate_requires_confirmation_for_weak_context():
@@ -378,6 +429,33 @@ def test_safety_engine_does_not_treat_iron_panel_as_dosage_for_child():
     assert not any("dosage" in item["key"] for item in result["warnings"])
 
 
+def test_safety_sanitizer_hides_sensitive_supplement_dosage_for_child():
+    protocol = {
+        "supplements": [
+            {
+                "supplement": "Vitamin D",
+                "title": "Vitamin D",
+                "dosage": "600-1000 IU/day",
+                "rationale": "Discuss this with a clinician.",
+            }
+        ]
+    }
+
+    sanitized = sanitize_protocol_for_safety(protocol, profile={"age": 8, "sex": "male"}, locale="uk")
+    item = sanitized["supplements"][0]
+    result = validate_report(
+        biomarkers=[],
+        knowledge_report={"summary": {"headline": "Educational report"}},
+        protocol=sanitized,
+        profile={"age": 8, "sex": "male"},
+    )
+
+    assert item["original_dosage_hidden"] is True
+    assert "лікарем" in item["dosage"]
+    assert result["status"] == "approved_with_warnings"
+    assert result["blocked_items"] == []
+
+
 def test_safety_engine_blocks_diagnosis_like_wording():
     result = validate_protocol(
         [{"title": "You have anemia", "body": "Confirmed diagnosis."}],
@@ -442,6 +520,111 @@ async def test_save_report_version_persists_expected_payload(monkeypatch):
         "interpreted_report": {"version": "interpreted_report_v1"},
     }
     assert result["id"] == "report-1"
+
+
+@pytest.mark.asyncio
+async def test_get_latest_report_version_falls_back_to_any_locale(monkeypatch):
+    calls = []
+
+    class _Table:
+        def __init__(self, name):
+            self.name = name
+            self.filters = []
+
+        def select(self, *_args, **_kwargs):
+            return self
+
+        def eq(self, key, value):
+            self.filters.append((key, value))
+            return self
+
+        def order(self, *_args, **_kwargs):
+            return self
+
+        def limit(self, *_args, **_kwargs):
+            return self
+
+        def execute(self):
+            calls.append(list(self.filters))
+            if len(calls) == 1:
+                return type("Resp", (), {"data": []})()
+            return type("Resp", (), {"data": [{"id": "report-en-1", "locale": "en"}]})()
+
+    class _Client:
+        def table(self, name):
+            assert name == "report_versions"
+            return _Table(name)
+
+    async def fake_run(fn):
+        return fn()
+
+    monkeypatch.setattr(supabase_service, "_get_supabase", lambda: _Client())
+    monkeypatch.setattr(supabase_service, "_run", fake_run)
+
+    result = await supabase_service.get_latest_report_version("upload-1", "user-1", "uk")
+
+    assert result == {"id": "report-en-1", "locale": "en"}
+    assert ("locale", "uk") in calls[0]
+    assert all(key != "locale" for key, _value in calls[1])
+
+
+@pytest.mark.asyncio
+async def test_get_user_progress_returns_latest_upload_first(monkeypatch):
+    captured = {}
+
+    class _UploadsTable:
+        def select(self, *_args, **_kwargs):
+            return self
+
+        def eq(self, *_args, **_kwargs):
+            return self
+
+        def order(self, key, desc=False):
+            captured["upload_order"] = {"key": key, "desc": desc}
+            return self
+
+        def execute(self):
+            return type(
+                "Resp",
+                (),
+                {"data": [{"id": "new", "created_at": "2026-08-16T00:00:00Z", "lab_name": "New", "test_date": None}]},
+            )()
+
+    class _BiomarkersTable:
+        def select(self, *_args, **_kwargs):
+            return self
+
+        def in_(self, *_args, **_kwargs):
+            return self
+
+        def eq(self, *_args, **_kwargs):
+            return self
+
+        def execute(self):
+            return type("Resp", (), {"data": []})()
+
+    class _Client:
+        def table(self, name):
+            if name == "lab_uploads":
+                return _UploadsTable()
+            if name == "biomarkers":
+                return _BiomarkersTable()
+            raise AssertionError(name)
+
+    async def fake_run(fn):
+        return fn()
+
+    async def fake_audit(**_kwargs):
+        return None
+
+    monkeypatch.setattr(supabase_service, "_get_supabase", lambda: _Client())
+    monkeypatch.setattr(supabase_service, "_run", fake_run)
+    monkeypatch.setattr(supabase_service, "_audit_medical_read", fake_audit)
+
+    result = await supabase_service.get_user_progress("user-1")
+
+    assert result[0]["id"] == "new"
+    assert captured["upload_order"] == {"key": "created_at", "desc": True}
 
 
 @pytest.mark.asyncio

@@ -459,7 +459,20 @@ async def get_latest_report_version(upload_id: str, user_id: str, locale: str) -
         .limit(1)
         .execute()
     )
-    return (resp.data or [None])[0]
+    latest = (resp.data or [None])[0]
+    if latest:
+        return latest
+
+    fallback = await _run(
+        lambda: supabase.table("report_versions")
+        .select("*")
+        .eq("upload_id", upload_id)
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return (fallback.data or [None])[0]
 
 
 async def get_report_version(report_version_id: str, user_id: str) -> Optional[Dict[str, Any]]:
@@ -1053,7 +1066,7 @@ async def get_user_progress(user_id: str) -> List[Dict]:
         lambda: supabase.table("lab_uploads")
         .select("id, created_at, lab_name, test_date")
         .eq("user_id", user_id)
-        .order("created_at", desc=False)
+        .order("created_at", desc=True)
         .execute()
     )
 

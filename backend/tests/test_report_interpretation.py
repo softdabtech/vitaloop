@@ -130,6 +130,24 @@ def test_interpreted_report_hides_unknown_zero_health_domains():
     assert domains == ["blood_count"]
 
 
+def test_interpreted_report_localizes_uk_health_domain_labels():
+    report = build_interpreted_report(
+        biomarkers=RETICULOCYTE_PANEL,
+        health_states={
+            "version": "health_state_engine_v1",
+            "states": [
+                {"domain": "iron_status", "label": "Iron status", "score": 42, "risk_level": "high_attention"},
+                {"domain": "cardiovascular", "label": "Cardiovascular risk context", "score": 61, "risk_level": "needs_attention"},
+            ],
+        },
+        profile={"age": 8, "sex": "male", "height_cm": 140, "weight_kg": 35},
+        locale="uk",
+    )
+
+    labels = [item["label"] for item in report["health_domains"]]
+    assert labels == ["Статус заліза", "Серцево-судинний профіль"]
+
+
 def test_interpreted_report_exposes_nutrition_context_from_kb():
     report = build_interpreted_report(
         biomarkers=RETICULOCYTE_PANEL,

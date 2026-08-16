@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, Iterable, List, Tuple
 
-from app.services.biomarker_reference import get_all_biomarkers
+from app.services.biomarker_reference import BIOMARKER_DATABASE, get_all_biomarkers
 
 _KNOWN_UNITS = {
     "%",
@@ -28,6 +28,14 @@ _KNOWN_UNITS = {
     "x10^6/µL",
     "x10^12/L",
 }
+
+
+def _reference_units() -> set[str]:
+    return {
+        unit
+        for biomarker in BIOMARKER_DATABASE.values()
+        for unit in (biomarker.get("units") or {})
+    }
 
 
 def _normalize_text(value: Any) -> str:
@@ -71,11 +79,17 @@ def _unit_recognized(unit: Any) -> bool:
     raw = str(unit or "").strip()
     if not raw:
         return False
-    normalized = raw.replace("μ", "µ")
+    normalized = raw.replace("μ", "µ").replace("㎍", "µg").replace("㎎", "mg").replace("⁄", "/")
+    normalized_lookup = re.sub(r"\s+", "", normalized).replace("²", "2")
+    known_units = _KNOWN_UNITS | _reference_units()
     lowered = normalized.lower()
     return (
-        normalized in _KNOWN_UNITS
-        or lowered in {unit.lower() for unit in _KNOWN_UNITS}
+        normalized in known_units
+        or lowered in {unit.lower() for unit in known_units}
+        or normalized_lookup.lower() in {
+            re.sub(r"\s+", "", unit.replace("μ", "µ")).replace("²", "2").lower()
+            for unit in known_units
+        }
         or bool(re.match(r"^(x10\^\d+)/(ul|µl|l)$", lowered))
     )
 
@@ -156,7 +170,16 @@ def build_candidate_payloads(
             "source_row": biomarker.get("source_row") or index,
             "status": "pending",
         }
+        if source == "manual":
+            candidate["status"] = "confirmed"
+            candidate["deterministic_ai_agreement"] = True
         scored = score_biomarker_candidate(candidate)
+        if source == "manual" and scored["score"] >= 0.75:
+            scored = {
+                "score": 1.0,
+                "label": "high",
+                "reasons": [*scored["reasons"], "manual_user_confirmed"],
+            }
         candidate["confidence_score"] = scored["score"]
         candidate["confidence_label"] = scored["label"]
         candidate["confidence_reasons"] = scored["reasons"]
@@ -190,4 +213,3 @@ def candidate_to_biomarker(candidate: Dict[str, Any]) -> Dict[str, Any] | None:
         "status": candidate.get("biomarker_status") or candidate.get("status_hint") or "BORDERLINE",
         "category": candidate.get("category") or "other",
     }
-
