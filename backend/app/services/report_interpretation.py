@@ -56,9 +56,33 @@ COPY = {
     },
 }
 
+DOMAIN_LABELS_UK = {
+    "iron_status": "Статус заліза",
+    "metabolic_health": "Метаболічне здоровʼя",
+    "cardiovascular": "Серцево-судинний профіль",
+    "inflammation": "Запалення",
+    "thyroid": "Щитоподібна залоза",
+    "liver": "Печінка",
+    "kidney": "Нирки",
+    "micronutrients": "Мікронутрієнти",
+    "recovery_energy": "Відновлення й енергія",
+    "blood_count": "Загальний аналіз крові",
+    "general": "Загальний контекст",
+}
+
 
 def _t(locale: str, key: str) -> str:
     return COPY[_locale(locale)][key]
+
+
+def _localize_health_state(state: Dict[str, Any], locale: str) -> Dict[str, Any]:
+    if _locale(locale) != "uk":
+        return state
+    domain = str(state.get("domain") or state.get("key") or "").strip()
+    if not domain:
+        return state
+    label = DOMAIN_LABELS_UK.get(domain)
+    return {**state, "label": label or state.get("label") or domain}
 
 
 def _name(item: Dict[str, Any]) -> str:
@@ -365,7 +389,7 @@ def build_interpreted_report(
             "stable_biomarkers": [_format_marker(item) for item in stable[:12]],
         },
         "patterns": patterns,
-        "health_domains": useful_states[:6],
+        "health_domains": [_localize_health_state(item, locale) for item in useful_states[:6]],
         "nutrition_context": {
             "version": nutrition_context.get("version"),
             "person_group": nutrition_context.get("person_group"),

@@ -170,6 +170,58 @@ def _has_safety_wording(item: Dict[str, Any]) -> bool:
     return any(term in text for term in safe_terms)
 
 
+def _clinician_review_dosage_text(locale: str) -> str:
+    if str(locale or "").lower().startswith("uk"):
+        return "Узгодити дозування з лікарем з урахуванням віку, ваги, аналізів і поточних добавок."
+    return "Confirm dosing with a qualified clinician based on age, weight, labs, and current supplements."
+
+
+def _supplement_dosage_safety_note(locale: str) -> str:
+    if str(locale or "").lower().startswith("uk"):
+        return "Для дитячого або вагітного контексту VITALOOP не показує самостійні дозування добавок."
+    return "For pediatric or pregnancy context, VITALOOP does not show self-directed supplement dosing."
+
+
+def sanitize_protocol_for_safety(
+    protocol: Any,
+    *,
+    profile: Dict[str, Any] | None = None,
+    locale: str = "en",
+) -> Any:
+    """
+    Remove self-directed supplement dosing from sensitive contexts while preserving
+    the recommendation as clinician-discussion guidance.
+    """
+    sensitive_context = _is_pediatric_profile(profile) or _is_pregnancy_profile(profile)
+    if not sensitive_context:
+        return protocol
+
+    def sanitize_item(item: Any) -> Any:
+        if not isinstance(item, dict):
+            return item
+        sanitized = dict(item)
+        supplement_key = _contains_sensitive_supplement(sanitized)
+        if supplement_key and _contains_explicit_dosage(sanitized):
+            sanitized["original_dosage_hidden"] = True
+            sanitized["dosage"] = _clinician_review_dosage_text(locale)
+            sanitized["requires_doctor"] = True
+            notes = list(sanitized.get("safety_notes") or [])
+            note = _supplement_dosage_safety_note(locale)
+            if note not in notes:
+                notes.insert(0, note)
+            sanitized["safety_notes"] = notes
+        return sanitized
+
+    if isinstance(protocol, dict):
+        return {
+            key: [sanitize_item(item) for item in value] if isinstance(value, list) else value
+            for key, value in protocol.items()
+        }
+    if isinstance(protocol, list):
+        return [sanitize_item(item) for item in protocol]
+    return protocol
+
+
 def _diagnosis_like_text(value: Any) -> bool:
     text = str(value or "").lower()
     return any(re.search(pattern, text) for pattern in _DIAGNOSIS_PATTERNS)

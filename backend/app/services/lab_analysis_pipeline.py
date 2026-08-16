@@ -24,13 +24,34 @@ from app.services.knowledge.report import build_knowledge_report
 from app.services.lab_normalization.biomarker_mapping import infer_category, to_canonical_name
 from app.services.protocol_enrichment import enrich_protocol
 from app.services.report_interpretation import REPORT_INTERPRETATION_VERSION, build_interpreted_report
-from app.services.safety import validate_report
+from app.services.safety import sanitize_protocol_for_safety, validate_report
 from app.services.safety.safety_engine import SAFETY_ENGINE_VERSION
 from app.services.trend_engine import evaluate_biomarker_trends
 
 logger = logging.getLogger("uvicorn.error")
 
 LAB_ANALYSIS_PIPELINE_VERSION = "lab_analysis_pipeline_v2"
+
+_DOMAIN_LABELS_UK = {
+    "iron_status": "Статус заліза",
+    "metabolic_health": "Метаболічне здоровʼя",
+    "cardiovascular": "Серцево-судинний профіль",
+    "inflammation": "Запалення",
+    "thyroid": "Щитоподібна залоза",
+    "liver": "Печінка",
+    "kidney": "Нирки",
+    "micronutrients": "Мікронутрієнти",
+    "recovery_energy": "Відновлення й енергія",
+    "blood_count": "Загальний аналіз крові",
+    "general": "Загальний контекст",
+}
+
+
+def _localized_domain_label(domain: Any, fallback: Any, locale: str) -> str:
+    key = str(domain or "").strip()
+    if str(locale or "").lower().startswith("uk") and key in _DOMAIN_LABELS_UK:
+        return _DOMAIN_LABELS_UK[key]
+    return str(fallback or key or "Health domain")
 
 
 DISCLAIMER = (
@@ -761,6 +782,7 @@ async def run_lab_analysis_pipeline(
         biomarkers=normalized_biomarkers,
         prioritized=prioritized,
     )
+    protocol = sanitize_protocol_for_safety(protocol, profile=user_profile, locale=locale)
     safety_result = validate_report(
         biomarkers=normalized_biomarkers,
         knowledge_report=knowledge_report,
@@ -779,6 +801,7 @@ async def run_lab_analysis_pipeline(
         domain_definitions=domain_definitions,
         locale=locale,
     )
+    protocol = sanitize_protocol_for_safety(protocol, profile=user_profile, locale=locale)
     safety_result = validate_report(
         biomarkers=normalized_biomarkers,
         knowledge_report=knowledge_report,
@@ -855,6 +878,7 @@ async def run_lab_analysis_pipeline(
             "top_domains": [
                 {
                     "domain": item.get("domain"),
+                    "label": _localized_domain_label(item.get("domain"), item.get("label"), locale),
                     "score": item.get("score"),
                     "risk_level": item.get("risk_level"),
                     "confidence": item.get("confidence"),

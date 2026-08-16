@@ -506,6 +506,7 @@ async def analyze_lab_file(
 
         upload_id = upload["id"]
 
+        candidates = []
         try:
             candidates = build_candidate_payloads(
                 biomarkers=biomarkers,
@@ -969,6 +970,7 @@ async def analyze_lab(
             )
         analysis_source = _stable_analysis_source("llm" if is_llm_configured() else "fallback")
 
+        candidates = []
         try:
             candidates = build_candidate_payloads(
                 biomarkers=biomarkers,
@@ -1017,7 +1019,7 @@ async def analyze_lab(
             user_profile=user_profile,
             user_id=user_id,
             analysis_id=str(upload_id),
-            source_metadata={"source": "b2c_text", "lab_name": normalized_lab_name},
+            source_metadata={"source": "b2c_text", "lab_name": normalized_lab_name, "candidates": candidates},
             persist_knowledge=True,
             persist_report_version=True,
             locale=_resolve_response_locale(request),
@@ -1439,6 +1441,23 @@ async def analyze_manual_biomarkers(
         upload_id = upload_result["upload_id"]
         biomarkers_data = upload_result["biomarkers"]
         user_profile = await get_user_profile(user_id) or {}
+        manual_candidates = build_candidate_payloads(
+            biomarkers=biomarkers_data,
+            source="manual",
+        )
+        try:
+            await save_biomarker_extraction_candidates(
+                upload_id=upload_id,
+                user_id=user_id,
+                candidates=manual_candidates,
+            )
+        except Exception as exc:
+            logger.warning(
+                "analyze_manual_save_candidates_failed upload_id=%s user_id=%s error=%s",
+                upload_id,
+                user_id,
+                repr(exc),
+            )
 
         pipeline_result = await run_lab_analysis_pipeline(
             biomarkers=biomarkers_data,
@@ -1446,7 +1465,11 @@ async def analyze_manual_biomarkers(
             user_profile=user_profile,
             user_id=user_id,
             analysis_id=str(upload_id),
-            source_metadata={"source": "b2c_manual", "lab_name": request.lab_name},
+            source_metadata={
+                "source": "b2c_manual",
+                "lab_name": request.lab_name,
+                "candidates": manual_candidates,
+            },
             persist_knowledge=True,
             persist_report_version=True,
             locale=response_locale,
