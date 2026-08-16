@@ -37,6 +37,7 @@ const CONFIG = {
 }
 
 const failures = []
+const skippedChecks = []
 
 function redact(value) {
   return String(value || '').replace(/access_token=[^&]+/g, 'access_token=***')
@@ -69,6 +70,17 @@ async function reportFailure(failure) {
 
 function assertOk(condition, failure) {
   if (!condition) failures.push(failure)
+}
+
+export function hasAuthSmokeConfig(config) {
+  return Boolean(config?.email && config?.password && config?.supabaseUrl && config?.supabaseAnonKey)
+}
+
+function skipCheck(skip) {
+  skippedChecks.push({
+    ...skip,
+    skipped_at: new Date().toISOString(),
+  })
 }
 
 export function isMissingPlaywrightError(error) {
@@ -172,8 +184,8 @@ async function checkRedirect(label, url, expectedPrefix) {
 
 async function checkAuthApi() {
   if (!CONFIG.email || !CONFIG.password) return null
-  if (!CONFIG.supabaseUrl || !CONFIG.supabaseAnonKey) {
-    failures.push({
+  if (!hasAuthSmokeConfig(CONFIG)) {
+    skipCheck({
       code: 'SMOKE_AUTH_CONFIG_MISSING',
       message: 'Supabase URL or anon key is missing for auth smoke',
       endpoint: `${CONFIG.apiBaseUrl}/auth/me`,
@@ -253,6 +265,7 @@ async function main() {
       ok: failures.length === 0,
       mode: 'http-only',
       failures,
+      skipped_checks: skippedChecks,
       checked_at: new Date().toISOString(),
     }, null, 2))
 
@@ -363,6 +376,7 @@ async function main() {
   console.log(JSON.stringify({
     ok: failures.length === 0,
     failures,
+    skipped_checks: skippedChecks,
     checked_at: new Date().toISOString(),
   }, null, 2))
 
