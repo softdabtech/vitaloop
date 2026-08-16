@@ -882,7 +882,7 @@ function BiomarkerRangeBar({ biomarker, copy }) {
 }
 
 function localizeDomainLabel(value, copy) {
-  const raw = String(value || '').trim()
+  const raw = humanizeReportValue(value).trim()
   if (!raw) return ''
   if (copy === RESULTS_COPY.uk) {
     const key = raw.toLowerCase().replace(/\s+/g, '_')
