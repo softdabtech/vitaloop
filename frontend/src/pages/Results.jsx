@@ -584,6 +584,29 @@ function itemToReportText(item) {
   ].filter(Boolean).join(' - ')
 }
 
+function humanizeReportValue(value) {
+  if (value == null) return ''
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (Array.isArray(value)) return value.map(humanizeReportValue).filter(Boolean).join(', ')
+  if (typeof value === 'object') {
+    return [
+      value.label,
+      value.title,
+      value.name,
+      value.marker,
+      value.biomarker,
+      value.missing_marker,
+      value.reason,
+      value.summary,
+      value.description,
+      value.suggested_next_step,
+      value.impact_on_confidence,
+    ].map(humanizeReportValue).filter(Boolean).join(' · ')
+  }
+  return String(value)
+}
+
 function actionTimeframeLabel(timeframe, copy) {
   const key = String(timeframe || '').toLowerCase()
   if (key === 'today') return copy.today
@@ -1127,7 +1150,23 @@ export default function Results() {
     const direct = localizedFinalAnalysis?.evidence_gaps?.gaps
     const fromExplainability = explainability?.evidence_gaps?.gaps
     const items = Array.isArray(direct) ? direct : (Array.isArray(fromExplainability) ? fromExplainability : [])
-    return items.filter(Boolean).slice(0, 6)
+    return items
+      .filter(Boolean)
+      .map((gap) => {
+        if (!gap || typeof gap !== 'object') {
+          return { reason: humanizeReportValue(gap) }
+        }
+        return {
+          ...gap,
+          domain: humanizeReportValue(gap.domain),
+          priority: humanizeReportValue(gap.priority),
+          missing_marker: humanizeReportValue(gap.missing_marker),
+          reason: humanizeReportValue(gap.reason),
+          suggested_next_step: humanizeReportValue(gap.suggested_next_step),
+          impact_on_confidence: humanizeReportValue(gap.impact_on_confidence),
+        }
+      })
+      .slice(0, 6)
   }, [localizedFinalAnalysis, explainability])
 
   async function exportResultsAsPDF() {
