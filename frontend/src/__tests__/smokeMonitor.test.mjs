@@ -4,7 +4,9 @@ import { test } from 'node:test'
 import {
   endpointFailureMessage,
   hasAuthSmokeConfig,
+  hasMeaningfulResultsPayload,
   isMissingPlaywrightError,
+  isExpectedProtectedStatus,
 } from '../../../scripts/vitaloop-smoke-monitor.mjs'
 
 test('endpointFailureMessage includes readiness body state and reason', () => {
@@ -41,5 +43,26 @@ test('hasAuthSmokeConfig requires credentials and Supabase public config', () =>
   assert.equal(hasAuthSmokeConfig({
     email: 'test@example.com',
     password: 'secret',
+  }), false)
+})
+
+test('isExpectedProtectedStatus rejects server errors', () => {
+  assert.equal(isExpectedProtectedStatus(200), true)
+  assert.equal(isExpectedProtectedStatus(402), true)
+  assert.equal(isExpectedProtectedStatus(422), true)
+  assert.equal(isExpectedProtectedStatus(500), false)
+  assert.equal(isExpectedProtectedStatus(504), false)
+})
+
+test('hasMeaningfulResultsPayload requires upload, biomarkers and report content', () => {
+  assert.equal(hasMeaningfulResultsPayload({
+    upload_id: 'upload-1',
+    biomarkers: [{ name: 'Ferritin' }],
+    final_analysis: { knowledge_report: {} },
+  }), true)
+
+  assert.equal(hasMeaningfulResultsPayload({
+    upload_id: 'upload-1',
+    biomarkers: [],
   }), false)
 })
