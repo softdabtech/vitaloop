@@ -3,6 +3,7 @@ import { test } from 'node:test'
 
 import {
   endpointFailureMessage,
+  hasAuthSmokeConfig,
   isMissingPlaywrightError,
 } from '../../../scripts/vitaloop-smoke-monitor.mjs'
 
@@ -26,5 +27,19 @@ test('isMissingPlaywrightError detects missing optional browser dependency', () 
   assert.equal(isMissingPlaywrightError({
     code: 'ERR_MODULE_NOT_FOUND',
     message: "Cannot find package 'other-package'",
+  }), false)
+})
+
+test('hasAuthSmokeConfig requires credentials and Supabase public config', () => {
+  assert.equal(hasAuthSmokeConfig({
+    email: 'test@example.com',
+    password: 'secret',
+    supabaseUrl: 'https://project.supabase.co',
+    supabaseAnonKey: 'anon-key',
+  }), true)
+
+  assert.equal(hasAuthSmokeConfig({
+    email: 'test@example.com',
+    password: 'secret',
   }), false)
 })
