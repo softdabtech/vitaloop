@@ -95,11 +95,12 @@
 .coach-hero::after {
   content: "";
   position: absolute;
-  inset: auto -120px -180px auto;
+  inset: auto 0 0 auto;
   width: 360px;
   height: 360px;
   border-radius: 50%;
   background: rgba(42, 191, 170, 0.1);
+  transform: translate(42%, 42%);
   pointer-events: none;
 }
 
