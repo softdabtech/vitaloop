@@ -365,10 +365,10 @@ export default function Subscription() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-xl bg-slate-50 p-4 border border-slate-200">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Current Plan</div>
-                <div className="text-2xl font-bold text-slate-900">{PLANS[currentPlan]?.name || 'Free'}</div>
+                <div className="break-words text-2xl font-bold leading-tight text-slate-900">{PLANS[currentPlan]?.name || 'Free'}</div>
               </div>
 
               {daysRemaining !== null && (
@@ -383,7 +383,7 @@ export default function Subscription() {
 
               <div className="rounded-xl bg-blue-50 p-4 border border-blue-200">
                 <div className="text-xs font-semibold uppercase tracking-wide text-blue-600 mb-2">Uploads</div>
-                <div className="text-2xl font-bold text-blue-900">
+                <div className="break-words text-2xl font-bold leading-tight text-blue-900">
                   {currentPlan === 'free' && uploadLimit !== null ? `${Math.max(0, uploadLimit - uploadCount)}/month` : 'Unlimited'}
                 </div>
               </div>

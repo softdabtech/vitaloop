@@ -111,7 +111,7 @@ export default function UserCabinetLayout({ children }) {
         background: shellBackground,
       }}
     >
-      <div className="hidden md:sticky md:top-0 md:block md:self-start">
+      <div className="hidden lg:sticky lg:top-0 lg:block lg:self-start">
         <UserDashboardSidebar
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
@@ -121,7 +121,7 @@ export default function UserCabinetLayout({ children }) {
       </div>
 
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm md:hidden" onClick={() => setSidebarOpen(false)}>
+        <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)}>
           <div className="h-full w-72" onClick={(event) => event.stopPropagation()}>
             <UserDashboardSidebar
               collapsed={false}
@@ -140,7 +140,7 @@ export default function UserCabinetLayout({ children }) {
             <div className="flex min-w-0 items-center gap-3">
               <button
                 onClick={() => setSidebarOpen((prev) => !prev)}
-                className="vtl-focus-ring rounded-xl p-2 transition hover:bg-slate-100 md:hidden"
+                className="vtl-focus-ring rounded-xl p-2 transition hover:bg-slate-100 lg:hidden"
                 aria-label="Open navigation"
               >
                 <Menu className="h-5 w-5 text-slate-700" />
@@ -174,7 +174,7 @@ export default function UserCabinetLayout({ children }) {
         </div>
 
         <main className="flex-1 overflow-x-hidden">
-          <div className="mx-auto w-full max-w-[1380px] px-3 py-5 pb-[calc(var(--vtl-bottom-bar-height)+20px)] sm:px-5 sm:py-7 md:pb-8 lg:px-6">
+          <div className="mx-auto w-full max-w-[1380px] px-3 py-5 pb-[calc(var(--vtl-bottom-bar-height)+20px)] sm:px-5 sm:py-7 lg:px-6 lg:pb-8">
             {isDashboardRoute && <PWAInstallBanner />}
             {children}
           </div>
