@@ -63,8 +63,8 @@ const WORKFLOW_STEPS = [
   {
     icon: BrainCircuit,
     step: '03',
-    title: 'Core V2 drafts explainable outputs',
-    body: 'Based on biomarkers, symptoms, safety context, and history, the system proposes nutrition, supplement, lifestyle, training/recovery, retest, and discussion outputs that you finalize as the practitioner.',
+    title: 'Core V3 drafts explainable outputs',
+    body: 'Based on extraction confidence, biomarkers, symptoms, missing evidence, safety context, and history, the system proposes education-oriented nutrition, lifestyle, retest, and discussion outputs that you finalize as the practitioner.',
     accent: '#8b5cf6',
   },
   {
@@ -144,7 +144,7 @@ const USE_CASES = [
 ]
 
 const METRICS = [
-  { value: 'Core V2', label: 'Shared B2C, practitioner, and B2B analysis path' },
+  { value: 'Core V3', label: 'Shared B2C, practitioner, and B2B analysis path' },
   { value: 'Structured', label: 'Complete biomarker, safety, protocol, and retest output' },
   { value: '100%', label: 'Patient history in one place' },
   { value: '1:N', label: 'One practitioner, many active patients' },
@@ -404,7 +404,7 @@ export default function ForNutritionists() {
             <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
               <div className="mb-1 flex items-center gap-2 text-xs font-semibold text-emerald-600">
                 <BrainCircuit className="h-3.5 w-3.5" />
-                  AI protocol draft
+                  Explainable plan draft
               </div>
               <p className="text-xs leading-relaxed text-slate-600">
                   Priority: restore iron and vitamin D while monitoring symptom response. Suggested plan and timing are reviewed by practitioner before patient execution.

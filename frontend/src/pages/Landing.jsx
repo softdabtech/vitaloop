@@ -63,8 +63,8 @@ const STEPS = [
 
 const BENEFITS = [
   {
-    title: 'Explainable, not generic AI',
-    body: 'Each report runs through a structured analysis layer: biomarker context, Knowledge Base rules, safety flags, and traceable reasoning instead of loose chatbot guesses.',
+    title: 'Quality-gated, not generic AI',
+    body: 'Each report runs through extraction confidence, clinical data integrity checks, Knowledge Base rules, safety flags, and traceable reasoning instead of loose chatbot guesses.',
     icon: BrainCircuit,
     stat: 'KB',
     label: 'Explainable logic'
@@ -85,7 +85,7 @@ const BENEFITS = [
   },
   {
     title: 'Built for repeat cycles',
-    body: 'Each upload, check-in, trend, and retest adds versioned context for the next decision instead of treating every report as a one-off PDF.',
+    body: 'Each upload, check-in, trend, and retest adds versioned context for the next review instead of treating every report as a one-off PDF.',
     icon: TrendingUp,
     stat: 'Progress',
     label: 'Retest learning'
@@ -94,8 +94,8 @@ const BENEFITS = [
 
 const PREMIUM_FEATURES = [
   {
-    title: 'Full Knowledge report',
-    body: 'Explainable biomarker patterns, Knowledge Base reasoning, doctor discussion points, safety notes, and quality context.',
+    title: 'Full evidence-aware report',
+    body: 'Explainable biomarker patterns, Knowledge Base reasoning, missing evidence, doctor discussion points, safety notes, and quality context.',
     icon: BrainCircuit,
   },
   {
@@ -123,8 +123,8 @@ const PLAN_DETAILS = {
   },
   'Premium': {
     eyebrow: 'Most chosen plan',
-    description: 'For users actively running a health protocol who need unlimited uploads, longitudinal tracking, weekly adaptation, and comprehensive feedback between lab cycles.',
-    idealFor: 'Best for: people serious about biohacking, recovery, hormone optimization, or deficiency correction.',
+    description: 'For users actively tracking symptoms, lab context, weekly follow-through, repeated uploads, and retest planning between lab cycles.',
+    idealFor: 'Best for: people who want a repeatable health loop with safer context, not a one-time lab explanation.',
   },
   Enterprise: {
     eyebrow: 'Practitioner operations',
@@ -152,10 +152,10 @@ const HUB_GUIDES = [
 ]
 
 const MOCKUPS = [
-  { title: 'Dashboard', alt: 'Health Score 78/100 with biomarker priority flags and weekly adherence trend.', device: 'desktop' },
-  { title: 'Lab Upload', alt: 'Upload workspace with PDF intake, AI analysis progress, and 54 biomarkers analyzed.', device: 'desktop' },
+  { title: 'Dashboard', alt: 'Coach-style dashboard with next action, current report quality, evidence gaps, and weekly follow-through.', device: 'desktop' },
+  { title: 'Lab Upload', alt: 'Upload workspace with PDF, image, spreadsheet, manual entry, analysis quality gate, and biomarker extraction status.', device: 'desktop' },
   { title: 'Lab Results', alt: 'Structured biomarker table with severity chips, reference ranges, and trend arrows.', device: 'desktop' },
-  { title: 'Personalized Protocol', alt: 'AI protocol plan with ranked supplements, nutrition targets, and weekly tasks.', device: 'desktop' },
+  { title: 'Personalized Protocol', alt: 'Structured action plan with priorities, safety notes, clinician discussion points, and retest timing.', device: 'desktop' },
   { title: 'Timeline', alt: 'Longitudinal trend chart showing ferritin, CRP, and vitamin D across 5 test cycles.', device: 'desktop' },
   { title: 'Practitioner CRM', alt: 'Practitioner CRM with 3 client panels, adherence bars, and assignment overview.', device: 'desktop' },
   { title: 'Weekly Check-in', alt: 'Mobile weekly check-in with energy, sleep, and symptom sliders plus streak badge.', device: 'mobile' },
@@ -202,7 +202,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'How is this different from generic AI chat?',
-    answer: 'VITALOOP runs structured symptoms and biomarkers through a governed analysis core with Knowledge Base rules, safety context, trend logic, and reusable outputs instead of producing a one-off chat reply.',
+    answer: 'VITALOOP runs structured symptoms and biomarkers through a governed Core V3 analysis pipeline with extraction confidence, clinical data integrity checks, Knowledge Base rules, evidence gaps, safety context, trend logic, and reusable outputs instead of producing a one-off chat reply.',
   },
   {
     question: 'How much does VITALOOP cost?',
@@ -241,7 +241,7 @@ const PRICING = {
       name: 'Free',
       price: '$0',
       period: '/month',
-      points: ['1 active upload', 'Basic biomarker summary', 'Core dashboard'],
+      points: ['1 active upload', 'Starter structured report', 'Core dashboard'],
       cta: 'Try free',
       featured: false,
     },
@@ -249,7 +249,7 @@ const PRICING = {
       name: 'Premium',
       price: '$4.99',
       period: '/month',
-      points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
+      points: ['Unlimited uploads', 'Full evidence report', 'Weekly check-ins', 'Retest planning'],
       cta: 'Upgrade',
       featured: true,
     },
@@ -267,7 +267,7 @@ const PRICING = {
       name: 'Free',
       price: '$0',
       period: '/year',
-      points: ['1 active upload', 'Basic biomarker summary', 'Core dashboard'],
+      points: ['1 active upload', 'Starter structured report', 'Core dashboard'],
       cta: 'Try free',
       featured: false,
     },
@@ -275,7 +275,7 @@ const PRICING = {
       name: 'Premium',
       price: '$49.99',
       period: '/year',
-      points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
+      points: ['Unlimited uploads', 'Full evidence report', 'Weekly check-ins', 'Retest planning'],
       cta: 'Upgrade',
       featured: true,
     },
@@ -314,24 +314,24 @@ function MockupScreenContent({ title }) {
             </defs>
           </svg>
           <div className="text-center">
-            <div className="text-lg font-bold leading-none text-emerald-300">78</div>
-            <div className="text-[8px] font-semibold uppercase tracking-wider text-slate-500">score</div>
+            <div className="text-lg font-bold leading-none text-emerald-300">2</div>
+            <div className="text-[8px] font-semibold uppercase tracking-wider text-slate-500">review</div>
           </div>
         </div>
-        <div className="text-[10px] font-semibold text-emerald-400">↑ +5 this cycle</div>
+        <div className="text-[10px] font-semibold text-emerald-400">Next best step</div>
       </div>
-      {/* Right — flags + adherence */}
+      {/* Right — report context + follow-through */}
       <div className="grid gap-2">
         <div className="rounded-xl border border-slate-700/70 bg-slate-900/85 p-2.5">
-          <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Priority flags</div>
+          <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Report context</div>
           <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5"><span className="h-2 w-2 shrink-0 rounded-full bg-rose-400" /><span className="text-[10px] text-slate-300">Ferritin — Low (14 ng/mL)</span></div>
-            <div className="flex items-center gap-1.5"><span className="h-2 w-2 shrink-0 rounded-full bg-amber-400" /><span className="text-[10px] text-slate-400">Vitamin D — Borderline</span></div>
-            <div className="flex items-center gap-1.5"><span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400" /><span className="text-[10px] text-slate-400">CRP — Normalizing ↓</span></div>
+            <div className="flex items-center gap-1.5"><span className="h-2 w-2 shrink-0 rounded-full bg-rose-400" /><span className="text-[10px] text-slate-300">2 outside range</span></div>
+            <div className="flex items-center gap-1.5"><span className="h-2 w-2 shrink-0 rounded-full bg-amber-400" /><span className="text-[10px] text-slate-400">Evidence gaps found</span></div>
+            <div className="flex items-center gap-1.5"><span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400" /><span className="text-[10px] text-slate-400">Safety wording applied</span></div>
           </div>
         </div>
         <div className="rounded-xl border border-slate-700/70 bg-slate-900/85 p-2.5">
-          <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Weekly adherence</div>
+          <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Weekly follow-through</div>
           <div className="mb-1.5 flex items-end gap-1" style={{ height: 28 }}>
             {[55, 70, 60, 80, 68, 90, 85].map((h, i) => (
               <div key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%`, backgroundColor: i >= 5 ? 'rgba(16,185,129,0.7)' : 'rgba(71,85,105,0.5)' }} />
@@ -363,8 +363,8 @@ function MockupScreenContent({ title }) {
       {/* Analysis progress */}
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <span className="text-[9px] text-slate-500">Biomarkers found</span>
-          <span className="text-[9px] font-bold text-emerald-400">54 / 54</span>
+          <span className="text-[9px] text-slate-500">Quality gate</span>
+          <span className="text-[9px] font-bold text-emerald-400">Ready for review</span>
         </div>
         <div className="h-2 w-full rounded-full bg-slate-800">
           <div className="h-2 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400" style={{ width: '100%' }} />
@@ -372,20 +372,20 @@ function MockupScreenContent({ title }) {
       </div>
       {/* Result chips */}
       <div className="flex flex-wrap gap-1">
-        {[['CBC', 'emerald'], ['Iron panel', 'sky'], ['Thyroid', 'violet'], ['Lipids', 'amber'], ['Metabolic', 'emerald']].map(([label, c]) => (
+        {[['Normalized', 'emerald'], ['Quality gate', 'sky'], ['KB match', 'violet'], ['Safety', 'amber'], ['Evidence gaps', 'emerald']].map(([label, c]) => (
           <span key={label} className={'rounded-full border px-1.5 py-0.5 text-[8px] font-semibold'} style={{ borderColor: `var(--${c}-400, #34d399)30`, background: `var(--${c}-500, #10b981)12`, color: `var(--${c}-300, #6ee7b7)` }}>{label}</span>
         ))}
       </div>
       <div className="flex items-center gap-1.5">
         <span className="h-2 w-2 rounded-full bg-emerald-400" />
-        <span className="text-[9px] text-slate-400">3 red flags detected — protocol generating…</span>
+        <span className="text-[9px] text-slate-400">Evidence-aware report generating…</span>
       </div>
     </div>
   )
 
   if (title === 'Lab Results') return (
     <div className="rounded-xl border border-slate-700/70 bg-slate-900/85 p-2.5" style={{ height: 168 }}>
-      <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">54 biomarkers · 3 flagged</div>
+      <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Normalized table · 2 outside range</div>
       <div className="space-y-1.5">
         {[
           { name: 'Ferritin', value: '14', unit: 'ng/mL', ref: '13–150', color: 'rose', pct: 8, label: 'Low' },
@@ -410,13 +410,13 @@ function MockupScreenContent({ title }) {
 
   if (title === 'Personalized Protocol') return (
     <div className="rounded-xl border border-slate-700/70 bg-slate-900/85 p-2.5" style={{ height: 168 }}>
-      <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Your protocol · 7 actions</div>
+      <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Your plan · prioritized actions</div>
       <div className="space-y-1.5">
         {[
-          { rank: '01', label: 'Iron bisglycinate 36mg with Vit C', cat: 'Supplement', prio: 'Critical', bg: '#f8717120', border: '#f87171', col: '#fca5a5', bar: '#f87171aa', pct: 92 },
-          { rank: '02', label: 'Reduce inflammatory foods 4× week', cat: 'Nutrition', prio: 'High', bg: '#fbbf2420', border: '#fbbf24', col: '#fde68a', bar: '#fbbf24aa', pct: 78 },
-          { rank: '03', label: 'Vitamin D3 4000 IU daily with K2', cat: 'Supplement', prio: 'High', bg: '#60a5fa20', border: '#60a5fa', col: '#93c5fd', bar: '#60a5faaa', pct: 70 },
-          { rank: '04', label: 'Weekly check-in — track fatigue', cat: 'Lifestyle', prio: 'Medium', bg: '#34d39920', border: '#34d399', col: '#6ee7b7', bar: '#34d399aa', pct: 55 },
+          { rank: '01', label: 'Review missing context with clinician', cat: 'Safety', prio: 'Priority', bg: '#f8717120', border: '#f87171', col: '#fca5a5', bar: '#f87171aa', pct: 92 },
+          { rank: '02', label: 'Prepare retest or additional panel', cat: 'Evidence gap', prio: 'High', bg: '#fbbf2420', border: '#fbbf24', col: '#fde68a', bar: '#fbbf24aa', pct: 78 },
+          { rank: '03', label: 'Track symptoms weekly', cat: 'Follow-through', prio: 'Medium', bg: '#60a5fa20', border: '#60a5fa', col: '#93c5fd', bar: '#60a5faaa', pct: 70 },
+          { rank: '04', label: 'Keep nutrition baseline steady', cat: 'Lifestyle', prio: 'Medium', bg: '#34d39920', border: '#34d399', col: '#6ee7b7', bar: '#34d399aa', pct: 55 },
         ].map((item) => (
           <div key={item.rank} className="flex items-center gap-2 rounded-lg px-2 py-1.5" style={{ background: item.bg, border: `1px solid ${item.border}35` }}>
             <span className="text-[8px] font-bold" style={{ color: item.col }}>{item.rank}</span>
@@ -940,7 +940,7 @@ export default function Landing() {
 
             <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm leading-6 text-amber-900">
               <p>VITALOOP is a wellness tool, not a medical device.</p>
-              <p>We implement HIPAA-aligned safeguards; formal HIPAA obligations apply when required by customer context and agreements.</p>
+              <p>We use privacy-first safeguards, access controls, and careful handling of sensitive health data.</p>
               <p>Always consult qualified healthcare providers for medical decisions.</p>
             </div>
           </motion.div>

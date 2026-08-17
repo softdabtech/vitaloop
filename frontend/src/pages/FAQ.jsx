@@ -52,7 +52,7 @@ const FAQ_ITEMS = [
     questions: [
       {
         q: 'What\'s the difference between Free and Premium?',
-        a: 'Free includes one active upload, a basic biomarker summary, and the core dashboard. Premium adds unlimited uploads, personalized action plans, weekly check-ins, priority insights, and progress tracking.',
+        a: 'Free includes one active upload, a starter structured report, and the core dashboard. Premium adds unlimited uploads, full evidence-aware reports, action plans, weekly check-ins, progress tracking, and retest planning.',
       },
       {
         q: 'Can I cancel my subscription anytime?',
@@ -98,7 +98,7 @@ const FAQ_ITEMS = [
       },
       {
         q: 'How far back do you track history?',
-        a: 'As far back as you upload. Some users have 5+ years of data in the system. The longitudinal engine lets you see multi-year trends and patterns.',
+        a: 'As far back as you upload. The longitudinal engine is designed to compare repeated uploads over time, so one result becomes a baseline and later results can show direction.',
       },
       {
         q: 'Can you import data from wearables?',
@@ -119,11 +119,11 @@ const FAQ_ITEMS = [
       },
       {
         q: 'Can I chat with an AI about my results?',
-        a: 'Yes. The AI Health Coach lets you ask questions about your biomarkers, supplements, nutrition, and protocol. Answers are personalized to your test results.',
+        a: 'VITALOOP focuses on structured educational explanations inside your report and protocol. Where AI support is available, it is constrained by your biomarkers, symptoms, Knowledge Base context, evidence gaps, and safety limits.',
       },
       {
         q: 'How does the protocol engine work?',
-        a: 'Shared Analysis Core V2 organizes out-of-range markers, related patterns, symptoms, safety context, and available history into prioritized educational actions, protocol sections, retest suggestions, and follow-up questions. Clinical decisions remain with you and your qualified practitioner.',
+        a: 'Health Intelligence Core V3 organizes extracted biomarkers, confidence signals, related patterns, symptoms, safety context, missing evidence, and available history into prioritized educational actions, protocol sections, retest suggestions, and follow-up questions. Clinical decisions remain with you and your qualified practitioner.',
       },
       {
         q: 'Does the protocol adapt over time?',
@@ -166,7 +166,7 @@ export default function FAQ() {
     <>
       <Seo
         title="VITALOOP Health Intelligence FAQ | Symptoms, Labs, Safety & Retests"
-        description="Answers about symptom intake, blood test uploads, biomarker explanations, Shared Analysis Core V2, privacy, pricing, practitioner workflows, and VITALOOP safety limits."
+        description="Answers about symptom intake, blood test uploads, biomarker explanations, Health Intelligence Core V3, privacy, pricing, practitioner workflows, and VITALOOP safety limits."
         path="/faq"
         schemas={[
           {

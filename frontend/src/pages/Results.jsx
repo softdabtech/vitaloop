@@ -202,7 +202,7 @@ const RESULTS_COPY = {
     shoppingTitle: 'Optional items to discuss before buying',
     shoppingBody: 'These are educational search shortcuts based on your report context. Confirm supplement choice, dose, and interactions with a qualified clinician.',
     findIherb: 'Find on iHerb',
-    v2Eyebrow: 'Shared Analysis Core V2',
+    v2Eyebrow: 'Health Intelligence Core V3',
     domainsTitle: 'Health domain states',
     domainsBody: 'Domain-level interpretation from biomarkers, symptoms, profile context, and knowledge-base rules.',
     reportBasis: 'Signals behind the conclusion',
@@ -415,7 +415,8 @@ const UA_REPORT_PHRASES = [
   [/^educational$/i, 'освітній висновок'],
   [/^manual entry$/i, 'Ручне введення'],
   [/^Health domain$/i, 'Домен здоровʼя'],
-  [/^Shared Analysis Core V2$/i, 'Ядро аналізу V2'],
+  [/^Shared Analysis Core V2$/i, 'Ядро аналізу V3'],
+  [/^Health Intelligence Core V3$/i, 'Ядро аналізу V3'],
 ]
 
 function localizeReportText(value, isUk) {

@@ -117,7 +117,7 @@ export const HELP_ARTICLES = {
         type: 'feature-grid',
         items: [
           { icon: '📤', title: 'Upload or enter lab data', desc: 'Use PDF/image uploads, manual biomarker entry, and structured lab inputs supported by the product flow.' },
-          { icon: '🧠', title: 'Shared Analysis Core V2', desc: 'Names, values, units, ranges, symptoms, safety context, and trends are processed through one structured path.' },
+          { icon: '🧠', title: 'Health Intelligence Core V3', desc: 'Names, values, units, ranges, extraction confidence, symptoms, safety context, evidence gaps, and trends are processed through one structured path.' },
           { icon: '⚠️', title: 'Prioritized and safety-aware', desc: 'Important findings, safety notes, and clinician discussion points are surfaced clearly.' },
           { icon: '💊', title: 'Structured protocol sections', desc: 'Nutrition, supplements, lifestyle, training/recovery, adherence, and retest suggestions are organized for review.' },
           { icon: '📈', title: 'Longitudinal tracking', desc: 'Compare multiple tests and check-ins over time. See what is changing.' },
@@ -167,11 +167,11 @@ export const HELP_ARTICLES = {
           },
           {
             title: 'Review your results',
-            body: 'Once complete, you\'ll land on the Results page showing:\n- All detected biomarkers with current values\n- Status for each: Deficient / Borderline / Optimal / Elevated\n- **Top Priority** card — the one marker to focus on first',
+            body: 'Once complete, you\'ll land on the Results page showing:\n- Detected biomarkers with current values\n- Reference status such as below range, in range, above range, or needs review\n- A short health summary, key findings, evidence gaps, safety notes, and next-step questions',
           },
           {
             title: 'Check your protocol',
-            body: 'Navigate to the **Protocol** tab to see your personalized recommendations with exact dosages, timing, and a retest schedule.',
+            body: 'Navigate to the **Protocol** tab to see education-oriented next steps, safety notes, clinician discussion points, and a retest schedule where supported by the available context.',
           },
         ],
       },
@@ -365,7 +365,7 @@ export const HELP_ARTICLES = {
       {
         type: 'list',
         items: [
-          'Filter by status: **All / Deficient / Borderline / Optimal / Elevated**',
+          'Filter by status: **All / Below range / In range / Above range / Needs review**',
           'Sort by: priority, alphabetical, or deviation from range',
           'Search by biomarker name',
         ],
@@ -785,7 +785,7 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'paragraph',
-        text: 'All plans include the same AI analysis quality. Premium unlocks longitudinal tracking, full protocols, and weekly check-ins.',
+        text: 'All plans use the same analysis-quality principles. Premium unlocks longitudinal tracking, fuller evidence-aware reports, action planning, and weekly check-ins.',
       },
     ],
   },
@@ -799,7 +799,7 @@ export const HELP_ARTICLES = {
     content: [
       {
         type: 'intro',
-        text: 'Upgrade to Premium to unlock unlimited uploads, full protocols, and longitudinal tracking.',
+        text: 'Upgrade to Premium to unlock unlimited uploads, fuller evidence-aware reports, action planning, and longitudinal tracking.',
       },
       {
         type: 'steps',

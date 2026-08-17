@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 const FEATURES = [
   '50+ adaptive questions tailored in real-time',
   'Covers symptoms, lifestyle, nutrition, and habits',
-  'Detects hidden patterns behind your lab results',
-  'Built on 5+ years of practitioner research',
+  'Surfaces context that may be useful to discuss',
+  'Built around governed Knowledge Base reasoning',
 ]
 
 export default function AvatarSection() {
@@ -22,7 +22,7 @@ export default function AvatarSection() {
             color: 'var(--teal-400)',
             marginBottom: 16,
           }}>
-            AI Health Assessment
+            Guided Health Context
           </div>
           <h2 style={{
             fontSize: 'clamp(32px, 4vw, 52px)',
@@ -34,7 +34,7 @@ export default function AvatarSection() {
             Go deeper than your lab results
           </h2>
           <p style={{ fontSize: 17, color: 'var(--gray-300)', maxWidth: 660, margin: '0 auto', lineHeight: 1.65 }}>
-            Answer a personalized set of questions designed to uncover hidden patterns your doctor might miss.
+            Answer focused questions that help connect symptoms, lifestyle, and lab context before the report is interpreted.
           </p>
         </div>
 

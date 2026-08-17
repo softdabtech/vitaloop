@@ -6,8 +6,8 @@ import Footer from '../components/landing/Footer.jsx'
 import { PageHeader } from '../components/landing/PageHeader.jsx'
 
 const TRACTION_METRICS = [
-  { value: '85+', label: 'Biomarkers normalized per upload' },
-  { value: 'End-to-end', label: 'Complete biomarker analysis' },
+  { value: 'Core V3', label: 'Quality-gated health intelligence pipeline' },
+  { value: 'End-to-end', label: 'Upload, report, protocol, progress loop' },
   { value: '3', label: 'Monetization layers (Free, Premium, Enterprise)' },
   { value: 'Weekly', label: 'Retention loop via check-ins' },
 ]
@@ -49,15 +49,15 @@ const ENTERPRISE_FLOW = [
 ]
 
 const MARKET_METRICS = [
-  { label: 'US Health Tech Market', value: '$480B+', detail: 'Growing at 15% CAGR through 2030' },
-  { label: 'Personalized Medicine TAM', value: '$190B', detail: 'Genomics + biomarker intelligence' },
-  { label: 'Preventive Care Shift', value: '68%', detail: 'Of patients want AI-driven health monitoring' },
+  { label: 'Consumer need', value: 'Clarity', detail: 'People already receive lab PDFs but still lack an understandable next step.' },
+  { label: 'Product wedge', value: 'Health loop', detail: 'Symptoms, labs, evidence gaps, safety, plans, and retests stay connected.' },
+  { label: 'Expansion path', value: 'B2C → B2B', detail: 'The same shared backend supports consumer and practitioner workflows.' },
 ]
 
 const UNIT_ECONOMICS = [
-  { label: 'Free-to-Premium Conversion', value: '25%', detail: 'Freemium funnel proven at scale' },
-  { label: 'Monthly Churn', value: '< 5%', detail: 'High engagement via weekly check-in loop' },
-  { label: 'Enterprise ACV', value: '$1.2-5K/mo', detail: 'Practitioner CRM with 10+ client base' },
+  { label: 'Conversion model', value: 'Free → Premium', detail: 'Freemium funnel is being instrumented around upload, report, protocol, and retest activation.' },
+  { label: 'Retention loop', value: 'Weekly', detail: 'Engagement is designed around symptom check-ins, protocol follow-through, and repeated lab cycles.' },
+  { label: 'Enterprise wedge', value: 'Practitioner CRM', detail: 'Practitioner workflows are positioned around client context, assignments, and longitudinal review.' },
 ]
 
 const GROWTH_STRATEGY = [
@@ -200,10 +200,10 @@ export default function ForInvestors() {
         <div className="rounded-[30px] border border-slate-200 bg-slate-50 p-6 md:p-8">
           <div className="mb-6 flex items-center gap-3">
             <Target className="h-5 w-5 text-emerald-600" />
-            <h2 className="text-3xl font-bold text-slate-900">Market opportunity: $190B+ in personalized medicine</h2>
+            <h2 className="text-3xl font-bold text-slate-900">Market opportunity: turning lab data into recurring health workflows</h2>
           </div>
           <p className="max-w-3xl text-sm leading-7 text-slate-600">
-            The shift from reactive care to continuous preventive workflows is expanding demand for structured health platforms. VITALOOP sits at the intersection of AI assistance, biomarker interpretation, and recurring execution loops.
+            The shift from static lab portals to continuous preventive workflows is creating demand for structured health platforms. VITALOOP sits at the intersection of AI assistance, biomarker interpretation, evidence gaps, safety, and recurring execution loops.
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {MARKET_METRICS.map((item) => (
@@ -221,10 +221,10 @@ export default function ForInvestors() {
         <div className="rounded-[30px] border border-slate-200 bg-slate-50 p-6 md:p-8">
           <div className="mb-6 flex items-center gap-3">
             <TrendingUp className="h-5 w-5 text-emerald-600" />
-            <h2 className="text-3xl font-bold text-slate-900">Unit economics: proven path to profitability</h2>
+            <h2 className="text-3xl font-bold text-slate-900">Unit economics: instrumented path to recurring usage</h2>
           </div>
           <p className="max-w-3xl text-sm leading-7 text-slate-600">
-            The dual-sided model (consumer + enterprise) enables leverage. The focus is recurring engagement through weekly loops and sticky practitioner workflows.
+            The dual-sided model (consumer + enterprise) is being validated through recurring engagement: upload quality, report value, weekly loops, retests, and practitioner workflows.
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {UNIT_ECONOMICS.map((item) => (
@@ -305,7 +305,7 @@ export default function ForInvestors() {
               <ul className="mt-4 space-y-2 text-sm text-slate-600">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
-                  <span>500+ free users → 125+ paid (25% conv.)</span>
+                  <span>Validated upload → report → protocol activation benchmarks</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
@@ -313,11 +313,11 @@ export default function ForInvestors() {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
-                  <span>$50K+ monthly recurring revenue</span>
+                  <span>Repeatable subscription and enterprise pilot metrics</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
-                  <span>Clinical validation published</span>
+                  <span>Governed evidence, safety, and explainability review process</span>
                 </li>
               </ul>
             </div>
@@ -326,7 +326,7 @@ export default function ForInvestors() {
               <ul className="mt-4 space-y-2 text-sm text-slate-600">
                 <li className="flex items-start gap-2">
                   <span className="text-emerald-600 font-bold">•</span>
-                  <span><strong>Regulatory:</strong> Proactive HIPAA/state medical licensing compliance</span>
+                  <span><strong>Regulatory:</strong> Conservative educational positioning, privacy controls, and clinical-review boundaries</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-emerald-600 font-bold">•</span>
@@ -375,7 +375,7 @@ export default function ForInvestors() {
             <h2 className="text-3xl font-bold text-slate-900">Competitive positioning</h2>
           </div>
           <p className="max-w-3xl text-sm leading-7 text-slate-600">
-            The market has diagnostics providers, record portals, and generic AI assistants. VITALOOP is positioned as a longitudinal decision system with workflow primitives for both users and practitioners.
+            The market has diagnostics providers, record portals, and broad AI assistants. VITALOOP is positioned as a longitudinal decision system with workflow primitives for both users and practitioners.
           </p>
           <div className="mt-6 overflow-x-auto">
             <table className="min-w-full border-collapse text-left text-sm">
@@ -439,17 +439,17 @@ export default function ForInvestors() {
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Early adopters</div>
-                <div className="mt-1 text-sm font-semibold">17 early users</div>
-                <div className="mt-1 text-[11px] text-emerald-700">Validated in live product usage</div>
+                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Current product stage</div>
+                <div className="mt-1 text-sm font-semibold">Core V3 quality-gated report loop</div>
+                <div className="mt-1 text-[11px] text-emerald-700">Live product iteration</div>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Lab compatibility</div>
-                <div className="mt-1 text-sm font-semibold">Quest, LabCorp, and 50+ report formats</div>
+                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Input compatibility</div>
+                <div className="mt-1 text-sm font-semibold">PDF, image, spreadsheet, and manual biomarker flows</div>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Launch & stack</div>
-                <div className="mt-1 text-sm font-semibold">May 2026 launch · FastAPI + Advanced AI + Supabase</div>
+                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Architecture</div>
+                <div className="mt-1 text-sm font-semibold">FastAPI + Supabase + OpenAI + governed Knowledge Base</div>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Founder contact</div>

@@ -32,14 +32,14 @@ export default function HowItWorks() {
     {
       icon: Upload,
       title: 'Upload lab results',
-      description: 'Upload a PDF or image, use manual entry, or add structured biomarker data. VITALOOP normalizes the results and connects them to symptoms and previous context.',
+      description: 'Upload a PDF, image, spreadsheet, use manual entry, or add structured biomarker data. VITALOOP normalizes names, units, values, and reference ranges before interpretation.',
       code: '04',
       color: 'from-emerald-500/20 to-violet-500/15',
     },
     {
       icon: LayoutDashboard,
       title: 'Review the versioned analysis',
-      description: 'Results include prioritized biomarkers, why a conclusion was made, what data was used, safety notes, protocol actions, trends, and retest timing.',
+      description: 'Results include prioritized health states, what data was used, what evidence is missing, safety notes, protocol actions, trends, and retest timing.',
       code: '05',
       color: 'from-emerald-500/20 to-cyan-500/15',
     },
@@ -65,15 +65,15 @@ export default function HowItWorks() {
 
   const outcomes = [
     { label: 'Starting point', value: 'Symptom-first', icon: HeartPulse },
-    { label: 'Analysis engine', value: 'Core V2', icon: TrendingUp },
+    { label: 'Analysis engine', value: 'Core V3', icon: TrendingUp },
     { label: 'Execution model', value: 'Weekly loop', icon: CheckCircle2 },
   ]
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
-        title="How VITALOOP Health Intelligence Works | Shared Analysis Core V2"
-        description="See how VITALOOP connects symptom intake, lab discussion guidance, biomarker normalization, Knowledge Base reasoning, safety notes, protocol actions, trends, and weekly progress tracking."
+        title="How VITALOOP Health Intelligence Works | Core V3"
+        description="See how VITALOOP connects symptom intake, analysis quality gates, biomarker normalization, Knowledge Base reasoning, evidence gaps, safety notes, protocol actions, trends, and weekly progress tracking."
         path="/how-it-works"
         schemas={[
           {
@@ -174,14 +174,14 @@ export default function HowItWorks() {
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="text-xs uppercase tracking-[0.16em] text-slate-600">Priority issue</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">Ferritin recovery stack</div>
+                <div className="mt-2 text-lg font-semibold text-slate-900">Evidence gap review</div>
                 <div className="mt-3 h-2 rounded-full bg-slate-200">
                   <div className="h-2 w-[74%] rounded-full bg-emerald-500" />
                 </div>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="text-xs uppercase tracking-[0.16em] text-slate-600">Current loop</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">Symptoms → Labs → Core V2 → Action → Retest</div>
+                <div className="mt-2 text-lg font-semibold text-slate-900">Symptoms → Quality Gate → Core V3 → Action → Retest</div>
                 <div className="mt-3 text-sm leading-relaxed text-slate-600">Each cycle compounds rather than resetting your context.</div>
               </div>
             </div>
