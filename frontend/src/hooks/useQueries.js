@@ -106,7 +106,7 @@ export const useUserProfile = () =>
   useQuery({
     queryKey: ['user-profile'],
     queryFn: async () => {
-      const { data } = await api.get('/user/profile')
+      const { data } = await api.get('/profile')
       return data || null
     },
     staleTime: 30 * 60 * 1000,
