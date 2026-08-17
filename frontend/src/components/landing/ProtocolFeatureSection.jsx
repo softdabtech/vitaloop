@@ -6,8 +6,8 @@ import { stagger, staggerChild, fadeUp, viewport } from '../../lib/motion.js'
 const FEATURES = [
   {
     icon: Pill,
-    title: 'Supplement Protocol',
-    desc: 'Exactly as in your cabinet: Supplement/Dosage, Rationale, Daily Schedule, and Priority in one table.',
+    title: 'Safety-aware plan',
+    desc: 'Exactly as in your cabinet: priority, rationale, missing context, discussion points, and retest timing in one structured view.',
   },
   {
     icon: UtensilsCrossed,
@@ -22,7 +22,7 @@ const FEATURES = [
   {
     icon: ArrowRight,
     title: 'Export PDF',
-    desc: 'Premium users can export the full 7-Day Health Protocol as PDF directly from the protocol view.',
+    desc: 'Users can export the structured report and plan as PDF directly from the report flow.',
   },
 ]
 
@@ -75,13 +75,13 @@ export default function ProtocolFeatureSection() {
             variants={reduced ? {} : staggerChild}
             style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--gray-900)', marginBottom: 16, lineHeight: 1.15 }}
           >
-            Your 7-Day Health Plan — at a Glance
+            Your Health Plan — at a Glance
           </motion.h2>
           <motion.p
             variants={reduced ? {} : staggerChild}
             style={{ fontSize: 17, color: 'var(--gray-500)', maxWidth: 520, margin: '0 auto', lineHeight: 1.65 }}
           >
-            After each lab upload, your cabinet shows a structured plan with Supplement Protocol, Nutrition Plan, Lifestyle Recommendations, and Export PDF.
+            After each lab upload, your cabinet shows a structured plan with safety notes, nutrition context, lifestyle recommendations, discussion points, retest timing, and export.
           </motion.p>
         </motion.div>
 
@@ -108,7 +108,7 @@ export default function ProtocolFeatureSection() {
               <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.75, marginBottom: 4 }}>
                 Personalized Protocol
               </div>
-              <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Your 7-Day Health Plan</div>
+              <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Your Health Plan</div>
               <div style={{ display: 'flex', gap: 20 }}>
                 {[['3', 'Supplements'], ['3', 'Food Groups'], ['3', 'Lifestyle Areas']].map(([n, l]) => (
                   <div key={l}>
@@ -151,7 +151,7 @@ export default function ProtocolFeatureSection() {
             {/* Mock Supplement table */}
             <div style={{ padding: '0 0 4px' }}>
               <div style={{ padding: '10px 16px 6px', fontSize: 11, fontWeight: 600, color: 'var(--gray-500)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                Supplement Protocol
+                Safety-aware plan
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                 <thead>

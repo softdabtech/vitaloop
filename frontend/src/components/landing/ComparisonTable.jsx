@@ -5,7 +5,7 @@ const COMPARISON_ROWS = [
   {
     feature: 'Prioritization',
     doctor: 'Lists all results. Says "looks normal." No ranking of what matters most.',
-    vitaloop: 'Analyzes all 54 biomarkers. Shows your top 3 critical problems ranked by impact.',
+    vitaloop: 'Normalizes extracted biomarkers, highlights findings that need review, and shows why each priority matters.',
   },
   {
     feature: 'Historical context',
@@ -15,7 +15,7 @@ const COMPARISON_ROWS = [
   {
     feature: 'Actionable protocol',
     doctor: '"Take iron." Which form? With food? Morning or night? When to retest? You figure it out.',
-    vitaloop: 'Iron bisglycinate 36mg, mornings with Vitamin C. Retest week 8. Exact dosage & timing.',
+    vitaloop: 'Turns findings into clinician discussion points, safer next steps, weekly follow-through, and retest planning.',
   },
   {
     feature: 'Accountability',
@@ -25,12 +25,12 @@ const COMPARISON_ROWS = [
   {
     feature: 'Speed',
     doctor: 'Appointment wait: 2 months. Visit time: 5 minutes. Answers: unclear.',
-    vitaloop: 'Upload your PDF today. Receive a full protocol with prioritized guidance and clear next actions.',
+    vitaloop: 'Upload your PDF and receive a structured report with priorities, evidence gaps, and clearer next questions.',
   },
   {
     feature: 'Cost',
     doctor: '$200-500 for test + consultation time + multiple appointments.',
-    vitaloop: 'You already paid for the test. $4.99/mo unlocks full protocol & accountability.',
+    vitaloop: 'You already paid for the test. Premium unlocks repeated uploads, progress tracking, and follow-through tools.',
   },
 ]
 

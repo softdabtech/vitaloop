@@ -73,7 +73,7 @@ export function AnimatedHero() {
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-8 border-t border-slate-700">
               <StatBox value="$4.99" label="Premium plan /month" delay={0.5} />
-              <StatBox value="85+" label="Biomarkers analyzed" delay={0.6} />
+              <StatBox value="Core V3" label="Quality-gated analysis" delay={0.6} />
               <StatBox value="1 upload" label="Included in Free plan" delay={0.7} />
               <StatBox value="Weekly" label="Check-ins on paid plans" delay={0.8} />
             </div>
@@ -287,9 +287,9 @@ function StageAnalyze() {
           animate={{ scale: 1 }}
           transition={{ delay: 0.6, type: 'spring', stiffness: 150 }}
         >
-          85+
+          Core V3
         </motion.div>
-        <div className="text-sm text-slate-400 mb-4">Biomarkers analyzed</div>
+        <div className="text-sm text-slate-400 mb-4">Quality-gated analysis</div>
 
         <div className="space-y-2">
           {['Vitamin D', 'Ferritin', 'TSH', 'CRP'].map((marker, i) => (

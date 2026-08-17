@@ -27,9 +27,9 @@ const FEATURES = [
   },
   {
     icon: TrendingUp,
-    title: 'Shared Analysis Core V2',
-    description: 'Run symptoms, biomarkers, safety context, trends, and retest logic through one versioned analysis path used by the user product and partner API.',
-    details: ['Knowledge Base rules', 'Safety flags', 'Trend context', 'B2C/B2B output reuse'],
+    title: 'Health Intelligence Core V3',
+    description: 'Run symptoms, biomarkers, extraction confidence, safety context, evidence gaps, trends, and retest logic through one versioned analysis path.',
+    details: ['Quality gate', 'Clinical data integrity', 'Evidence gaps', 'Versioned outputs'],
   },
   {
     icon: Sparkles,
@@ -46,14 +46,14 @@ const FEATURES = [
   {
     icon: LayoutDashboard,
     title: 'Personal Dashboard',
-    description: 'Central hub for your health data. See your health score, latest biomarkers, current protocol, and upcoming milestones at a glance.',
-    details: ['Health score', 'Biomarker cards', 'Protocol overview', 'Insights & alerts'],
+    description: 'Central hub for your next best step, latest uploads, current plan, and progress signals without unexplained scores.',
+    details: ['Next action', 'Biomarker cards', 'Protocol overview', 'Progress signals'],
   },
   {
     icon: Zap,
-    title: 'Contextual AI Guidance',
-    description: 'Ask questions about your results and receive educational explanations grounded in available symptoms, biomarkers, Knowledge Base context, and safety limits.',
-    details: ['Natural-language Q&A', 'Biomarker context', 'Evidence-aware explanations', 'Safety reminders'],
+    title: 'Explainable AI Layer',
+    description: 'Receive educational explanations grounded in available symptoms, biomarkers, Knowledge Base context, evidence gaps, and safety limits.',
+    details: ['Plain-language context', 'Biomarker rationale', 'Evidence-aware explanations', 'Safety reminders'],
   },
   {
     icon: BarChart3,
@@ -99,8 +99,8 @@ export default function Features() {
   return (
     <>
       <Seo
-        title="Health Intelligence Features | VITALOOP Shared Analysis Core"
-        description="Explore symptom intake, Shared Analysis Core V2, Knowledge Base biomarker reasoning, safety notes, personalized action plans, weekly check-ins, and progress tracking."
+        title="Health Intelligence Core V3 Features | VITALOOP"
+        description="Explore symptom intake, Health Intelligence Core V3, extraction quality gates, biomarker reasoning, safety notes, action plans, weekly check-ins, and progress tracking."
         path="/features"
       />
 
@@ -128,7 +128,7 @@ export default function Features() {
           >
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2">
               <Sparkles size={16} className="text-emerald-600" />
-              <span className="text-sm font-semibold text-slate-900">Shared Analysis Core V2</span>
+              <span className="text-sm font-semibold text-slate-900">Health Intelligence Core V3</span>
             </div>
             <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 mb-6 leading-tight">
               Understand Symptoms, Blood Tests, Trends, and Next Steps in One Place
