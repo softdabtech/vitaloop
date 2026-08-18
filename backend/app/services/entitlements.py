@@ -23,8 +23,7 @@ def _is_paid_subscription(active_sub: Optional[Dict[str, Any]], account: Dict[st
         and not cancel_at_period_end
     )
     paid_from_account = bool(
-        not active_sub
-        and subscription_status == 'active'
+        subscription_status == 'active'
         and account_plan
         and account_plan != 'free'
     )
@@ -46,7 +45,7 @@ def _is_paid_subscription(active_sub: Optional[Dict[str, Any]], account: Dict[st
         plan_key = sub_table_plan or account_plan or 'free'
         source = 'subscriptions'
     else:
-        billing_status = subscription_status or 'free'
+        billing_status = 'free' if subscription_status == 'active' and (not account_plan or account_plan == 'free') else (subscription_status or 'free')
         plan_key = account_plan or 'free'
         source = 'users'
 

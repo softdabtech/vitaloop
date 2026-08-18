@@ -14,6 +14,7 @@ router = APIRouter()
 
 class AdminUserSubscriptionUpdateRequest(BaseModel):
     sub_status: str = Field(min_length=1, max_length=64)
+    plan_tier: str | None = Field(default=None, max_length=64)
 
 
 class AdminUserUpdateRequest(BaseModel):
@@ -223,8 +224,15 @@ async def admin_update_user_subscription(
     if not sub_status:
         raise HTTPException(status_code=400, detail=_SUB_STATUS_REQUIRED)
 
-    await svc.update_user_subscription(user_id=user_id, sub_status=sub_status)
-    return {"ok": True, "user_id": user_id, "sub_status": sub_status}
+    plan_tier = str(body.plan_tier or "").strip().lower() or None
+    if plan_tier is None:
+        if sub_status in {"active", "trialing"}:
+            plan_tier = "personal"
+        elif sub_status in {"free", "cancelled", "canceled", "unpaid", "incomplete"}:
+            plan_tier = "free"
+
+    await svc.update_user_subscription(user_id=user_id, sub_status=sub_status, plan_tier=plan_tier)
+    return {"ok": True, "user_id": user_id, "sub_status": sub_status, "plan_tier": plan_tier}
 
 
 @router.get("/platform-overview")
