@@ -132,13 +132,24 @@ export const useUserEntitlements = () =>
       }
 
       try {
-        const { data } = await api.get('/auth/me')
-        return data?.entitlements || {
-          is_premium: Boolean(data?.has_active_subscription || data?.subscription_active),
-          billing_status: String(data?.subscription_status || 'free').toLowerCase(),
-          plan_key: data?.plan_name || 'free',
-          has_active_subscription: Boolean(data?.has_active_subscription || data?.subscription_active),
-          features: freeEntitlements.features,
+        const { data } = await api.get('/auth/entitlements')
+        const entitlements = data?.entitlements || data || {}
+        const billingStatus = String(entitlements?.billing_status || entitlements?.subscription_status || 'free').toLowerCase()
+        const isPremium = typeof entitlements?.is_premium === 'boolean'
+          ? entitlements.is_premium
+          : Boolean(entitlements?.has_active_subscription || entitlements?.subscription_active || billingStatus === 'active')
+
+        return {
+          ...freeEntitlements,
+          ...entitlements,
+          is_premium: isPremium,
+          billing_status: billingStatus,
+          plan_key: entitlements?.plan_key || entitlements?.plan_name || (isPremium ? 'personal' : 'free'),
+          has_active_subscription: Boolean(isPremium || entitlements?.has_active_subscription || entitlements?.subscription_active),
+          features: {
+            ...freeEntitlements.features,
+            ...(entitlements?.features || {}),
+          },
         }
       } catch (error) {
         if (error?.response?.status === 401) {
@@ -147,8 +158,10 @@ export const useUserEntitlements = () =>
         throw error
       }
     },
-    staleTime: 30 * 60 * 1000,
+    staleTime: 15 * 1000,
     gcTime: 60 * 60 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   })
 
 // Symptom check session/context

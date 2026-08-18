@@ -1020,7 +1020,7 @@ async def record_health_failure(
 
 
 async def get_user_account(user_id: str) -> Dict[str, Any]:
-    primary_columns = "id, email, full_name, sub_status, subscription_status, global_role, created_at"
+    primary_columns = "id, email, full_name, sub_status, subscription_status, plan_tier, global_role, created_at"
     fallback_columns = "id, email, full_name, subscription_status, global_role, created_at"
 
     account = await _select_first_by_id_with_fallback("users", primary_columns, user_id)
