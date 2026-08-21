@@ -67,6 +67,8 @@ const UPLOAD_COPY = {
     invalidFileType: 'Please upload a valid PDF, image, XLS/XLSX, or CSV file.',
     fileTooLarge: 'File too large for processing. Please upload a file under 20MB.',
     tooMany: 'Too many uploads. Please wait and try again later.',
+    timeout: 'Analysis is taking longer than expected. Please wait a moment and open Lab Results before retrying.',
+    inProgress: 'This file is still being processed. Please wait a moment and open Lab Results.',
     fallbackError: 'Analysis failed. Please try again.',
     quotaManual: 'You\'ve already entered biomarkers manually. Free plan includes 1 lab analysis (file upload or manual entry). Upgrade to Premium for unlimited analyses, advanced protocols, and health tracking.',
     quotaUpload: 'You\'ve reached your free analysis limit (1 per month). Upgrade to Premium for unlimited lab uploads, AI-generated protocols, and personalized health insights.',
@@ -128,6 +130,8 @@ const UPLOAD_COPY = {
     invalidFileType: 'Завантажте коректний PDF, зображення, XLS/XLSX або CSV.',
     fileTooLarge: 'Файл завеликий для обробки. Завантажте файл до 20MB.',
     tooMany: 'Забагато спроб. Зачекайте і спробуйте ще раз.',
+    timeout: 'Аналіз триває довше, ніж очікувалось. Зачекайте трохи й відкрийте список результатів перед повторною спробою.',
+    inProgress: 'Цей файл ще обробляється. Зачекайте трохи й відкрийте список результатів.',
     fallbackError: 'Аналіз не вдався. Спробуйте ще раз.',
     quotaManual: 'Ви вже ввели показники вручну. Безкоштовний план включає 1 аналіз: файл або ручне введення. Premium відкриває необмежені аналізи, розширені плани та динаміку.',
     quotaUpload: 'Ви досягли ліміту безкоштовного аналізу. Premium відкриває необмежені завантаження, AI-плани та персональні підсумки.',
@@ -213,6 +217,14 @@ function maybeTriggerPaywall({ status, errorCode, usedBy }) {
 }
 
 function resolveAnalysisErrorMessage({ status, errorCode, errorDetail, usedBy, copy = UPLOAD_COPY.en }) {
+  if (!status && errorCode === 'ECONNABORTED') {
+    return copy.timeout
+  }
+
+  if (status === 409 && errorCode === 'ANALYZE_IN_PROGRESS') {
+    return copy.inProgress
+  }
+
   if (status === 402) {
     return build402ErrorMessage({ errorCode, errorDetail, usedBy, copy })
   }
@@ -248,7 +260,7 @@ function handleAnalysisError(err, copy = UPLOAD_COPY.en) {
 
   // Handle nested error structure: detail contains {detail, code, used_by}
   const innerError = typeof errorData?.detail === 'object' ? errorData.detail : errorData
-  const errorCode = innerError?.code || errorData?.code
+  const errorCode = innerError?.code || errorData?.code || err.code
   const errorDetail = typeof innerError?.detail === 'string' ? innerError.detail : typeof errorData?.detail === 'string' ? errorData.detail : null
   const usedBy = innerError?.used_by || errorData?.used_by
 
@@ -259,6 +271,23 @@ function handleAnalysisError(err, copy = UPLOAD_COPY.en) {
 function resolveUploadId(data) {
   const value = data?.upload_id || data?.uploadId || data?.id
   return typeof value === 'string' && value.trim() ? value.trim() : ''
+}
+
+async function buildFileIdempotencyKey(file, labName = '') {
+  const encoder = new TextEncoder()
+  const metadata = `${file.name || 'file'}:${file.size || 0}:${file.lastModified || 0}:${labName || ''}`
+  try {
+    if (window.crypto?.subtle) {
+      const fileHash = await window.crypto.subtle.digest('SHA-256', await file.arrayBuffer())
+      const metadataHash = await window.crypto.subtle.digest('SHA-256', encoder.encode(metadata))
+      const toHex = (buffer) => Array.from(new Uint8Array(buffer)).map(byte => byte.toString(16).padStart(2, '0')).join('')
+      return `lab-file:${toHex(fileHash).slice(0, 48)}:${toHex(metadataHash).slice(0, 16)}`
+    }
+  } catch {
+    // Fall through to a deterministic metadata key when browser hashing is unavailable.
+  }
+  const safeMetadata = metadata.replace(/[^a-zA-Z0-9:_-]/g, '_').slice(0, 96)
+  return `lab-file:${safeMetadata}`
 }
 
 function getMissingAnalysisProfileFields(profile = {}) {
@@ -365,7 +394,7 @@ export default function Upload() {
     }
   }, [analyzing, copy])
 
-  async function handleFile(file) {
+  async function handleFile(file, options = {}) {
     if (isBusy) return
 
     if (profileChecking || profileIncomplete) {
@@ -386,7 +415,9 @@ export default function Upload() {
     setErrorMessage('')
     setSelectedFileName(file.name)
     setSelectedFile(file)
-    setRetryCount(0)
+    if (!options.isRetry) {
+      setRetryCount(0)
+    }
 
     toast(copy.uploading(file.name, (file.size / 1024).toFixed(0)), { icon: '📄' })
 
@@ -398,7 +429,12 @@ export default function Upload() {
         formData.append('lab_name', labName)
       }
 
-      const { data } = await api.post('/analyze/pdf', formData)
+      const { data } = await api.post('/analyze/pdf', formData, {
+        timeout: 150_000,
+        headers: {
+          'X-Idempotency-Key': await buildFileIdempotencyKey(file, labName),
+        },
+      })
 
       const uploadId = resolveUploadId(data)
       if (!uploadId) {
@@ -454,7 +490,7 @@ export default function Upload() {
     if (!selectedFile || retryCount >= 3) return
     setRetryCount(prev => prev + 1)
     setErrorMessage('')
-    await handleFile(selectedFile)
+    await handleFile(selectedFile, { isRetry: true })
   }
 
   function handleUploadZoneError(message) {
