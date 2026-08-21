@@ -93,6 +93,7 @@ function getItemDate(item, isUk = false) {
 function displayLabName(item, fallback, isUk) {
   const raw = String(item?.lab_name || '').trim()
   if (!raw) return fallback
+  if (/\b(smoke|test fixture|premium feature smoke|premium smoke|qa[-_ ]?)/i.test(raw)) return fallback
   if (isUk && raw.toLowerCase() === 'manual entry') return 'Ручне введення'
   return raw
 }

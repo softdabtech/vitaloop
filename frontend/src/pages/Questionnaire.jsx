@@ -10,13 +10,19 @@ import { isUkrainianLocale } from '../lib/locale.js'
 const BODY_SYSTEMS = ['General', 'Neurological', 'Cardiometabolic', 'Hormonal', 'Digestive', 'Musculoskeletal', 'Recovery']
 const DURATION_OPTIONS = ['< 1 week', '1-4 weeks', '1-3 months', '3-6 months', '6+ months']
 const RELATED_SYMPTOMS = ['Fatigue', 'Poor sleep', 'Brain fog', 'Hair shedding', 'Low mood', 'Digestive issues', 'Cravings', 'Low stamina']
+const TRIGGER_OPTIONS = ['Morning worse', 'After meals', 'After stress', 'After exercise', 'At night', 'Before period', 'After poor sleep', 'No clear trigger']
+const LIFESTYLE_CONTEXT_OPTIONS = ['Restrictive diet', 'Low protein intake', 'Vegetarian or vegan', 'Heavy training', 'High stress', 'Recent illness', 'Weight change', 'GI symptoms']
+const IMPACT_OPTIONS = ['Noticeable but manageable', 'Affects work or study', 'Limits activity', 'Needs rest during day', 'Wakes me at night']
 
 const WIZARD_STEPS = [
   { title: 'Main concern', helper: 'Required', why: 'This anchors the analysis around what you actually want to improve.' },
   { title: 'Duration', helper: 'Optional', why: 'Timing helps separate a new issue from a pattern that needs trend review.' },
   { title: 'Related symptoms', helper: 'Choose what fits', why: 'Symptom clusters help prioritize the lab markers worth checking first.' },
+  { title: 'Triggers & pattern', helper: 'Context', why: 'Timing and triggers help the Knowledge Base separate nutrition, recovery, sleep, inflammatory, and hormonal patterns.' },
+  { title: 'Lifestyle context', helper: 'Context', why: 'Food pattern, stress, training, sleep, and recent illness often explain why a marker matters or what evidence is missing.' },
   { title: 'Medications & supplements', helper: 'Context', why: 'Some markers and recommendations depend on current medications or supplements.' },
   { title: 'Safety questions', helper: 'Required', why: 'Red flags change the safest next step and may require clinician review.' },
+  { title: 'Review', helper: 'Final check', why: 'A clean summary helps VITALOOP pass better context into lab planning, Knowledge Base matching, and reports.' },
 ]
 
 const UK = {
@@ -46,12 +52,42 @@ const UK = {
     Cravings: 'Тяга до їжі',
     'Low stamina': 'Низька витривалість',
   },
+  triggers: {
+    'Morning worse': 'Гірше зранку',
+    'After meals': 'Після їжі',
+    'After stress': 'Після стресу',
+    'After exercise': 'Після навантаження',
+    'At night': 'Вночі',
+    'Before period': 'Перед циклом',
+    'After poor sleep': 'Після поганого сну',
+    'No clear trigger': 'Без чіткого тригера',
+  },
+  lifestyle: {
+    'Restrictive diet': 'Обмежувальне харчування',
+    'Low protein intake': 'Мало білка',
+    'Vegetarian or vegan': 'Вегетаріанство або веганство',
+    'Heavy training': 'Високі тренування',
+    'High stress': 'Високий стрес',
+    'Recent illness': 'Нещодавня хвороба',
+    'Weight change': 'Зміна ваги',
+    'GI symptoms': 'Симптоми травлення',
+  },
+  impacts: {
+    'Noticeable but manageable': 'Помітно, але керовано',
+    'Affects work or study': 'Впливає на роботу або навчання',
+    'Limits activity': 'Обмежує активність',
+    'Needs rest during day': 'Потрібен відпочинок вдень',
+    'Wakes me at night': 'Будить вночі',
+  },
   steps: [
     { title: 'Головний запит', helper: 'Обовʼязково', why: 'Це привʼязує аналіз до того, що ви реально хочете покращити.' },
     { title: 'Тривалість', helper: 'Необовʼязково', why: 'Час допомагає відрізнити нову проблему від патерну, який треба дивитися в динаміці.' },
     { title: 'Повʼязані симптоми', helper: 'Оберіть те, що підходить', why: 'Кластери симптомів допомагають пріоритезувати маркери, які варто перевірити першими.' },
+    { title: 'Тригери й патерн', helper: 'Контекст', why: 'Час і тригери допомагають базі знань розрізняти харчові, відновлювальні, сонні, запальні та гормональні патерни.' },
+    { title: 'Спосіб життя', helper: 'Контекст', why: 'Харчування, стрес, навантаження, сон і нещодавні хвороби часто пояснюють, чому маркер важливий або яких даних бракує.' },
     { title: 'Ліки та добавки', helper: 'Контекст', why: 'Деякі маркери й рекомендації залежать від поточних ліків або добавок.' },
     { title: 'Питання безпеки', helper: 'Обовʼязково', why: 'Червоні прапорці змінюють найбезпечніший наступний крок і можуть вимагати консультації лікаря.' },
+    { title: 'Перевірка', helper: 'Фінальний огляд', why: 'Чистий підсумок допомагає VITALOOP передати кращий контекст у план аналізів, базу знань і звіти.' },
   ],
   redFlags: {
     severeOnset: 'Раптовий сильний початок',
@@ -87,6 +123,63 @@ function urgencyGuidance(redFlags, isUk = false) {
   if (activeCount === 0) return isUk ? 'Термінових червоних прапорців не зазначено.' : 'No urgent red flags reported.'
   if (activeCount <= 2) return isUk ? 'Деякі відповіді вказують, що своєчасний огляд лікаря важливий.' : 'Some answers suggest timely clinician review is important.'
   return isUk ? 'Виявлено кілька червоних прапорців. Не відкладайте медичний огляд.' : 'Multiple red flags detected. Do not delay medical review.'
+}
+
+function hasNonEnglishScript(value) {
+  return /[\u0400-\u04FF\u0500-\u052F]/.test(String(value || ''))
+}
+
+function splitTextList(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).filter(Boolean)
+  return String(value || '').split(',').map((item) => item.trim()).filter(Boolean)
+}
+
+function toggleListValue(list, value) {
+  return list.includes(value) ? list.filter((item) => item !== value) : [...list, value]
+}
+
+function buildDomainScores({ bodySystem, selectedSymptoms, selectedTriggers, lifestyleContext, severity, duration }) {
+  const scores = {
+    energy_recovery: 0,
+    sleep: 0,
+    neurocognitive: 0,
+    digestive: 0,
+    metabolic: 0,
+    hormone: 0,
+    inflammation_safety: 0,
+  }
+  const add = (key, value) => { scores[key] = Math.min(100, scores[key] + value) }
+  const symptomText = selectedSymptoms.join(' ').toLowerCase()
+  const triggerText = selectedTriggers.join(' ').toLowerCase()
+  const lifestyleText = lifestyleContext.join(' ').toLowerCase()
+  const symptomMatches = (terms) => terms.some((term) => symptomText.includes(term.toLowerCase()))
+  const contextMatches = (terms) => terms.some((term) => lifestyleText.includes(term.toLowerCase()) || triggerText.includes(term.toLowerCase()))
+
+  if (symptomMatches(['Fatigue', 'Low stamina'])) add('energy_recovery', 35)
+  if (symptomMatches(['Poor sleep'])) add('sleep', 35)
+  if (symptomMatches(['Brain fog', 'Low mood'])) add('neurocognitive', 30)
+  if (symptomMatches(['Digestive issues', 'Cravings'])) add('digestive', 24)
+  if (symptomMatches(['Cravings'])) add('metabolic', 22)
+  if (symptomMatches(['Hair shedding'])) add('hormone', 18)
+  if (contextMatches(['After poor sleep', 'At night'])) add('sleep', 20)
+  if (contextMatches(['After exercise', 'Heavy training'])) add('energy_recovery', 18)
+  if (contextMatches(['After meals', 'GI symptoms'])) add('digestive', 18)
+  if (contextMatches(['High stress'])) {
+    add('neurocognitive', 12)
+    add('hormone', 8)
+  }
+  if (contextMatches(['Recent illness'])) add('inflammation_safety', 20)
+  if (contextMatches(['Restrictive diet', 'Low protein intake', 'Vegetarian or vegan', 'Weight change'])) {
+    add('metabolic', 14)
+    add('energy_recovery', 10)
+  }
+  if (bodySystem === 'Neurological') add('neurocognitive', 16)
+  if (bodySystem === 'Hormonal') add('hormone', 16)
+  if (bodySystem === 'Digestive') add('digestive', 16)
+  if (bodySystem === 'Recovery') add('energy_recovery', 16)
+  if (Number(severity) >= 7) add('inflammation_safety', 10)
+  if (['3-6 months', '6+ months'].includes(duration)) add('energy_recovery', 8)
+  return scores
 }
 
 function saveConcernContext(payload) {
@@ -141,6 +234,10 @@ export default function Questionnaire() {
   const [severity, setSeverity] = useState(5)
   const [bodySystem, setBodySystem] = useState('')
   const [relatedSymptoms, setRelatedSymptoms] = useState('')
+  const [selectedTriggers, setSelectedTriggers] = useState([])
+  const [lifestyleContext, setLifestyleContext] = useState([])
+  const [functionalImpact, setFunctionalImpact] = useState('')
+  const [symptomPattern, setSymptomPattern] = useState('')
   const [medications, setMedications] = useState('')
   const [supplements, setSupplements] = useState('')
   const [whatTried, setWhatTried] = useState('')
@@ -157,12 +254,21 @@ export default function Questionnaire() {
   })
 
   const readiness = useMemo(
-    () => scoreReadiness({ concern, duration, severity, bodySystem, related: relatedSymptoms, meds: medications }),
-    [concern, duration, severity, bodySystem, relatedSymptoms, medications]
+    () => {
+      const base = scoreReadiness({ concern, duration, severity, bodySystem, related: relatedSymptoms, meds: medications })
+      const extra = Math.min(18, selectedTriggers.length * 3 + lifestyleContext.length * 2 + (functionalImpact ? 5 : 0) + (symptomPattern ? 4 : 0))
+      return Math.min(99, base + extra)
+    },
+    [concern, duration, severity, bodySystem, relatedSymptoms, medications, selectedTriggers, lifestyleContext, functionalImpact, symptomPattern]
   )
   const urgency = useMemo(() => urgencyGuidance(redFlags, isUk), [redFlags, isUk])
   const progress = Math.round(((step + 1) / WIZARD_STEPS.length) * 100)
-  const selectedRelated = relatedSymptoms.split(',').map((item) => item.trim()).filter(Boolean)
+  const selectedRelated = splitTextList(relatedSymptoms)
+  const domainScores = useMemo(
+    () => buildDomainScores({ bodySystem, selectedSymptoms: selectedRelated, selectedTriggers, lifestyleContext, severity, duration }),
+    [bodySystem, selectedRelated, selectedTriggers, lifestyleContext, severity, duration]
+  )
+  const showLanguageHint = !isUk && hasNonEnglishScript(concern)
 
   async function loadSession() {
     setLoading(true)
@@ -180,6 +286,10 @@ export default function Questionnaire() {
         setSeverity(Number(summary.severity || 5))
         setBodySystem(summary.bodySystem || summary.body_system || '')
         setRelatedSymptoms(summary.relatedSymptoms || summary.related_symptoms || '')
+        setSelectedTriggers(splitTextList(summary.symptomTriggers || summary.symptom_triggers || summary.triggers || []))
+        setLifestyleContext(splitTextList(summary.lifestyleContext || summary.lifestyle_context || []))
+        setFunctionalImpact(summary.functionalImpact || summary.functional_impact || '')
+        setSymptomPattern(summary.symptomPattern || summary.symptom_pattern || '')
         setMedications(summary.medications || '')
         setSupplements(summary.supplements || '')
         setWhatTried(summary.whatTried || summary.what_tried || '')
@@ -203,6 +313,14 @@ export default function Questionnaire() {
     setRelatedSymptoms(next.join(', '))
   }
 
+  function toggleTrigger(label) {
+    setSelectedTriggers((current) => toggleListValue(current, label))
+  }
+
+  function toggleLifestyle(label) {
+    setLifestyleContext((current) => toggleListValue(current, label))
+  }
+
   function canContinue() {
     if (step === 0) return concern.trim().length >= 3
     return true
@@ -215,12 +333,24 @@ export default function Questionnaire() {
       severity,
       bodySystem,
       relatedSymptoms,
+      related_symptoms: selectedRelated,
+      symptomTriggers: selectedTriggers,
+      symptom_triggers: selectedTriggers,
+      lifestyleContext,
+      lifestyle_context: lifestyleContext,
+      functionalImpact,
+      functional_impact: functionalImpact,
+      symptomPattern,
+      symptom_pattern: symptomPattern,
       medications,
       supplements,
       whatTried,
+      what_tried: whatTried,
       readiness,
       urgency,
       redFlags,
+      red_flags: redFlags,
+      domain_scores: domainScores,
       linkedLabs: [],
     })
     await queryClient.invalidateQueries({ queryKey: ['questionnaire-session'] })
@@ -323,6 +453,11 @@ export default function Questionnaire() {
                   <CoachInput label={isUk ? 'Що головне ви хочете зрозуміти або покращити?' : 'What is the main thing you want to understand or improve?'} helper={isUk ? 'Приклад: втома та випадіння волосся останні 2 місяці.' : 'Example: fatigue and hair shedding for the last 2 months.'}>
                     <textarea value={concern} onChange={(e) => setConcern(e.target.value)} placeholder={isUk ? 'Опишіть головний запит' : 'Describe the main concern'} />
                   </CoachInput>
+                  {showLanguageHint && (
+                    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm leading-6 text-blue-900">
+                      VITALOOP will save your original wording. Reports follow your account/site language, so keep medically important words as you normally use them.
+                    </div>
+                  )}
                   <NumericScale value={severity} onChange={setSeverity} isUk={isUk} />
                 </div>
               )}
@@ -360,6 +495,63 @@ export default function Questionnaire() {
               )}
 
               {step === 3 && (
+                <div className="grid gap-5">
+                  <div>
+                    <p className="mb-3 text-sm font-bold text-slate-700">{isUk ? 'Коли або після чого стає гірше?' : 'When or after what does it get worse?'}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {TRIGGER_OPTIONS.map((label) => (
+                        <CoachChip key={label} active={selectedTriggers.includes(label)} onClick={() => toggleTrigger(label)}>
+                          {isUk ? (UK.triggers[label] || label) : label}
+                        </CoachChip>
+                      ))}
+                    </div>
+                  </div>
+                  <CoachInput
+                    label={isUk ? 'Опишіть патерн своїми словами' : 'Describe the pattern in your own words'}
+                    helper={isUk ? 'Наприклад: гірше після навантаження, краще після їжі, хвилями протягом тижня.' : 'Example: worse after exercise, better after meals, comes in waves during the week.'}
+                  >
+                    <textarea
+                      value={symptomPattern}
+                      onChange={(e) => setSymptomPattern(e.target.value)}
+                      placeholder={isUk ? 'Що ви помітили в динаміці симптомів?' : 'What have you noticed about the symptom pattern?'}
+                    />
+                  </CoachInput>
+                  <CoachInput
+                    label={isUk ? 'Як це впливає на день?' : 'How does this affect your day?'}
+                    helper={isUk ? 'Це допомагає відрізняти легкий сигнал від проблеми, яка реально обмежує життя.' : 'This helps separate a mild signal from something that limits daily life.'}
+                  >
+                    <select value={functionalImpact} onChange={(e) => setFunctionalImpact(e.target.value)}>
+                      <option value="">{isUk ? 'Оберіть найближчий варіант' : 'Choose the closest fit'}</option>
+                      {IMPACT_OPTIONS.map((item) => <option key={item} value={item}>{isUk ? (UK.impacts[item] || item) : item}</option>)}
+                    </select>
+                  </CoachInput>
+                </div>
+              )}
+
+              {step === 4 && (
+                <div className="grid gap-5">
+                  <div>
+                    <p className="mb-3 text-sm font-bold text-slate-700">{isUk ? 'Що може впливати на самопочуття зараз?' : 'What may be affecting how you feel right now?'}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {LIFESTYLE_CONTEXT_OPTIONS.map((label) => (
+                        <CoachChip key={label} active={lifestyleContext.includes(label)} onClick={() => toggleLifestyle(label)}>
+                          {isUk ? (UK.lifestyle[label] || label) : label}
+                        </CoachChip>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
+                    <div className="font-bold">{isUk ? 'Як це використає VITALOOP' : 'How VITALOOP uses this'}</div>
+                    <p className="mt-1">
+                      {isUk
+                        ? 'Ці сигнали не є діагнозом. Вони допомагають базі знань зрозуміти, які маркери потребують контексту: залізо, B12/фолат, вітамін D, запалення, глюкоза, щитоподібна залоза, відновлення.'
+                        : 'These signals are not a diagnosis. They help the Knowledge Base understand which markers need context: iron, B12/folate, vitamin D, inflammation, glucose, thyroid, and recovery.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {step === 5 && (
                 <div className="grid gap-5 sm:grid-cols-2">
                   <CoachInput label={isUk ? 'Поточні ліки' : 'Current medications'} helper={isUk ? 'Вкажіть дозу, якщо знаєте.' : 'Include dose if you know it.'}>
                     <textarea value={medications} onChange={(e) => setMedications(e.target.value)} placeholder={isUk ? 'Приклад: метформін, левотироксин, антигістамінні' : 'Example: metformin, levothyroxine, antihistamines'} />
@@ -370,7 +562,7 @@ export default function Questionnaire() {
                 </div>
               )}
 
-              {step === 4 && (
+              {step === 6 && (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {Object.entries({
                     severeOnset: isUk ? UK.redFlags.severeOnset : 'Sudden severe onset',
@@ -386,6 +578,48 @@ export default function Questionnaire() {
                       {label}
                     </label>
                   ))}
+                </div>
+              )}
+
+              {step === 7 && (
+                <div className="grid gap-4">
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <div className="mb-2 flex items-center gap-2 text-sm font-extrabold text-emerald-900">
+                      <CheckCircle2 className="h-4 w-4" />
+                      {isUk ? 'Підсумок для бази знань' : 'Knowledge Base context summary'}
+                    </div>
+                    <dl className="grid gap-3 text-sm leading-6 text-slate-700 sm:grid-cols-2">
+                      <div>
+                        <dt className="font-bold text-slate-900">{isUk ? 'Головний запит' : 'Main concern'}</dt>
+                        <dd>{concern || (isUk ? 'Не вказано' : 'Not set')}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-bold text-slate-900">{isUk ? 'Тривалість / інтенсивність' : 'Duration / intensity'}</dt>
+                        <dd>{duration ? (isUk ? (UK.durations[duration] || duration) : duration) : (isUk ? 'Не вказано' : 'Not set')} · {severity}/10</dd>
+                      </div>
+                      <div>
+                        <dt className="font-bold text-slate-900">{isUk ? 'Повʼязані симптоми' : 'Related symptoms'}</dt>
+                        <dd>{selectedRelated.length ? selectedRelated.map((item) => isUk ? (UK.symptoms[item] || item) : item).join(', ') : (isUk ? 'Не вказано' : 'Not set')}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-bold text-slate-900">{isUk ? 'Тригери' : 'Triggers'}</dt>
+                        <dd>{selectedTriggers.length ? selectedTriggers.map((item) => isUk ? (UK.triggers[item] || item) : item).join(', ') : (isUk ? 'Не вказано' : 'Not set')}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-bold text-slate-900">{isUk ? 'Контекст способу життя' : 'Lifestyle context'}</dt>
+                        <dd>{lifestyleContext.length ? lifestyleContext.map((item) => isUk ? (UK.lifestyle[item] || item) : item).join(', ') : (isUk ? 'Не вказано' : 'Not set')}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-bold text-slate-900">{isUk ? 'Вплив на день' : 'Daily impact'}</dt>
+                        <dd>{functionalImpact ? (isUk ? (UK.impacts[functionalImpact] || functionalImpact) : functionalImpact) : (isUk ? 'Не вказано' : 'Not set')}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600">
+                    {isUk
+                      ? 'Після збереження ці дані будуть використані для плану аналізів, звʼязку симптомів із біомаркерами, evidence gaps, safety checks і наступних звітів.'
+                      : 'After saving, this context is used for lab planning, symptom-biomarker links, evidence gaps, safety checks, and future reports.'}
+                  </div>
                 </div>
               )}
 
