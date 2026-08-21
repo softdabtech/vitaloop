@@ -215,6 +215,32 @@ export function gaSignupIntent(source = 'public_site') {
   })
 }
 
+/** Fire when a visitor opens or submits the account creation flow. */
+export function gaSignupStarted(method = 'email', params = {}) {
+  gaEvent('signup_started', {
+    event_category: 'acquisition',
+    method,
+    ...params,
+  })
+}
+
+/** Fire after account creation succeeds. Mirrors sign_up with campaign-safe fields. */
+export function gaSignupCompleted(method = 'email', params = {}) {
+  gaEvent('signup_completed', {
+    event_category: 'acquisition',
+    method,
+    ...params,
+  })
+}
+
+/** Fire when lab/manual analysis starts. Never include file names or health values. */
+export function gaAnalysisStarted(params = {}) {
+  gaEvent('analysis_started', {
+    event_category: 'activation',
+    ...params,
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Engagement events
 // ---------------------------------------------------------------------------

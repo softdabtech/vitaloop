@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { EASE } from '../../lib/motion.js'
 import { useAuth } from '../../hooks/useAuth.js'
 import BrandMark from './BrandMark.jsx'
+import { withStoredAttribution } from '../../lib/attribution.js'
 
 const NAV_LINKS = [
   { label: 'Features', href: '#why-vitaloop' },
@@ -186,7 +187,7 @@ export default function Navbar() {
           ) : (
             <>
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate(withStoredAttribution('/login'))}
                 className="hidden md:block"
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
@@ -198,7 +199,7 @@ export default function Navbar() {
                 Sign in
               </button>
               <button
-                onClick={() => navigate('/login?signup=true')}
+                onClick={() => navigate(withStoredAttribution('/login?signup=true'))}
                 className="hidden md:block"
                 style={{
                   background: 'var(--teal-800)', color: 'white',
@@ -317,7 +318,7 @@ export default function Navbar() {
               onClick={(e) => {
                 e.stopPropagation()
                 setMobileOpen(false)
-                navigate(user ? '/dashboard' : '/login?signup=true')
+                navigate(user ? '/dashboard' : withStoredAttribution('/login?signup=true'))
               }}
               initial={reduced ? {} : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

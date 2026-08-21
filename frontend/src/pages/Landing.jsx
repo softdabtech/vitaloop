@@ -36,6 +36,7 @@ import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx
 import Footer from '../components/landing/Footer.jsx'
 import BrandMark from '../components/landing/BrandMark.jsx'
 import WellbeingCheckModal from '../components/landing/WellbeingCheckModal.jsx'
+import { withStoredAttribution } from '../lib/attribution.js'
 import { trackPublicFunnelEvent } from '../lib/publicFunnel.js'
 
 const NAV_LINKS = [
@@ -703,8 +704,8 @@ export default function Landing() {
   return (
     <div className={rootClasses}>
       <Seo
-        title="Health Intelligence for Symptoms, Blood Tests & Retests | VITALOOP"
-        description="Start with symptoms or upload blood test results. Get Knowledge Base biomarker reasoning, safety notes, priorities, clinician discussion guidance, protocol actions, trends, and retest timing."
+        title="AI Health Intelligence for Lab Results Over Time | VITALOOP"
+        description="VITALOOP helps you make sense of symptoms, lab results, biomarker patterns, safety context, retests, and progress over time with AI."
         path="/"
         schemas={[SCHEMA_HOWTO, SCHEMA_FAQ]}
       />
@@ -736,7 +737,7 @@ export default function Landing() {
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Log in link — only for non-authenticated visitors; visibility keeps space reserved during auth check */}
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate(withStoredAttribution('/login'))}
               className="hidden sm:inline-flex h-11 items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
               style={{ visibility: (!authLoading && user) ? 'hidden' : 'visible' }}
               tabIndex={(!authLoading && user) ? -1 : 0}
@@ -747,7 +748,7 @@ export default function Landing() {
 
             {/* Cabinet / Sign Up button */}
             <button
-              onClick={() => navigate(user ? '/dashboard' : '/login?signup=true')}
+              onClick={() => navigate(user ? '/dashboard' : withStoredAttribution('/login?signup=true'))}
               className={`hidden sm:inline-flex ${ctaBase} border border-slate-300 bg-white text-slate-900 hover:border-emerald-300`}
             >
               {user ? 'Cabinet' : 'Sign Up'}
@@ -797,13 +798,13 @@ export default function Landing() {
                 ) : (
                   <div className="mt-1 flex flex-col gap-2">
                     <button
-                      onClick={() => { closeMobileMenu(); navigate('/login?signup=true') }}
+                      onClick={() => { closeMobileMenu(); navigate(withStoredAttribution('/login?signup=true')) }}
                       className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-emerald-400"
                     >
                       Sign Up — Free
                     </button>
                     <button
-                      onClick={() => { closeMobileMenu(); navigate('/login') }}
+                      onClick={() => { closeMobileMenu(); navigate(withStoredAttribution('/login')) }}
                       className={`w-full rounded-xl border px-4 py-3 text-center text-sm font-semibold transition ${'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
                     >
                       Log in

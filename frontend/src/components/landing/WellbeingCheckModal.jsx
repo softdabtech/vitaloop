@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
+import { withStoredAttribution } from '../../lib/attribution.js'
 import {
   Activity,
   AlertCircle,
@@ -141,13 +142,13 @@ export default function WellbeingCheckModal({ open, onClose }) {
   function goSignup() {
     const params = new URLSearchParams({ signup: 'true', from: 'wellbeing_modal' })
     if (selectedIds.length) params.set('symptoms', selectedIds.join(','))
-    navigate(`/login?${params.toString()}`)
+    navigate(withStoredAttribution(`/login?${params.toString()}`))
   }
 
   function goUpload() {
     const params = new URLSearchParams({ signup: 'true', from: 'wellbeing_modal', returnUrl: '/upload' })
     if (selectedIds.length) params.set('symptoms', selectedIds.join(','))
-    navigate(`/login?${params.toString()}`)
+    navigate(withStoredAttribution(`/login?${params.toString()}`))
   }
 
   return createPortal(

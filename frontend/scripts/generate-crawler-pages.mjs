@@ -18,14 +18,14 @@ const UA_ALTERNATE_BY_EN_PATH = {
 const routes = [
   {
     path: '/',
-    title: 'Health Intelligence for Symptoms, Blood Tests & Retests | VITALOOP',
-    description: 'Start with symptoms or upload blood test results. Get Knowledge Base biomarker reasoning, safety notes, priorities, clinician discussion guidance, protocol actions, trends, and retest timing.',
+    title: 'AI Health Intelligence for Lab Results Over Time | VITALOOP',
+    description: 'VITALOOP helps you make sense of symptoms, lab results, biomarker patterns, safety context, retests, and progress over time with AI.',
     priority: '1.0',
     changefreq: 'weekly',
     text: [
-      'VITALOOP is a symptom-first health intelligence platform.',
-      'Start with fatigue, sleep, low energy, brain fog, hair loss, digestion, or other signals.',
-      'VITALOOP helps connect symptoms, lab direction, biomarker results, safety notes, protocol actions, trends, retests, and weekly progress into one clear health action loop.',
+      'VITALOOP helps people make sense of health data and lab results over time using AI.',
+      'Start with symptoms or upload blood test results when you have them.',
+      'VITALOOP connects biomarker patterns, symptom context, Knowledge Base rules, safety notes, clinician discussion points, retest timing, and progress tracking into one clear health action loop.',
     ],
   },
   {

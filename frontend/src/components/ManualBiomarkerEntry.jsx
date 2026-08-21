@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react'
 import { ChevronRight, Trash2, Plus } from 'lucide-react'
 import api from '../lib/api.js'
 import { isUkrainianLocale } from '../lib/locale.js'
+import { gaAnalysisStarted } from '../lib/analytics.js'
+import { getAttributionEventParams, getAttributionMetadata } from '../lib/attribution.js'
+import { trackFunnelEvent } from '../lib/funnel.js'
 import '../styles/manual-entry.css'
 
 const COPY = {
@@ -201,6 +204,18 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
     onLoading?.(true)
 
     try {
+      const analysisStartedMetadata = {
+        source: 'manual_entry',
+        biomarker_count: entries.length,
+        ...getAttributionMetadata(),
+      }
+      trackFunnelEvent('funnel_analysis_started', 'User started manual biomarker analysis', analysisStartedMetadata, { oncePerSession: true })
+      gaAnalysisStarted({
+        source: 'manual_entry',
+        biomarker_count: entries.length,
+        ...getAttributionEventParams(),
+      })
+
       const payload = {
         biomarkers: entries.map(e => ({
           biomarker_id: e.biomarker_id,
