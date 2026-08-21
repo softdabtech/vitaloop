@@ -174,6 +174,34 @@ const HEALTH_DOMAIN_LABELS_UK = {
   'recovery and energy': 'Відновлення й енергія',
 }
 
+const CATEGORY_LABELS = {
+  nutrition: { en: 'Nutrition', uk: 'Харчування' },
+  nutrition_context: { en: 'Nutrition context', uk: 'Харчовий контекст' },
+  supplements: { en: 'Supplements', uk: 'Добавки' },
+  supplement: { en: 'Supplement', uk: 'Добавка' },
+  lifestyle: { en: 'Lifestyle', uk: 'Спосіб життя' },
+  training_recovery: { en: 'Training and recovery', uk: 'Тренування та відновлення' },
+  trainingRecovery: { en: 'Training and recovery', uk: 'Тренування та відновлення' },
+  hematology: { en: 'Blood markers', uk: 'Показники крові' },
+  micronutrient: { en: 'Micronutrients', uk: 'Мікронутрієнти' },
+  metabolic: { en: 'Metabolic context', uk: 'Метаболічний контекст' },
+  safety: { en: 'Safety', uk: 'Безпека' },
+}
+
+function humanizeCategory(value, isUk = false) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  const key = raw.replace(/\s+/g, '_')
+  const normalizedKey = key.toLowerCase()
+  const entry = CATEGORY_LABELS[key] || CATEGORY_LABELS[normalizedKey]
+  if (entry) return isUk ? entry.uk : entry.en
+  return raw
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
 function formatPriority(priority, isUk = false) {
   return String(priority || 'LOW').toUpperCase()
     .replace('HIGH', isUk ? 'ВИСОКИЙ' : 'HIGH')
@@ -244,8 +272,8 @@ function protocolTiming(item, isUk = false) {
   return labels[raw] || raw.replaceAll('_', ' ') || ''
 }
 
-function protocolCategory(item) {
-  return String(item?.category || item?.type || '').trim()
+function protocolCategory(item, isUk = false) {
+  return humanizeCategory(item?.category || item?.type, isUk)
 }
 
 function effortLabel(item) {
@@ -350,7 +378,7 @@ function ActionCard({ item, copy, isUk }) {
   const title = protocolTitle(item)
   const body = protocolBody(item)
   const timing = protocolTiming(item, isUk)
-  const category = protocolCategory(item)
+  const category = protocolCategory(item, isUk)
   const effort = effortLabel(item)
   const outcome = outcomeLabel(item)
   const evidence = displayEvidence(evidenceLabel(item), isUk)
@@ -436,7 +464,7 @@ async function exportProtocolPdf({ protocolRows, retestPlan, doctorDiscussion, u
   protocolRows.forEach((item, index) => {
     addText(`${index + 1}. ${protocolTitle(item)}${item?.priority ? ` [${formatPriority(item.priority, isUk)}]` : ''}`, 11)
     addText(protocolBody(item), 9)
-    const meta = [protocolTiming(item, isUk), protocolCategory(item), evidenceLabel(item)].filter(Boolean).join(' · ')
+    const meta = [protocolTiming(item, isUk), protocolCategory(item, isUk), displayEvidence(evidenceLabel(item), isUk)].filter(Boolean).join(' · ')
     addText(meta, 9)
   })
   addTitle(copy.pdfDiscussion, 14)
@@ -608,7 +636,7 @@ export default function ProtocolPage() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <h3 className="font-extrabold text-slate-950">{item.label || item.search_query}</h3>
-                    {item.category && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-emerald-700">{item.category}</p>}
+                    {(item.category || item.type) && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-emerald-700">{humanizeCategory(item.category || item.type, isUk)}</p>}
                   </div>
                   {item.priority && <CoachBadge tone={priorityTone(item.priority)}>{formatPriority(item.priority, isUk)}</CoachBadge>}
                 </div>
