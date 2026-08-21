@@ -22,7 +22,17 @@ EVIDENCE_MULTIPLIER = {
     "moderate": 1.0,
     "high": 1.08,
     "guideline_placeholder": 0.98,
+    "clinical_guideline_context": 0.98,
 }
+
+
+def _public_evidence_level(value: Any) -> str | None:
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return None
+    if "placeholder" in raw:
+        return "clinical_guideline_context"
+    return raw
 
 
 def _normalize_unit(value: str | None) -> str:
@@ -366,7 +376,12 @@ async def _load_recommendations(recommendation_keys: List[str]) -> Dict[str, Dic
         .execute()
     )
     rows = response.data or []
-    return {str(row.get("key")): row for row in rows}
+    cleaned_rows: List[Dict[str, Any]] = []
+    for row in rows:
+        cleaned = dict(row)
+        cleaned["evidence_level"] = _public_evidence_level(cleaned.get("evidence_level"))
+        cleaned_rows.append(cleaned)
+    return {str(row.get("key")): row for row in cleaned_rows}
 
 
 async def _persist_rule_evaluation(user_id: str | None, rule_match: Dict[str, Any], input_snapshot: Dict[str, Any]) -> str | None:
@@ -604,7 +619,7 @@ async def evaluate_health_input(
                 "category": row.get("category"),
                 "priority": row.get("priority"),
                 "requires_doctor": bool(row.get("requires_doctor", False)),
-                "evidence_level": row.get("evidence_level"),
+                "evidence_level": _public_evidence_level(row.get("evidence_level")),
                 "source": row.get("source"),
                 "source_url": row.get("source_url"),
             }
