@@ -892,7 +892,13 @@ async def update_user_subscription(user_id: str, sub_status: str, sub_id: Option
         payload["sub_id"] = sub_id
     if plan_tier:
         payload["plan_tier"] = plan_tier
-    await _run(lambda: supabase.table("users").update(payload).eq("id", user_id).execute())
+    try:
+        await _run(lambda: supabase.table("users").update(payload).eq("id", user_id).execute())
+    except Exception as exc:
+        if "plan_tier" not in payload or "plan_tier" not in str(exc):
+            raise
+        payload.pop("plan_tier", None)
+        await _run(lambda: supabase.table("users").update(payload).eq("id", user_id).execute())
 
 
 async def update_admin_user_fields(
@@ -1043,7 +1049,7 @@ async def record_health_failure(
 
 
 async def get_user_account(user_id: str) -> Dict[str, Any]:
-    primary_columns = "id, email, full_name, sub_status, subscription_status, plan_tier, global_role, created_at"
+    primary_columns = "id, email, full_name, sub_status, subscription_status, global_role, created_at"
     fallback_columns = "id, email, full_name, subscription_status, global_role, created_at"
 
     account = await _select_first_by_id_with_fallback("users", primary_columns, user_id)

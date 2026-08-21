@@ -24,7 +24,6 @@ def _is_paid_subscription(active_sub: Optional[Dict[str, Any]], account: Dict[st
     )
     paid_from_account = bool(
         subscription_status == 'active'
-        and account_plan
         and account_plan != 'free'
     )
     is_paid = paid_from_sub_table or paid_from_account
