@@ -5,7 +5,8 @@ import { supabase } from '../lib/supabase.js'
 import { navigateToResolvedPath, resolvePostLoginDestination } from '../auth/postLogin.js'
 import { notifyRegistrationAlert, sendWelcomeEmail } from '../auth/registrationAlert.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
-import { gaSignUp, gaLogin } from '../lib/analytics.js'
+import { gaSignUp, gaLogin, gaSignupCompleted, gaSignupStarted } from '../lib/analytics.js'
+import { getAttributionEventParams, getAttributionMetadata, getSignupUserMetadata } from '../lib/attribution.js'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
@@ -630,6 +631,15 @@ export default function Login() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
+  useEffect(() => {
+    if (!isSignUp || isForgot) return
+    gaSignupStarted('email', getAttributionEventParams())
+    trackFunnelEvent('funnel_signup_started', 'User started signup', {
+      auth_provider: 'email',
+      ...getAttributionMetadata(),
+    }, { oncePerSession: true })
+  }, [isSignUp, isForgot])
+
   const ATTEMPT_KEY = 'vo:auth-attempts'
   const ATTEMPT_WINDOW_MS = 10 * 60 * 1000
   const ATTEMPT_LIMIT = 8
@@ -714,8 +724,10 @@ export default function Login() {
   // Handle sign-up completion and navigation
   async function handleSignUpSuccess(authData, normalizedEmail) {
     gaSignUp('email')
+    gaSignupCompleted('email', getAttributionEventParams())
     trackFunnelEvent('funnel_signup_completed', 'User completed signup', {
       auth_provider: 'email',
+      ...getAttributionMetadata(),
     }, { oncePerSession: true })
 
     const returnUrl = searchParams.get('returnUrl')
@@ -780,7 +792,10 @@ export default function Login() {
     const returnUrl = searchParams.get('returnUrl')
     const fn = isSignUp ? signUpWithEmail : signInWithEmail
     const { data: authData, error } = await (isSignUp
-      ? fn(normalizedEmail, password, { emailRedirectTo: resolveEmailConfirmationRedirect(returnUrl) })
+      ? fn(normalizedEmail, password, {
+        emailRedirectTo: resolveEmailConfirmationRedirect(returnUrl),
+        data: getSignupUserMetadata(),
+      })
       : fn(normalizedEmail, password))
     setLoading(false)
 
@@ -1206,7 +1221,18 @@ export default function Login() {
               {/* Google */}
               <button
                 className="ua-google-btn"
-                onClick={() => { gaLogin('google'); signInWithGoogle() }}
+                onClick={() => {
+                  if (isSignUp) {
+                    gaSignupStarted('google', getAttributionEventParams())
+                    trackFunnelEvent('funnel_signup_started', 'User started signup', {
+                      auth_provider: 'google',
+                      ...getAttributionMetadata(),
+                    }, { oncePerSession: true })
+                  } else {
+                    gaLogin('google')
+                  }
+                  signInWithGoogle()
+                }}
                 style={{
                   width: '100%', background: 'rgba(255,255,255,0.04)',
                   border: '0.5px solid rgba(255,255,255,0.1)',

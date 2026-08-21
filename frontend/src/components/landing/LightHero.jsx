@@ -25,7 +25,7 @@ const TRUST_CHIPS = [
   { icon: FileText, label: 'PDF, image, manual, CSV/XLS input' },
   { icon: Sparkles, label: 'Knowledge Base reasoning' },
   { icon: ListChecks, label: 'Priorities, safety notes, retest plan' },
-  { icon: ShieldCheck, label: 'Privacy-first, tenant-aware flow' },
+  { icon: ShieldCheck, label: 'Privacy-first, founder-led product' },
 ]
 
 export function LightHero() {
@@ -41,25 +41,25 @@ export function LightHero() {
           <div className="min-w-0 space-y-8">
             {/* Eyebrow badge */}
             <div className="inline-flex max-w-full items-center gap-2 rounded-2xl border border-teal-200 bg-teal-50 px-3 py-2 sm:rounded-full sm:px-4">
-              <span className="min-w-0 whitespace-normal text-center text-[11px] font-semibold leading-4 text-teal-600 sm:text-sm">AI BLOOD TEST ANALYSIS + SYMPTOM CONTEXT</span>
+              <span className="min-w-0 whitespace-normal text-center text-[11px] font-semibold leading-4 text-teal-600 sm:text-sm">AI HEALTH DATA + LAB RESULTS OVER TIME</span>
             </div>
 
             {/* Headline */}
             <h1 className="max-w-full break-words text-[38px] font-bold leading-[1.04] tracking-[-0.035em] text-slate-900 sm:text-5xl lg:text-6xl">
-              Understand your symptoms
+              Make sense of your health data
               <br className="hidden sm:block" />
               {' '}
               <span className="bg-gradient-to-r from-teal-600 to-teal-500 bg-clip-text text-transparent">
-                and blood test results
+                and lab results over time
               </span>
             </h1>
 
             {/* Subheadline */}
             <p className="text-lg text-slate-600 leading-relaxed max-w-xl space-y-3">
-              <span className="block">Start with symptoms. Upload labs when you have them.</span>
-              <span className="block font-semibold text-slate-900">From scattered signals to an explainable health report.</span>
+              <span className="block">Start with symptoms or upload labs when you have them.</span>
+              <span className="block font-semibold text-slate-900">From scattered health signals to a clear, explainable action loop.</span>
               <span className="block text-base text-slate-500">
-                VITALOOP connects biomarker results with symptom context, Knowledge Base rules, safety notes, trends, clinician discussion points, retest timing, and weekly follow-through.
+                VITALOOP connects biomarkers, symptom context, Knowledge Base rules, safety notes, retest timing, clinician discussion points, and progress tracking. It is educational support, not a replacement for a physician.
               </span>
             </p>
 

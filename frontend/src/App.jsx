@@ -9,10 +9,11 @@ import { useAuth } from './hooks/useAuth.js'
 import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
 import { useEffect, useState } from 'react'
 import { useOnboardingState } from './hooks/useOnboardingState.js'
-import { gaPageView, gaPurchase } from './lib/analytics.js'
+import { gaEvent, gaPageView, gaPurchase } from './lib/analytics.js'
 import { trackPublicFunnelEvent } from './lib/publicFunnel.js'
 import { isUkrainianLocale } from './lib/locale.js'
 import { reportClientActivity } from './lib/errorReporter.js'
+import { captureAttributionFromLocation, getAttributionEventParams, shouldTrackFounderXLandingOnce } from './lib/attribution.js'
 
 // Marketing pages — lazy
 const Features = lazy(() => import('./pages/Features.jsx'))
@@ -121,6 +122,7 @@ function GAPageTracker() {
   const location = useLocation()
   useEffect(() => {
     const route = location.pathname + location.search
+    const attribution = captureAttributionFromLocation(location)
     gaPageView(route)
     reportClientActivity({
       type: 'route_view',
@@ -129,6 +131,16 @@ function GAPageTracker() {
         hash: location.hash || null,
       },
     })
+
+    if (attribution?.captured && attribution.isFounderX && shouldTrackFounderXLandingOnce()) {
+      const eventParams = {
+        event_category: 'acquisition',
+        landing_path: attribution.lastTouch?.landing_path || location.pathname,
+        ...getAttributionEventParams(),
+      }
+      gaEvent('x_landing_visit', eventParams)
+      trackPublicFunnelEvent('x_landing_visit', eventParams)
+    }
 
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(location.search)
@@ -205,6 +217,14 @@ function RegisterRedirect() {
   params.set('signup', 'true')
   const query = params.toString()
   return <Navigate to={`/login${query ? `?${query}` : '?signup=true'}`} replace />
+}
+
+function FounderXRedirect() {
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.location.replace('/?utm_source=x&utm_medium=founder&utm_campaign=alex_founder')
+  }, [])
+  return <AppLoadingScreen />
 }
 
 function FloatingSupportChat() {
@@ -637,6 +657,8 @@ export default function App() {
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={isUaHost ? <UaLanding /> : <Landing />} />
+          <Route path="/x" element={<FounderXRedirect />} />
+          <Route path="/x/" element={<FounderXRedirect />} />
           <Route path="/ua" element={<UaLanding />} />
           <Route path="/ua/about" element={<UaAbout />} />
           <Route path="/ua/privacy-policy" element={<UaPrivacy />} />

@@ -9,7 +9,8 @@ import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import AnalysisProgressIndicator from '../components/AnalysisProgressIndicator.jsx'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
-import { gaLabUpload } from '../lib/analytics.js'
+import { gaAnalysisStarted, gaLabUpload } from '../lib/analytics.js'
+import { getAttributionEventParams, getAttributionMetadata } from '../lib/attribution.js'
 import toast from 'react-hot-toast'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import { useQuestionnaireSession } from '../hooks/useQueries.js'
@@ -423,6 +424,22 @@ export default function Upload() {
 
     setAnalyzing(true)
     try {
+      const analysisStartedMetadata = {
+        source: 'file_upload',
+        file_type: String(file.type || '').slice(0, 80) || 'unknown',
+        file_size_kb: Math.round(file.size / 1024),
+        has_lab_name: Boolean(labName),
+        is_retry: Boolean(options.isRetry),
+        ...getAttributionMetadata(),
+      }
+      trackFunnelEvent('funnel_analysis_started', 'User started lab analysis', analysisStartedMetadata, { oncePerSession: true })
+      gaAnalysisStarted({
+        source: 'file_upload',
+        file_type: analysisStartedMetadata.file_type,
+        is_retry: Boolean(options.isRetry),
+        ...getAttributionEventParams(),
+      })
+
       const formData = new FormData()
       formData.append('file', file)
       if (labName) {
