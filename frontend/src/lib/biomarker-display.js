@@ -73,12 +73,21 @@ const BIOMARKER_LABELS_EN = {
 
 const EVIDENCE_LABELS = {
   clinical_context: { en: 'Clinical context', uk: 'Клінічний контекст' },
+  clinical_guideline_context: { en: 'Guideline-informed context', uk: 'Контекст на основі клінічних орієнтирів' },
+  guideline_informed_context: { en: 'Guideline-informed context', uk: 'Контекст на основі клінічних орієнтирів' },
+  guideline_placeholder: { en: 'Guideline-informed context', uk: 'Контекст на основі клінічних орієнтирів' },
   knowledge_rule: { en: 'Knowledge-base rule', uk: 'Правило бази знань' },
   rule_based: { en: 'Rule-based', uk: 'На основі правил' },
   ai_protocol: { en: 'AI-assisted draft', uk: 'AI-допоміжний чернетковий план' },
+  context_required: { en: 'Context required', uk: 'Потрібен контекст' },
+  best_practice: { en: 'Best-practice context', uk: 'Контекст найкращих практик' },
+  safety: { en: 'Safety note', uk: 'Примітка безпеки' },
+  dri_context: { en: 'Nutrition reference context', uk: 'Контекст нутриціологічних норм' },
+  managed_context: { en: 'Managed clinical context', uk: 'Керований клінічний контекст' },
   high: { en: 'High confidence', uk: 'Висока впевненість' },
   medium: { en: 'Medium confidence', uk: 'Середня впевненість' },
   low: { en: 'Low confidence', uk: 'Низька впевненість' },
+  fallback: { en: 'Conservative fallback', uk: 'Обережний резервний висновок' },
 }
 
 const RISK_LABELS = {
@@ -117,6 +126,9 @@ export function evidenceDisplayLabel(value, isUk = false) {
   const raw = String(value || '').trim()
   if (!raw) return ''
   const key = normalizeKey(raw)
+  if (key.includes('placeholder')) {
+    return isUk ? 'Контекст на основі клінічних орієнтирів' : 'Guideline-informed context'
+  }
   const entry = EVIDENCE_LABELS[key] || RISK_LABELS[key]
   if (entry) return isUk ? entry.uk : entry.en
   return raw.replaceAll('_', ' ')
