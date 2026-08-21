@@ -1169,6 +1169,13 @@ export default function Results() {
       })
       .slice(0, 6)
   }, [localizedFinalAnalysis, explainability])
+  const interpretedMissingContext = Array.isArray(interpretedPattern?.missing_context)
+    ? interpretedPattern.missing_context.filter(Boolean)
+    : []
+  const interpretedNormalContext = Array.isArray(interpretedPattern?.normal_context)
+    ? interpretedPattern.normal_context.filter(Boolean)
+    : []
+  const hasInterpretationContextCards = interpretedMissingContext.length > 0 || interpretedNormalContext.length > 0 || hasPediatricContext
 
   async function exportResultsAsPDF() {
     if (exporting) return
@@ -1525,28 +1532,34 @@ export default function Results() {
                 )}
               </div>
             </div>
-            <div className="mt-4 grid gap-3 lg:grid-cols-3">
-              <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">{copy.needsData}</p>
-                <ul className="mt-2 space-y-1 text-sm leading-6 text-amber-950">
-                  {(interpretedPattern.missing_context || []).slice(0, 5).map((text, index) => <li key={`missing-context-${index}`}>{text}</li>)}
-                </ul>
+            {hasInterpretationContextCards && (
+              <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                {!!interpretedMissingContext.length && (
+                  <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">{copy.needsData}</p>
+                    <ul className="mt-2 space-y-1 text-sm leading-6 text-amber-950">
+                      {interpretedMissingContext.slice(0, 5).map((text, index) => <li key={`missing-context-${index}`}>{text}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {!!interpretedNormalContext.length && (
+                  <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">{copy.stableContext}</p>
+                    <ul className="mt-2 space-y-1 text-sm leading-6 text-sky-950">
+                      {interpretedNormalContext.slice(0, 4).map((marker, index) => (
+                        <li key={`normal-context-${index}`}>{marker.name}: {marker.value}{marker.unit ? ` ${marker.unit}` : ''}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {hasPediatricContext && (
+                  <div className="rounded-2xl border border-teal-100 bg-teal-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">{copy.pediatricContext}</p>
+                    <p className="mt-2 text-sm leading-6 text-teal-950">{copy.pediatricBody}</p>
+                  </div>
+                )}
               </div>
-              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">{copy.stableContext}</p>
-                <ul className="mt-2 space-y-1 text-sm leading-6 text-sky-950">
-                  {(interpretedPattern.normal_context || []).slice(0, 4).map((marker, index) => (
-                    <li key={`normal-context-${index}`}>{marker.name}: {marker.value}{marker.unit ? ` ${marker.unit}` : ''}</li>
-                  ))}
-                </ul>
-              </div>
-              {hasPediatricContext && (
-                <div className="rounded-2xl border border-teal-100 bg-teal-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">{copy.pediatricContext}</p>
-                  <p className="mt-2 text-sm leading-6 text-teal-950">{copy.pediatricBody}</p>
-                </div>
-              )}
-            </div>
+            )}
           </SectionCard>
         )}
 
