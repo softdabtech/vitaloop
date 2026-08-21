@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Beaker, CalendarCheck2, CheckCircle2, ClipboardList, HelpCircle, MessageCircle, Route, Sparkles, Stethoscope, UploadCloud } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth.js'
-import { useDashboardSummary, useQuestionnaireSession } from '../hooks/useQueries.js'
+import { useDashboardSummary, useQuestionnaireSession, useUserProfile } from '../hooks/useQueries.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import { CoachBadge, CoachButton, CoachCard, CoachProgress, CoachSkeleton, CoachTooltip, EmptyCoachState, InsightCard, KPIBlock } from '../components/coach/CoachUI.jsx'
 import { HEALTH_LOOP_STAGES, getHealthLoopStageIndex } from '../lib/cabinetV511.js'
@@ -52,6 +52,9 @@ const DASHBOARD_COPY = {
     checkinsHelp: 'Check-ins show whether actions are helping.',
     recentContext: 'Recent Context',
     keepMoving: 'Keep the loop moving',
+    firstCheckinTitle: 'Start your first check-in',
+    firstCheckinBody: 'You already have lab context. A short check-in connects symptoms, actions, and future biomarker changes so progress is easier to interpret.',
+    firstCheckinCta: 'Start check-in',
     next: 'Next',
     noLoadTitle: 'We could not load your dashboard',
     noLoadBody: 'Your account is safe. Try refreshing, or open your journey to continue from the last saved step.',
@@ -91,9 +94,9 @@ const DASHBOARD_COPY = {
       openResults: 'Open results',
       upload: 'Upload',
       actionsReady: 'Action items available',
-      actionsMissing: 'No action plan yet',
+      actionsMissing: 'Action plan not opened yet',
       waiting: (count) => `${count} action item${count === 1 ? '' : 's'} are waiting.`,
-      generate: 'Generate a protocol after your results.',
+      generate: 'Open your latest result as an action plan before tracking progress.',
       openPlan: 'Open plan',
       seeJourney: 'See journey',
     },
@@ -141,6 +144,9 @@ const DASHBOARD_COPY = {
     checkinsHelp: 'Чек-іни показують, чи допомагають дії.',
     recentContext: 'Останній контекст',
     keepMoving: 'Продовжуйте цикл',
+    firstCheckinTitle: 'Зробіть перший чек-ін',
+    firstCheckinBody: 'Контекст аналізів уже є. Короткий чек-ін повʼяже симптоми, дії та майбутні зміни біомаркерів, щоб прогрес було легше інтерпретувати.',
+    firstCheckinCta: 'Почати чек-ін',
     next: 'Далі',
     noLoadTitle: 'Не вдалося завантажити кабінет',
     noLoadBody: 'Ваш акаунт у безпеці. Оновіть сторінку або відкрийте шлях, щоб продовжити з останнього збереженого кроку.',
@@ -180,9 +186,9 @@ const DASHBOARD_COPY = {
       openResults: 'Відкрити результати',
       upload: 'Завантажити',
       actionsReady: 'Є кроки плану дій',
-      actionsMissing: 'Плану дій ще немає',
+      actionsMissing: 'План дій ще не відкрито',
       waiting: (count) => `${count} ${count === 1 ? 'крок очікує' : 'кроків очікують'}.`,
-      generate: 'Згенеруйте протокол після результатів.',
+      generate: 'Відкрийте останній результат як план дій перед відстеженням прогресу.',
       openPlan: 'Відкрити план',
       seeJourney: 'Подивитись шлях',
     },
@@ -230,6 +236,7 @@ export default function UserDashboard() {
   const { user } = useAuth()
   const { data, isLoading, error } = useDashboardSummary()
   const { data: questionnaireSession } = useQuestionnaireSession()
+  const { data: profile } = useUserProfile()
   const { isPremium } = useSubscription()
   const isUk = isUkrainianLocale()
   const copy = isUk ? DASHBOARD_COPY.uk : DASHBOARD_COPY.en
@@ -243,6 +250,8 @@ export default function UserDashboard() {
   const sessionContext = questionnaireSession?.session_context || questionnaireSession?.session?.session_metadata || {}
   const concern = sessionContext?.active_concern || ''
   const concernSummary = sessionContext?.summary || null
+  const profileData = profile?.profile || profile || {}
+  const displayName = profileData?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.name || ''
 
   const hasConcern = Boolean(concern)
   const hasQuestions = Boolean(concernSummary?.readiness)
@@ -325,7 +334,7 @@ export default function UserDashboard() {
       body: assignments.length ? copy.recent.waiting(assignments.length) : copy.recent.generate,
       done: Boolean(assignments.length),
       action: assignments.length ? copy.recent.openPlan : copy.recent.seeJourney,
-      path: assignments.length ? '/assignments' : '/lab-plan',
+      path: assignments.length ? '/assignments' : (latestUpload?.id ? `/protocol/${latestUpload.id}` : '/lab-plan'),
     },
   ]
 
@@ -352,7 +361,7 @@ export default function UserDashboard() {
         <div className="relative z-10 grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-center">
           <div>
             <p className="coach-eyebrow">{copy.nextBestStep}</p>
-            <h1 className="coach-title-xl">{nextAction.label}{user?.email ? `, ${user.email.split('@')[0]}` : ''}</h1>
+            <h1 className="coach-title-xl">{nextAction.label}{displayName ? `, ${displayName}` : ''}</h1>
             <p className="coach-body mt-4 max-w-2xl">{nextAction.why}</p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <CoachButton onClick={() => navigate(nextAction.path)} trailingIcon={ArrowRight}>
@@ -391,6 +400,20 @@ export default function UserDashboard() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-semibold text-amber-900">{copy.premiumNotice}</p>
             <CoachButton variant="secondary" size="sm" onClick={() => navigate('/subscription')}>{copy.viewPlans}</CoachButton>
+          </div>
+        </CoachCard>
+      )}
+
+      {hasResults && !hasCheckin && (
+        <CoachCard tone="soft" className="p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-extrabold text-slate-950">{copy.firstCheckinTitle}</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">{copy.firstCheckinBody}</p>
+            </div>
+            <CoachButton size="sm" icon={CalendarCheck2} onClick={() => navigate('/check-ins')}>
+              {copy.firstCheckinCta}
+            </CoachButton>
           </div>
         </CoachCard>
       )}

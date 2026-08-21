@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { Mail, Lock, LogOut, AlertTriangle, Cookie, UserCircle2 } from 'lucide-react'
+import { Mail, Lock, LogOut, AlertTriangle, Cookie, UserCircle2, CreditCard, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import NotificationPreferences from '../components/NotificationPreferences.jsx'
@@ -83,11 +84,25 @@ export default function Settings() {
   })
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [newEmail, setNewEmail] = useState('')
   const [saving, setSaving] = useState(false)
+  const [savingEmail, setSavingEmail] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [canceling, setCanceling] = useState(false)
+  const [exportingData, setExportingData] = useState(false)
+  const { data: subscriptionStatus, isLoading: subscriptionStatusLoading } = useQuery({
+    queryKey: ['settings-subscription-status'],
+    queryFn: async () => {
+      const { data } = await api.get('/stripe/subscription')
+      return data || null
+    },
+    enabled: Boolean(isPremium),
+    staleTime: 60 * 1000,
+    retry: 1,
+  })
+  const hasStripeCustomer = Boolean(subscriptionStatus?.has_stripe_customer)
 
   function focusStyle(event) {
     event.target.style.borderColor = 'rgba(29,158,117,0.72)'
@@ -126,6 +141,31 @@ export default function Settings() {
     }
   }
 
+  async function updateEmail() {
+    const trimmedEmail = newEmail.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      toast.error(isUk ? 'Вкажіть коректну email адресу' : 'Enter a valid email address')
+      return
+    }
+    if (trimmedEmail.toLowerCase() === String(user?.email || '').toLowerCase()) {
+      toast.error(isUk ? 'Це вже поточна email адреса' : 'This is already your current email address')
+      return
+    }
+
+    setSavingEmail(true)
+    try {
+      const { error } = await supabase.auth.updateUser({ email: trimmedEmail })
+      if (error) throw error
+      toast.success(isUk ? 'Ми надіслали підтвердження на нову email адресу' : 'We sent a confirmation link to your new email address')
+      setNewEmail('')
+    } catch (error) {
+      toast.error(error.message || (isUk ? 'Не вдалося оновити email' : 'Failed to update email'))
+      console.error(error)
+    } finally {
+      setSavingEmail(false)
+    }
+  }
+
   async function deleteAccount() {
     setDeleting(true)
     try {
@@ -157,6 +197,47 @@ export default function Settings() {
       console.error(error)
     } finally {
       setCanceling(false)
+    }
+  }
+
+  async function exportAccountData() {
+    setExportingData(true)
+    try {
+      const endpoints = [
+        ['profile', '/profile'],
+        ['lab_results', '/progress'],
+        ['timeline', '/timeline'],
+        ['insights', '/insights'],
+        ['checkins', '/checkins/history'],
+      ]
+      const entries = await Promise.all(endpoints.map(async ([key, path]) => {
+        try {
+          const { data } = await api.get(path)
+          return [key, data]
+        } catch (error) {
+          return [key, { unavailable: true, status: error?.response?.status || null }]
+        }
+      }))
+      const payload = {
+        exported_at: new Date().toISOString(),
+        account_email: user?.email || null,
+        data: Object.fromEntries(entries),
+      }
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `vitaloop-account-export-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+      toast.success(isUk ? 'Експорт даних підготовлено' : 'Data export is ready')
+    } catch (error) {
+      toast.error(isUk ? 'Не вдалося підготувати експорт' : 'Failed to prepare export')
+      console.error(error)
+    } finally {
+      setExportingData(false)
     }
   }
 
@@ -209,9 +290,29 @@ export default function Settings() {
             {user?.email || (isUk ? 'Email не вказано' : 'No email')}
           </div>
 
-          <p className="mt-2 text-xs text-slate-500">
-            {isUk ? 'Щоб змінити email, напишіть на support@vitaloop.today.' : 'Contact support@vitaloop.today to change your email address.'}
-          </p>
+          <div className="mt-4 grid gap-3">
+            <Field label={isUk ? 'Нова email адреса' : 'New email address'}>
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder={isUk ? 'name@example.com' : 'name@example.com'}
+                style={fieldStyle}
+                onFocus={focusStyle}
+                onBlur={blurStyle}
+              />
+            </Field>
+            <button
+              onClick={updateEmail}
+              disabled={savingEmail || !newEmail.trim()}
+              className="rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-3 text-center font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
+            >
+              {savingEmail ? (isUk ? 'Надсилаємо...' : 'Sending...') : (isUk ? 'Надіслати підтвердження' : 'Send confirmation')}
+            </button>
+            <p className="text-xs leading-5 text-slate-500">
+              {isUk ? 'Email зміниться після підтвердження за посиланням у новій пошті.' : 'Your email changes after you confirm the link sent to the new address.'}
+            </p>
+          </div>
         </motion.section>
 
         <motion.section
@@ -305,6 +406,26 @@ export default function Settings() {
           </div>
         </motion.section>
 
+        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} className="rounded-2xl border border-slate-200 bg-white p-6 lg:col-span-2">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50">
+              <Download size={18} color="#2563eb" />
+            </span>
+            <div>
+              <div className="text-sm font-bold text-slate-900">{isUk ? 'Дані та приватність' : 'Data & Privacy'}</div>
+              <div className="text-xs text-slate-500">{isUk ? 'Експорт основних даних акаунта' : 'Export core account data'}</div>
+            </div>
+          </div>
+          <p className="mb-4 text-sm leading-6 text-slate-600">
+            {isUk
+              ? 'Скачайте копію профілю, завантажених результатів, динаміки, інсайтів і чек-інів у JSON форматі.'
+              : 'Download a JSON copy of your profile, uploaded result history, progress, insights, and check-ins.'}
+          </p>
+          <button onClick={exportAccountData} disabled={exportingData} className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60">
+            {exportingData ? (isUk ? 'Готуємо експорт...' : 'Preparing export...') : (isUk ? 'Скачати мої дані' : 'Download my data')}
+          </button>
+        </motion.section>
+
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -336,7 +457,7 @@ export default function Settings() {
               </p>
             </div>
 
-            {isPremium && (
+            {isPremium && !subscriptionStatusLoading && hasStripeCustomer && (
               <div className="border-t border-rose-300/50 pt-3">
                 {!showCancelConfirm ? (
                   <>
@@ -373,6 +494,25 @@ export default function Settings() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {isPremium && !subscriptionStatusLoading && !hasStripeCustomer && (
+              <div className="border-t border-rose-300/50 pt-3">
+                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                  <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-blue-900">
+                    <CreditCard className="h-4 w-4" />
+                    {isUk ? 'Premium керується підтримкою' : 'Premium is support-managed'}
+                  </div>
+                  <p className="text-xs leading-5 text-blue-800">
+                    {isUk
+                      ? 'Цей Premium-доступ активовано без Stripe-порталу. Для зміни доступу або питань оплати напишіть у підтримку.'
+                      : 'This Premium access is active without a Stripe billing portal. Contact support for access changes or billing questions.'}
+                  </p>
+                  <a href="mailto:support@vitaloop.today" className="mt-3 inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                    {isUk ? 'Написати підтримці' : 'Contact support'}
+                  </a>
+                </div>
               </div>
             )}
 

@@ -47,7 +47,6 @@ const UaTerms = lazy(() => import('./pages/UaLegal.jsx').then(m => ({ default: m
 // UI components — lazy
 const SupportChat = lazy(() => import('./components/SupportChat.jsx'))
 const PaywallModal = lazy(() => import('./components/PaywallModal.jsx'))
-const WellbeingCheckModal = lazy(() => import('./components/landing/WellbeingCheckModal.jsx'))
 // CookieConsent is handled by vanilla JS in index.html (loads before React bundle).
 // const CookieConsent = lazy(() => import('./components/CookieConsent.jsx'))
 
@@ -614,77 +613,6 @@ function FloatingSupportChat() {
   )
 }
 
-const SYMPTOM_PROMPT_STORAGE_KEY = 'vitaloop_symptom_prompt_seen'
-const SYMPTOM_PROMPT_STARTED_AT_KEY = 'vitaloop_symptom_prompt_started_at'
-const SYMPTOM_PROMPT_DELAY_MS = 10000
-
-function PublicSymptomPrompt({ disabled = false }) {
-  const location = useLocation()
-  const { user, loading } = useAuth()
-  const [visible, setVisible] = useState(false)
-
-  const isExcludedRoute = [
-    '/ua',
-    '/symptom-intake',
-    '/login',
-    '/auth',
-    '/dashboard',
-    '/today',
-    '/upload',
-    '/lab-plan',
-    '/results/',
-    '/protocol/',
-    '/avatar',
-    '/progress',
-    '/assignments',
-    '/lab-results',
-    '/settings',
-    '/health-profile',
-    '/subscription',
-    '/billing-history',
-    '/help-center',
-    '/admin',
-    '/ops',
-    '/crm',
-    '/onboarding',
-    '/questionnaire',
-    '/check-ins',
-    '/checkin',
-    '/insights',
-  ].some((prefix) => location.pathname === prefix || location.pathname.startsWith(prefix))
-
-  useEffect(() => {
-    setVisible(false)
-    if (disabled || loading || user || isExcludedRoute) return undefined
-    if (typeof window === 'undefined') return undefined
-    if (window.sessionStorage.getItem(SYMPTOM_PROMPT_STORAGE_KEY) === '1') return undefined
-
-    const storedStartedAt = Number(window.sessionStorage.getItem(SYMPTOM_PROMPT_STARTED_AT_KEY))
-    const startedAt = Number.isFinite(storedStartedAt) && storedStartedAt > 0 ? storedStartedAt : Date.now()
-    if (startedAt !== storedStartedAt) {
-      window.sessionStorage.setItem(SYMPTOM_PROMPT_STARTED_AT_KEY, String(startedAt))
-    }
-    const remainingDelay = Math.max(0, SYMPTOM_PROMPT_DELAY_MS - (Date.now() - startedAt))
-
-    const timerId = window.setTimeout(() => {
-      window.sessionStorage.setItem(SYMPTOM_PROMPT_STORAGE_KEY, '1')
-      setVisible(true)
-    }, remainingDelay)
-
-    return () => window.clearTimeout(timerId)
-  }, [disabled, loading, user, isExcludedRoute, location.pathname])
-
-  if (!visible) return null
-
-  const closePrompt = () => setVisible(false)
-
-  return (
-    <Suspense fallback={null}>
-      <WellbeingCheckModal open={visible} onClose={closePrompt} />
-    </Suspense>
-  )
-}
-
 export default function App() {
   const isUaHost = typeof window !== 'undefined' && window.location.hostname.toLowerCase() === 'ua.vitaloop.today'
   const isUaPreviewPath = typeof window !== 'undefined' && (window.location.pathname === '/ua' || window.location.pathname.startsWith('/ua/'))
@@ -802,7 +730,6 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
-      {!isUaLandingShell && <PublicSymptomPrompt disabled={isUaLandingShell} />}
       {!isUaLandingShell && <FloatingSupportChat />}
     </BrowserRouter>
   )

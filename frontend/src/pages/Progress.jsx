@@ -63,9 +63,16 @@ function buildTrends(uploads) {
     .sort((a, b) => Math.abs(b.pct || 0) - Math.abs(a.pct || 0))
 }
 
-function trendTone(state) {
-  if (state === 'increased') return 'primary'
-  if (state === 'decreased') return 'warning'
+function normalizeMarkerStatus(status) {
+  const value = String(status || '').toLowerCase()
+  if (value.includes('critical') || value.includes('review') || value.includes('deficient') || value.includes('elevated') || value.includes('low') || value.includes('high')) return 'review'
+  if (value.includes('border') || value.includes('warn') || value.includes('monitor')) return 'monitor'
+  if (value.includes('optimal') || value.includes('normal') || value.includes('range')) return 'stable'
+  return 'unknown'
+}
+
+function trendDirectionTone(state) {
+  if (state === 'increased' || state === 'decreased') return 'primary'
   if (state === 'stable') return 'success'
   return 'neutral'
 }
@@ -78,9 +85,63 @@ function trendLabel(trend, isUk = false) {
   return isUk ? 'Тренд' : 'Trend'
 }
 
+function trendMeaning(trend, isUk = false) {
+  const latest = trend.last || trend.points?.[trend.points.length - 1]
+  const markerStatus = normalizeMarkerStatus(latest?.marker?.status)
+
+  if (trend.state === 'baseline') {
+    return {
+      tone: 'neutral',
+      label: isUk ? 'Потрібна друга точка' : 'Second point needed',
+      body: isUk
+        ? 'Це базове значення. VITALOOP не робить висновок про динаміку, поки немає другого порівнюваного аналізу.'
+        : 'This is a baseline value. VITALOOP does not infer a trend until a second comparable result exists.',
+    }
+  }
+
+  if (markerStatus === 'review') {
+    return {
+      tone: 'warning',
+      label: isUk ? 'Обговорити в контексті' : 'Review in context',
+      body: isUk
+        ? 'Останнє значення позначене як таке, що потребує перегляду. Напрямок зміни сам по собі не є діагнозом.'
+        : 'The latest value is marked for review. Direction alone is not a diagnosis.',
+    }
+  }
+
+  if (markerStatus === 'monitor') {
+    return {
+      tone: 'warning',
+      label: isUk ? 'Спостерігати' : 'Monitor',
+      body: isUk
+        ? 'Маркер варто відстежувати разом із симптомами, повторними аналізами та планом дій.'
+        : 'Track this marker together with symptoms, repeat labs, and the action plan.',
+    }
+  }
+
+  if (markerStatus === 'stable') {
+    return {
+      tone: 'success',
+      label: isUk ? 'У стабільній зоні' : 'Stable zone',
+      body: isUk
+        ? 'Останнє значення перебуває в референсі. Зміна показує напрямок, але не потребує окремого висновку без контексту.'
+        : 'The latest value is in range. The movement shows direction, not a standalone conclusion.',
+    }
+  }
+
+  return {
+    tone: 'neutral',
+    label: isUk ? 'Контекст потрібен' : 'Context needed',
+    body: isUk
+      ? 'VITALOOP показує напрямок зміни, але для інтерпретації потрібні референси, симптоми й профіль.'
+      : 'VITALOOP shows direction, but interpretation needs reference ranges, symptoms, and profile context.',
+  }
+}
+
 function TrendCard({ trend, isUk = false }) {
   const latest = trend.last || trend.points?.[trend.points.length - 1]
   const first = trend.first || trend.points?.[0]
+  const meaning = trendMeaning(trend, isUk)
   return (
     <CoachCard className="p-4" interactive>
       <div className="mb-4 flex items-start justify-between gap-3">
@@ -88,7 +149,7 @@ function TrendCard({ trend, isUk = false }) {
           <h3 className="text-lg font-extrabold text-slate-950">{trend.name}</h3>
           <p className="mt-1 text-sm text-slate-500">{latest ? `${latest.value}${trend.unit ? ` ${trend.unit}` : ''}` : (isUk ? 'Немає значення' : 'No value')}</p>
         </div>
-        <CoachBadge tone={trendTone(trend.state)}>{trendLabel(trend, isUk)}</CoachBadge>
+        <CoachBadge tone={trendDirectionTone(trend.state)}>{trendLabel(trend, isUk)}</CoachBadge>
       </div>
       {trend.state === 'baseline' ? (
         <p className="text-sm leading-6 text-slate-600">{isUk ? 'Є одна валідна точка даних. Завантажте ще один аналіз, щоб порівняти динаміку.' : 'One valid data point. Upload another test to compare direction over time.'}</p>
@@ -98,6 +159,12 @@ function TrendCard({ trend, isUk = false }) {
           {trend.pct != null ? ` (${trend.pct > 0 ? '+' : ''}${trend.pct}%)` : ''}
         </p>
       )}
+      <div className="mt-3 rounded-xl border border-slate-200 bg-white/75 p-3">
+        <div className="mb-1">
+          <CoachBadge tone={meaning.tone}>{meaning.label}</CoachBadge>
+        </div>
+        <p className="text-xs leading-5 text-slate-600">{meaning.body}</p>
+      </div>
       <p className="mt-3 text-xs font-semibold text-slate-500">{isUk ? 'Від' : 'Since'} {formatDate(first?.date, isUk)}</p>
     </CoachCard>
   )
@@ -156,8 +223,8 @@ export default function Progress() {
   const trends = useMemo(() => buildTrends(uploads), [uploads])
   const multiplePointTrends = trends.filter((trend) => trend.points.length >= 2)
   const baselineTrends = trends.filter((trend) => trend.points.length === 1)
-  const recentImprovements = multiplePointTrends.filter((trend) => trend.state === 'increased' || trend.state === 'stable').slice(0, 4)
-  const attentionTrends = multiplePointTrends.filter((trend) => trend.state === 'decreased').slice(0, 4)
+  const recentImprovements = multiplePointTrends.filter((trend) => normalizeMarkerStatus((trend.last || trend.points?.[trend.points.length - 1])?.marker?.status) === 'stable').slice(0, 4)
+  const attentionTrends = multiplePointTrends.filter((trend) => ['review', 'monitor', 'unknown'].includes(normalizeMarkerStatus((trend.last || trend.points?.[trend.points.length - 1])?.marker?.status))).slice(0, 4)
   const latestUpload = uploads[uploads.length - 1]
   const latestDate = latestUpload?.test_date || latestUpload?.created_at
   const daysSinceLatest = latestDate ? Math.floor((Date.now() - new Date(latestDate).getTime()) / (1000 * 60 * 60 * 24)) : null

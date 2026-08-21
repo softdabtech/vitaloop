@@ -300,7 +300,9 @@ export default function Subscription() {
       {
         date: subscription?.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString().slice(0, 10) : 'Current',
         title: isPremium ? 'Premium access active' : 'Free plan active',
-        details: isPremium ? 'Renews automatically unless canceled.' : 'Upgrade anytime to unlock premium features.',
+        details: isPremium
+          ? (hasStripeCustomer ? 'Renews automatically unless canceled.' : 'Managed by VITALOOP support; contact support for access or billing changes.')
+          : 'Upgrade anytime to unlock premium features.',
       },
     ]
 
@@ -360,7 +362,7 @@ export default function Subscription() {
               <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
                 <div className="font-semibold">Premium access is active.</div>
                 <p className="mt-1 text-emerald-800">
-                  This account is enabled without a Stripe billing customer, so the billing portal is not available. Feature access, uploads, reports, protocols, progress, and check-ins continue to work as Premium.
+                  Your Premium access is active and managed by the VITALOOP team. Uploads, reports, protocols, progress, and check-ins work as Premium. For billing or access changes, contact support.
                 </p>
               </div>
             )}
@@ -421,149 +423,149 @@ export default function Subscription() {
       </div>
 
       {subscription && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="rounded-2xl border border-slate-200 bg-white p-6"
-          >
-            <h3 className="text-lg font-bold text-slate-900 mb-6">Usage & limits</h3>
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="rounded-2xl border border-slate-200 bg-white p-6"
+        >
+          <h3 className="text-lg font-bold text-slate-900 mb-6">Usage & limits</h3>
 
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-semibold text-slate-700">Lab Uploads</span>
-                  {uploadLimit !== null ? (
-                    <span className="text-sm font-semibold text-slate-500">{uploadCount} of {uploadLimit}</span>
-                  ) : (
-                    <span className="text-sm font-semibold text-emerald-600">Unlimited</span>
-                  )}
-                </div>
-                {uploadLimit !== null && (
-                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-emerald-500 h-full transition-all"
-                      style={{ width: `${Math.min((uploadCount / uploadLimit) * 100, 100)}%` }}
-                    />
-                  </div>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-semibold text-slate-700">Lab Uploads</span>
+                {uploadLimit !== null ? (
+                  <span className="text-sm font-semibold text-slate-500">{uploadCount} of {uploadLimit}</span>
+                ) : (
+                  <span className="text-sm font-semibold text-emerald-600">Unlimited</span>
                 )}
-                <p className="text-xs text-slate-500 mt-2">
-                  {currentPlan === 'free' ? 'Free plan: 1 upload every 30 days' : 'Upload lab reports for analysis'}
-                </p>
               </div>
-
-              <div className="pt-4 border-t border-slate-200">
-                <h4 className="text-sm font-semibold text-slate-900 mb-3">Included Features</h4>
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {(subscription?.features || PLANS[currentPlan]?.features || []).map((feature, idx) => (
-                    <li key={idx} className="flex items-center gap-2 text-sm text-slate-700">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {uploadLimit !== null && (
+                <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-emerald-500 h-full transition-all"
+                    style={{ width: `${Math.min((uploadCount / uploadLimit) * 100, 100)}%` }}
+                  />
+                </div>
+              )}
+              <p className="text-xs text-slate-500 mt-2">
+                {currentPlan === 'free' ? 'Free plan: 1 upload every 30 days' : 'Upload lab reports for analysis'}
+              </p>
             </div>
-          </motion.section>
+
+            <div className="pt-4 border-t border-slate-200">
+              <h4 className="text-sm font-semibold text-slate-900 mb-3">Included Features</h4>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {(subscription?.features || PLANS[currentPlan]?.features || []).map((feature, idx) => (
+                  <li key={idx} className="flex items-center gap-2 text-sm text-slate-700">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </motion.section>
       )}
 
       {currentPlan === 'free' && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="rounded-2xl border border-blue-200 bg-blue-50 p-6"
-          >
-            <h3 className="font-semibold text-blue-900 mb-3">💡 About Your Free Plan</h3>
-            <div className="space-y-2 text-sm text-blue-800">
-              <p>You're currently using the Free plan which includes:</p>
-              <ul className="list-disc list-inside space-y-1 ml-2">
-                <li>1 lab report upload every 30 days</li>
-                <li>Basic biomarker analysis</li>
-                <li>Core dashboard access</li>
-                <li>Community support</li>
-              </ul>
-              <p className="pt-2 text-blue-900 font-medium">Upgrade to Premium to unlock unlimited uploads and AI-powered protocols.</p>
-            </div>
-          </motion.section>
-        )}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="rounded-2xl border border-blue-200 bg-blue-50 p-6"
+        >
+          <h3 className="font-semibold text-blue-900 mb-3">💡 About Your Free Plan</h3>
+          <div className="space-y-2 text-sm text-blue-800">
+            <p>You're currently using the Free plan which includes:</p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li>1 lab report upload every 30 days</li>
+              <li>Basic biomarker analysis</li>
+              <li>Core dashboard access</li>
+              <li>Community support</li>
+            </ul>
+            <p className="pt-2 text-blue-900 font-medium">Upgrade to Premium to unlock unlimited uploads and AI-powered protocols.</p>
+          </div>
+        </motion.section>
+      )}
 
-        {currentPlan === 'free' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Choose a plan</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {Object.entries(PLANS).map(([key, plan]) => (
-                <PlanCard
-                  key={key}
-                  planKey={key}
-                  plan={plan}
-                  currentPlan={currentPlan}
-                  onSelect={handleSelectPlan}
-                  isLoading={upgrading}
-                />
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {isPremium && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-            className="rounded-2xl border border-blue-200 bg-blue-50 p-6 sm:p-8"
-          >
-            <div className="flex items-start gap-3">
-              <CreditCard className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-semibold text-blue-900 mb-1">
-                  {hasStripeCustomer ? 'Manage Payment Method & Billing' : 'Premium Access & Billing History'}
-                </h4>
-                <p className="text-sm text-blue-800 mb-4">
-                  {hasStripeCustomer
-                    ? 'Update your billing address, payment method, view invoices, and manage your subscription renewal.'
-                    : 'Your Premium access is active. Stripe portal management is available only for Stripe-managed subscriptions; billing history remains available for audit and support.'}
-                </p>
-                <button
-                  onClick={openBillingPortal}
-                  disabled={openingPortal}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {openingPortal ? 'Opening...' : hasStripeCustomer ? 'Open Billing Portal' : 'View Billing History'}
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
+      {currentPlan === 'free' && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-          className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+          transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Questions About Your Plan?</h3>
-          <p className="text-slate-600 mb-4">
-            If you have any questions about your subscription, pricing, or need help choosing the right plan for your needs, please contact our support team.
-          </p>
-          <a
-            href="mailto:support@vitaloop.today"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 hover:text-emerald-900 transition"
-          >
-            Contact Support
-            <ArrowRight className="w-4 h-4" />
-          </a>
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Choose a plan</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {Object.entries(PLANS).map(([key, plan]) => (
+              <PlanCard
+                key={key}
+                planKey={key}
+                plan={plan}
+                currentPlan={currentPlan}
+                onSelect={handleSelectPlan}
+                isLoading={upgrading}
+              />
+            ))}
+          </div>
         </motion.div>
+      )}
+
+      {isPremium && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+          className="rounded-2xl border border-blue-200 bg-blue-50 p-6 sm:p-8"
+        >
+          <div className="flex items-start gap-3">
+            <CreditCard className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-blue-900 mb-1">
+                {hasStripeCustomer ? 'Manage Payment Method & Billing' : 'Premium Access & Billing History'}
+              </h4>
+              <p className="text-sm text-blue-800 mb-4">
+                {hasStripeCustomer
+                  ? 'Update your billing address, payment method, view invoices, and manage your subscription renewal.'
+                  : 'Your Premium access is active and managed by VITALOOP support. Billing history remains available for audit and support.'}
+              </p>
+              <button
+                onClick={openBillingPortal}
+                disabled={openingPortal}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {openingPortal ? 'Opening...' : hasStripeCustomer ? 'Open Billing Portal' : 'View Billing History'}
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.6 }}
+        className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+      >
+        <h3 className="text-lg font-bold text-slate-900 mb-4">Questions About Your Plan?</h3>
+        <p className="text-slate-600 mb-4">
+            If you have any questions about your subscription, pricing, or need help choosing the right plan for your needs, please contact our support team.
+        </p>
+        <a
+          href="mailto:support@vitaloop.today"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 hover:text-emerald-900 transition"
+        >
+            Contact Support
+          <ArrowRight className="w-4 h-4" />
+        </a>
+      </motion.div>
     </div>
   )
 }

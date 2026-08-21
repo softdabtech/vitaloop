@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Target, User, Activity, TrendingUp } from 'lucide-react'
+import { Target, User, Activity, TrendingUp, ShieldCheck, Info } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
@@ -94,6 +94,19 @@ function parseCommaSeparatedList(value) {
     : []
 }
 
+function hasMeaningfulValue(value) {
+  return Boolean(String(value || '').trim())
+}
+
+function isSystemRedFlagText(value) {
+  return /^red flags selected:/i.test(String(value || '').trim())
+}
+
+function isPregnancyContextApplicable(profile) {
+  const age = Number(profile.age)
+  return profile.sex === 'female' && Number.isFinite(age) && age >= 12 && age <= 55
+}
+
 function mapProfileFromApi(data) {
   return {
     age: data.age || '',
@@ -144,7 +157,7 @@ function buildProfileUpdatePayload(profile) {
     pregnancy_status: profile.pregnancy_status || null,
     current_supplements: supplementsList.length ? supplementsList : null,
     current_medications: medicationsList.length ? medicationsList : null,
-    prior_diagnoses: profile.prior_diagnoses || null,
+    prior_diagnoses: isSystemRedFlagText(profile.prior_diagnoses) ? null : (profile.prior_diagnoses || null),
   }
 }
 
@@ -157,16 +170,58 @@ export default function HealthProfile() {
   const [loading, setLoading] = useState(true)
 
   const profileCompletion = useMemo(() => {
-    const checks = [
+    const requiredChecks = [
       Boolean(profile.age),
       Boolean(profile.sex),
       Boolean(profile.timezone),
       Boolean(profile.height_cm),
       Boolean(profile.weight_kg),
-      Array.isArray(profile.goals) && profile.goals.length > 0,
+    ]
+    const safetyChecks = [
+      hasMeaningfulValue(profile.medications),
+      hasMeaningfulValue(profile.allergies),
+      hasMeaningfulValue(profile.current_supplements),
+      hasMeaningfulValue(profile.current_medications),
+      hasMeaningfulValue(profile.prior_diagnoses) && !isSystemRedFlagText(profile.prior_diagnoses),
+      isPregnancyContextApplicable(profile) ? hasMeaningfulValue(profile.pregnancy_status) : true,
+    ]
+    const goalsComplete = Array.isArray(profile.goals) && profile.goals.length > 0
+    const requiredScore = (requiredChecks.filter(Boolean).length / requiredChecks.length) * 60
+    const goalsScore = goalsComplete ? 10 : 0
+    const safetyScore = (safetyChecks.filter(Boolean).length / safetyChecks.length) * 30
+    return Math.round(requiredScore + goalsScore + safetyScore)
+  }, [profile])
+
+  const safetyCompletion = useMemo(() => {
+    const checks = [
+      hasMeaningfulValue(profile.medications),
+      hasMeaningfulValue(profile.allergies),
+      hasMeaningfulValue(profile.current_supplements),
+      hasMeaningfulValue(profile.current_medications),
+      hasMeaningfulValue(profile.prior_diagnoses) && !isSystemRedFlagText(profile.prior_diagnoses),
+      isPregnancyContextApplicable(profile) ? hasMeaningfulValue(profile.pregnancy_status) : true,
     ]
     return Math.round((checks.filter(Boolean).length / checks.length) * 100)
   }, [profile])
+
+  const childProfileContext = useMemo(() => {
+    const age = Number(profile.age)
+    return Number.isFinite(age) && age > 0 && age < 18
+  }, [profile.age])
+
+  const systemRedFlagInDiagnoses = isSystemRedFlagText(profile.prior_diagnoses)
+
+  const missingContextItems = useMemo(() => {
+    const items = []
+    if (!profile.age) items.push(isUk ? 'вік' : 'age')
+    if (!profile.sex) items.push(isUk ? 'стать' : 'sex')
+    if (!profile.height_cm) items.push(isUk ? 'зріст' : 'height')
+    if (!profile.weight_kg) items.push(isUk ? 'вага' : 'weight')
+    if (!hasMeaningfulValue(profile.medications)) items.push(isUk ? 'ліки або “немає”' : 'medications or “none”')
+    if (!hasMeaningfulValue(profile.allergies)) items.push(isUk ? 'алергії або “немає”' : 'allergies or “none”')
+    if (isPregnancyContextApplicable(profile) && !hasMeaningfulValue(profile.pregnancy_status)) items.push(isUk ? 'статус вагітності/ГВ' : 'pregnancy/breastfeeding status')
+    return items
+  }, [isUk, profile])
 
   // Calculate BMI
   const bmi = useMemo(() => {
@@ -243,6 +298,28 @@ export default function HealthProfile() {
         </div>
       )}
 
+      {childProfileContext && (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+          <div className="mb-1 flex items-center gap-2 font-semibold"><Info className="h-4 w-4" /> {isUk ? 'Профіль дитини' : 'Child profile context'}</div>
+          <p className="leading-6">
+            {isUk
+              ? 'VITALOOP може допомагати батькам готувати освітній огляд аналізів дитини. Інтерпретація має враховувати вік, стать, зріст, вагу, симптоми й консультацію педіатра.'
+              : 'VITALOOP can help parents prepare an educational review of a child’s lab results. Interpretation must account for age, sex, height, weight, symptoms, and pediatric clinician review.'}
+          </p>
+        </div>
+      )}
+
+      {systemRedFlagInDiagnoses && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="mb-1 font-semibold">{isUk ? 'Потрібно очистити поле діагнозів' : 'Diagnosis field needs cleanup'}</div>
+          <p className="leading-6">
+            {isUk
+              ? 'У полі попередніх діагнозів знайдено системний текст про red flags. Він не буде збережений як діагноз; перенесіть реальні стани вручну або залиште поле порожнім.'
+              : 'The prior diagnoses field contains system-generated red flag text. It will not be saved as a diagnosis; enter real conditions manually or leave the field blank.'}
+          </p>
+        </div>
+      )}
+
       <section className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><Activity className="h-3.5 w-3.5 text-emerald-600" /> {isUk ? 'Заповнення профілю' : 'Profile completion'}</div>
@@ -258,6 +335,17 @@ export default function HealthProfile() {
           <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><Target className="h-3.5 w-3.5 text-emerald-600" /> {isUk ? 'Активні цілі' : 'Active goals'}</div>
           <p className="text-2xl font-bold text-slate-900">{Array.isArray(profile.goals) ? profile.goals.length : 0}</p>
           <p className="mt-1 text-xs text-slate-500">{isUk ? 'Використовується для персоналізації рекомендацій.' : 'Used to personalize recommendations.'}</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:col-span-3">
+          <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> {isUk ? 'Контекст безпеки' : 'Safety context'}</div>
+          <p className="text-2xl font-bold text-slate-900">{safetyCompletion}%</p>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-blue-500" style={{ width: `${safetyCompletion}%` }} /></div>
+          {missingContextItems.length > 0 && (
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              {isUk ? 'Для точнішої інтерпретації додайте: ' : 'For safer interpretation, add: '}
+              {missingContextItems.slice(0, 5).join(', ')}{missingContextItems.length > 5 ? '…' : '.'}
+            </p>
+          )}
         </div>
       </section>
 
@@ -316,7 +404,7 @@ export default function HealthProfile() {
 
       <section className="rounded-2xl border border-rose-200 bg-rose-50 p-5 sm:p-6">
         <h3 className="mb-1 text-base font-semibold text-rose-900">{isUk ? 'Контекст безпеки' : 'Safety context'}</h3>
-        <p className="mb-4 text-sm text-rose-700">{isUk ? 'Допомагає уникати небезпечних порад і робити рекомендації точнішими.' : 'Used to avoid unsafe suggestions and make recommendations more accurate.'}</p>
+        <p className="mb-4 text-sm text-rose-700">{isUk ? 'Допомагає уникати небезпечних порад і робити рекомендації точнішими. Якщо пункт не стосується вас, напишіть “немає” або оберіть “не стосується”.' : 'Used to avoid unsafe suggestions and make recommendations more accurate. If a field does not apply, enter “none” or choose “not applicable”.'}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={isUk ? 'Поточні ліки (якщо є)' : 'Current medications (if any)'}>
             <textarea value={profile.medications} onChange={(e) => setProfile({ ...profile, medications: e.target.value })} rows={3} placeholder={isUk ? 'наприклад, аспірин 100 мг щодня' : 'e.g., Aspirin 100mg daily'} style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
