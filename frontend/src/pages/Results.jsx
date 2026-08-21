@@ -863,7 +863,7 @@ function BiomarkerRangeBar({ biomarker, copy }) {
     <div className="mt-3 rounded-xl border border-white/80 bg-white/75 p-3">
       <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
         <span>{copy.rangePosition}</span>
-        {delta && <span className="text-sky-700">{delta}</span>}
+        {delta && <span className="normal-case tracking-normal text-sky-700">{delta}</span>}
       </div>
       <div className="relative h-2 rounded-full bg-slate-200">
         <div className="absolute left-[15%] top-0 h-2 w-[70%] rounded-full bg-emerald-200" />
