@@ -1,7 +1,9 @@
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   BarChart3,
   ChevronLeft,
+  CircleHelp,
+  CreditCard,
   Crown,
   FileText,
   Home,
@@ -14,7 +16,6 @@ import {
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { buildSubscriptionPath, getCabinetUpgradeTarget } from '../../lib/subscriptionFlow.js'
 import { isUkrainianLocale } from '../../lib/locale.js'
-import UserAvatar from '../UserAvatar.jsx'
 
 const MENU_ITEMS = [
   { icon: Home, label: 'Dashboard', ukLabel: 'Панель', path: '/dashboard', badge: null },
@@ -22,6 +23,9 @@ const MENU_ITEMS = [
   { icon: FileText, label: 'Results', ukLabel: 'Результати', path: '/lab-results', badge: null },
   { icon: BarChart3, label: 'Progress', ukLabel: 'Прогрес', path: '/progress', badge: null },
   { icon: User, label: 'Profile', ukLabel: 'Профіль', path: '/health-profile', badge: null },
+  { icon: CreditCard, label: 'Billing', ukLabel: 'Оплата', path: '/subscription', badge: null },
+  { icon: Settings, label: 'Settings', ukLabel: 'Налаштування', path: '/settings', badge: null },
+  { icon: CircleHelp, label: 'Help', ukLabel: 'Допомога', path: '/help-center', badge: null },
 ]
 
 function isItemActive(currentPath, itemPath) {
@@ -41,7 +45,16 @@ function isItemActive(currentPath, itemPath) {
     return currentPath === '/check-ins' || currentPath === '/checkin'
   }
   if (itemPath === '/health-profile') {
-    return currentPath === '/health-profile' || currentPath === '/settings' || currentPath === '/subscription' || currentPath === '/billing-history' || currentPath === '/help-center'
+    return currentPath === '/health-profile'
+  }
+  if (itemPath === '/subscription') {
+    return currentPath === '/subscription' || currentPath === '/billing-history'
+  }
+  if (itemPath === '/settings') {
+    return currentPath === '/settings'
+  }
+  if (itemPath === '/help-center') {
+    return currentPath === '/help-center'
   }
   if (itemPath === '/progress') {
     return currentPath === '/progress' || currentPath === '/insights'
@@ -193,32 +206,6 @@ export default function UserDashboardSidebar({
           {!collapsed && <span className="text-sm font-medium">{isUk ? 'Вийти' : 'Sign out'}</span>}
         </button>
 
-        {/* User profile card */}
-        <div
-          className="relative mt-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 cursor-pointer transition-colors hover:bg-slate-100"
-          onClick={() => { if (typeof window !== 'undefined') window.location.href = '/settings' }}
-          title={isUk ? 'Налаштування профілю' : 'Profile settings'}
-        >
-          <div className="flex items-start gap-2.5">
-            <UserAvatar user={user} size={collapsed ? 32 : 36} />
-            {!collapsed && (
-              <div className="min-w-0 flex-1 pr-5">
-                <p className="truncate text-xs font-semibold text-slate-700">
-                  {user?.user_metadata?.full_name || user?.name || user?.email?.split('@')[0] || 'User'}
-                </p>
-                <p className="truncate text-xs text-slate-400">{user?.email || (isUk ? 'Email не вказано' : 'No email')}</p>
-                <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 leading-none">
-                  <a onClick={(event) => event.stopPropagation()} href="/subscription" className="whitespace-nowrap text-[11px] font-semibold text-slate-500 hover:text-emerald-700">{isUk ? 'Оплата' : 'Billing'}</a>
-                  <span className="text-[11px] text-slate-300">·</span>
-                  <a onClick={(event) => event.stopPropagation()} href="/settings" className="whitespace-nowrap text-[11px] font-semibold text-slate-500 hover:text-emerald-700">{isUk ? 'Налаштування' : 'Settings'}</a>
-                  <span className="text-[11px] text-slate-300">·</span>
-                  <a onClick={(event) => event.stopPropagation()} href="/help-center" className="whitespace-nowrap text-[11px] font-semibold text-slate-500 hover:text-emerald-700">{isUk ? 'Допомога' : 'Help'}</a>
-                </div>
-              </div>
-            )}
-            {!collapsed && <Settings className="absolute right-3 top-3 h-3.5 w-3.5 text-slate-300" />}
-          </div>
-        </div>
       </div>
     </aside>
   )
