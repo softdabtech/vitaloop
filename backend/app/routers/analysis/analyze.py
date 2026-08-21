@@ -29,6 +29,7 @@ from app.services.supabase_service import (
     save_protocol,
     save_timeline_event,
     update_biomarker_extraction_candidates,
+    update_lab_upload_analysis_payload,
     update_lab_upload_status,
     write_audit_log,
 )
@@ -435,6 +436,29 @@ async def analyze_lab_file(
             if cached is not None:
                 return cached
 
+        try:
+            upload = await save_lab_upload(
+                user_id=user_id,
+                extracted_text=json.dumps(
+                    {
+                        "status": "processing",
+                        "filename": file.filename,
+                        "file_type": file_ext,
+                    },
+                    ensure_ascii=True,
+                ),
+                lab_name=lab_name or file.filename,
+                analyze_prompt_version="openai_file_processing_v1",
+            )
+        except Exception as exc:
+            logger.error("analyze_file_save_upload_failed user_id=%s error=%s", user_id, repr(exc), exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail={"detail": "Could not store uploaded lab data", "code": "LAB_UPLOAD_SAVE_FAILED"},
+            ) from exc
+
+        upload_id = upload["id"]
+
         # Save file temporarily with correct extension
         with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
             tmp.write(upload_bytes)
@@ -509,20 +533,13 @@ async def analyze_lab_file(
         analysis_source = "llm" if "openai" in prompt_version else _stable_analysis_source("fallback")
 
         try:
-            upload = await save_lab_upload(
-                user_id=user_id,
+            await update_lab_upload_analysis_payload(
+                upload_id,
                 extracted_text=json.dumps(upload_payload, ensure_ascii=True),
-                lab_name=lab_name or file.filename,
                 analyze_prompt_version=prompt_version,
             )
         except Exception as exc:
-            logger.error("analyze_file_save_upload_failed user_id=%s error=%s", user_id, repr(exc), exc_info=True)
-            raise HTTPException(
-                status_code=500,
-                detail={"detail": "Could not store uploaded lab data", "code": "LAB_UPLOAD_SAVE_FAILED"},
-            ) from exc
-
-        upload_id = upload["id"]
+            logger.warning("analyze_file_update_upload_payload_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
 
         candidates = []
         try:

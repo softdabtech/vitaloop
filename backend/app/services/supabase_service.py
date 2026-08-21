@@ -611,6 +611,29 @@ async def update_lab_upload_status(upload_id: str, status: str) -> None:
     )
 
 
+async def update_lab_upload_analysis_payload(
+    upload_id: str,
+    *,
+    extracted_text: Optional[str] = None,
+    analyze_prompt_version: Optional[str] = None,
+) -> None:
+    payload: Dict[str, Any] = {}
+    if extracted_text is not None:
+        payload["extracted_text"] = extracted_text
+    if analyze_prompt_version is not None:
+        payload["analyze_prompt_version"] = analyze_prompt_version
+    if not payload:
+        return
+
+    supabase = _get_supabase()
+    await _run(
+        lambda: supabase.table("lab_uploads")
+        .update(payload)
+        .eq("id", upload_id)
+        .execute()
+    )
+
+
 async def assert_upload_belongs_to_user(upload_id: str, user_id: str) -> Dict:
     _logger.debug("assert_upload_belongs_to_user called")
     supabase = _get_supabase()

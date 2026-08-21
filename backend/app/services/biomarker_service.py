@@ -321,8 +321,9 @@ class BiomarkerService:
             
             response = await svc._run(
                 lambda: sb.table("lab_uploads")
-                .select("id, analyze_prompt_version")
+                .select("id, analyze_prompt_version, status")
                 .eq("user_id", user_id)
+                .neq("status", "failed")
                 .execute()
             )
 
@@ -337,11 +338,6 @@ class BiomarkerService:
             first_upload = uploads[0]
             used_by_type = "manual" if first_upload.get("analyze_prompt_version") == "manual_v1" else "pdf"
             
-            if entry_type == used_by_type:
-                # Same type - shouldn't happen, but allow it
-                return True, "Entry allowed", None
-            
-            # Different type - quota exceeded
             msg = f"You've already used your 1 free biomarker entry via {used_by_type} upload. Upgrade to Premium for unlimited entries."
             return False, msg, used_by_type
 
