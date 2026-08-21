@@ -361,6 +361,7 @@ async def analyze_lab_file(
     lab_name: Optional[str] = Form(default=None),
     symptoms: List[str] = Form(default_factory=list),
     current_user: dict = Depends(get_current_user),
+    idempotency_key: Optional[str] = Header(default=None, alias="X-Idempotency-Key"),
 ):
     """
     Universal file analyzer for all lab report formats.
@@ -374,6 +375,7 @@ async def analyze_lab_file(
     user_id: str = current_user["sub"]
     response_locale = _resolve_response_locale(request)
     user_profile = await _require_analysis_profile_context(user_id, response_locale)
+    normalized_symptoms = _normalize_symptoms(symptoms or [])
 
     # Check quota (unified biomarker quota)
     quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "file")
@@ -417,6 +419,22 @@ async def analyze_lab_file(
         if not upload_bytes:
             raise HTTPException(status_code=400, detail={"detail": "Uploaded file is empty", "code": "EMPTY_FILE"})
 
+        normalized_key = _normalize_idempotency_key(idempotency_key)
+        if normalized_key:
+            fingerprint = _file_request_fingerprint(
+                upload_bytes=upload_bytes,
+                filename=filename,
+                lab_name=lab_name,
+                normalized_symptoms=normalized_symptoms,
+            )
+            cached = await _get_idempotency_cached_response(
+                user_id=user_id,
+                idempotency_key=normalized_key,
+                fingerprint=fingerprint,
+            )
+            if cached is not None:
+                return cached
+
         # Save file temporarily with correct extension
         with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
             tmp.write(upload_bytes)
@@ -433,7 +451,7 @@ async def analyze_lab_file(
             )
 
         try:
-            analysis = await file_analyzer.analyze(temp_path, symptoms=symptoms)
+            analysis = await file_analyzer.analyze(temp_path, symptoms=normalized_symptoms)
         except Exception as e:
             logger.error(f"Analysis failed for file {file.filename}: {e}", exc_info=True)
             raise HTTPException(
@@ -527,7 +545,7 @@ async def analyze_lab_file(
 
         pipeline_result = await run_lab_analysis_pipeline(
             biomarkers=saved_biomarkers,
-            symptoms=symptoms,
+            symptoms=normalized_symptoms,
             user_profile=user_profile,
             user_id=user_id,
             analysis_id=str(upload_id),
@@ -577,7 +595,7 @@ async def analyze_lab_file(
         except Exception as exc:
             logger.warning("analyze_file_timeline_event_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
 
-        return {
+        result = {
             "upload_id": upload_id,
             "biomarkers": saved_biomarkers,
             "top_priority": pipeline_result.get("prioritized_biomarkers", []),
@@ -598,14 +616,23 @@ async def analyze_lab_file(
             "report_version": pipeline_result.get("report_version"),
             "final_analysis": pipeline_result,
         }
+        if normalized_key:
+            await _complete_idempotency(user_id=user_id, idempotency_key=normalized_key, response=result)
+        return result
     except HTTPException:
         if upload_id:
             await update_lab_upload_status(upload_id, "failed")
+        normalized_key = _normalize_idempotency_key(idempotency_key)
+        if normalized_key:
+            await _drop_idempotency(user_id=user_id, idempotency_key=normalized_key)
         raise
     except Exception as exc:
         logger.error("analyze_pdf_failed user_id=%s error=%s", user_id, repr(exc), exc_info=True)
         if upload_id:
             await update_lab_upload_status(upload_id, "failed")
+        normalized_key = _normalize_idempotency_key(idempotency_key)
+        if normalized_key:
+            await _drop_idempotency(user_id=user_id, idempotency_key=normalized_key)
         raise HTTPException(status_code=500, detail={"detail": "Error analyzing lab report", "code": "ANALYZE_FAILED"})
     finally:
         try:
@@ -639,6 +666,40 @@ def _request_fingerprint(
     }
     raw = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _file_request_fingerprint(
+    *,
+    upload_bytes: bytes,
+    filename: str,
+    lab_name: Optional[str],
+    normalized_symptoms: List[str],
+) -> str:
+    payload = {
+        "file_sha256": hashlib.sha256(upload_bytes).hexdigest(),
+        "filename": filename,
+        "lab_name": lab_name.strip() if lab_name else None,
+        "symptoms": normalized_symptoms,
+    }
+    raw = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _normalize_idempotency_key(idempotency_key: Optional[str]) -> Optional[str]:
+    if not idempotency_key:
+        return None
+    normalized_key = idempotency_key.strip()
+    if not normalized_key:
+        return None
+    if len(normalized_key) > MAX_IDEMPOTENCY_KEY_LENGTH:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "detail": f"X-Idempotency-Key is too long (max {MAX_IDEMPOTENCY_KEY_LENGTH} chars)",
+                "code": "IDEMPOTENCY_KEY_TOO_LONG",
+            },
+        )
+    return normalized_key
 
 
 async def _get_idempotency_cached_response(
