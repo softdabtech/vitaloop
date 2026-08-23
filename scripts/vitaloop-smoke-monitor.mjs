@@ -82,6 +82,18 @@ export function isExpectedProtectedStatus(status) {
   return [200, 201, 202, 204, 402, 404, 405, 422].includes(Number(status))
 }
 
+export function isTransientFetchError(error) {
+  const name = String(error?.name || '')
+  const code = String(error?.code || '')
+  const message = String(error?.message || '')
+  return name === 'TimeoutError'
+    || name === 'AbortError'
+    || code === 'UND_ERR_CONNECT_TIMEOUT'
+    || code === 'UND_ERR_HEADERS_TIMEOUT'
+    || code === 'UND_ERR_BODY_TIMEOUT'
+    || /aborted due to timeout|fetch failed|network|socket|ECONNRESET|ETIMEDOUT/i.test(message)
+}
+
 export function hasMeaningfulResultsPayload(data) {
   return Boolean(
     data
@@ -294,7 +306,7 @@ async function fetchJsonWithAuth(path, token, { method = 'GET', body, locale = '
   }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
 
-  try {
+  async function requestOnce() {
     const res = await fetch(endpoint, {
       method,
       headers,
@@ -304,6 +316,25 @@ async function fetchJsonWithAuth(path, token, { method = 'GET', body, locale = '
     const text = await res.text()
     let data = null
     try { data = JSON.parse(text) } catch {}
+    return { res, text, data }
+  }
+
+  try {
+    let attempt = 1
+    let response
+    try {
+      response = await requestOnce()
+    } catch (error) {
+      if (method === 'GET' && isTransientFetchError(error)) {
+        attempt = 2
+        await new Promise((resolve) => setTimeout(resolve, 750))
+        response = await requestOnce()
+      } else {
+        throw error
+      }
+    }
+
+    const { res, text, data } = response
 
     const accepted = expectedStatuses || [200]
     assertOk(accepted.includes(res.status), {
@@ -312,7 +343,7 @@ async function fetchJsonWithAuth(path, token, { method = 'GET', body, locale = '
       endpoint,
       status: res.status,
       body: text.slice(0, 800),
-      metadata: { locale },
+      metadata: { locale, attempt },
     })
     if (accepted.includes(res.status)) {
       completeCheck({
@@ -320,6 +351,7 @@ async function fetchJsonWithAuth(path, token, { method = 'GET', body, locale = '
         endpoint,
         status: res.status,
         locale,
+        attempt,
       })
     }
 
