@@ -7,6 +7,7 @@ import {
   hasMeaningfulResultsPayload,
   isMissingPlaywrightError,
   isExpectedProtectedStatus,
+  isTransientFetchError,
 } from '../../../scripts/vitaloop-smoke-monitor.mjs'
 
 test('endpointFailureMessage includes readiness body state and reason', () => {
@@ -52,6 +53,13 @@ test('isExpectedProtectedStatus rejects server errors', () => {
   assert.equal(isExpectedProtectedStatus(422), true)
   assert.equal(isExpectedProtectedStatus(500), false)
   assert.equal(isExpectedProtectedStatus(504), false)
+})
+
+test('isTransientFetchError only detects timeout and network failures', () => {
+  assert.equal(isTransientFetchError({ name: 'TimeoutError', message: 'The operation was aborted due to timeout' }), true)
+  assert.equal(isTransientFetchError({ code: 'UND_ERR_CONNECT_TIMEOUT', message: 'connect timeout' }), true)
+  assert.equal(isTransientFetchError({ message: 'fetch failed' }), true)
+  assert.equal(isTransientFetchError({ name: 'HttpError', message: 'GET /dashboard/summary returned 500' }), false)
 })
 
 test('hasMeaningfulResultsPayload requires upload, biomarkers and report content', () => {
