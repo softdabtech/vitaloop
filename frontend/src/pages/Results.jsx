@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import api from '../lib/api.js'
 import FeatureGate from '../components/FeatureGate.jsx'
-import HintBanner from '../components/tour/HintBanner.jsx'
-import { useTourHints } from '../hooks/useTourHints.js'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import BiomarkerContextTooltip from '../components/BiomarkerContextTooltip.jsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
 import {
@@ -13,6 +12,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Download,
+  ExternalLink,
   FileText,
   HeartPulse,
   Info,
@@ -22,6 +22,8 @@ import {
   Stethoscope,
 } from 'lucide-react'
 import { isUkrainianLocale } from '../lib/locale.js'
+import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
+import { CoachBadge, CoachCard } from '../components/coach/CoachUI.jsx'
 
 const STATUS_META = {
   DEFICIENT: { rank: 0, label: 'Below range', ukLabel: 'Нижче референсу', badge: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' },
@@ -101,6 +103,14 @@ const RESULTS_COPY = {
     export: 'Export summary',
     eyebrow: 'Lab report summary',
     fallbackHeadline: 'Your results are organized into clear priorities.',
+    healthSummary: 'Your Health Summary',
+    topFindings: 'Top Findings',
+    whyMatters: 'Why this matters',
+    doctorQuestions: 'Questions for your doctor',
+    evidence: 'Evidence & Sources',
+    today: 'Today',
+    thisWeek: 'This week',
+    thisMonth: 'This month',
     intro: 'VITALOOP groups your biomarkers into what looks stable, what is worth watching, and what may deserve a clinician’s review.',
     actionPlan: 'View personal action plan',
     checkIn: 'Start a check-in',
@@ -133,6 +143,37 @@ const RESULTS_COPY = {
     openPlan: 'Open action plan',
     disclaimer: 'VITALOOP provides educational information and does not diagnose, treat, or replace professional medical advice.',
     noRange: 'No reference range',
+    emptyTitle: 'Results & Interpretation',
+    emptySubtitle: 'No processed biomarkers yet.',
+    focusNow: 'Focus now',
+    watchListLabel: 'Watch list',
+    noImmediate: 'No immediate out-of-range marker',
+    stableZone: 'Stable zone',
+    markersNearBorder: (count) => `${count} marker${count === 1 ? '' : 's'} near the border`,
+    markersInRange: (count) => `${count} marker${count === 1 ? '' : 's'} in range`,
+    whyThisAppears: 'Why this appears',
+    whyDefault: 'Based on extracted biomarker value, reference range, symptom context, and knowledge-base matching when available.',
+    evidenceSummary: 'Connected to report signals and knowledge-base context. This is not a diagnosis.',
+    reviewTopFinding: 'Review the top finding and avoid starting high-dose supplements from one marker alone.',
+    shoppingEyebrow: 'Suggested iHerb searches',
+    shoppingTitle: 'Optional items to discuss before buying',
+    shoppingBody: 'These are educational search shortcuts based on your report context. Confirm supplement choice, dose, and interactions with a qualified clinician.',
+    findIherb: 'Find on iHerb',
+    v2Eyebrow: 'Shared Analysis Core V2',
+    domainsTitle: 'Health domain states',
+    domainsBody: 'Domain-level interpretation from biomarkers, symptoms, profile context, and knowledge-base rules.',
+    whyConclusion: 'Why this conclusion',
+    dataUsed: 'Data used',
+    analysisQuality: 'Analysis quality',
+    trends: 'Trends',
+    noTrendData: 'No prior comparable upload yet. Trends will appear after the next result.',
+    expectedTimeline: 'Expected timeline',
+    safetyNotes: 'Safety notes',
+    completeness: 'Completeness',
+    sourceVersion: 'Core version',
+    missingData: 'Missing data',
+    score: 'score',
+    confidence: 'confidence',
   },
   uk: {
     hints: [
@@ -145,6 +186,14 @@ const RESULTS_COPY = {
     export: 'Експортувати підсумок',
     eyebrow: 'Підсумок аналізів',
     fallbackHeadline: 'Ваші результати зібрані в зрозумілі пріоритети.',
+    healthSummary: 'Підсумок здоровʼя',
+    topFindings: 'Головні знахідки',
+    whyMatters: 'Чому це важливо',
+    doctorQuestions: 'Питання до лікаря',
+    evidence: 'Докази й джерела',
+    today: 'Сьогодні',
+    thisWeek: 'Цього тижня',
+    thisMonth: 'Цього місяця',
     intro: 'VITALOOP групує показники: що виглядає стабільно, що варто відстежити і що краще обговорити з лікарем.',
     actionPlan: 'Переглянути план дій',
     checkIn: 'Почати чек-ін',
@@ -177,7 +226,55 @@ const RESULTS_COPY = {
     openPlan: 'Відкрити план дій',
     disclaimer: 'VITALOOP надає освітню інформацію і не ставить діагноз, не лікує та не замінює професійну медичну консультацію.',
     noRange: 'Референс не вказано',
+    emptyTitle: 'Результати й інтерпретація',
+    emptySubtitle: 'Оброблених показників ще немає.',
+    focusNow: 'Фокус зараз',
+    watchListLabel: 'Спостереження',
+    noImmediate: 'Немає термінового показника поза референсом',
+    stableZone: 'Стабільна зона',
+    markersNearBorder: (count) => `${count} ${count === 1 ? 'показник біля межі' : 'показників біля межі'}`,
+    markersInRange: (count) => `${count} ${count === 1 ? 'показник у референсі' : 'показників у референсі'}`,
+    whyThisAppears: 'Чому це показано',
+    whyDefault: 'На основі розпізнаного значення, референсу, контексту симптомів і збігів у базі знань, якщо вони доступні.',
+    evidenceSummary: 'Повʼязано із сигналами звіту та контекстом бази знань. Це не діагноз.',
+    reviewTopFinding: 'Перегляньте головну знахідку й не починайте високі дози добавок лише за одним показником.',
+    shoppingEyebrow: 'Пошук на iHerb',
+    shoppingTitle: 'Опційні позиції для обговорення перед покупкою',
+    shoppingBody: 'Це освітні пошукові посилання на основі вашого звіту. Підтвердьте вибір добавки, дозу й взаємодії з кваліфікованим фахівцем.',
+    findIherb: 'Знайти на iHerb',
+    v2Eyebrow: 'Shared Analysis Core V2',
+    domainsTitle: 'Доменний стан здоровʼя',
+    domainsBody: 'Доменна інтерпретація на основі біомаркерів, симптомів, профілю та правил бази знань.',
+    whyConclusion: 'Чому зроблено висновок',
+    dataUsed: 'Які дані використані',
+    analysisQuality: 'Якість аналізу',
+    trends: 'Тренди',
+    noTrendData: 'Попереднього порівнянного завантаження ще немає. Тренди зʼявляться після наступного результату.',
+    expectedTimeline: 'Очікуваний строк',
+    safetyNotes: 'Примітки безпеки',
+    completeness: 'Повнота',
+    sourceVersion: 'Версія ядра',
+    missingData: 'Бракує даних',
+    score: 'оцінка',
+    confidence: 'впевненість',
   },
+}
+
+const HEALTH_DOMAIN_LABELS_UK = {
+  iron_status: 'Статус заліза',
+  'iron status': 'Статус заліза',
+  metabolic_health: 'Метаболічне здоровʼя',
+  'metabolic health': 'Метаболічне здоровʼя',
+  cardiovascular: 'Серцево-судинний профіль',
+  'cardiovascular risk context': 'Серцево-судинний профіль',
+  inflammation: 'Запалення',
+  thyroid: 'Щитоподібна залоза',
+  liver: 'Печінка',
+  'liver stress context': 'Печінка',
+  kidney: 'Нирки',
+  micronutrients: 'Мікронутрієнти',
+  recovery_energy: 'Відновлення й енергія',
+  'recovery and energy': 'Відновлення й енергія',
 }
 
 function toEnglishBiomarkerName(name) {
@@ -222,8 +319,10 @@ function formatRange(biomarker, copy = RESULTS_COPY.en) {
 
 function displayBiomarkerName(biomarker, isUk) {
   if (!biomarker) return '—'
-  if (isUk) return biomarker.name || biomarker.source_name || biomarker.name_en || '—'
-  return biomarker.name_en || biomarker.name || biomarker.source_name || '—'
+  const value = isUk
+    ? biomarker.canonical_name || biomarker.name || biomarker.source_name || biomarker.name_en
+    : biomarker.name_en || biomarker.canonical_name || biomarker.name || biomarker.source_name
+  return biomarkerDisplayName(value, isUk) || '—'
 }
 
 function triggerSubscriptionRequiredPaywall() {
@@ -246,13 +345,150 @@ function SectionCard({ icon: Icon, title, children, className = '' }) {
   )
 }
 
+function asTextList(value) {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === 'string') return item
+        if (!item || typeof item !== 'object') return String(item)
+        return item.label || item.name || item.marker || item.biomarker || item.reason || item.summary || item.key || ''
+      })
+      .filter(Boolean)
+  }
+  if (typeof value === 'object') return Object.values(value).flatMap(asTextList).filter(Boolean)
+  return [String(value)]
+}
+
+function formatPercent(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return null
+  return `${Math.round(number * (number <= 1 ? 100 : 1))}%`
+}
+
+function localizeDomainLabel(value, copy) {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  if (copy === RESULTS_COPY.uk) {
+    const key = raw.toLowerCase().replace(/\s+/g, '_')
+    const textKey = raw.toLowerCase()
+    return HEALTH_DOMAIN_LABELS_UK[key] || HEALTH_DOMAIN_LABELS_UK[textKey] || raw
+  }
+  return raw
+}
+
+function HealthDomainCard({ state, copy }) {
+  const labelSource = copy === RESULTS_COPY.uk
+    ? state?.domain || state?.key || state?.label || state?.domain_label || 'Health domain'
+    : state?.label || state?.domain_label || state?.domain || state?.key || 'Health domain'
+  const label = localizeDomainLabel(labelSource, copy)
+  const score = Number(state?.score ?? state?.health_score)
+  const risk = riskDisplayLabel(state?.risk_level || state?.status || state?.state, copy === RESULTS_COPY.uk)
+  const confidence = formatPercent(state?.confidence)
+  const dataUsed = asTextList(state?.used_biomarkers || state?.biomarkers || state?.contributing_biomarkers || state?.matched_biomarkers).slice(0, 5)
+  const missing = asTextList(state?.missing_data || state?.missing_markers).slice(0, 4)
+  const reasons = asTextList(state?.why || state?.reasons || state?.matched_signals || state?.evidence).slice(0, 3)
+  if (!reasons.length) {
+    const parts = [
+      risk ? `risk: ${risk}` : null,
+      Number.isFinite(score) ? `${copy.score}: ${Math.round(score)}` : null,
+      dataUsed.length ? `${copy.dataUsed.toLowerCase()}: ${dataUsed.join(', ')}` : null,
+    ].filter(Boolean)
+    if (parts.length) reasons.push(parts.join(' · '))
+  }
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold text-slate-950">{label}</h3>
+          <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {[risk, Number.isFinite(score) ? `${copy.score} ${Math.round(score)}` : null, confidence ? `${confidence} ${copy.confidence}` : null].filter(Boolean).join(' · ')}
+          </p>
+        </div>
+      </div>
+      {!!reasons.length && (
+        <div className="mt-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.whyConclusion}</p>
+          <ul className="mt-1 space-y-1 text-sm leading-5 text-slate-600">
+            {reasons.map((item, index) => <li key={index}>{item}</li>)}
+          </ul>
+        </div>
+      )}
+      {!!dataUsed.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.dataUsed}:</span> {dataUsed.join(', ')}
+        </p>
+      )}
+      {!!missing.length && (
+        <p className="mt-2 text-sm leading-5 text-amber-800">
+          <span className="font-semibold">{copy.missingData}:</span> {missing.join(', ')}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function AnalysisCoreV2Panel({ finalAnalysis, copy }) {
+  if (!finalAnalysis) return null
+  const healthStates = finalAnalysis.health_states || {}
+  const quality = finalAnalysis.quality_snapshot || {}
+  const trends = finalAnalysis.trend_analysis || {}
+  const metadata = finalAnalysis.metadata || {}
+  const states = Array.isArray(healthStates.top_priorities) && healthStates.top_priorities.length
+    ? healthStates.top_priorities
+    : Array.isArray(healthStates.states)
+      ? healthStates.states
+      : []
+  const trendRows = asTextList(trends.priority_changes || trends.changes || trends.summary || trends.signals).slice(0, 4)
+  const completeness = formatPercent(quality?.coverage?.completeness ?? quality?.coverage?.analysis_completeness ?? quality?.completeness)
+  const topDomains = asTextList(quality.top_health_domains).slice(0, 4).map((item) => localizeDomainLabel(item, copy))
+
+  if (!states.length && !Object.keys(quality).length && !Object.keys(trends).length) return null
+
+  return (
+    <SectionCard icon={HeartPulse} title={copy.domainsTitle} className="mb-6">
+      <div className="mb-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">{copy.v2Eyebrow}</p>
+        <p className="mt-1 text-sm leading-6 text-slate-600">{copy.domainsBody}</p>
+      </div>
+      {!!states.length && (
+        <div className="grid gap-3 md:grid-cols-2">
+          {states.slice(0, 6).map((state, index) => <HealthDomainCard key={state?.key || state?.domain || index} state={state} copy={copy} />)}
+        </div>
+      )}
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.analysisQuality}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">
+            {[completeness ? `${copy.completeness}: ${completeness}` : null, quality.version, metadata.analysis_core_version].filter(Boolean).join(' · ') || copy.sourceVersion}
+          </p>
+          {!!topDomains.length && <p className="mt-2 text-xs leading-5 text-slate-500">{topDomains.join(', ')}</p>}
+        </div>
+        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.trends}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">{trendRows.length ? trendRows.join(' · ') : copy.noTrendData}</p>
+        </div>
+        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.sourceVersion}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">
+            {[healthStates.version, healthStates.domain_registry_version, metadata.health_context_version].filter(Boolean).join(' · ') || 'V2'}
+          </p>
+        </div>
+      </div>
+    </SectionCard>
+  )
+}
+
 export default function Results() {
   const { uploadId } = useParams()
   const navigate = useNavigate()
-  const { show: showHints, dismiss: dismissHints } = useTourHints('results')
   const [biomarkers, setBiomarkers] = useState([])
   const [protocol, setProtocol] = useState([])
+  const [shoppingLinks, setShoppingLinks] = useState([])
   const [knowledgeReport, setKnowledgeReport] = useState(null)
+  const [finalAnalysis, setFinalAnalysis] = useState(null)
+  const [explainability, setExplainability] = useState(null)
+  const [safetyResult, setSafetyResult] = useState(null)
   const [loading, setLoading] = useState(true)
   const isUk = isUkrainianLocale()
   const copy = isUk ? RESULTS_COPY.uk : RESULTS_COPY.en
@@ -261,16 +497,39 @@ export default function Results() {
     let active = true
     async function load() {
       try {
+        // Cabinet reconciliation: a single call to /results/{uploadId} is
+        // sufficient — no second /analyze/{uploadId} fetch. Verified against
+        // the current backend contract (report_history.py::assemble_frozen_response
+        // + both GET callers): explainability/safety_result are present at the
+        // TOP LEVEL of the response for a frozen historical report, and nested
+        // under final_analysis.explainability/final_analysis.safety_result for
+        // the live-rendered fallback path (run_lab_analysis_pipeline's return
+        // dict always carries both keys) — so this fallback chain covers both
+        // cases with one request instead of two.
         const { data } = await api.get(`/results/${uploadId}`)
         if (!active) return
         setBiomarkers(data.biomarkers ?? [])
         setProtocol(data.protocol ?? [])
+        setShoppingLinks(
+          Array.isArray(data.shopping_links)
+            ? data.shopping_links
+            : Array.isArray(data.final_analysis?.shopping_links)
+              ? data.final_analysis.shopping_links
+              : []
+        )
         setKnowledgeReport(data.knowledge_report ?? null)
+        setFinalAnalysis(data.final_analysis ?? null)
+        setExplainability(data.explainability ?? data.final_analysis?.explainability ?? null)
+        setSafetyResult(data.safety_result ?? data.final_analysis?.safety_result ?? null)
       } catch (_e) {
         if (!active) return
         setBiomarkers([])
         setProtocol([])
+        setShoppingLinks([])
         setKnowledgeReport(null)
+        setFinalAnalysis(null)
+        setExplainability(null)
+        setSafetyResult(null)
       } finally {
         if (active) setLoading(false)
       }
@@ -304,16 +563,63 @@ export default function Results() {
   const reportDiscussion = Array.isArray(knowledgeReport?.doctor_discussion) ? knowledgeReport.doctor_discussion : []
   const reportRetest = Array.isArray(knowledgeReport?.retest_plan) ? knowledgeReport.retest_plan : []
   const reportAlerts = Array.isArray(knowledgeReport?.safety_alerts) ? knowledgeReport.safety_alerts : []
+  const explanations = Array.isArray(explainability?.recommendations)
+    ? explainability.recommendations
+    : Array.isArray(explainability?.marker_explanations)
+      ? explainability.marker_explanations
+      : []
 
   async function exportResultsAsPDF() {
-    const node = document.querySelector('.vtl-page')
-    if (!node) return
     try {
-      const html2canvas = (await import('html2canvas')).default
       const jsPDF = (await import('jspdf')).jsPDF
-      const canvas = await html2canvas(node, { scale: 2 })
-      const pdf = new jsPDF({ orientation: 'p', unit: 'px', format: 'a4' })
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight())
+      const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' })
+      const margin = 44
+      const width = pdf.internal.pageSize.getWidth() - margin * 2
+      let y = 48
+      const addTitle = (text, size = 18) => {
+        if (y > 720) { pdf.addPage(); y = 48 }
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(size)
+        pdf.setTextColor(15, 23, 42)
+        pdf.text(text, margin, y)
+        y += size + 12
+      }
+      const addText = (text, size = 10) => {
+        if (!text) return
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(size)
+        pdf.setTextColor(71, 85, 105)
+        const lines = pdf.splitTextToSize(String(text), width)
+        lines.forEach((line) => {
+          if (y > 760) { pdf.addPage(); y = 48 }
+          pdf.text(line, margin, y)
+          y += size + 5
+        })
+        y += 4
+      }
+      const addList = (items = []) => {
+        items.filter(Boolean).slice(0, 10).forEach((item) => {
+          const text = typeof item === 'string' ? item : [item.title, item.body || item.summary || item.reason].filter(Boolean).join(' - ')
+          addText(`• ${text}`, 10)
+        })
+      }
+
+      addTitle('VITALOOP Health Report', 20)
+      addText(reportSummary?.headline || copy.fallbackHeadline, 12)
+      addTitle('1. Executive Summary', 14)
+      addText(reportFound?.summary || copy.intro)
+      addTitle('2. Findings', 14)
+      addList(priorityMarkers.slice(0, 5).map((b) => `${displayBiomarkerName(b, isUk)}: ${formatMetric(b)} (${formatRange(b, copy)})`))
+      addTitle('3. Action Plan', 14)
+      addList(reportActions.length ? reportActions : protocol)
+      addTitle('4. Doctor Questions', 14)
+      addList(reportDiscussion)
+      addTitle('5. Biomarkers', 14)
+      addList(rankedBiomarkers.map((b) => `${displayBiomarkerName(b, isUk)}: ${formatMetric(b)}; reference ${formatRange(b, copy)}; status ${b.status_normalized}`))
+      addTitle('6. Retest Plan', 14)
+      addList(reportRetest)
+      addTitle('7. Disclaimer', 14)
+      addText(reportSummary?.disclaimer || copy.disclaimer, 9)
       pdf.save('vitaloop-results.pdf')
     } catch (err) {
       console.error('Failed to export PDF', err)
@@ -322,7 +628,7 @@ export default function Results() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-500">
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
         {copy.loading}
       </div>
     )
@@ -330,9 +636,10 @@ export default function Results() {
 
   if (normalizedBiomarkers.length === 0) {
     return (
-      <div className="min-h-screen bg-slate-50 p-6">
-        <div className="mx-auto max-w-4xl">
-          <button onClick={() => navigate('/lab-results')} className="mb-8 inline-flex items-center gap-2 text-slate-600 transition hover:text-slate-900">
+      <div className="space-y-6">
+        <CabinetPageHeader title={copy.emptyTitle} subtitle={copy.emptySubtitle} />
+        <div className="max-w-4xl">
+          <button onClick={() => navigate('/lab-results')} className="mb-6 inline-flex items-center gap-2 text-slate-600 transition hover:text-slate-900">
             <ArrowLeft className="h-4 w-4" />
             {copy.back}
           </button>
@@ -345,21 +652,25 @@ export default function Results() {
   }
 
   return (
-    <div className="vtl-page min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <button onClick={() => navigate('/lab-results')} className="inline-flex w-fit items-center gap-2 rounded-xl px-2 py-1 text-sm text-slate-600 transition hover:bg-white hover:text-slate-900">
-            <ArrowLeft className="h-4 w-4" />
-            {copy.back}
-          </button>
-          <button onClick={exportResultsAsPDF} className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700">
-            <Download className="h-4 w-4" />
-            {copy.export}
-          </button>
-        </div>
+    <div className="space-y-6">
+      <CabinetPageHeader
+        title={copy.healthSummary}
+        subtitle="What is happening, why it matters, and what to do next."
+        action={(
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => navigate('/lab-results')} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 inline-flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              {copy.back}
+            </button>
+            <button onClick={exportResultsAsPDF} className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700">
+              <Download className="h-4 w-4" />
+              {copy.export}
+            </button>
+          </div>
+        )}
+      />
 
-        {showHints && <div className="mb-6"><HintBanner hints={copy.hints} onDone={dismissHints} /></div>}
-
+      <div className="max-w-6xl">
         <motion.header
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -370,13 +681,13 @@ export default function Results() {
             <div className="p-6 sm:p-8">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
                 <HeartPulse className="h-3.5 w-3.5" />
-                {copy.eyebrow}
+                {copy.healthSummary}
               </div>
               <h1 className="max-w-3xl text-3xl font-bold leading-tight text-slate-950 sm:text-4xl">
-                {reportSummary?.headline || copy.fallbackHeadline}
+                {reportSummary?.headline || (priorityMarkers[0] ? `${displayBiomarkerName(priorityMarkers[0], isUk)} may need attention.` : copy.fallbackHeadline)}
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
-                {copy.intro}
+                {reportFound?.summary || copy.intro}
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button
@@ -413,6 +724,23 @@ export default function Results() {
           </div>
         </motion.header>
 
+        <div className="mb-6 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.focusNow}</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{priorityMarkers[0] ? displayBiomarkerName(priorityMarkers[0], isUk) : copy.noImmediate}</p>
+          </div>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">{copy.watchListLabel}</p>
+            <p className="mt-1 text-sm font-semibold text-amber-900">{copy.markersNearBorder(watchCount)}</p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{copy.stableZone}</p>
+            <p className="mt-1 text-sm font-semibold text-emerald-900">{copy.markersInRange(optimalCount)}</p>
+          </div>
+        </div>
+
+        <AnalysisCoreV2Panel finalAnalysis={finalAnalysis} copy={copy} />
+
         {!!reportAlerts.length && (
           <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-900">
             <div className="mb-2 flex items-center gap-2 font-semibold">
@@ -428,10 +756,10 @@ export default function Results() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <SectionCard icon={ClipboardList} title={copy.priorityMarkers}>
+          <SectionCard icon={ClipboardList} title={copy.topFindings}>
             {priorityMarkers.length ? (
               <div className="space-y-3">
-                {priorityMarkers.map((b) => {
+                {priorityMarkers.slice(0, 3).map((b) => {
                   const meta = STATUS_META[b.status_normalized] || STATUS_META.BORDERLINE
                   return (
                     <div key={b.id || `${b.name_en}-${b.value}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
@@ -443,6 +771,15 @@ export default function Results() {
                             <BiomarkerContextTooltip biomarkerName={displayBiomarkerName(b, isUk)} value={b.value} status={b.status_normalized} size="sm" />
                           </div>
                           <p className="mt-1 text-sm text-slate-500">{formatMetric(b)} · {copy.reference} {formatRange(b, copy)}</p>
+                          <details className="mt-3 text-sm">
+                            <summary className="cursor-pointer font-semibold text-teal-700">{copy.whyThisAppears}</summary>
+                            <p className="mt-2 leading-6 text-slate-600">
+                              {(() => {
+                                const explanation = explanations.find((item) => String(item.triggered_biomarker || item.marker || '').toLowerCase().includes(String(displayBiomarkerName(b, false)).toLowerCase().split(' ')[0]))
+                                return explanation?.explanation || explanation?.reason || explanation?.summary || explanation?.why || copy.whyDefault
+                              })()}
+                            </p>
+                          </details>
                         </div>
                         <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{isUk ? meta.ukLabel || meta.label : meta.label}</span>
                       </div>
@@ -457,7 +794,7 @@ export default function Results() {
             )}
           </SectionCard>
 
-          <SectionCard icon={Info} title={copy.meaning}>
+          <SectionCard icon={Info} title={copy.whyMatters}>
             {reportPatterns.length ? (
               <div className="space-y-3">
                 {reportPatterns.slice(0, 4).map((item, idx) => (
@@ -475,7 +812,7 @@ export default function Results() {
           </SectionCard>
         </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <div className="mt-6 grid gap-6 lg:grid-cols-4">
           <SectionCard icon={CheckCircle2} title={copy.nextSteps}>
             {reportActions.length ? (
               <ul className="space-y-3 text-sm leading-6 text-slate-700">
@@ -491,7 +828,15 @@ export default function Results() {
             )}
           </SectionCard>
 
-          <SectionCard icon={MessageCircle} title={copy.discuss}>
+          <SectionCard icon={ArrowRight} title={copy.today}>
+            <p className="text-sm leading-6 text-slate-600">{reportActions[0]?.body || reportActions[0]?.title || copy.reviewTopFinding}</p>
+          </SectionCard>
+
+          <SectionCard icon={RefreshCw} title={copy.thisMonth}>
+            <p className="text-sm leading-6 text-slate-600">{reportRetest[0]?.timing || 'Plan retesting based on symptoms, clinician guidance, and the marker involved.'}</p>
+          </SectionCard>
+
+          <SectionCard icon={MessageCircle} title={copy.doctorQuestions}>
             {reportDiscussion.length ? (
               <ul className="space-y-2 text-sm leading-6 text-slate-700">
                 {reportDiscussion.slice(0, 5).map((item, idx) => (
@@ -503,9 +848,25 @@ export default function Results() {
             )}
           </SectionCard>
 
-          <SectionCard icon={RefreshCw} title={copy.retest}>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <CoachCard className="p-5">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-slate-950">{copy.evidence}</h2>
+              <CoachBadge tone={safetyResult?.status === 'blocked' ? 'critical' : safetyResult?.status === 'approved_with_warnings' ? 'warning' : 'success'}>
+                {safetyResult?.status || 'educational'}
+              </CoachBadge>
+            </div>
+            <p className="text-sm leading-6 text-slate-600">
+              {explanations.length ? copy.evidenceSummary : copy.whyDefault}
+            </p>
+          </CoachCard>
+
+          <CoachCard className="p-5">
+            <h2 className="text-lg font-semibold text-slate-950">{copy.retest}</h2>
             {reportRetest.length ? (
-              <ul className="space-y-2 text-sm leading-6 text-slate-700">
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                 {reportRetest.slice(0, 5).map((item, idx) => (
                   <li key={`retest-${idx}`} className="rounded-xl bg-slate-50 px-3 py-2">
                     <span className="font-semibold text-slate-950">{item.marker}</span>
@@ -515,10 +876,45 @@ export default function Results() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm leading-6 text-slate-600">{copy.retestFallback}</p>
+              <p className="mt-3 text-sm leading-6 text-slate-600">{copy.retestFallback}</p>
             )}
-          </SectionCard>
+          </CoachCard>
         </div>
+
+        {!!shoppingLinks.length && (
+          <div className="mt-6 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">{copy.shoppingEyebrow}</p>
+              <h2 className="mt-1 text-lg font-semibold text-slate-950">{copy.shoppingTitle}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {copy.shoppingBody}
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {shoppingLinks.slice(0, 6).map((item, idx) => (
+                <div key={`${item.search_query || item.label}-${idx}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="flex flex-col gap-2">
+                    <div>
+                      <h3 className="font-semibold text-slate-950">{item.label || item.search_query}</h3>
+                      {item.reason && <p className="mt-1 text-sm leading-6 text-slate-600">{item.reason}</p>}
+                    </div>
+                    {item.url && (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                      >
+                        {copy.findIherb}
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

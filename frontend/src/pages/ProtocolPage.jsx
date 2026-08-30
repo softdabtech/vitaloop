@@ -1,767 +1,671 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, FileText, MessageCircle, RefreshCw, ShieldAlert, Sparkles } from 'lucide-react'
 import api from '../lib/api.js'
 import { useFeature } from '../hooks/useFeature.js'
-import HintBanner from '../components/tour/HintBanner.jsx'
-import { useTourHints } from '../hooks/useTourHints.js'
-import {
-  ArrowLeft, ClipboardCheck, Droplets, Moon, Zap, Check,
-  UtensilsCrossed, Clock, Download,
-} from 'lucide-react'
-
-// ---------------------------------------------------------------------------
-// Data helpers
-// ---------------------------------------------------------------------------
-
-const TIMING_TO_SCHEDULE = {
-  morning: '8:00 am',
-  with_breakfast: '8:00 am',
-  before_breakfast: '7:30 am',
-  with_food: '12:00 pm · 6:00 pm',
-  with_lunch: '12:00 pm',
-  afternoon: '2:00 pm',
-  with_dinner: '6:00 pm',
-  morning_with_food: '8:00 am',
-  morning_empty: '7:30 am',
-  between_meals: '2:00 pm',
-  evening: '6:00 pm',
-  night: '9:00 pm',
-  before_bed: '9:00 pm',
-  bedtime: '10:00 pm',
-}
-
-const NUTRITION_MAP = [
-  {
-    name: 'Nutrient-dense greens',
-    keywords: ['iron', 'folate', 'folic acid', 'magnesium', 'calcium', 'vitamin k', 'b9'],
-    foods: ['Spinach, kale, arugula', 'Broccoli & Brussels sprouts', 'Swiss chard, collard greens'],
-    color: 'emerald',
-  },
-  {
-    name: 'Protein support',
-    keywords: ['b12', 'vitamin b12', 'zinc', 'protein', 'albumin', 'ferritin', 'selenium'],
-    foods: ['Chicken breast, turkey', 'Eggs, tuna, legumes', 'Greek yogurt, cottage cheese'],
-    color: 'teal',
-  },
-  {
-    name: 'Healthy fats',
-    keywords: ['vitamin d', 'd3', 'omega', 'omega-3', 'vitamin a', 'vitamin e', 'epa', 'dha'],
-    foods: ['Salmon, sardines, mackerel', 'Avocado, extra-virgin olive oil', 'Walnuts, flaxseeds'],
-    color: 'amber',
-  },
-  {
-    name: 'Steady energy carbs',
-    keywords: ['glucose', 'blood sugar', 'insulin', 'hba1c', 'glycated', 'cortisol'],
-    foods: ['Oats, quinoa, sweet potato', 'Brown rice, whole grains', 'Lentils, black beans'],
-    color: 'blue',
-  },
-]
-
-const LIFESTYLE_SECTIONS = [
-  {
-    icon: Droplets,
-    title: 'Hydration',
-    color: 'blue',
-    items: [
-      'Drink 2–3 L of water daily',
-      'Add electrolytes post-exercise',
-      'Limit caffeine after noon',
-    ],
-  },
-  {
-    icon: Moon,
-    title: 'Sleep',
-    color: 'indigo',
-    items: [
-      'Aim for 7–9 hours per night',
-      'Consistent sleep/wake schedule',
-      'Reduce screen time 1h before bed',
-    ],
-  },
-  {
-    icon: Zap,
-    title: 'Exercise',
-    color: 'emerald',
-    items: [
-      'Plan-aligned movement daily',
-      'Strength training 3× per week',
-      'Morning walks to aid absorption',
-    ],
-  },
-]
-
-const COLOR_CLASSES = {
-  emerald: { bg: 'bg-emerald-500', text: 'text-white', ring: 'ring-emerald-500/20' },
-  teal:    { bg: 'bg-teal-500',    text: 'text-white', ring: 'ring-teal-500/20' },
-  amber:   { bg: 'bg-amber-400',   text: 'text-white', ring: 'ring-amber-400/20' },
-  blue:    { bg: 'bg-blue-500',    text: 'text-white', ring: 'ring-blue-500/20' },
-  indigo:  { bg: 'bg-indigo-500',  text: 'text-white', ring: 'ring-indigo-500/20' },
-}
+import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
+import { isUkrainianLocale } from '../lib/locale.js'
+import { biomarkerDisplayName, evidenceDisplayLabel } from '../lib/biomarker-display.js'
 
 const PRIORITY_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 }
-const NUTRITION_RELEVANT_STATUSES = new Set(['DEFICIENT', 'BORDERLINE'])
-const DEFICIENT_STATUSES = new Set(['DEFICIENT', 'ELEVATED'])
-
-function hasStatusIn(status, allowedStatuses) {
-  return allowedStatuses.has(String(status || '').toUpperCase())
+const TIMING_LABELS = {
+  morning: 'Morning',
+  with_breakfast: 'With breakfast',
+  before_breakfast: 'Before breakfast',
+  with_food: 'With food',
+  with_lunch: 'With lunch',
+  afternoon: 'Afternoon',
+  with_dinner: 'With dinner',
+  evening: 'Evening',
+  night: 'Night',
+  before_bed: 'Before bed',
+  bedtime: 'Before bed',
 }
 
-function normalizeBiomarkerName(name) {
-  return String(name || '').toLowerCase()
+const TIMING_LABELS_UK = {
+  morning: 'Ранок',
+  with_breakfast: 'Зі сніданком',
+  before_breakfast: 'До сніданку',
+  with_food: 'З їжею',
+  with_lunch: 'З обідом',
+  afternoon: 'Після обіду',
+  with_dinner: 'З вечерею',
+  evening: 'Вечір',
+  night: 'Ніч',
+  before_bed: 'Перед сном',
+  bedtime: 'Перед сном',
 }
 
-function deriveNutritionGroups(biomarkers) {
-  if (!biomarkers?.length) return NUTRITION_MAP.slice(0, 3)
-  const deficientNames = biomarkers
-    .filter((biomarker) => hasStatusIn(biomarker.status, NUTRITION_RELEVANT_STATUSES))
-    .map((biomarker) => normalizeBiomarkerName(biomarker.name))
-  const matched = NUTRITION_MAP.filter((group) =>
-    group.keywords.some((keyword) => deficientNames.some((name) => name.includes(keyword)))
-  )
-  const unmatched = NUTRITION_MAP.filter((g) => !matched.includes(g))
-  return [...matched, ...unmatched].slice(0, Math.max(3, matched.length))
+const PROTOCOL_COPY = {
+  en: {
+    errorTitle: 'Protocol is not available',
+    notFound: 'This upload was not found or is no longer available.',
+    premium: 'This protocol requires Premium access.',
+    genericError: 'Unable to load this protocol right now.',
+    backResults: 'Back to results',
+    noProtocol: 'No protocol yet',
+    noProtocolBody: 'Open your result first. If the report has no generated actions yet, VITALOOP will show them after analysis completes.',
+    openResult: 'Open result',
+    summaryEyebrow: 'Protocol Summary',
+    summaryTitle: 'Your plan, organized by when to act.',
+    summaryBody: 'Educational next steps based on this report. Confirm supplements, medication interactions, and dosing with a qualified clinician when relevant.',
+    exporting: 'Exporting...',
+    exportPdf: 'Export PDF',
+    planContext: 'Plan Context',
+    actions: 'Actions',
+    biomarkers: 'Biomarkers reviewed',
+    retestItems: 'Retest items',
+    safetyWarning: 'Safety warning',
+    sections: {
+      today: ['Today', 'Small actions to start with now.'],
+      week: ['This Week', 'Actions that need a few days of consistency.'],
+      month: ['This Month', 'Follow-up actions and review windows.'],
+      longTerm: ['Long-Term Habits', 'Repeatable habits that support the loop.'],
+    },
+    shoppingEyebrow: 'Suggested iHerb searches',
+    shoppingTitle: 'Optional shopping aids connected to this protocol.',
+    shoppingBody: 'These links are educational search shortcuts, not prescriptions. Confirm supplements, dosing, and interactions with a qualified clinician before use.',
+    findIherb: 'Find on iHerb',
+    retestPlan: 'Retest Plan',
+    marker: 'Marker',
+    discussTiming: 'Discuss timing with a clinician.',
+    retestFallback: 'Retest timing depends on the marker, symptoms, and clinician guidance.',
+    safetyDiscussion: 'Safety and Clinician Discussion',
+    discussionFallback: 'Ask whether the plan fits your symptoms, medications, history, and current lab context.',
+    evidenceTitle: 'Evidence / Why this appears',
+    evidenceBody: 'When available, each action shows timing, priority, category, evidence, effort, safety notes, and intended outcome from the existing report data. Empty fields are hidden instead of fabricated.',
+    effort: 'Effort',
+    evidence: 'Evidence',
+    outcome: 'Intended outcome',
+    basedOn: 'Based on',
+    dataUsed: 'Data used',
+    healthDomains: 'Health domains',
+    expectedTimeline: 'Expected timeline',
+    retestMarkers: 'Retest markers',
+    safetyNotes: 'Safety notes',
+    kbContext: 'Knowledge-base context',
+    technicalDetails: 'Analysis details',
+    pdfTitle: 'VITALOOP Action Protocol',
+    pdfUpload: 'Upload',
+    pdfGenerated: 'Generated',
+    pdfSummary: '1. Protocol Summary',
+    pdfSummaryBody: (count) => `This educational protocol contains ${count} action item${count === 1 ? '' : 's'} grouped by practical timing.`,
+    pdfActions: '2. Actions',
+    pdfDiscussion: '3. Clinician Discussion',
+    pdfRetest: '4. Retest Plan',
+    pdfDisclaimer: '5. Disclaimer',
+    disclaimer: 'VITALOOP provides educational information only. It does not diagnose, treat, prescribe, or replace professional medical advice.',
+  },
+  uk: {
+    errorTitle: 'План дій недоступний',
+    notFound: 'Це завантаження не знайдено або воно більше недоступне.',
+    premium: 'Для цього плану потрібен Premium.',
+    genericError: 'Не вдалося завантажити план дій зараз.',
+    backResults: 'До результатів',
+    noProtocol: 'Плану дій ще немає',
+    noProtocolBody: 'Спочатку відкрийте результат. Якщо звіт ще не має дій, VITALOOP покаже їх після завершення аналізу.',
+    openResult: 'Відкрити результат',
+    summaryEyebrow: 'Підсумок плану',
+    summaryTitle: 'Ваш план, згрупований за часом дії.',
+    summaryBody: 'Освітні наступні кроки на основі звіту. Підтвердьте добавки, взаємодії та дозування з кваліфікованим фахівцем.',
+    exporting: 'Експортуємо...',
+    exportPdf: 'Експорт PDF',
+    planContext: 'Контекст плану',
+    actions: 'Дій',
+    biomarkers: 'Показників переглянуто',
+    retestItems: 'Повторних перевірок',
+    safetyWarning: 'Попередження безпеки',
+    sections: {
+      today: ['Сьогодні', 'Невеликі кроки, з яких можна почати зараз.'],
+      week: ['Цього тижня', 'Дії, яким потрібна кількаденна послідовність.'],
+      month: ['Цього місяця', 'Кроки для перегляду й повторної перевірки.'],
+      longTerm: ['Довгострокові звички', 'Повторювані дії, що підтримують цикл.'],
+    },
+    shoppingEyebrow: 'Пошук на iHerb',
+    shoppingTitle: 'Опційні підказки для покупок, повʼязані з цим планом.',
+    shoppingBody: 'Це освітні пошукові посилання, не призначення. Підтвердьте добавки, дозування й взаємодії з фахівцем перед використанням.',
+    findIherb: 'Знайти на iHerb',
+    retestPlan: 'План повторної перевірки',
+    marker: 'Показник',
+    discussTiming: 'Обговоріть терміни з фахівцем.',
+    retestFallback: 'Терміни повторної перевірки залежать від показника, симптомів і рекомендацій фахівця.',
+    safetyDiscussion: 'Безпека та питання до фахівця',
+    discussionFallback: 'Запитайте, чи відповідає план вашим симптомам, лікам, історії та поточному контексту аналізів.',
+    evidenceTitle: 'Доказовість / Чому це показано',
+    evidenceBody: 'Коли дані доступні, кожна дія показує час, пріоритет, категорію, доказовість, зусилля, примітки безпеки й очікуваний результат. Порожні поля приховані, а не вигадані.',
+    effort: 'Зусилля',
+    evidence: 'Доказовість',
+    outcome: 'Очікуваний результат',
+    basedOn: 'На основі',
+    dataUsed: 'Використані дані',
+    healthDomains: 'Домени здоровʼя',
+    expectedTimeline: 'Очікуваний строк',
+    retestMarkers: 'Повторні аналізи',
+    safetyNotes: 'Примітки безпеки',
+    kbContext: 'Контекст бази знань',
+    technicalDetails: 'Деталі аналізу',
+    pdfTitle: 'VITALOOP План дій',
+    pdfUpload: 'Завантаження',
+    pdfGenerated: 'Сформовано',
+    pdfSummary: '1. Підсумок плану',
+    pdfSummaryBody: (count) => `Цей освітній план містить ${count} ${count === 1 ? 'дію' : 'дій'}, згрупованих за практичним часом виконання.`,
+    pdfActions: '2. Дії',
+    pdfDiscussion: '3. Обговорення з фахівцем',
+    pdfRetest: '4. Повторна перевірка',
+    pdfDisclaimer: '5. Дисклеймер',
+    disclaimer: 'VITALOOP надає лише освітню інформацію. Він не ставить діагноз, не лікує, не призначає терапію і не замінює професійну медичну консультацію.',
+  },
 }
 
-function formatPriority(priority) {
+const HEALTH_DOMAIN_LABELS_UK = {
+  iron_status: 'Статус заліза',
+  'iron status': 'Статус заліза',
+  metabolic_health: 'Метаболічне здоровʼя',
+  'metabolic health': 'Метаболічне здоровʼя',
+  cardiovascular: 'Серцево-судинний профіль',
+  'cardiovascular risk context': 'Серцево-судинний профіль',
+  inflammation: 'Запалення',
+  thyroid: 'Щитоподібна залоза',
+  liver: 'Печінка',
+  'liver stress context': 'Печінка',
+  kidney: 'Нирки',
+  micronutrients: 'Мікронутрієнти',
+  recovery_energy: 'Відновлення й енергія',
+  'recovery and energy': 'Відновлення й енергія',
+}
+
+function formatPriority(priority, isUk = false) {
   return String(priority || 'LOW').toUpperCase()
+    .replace('HIGH', isUk ? 'ВИСОКИЙ' : 'HIGH')
+    .replace('MEDIUM', isUk ? 'СЕРЕДНІЙ' : 'MEDIUM')
+    .replace('LOW', isUk ? 'НИЗЬКИЙ' : 'LOW')
 }
 
 function sortProtocolByPriority(protocol) {
-  return [...protocol].sort((a, b) => {
-    return (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9)
-  })
+  return [...protocol].sort((a, b) => (PRIORITY_ORDER[formatPriority(a.priority)] ?? 9) - (PRIORITY_ORDER[formatPriority(b.priority)] ?? 9))
 }
 
-function countDeficientBiomarkers(biomarkers) {
-  return biomarkers.filter((biomarker) => hasStatusIn(biomarker.status, DEFICIENT_STATUSES)).length
+function normalizeProtocolRows(protocol) {
+  if (Array.isArray(protocol)) return protocol
+  if (!protocol || typeof protocol !== 'object') return []
+  const sectionOrder = ['nutrition', 'supplements', 'lifestyle', 'training_recovery', 'trainingRecovery']
+  const rows = []
+  const seenSections = new Set()
+  sectionOrder.forEach((section) => {
+    seenSections.add(section)
+    const items = protocol[section]
+    if (Array.isArray(items)) {
+      items.forEach((item) => rows.push({ section, ...(item || {}) }))
+    }
+  })
+  Object.entries(protocol).forEach(([section, items]) => {
+    if (seenSections.has(section) || !Array.isArray(items)) return
+    items.forEach((item) => rows.push({ section, ...(item || {}) }))
+  })
+  return rows
 }
 
 async function loadProtocolData(uploadId) {
   const { data } = await api.get(`/results/${uploadId}`)
   const biomarkers = data?.biomarkers ?? []
-  const storedProtocol = Array.isArray(data?.protocol) ? data.protocol : []
+  const coreProtocol = normalizeProtocolRows(data?.final_analysis?.protocol)
+  const storedProtocol = normalizeProtocolRows(data?.protocol)
   const actionPlan = Array.isArray(data?.knowledge_report?.action_plan) ? data.knowledge_report.action_plan : []
-
+  const doctorDiscussion = Array.isArray(data?.knowledge_report?.doctor_discussion) ? data.knowledge_report.doctor_discussion : []
+  const retestPlan = Array.isArray(data?.knowledge_report?.retest_plan) ? data.knowledge_report.retest_plan : []
+  const safetyAlerts = Array.isArray(data?.knowledge_report?.safety_alerts) ? data.knowledge_report.safety_alerts : []
+  const shoppingLinks = Array.isArray(data?.shopping_links)
+    ? data.shopping_links
+    : Array.isArray(data?.final_analysis?.shopping_links)
+      ? data.final_analysis.shopping_links
+      : []
   return {
     biomarkers,
-    protocol: storedProtocol.length ? storedProtocol : actionPlan,
+    protocol: coreProtocol.length ? coreProtocol : storedProtocol.length ? storedProtocol : actionPlan,
+    doctorDiscussion,
+    retestPlan,
+    safetyAlerts,
+    shoppingLinks,
+    knowledgeReport: data?.knowledge_report ?? null,
   }
 }
 
-function buildPdfRows(protocolRows) {
-  return protocolRows.map((rec) => {
-    const schedule = TIMING_TO_SCHEDULE[rec.timing] ?? (rec.timing?.replace(/_/g, ' ') ?? '-')
-    return [
-      rec.supplement || rec.title || '-',
-      rec.dosage || rec.amount || '-',
-      schedule,
-      formatPriority(rec.priority),
-      rec.rationale || rec.body || '-',
-    ]
-  })
+function protocolTitle(item) {
+  return item?.title || item?.supplement || item?.name || 'Action item'
 }
 
-async function exportProtocolPdf({ protocolRows, nutritionGroups, lifestyleSections, uploadId }) {
-  const [{ jsPDF }, { default: autoTable }] = await Promise.all([
-    import('jspdf'),
-    import('jspdf-autotable'),
-  ])
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
-  const pageWidth = doc.internal.pageSize.getWidth()
-  const pageHeight = doc.internal.pageSize.getHeight()
-  const margin = 44
-  const contentWidth = pageWidth - margin * 2
-  const createdAt = new Date().toLocaleString()
-
-  const actionsTotal = protocolRows.length
-  const highPriority = protocolRows.filter((row) => formatPriority(row.priority) === 'HIGH').length
-  const mediumPriority = protocolRows.filter((row) => formatPriority(row.priority) === 'MEDIUM').length
-  const lowPriority = Math.max(0, actionsTotal - highPriority - mediumPriority)
-
-  const drawLogo = () => {
-    doc.setFillColor(255, 255, 255)
-    doc.roundedRect(margin, 24, 32, 32, 6, 6, 'F')
-    doc.setTextColor(16, 185, 129)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(14)
-    doc.text('V', margin + 11, 44)
-    doc.setLineWidth(1.8)
-    doc.setDrawColor(16, 185, 129)
-    doc.line(margin + 19, 42, margin + 23, 46)
-    doc.line(margin + 23, 46, margin + 29, 36)
-  }
-
-  const drawHeader = (title, subtitle) => {
-    doc.setFillColor(16, 185, 129)
-    doc.rect(0, 0, pageWidth, 86, 'F')
-    drawLogo()
-
-    doc.setTextColor(255, 255, 255)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(17)
-    doc.text(title, margin + 42, 40)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    if (subtitle) {
-      doc.text(subtitle, margin + 42, 56)
-    }
-
-    doc.setFontSize(9)
-    doc.text(`Upload: ${uploadId}`, pageWidth - margin - 120, 38)
-    doc.text(`Generated: ${createdAt}`, pageWidth - margin - 120, 52)
-  }
-
-  const drawFooter = (pageNum, totalPages) => {
-    doc.setDrawColor(226, 232, 240)
-    doc.setLineWidth(0.6)
-    doc.line(margin, pageHeight - 34, pageWidth - margin, pageHeight - 34)
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.setTextColor(100, 116, 139)
-    doc.text('VITALOOP Educational Action Plan', margin, pageHeight - 20)
-    doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth - margin - 54, pageHeight - 20)
-  }
-
-  const addPage = (title, subtitle) => {
-    doc.addPage()
-    drawHeader(title, subtitle)
-    return 112
-  }
-
-  const ensureSpace = (cursorY, requiredHeight, title, subtitle) => {
-    if (cursorY + requiredHeight <= pageHeight - 52) {
-      return cursorY
-    }
-    return addPage(title, subtitle)
-  }
-
-  // Summary page
-  drawHeader('VITALOOP - Personal Action Plan', 'Educational priorities based on your lab report')
-
-  let y = 112
-  doc.setTextColor(31, 41, 55)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(13)
-  doc.text('Executive Summary', margin, y)
-  y += 16
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  const summaryLines = [
-    `Total action items in current plan: ${actionsTotal}`,
-    `Priority split: HIGH ${highPriority}, MEDIUM ${mediumPriority}, LOW ${lowPriority}`,
-    `Nutrition focus groups: ${nutritionGroups.map((group) => group.name).slice(0, 4).join(', ') || 'N/A'}`,
-    `Lifestyle blocks included: ${lifestyleSections.map((item) => item.title).join(', ')}`,
-  ]
-  summaryLines.forEach((line) => {
-    const wrapped = doc.splitTextToSize(`- ${line}`, contentWidth)
-    doc.text(wrapped, margin, y)
-    y += wrapped.length * 12 + 2
-  })
-
-  y += 8
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.text('Top Priority Actions', margin, y)
-  y += 14
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-
-  const topRows = protocolRows.slice(0, 5)
-  if (topRows.length === 0) {
-    doc.text('- No action items available for this upload yet.', margin, y)
-    y += 12
-  } else {
-    topRows.forEach((row) => {
-      const schedule = TIMING_TO_SCHEDULE[row.timing] ?? (row.timing?.replace(/_/g, ' ') ?? '-')
-      const amount = row.dosage || row.amount || 'context review'
-      const line = `${row.supplement || row.title || '-'} (${amount}) - ${schedule} [${formatPriority(row.priority)}]`
-      const wrapped = doc.splitTextToSize(`- ${line}`, contentWidth)
-      y = ensureSpace(y, wrapped.length * 12 + 4, 'Action Plan Summary (cont.)', 'Auto-generated continuation')
-      doc.text(wrapped, margin, y)
-      y += wrapped.length * 12 + 2
-    })
-  }
-
-  // Detailed table starts on a new page
-  addPage('Action Plan', 'Priorities, timing, and rationale')
-  autoTable(doc, {
-    startY: 112,
-    margin: { left: margin, right: margin },
-    head: [['Action', 'Amount', 'Schedule', 'Priority', 'Rationale']],
-    body: buildPdfRows(protocolRows),
-    styles: {
-      font: 'helvetica',
-      fontSize: 9,
-      cellPadding: 6,
-      textColor: [31, 41, 55],
-      lineColor: [226, 232, 240],
-      lineWidth: 0.5,
-      valign: 'top',
-    },
-    headStyles: {
-      fillColor: [240, 253, 250],
-      textColor: [15, 118, 110],
-      fontStyle: 'bold',
-    },
-    columnStyles: {
-      0: { cellWidth: 90 },
-      1: { cellWidth: 70 },
-      2: { cellWidth: 85 },
-      3: { cellWidth: 55 },
-      4: { cellWidth: contentWidth - 300 },
-    },
-    didParseCell: (data) => {
-      if (data.section === 'body' && data.column.index === 3) {
-        const value = String(data.cell.raw || '').toUpperCase()
-        if (value === 'HIGH') data.cell.styles.textColor = [190, 18, 60]
-        if (value === 'MEDIUM') data.cell.styles.textColor = [180, 83, 9]
-      }
-    },
-    didDrawPage: () => {
-      drawHeader('Action Plan', 'Priorities, timing, and rationale')
-    },
-  })
-
-  const tableY = (doc.lastAutoTable?.finalY || 112) + 18
-  y = tableY
-
-  y = ensureSpace(y, 24, 'Action Plan Details', 'Nutrition and lifestyle guidance')
-  if (y === 112) {
-    drawHeader('Action Plan Details', 'Nutrition and lifestyle guidance')
-  }
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.setTextColor(31, 41, 55)
-  doc.text('Nutrition Plan', margin, y)
-  y += 14
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  nutritionGroups.forEach((group) => {
-    const foods = (group.foods || []).join(', ')
-    const wrappedFoods = doc.splitTextToSize(foods, contentWidth - 8)
-    const blockHeight = 12 + wrappedFoods.length * 12 + 8
-    y = ensureSpace(y, blockHeight, 'Action Plan Details (cont.)', 'Nutrition and lifestyle guidance')
-    if (y === 112) {
-      drawHeader('Action Plan Details (cont.)', 'Nutrition and lifestyle guidance')
-    }
-    doc.setFont('helvetica', 'bold')
-    doc.text(group.name, margin, y)
-    y += 12
-    doc.setFont('helvetica', 'normal')
-    doc.text(wrappedFoods, margin + 4, y)
-    y += wrappedFoods.length * 12 + 8
-  })
-
-  y += 2
-  y = ensureSpace(y, 24, 'Action Plan Details (cont.)', 'Lifestyle guidance')
-  if (y === 112) {
-    drawHeader('Action Plan Details (cont.)', 'Lifestyle guidance')
-  }
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.text('Lifestyle Recommendations', margin, y)
-  y += 16
-
-  doc.setFont('helvetica', 'normal')
-  lifestyleSections.forEach((section) => {
-    const sectionLines = section.items.reduce((acc, item) => {
-      const wrapped = doc.splitTextToSize(`- ${item}`, contentWidth - 8)
-      return acc + wrapped.length
-    }, 0)
-    const requiredHeight = 12 + sectionLines * 12 + 10
-    y = ensureSpace(y, requiredHeight, 'Action Plan Details (cont.)', 'Lifestyle guidance')
-    if (y === 112) {
-      drawHeader('Action Plan Details (cont.)', 'Lifestyle guidance')
-    }
-
-    doc.setFont('helvetica', 'bold')
-    doc.text(section.title, margin, y)
-    y += 12
-    doc.setFont('helvetica', 'normal')
-
-    section.items.forEach((item) => {
-      const wrapped = doc.splitTextToSize(`- ${item}`, contentWidth - 8)
-      doc.text(wrapped, margin + 4, y)
-      y += wrapped.length * 12 + 2
-    })
-    y += 6
-  })
-
-  const totalPages = doc.getNumberOfPages()
-  for (let page = 1; page <= totalPages; page += 1) {
-    doc.setPage(page)
-    drawFooter(page, totalPages)
-  }
-
-  const safeUpload = String(uploadId || 'protocol').replace(/[^a-zA-Z0-9_-]/g, '')
-  const datePart = new Date().toISOString().slice(0, 10)
-  doc.save(`vitaloop-protocol-${safeUpload}-${datePart}.pdf`)
+function protocolBody(item) {
+  return item?.body || item?.rationale || item?.explanation || item?.reason || ''
 }
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
+function protocolTiming(item, isUk = false) {
+  const raw = String(item?.timing || item?.schedule || '').trim()
+  const labels = isUk ? TIMING_LABELS_UK : TIMING_LABELS
+  return labels[raw] || raw.replaceAll('_', ' ') || ''
+}
 
-function PriorityBadge({ priority }) {
-  const colors = {
-    HIGH:   'bg-rose-100 text-rose-700 border-rose-200',
-    MEDIUM: 'bg-amber-100 text-amber-700 border-amber-200',
-    LOW:    'bg-slate-100 text-slate-500 border-slate-200',
+function protocolCategory(item) {
+  return String(item?.category || item?.type || '').trim()
+}
+
+function effortLabel(item) {
+  return item?.effort || item?.expected_effort || null
+}
+
+function outcomeLabel(item) {
+  return item?.intended_outcome || item?.outcome || null
+}
+
+function evidenceLabel(item) {
+  return item?.evidence_level || item?.evidence || item?.confidence || null
+}
+
+function safetyLabel(item) {
+  return item?.safety_note || item?.warning || item?.clinician_note || null
+}
+
+function asTextList(value) {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((item) => {
+        if (!item) return []
+        if (typeof item === 'string') return [item]
+        if (typeof item !== 'object') return [String(item)]
+        return [item.label || item.name || item.marker || item.biomarker || item.domain || item.key || item.reason || item.summary || item.title || ''].filter(Boolean)
+      })
+      .filter(Boolean)
   }
+  if (typeof value === 'object') return Object.values(value).flatMap(asTextList).filter(Boolean)
+  return [String(value)]
+}
+
+function basedOnList(item) {
+  const basedOn = item?.based_on || {}
+  return [
+    ...asTextList(basedOn.biomarkers || basedOn.markers || item?.biomarkers),
+    ...asTextList(basedOn.symptoms || item?.symptoms),
+    ...asTextList(basedOn.rules || basedOn.knowledge_rules),
+  ].slice(0, 6)
+}
+
+function displayEvidence(value, isUk) {
+  return evidenceDisplayLabel(value, isUk)
+}
+
+function displayBiomarker(value, isUk) {
+  return biomarkerDisplayName(value, isUk) || String(value || '')
+}
+
+function healthDomainList(item) {
+  return asTextList(
+    item?.knowledge_domain_context
+    || item?.health_domains
+    || item?.based_on?.health_domains
+    || item?.based_on?.domains
+  ).slice(0, 5)
+}
+
+function safetyNotesList(item) {
+  return asTextList(item?.safety_notes || item?.safety_note || item?.warnings || item?.warning).slice(0, 4)
+}
+
+function retestMarkersList(item) {
+  return asTextList(item?.retest_markers || item?.retest_marker || item?.follow_up_markers).slice(0, 5)
+}
+
+function localizeDomainLabel(value, isUk) {
+  const raw = String(value || '').trim()
+  if (!raw || !isUk) return raw
+  const key = raw.toLowerCase().replace(/\s+/g, '_')
+  const textKey = raw.toLowerCase()
+  return HEALTH_DOMAIN_LABELS_UK[key] || HEALTH_DOMAIN_LABELS_UK[textKey] || raw
+}
+
+function groupProtocol(rows) {
+  const groups = {
+    today: [],
+    week: [],
+    month: [],
+    longTerm: [],
+  }
+  rows.forEach((item, index) => {
+    const text = `${item?.timing || ''} ${item?.category || ''} ${item?.title || ''} ${item?.body || ''}`.toLowerCase()
+    if (index < 2 || text.includes('today') || text.includes('morning') || text.includes('breakfast') || text.includes('daily')) groups.today.push(item)
+    else if (text.includes('week') || text.includes('sleep') || text.includes('nutrition') || text.includes('food')) groups.week.push(item)
+    else if (text.includes('month') || text.includes('retest') || text.includes('follow')) groups.month.push(item)
+    else groups.longTerm.push(item)
+  })
+  return groups
+}
+
+function priorityTone(priority) {
+  const p = formatPriority(priority)
+  if (p === 'HIGH') return 'critical'
+  if (p === 'MEDIUM') return 'warning'
+  return 'neutral'
+}
+
+function ActionCard({ item, copy, isUk }) {
+  const title = protocolTitle(item)
+  const body = protocolBody(item)
+  const timing = protocolTiming(item, isUk)
+  const category = protocolCategory(item)
+  const effort = effortLabel(item)
+  const outcome = outcomeLabel(item)
+  const evidence = displayEvidence(evidenceLabel(item), isUk)
+  const safety = safetyLabel(item)
+  const basedOn = basedOnList(item).map((value) => displayBiomarker(value, isUk))
+  const domains = healthDomainList(item).map((domain) => localizeDomainLabel(domain, isUk))
+  const safetyNotes = safetyNotesList(item)
+  const retestMarkers = retestMarkersList(item)
+  const expectedTimeline = item?.expected_timeline || item?.timeline || item?.expected_timeframe || null
   return (
-    <span className={`inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${colors[priority] ?? colors.LOW}`}>
-      {priority ?? 'LOW'}
-    </span>
-  )
-}
-
-function ActionRow({ rec, index }) {
-  const isHighlighted = rec.priority === 'HIGH' || index === 0
-  const schedule = TIMING_TO_SCHEDULE[rec.timing] ?? (rec.timing?.replace(/_/g, ' ') ?? '—')
-  const actionName = rec.supplement || rec.title || 'Action item'
-  const amount = rec.dosage || rec.amount || rec.category || 'Context review'
-  const rationale = rec.rationale || rec.body || ''
-
-  return (
-    <motion.tr
-      initial={{ opacity: 0, x: -20 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.4, delay: index * 0.05 }}
-      className={`border-b border-slate-100 transition-colors ${isHighlighted ? 'bg-emerald-50/70 hover:bg-emerald-50' : 'hover:bg-slate-50/80'}`}
-    >
-      <td className="px-4 py-3.5">
-        <div className="flex items-center gap-3">
-          <motion.div
-            animate={{ scale: [1, 1.05, 1] }}
-            transition={{ duration: 3, repeat: isHighlighted ? Infinity : 0 }}
-            className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isHighlighted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}
-          >
-            <ClipboardCheck className="w-3.5 h-3.5" />
-          </motion.div>
-          <div>
-            <div className={`font-semibold text-sm ${isHighlighted ? 'text-emerald-900' : 'text-slate-900'}`}>
-              {actionName}
-            </div>
-            <div className="text-xs text-slate-400">{amount}</div>
+    <CoachCard className="p-4" interactive>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-extrabold text-slate-950">{title}</h3>
+          {category && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">{category}</p>}
+        </div>
+        <CoachBadge tone={priorityTone(item?.priority)}>{formatPriority(item?.priority, isUk)}</CoachBadge>
+      </div>
+      {body && <p className="text-sm leading-6 text-slate-600">{body}</p>}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {timing && <CoachBadge tone="primary">{timing}</CoachBadge>}
+        {effort && <CoachBadge tone="neutral">{copy.effort}: {effort}</CoachBadge>}
+        {evidence && <CoachBadge tone="neutral">{copy.evidence}: {evidence}</CoachBadge>}
+      </div>
+      {outcome && <p className="mt-3 text-sm font-semibold text-slate-700">{copy.outcome}: <span className="font-normal text-slate-600">{outcome}</span></p>}
+      {(basedOn.length || domains.length || expectedTimeline || retestMarkers.length) && (
+        <details className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-3 text-sm leading-6 text-slate-600">
+          <summary className="cursor-pointer font-semibold text-slate-800">{copy.technicalDetails}</summary>
+          <div className="mt-3 grid gap-2">
+            {!!basedOn.length && <p><span className="font-semibold text-slate-800">{copy.basedOn}:</span> {basedOn.join(', ')}</p>}
+            {!!domains.length && <p><span className="font-semibold text-slate-800">{copy.healthDomains}:</span> {domains.join(', ')}</p>}
+            {expectedTimeline && <p><span className="font-semibold text-slate-800">{copy.expectedTimeline}:</span> {expectedTimeline}</p>}
+            {!!retestMarkers.length && <p><span className="font-semibold text-slate-800">{copy.retestMarkers}:</span> {retestMarkers.map((value) => displayBiomarker(value, isUk)).join(', ')}</p>}
           </div>
+        </details>
+      )}
+      {(safety || safetyNotes.length) && (
+        <div className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
+          <span className="font-semibold">{copy.safetyNotes}: </span>
+          {[safety, ...safetyNotes].filter(Boolean).join(' ')}
         </div>
-      </td>
-      <td className="px-4 py-3.5 hidden md:table-cell max-w-xs">
-        <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">{rationale}</p>
-      </td>
-      <td className="px-4 py-3.5 whitespace-nowrap">
-        <div className="flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-          <span className="text-xs text-slate-600">{schedule}</span>
-        </div>
-      </td>
-      <td className="px-4 py-3.5">
-        <div className="flex flex-col gap-1.5 items-start">
-          <PriorityBadge priority={rec.priority} />
-          {rec.iherb_url && <span className="text-[10px] text-slate-400">Product link available</span>}
-        </div>
-      </td>
-    </motion.tr>
+      )}
+    </CoachCard>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Main page
-// ---------------------------------------------------------------------------
+async function exportProtocolPdf({ protocolRows, retestPlan, doctorDiscussion, uploadId, copy, isUk }) {
+  const { jsPDF } = await import('jspdf')
+  const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' })
+  const margin = 44
+  const width = doc.internal.pageSize.getWidth() - margin * 2
+  let y = 48
+  const safeUpload = String(uploadId || 'protocol').replace(/[^a-zA-Z0-9_-]/g, '')
+
+  const addTitle = (text, size = 18) => {
+    if (y > 720) { doc.addPage(); y = 48 }
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(size)
+    doc.setTextColor(15, 23, 42)
+    doc.text(text, margin, y)
+    y += size + 12
+  }
+  const addText = (text, size = 10) => {
+    if (!text) return
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(size)
+    doc.setTextColor(71, 85, 105)
+    const lines = doc.splitTextToSize(String(text), width)
+    lines.forEach((line) => {
+      if (y > 760) { doc.addPage(); y = 48 }
+      doc.text(line, margin, y)
+      y += size + 5
+    })
+    y += 4
+  }
+
+  addTitle(copy.pdfTitle, 20)
+  addText(`${copy.pdfUpload}: ${uploadId}`)
+  addText(`${copy.pdfGenerated}: ${new Date().toLocaleString()}`)
+  addTitle(copy.pdfSummary, 14)
+  addText(copy.pdfSummaryBody(protocolRows.length))
+  addTitle(copy.pdfActions, 14)
+  protocolRows.forEach((item, index) => {
+    addText(`${index + 1}. ${protocolTitle(item)}${item?.priority ? ` [${formatPriority(item.priority, isUk)}]` : ''}`, 11)
+    addText(protocolBody(item), 9)
+    const meta = [protocolTiming(item, isUk), protocolCategory(item), evidenceLabel(item)].filter(Boolean).join(' · ')
+    addText(meta, 9)
+  })
+  addTitle(copy.pdfDiscussion, 14)
+  ;(doctorDiscussion || []).slice(0, 8).forEach((item) => addText(`• ${item}`))
+  addTitle(copy.pdfRetest, 14)
+  ;(retestPlan || []).slice(0, 8).forEach((item) => addText(`• ${item.marker || copy.marker}: ${item.timing || item.reason || ''}`))
+  addTitle(copy.pdfDisclaimer, 14)
+  addText(copy.disclaimer)
+  doc.save(`vitaloop-protocol-${safeUpload}-${new Date().toISOString().slice(0, 10)}.pdf`)
+}
 
 export default function ProtocolPage() {
   const { uploadId } = useParams()
   const navigate = useNavigate()
-  const { show: showHints, dismiss: dismissHints } = useTourHints('protocol')
   const { hasAccess: canExport } = useFeature('advanced_protocol')
+  const isUk = isUkrainianLocale()
+  const copy = isUk ? PROTOCOL_COPY.uk : PROTOCOL_COPY.en
   const [biomarkers, setBiomarkers] = useState([])
   const [protocol, setProtocol] = useState([])
+  const [doctorDiscussion, setDoctorDiscussion] = useState([])
+  const [retestPlan, setRetestPlan] = useState([])
+  const [safetyAlerts, setSafetyAlerts] = useState([])
+  const [shoppingLinks, setShoppingLinks] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
+    let active = true
     async function load() {
-      const data = await loadProtocolData(uploadId)
-      setBiomarkers(data.biomarkers)
-      setProtocol(data.protocol)
-      setLoading(false)
+      setLoading(true)
+      setError('')
+      try {
+        const data = await loadProtocolData(uploadId)
+        if (!active) return
+        setBiomarkers(data.biomarkers)
+        setProtocol(data.protocol)
+        setDoctorDiscussion(data.doctorDiscussion)
+        setRetestPlan(data.retestPlan)
+        setSafetyAlerts(data.safetyAlerts)
+        setShoppingLinks(data.shoppingLinks)
+      } catch (err) {
+        if (!active) return
+        const status = err?.response?.status
+        if (status === 404) setError(copy.notFound)
+        else if (status === 402) setError(copy.premium)
+        else setError(copy.genericError)
+      } finally {
+        if (active) setLoading(false)
+      }
     }
     load()
+    return () => { active = false }
   }, [uploadId])
 
-  const nutritionGroups = deriveNutritionGroups(biomarkers)
-  const sortedProtocol = sortProtocolByPriority(protocol)
+  const sortedProtocol = useMemo(() => sortProtocolByPriority(protocol), [protocol])
+  const grouped = useMemo(() => groupProtocol(sortedProtocol), [sortedProtocol])
+  const sections = [
+    { key: 'today', title: copy.sections.today[0], body: copy.sections.today[1], rows: grouped.today },
+    { key: 'week', title: copy.sections.week[0], body: copy.sections.week[1], rows: grouped.week },
+    { key: 'month', title: copy.sections.month[0], body: copy.sections.month[1], rows: grouped.month },
+    { key: 'longTerm', title: copy.sections.longTerm[0], body: copy.sections.longTerm[1], rows: grouped.longTerm },
+  ].filter((section) => section.rows.length > 0)
 
-  const deficientCount = countDeficientBiomarkers(biomarkers)
-
-  const handleExportPdf = async () => {
-    if (!canExport || sortedProtocol.length === 0 || exporting) return
+  async function handleExportPdf() {
+    if (!canExport || exporting || sortedProtocol.length === 0) return
     try {
       setExporting(true)
-      await exportProtocolPdf({
-        protocolRows: sortedProtocol,
-        nutritionGroups,
-        lifestyleSections: LIFESTYLE_SECTIONS,
-        uploadId,
-      })
+      await exportProtocolPdf({ protocolRows: sortedProtocol, retestPlan, doctorDiscussion, uploadId, copy, isUk })
     } finally {
       setExporting(false)
     }
   }
 
-  if (loading) {
+  if (loading) return <div className="coach-shell"><CoachSkeleton rows={4} /></div>
+
+  if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
-        <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-slate-500 text-sm">Loading your action plan…</p>
-        </div>
+      <div className="coach-shell">
+        <EmptyCoachState
+          icon={ShieldAlert}
+          title={copy.errorTitle}
+          body={error}
+          actionLabel={copy.backResults}
+          onAction={() => navigate(`/results/${uploadId}`)}
+        />
+      </div>
+    )
+  }
+
+  if (sortedProtocol.length === 0) {
+    return (
+      <div className="coach-shell">
+        <EmptyCoachState
+          icon={FileText}
+          title={copy.noProtocol}
+          body={copy.noProtocolBody}
+          actionLabel={copy.openResult}
+          onAction={() => navigate(`/results/${uploadId}`)}
+        />
       </div>
     )
   }
 
   return (
-    <div className="vtl-page w-full">
-      <div className="w-full">
-        {/* Top bar */}
-        <div className="sticky top-0 z-10 flex h-[76px] items-center justify-between gap-4 border-b border-slate-200 bg-white/90 backdrop-blur-sm px-4 sm:px-6 shadow-sm">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(`/results/${uploadId}`)}
-              className="vtl-focus-ring flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors rounded-lg px-2 py-1"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back to Results</span>
-            </button>
-            <div className="h-5 w-px bg-slate-200" />
-            <h1 className="text-base sm:text-lg font-semibold text-slate-900">Personal Action Plan</h1>
+    <div className="coach-shell coach-grid">
+      <section className="coach-hero">
+        <div className="relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+          <div>
+            <p className="coach-eyebrow">{copy.summaryEyebrow}</p>
+            <h1 className="coach-title-xl">{copy.summaryTitle}</h1>
+            <p className="coach-body mt-4 max-w-2xl">
+              {copy.summaryBody}
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <CoachButton variant="secondary" icon={ArrowLeft} onClick={() => navigate(`/results/${uploadId}`)}>{copy.backResults}</CoachButton>
+              <CoachButton icon={Download} disabled={!canExport || exporting} onClick={handleExportPdf}>{exporting ? copy.exporting : copy.exportPdf}</CoachButton>
+            </div>
           </div>
-          <button
-            onClick={handleExportPdf}
-            disabled={!canExport || sortedProtocol.length === 0 || exporting}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-800 hover:border-slate-300 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download className="w-4 h-4" />
-            {exporting ? 'Exporting...' : 'Export PDF'}
-          </button>
+          <CoachCard className="p-5" tone="soft">
+            <p className="coach-eyebrow">{copy.planContext}</p>
+            <div className="grid gap-3">
+              <div className="flex items-center justify-between gap-3"><span className="text-sm text-slate-600">{copy.actions}</span><strong>{sortedProtocol.length}</strong></div>
+              <div className="flex items-center justify-between gap-3"><span className="text-sm text-slate-600">{copy.biomarkers}</span><strong>{biomarkers.length}</strong></div>
+              <div className="flex items-center justify-between gap-3"><span className="text-sm text-slate-600">{copy.retestItems}</span><strong>{retestPlan.length}</strong></div>
+            </div>
+          </CoachCard>
         </div>
+      </section>
 
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-auto">
-          <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 pb-16">
-
-            {showHints && (
-              <HintBanner
-                hints={[
-                  'Each action is ranked by practical priority. Focus on the first few items before changing too much at once.',
-                  'Timing is guidance, not a prescription. Confirm supplements, medications, and dosages with a clinician when needed.',
-                  'Premium subscribers can export this plan as a PDF to share with a doctor, nutritionist, or coach.',
-                ]}
-                onDone={dismissHints}
-              />
-            )}
-
-            {/* Hero header */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 p-6 sm:p-8 text-white shadow-lg overflow-hidden relative"
-            >
-              <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 50%)' }} />
-              <p className="text-emerald-100 text-xs font-semibold uppercase tracking-widest mb-2">Personalized Action Plan</p>
-              <h2 className="text-2xl sm:text-3xl font-bold leading-tight mb-2">What to do after this report</h2>
-              <p className="text-emerald-100 text-sm max-w-lg leading-relaxed">
-                Based on your lab results{deficientCount > 0 ? ` and ${deficientCount} priority markers` : ''}, this plan organizes nutrition, lifestyle, follow-up, and discussion points into a clearer next step.
-              </p>
-              <div className="flex flex-wrap gap-6 mt-5">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: 0.1 }}
-                >
-                  <div className="text-2xl font-bold">{sortedProtocol.length}</div>
-                  <div className="text-emerald-200 text-xs uppercase tracking-wider">Actions</div>
-                </motion.div>
-                <div className="w-px bg-emerald-400/60" />
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: 0.2 }}
-                >
-                  <div className="text-2xl font-bold">{nutritionGroups.length}</div>
-                  <div className="text-emerald-200 text-xs uppercase tracking-wider">Nutrition</div>
-                </motion.div>
-                <div className="w-px bg-emerald-400/60" />
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: 0.3 }}
-                >
-                  <div className="text-2xl font-bold">3</div>
-                  <div className="text-emerald-200 text-xs uppercase tracking-wider">Lifestyle</div>
-                </motion.div>
-              </div>
-            </motion.div>
-
-            {/* ── Nutrition Plan ── */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-100px' }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
-            >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                  <UtensilsCrossed className="w-4 h-4 text-emerald-600" />
-                  Nutrition Priorities
-                </h3>
-                <span className="text-xs text-slate-400">Based on markers that may need attention</span>
-              </div>
-              <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {nutritionGroups.map((group, i) => {
-                  const c = COLOR_CLASSES[group.color] ?? COLOR_CLASSES.emerald
-                  const isHighlight = i < 2
-                  return (
-                    <motion.div
-                      key={group.name}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.4, delay: i * 0.1 }}
-                      whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
-                      className={`rounded-xl p-4 transition-shadow ${
-                        isHighlight
-                          ? `${c.bg} ${c.text} shadow-md`
-                          : 'border border-slate-200 bg-slate-50 text-slate-800 hover:shadow-sm'
-                      }`}
-                    >
-                      <div className="font-semibold text-sm mb-2.5">{group.name}</div>
-                      <ul className="space-y-1.5">
-                        {group.foods.map((food) => (
-                          <li
-                            key={food}
-                            className={`text-xs flex items-start gap-2 ${isHighlight ? 'text-white/85' : 'text-slate-500'}`}
-                          >
-                            <span className={`mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${isHighlight ? 'bg-white/60' : 'bg-slate-300'}`} />
-                            {food}
-                          </li>
-                        ))}
-                      </ul>
-                    </motion.div>
-                  )
-                })}
-              </div>
-            </motion.div>
-
-            {/* ── Action Plan Table ── */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-100px' }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
-            >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                  <ClipboardCheck className="w-4 h-4 text-emerald-600" />
-                  Priority Action Plan
-                </h3>
-                <span className="text-xs text-slate-400">{sortedProtocol.length} items · review with context</span>
-              </div>
-
-              {sortedProtocol.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50/80">
-                        <th className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Action / Amount</th>
-                        <th className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider hidden md:table-cell">Rationale</th>
-                        <th className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Suggested Timing</th>
-                        <th className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Priority</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedProtocol.map((rec, i) => (
-                        <ActionRow key={`${rec.supplement || rec.title}-${i}`} rec={rec} index={i} />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="p-10 text-center text-slate-400 text-sm">
-                  No action plan generated yet.
-                </div>
-              )}
-            </motion.div>
-
-            {/* ── Lifestyle Recommendations ── */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-100px' }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
-            >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-emerald-600" />
-                  Lifestyle Recommendations
-                </h3>
-                <span className="text-xs text-slate-400">Daily habits for best results</span>
-              </div>
-              <div className="p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {LIFESTYLE_SECTIONS.map(({ icon: Icon, title, color, items }, idx) => {
-                  const c = COLOR_CLASSES[color] ?? COLOR_CLASSES.emerald
-                  return (
-                    <motion.div
-                      key={title}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.4, delay: idx * 0.1 }}
-                      whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
-                      className="rounded-xl border border-slate-200 bg-slate-50 p-4 hover:shadow-sm transition-shadow"
-                    >
-                      <div className="flex items-center gap-2.5 mb-3">
-                        <motion.div
-                          animate={{ rotate: [0, 5, -5, 0] }}
-                          transition={{ duration: 3, repeat: Infinity, delay: idx * 0.2 }}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center ${c.bg} text-white shadow-sm`}
-                        >
-                          <Icon className="w-4 h-4" />
-                        </motion.div>
-                        <span className="font-semibold text-sm text-slate-900">{title}</span>
-                      </div>
-                      <ul className="space-y-2">
-                        {items.map((item) => (
-                          <li key={item} className="flex items-start gap-2 text-xs text-slate-600 leading-relaxed">
-                            <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </motion.div>
-                  )
-                })}
-              </div>
-            </motion.div>
-
+      {!!safetyAlerts.length && (
+        <CoachCard tone="attention" className="p-5">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="mt-1 h-5 w-5 text-amber-600" />
+            <div>
+              <h2 className="text-lg font-extrabold text-slate-950">{copy.safetyWarning}</h2>
+              <ul className="mt-2 space-y-2 text-sm leading-6 text-amber-900">
+                {safetyAlerts.slice(0, 4).map((alert, index) => <li key={index}>{alert.message || alert.body || String(alert)}</li>)}
+              </ul>
+            </div>
           </div>
-        </div>
+        </CoachCard>
+      )}
+
+      {sections.map((section) => (
+        <CoachCard key={section.key} className="p-5 sm:p-6">
+          <div className="mb-5">
+            <p className="coach-eyebrow">{section.title}</p>
+            <h2 className="coach-title-lg">{section.body}</h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {section.rows.map((item, index) => <ActionCard key={`${protocolTitle(item)}-${index}`} item={item} copy={copy} isUk={isUk} />)}
+          </div>
+        </CoachCard>
+      ))}
+
+      {!!shoppingLinks.length && (
+        <CoachCard className="p-5 sm:p-6">
+          <div className="mb-5">
+            <p className="coach-eyebrow">{copy.shoppingEyebrow}</p>
+            <h2 className="coach-title-lg">{copy.shoppingTitle}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              {copy.shoppingBody}
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {shoppingLinks.slice(0, 6).map((item, index) => (
+              <div key={`${item.search_query || item.label}-${index}`} className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-extrabold text-slate-950">{item.label || item.search_query}</h3>
+                    {item.category && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-emerald-700">{item.category}</p>}
+                  </div>
+                  {item.priority && <CoachBadge tone={priorityTone(item.priority)}>{formatPriority(item.priority, isUk)}</CoachBadge>}
+                </div>
+                {item.reason && <p className="mt-3 text-sm leading-6 text-slate-600">{item.reason}</p>}
+                {item.url && (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700 sm:w-auto"
+                  >
+                    {copy.findIherb}
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </CoachCard>
+      )}
+
+      <div className="coach-grid coach-grid--2">
+        <CoachCard className="p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <RefreshCw className="h-5 w-5 text-teal-600" />
+            <h2 className="text-lg font-extrabold text-slate-950">{copy.retestPlan}</h2>
+          </div>
+          {retestPlan.length ? (
+            <div className="space-y-3">
+              {retestPlan.slice(0, 6).map((item, index) => (
+                <div key={index} className="rounded-2xl bg-slate-50 p-3">
+                  <p className="font-bold text-slate-950">{displayBiomarker(item.marker, isUk) || copy.marker}</p>
+                  <p className="mt-1 text-sm text-slate-600">{item.timing || item.reason || copy.discussTiming}</p>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-sm leading-6 text-slate-600">{copy.retestFallback}</p>}
+        </CoachCard>
+
+        <CoachCard className="p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-teal-600" />
+            <h2 className="text-lg font-extrabold text-slate-950">{copy.safetyDiscussion}</h2>
+          </div>
+          {doctorDiscussion.length ? (
+            <ul className="space-y-2 text-sm leading-6 text-slate-700">
+              {doctorDiscussion.slice(0, 6).map((item, index) => <li key={index} className="rounded-2xl bg-slate-50 p-3">{item}</li>)}
+            </ul>
+          ) : <p className="text-sm leading-6 text-slate-600">{copy.discussionFallback}</p>}
+        </CoachCard>
       </div>
+
+      <InsightCard
+        icon={Sparkles}
+        title={copy.evidenceTitle}
+        body={copy.evidenceBody}
+      />
     </div>
   )
 }

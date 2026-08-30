@@ -20,7 +20,6 @@ import {
 } from 'lucide-react'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { buildSubscriptionPath, getCabinetUpgradeTarget } from '../../lib/subscriptionFlow.js'
-import { CABINET_VERSION } from '../../lib/cabinetV511.js'
 import { isUkrainianLocale } from '../../lib/locale.js'
 import UserAvatar from '../UserAvatar.jsx'
 
@@ -104,7 +103,6 @@ export default function UserDashboardSidebar({
           {!collapsed && (
             <div>
               <div className="text-sm font-semibold tracking-tight text-slate-800">VITALOOP</div>
-              <div className="text-xs text-slate-400">Cabinet {CABINET_VERSION}</div>
             </div>
           )}
         </div>
@@ -207,21 +205,21 @@ export default function UserDashboardSidebar({
 
         {/* User profile card */}
         <div
-          className="mt-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 cursor-pointer hover:bg-slate-100 transition-colors"
+          className="relative mt-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 cursor-pointer transition-colors hover:bg-slate-100"
           onClick={() => { if (typeof window !== 'undefined') window.location.href = '/settings' }}
           title={isUk ? 'Налаштування профілю' : 'Profile settings'}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-start gap-2.5">
             <UserAvatar user={user} size={collapsed ? 32 : 36} />
             {!collapsed && (
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 pr-5">
                 <p className="truncate text-xs font-semibold text-slate-700">
                   {user?.user_metadata?.full_name || user?.name || user?.email?.split('@')[0] || 'User'}
                 </p>
                 <p className="truncate text-xs text-slate-400">{user?.email || (isUk ? 'Email не вказано' : 'No email')}</p>
               </div>
             )}
-            {!collapsed && <Settings className="h-3.5 w-3.5 flex-shrink-0 text-slate-300" />}
+            {!collapsed && <Settings className="absolute right-3 top-3 h-3.5 w-3.5 text-slate-300" />}
           </div>
         </div>
       </div>

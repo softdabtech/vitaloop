@@ -1,7 +1,79 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight, Trash2, Plus } from 'lucide-react'
 import api from '../lib/api.js'
+import { isUkrainianLocale } from '../lib/locale.js'
 import '../styles/manual-entry.css'
+
+const COPY = {
+  en: {
+    loadFailed: 'Failed to load biomarker options. Please try refreshing.',
+    selectBiomarkerError: 'Select a biomarker',
+    validNumberError: 'Enter a valid number',
+    negativeError: 'Value cannot be negative',
+    tooHighError: 'Value seems too high',
+    selectUnitError: 'Select a unit',
+    addAtLeastOne: 'Add at least one biomarker',
+    fixErrors: 'Please fix the errors above',
+    analysisFailed: 'Analysis failed. Please try again.',
+    pdfQuota: 'You\'ve already uploaded a lab PDF. Free plan allows 1 entry via PDF OR manual. Upgrade to Premium for unlimited entries.',
+    manualQuota: 'Your free biomarker entry quota is full. Upgrade to Premium for unlimited entries.',
+    subscriptionRequired: 'Subscription required for this action. Upgrade to Premium.',
+    validationPrefix: 'Validation error',
+    loading: 'Loading biomarker database...',
+    emptyOptions: 'Unable to load biomarker options. Please try uploading a PDF instead.',
+    title: '📊 Enter Lab Results Manually',
+    subtitle: 'Don\'t have a PDF? Enter your biomarker values below to get personalized insights.',
+    empty: 'Click "Add Biomarker" to start entering your lab results',
+    biomarker: 'Biomarker',
+    selectBiomarker: 'Select biomarker...',
+    value: 'Value',
+    valuePlaceholder: 'e.g., 14.5',
+    unit: 'Unit',
+    selectUnit: 'Unit...',
+    removeTitle: 'Remove this entry',
+    standardUnit: 'Standard unit',
+    converting: 'Auto-converting to standard unit',
+    addAnother: 'Add Another',
+    addFirst: 'Add First Biomarker',
+    analyzing: 'Analyzing...',
+    analyze: 'Analyze Results',
+    hint: '💡 You can enter 1-3 biomarkers per month for free. Upgrade to Premium for unlimited entries.',
+  },
+  uk: {
+    loadFailed: 'Не вдалося завантажити список показників. Оновіть сторінку й спробуйте ще раз.',
+    selectBiomarkerError: 'Оберіть показник',
+    validNumberError: 'Введіть коректне число',
+    negativeError: 'Значення не може бути відʼємним',
+    tooHighError: 'Значення виглядає занадто високим',
+    selectUnitError: 'Оберіть одиницю',
+    addAtLeastOne: 'Додайте хоча б один показник',
+    fixErrors: 'Виправте помилки вище',
+    analysisFailed: 'Аналіз не вдався. Спробуйте ще раз.',
+    pdfQuota: 'Ви вже завантажили PDF з аналізами. Безкоштовний план дозволяє 1 введення: PDF або вручну. Premium відкриває необмежені введення.',
+    manualQuota: 'Ліміт безкоштовного ручного введення вичерпано. Premium відкриває необмежені введення.',
+    subscriptionRequired: 'Для цієї дії потрібен Premium.',
+    validationPrefix: 'Помилка валідації',
+    loading: 'Завантажуємо базу показників...',
+    emptyOptions: 'Не вдалося завантажити список показників. Спробуйте завантажити PDF.',
+    title: '📊 Ввести аналізи вручну',
+    subtitle: 'Немає PDF? Внесіть значення показників вручну, щоб отримати структурований розбір.',
+    empty: 'Натисніть «Додати показник», щоб почати введення результатів',
+    biomarker: 'Показник',
+    selectBiomarker: 'Оберіть показник...',
+    value: 'Значення',
+    valuePlaceholder: 'наприклад, 14.5',
+    unit: 'Одиниця',
+    selectUnit: 'Одиниця...',
+    removeTitle: 'Видалити цей показник',
+    standardUnit: 'Стандартна одиниця',
+    converting: 'Автоматично приводимо до стандартної одиниці',
+    addAnother: 'Додати ще',
+    addFirst: 'Додати показник',
+    analyzing: 'Аналізуємо...',
+    analyze: 'Аналізувати результати',
+    hint: '💡 У безкоштовному плані доступне одне введення аналізів. Premium відкриває необмежені введення.',
+  },
+}
 
 function triggerPaywall(detail) {
   if (typeof window !== 'undefined') {
@@ -10,6 +82,8 @@ function triggerPaywall(detail) {
 }
 
 export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
+  const isUk = isUkrainianLocale()
+  const copy = isUk ? COPY.uk : COPY.en
   const [entries, setEntries] = useState([])
   const [biomarkerOptions, setBiomarkerOptions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -26,12 +100,12 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
         setLoading(false)
       } catch (err) {
         console.error('Failed to load biomarkers:', err)
-        setGlobalError('Failed to load biomarker options. Please try refreshing.')
+        setGlobalError(copy.loadFailed)
         setLoading(false)
       }
     }
     fetchBiomarkers()
-  }, [])
+  }, [copy.loadFailed])
 
   const addEntry = () => {
     setEntries([
@@ -81,23 +155,23 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
       const entryErrors = []
 
       if (!entry.biomarker_id) {
-        entryErrors.push('Select a biomarker')
+        entryErrors.push(copy.selectBiomarkerError)
         hasErrors = true
       }
 
       if (!entry.value || entry.value === '' || isNaN(parseFloat(entry.value))) {
-        entryErrors.push('Enter a valid number')
+        entryErrors.push(copy.validNumberError)
         hasErrors = true
       } else if (parseFloat(entry.value) < 0) {
-        entryErrors.push('Value cannot be negative')
+        entryErrors.push(copy.negativeError)
         hasErrors = true
       } else if (parseFloat(entry.value) > 10000) {
-        entryErrors.push('Value seems too high')
+        entryErrors.push(copy.tooHighError)
         hasErrors = true
       }
 
       if (!entry.unit) {
-        entryErrors.push('Select a unit')
+        entryErrors.push(copy.selectUnitError)
         hasErrors = true
       }
 
@@ -114,12 +188,12 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
     setGlobalError(null)
 
     if (entries.length === 0) {
-      setGlobalError('Add at least one biomarker')
+      setGlobalError(copy.addAtLeastOne)
       return
     }
 
     if (!validateEntries()) {
-      setGlobalError('Please fix the errors above')
+      setGlobalError(copy.fixErrors)
       return
     }
 
@@ -153,22 +227,22 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
         ? errorData.errors[0]?.msg
         : null
 
-      let message = firstValidationMessage || errorDetail || 'Analysis failed. Please try again.'
+      let message = firstValidationMessage || errorDetail || copy.analysisFailed
 
       if (err.response?.status === 402 && errorCode === 'BIOMARKER_QUOTA_EXCEEDED') {
         const usedBy = innerError?.used_by || errorData?.used_by
         if (usedBy === 'pdf') {
-          message = 'You\'ve already uploaded a lab PDF. Free plan allows 1 entry via PDF OR manual. Upgrade to Premium for unlimited entries.'
+          message = copy.pdfQuota
         } else {
-          message = errorDetail || 'Your free biomarker entry quota is full. Upgrade to Premium for unlimited entries.'
+          message = errorDetail || copy.manualQuota
         }
         // Trigger paywall
         triggerPaywall({ reason: 'BIOMARKER_QUOTA_EXCEEDED', used_by: usedBy })
       } else if (err.response?.status === 402) {
-        message = errorDetail || 'Subscription required for this action. Upgrade to Premium.'
+        message = errorDetail || copy.subscriptionRequired
         triggerPaywall({ reason: 'SUBSCRIPTION_REQUIRED' })
       } else if (err.response?.status === 422 && !errorDetail && firstValidationMessage) {
-        message = `Validation error: ${firstValidationMessage}`
+        message = `${copy.validationPrefix}: ${firstValidationMessage}`
       }
 
       setGlobalError(message)
@@ -182,7 +256,7 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
     return (
       <div className="manual-entry-loading">
         <div className="spinner"></div>
-        <p>Loading biomarker database...</p>
+        <p>{copy.loading}</p>
       </div>
     )
   }
@@ -190,7 +264,7 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
   if (!biomarkerOptions || biomarkerOptions.length === 0) {
     return (
       <div className="manual-entry-error">
-        <p>Unable to load biomarker options. Please try uploading a PDF instead.</p>
+        <p>{copy.emptyOptions}</p>
       </div>
     )
   }
@@ -198,8 +272,8 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
   return (
     <div className="manual-entry-container">
       <div className="manual-entry-header">
-        <h3>📊 Enter Lab Results Manually</h3>
-        <p className="subtitle">Don't have a PDF? Enter your biomarker values below to get personalized insights.</p>
+        <h3>{copy.title}</h3>
+        <p className="subtitle">{copy.subtitle}</p>
       </div>
 
       {globalError && (
@@ -211,7 +285,7 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
       <div className="entries-section">
         {entries.length === 0 && (
           <div className="empty-state">
-            <p>Click "Add Biomarker" to start entering your lab results</p>
+            <p>{copy.empty}</p>
           </div>
         )}
 
@@ -225,13 +299,13 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
               <div className="entry-fields">
                 {/* Biomarker Dropdown */}
                 <div className="field biomarker-field">
-                  <label>Biomarker</label>
+                  <label>{copy.biomarker}</label>
                   <select
                     value={entry.biomarker_id}
                     onChange={(e) => updateEntry(entry.id, 'biomarker_id', e.target.value)}
                     className={entryErrors.length > 0 ? 'has-error' : ''}
                   >
-                    <option value="">Select biomarker...</option>
+                    <option value="">{copy.selectBiomarker}</option>
                     {biomarkerOptions.map(b => (
                       <option key={b.id} value={b.id}>
                         {b.name} ({b.category})
@@ -242,11 +316,11 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
 
                 {/* Value Input */}
                 <div className="field value-field">
-                  <label>Value</label>
+                  <label>{copy.value}</label>
                   <input
                     type="number"
                     step="0.01"
-                    placeholder="e.g., 14.5"
+                    placeholder={copy.valuePlaceholder}
                     value={entry.value}
                     onChange={(e) => updateEntry(entry.id, 'value', e.target.value)}
                     className={entryErrors.length > 0 ? 'has-error' : ''}
@@ -255,14 +329,14 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
 
                 {/* Unit Dropdown */}
                 <div className="field unit-field">
-                  <label>Unit</label>
+                  <label>{copy.unit}</label>
                   <select
                     value={entry.unit}
                     onChange={(e) => updateEntry(entry.id, 'unit', e.target.value)}
                     disabled={!entry.biomarker_id}
                     className={entryErrors.length > 0 ? 'has-error' : ''}
                   >
-                    <option value="">Unit...</option>
+                    <option value="">{copy.selectUnit}</option>
                     {units.map(u => (
                       <option key={u} value={u}>
                         {u}
@@ -275,7 +349,7 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
                 <button
                   onClick={() => removeEntry(entry.id)}
                   className="btn-remove"
-                  title="Remove this entry"
+                  title={copy.removeTitle}
                 >
                   <Trash2 size={18} />
                 </button>
@@ -286,10 +360,10 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
                 <div className="entry-info">
                   <span className="badge">{selectedBiomarker.category}</span>
                   {selectedBiomarker.default_unit === entry.unit && (
-                    <span className="hint">Standard unit</span>
+                    <span className="hint">{copy.standardUnit}</span>
                   )}
                   {selectedBiomarker.default_unit !== entry.unit && entry.unit && (
-                    <span className="hint converting">Auto-converting to standard unit</span>
+                    <span className="hint converting">{copy.converting}</span>
                   )}
                 </div>
               )}
@@ -309,14 +383,14 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
         {entries.length > 0 && (
           <button onClick={addEntry} className="btn-add-entry">
             <Plus size={18} />
-            Add Another
+            {copy.addAnother}
           </button>
         )}
 
         {entries.length === 0 && (
           <button onClick={addEntry} className="btn-add-entry btn-primary">
             <Plus size={18} />
-            Add First Biomarker
+            {copy.addFirst}
           </button>
         )}
       </div>
@@ -331,17 +405,17 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
             {analyzing ? (
               <>
                 <div className="spinner-small"></div>
-                Analyzing...
+                {copy.analyzing}
               </>
             ) : (
               <>
-                Analyze Results
+                {copy.analyze}
                 <ChevronRight size={18} />
               </>
             )}
           </button>
           <p className="hint-text">
-            💡 You can enter 1-3 biomarkers per month for free. Upgrade to Premium for unlimited entries.
+            {copy.hint}
           </p>
         </div>
       )}
