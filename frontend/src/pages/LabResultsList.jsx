@@ -16,8 +16,8 @@ import '../styles/dashboard2026.css'
 // LabResultsList.jsx (LAB_RESULTS_COPY). Applied on top of the CURRENT
 // file's data logic, not origin/main's — origin/main's version regresses
 // two Stage 2D invariants that must not be ported: (1) its getItemDate()
-// falls back to created_at (`item?.test_date || item?.created_at`),
-// violating Stage 2D-1's test_date -> collected_at -> reported_at
+// falls back to the upload's created-at timestamp when no real lab date
+// exists, violating Stage 2D-1's test_date -> collected_at -> reported_at
 // chronology; (2) it has no /progress/overview call or ClinicalProgressPanel
 // at all — its sidebar is static placeholder copy, not backend-computed
 // longitudinal data, which is a regression from Stage 2D-2 here, not an

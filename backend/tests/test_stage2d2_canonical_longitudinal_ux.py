@@ -168,7 +168,10 @@ def test_d2_8_upload_history_list_remains_and_is_visually_separate_from_progress
     # Clinical progress now lives in its own distinct component, not merged
     # into the upload-history row markup.
     assert "function ClinicalProgressPanel(" in LAB_RESULTS_LIST_JSX
-    assert "<ClinicalProgressPanel overview={overview} loading={overviewLoading} t={t} />" in LAB_RESULTS_LIST_JSX
+    # Cabinet reconciliation: gained a `copy` prop (EN/UA localization for the
+    # panel's two static text blocks) — same component, same call site, just
+    # one more prop than this exact-string check originally pinned.
+    assert "<ClinicalProgressPanel overview={overview} loading={overviewLoading} t={t} copy={copy} />" in LAB_RESULTS_LIST_JSX
 
 
 # --- D2-9 through D2-12: prior-stage suites remain green -------------------------

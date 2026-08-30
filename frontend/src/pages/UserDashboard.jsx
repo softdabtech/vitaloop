@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Beaker, CalendarCheck2, CheckCircle2, ClipboardList, HelpCircle, MessageCircle, Route, Sparkles, Stethoscope, UploadCloud } from 'lucide-react'
+import { ArrowRight, Beaker, CalendarCheck2, CheckCircle2, ClipboardList, HelpCircle, MessageCircle, Route, ShieldAlert, Sparkles, Stethoscope, UploadCloud } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth.js'
 import { useDashboardSummary, useQuestionnaireSession } from '../hooks/useQueries.js'
 import { useSubscription } from '../hooks/useSubscription.js'
@@ -60,6 +60,8 @@ const DASHBOARD_COPY = {
     overallNotCalculated: 'Overall score not yet calculated — upload a lab and complete a check-in to generate it.',
     overallLabel: (v) => `Overall: ${v}%`,
     notYetCalculated: 'Not yet calculated',
+    safety: 'Safety',
+    noRedFlags: 'No urgent red flags reported.',
     scoreLabels: {
       symptom: 'Symptoms',
       biomarker: 'Biomarkers',
@@ -159,6 +161,8 @@ const DASHBOARD_COPY = {
     overallNotCalculated: 'Загальний бал ще не розраховано — завантажте аналіз і пройдіть чек-ін, щоб отримати його.',
     overallLabel: (v) => `Загалом: ${v}%`,
     notYetCalculated: 'Ще не розраховано',
+    safety: 'Безпека',
+    noRedFlags: 'Термінових тривожних сигналів не повідомлено.',
     scoreLabels: {
       symptom: 'Симптоми',
       biomarker: 'Біомаркери',
@@ -483,6 +487,13 @@ export default function UserDashboard() {
           <CoachScoreRow label={copy.scoreLabels.adherence} value={adherenceScore} notYetCalculated={copy.notYetCalculated} />
           <CoachScoreRow label={copy.scoreLabels.profile} value={profileScore} notYetCalculated={copy.notYetCalculated} />
         </div>
+      </CoachCard>
+
+      <CoachCard className="p-5 sm:p-6">
+        <div className="mb-2 flex items-center gap-2 text-lg font-extrabold text-slate-950">
+          <ShieldAlert className="h-4 w-4 text-slate-500" /> {copy.safety}
+        </div>
+        <p className="text-sm leading-6 text-slate-600">{concernSummary?.urgency || copy.noRedFlags}</p>
       </CoachCard>
 
       <CoachCard className="p-5 sm:p-6">

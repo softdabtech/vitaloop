@@ -57,9 +57,14 @@ def test_f1_fabricated_biomarker_score_pattern_removed():
 
 def test_f2_fabricated_safety_score_pattern_removed():
     assert "urgency?.includes" not in DASHBOARD_JSX, "the binary substring-match safety score must be gone"
-    assert "safetyScore" not in DASHBOARD_JSX.replace(
-        "// biomarkerScore (flat 70/25 constant), safetyScore (binary substring", ""
-    ), "no live safetyScore variable should remain (only the explanatory comment may mention the old name)"
+    # No live safetyScore variable declaration/usage — "safetyScore" may still
+    # appear inside an explanatory comment (documenting what Stage 2F
+    # replaced), which prose reflow can wrap across lines differently; a live
+    # reference would read as `safetyScore =`/`safetyScore)`/`{safetyScore`/
+    # `safetyScore.` etc. None of those patterns should be present.
+    import re
+    assert not re.search(r"safetyScore\s*[=).]|\{safetyScore\b", DASHBOARD_JSX), \
+        "no live safetyScore variable should remain (only an explanatory comment may mention the old name)"
 
 
 # --- F3/F4: dashboard renders correctly with and without labs (data contract) ---
@@ -80,8 +85,14 @@ async def test_f3_dashboard_stats_reflect_real_upload_presence(monkeypatch):
 
 
 def test_f4_dashboard_falls_back_to_truthful_empty_state_text():
-    assert "Not started — set an active concern to begin." in DASHBOARD_JSX
-    assert "No active protocol tasks yet." in DASHBOARD_JSX
+    # Cabinet reconciliation restructured the dashboard onto origin/main's
+    # journey/KPI-card layout — the old "Symptom Check & Lab Plan"/"Protocol"
+    # sections these two strings lived in no longer exist as such, but the
+    # same truthful-empty-state invariant is preserved by their KPIBlock/
+    # Recent-Context equivalents (still real, still non-fabricated, just
+    # reworded for the new layout).
+    assert "Start with the main concern." in DASHBOARD_JSX  # KPIBlock helper when !hasConcern
+    assert "Generate a protocol after your results." in DASHBOARD_JSX  # Recent Context card when no assignments
     assert "Overall score not yet calculated" in DASHBOARD_JSX
 
 
@@ -177,8 +188,11 @@ def test_f6_safety_section_has_no_score_threshold_styling():
     # The Safety section still displays real text (concernSummary?.urgency) —
     # that data-provenance question belongs to Questionnaire.jsx, out of
     # Stage 2F's scope — this test only proves the FABRICATED PERCENTAGE/
-    # THRESHOLD built on top of it in UserDashboard.jsx is gone.
-    assert 'concernSummary?.urgency || \'No urgent red flags reported.\'' in DASHBOARD_JSX
+    # THRESHOLD built on top of it in UserDashboard.jsx is gone. Cabinet
+    # reconciliation localized the fallback string (EN/UA) instead of a
+    # hardcoded English literal — same real-urgency-text-or-truthful-fallback
+    # shape, just read from `copy.noRedFlags` now.
+    assert "concernSummary?.urgency || copy.noRedFlags" in DASHBOARD_JSX
 
 
 # --- F7: Stage 2E check-in state remains correct --------------------------------
