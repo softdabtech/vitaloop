@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react'
-import { motion } from 'framer-motion'
 import { Mail, Lock, LogOut, AlertTriangle, Cookie, UserCircle2, CreditCard, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
@@ -11,6 +10,7 @@ import { supabase } from '../lib/supabase.js'
 import api from '../lib/api.js'
 import { isUkrainianLocale } from '../lib/locale.js'
 import { ct } from '../lib/cabinetI18n.js'
+import { CoachButton, CoachCard, CoachInput } from '../components/coach/CoachUI.jsx'
 import '../styles/dashboard2026.css'
 
 const COOKIE_STORAGE_KEY = 'vitaloop-cookie-consent'
@@ -21,19 +21,6 @@ function resetCookieConsent() {
     // Continue to reload so the user can retry consent setup even if storage is blocked.
   }
   window.location.reload()
-}
-
-const fieldStyle = {
-  width: '100%',
-  minHeight: 44,
-  padding: '10px 14px',
-  background: '#f8fafc',
-  border: '1px solid rgba(15,23,42,0.12)',
-  borderRadius: 14,
-  color: '#0f172a',
-  fontSize: 16,
-  outline: 'none',
-  transition: 'border-color 200ms, box-shadow 200ms',
 }
 
 function safeNavigateToLogin() {
@@ -47,17 +34,6 @@ function validatePasswordInput(newPassword, confirmPassword, isUk = false) {
   if (newPassword !== confirmPassword) return isUk ? 'Паролі не збігаються' : 'Passwords do not match'
   if (newPassword.length < 8) return isUk ? 'Пароль має містити щонайменше 8 символів' : 'Password must be at least 8 characters'
   return ''
-}
-
-function Field({ label, children }) {
-  return (
-    <div>
-      <label style={{ fontSize: 13, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6, lineHeight: 1.3 }}>
-        {label}
-      </label>
-      {children}
-    </div>
-  )
 }
 
 export default function Settings() {
@@ -83,17 +59,6 @@ export default function Settings() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [exportingData, setExportingData] = useState(false)
-
-  function focusStyle(event) {
-    event.target.style.borderColor = 'rgba(29,158,117,0.72)'
-    event.target.style.boxShadow = '0 0 0 3px rgba(29,158,117,0.16)'
-  }
-
-  function blurStyle(event) {
-    event.target.style.borderColor = 'rgba(15,23,42,0.12)'
-    event.target.style.boxShadow = 'none'
-  }
-
 
   async function updatePassword() {
     const validationError = validatePasswordInput(newPassword, confirmPassword, isUk)
@@ -205,15 +170,15 @@ export default function Settings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="coach-shell">
       <CabinetPageHeader
         title={ct().settings.title}
         subtitle={ct().settings.subtitle}
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="coach-grid coach-grid--2">
 
-        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }} className="rounded-2xl border border-slate-200 bg-white p-6">
+        <CoachCard className="p-6">
           <div className="mb-5 flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50">
               <UserCircle2 size={18} color="#0d9488" />
@@ -232,15 +197,9 @@ export default function Settings() {
               })
             }, [isUk])}
           />
-        </motion.section>
+        </CoachCard>
 
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0 }}
-          className="rounded-2xl border border-slate-200 bg-white p-6"
-        >
+        <CoachCard className="p-6">
           <div className="mb-5 flex items-center gap-3">
             <Mail size={18} className="text-emerald-600" />
             <div>
@@ -254,37 +213,24 @@ export default function Settings() {
           </div>
 
           <div className="mt-4 grid gap-3">
-            <Field label={isUk ? 'Нова email адреса' : 'New email address'}>
+            <CoachInput label={isUk ? 'Нова email адреса' : 'New email address'}>
               <input
                 type="email"
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
-                placeholder={isUk ? 'name@example.com' : 'name@example.com'}
-                style={fieldStyle}
-                onFocus={focusStyle}
-                onBlur={blurStyle}
+                placeholder="name@example.com"
               />
-            </Field>
-            <button
-              onClick={updateEmail}
-              disabled={savingEmail || !newEmail.trim()}
-              className="rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-3 text-center font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
-            >
+            </CoachInput>
+            <CoachButton onClick={updateEmail} disabled={savingEmail || !newEmail.trim()}>
               {savingEmail ? (isUk ? 'Надсилаємо...' : 'Sending...') : (isUk ? 'Надіслати підтвердження' : 'Send confirmation')}
-            </button>
+            </CoachButton>
             <p className="text-xs leading-5 text-slate-500">
               {isUk ? 'Email зміниться після підтвердження за посиланням у новій пошті.' : 'Your email changes after you confirm the link sent to the new address.'}
             </p>
           </div>
-        </motion.section>
+        </CoachCard>
 
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="rounded-2xl border border-slate-200 bg-white p-6"
-        >
+        <CoachCard className="p-6">
           <div className="mb-5 flex items-center gap-3">
             <Lock size={18} className="text-emerald-600" />
             <div>
@@ -293,48 +239,32 @@ export default function Settings() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gap: 16 }}>
-            <Field label={isUk ? 'Новий пароль' : 'New Password'}>
+          <div className="grid gap-4">
+            <CoachInput label={isUk ? 'Новий пароль' : 'New Password'}>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder={isUk ? 'Щонайменше 8 символів' : 'At least 8 characters'}
-                style={fieldStyle}
-                onFocus={focusStyle}
-                onBlur={blurStyle}
               />
-            </Field>
+            </CoachInput>
 
-            <Field label={isUk ? 'Підтвердіть пароль' : 'Confirm Password'}>
+            <CoachInput label={isUk ? 'Підтвердіть пароль' : 'Confirm Password'}>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder={isUk ? 'Введіть пароль ще раз' : 'Re-enter your password'}
-                style={fieldStyle}
-                onFocus={focusStyle}
-                onBlur={blurStyle}
               />
-            </Field>
+            </CoachInput>
 
-            <button
-              onClick={updatePassword}
-              disabled={saving || !newPassword}
-              className="rounded-2xl bg-emerald-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-            >
+            <CoachButton onClick={updatePassword} disabled={saving || !newPassword}>
               {saving ? (isUk ? 'Оновлення...' : 'Updating...') : (isUk ? 'Оновити пароль' : 'Update Password')}
-            </button>
+            </CoachButton>
           </div>
-        </motion.section>
+        </CoachCard>
 
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="rounded-2xl border border-slate-200 bg-white p-6"
-        >
+        <CoachCard className="p-6">
           <NotificationPreferences
             currentPreferences={notifications}
             onSave={(prefs) => {
@@ -342,9 +272,9 @@ export default function Settings() {
               toast.success(isUk ? 'Налаштування сповіщень оновлено' : 'Notification preferences updated!')
             }}
           />
-        </motion.section>
+        </CoachCard>
 
-        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="rounded-2xl border border-slate-200 bg-white p-6 lg:col-span-2">
+        <CoachCard className="p-6 lg:col-span-2">
           <div className="mb-4 flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50">
               <Cookie size={18} color="#0d9488" />
@@ -360,16 +290,16 @@ export default function Settings() {
               : 'Review or update your consent for analytics, marketing and functional cookies. Essential cookies required for login and security cannot be disabled.'}
           </p>
           <div className="flex flex-wrap gap-2">
-            <button onClick={resetCookieConsent} className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            <CoachButton variant="secondary" size="sm" onClick={resetCookieConsent}>
               {isUk ? 'Оновити налаштування cookie' : 'Update Cookie Settings'}
-            </button>
+            </CoachButton>
             <a href="/privacy-policy/#cookies" target="_blank" rel="noreferrer" className="rounded-full px-4 py-2 text-sm font-semibold text-emerald-700 underline underline-offset-4">
               {isUk ? 'Політика cookie ↗' : 'Cookie Policy ↗'}
             </a>
           </div>
-        </motion.section>
+        </CoachCard>
 
-        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} className="rounded-2xl border border-slate-200 bg-white p-6 lg:col-span-2">
+        <CoachCard className="p-6 lg:col-span-2">
           <div className="mb-4 flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50">
               <Download size={18} color="#2563eb" />
@@ -387,15 +317,9 @@ export default function Settings() {
           <button onClick={exportAccountData} disabled={exportingData} className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60">
             {exportingData ? (isUk ? 'Готуємо експорт...' : 'Preparing export...') : (isUk ? 'Скачати мої дані' : 'Download my data')}
           </button>
-        </motion.section>
+        </CoachCard>
 
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="rounded-2xl border border-rose-200 bg-rose-50 p-6 lg:col-span-2"
-        >
+        <CoachCard tone="attention" className="p-6 lg:col-span-2">
           <div className="mb-4 flex items-center gap-3">
             <AlertTriangle size={18} className="text-rose-700" />
             <div>
@@ -461,14 +385,14 @@ export default function Settings() {
                     <button
                       onClick={deleteAccount}
                       disabled={deleting}
-                      className="flex-1 rounded-lg bg-red-700 text-white px-4 py-2 font-semibold hover:bg-red-800 transition disabled:opacity-60"
+                      className="flex-1 rounded-lg bg-red-700 px-4 py-2 font-semibold text-white transition hover:bg-red-800 disabled:opacity-60"
                     >
                       {deleting ? (isUk ? 'Видалення...' : 'Deleting...') : (isUk ? 'Так, видалити все' : 'Yes, Delete Everything')}
                     </button>
                     <button
                       onClick={() => setShowDeleteConfirm(false)}
                       disabled={deleting}
-                      className="flex-1 rounded-lg border border-rose-400 bg-white text-rose-700 px-4 py-2 font-semibold hover:bg-rose-50 transition disabled:opacity-60"
+                      className="flex-1 rounded-lg border border-rose-400 bg-white px-4 py-2 font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
                     >
                       {isUk ? 'Скасувати' : 'Cancel'}
                     </button>
@@ -477,7 +401,7 @@ export default function Settings() {
               )}
             </div>
           </div>
-        </motion.section>
+        </CoachCard>
       </div>
     </div>
   )

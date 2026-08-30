@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Target, User, Activity, TrendingUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
@@ -8,6 +7,8 @@ import { useAuth } from '../hooks/useAuth.js'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
 import { gaEvent } from '../lib/analytics.js'
+import { CoachButton, CoachCard, CoachInput, CoachProgress } from '../components/coach/CoachUI.jsx'
+import { isUkrainianLocale } from '../lib/locale.js'
 import '../styles/dashboard2026.css'
 
 const TIMEZONES = [
@@ -18,6 +19,21 @@ const TIMEZONES = [
   'Australia/Sydney', 'Pacific/Auckland',
 ]
 
+const GOAL_KEYS = [
+  'more_energy',
+  'better_sleep',
+  'hormone_balance',
+  'improve_digestion',
+  'cardiometabolic_health',
+  'reduce_inflammation',
+  'sports_performance',
+  'healthy_aging',
+]
+
+// The backend stores goal text verbatim (no enum) — English canonical labels
+// are what's persisted/read back either way, so goal VALUES stay English
+// regardless of UI locale (this is stored, comparable data, not display
+// copy) while the checkbox LABEL the user sees is localized via GOAL_LABELS.
 const GOAL_OPTIONS = [
   'More energy',
   'Better sleep',
@@ -28,6 +44,121 @@ const GOAL_OPTIONS = [
   'Sports performance',
   'Healthy aging',
 ]
+
+const HEALTH_PROFILE_COPY = {
+  en: {
+    loadingProfile: 'Loading saved profile details...',
+    basics: 'Basics',
+    age: 'Age',
+    agePlaceholder: 'Enter your age',
+    sex: 'Sex',
+    selectSex: 'Select sex',
+    male: 'Male',
+    female: 'Female',
+    other: 'Other',
+    heightCm: 'Height (cm)',
+    weightKg: 'Weight (kg)',
+    timezone: 'Timezone',
+    goals: 'Goals',
+    goalsBody: 'Select goals to personalize your protocol recommendations.',
+    goalLabels: {
+      more_energy: 'More energy',
+      better_sleep: 'Better sleep',
+      hormone_balance: 'Hormone balance',
+      improve_digestion: 'Improve digestion',
+      cardiometabolic_health: 'Cardiometabolic health',
+      reduce_inflammation: 'Reduce inflammation',
+      sports_performance: 'Sports performance',
+      healthy_aging: 'Healthy aging',
+    },
+    conditionsTitle: 'Conditions & Contraindications',
+    conditionsBody: 'This information helps us interpret biomarkers safely and avoid dangerous recommendations.',
+    medications: 'Current medications (if any)',
+    medicationsPlaceholder: 'e.g., Aspirin 100mg daily, Vitamin D supplementation...',
+    allergies: 'Known allergies',
+    allergiesPlaceholder: 'e.g., Shellfish, Penicillin, Nuts...',
+    pregnancyStatus: 'Pregnancy / Breastfeeding status',
+    selectStatus: 'Select status',
+    pregnant: 'Currently pregnant',
+    breastfeeding: 'Breastfeeding',
+    planning: 'Planning to conceive',
+    notApplicable: 'Not applicable',
+    currentSupplements: 'Current supplements (comma-separated)',
+    supplementsPlaceholder: 'e.g., Vitamin D 2000IU, Magnesium 400mg, Omega-3...',
+    currentMedications: 'Current prescribed medications (comma-separated)',
+    currentMedicationsPlaceholder: 'e.g., Metformin 500mg, Lisinopril 10mg...',
+    priorDiagnoses: 'Prior diagnoses / chronic conditions',
+    priorDiagnosesPlaceholder: 'e.g., Type 2 diabetes, Hypothyroidism, IBS...',
+    privacyNote: 'Your medical information is kept private and only used to provide safe, personalized recommendations.',
+    save: 'Save Profile & Safety',
+    saving: 'Saving...',
+    savedToast: 'Profile & Safety updated!',
+    saveFailedToast: 'Failed to save profile',
+    profileCompletion: 'Profile Completion',
+    bmi: 'BMI',
+    ageMetric: 'Age',
+    weightMetric: 'Weight',
+    heightMetric: 'Height',
+    tip: 'TIP',
+    tipBody: 'Your profile data is used to personalize supplement recommendations, nutrition guidance, and protocol timing. Keep it updated!',
+  },
+  uk: {
+    loadingProfile: 'Завантажуємо збережений профіль...',
+    basics: 'Основне',
+    age: 'Вік',
+    agePlaceholder: 'Введіть ваш вік',
+    sex: 'Стать',
+    selectSex: 'Оберіть стать',
+    male: 'Чоловіча',
+    female: 'Жіноча',
+    other: 'Інша',
+    heightCm: 'Зріст (см)',
+    weightKg: 'Вага (кг)',
+    timezone: 'Часовий пояс',
+    goals: 'Цілі',
+    goalsBody: 'Оберіть цілі, щоб персоналізувати рекомендації протоколу.',
+    goalLabels: {
+      more_energy: 'Більше енергії',
+      better_sleep: 'Кращий сон',
+      hormone_balance: 'Гормональний баланс',
+      improve_digestion: 'Покращення травлення',
+      cardiometabolic_health: 'Кардіометаболічне здоровʼя',
+      reduce_inflammation: 'Зменшення запалення',
+      sports_performance: 'Спортивні результати',
+      healthy_aging: 'Здорове старіння',
+    },
+    conditionsTitle: 'Стани та протипоказання',
+    conditionsBody: 'Ця інформація допомагає безпечно інтерпретувати біомаркери та уникати небезпечних рекомендацій.',
+    medications: 'Поточні ліки (якщо є)',
+    medicationsPlaceholder: 'напр., Аспірин 100мг щодня, вітамін D...',
+    allergies: 'Відомі алергії',
+    allergiesPlaceholder: 'напр., Морепродукти, пеніцилін, горіхи...',
+    pregnancyStatus: 'Вагітність / грудне вигодовування',
+    selectStatus: 'Оберіть статус',
+    pregnant: 'Наразі вагітна',
+    breastfeeding: 'Годування груддю',
+    planning: 'Планую вагітність',
+    notApplicable: 'Не застосовується',
+    currentSupplements: 'Поточні добавки (через кому)',
+    supplementsPlaceholder: 'напр., Вітамін D 2000МО, Магній 400мг, Омега-3...',
+    currentMedications: 'Поточні призначені ліки (через кому)',
+    currentMedicationsPlaceholder: 'напр., Метформін 500мг, Лізиноприл 10мг...',
+    priorDiagnoses: 'Попередні діагнози / хронічні стани',
+    priorDiagnosesPlaceholder: 'напр., Діабет 2 типу, Гіпотиреоз, СРК...',
+    privacyNote: 'Ваша медична інформація залишається приватною і використовується лише для безпечних персоналізованих рекомендацій.',
+    save: 'Зберегти профіль і безпеку',
+    saving: 'Зберігаємо...',
+    savedToast: 'Профіль і безпеку оновлено!',
+    saveFailedToast: 'Не вдалося зберегти профіль',
+    profileCompletion: 'Заповненість профілю',
+    bmi: 'ІМТ',
+    ageMetric: 'Вік',
+    weightMetric: 'Вага',
+    heightMetric: 'Зріст',
+    tip: 'ПОРАДА',
+    tipBody: 'Дані профілю персоналізують рекомендації добавок, харчування та терміни протоколу. Тримайте їх актуальними!',
+  },
+}
 
 const DEFAULT_PROFILE = {
   age: '',
@@ -44,41 +175,14 @@ const DEFAULT_PROFILE = {
   prior_diagnoses: '',
 }
 
-const fieldStyle = {
-  width: '100%',
-  minHeight: 44,
-  padding: '10px 14px',
-  background: '#f8fafc',
-  border: '1px solid rgba(15,23,42,0.12)',
-  borderRadius: 14,
-  color: '#0f172a',
-  fontSize: 16,
-  outline: 'none',
-  transition: 'border-color 200ms, box-shadow 200ms',
-}
-
-function Field({ label, children }) {
-  return (
-    <div>
-      <label style={{ fontSize: 13, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6, lineHeight: 1.3 }}>
-        {label}
-      </label>
-      {children}
-    </div>
-  )
-}
-
 function MetricTile({ label, value, tone = 'default' }) {
-  const themes = {
-    default: { bg: '#f8fafc', border: 'rgba(15,23,42,0.08)', title: '#64748b', value: '#0f172a' },
-    success: { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.18)', title: '#047857', value: '#065f46' },
-  }
-  const theme = themes[tone] || themes.default
-
+  const toneClass = tone === 'success' ? 'border-emerald-200 bg-emerald-50' : 'border-slate-100 bg-slate-50'
+  const valueClass = tone === 'success' ? 'text-emerald-900' : 'text-slate-950'
+  const labelClass = tone === 'success' ? 'text-emerald-700' : 'text-slate-500'
   return (
-    <div style={{ borderRadius: 18, padding: '16px 18px', background: theme.bg, border: `1px solid ${theme.border}` }}>
-      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: theme.title, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: theme.value }}>{value}</div>
+    <div className={`rounded-2xl border p-4 ${toneClass}`}>
+      <p className={`text-xs font-bold uppercase tracking-wide ${labelClass}`}>{label}</p>
+      <p className={`mt-2 text-2xl font-extrabold ${valueClass}`}>{value}</p>
     </div>
   )
 }
@@ -154,6 +258,8 @@ function buildProfileUpdatePayload(profile) {
 export default function HealthProfile() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const isUk = isUkrainianLocale()
+  const copy = isUk ? HEALTH_PROFILE_COPY.uk : HEALTH_PROFILE_COPY.en
   const [profile, setProfile] = useState(DEFAULT_PROFILE)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -222,9 +328,9 @@ export default function HealthProfile() {
         queryClient.invalidateQueries({ queryKey: ['insights'] }),
         queryClient.invalidateQueries({ queryKey: ['health-score'] }),
       ])
-      toast.success('Profile & Safety updated!')
+      toast.success(copy.savedToast)
     } catch (error) {
-      toast.error('Failed to save profile')
+      toast.error(copy.saveFailedToast)
       console.error(error)
     } finally {
       setSaving(false)
@@ -232,7 +338,7 @@ export default function HealthProfile() {
   }
 
   return (
-    <>
+    <div className="coach-shell">
       <CabinetPageHeader
         title={ct().healthProfile.title}
         subtitle={ct().healthProfile.subtitle}
@@ -241,257 +347,203 @@ export default function HealthProfile() {
 
       {loading && (
         <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-          Loading saved profile details...
+          {copy.loadingProfile}
         </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-6">
           {/* Main grid: Personal Info + Health Goals side by side */}
-          <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Biometrics Section - Left Column */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-              <h3 className="mb-6 text-lg font-bold text-slate-900">Basics</h3>
+            <CoachCard className="p-6 sm:p-8">
+              <h3 className="coach-title-lg mb-6">{copy.basics}</h3>
 
               <div className="space-y-5">
-                <Field label="Age">
+                <CoachInput label={copy.age}>
                   <input
                     type="number"
                     value={profile.age}
                     onChange={(e) => setProfile({ ...profile, age: e.target.value })}
-                    placeholder="Enter your age"
-                    style={fieldStyle}
+                    placeholder={copy.agePlaceholder}
                     min="0"
                     max="150"
                   />
-                </Field>
+                </CoachInput>
 
-                <Field label="Sex">
+                <CoachInput label={copy.sex}>
                   <select
                     value={profile.sex}
                     onChange={(e) => setProfile({ ...profile, sex: e.target.value })}
-                    style={fieldStyle}
                   >
-                    <option value="">Select sex</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
+                    <option value="">{copy.selectSex}</option>
+                    <option value="male">{copy.male}</option>
+                    <option value="female">{copy.female}</option>
+                    <option value="other">{copy.other}</option>
                   </select>
-                </Field>
+                </CoachInput>
 
-                <Field label="Height (cm)">
+                <CoachInput label={copy.heightCm}>
                   <input
                     type="number"
                     value={profile.height_cm}
                     onChange={(e) => setProfile({ ...profile, height_cm: e.target.value })}
                     placeholder="e.g., 180"
-                    style={fieldStyle}
                     min="0"
                     max="300"
                     step="0.1"
                   />
-                </Field>
+                </CoachInput>
 
-                <Field label="Weight (kg)">
+                <CoachInput label={copy.weightKg}>
                   <input
                     type="number"
                     value={profile.weight_kg}
                     onChange={(e) => setProfile({ ...profile, weight_kg: e.target.value })}
                     placeholder="e.g., 80"
-                    style={fieldStyle}
                     min="0"
                     max="500"
                     step="0.1"
                   />
-                </Field>
+                </CoachInput>
 
-                <Field label="Timezone">
+                <CoachInput label={copy.timezone}>
                   <select
                     value={profile.timezone}
                     onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
-                    style={fieldStyle}
                   >
                     {TIMEZONES.map((tz) => (
                       <option key={tz} value={tz}>{tz}</option>
                     ))}
                   </select>
-                </Field>
+                </CoachInput>
               </div>
-            </div>
+            </CoachCard>
 
             {/* Health Goals - Right Column */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-              <h3 className="mb-6 text-lg font-bold text-slate-900">Goals</h3>
-              <p style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>
-                Select goals to personalize your protocol recommendations.
-              </p>
+            <CoachCard className="p-6 sm:p-8">
+              <h3 className="coach-title-lg mb-2">{copy.goals}</h3>
+              <p className="coach-body mb-4">{copy.goalsBody}</p>
 
               <div className="space-y-3">
-                {GOAL_OPTIONS.map((goal) => (
-                  <label key={goal} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '12px 14px',
-                    background: profile.goals.includes(goal) ? '#f0fdf4' : '#f8fafc',
-                    border: `1px solid ${profile.goals.includes(goal) ? '#dcfce7' : 'rgba(15,23,42,0.12)'}`,
-                    borderRadius: 14,
-                    cursor: 'pointer',
-                    transition: 'all 200ms',
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={profile.goals.includes(goal)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setProfile({ ...profile, goals: [...profile.goals, goal] })
-                        } else {
-                          setProfile({ ...profile, goals: profile.goals.filter((g) => g !== goal) })
-                        }
-                      }}
-                      style={{ cursor: 'pointer', width: 18, height: 18 }}
-                    />
-                    <span style={{ color: '#0f172a', fontSize: 14, fontWeight: 500 }}>{goal}</span>
-                  </label>
-                ))}
+                {GOAL_OPTIONS.map((goal, index) => {
+                  const goalKey = GOAL_KEYS[index]
+                  const isChecked = profile.goals.includes(goal)
+                  return (
+                    <label
+                      key={goal}
+                      className={`flex cursor-pointer items-center gap-2.5 rounded-2xl border p-3 transition ${
+                        isChecked ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setProfile({ ...profile, goals: [...profile.goals, goal] })
+                          } else {
+                            setProfile({ ...profile, goals: profile.goals.filter((g) => g !== goal) })
+                          }
+                        }}
+                        className="h-[18px] w-[18px] cursor-pointer"
+                      />
+                      <span className="text-sm font-medium text-slate-900">{copy.goalLabels[goalKey]}</span>
+                    </label>
+                  )
+                })}
               </div>
-            </div>
+            </CoachCard>
           </div>
 
           {/* Medical Flags - Important Context */}
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 sm:p-8">
-            <h3 className="mb-6 text-lg font-bold text-rose-900">⚠️ Conditions & Contraindications</h3>
-            <p style={{ fontSize: 14, color: '#b91c1c', marginBottom: 20 }}>
-              This information helps us interpret biomarkers safely and avoid dangerous recommendations.
-            </p>
+          <CoachCard tone="attention" className="p-6 sm:p-8">
+            <h3 className="mb-2 text-lg font-extrabold text-rose-900">⚠️ {copy.conditionsTitle}</h3>
+            <p className="mb-5 text-sm text-rose-700">{copy.conditionsBody}</p>
 
             <div className="space-y-5">
-              <Field label="Current medications (if any)">
+              <CoachInput label={copy.medications}>
                 <textarea
                   value={profile.medications}
                   onChange={(e) => setProfile({ ...profile, medications: e.target.value })}
-                  placeholder="e.g., Aspirin 100mg daily, Vitamin D supplementation..."
-                  style={{
-                    ...fieldStyle,
-                    minHeight: 80,
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                  }}
+                  placeholder={copy.medicationsPlaceholder}
+                  rows={3}
                 />
-              </Field>
+              </CoachInput>
 
-              <Field label="Known allergies">
+              <CoachInput label={copy.allergies}>
                 <textarea
                   value={profile.allergies}
                   onChange={(e) => setProfile({ ...profile, allergies: e.target.value })}
-                  placeholder="e.g., Shellfish, Penicillin, Nuts..."
-                  style={{
-                    ...fieldStyle,
-                    minHeight: 80,
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                  }}
+                  placeholder={copy.allergiesPlaceholder}
+                  rows={3}
                 />
-              </Field>
+              </CoachInput>
 
-              <Field label="Pregnancy / Breastfeeding status">
+              <CoachInput label={copy.pregnancyStatus}>
                 <select
                   value={profile.pregnancy_status}
                   onChange={(e) => setProfile({ ...profile, pregnancy_status: e.target.value })}
-                  style={fieldStyle}
                 >
-                  <option value="">Select status</option>
-                  <option value="pregnant">Currently pregnant</option>
-                  <option value="breastfeeding">Breastfeeding</option>
-                  <option value="planning">Planning to conceive</option>
-                  <option value="none">Not applicable</option>
+                  <option value="">{copy.selectStatus}</option>
+                  <option value="pregnant">{copy.pregnant}</option>
+                  <option value="breastfeeding">{copy.breastfeeding}</option>
+                  <option value="planning">{copy.planning}</option>
+                  <option value="none">{copy.notApplicable}</option>
                 </select>
-              </Field>
+              </CoachInput>
 
-              <Field label="Current supplements (comma-separated)">
+              <CoachInput label={copy.currentSupplements}>
                 <textarea
                   value={profile.current_supplements}
                   onChange={(e) => setProfile({ ...profile, current_supplements: e.target.value })}
-                  placeholder="e.g., Vitamin D 2000IU, Magnesium 400mg, Omega-3..."
-                  style={{
-                    ...fieldStyle,
-                    minHeight: 80,
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                  }}
+                  placeholder={copy.supplementsPlaceholder}
+                  rows={3}
                 />
-              </Field>
+              </CoachInput>
 
-              <Field label="Current prescribed medications (comma-separated)">
+              <CoachInput label={copy.currentMedications}>
                 <textarea
                   value={profile.current_medications}
                   onChange={(e) => setProfile({ ...profile, current_medications: e.target.value })}
-                  placeholder="e.g., Metformin 500mg, Lisinopril 10mg..."
-                  style={{
-                    ...fieldStyle,
-                    minHeight: 80,
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                  }}
+                  placeholder={copy.currentMedicationsPlaceholder}
+                  rows={3}
                 />
-              </Field>
+              </CoachInput>
 
-              <Field label="Prior diagnoses / chronic conditions">
+              <CoachInput label={copy.priorDiagnoses}>
                 <textarea
                   value={profile.prior_diagnoses}
                   onChange={(e) => setProfile({ ...profile, prior_diagnoses: e.target.value })}
-                  placeholder="e.g., Type 2 diabetes, Hypothyroidism, IBS..."
-                  style={{
-                    ...fieldStyle,
-                    minHeight: 80,
-                    resize: 'vertical',
-                    fontFamily: 'inherit',
-                  }}
+                  placeholder={copy.priorDiagnosesPlaceholder}
+                  rows={3}
                 />
-              </Field>
+              </CoachInput>
             </div>
 
-            <p style={{ fontSize: 12, color: '#b91c1c', marginTop: 16 }}>
-              ✓ Your medical information is kept private and only used to provide safe, personalized recommendations.
+            <p className="mt-4 text-xs text-rose-700">
+              ✓ {copy.privacyNote}
             </p>
-          </div>
+          </CoachCard>
 
-          {/* Save Button */}
-          <button
-            onClick={saveProfile}
-            disabled={saving}
-            className="rounded-2xl bg-emerald-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Profile & Safety'}
-          </button>
+          <CoachButton onClick={saveProfile} disabled={saving}>
+            {saving ? copy.saving : copy.save}
+          </CoachButton>
         </div>
 
         {/* Right Sidebar */}
         <div className="space-y-4">
           {/* Completion */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Profile Completion</div>
-            <div style={{
-              width: '100%',
-              height: 6,
-              background: '#e2e8f0',
-              borderRadius: 99,
-              overflow: 'hidden',
-            }}>
-              <div style={{
-                height: '100%',
-                width: `${profileCompletion}%`,
-                background: '#10b981',
-                transition: 'width 300ms',
-              }} />
-            </div>
-            <div className="mt-2 text-center text-xl font-bold text-slate-900">{profileCompletion}%</div>
-          </div>
+          <CoachCard className="p-5">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.profileCompletion}</p>
+            <CoachProgress value={profileCompletion} />
+            <p className="mt-2 text-center text-xl font-extrabold text-slate-950">{profileCompletion}%</p>
+          </CoachCard>
 
           {/* Biometrics Display */}
           {bmi && (
             <MetricTile
-              label="BMI"
+              label={copy.bmi}
               value={bmi}
               tone={bmi < 25 ? 'success' : 'default'}
             />
@@ -499,39 +551,32 @@ export default function HealthProfile() {
 
           {profile.age && (
             <MetricTile
-              label="Age"
+              label={copy.ageMetric}
               value={profile.age}
             />
           )}
 
           {profile.weight_kg && (
             <MetricTile
-              label="Weight"
+              label={copy.weightMetric}
               value={`${profile.weight_kg} kg`}
             />
           )}
 
           {profile.height_cm && (
             <MetricTile
-              label="Height"
+              label={copy.heightMetric}
               value={`${profile.height_cm} cm`}
             />
           )}
 
           {/* Info Box */}
-          <div style={{
-            borderRadius: 18,
-            padding: 16,
-            background: '#f0fdf4',
-            border: '1px solid rgba(16,185,129,0.18)',
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#047857', marginBottom: 6 }}>💡 TIP</div>
-            <div style={{ fontSize: 13, color: '#065f46', lineHeight: 1.5 }}>
-              Your profile data is used to personalize supplement recommendations, nutrition guidance, and protocol timing. Keep it updated!
-            </div>
-          </div>
+          <CoachCard tone="soft" className="p-4">
+            <p className="mb-1.5 text-xs font-bold text-emerald-700">💡 {copy.tip}</p>
+            <p className="text-[13px] leading-relaxed text-emerald-900">{copy.tipBody}</p>
+          </CoachCard>
         </div>
       </div>
-    </>
+    </div>
   )
 }
