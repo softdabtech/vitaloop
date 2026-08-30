@@ -8,9 +8,76 @@ import { useAuth } from '../hooks/useAuth.js'
 import { useQuestionnaireSession } from '../hooks/useQueries.js'
 import api from '../lib/api.js'
 import { gaCheckInSubmit } from '../lib/analytics.js'
+import { CoachButton, CoachCard, CoachProgress } from '../components/coach/CoachUI.jsx'
+import { isUkrainianLocale } from '../lib/locale.js'
 
 const CONCERN_STATUS = ['better', 'same', 'worse']
 const ADHERENCE = ['high', 'medium', 'low']
+
+const CHECKIN_COPY = {
+  en: {
+    stepOf: (step, total) => `Step ${step} of ${total}`,
+    percentComplete: (pct) => `${pct}% complete`,
+    step1Title: '1. Active concern status',
+    step1Body: (concern) => `Compared with last week, is ${concern} better, same, or worse?`,
+    statusLabels: { better: 'Better', same: 'Same', worse: 'Worse' },
+    step2Title: '2. Symptom severity',
+    step2Body: 'How intense is your active concern now?',
+    severity: (v) => `Severity: ${v}/10`,
+    step3Title: '3. Sleep, energy, mood, digestion, recovery',
+    metricLabels: { Sleep: 'Sleep', Energy: 'Energy', Mood: 'Mood', Digestion: 'Digestion', Recovery: 'Recovery' },
+    step4Title: '4. Protocol adherence',
+    adherenceLabels: { high: 'High', medium: 'Medium', low: 'Low' },
+    step5Title: '5. Side effects',
+    step5Placeholder: 'Any side effects or tolerance issues',
+    step6Title: '6. New symptoms and red flags',
+    newSymptomsPlaceholder: 'New symptoms',
+    redFlagsPlaceholder: 'Any urgent signs to discuss quickly',
+    step7Title: '7. Next adjustment preview',
+    previewBetter: 'Continue current plan and verify with retest timing.',
+    previewSame: 'Consider protocol adjustment and prioritize unresolved markers.',
+    previewWorse: 'Escalate review with clinician and reassess safety context promptly.',
+    back: 'Back',
+    next: 'Next',
+    saving: 'Saving...',
+    complete: 'Complete check-in',
+    saveFailed: 'Failed to save check-in. Please try again.',
+    done: 'Check-in saved. Redirecting to Today...',
+    subtitle: (concern) => `Track whether protocol is working for: ${concern}`,
+    defaultConcern: 'your active concern',
+  },
+  uk: {
+    stepOf: (step, total) => `Крок ${step} з ${total}`,
+    percentComplete: (pct) => `Готово на ${pct}%`,
+    step1Title: '1. Статус головної скарги',
+    step1Body: (concern) => `Порівняно з минулим тижнем, «${concern}» стало краще, так само чи гірше?`,
+    statusLabels: { better: 'Краще', same: 'Так само', worse: 'Гірше' },
+    step2Title: '2. Інтенсивність симптому',
+    step2Body: 'Наскільки інтенсивна ваша головна скарга зараз?',
+    severity: (v) => `Інтенсивність: ${v}/10`,
+    step3Title: '3. Сон, енергія, настрій, травлення, відновлення',
+    metricLabels: { Sleep: 'Сон', Energy: 'Енергія', Mood: 'Настрій', Digestion: 'Травлення', Recovery: 'Відновлення' },
+    step4Title: '4. Дотримання протоколу',
+    adherenceLabels: { high: 'Високе', medium: 'Середнє', low: 'Низьке' },
+    step5Title: '5. Побічні ефекти',
+    step5Placeholder: 'Будь-які побічні ефекти або проблеми з переносимістю',
+    step6Title: '6. Нові симптоми та тривожні ознаки',
+    newSymptomsPlaceholder: 'Нові симптоми',
+    redFlagsPlaceholder: 'Будь-які термінові ознаки для швидкого обговорення',
+    step7Title: '7. Попередній перегляд наступного кроку',
+    previewBetter: 'Продовжуйте поточний план і перевірте терміни повторного аналізу.',
+    previewSame: 'Розгляньте коригування протоколу та зосередьтеся на невирішених показниках.',
+    previewWorse: 'Терміново зверніться до лікаря та переоцініть контекст безпеки.',
+    back: 'Назад',
+    next: 'Далі',
+    saving: 'Зберігаємо...',
+    complete: 'Завершити чек-ін',
+    saveFailed: 'Не вдалося зберегти чек-ін. Спробуйте ще раз.',
+    done: 'Чек-ін збережено. Переходимо до головної...',
+    subtitle: (concern) => `Відстежуйте, чи працює протокол для: ${concern}`,
+    defaultConcern: 'вашої головної скарги',
+  },
+}
 
 function scoreFromAdherence(value) {
   if (value === 'high') return 5
@@ -22,9 +89,11 @@ export default function WeeklyCheckIn() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const isUk = isUkrainianLocale()
+  const copy = isUk ? CHECKIN_COPY.uk : CHECKIN_COPY.en
   const { data: questionnaireSession } = useQuestionnaireSession()
   const sessionContext = questionnaireSession?.session_context || questionnaireSession?.session?.session_metadata || {}
-  const concern = sessionContext?.active_concern || 'your active concern'
+  const concern = sessionContext?.active_concern || copy.defaultConcern
 
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
@@ -81,39 +150,39 @@ export default function WeeklyCheckIn() {
       setDone(true)
       setTimeout(() => navigate('/dashboard'), 1000)
     } catch {
-      toast.error('Failed to save check-in. Please try again.')
+      toast.error(copy.saveFailed)
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="coach-shell">
       <CabinetPageHeader
         title={ct().checkin.title}
-        subtitle={`Track whether protocol is working for: ${concern}`}
+        subtitle={copy.subtitle(concern)}
         helper={ct().checkin.helper}
       />
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+      <CoachCard className="p-5 sm:p-6">
         {!done ? (
           <>
             <div className="mb-5">
               <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <span>Step {step} of {totalSteps}</span>
-                <span>{progress}% complete</span>
+                <span>{copy.stepOf(step, totalSteps)}</span>
+                <span>{copy.percentComplete(progress)}</span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${progress}%` }} /></div>
+              <CoachProgress value={progress} />
             </div>
 
             {step === 1 && (
               <div className="space-y-3">
-                <h3 className="text-base font-semibold text-slate-900">1. Active concern status</h3>
-                <p className="text-sm text-slate-600">Compared with last week, is {concern} better, same, or worse?</p>
+                <h3 className="text-base font-semibold text-slate-900">{copy.step1Title}</h3>
+                <p className="text-sm text-slate-600">{copy.step1Body(concern)}</p>
                 <div className="grid gap-2 sm:grid-cols-3">
                   {CONCERN_STATUS.map((item) => (
                     <button key={item} onClick={() => setConcernStatus(item)} className={`rounded-xl border px-3 py-2 text-sm font-semibold ${concernStatus === item ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-700'}`}>
-                      {item}
+                      {copy.statusLabels[item]}
                     </button>
                   ))}
                 </div>
@@ -122,9 +191,9 @@ export default function WeeklyCheckIn() {
 
             {step === 2 && (
               <div className="space-y-3">
-                <h3 className="text-base font-semibold text-slate-900">2. Symptom severity</h3>
-                <p className="text-sm text-slate-600">How intense is your active concern now?</p>
-                <label className="text-sm text-slate-700">Severity: {symptomSeverity}/10
+                <h3 className="text-base font-semibold text-slate-900">{copy.step2Title}</h3>
+                <p className="text-sm text-slate-600">{copy.step2Body}</p>
+                <label className="text-sm text-slate-700">{copy.severity(symptomSeverity)}
                   <input type="range" min={1} max={10} value={symptomSeverity} onChange={(e) => setSymptomSeverity(Number(e.target.value))} className="mt-2 w-full" />
                 </label>
               </div>
@@ -132,7 +201,7 @@ export default function WeeklyCheckIn() {
 
             {step === 3 && (
               <div className="space-y-3">
-                <h3 className="text-base font-semibold text-slate-900">3. Sleep, energy, mood, digestion, recovery</h3>
+                <h3 className="text-base font-semibold text-slate-900">{copy.step3Title}</h3>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {[
                     ['Sleep', sleep, setSleep],
@@ -140,8 +209,8 @@ export default function WeeklyCheckIn() {
                     ['Mood', mood, setMood],
                     ['Digestion', digestion, setDigestion],
                     ['Recovery', recovery, setRecovery],
-                  ].map(([label, value, setter]) => (
-                    <label key={label} className="text-sm text-slate-700">{label}: {value}/10
+                  ].map(([labelKey, value, setter]) => (
+                    <label key={labelKey} className="text-sm text-slate-700">{copy.metricLabels[labelKey]}: {value}/10
                       <input type="range" min={1} max={10} value={value} onChange={(e) => setter(Number(e.target.value))} className="mt-1 w-full" />
                     </label>
                   ))}
@@ -151,11 +220,11 @@ export default function WeeklyCheckIn() {
 
             {step === 4 && (
               <div className="space-y-3">
-                <h3 className="text-base font-semibold text-slate-900">4. Protocol adherence</h3>
+                <h3 className="text-base font-semibold text-slate-900">{copy.step4Title}</h3>
                 <div className="grid gap-2 sm:grid-cols-3">
                   {ADHERENCE.map((item) => (
                     <button key={item} onClick={() => setAdherence(item)} className={`rounded-xl border px-3 py-2 text-sm font-semibold ${adherence === item ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-700'}`}>
-                      {item}
+                      {copy.adherenceLabels[item]}
                     </button>
                   ))}
                 </div>
@@ -164,41 +233,41 @@ export default function WeeklyCheckIn() {
 
             {step === 5 && (
               <div className="space-y-3">
-                <h3 className="text-base font-semibold text-slate-900">5. Side effects</h3>
-                <textarea value={sideEffects} onChange={(e) => setSideEffects(e.target.value)} rows={4} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Any side effects or tolerance issues" />
+                <h3 className="text-base font-semibold text-slate-900">{copy.step5Title}</h3>
+                <textarea value={sideEffects} onChange={(e) => setSideEffects(e.target.value)} rows={4} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder={copy.step5Placeholder} />
               </div>
             )}
 
             {step === 6 && (
               <div className="space-y-3">
-                <h3 className="text-base font-semibold text-slate-900">6. New symptoms and red flags</h3>
-                <textarea value={newSymptoms} onChange={(e) => setNewSymptoms(e.target.value)} rows={3} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="New symptoms" />
-                <textarea value={redFlags} onChange={(e) => setRedFlags(e.target.value)} rows={3} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Any urgent signs to discuss quickly" />
+                <h3 className="text-base font-semibold text-slate-900">{copy.step6Title}</h3>
+                <textarea value={newSymptoms} onChange={(e) => setNewSymptoms(e.target.value)} rows={3} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder={copy.newSymptomsPlaceholder} />
+                <textarea value={redFlags} onChange={(e) => setRedFlags(e.target.value)} rows={3} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder={copy.redFlagsPlaceholder} />
               </div>
             )}
 
             {step === 7 && (
               <div className="space-y-3">
-                <h3 className="text-base font-semibold text-slate-900">7. Next adjustment preview</h3>
+                <h3 className="text-base font-semibold text-slate-900">{copy.step7Title}</h3>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                  {concernStatus === 'better' ? 'Continue current plan and verify with retest timing.' : concernStatus === 'same' ? 'Consider protocol adjustment and prioritize unresolved markers.' : 'Escalate review with clinician and reassess safety context promptly.'}
+                  {concernStatus === 'better' ? copy.previewBetter : concernStatus === 'same' ? copy.previewSame : copy.previewWorse}
                 </div>
               </div>
             )}
 
             <div className="mt-6 flex items-center justify-between">
-              <button onClick={() => setStep((s) => Math.max(1, s - 1))} disabled={step === 1 || submitting} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Back</button>
+              <CoachButton variant="secondary" onClick={() => setStep((s) => Math.max(1, s - 1))} disabled={step === 1 || submitting}>{copy.back}</CoachButton>
               {step < totalSteps ? (
-                <button onClick={() => canContinue && setStep((s) => Math.min(totalSteps, s + 1))} disabled={!canContinue || submitting} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Next</button>
+                <CoachButton onClick={() => canContinue && setStep((s) => Math.min(totalSteps, s + 1))} disabled={!canContinue || submitting}>{copy.next}</CoachButton>
               ) : (
-                <button onClick={submit} disabled={submitting} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">{submitting ? 'Saving...' : 'Complete check-in'}</button>
+                <CoachButton onClick={submit} disabled={submitting}>{submitting ? copy.saving : copy.complete}</CoachButton>
               )}
             </div>
           </>
         ) : (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center text-emerald-800">Check-in saved. Redirecting to Today...</div>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center text-emerald-800">{copy.done}</div>
         )}
-      </section>
+      </CoachCard>
     </div>
   )
 }
