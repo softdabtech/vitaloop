@@ -439,6 +439,152 @@ async def test_g9_legacy_upload_without_report_version_is_tagged_not_frozen(monk
     assert payload["report_source"] != REPORT_SOURCE_FROZEN
 
 
+# --- Locale P0 fix + protocol-locale fix (cabinet reconciliation) -----------------
+# Real-world case this locks in: upload 8a818a14-6dae-4740-a76e-52a2b590c6d5 —
+# only a 'uk' report_versions row (and its upload-scoped protocols row,
+# written in Ukrainian) exist; an 'en' GET must never leak either.
+
+
+@pytest.mark.asyncio
+async def test_locale_mismatch_results_compat_never_serves_stale_locale_protocol(monkeypatch):
+    """A frozen version exists, just not in the requested locale — distinct
+    from the genuinely-legacy case above (has_any_report_version=True here,
+    vs None/False there). Must: (1) never claim REPORT_SOURCE_FROZEN or
+    REPORT_SOURCE_LEGACY_FALLBACK, (2) serve freshly-generated (correct
+    locale) protocol content, never the stale-locale protocols row content,
+    (3) never persist over the existing protocols row (save_protocol must not
+    be called — that would destroy the other locale's legitimately correct
+    protocol)."""
+    upload_id = str(uuid.uuid4())
+    save_protocol_called = {"count": 0}
+
+    async def fake_assert_upload_belongs_to_user(_upload_id, _user_id):
+        return {"id": upload_id, "user_id": FAKE_USER_ID}
+
+    async def fake_get_biomarkers_by_upload(_upload_id, _user_id):
+        return [{"name": "Hemoglobin", "value": 148.0, "unit": "g/L", "status": "ELEVATED"}]
+
+    async def fake_get_protocol_by_upload(_user_id, _upload_id):
+        # Stale: written by the 'uk' generation event, upload-scoped only.
+        return {"recommendations": [{"title": "Підтримайте базу харчування", "body": "УКРАЇНСЬКИЙ ТЕКСТ"}]}
+
+    async def fake_get_user_profile(_user_id):
+        return {}
+
+    async def fake_get_latest_report_version(_upload_id, _user_id, locale):
+        assert locale == "en"
+        return None  # no 'en' row — only 'uk' exists
+
+    async def fake_has_any_report_version(_upload_id, _user_id):
+        return True  # a 'uk' row DOES exist — this is the mismatch case
+
+    async def fake_pipeline(**kwargs):
+        assert kwargs["locale"] == "en"
+        assert kwargs["generate_ai_protocol"] is True, (
+            "the stale-locale protocol must not suppress fresh generation"
+        )
+        return {
+            "knowledge_report": {"summary": {"headline": "FRESH ENGLISH CONTENT"}},
+            "recommendations": [{"title": "Fresh English protocol item", "body": "ENGLISH TEXT"}],
+        }
+
+    async def fake_save_protocol(**_kwargs):
+        save_protocol_called["count"] += 1
+        raise AssertionError("must not persist over the other locale's protocols row")
+
+    monkeypatch.setattr(compatibility_router, "assert_upload_belongs_to_user", fake_assert_upload_belongs_to_user)
+    monkeypatch.setattr(compatibility_router, "get_biomarkers_by_upload", fake_get_biomarkers_by_upload)
+    monkeypatch.setattr(compatibility_router, "get_protocol_by_upload", fake_get_protocol_by_upload)
+    monkeypatch.setattr(compatibility_router, "get_user_profile", fake_get_user_profile)
+    monkeypatch.setattr(compatibility_router, "get_latest_report_version", fake_get_latest_report_version)
+    monkeypatch.setattr(compatibility_router, "has_any_report_version", fake_has_any_report_version)
+    monkeypatch.setattr(compatibility_router, "run_lab_analysis_pipeline", fake_pipeline)
+    monkeypatch.setattr(compatibility_router, "save_protocol", fake_save_protocol)
+
+    app.dependency_overrides[get_current_user] = lambda: {"sub": FAKE_USER_ID}
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get(f"/results/{upload_id}")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["report_source"] == report_history.REPORT_SOURCE_LOCALE_UNAVAILABLE
+    assert payload["report_source"] not in {REPORT_SOURCE_FROZEN, REPORT_SOURCE_LEGACY_FALLBACK}
+    assert payload["knowledge_report"]["summary"]["headline"] == "FRESH ENGLISH CONTENT"
+    # No Ukrainian text anywhere in the served protocol.
+    assert payload["protocol"] == [{"title": "Fresh English protocol item", "body": "ENGLISH TEXT"}]
+    assert save_protocol_called["count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_locale_mismatch_analyze_get_results_never_serves_stale_locale_protocol(monkeypatch):
+    """Same proof for GET /analyze/{upload_id} (analyze.py::get_results) —
+    the two GET callers must not drift apart."""
+    upload_id = str(uuid.uuid4())
+
+    async def fake_assert_upload_belongs_to_user(_upload_id, _user_id):
+        return {"id": upload_id, "user_id": FAKE_USER_ID}
+
+    async def fake_get_biomarkers_by_upload(_upload_id, _user_id):
+        return [{"name": "Hemoglobin", "value": 148.0, "unit": "g/L", "status": "ELEVATED"}]
+
+    async def fake_get_biomarker_extraction_candidates(_upload_id, _user_id):
+        return []
+
+    async def fake_get_protocol_by_upload(_user_id, _upload_id):
+        return {"recommendations": [{"title": "УКРАЇНСЬКИЙ", "body": "STALE UA TEXT"}]}
+
+    async def fake_get_user_profile(_user_id):
+        return {}
+
+    async def fake_get_latest_report_version(_upload_id, _user_id, locale):
+        assert locale == "en"
+        return None
+
+    async def fake_has_any_report_version(_upload_id, _user_id):
+        return True
+
+    async def fake_pipeline(**kwargs):
+        assert kwargs["generate_ai_protocol"] is True
+        return {
+            "knowledge_report": {"summary": {"headline": "FRESH ENGLISH"}},
+            "recommendations": [{"title": "Fresh EN", "body": "ENGLISH TEXT"}],
+        }
+
+    async def fake_write_audit_log(**_kwargs):
+        return None
+
+    async def fake_save_protocol(**_kwargs):
+        raise AssertionError("must not persist over the other locale's protocols row")
+
+    monkeypatch.setattr(analyze_router, "assert_upload_belongs_to_user", fake_assert_upload_belongs_to_user)
+    monkeypatch.setattr(analyze_router, "get_biomarkers_by_upload", fake_get_biomarkers_by_upload)
+    monkeypatch.setattr(analyze_router, "get_biomarker_extraction_candidates", fake_get_biomarker_extraction_candidates)
+    monkeypatch.setattr(analyze_router, "get_protocol_by_upload", fake_get_protocol_by_upload)
+    monkeypatch.setattr(analyze_router, "get_user_profile", fake_get_user_profile)
+    monkeypatch.setattr(analyze_router, "get_latest_report_version", fake_get_latest_report_version)
+    monkeypatch.setattr(analyze_router, "has_any_report_version", fake_has_any_report_version)
+    monkeypatch.setattr(analyze_router, "run_lab_analysis_pipeline", fake_pipeline)
+    monkeypatch.setattr(analyze_router, "save_protocol", fake_save_protocol)
+    monkeypatch.setattr(analyze_router, "write_audit_log", fake_write_audit_log)
+
+    app.dependency_overrides[get_current_user] = lambda: {"sub": FAKE_USER_ID}
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get(f"/analyze/{upload_id}")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["report_source"] == report_history.REPORT_SOURCE_LOCALE_UNAVAILABLE
+    assert payload["protocol"] == [{"title": "Fresh EN", "body": "ENGLISH TEXT"}]
+
+
 def test_g9_is_frozen_report_version_rejects_none_and_pending_shapes():
     assert is_frozen_report_version(None) is False
     assert is_frozen_report_version({}) is False

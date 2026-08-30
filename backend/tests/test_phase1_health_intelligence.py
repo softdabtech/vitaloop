@@ -539,7 +539,13 @@ async def test_save_report_version_persists_expected_payload(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_get_latest_report_version_falls_back_to_any_locale(monkeypatch):
+async def test_get_latest_report_version_never_falls_back_to_another_locale(monkeypatch):
+    """Locale P0 fix (cabinet reconciliation): a report_versions row that
+    exists only in a different locale (e.g. only a 'uk' row exists, 'en' is
+    requested) must never be returned. Confirmed live as a real production
+    defect on upload 8a818a14-6dae-4740-a76e-52a2b590c6d5 before this fix —
+    this test locks the corrected behavior in. Exactly ONE query is issued
+    (no second, locale-unfiltered fallback query at all)."""
     calls = []
 
     class _Table:
@@ -562,9 +568,8 @@ async def test_get_latest_report_version_falls_back_to_any_locale(monkeypatch):
 
         def execute(self):
             calls.append(list(self.filters))
-            if len(calls) == 1:
-                return type("Resp", (), {"data": []})()
-            return type("Resp", (), {"data": [{"id": "report-en-1", "locale": "en"}]})()
+            # Only an 'en' row exists for this upload; 'uk' is requested.
+            return type("Resp", (), {"data": []})()
 
     class _Client:
         def table(self, name):
@@ -579,9 +584,101 @@ async def test_get_latest_report_version_falls_back_to_any_locale(monkeypatch):
 
     result = await supabase_service.get_latest_report_version("upload-1", "user-1", "uk")
 
-    assert result == {"id": "report-en-1", "locale": "en"}
+    assert result is None
+    assert len(calls) == 1, "must not issue a second, locale-unfiltered fallback query"
     assert ("locale", "uk") in calls[0]
-    assert all(key != "locale" for key, _value in calls[1])
+
+
+@pytest.mark.asyncio
+async def test_get_latest_report_version_returns_matching_locale_row(monkeypatch):
+    class _Table:
+        def select(self, *_args, **_kwargs):
+            return self
+
+        def eq(self, *_args, **_kwargs):
+            return self
+
+        def order(self, *_args, **_kwargs):
+            return self
+
+        def limit(self, *_args, **_kwargs):
+            return self
+
+        def execute(self):
+            return type("Resp", (), {"data": [{"id": "report-uk-1", "locale": "uk"}]})()
+
+    class _Client:
+        def table(self, name):
+            assert name == "report_versions"
+            return _Table()
+
+    async def fake_run(fn):
+        return fn()
+
+    monkeypatch.setattr(supabase_service, "_get_supabase", lambda: _Client())
+    monkeypatch.setattr(supabase_service, "_run", fake_run)
+
+    result = await supabase_service.get_latest_report_version("upload-1", "user-1", "uk")
+
+    assert result == {"id": "report-uk-1", "locale": "uk"}
+
+
+@pytest.mark.asyncio
+async def test_has_any_report_version_true_when_other_locale_row_exists(monkeypatch):
+    class _Table:
+        def select(self, *_args, **_kwargs):
+            return self
+
+        def eq(self, *_args, **_kwargs):
+            return self
+
+        def limit(self, *_args, **_kwargs):
+            return self
+
+        def execute(self):
+            return type("Resp", (), {"data": [{"id": "report-uk-1"}]})()
+
+    class _Client:
+        def table(self, name):
+            assert name == "report_versions"
+            return _Table()
+
+    async def fake_run(fn):
+        return fn()
+
+    monkeypatch.setattr(supabase_service, "_get_supabase", lambda: _Client())
+    monkeypatch.setattr(supabase_service, "_run", fake_run)
+
+    assert await supabase_service.has_any_report_version("upload-1", "user-1") is True
+
+
+@pytest.mark.asyncio
+async def test_has_any_report_version_false_for_genuinely_legacy_upload(monkeypatch):
+    class _Table:
+        def select(self, *_args, **_kwargs):
+            return self
+
+        def eq(self, *_args, **_kwargs):
+            return self
+
+        def limit(self, *_args, **_kwargs):
+            return self
+
+        def execute(self):
+            return type("Resp", (), {"data": []})()
+
+    class _Client:
+        def table(self, name):
+            assert name == "report_versions"
+            return _Table()
+
+    async def fake_run(fn):
+        return fn()
+
+    monkeypatch.setattr(supabase_service, "_get_supabase", lambda: _Client())
+    monkeypatch.setattr(supabase_service, "_run", fake_run)
+
+    assert await supabase_service.has_any_report_version("upload-1", "user-1") is False
 
 
 @pytest.mark.asyncio

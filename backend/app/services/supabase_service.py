@@ -493,6 +493,23 @@ async def save_report_version(
 
 
 async def get_latest_report_version(upload_id: str, user_id: str, locale: str) -> Optional[Dict[str, Any]]:
+    """Stage: locale P0 fix (cabinet reconciliation).
+
+    NEVER return a frozen report_versions row whose locale differs from the
+    requested locale. There used to be a second, locale-unfiltered fallback
+    query here that returned the globally-latest row of ANY language when no
+    row matched the requested locale — that is exactly the cross-locale leak
+    (a Ukrainian frozen report rendering under English UI chrome) confirmed
+    live on upload 8a818a14-6dae-4740-a76e-52a2b590c6d5. Removed, no
+    replacement fallback query. Returning None here is intentional and safe:
+    both callers (analyze.py::get_results, compatibility.py::get_results_by_upload)
+    already treat a None report_version as "no frozen version for this locale
+    yet" and fall through to their existing transient (non-persisting)
+    live-render branch — verified by reading both callers and
+    run_lab_analysis_pipeline's persist_report_version/persist_biomarkers
+    defaults (both False unless a caller explicitly opts in, which these two
+    GET callers do not) before this change was made.
+    """
     supabase = _get_supabase()
     resp = await _run(
         lambda: supabase.table("report_versions")
@@ -504,20 +521,35 @@ async def get_latest_report_version(upload_id: str, user_id: str, locale: str) -
         .limit(1)
         .execute()
     )
-    latest = (resp.data or [None])[0]
-    if latest:
-        return latest
+    return (resp.data or [None])[0]
 
-    fallback = await _run(
+
+async def has_any_report_version(upload_id: str, user_id: str) -> bool:
+    """Existence check only, deliberately locale-unfiltered and deliberately
+    NOT used to serve report content (that would reintroduce the exact
+    cross-locale leak get_latest_report_version was just fixed to remove).
+
+    Lets a caller distinguish two different "no frozen version for this
+    locale" situations without guessing:
+      - a genuinely legacy upload that predates report_versions entirely
+        (this returns False), vs.
+      - an upload that HAS a frozen version, just in a different locale
+        (this returns True) — the case where a caller must not silently
+        trust an existing upload-scoped `protocols` row either, since that
+        row has no locale column of its own and may hold the other
+        locale's prose (see the protocol-locale fix in analyze.py::get_results
+        / compatibility.py::get_results_by_upload).
+    """
+    supabase = _get_supabase()
+    resp = await _run(
         lambda: supabase.table("report_versions")
-        .select("*")
+        .select("id")
         .eq("upload_id", upload_id)
         .eq("user_id", user_id)
-        .order("created_at", desc=True)
         .limit(1)
         .execute()
     )
-    return (fallback.data or [None])[0]
+    return bool(resp.data)
 
 
 async def get_report_version(report_version_id: str, user_id: str) -> Optional[Dict[str, Any]]:

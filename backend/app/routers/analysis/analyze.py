@@ -23,6 +23,7 @@ from app.services.supabase_service import (
     get_latest_report_version,
     get_protocol_by_upload,
     get_user_profile,
+    has_any_report_version,
     save_biomarker_extraction_candidates,
     save_lab_upload,
     save_protocol,
@@ -56,6 +57,7 @@ from app.services.safety import sanitize_protocol_for_safety
 from app.services.report_history import (
     REPORT_SOURCE_FROZEN,
     REPORT_SOURCE_LEGACY_FALLBACK,
+    REPORT_SOURCE_LOCALE_UNAVAILABLE,
     REPORT_SOURCE_REGENERATED,
     assemble_frozen_response,
     is_frozen_report_version,
@@ -1502,6 +1504,25 @@ async def get_results(
         response["final_analysis"] = dict(response)
         return response
 
+    # Protocol-locale fix (cabinet reconciliation): `protocols` is one mutable
+    # row PER UPLOAD with no locale column of its own (see report_history.py's
+    # module docstring) — it cannot tell us what language `protocol_recommendations`
+    # is actually written in. If a frozen report_versions row exists for this
+    # upload in ANY locale (just not the requested one — the same situation
+    # get_latest_report_version's locale fix now surfaces as None instead of
+    # silently substituting), the existing protocols row cannot be trusted to
+    # match the requested locale either: it was almost certainly written by
+    # that other locale's generation event. Force a fresh, correct-locale
+    # protocol generation in that case, and never persist over the existing
+    # row — persisting would overwrite the other locale's legitimately correct
+    # protocol next time IT is requested. This is transient/read-only, same
+    # non-persisting posture as the knowledge_report rebuild below; no schema
+    # change needed. A genuinely legacy upload (no report_versions row in any
+    # locale) keeps the exact prior behavior — untouched.
+    locale_mismatch = bool(protocol_recommendations) and await has_any_report_version(upload_id, user_id)
+    if locale_mismatch:
+        protocol_recommendations = []
+
     # Build the current report on read so older uploads are upgraded without re-uploading.
     pipeline_result = await run_lab_analysis_pipeline(
         biomarkers=biomarkers,
@@ -1519,30 +1540,39 @@ async def get_results(
 
     generated_recommendations = pipeline_result.get("recommendations") or []
     if not protocol_recommendations and generated_recommendations:
-        try:
-            protocol = await save_protocol(
-                user_id=user_id,
-                upload_id=upload_id,
-                recommendations=generated_recommendations,
-                prompt_version="results_read_v2",
-            )
-            protocol_recommendations = protocol.get("recommendations", [])
-        except Exception as exc:
-            logger.warning(
-                "results_read_save_protocol_failed upload_id=%s user_id=%s error=%s",
-                upload_id,
-                user_id,
-                repr(exc),
-                exc_info=True,
-            )
+        if locale_mismatch:
+            # Transient only — do not overwrite the other locale's protocols
+            # row (see docstring above).
+            protocol_recommendations = generated_recommendations
+        else:
+            try:
+                protocol = await save_protocol(
+                    user_id=user_id,
+                    upload_id=upload_id,
+                    recommendations=generated_recommendations,
+                    prompt_version="results_read_v2",
+                )
+                protocol_recommendations = protocol.get("recommendations", [])
+            except Exception as exc:
+                logger.warning(
+                    "results_read_save_protocol_failed upload_id=%s user_id=%s error=%s",
+                    upload_id,
+                    user_id,
+                    repr(exc),
+                    exc_info=True,
+                )
 
     # Stage 2G: this branch only runs when no frozen report_versions row was
-    # found. If real canonical biomarkers exist, this upload predates (or its
-    # generation event failed to persist into) report_versions — a genuine
-    # legacy artifact, not the still-pending case. Tag it so callers can tell
-    # a reconstructed legacy result apart from a true frozen one; the DB row
-    # is not retroactively created here (no mass migration).
-    report_source = REPORT_SOURCE_LEGACY_FALLBACK if biomarkers else None
+    # found for the requested locale. `locale_mismatch` distinguishes "a
+    # frozen version exists, just in a different locale" (tagged
+    # REPORT_SOURCE_LOCALE_UNAVAILABLE, transient render, DB row never
+    # retroactively created) from a genuinely legacy upload that predates
+    # report_versions entirely (REPORT_SOURCE_LEGACY_FALLBACK, unchanged from
+    # prior behavior — no mass migration/backfill happens here either).
+    if locale_mismatch:
+        report_source = REPORT_SOURCE_LOCALE_UNAVAILABLE
+    else:
+        report_source = REPORT_SOURCE_LEGACY_FALLBACK if biomarkers else None
 
     await write_audit_log(
         user_id=user_id,

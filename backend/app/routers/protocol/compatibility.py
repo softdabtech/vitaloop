@@ -11,12 +11,14 @@ from app.services.supabase_service import (
     get_protocol_by_upload,
     get_user_profile,
     get_user_progress,
+    has_any_report_version,
     save_protocol,
 )
 from app.services.lab_analysis_pipeline import run_lab_analysis_pipeline
 from app.services.safety import sanitize_protocol_for_safety
 from app.services.report_history import (
     REPORT_SOURCE_LEGACY_FALLBACK,
+    REPORT_SOURCE_LOCALE_UNAVAILABLE,
     assemble_frozen_response,
     is_frozen_report_version,
 )
@@ -94,6 +96,15 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
             locale=locale,
         )
 
+    # Protocol-locale fix — mirrors analyze.py::get_results (see its docstring
+    # comment for the full rationale). `protocols` has no locale column; if a
+    # frozen report_versions row exists for this upload in a different locale,
+    # the existing protocol row cannot be trusted to match the requested
+    # locale, so force a fresh transient (non-persisted) generation instead.
+    locale_mismatch = bool(protocol_recommendations) and await has_any_report_version(upload_id, user_id)
+    if locale_mismatch:
+        protocol_recommendations = []
+
     pipeline_result = await run_lab_analysis_pipeline(
         biomarkers=biomarkers or [],
         symptoms=[],
@@ -109,19 +120,28 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
     knowledge_report = pipeline_result.get("knowledge_report")
     generated_recommendations = pipeline_result.get("recommendations") or []
     if not protocol_recommendations and generated_recommendations:
-        protocol_row = await save_protocol(
-            user_id=user_id,
-            upload_id=upload_id,
-            recommendations=generated_recommendations,
-            prompt_version="results_compatibility_v2",
-        )
-        protocol_recommendations = (protocol_row or {}).get("recommendations") or []
+        if locale_mismatch:
+            # Transient only — do not overwrite the other locale's protocols row.
+            protocol_recommendations = generated_recommendations
+        else:
+            protocol_row = await save_protocol(
+                user_id=user_id,
+                upload_id=upload_id,
+                recommendations=generated_recommendations,
+                prompt_version="results_compatibility_v2",
+            )
+            protocol_recommendations = (protocol_row or {}).get("recommendations") or []
 
-    # Stage 2G: no frozen report_versions row exists. If real canonical
-    # biomarkers exist, this is a genuine legacy artifact predating
-    # report_versions — tagged so it is never mistaken for the original
-    # frozen historical result; no mass migration/backfill happens here.
-    report_source = REPORT_SOURCE_LEGACY_FALLBACK if biomarkers else None
+    # Stage 2G: no frozen report_versions row exists for this locale.
+    # `locale_mismatch` distinguishes "frozen version exists in another
+    # locale" (REPORT_SOURCE_LOCALE_UNAVAILABLE) from a genuine legacy
+    # artifact predating report_versions entirely (REPORT_SOURCE_LEGACY_FALLBACK,
+    # unchanged prior behavior) — never mistaken for the original frozen
+    # historical result; no mass migration/backfill happens here either way.
+    if locale_mismatch:
+        report_source = REPORT_SOURCE_LOCALE_UNAVAILABLE
+    else:
+        report_source = REPORT_SOURCE_LEGACY_FALLBACK if biomarkers else None
 
     return {
         "upload_id": upload_id,

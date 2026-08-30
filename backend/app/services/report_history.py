@@ -59,6 +59,13 @@ from app.services.safety.safety_engine import blocked_content_notice
 REPORT_SOURCE_FROZEN = "frozen"
 REPORT_SOURCE_REGENERATED = "regenerated"
 REPORT_SOURCE_LEGACY_FALLBACK = "legacy_fallback"
+# Locale P0 fix: a frozen report_versions row exists for this upload, just
+# not in the requested locale (distinct from REPORT_SOURCE_LEGACY_FALLBACK,
+# which means no report_versions row exists at all for this upload, in any
+# locale). Added so callers/telemetry/frontend can tell "genuinely legacy
+# upload" apart from "not generated in this language yet" — see
+# get_latest_report_version's docstring in supabase_service.py.
+REPORT_SOURCE_LOCALE_UNAVAILABLE = "locale_unavailable"
 
 _TERMINAL_STATUSES = {"completed", "blocked"}
 
