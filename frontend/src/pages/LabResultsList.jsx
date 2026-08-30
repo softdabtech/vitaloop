@@ -9,7 +9,69 @@ import { ct } from '../lib/cabinetI18n.js'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
+import { isUkrainianLocale } from '../lib/locale.js'
 import '../styles/dashboard2026.css'
+
+// Cabinet reconciliation: full EN/UA coverage ported from origin/main's
+// LabResultsList.jsx (LAB_RESULTS_COPY). Applied on top of the CURRENT
+// file's data logic, not origin/main's — origin/main's version regresses
+// two Stage 2D invariants that must not be ported: (1) its getItemDate()
+// falls back to created_at (`item?.test_date || item?.created_at`),
+// violating Stage 2D-1's test_date -> collected_at -> reported_at
+// chronology; (2) it has no /progress/overview call or ClinicalProgressPanel
+// at all — its sidebar is static placeholder copy, not backend-computed
+// longitudinal data, which is a regression from Stage 2D-2 here, not an
+// upgrade. Kept the current, Stage-2D-compliant logic; only added the
+// missing localization this page previously lacked (hardcoded English
+// throughout body copy, badges, and the empty/premium states).
+const LAB_RESULTS_COPY = {
+  en: {
+    uploadResults: 'Upload Results',
+    noResults: 'No results yet. Start symptom-first flow to build context, then upload labs linked to your concern.',
+    startSymptom: 'Start symptom check',
+    openLabPlan: 'Open lab plan',
+    uploads: 'Uploads',
+    mostRecent: 'Most recent lab',
+    uploadHistory: 'Upload history',
+    retestPlan: 'Retest plan',
+    reviewWindow: 'Review in 8-12 weeks',
+    labResults: (index) => `Lab Results #${index}`,
+    optimal: 'Optimal',
+    warning: 'Warning',
+    review: 'Review',
+    viewResults: 'View Results',
+    premiumTitle: 'Premium features available',
+    premiumBody: 'Upgrade to see your complete lab history, track trends over time, and keep action plans connected to follow-up check-ins.',
+    premiumCta: 'Upgrade for $19.99/month',
+    safetyContext: 'Safety context',
+    safetyBody: 'Review out-of-range markers with a qualified clinician when appropriate.',
+    nextStep: 'Next step',
+    nextBody: 'Open the action plan and use check-ins to track whether symptoms change.',
+  },
+  uk: {
+    uploadResults: 'Завантажити аналізи',
+    noResults: 'Результатів ще немає. Почніть із симптомів, щоб створити контекст, а потім завантажте аналізи, повʼязані зі скаргою.',
+    startSymptom: 'Почати перевірку симптомів',
+    openLabPlan: 'Відкрити план аналізів',
+    uploads: 'Завантаження',
+    mostRecent: 'Останній аналіз',
+    uploadHistory: 'Історія завантажень',
+    retestPlan: 'План повторної перевірки',
+    reviewWindow: 'Перегляд через 8-12 тижнів',
+    labResults: (index) => `Результати аналізів #${index}`,
+    optimal: 'У нормі',
+    warning: 'Спостерігати',
+    review: 'Перегляд',
+    viewResults: 'Переглянути',
+    premiumTitle: 'Доступні Premium-функції',
+    premiumBody: 'Оновіть тариф, щоб бачити повну історію аналізів, динаміку та повʼязувати плани дій із чек-інами.',
+    premiumCta: 'Оновити тариф',
+    safetyContext: 'Контекст безпеки',
+    safetyBody: 'Обговоріть показники поза референсом із кваліфікованим фахівцем, коли це доречно.',
+    nextStep: 'Наступний крок',
+    nextBody: 'Відкрийте план дій і використовуйте чек-іни, щоб відстежити зміни симптомів.',
+  },
+}
 
 function normalizeStatus(status) {
   const value = String(status || '').toLowerCase()
@@ -114,7 +176,7 @@ function statusGroupTone(group) {
 // Stage 2D-2: renders the backend's already-computed `/progress/overview`
 // data. Formatting only — direction, dates, and values below are read
 // directly from the overview payload, never derived in this component.
-function ClinicalProgressPanel({ overview, loading, t }) {
+function ClinicalProgressPanel({ overview, loading, t, copy }) {
   const labels = t.labProgress
 
   if (loading) {
@@ -191,12 +253,12 @@ function ClinicalProgressPanel({ overview, loading, t }) {
 
       <div className="mt-4 space-y-3">
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
-          <p className="text-xs uppercase tracking-wide text-rose-700 font-semibold">Safety context</p>
-          <p className="mt-1 text-sm text-slate-700">Review out-of-range markers with a qualified clinician when appropriate.</p>
+          <p className="text-xs uppercase tracking-wide text-rose-700 font-semibold">{copy.safetyContext}</p>
+          <p className="mt-1 text-sm text-slate-700">{copy.safetyBody}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Next step</p>
-          <p className="mt-1 text-sm text-slate-700">Open the action plan and use check-ins to track whether symptoms change.</p>
+          <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{copy.nextStep}</p>
+          <p className="mt-1 text-sm text-slate-700">{copy.nextBody}</p>
         </div>
       </div>
     </aside>
@@ -208,6 +270,8 @@ export default function LabResultsList() {
   const navigate = useNavigate()
   const { show: showHints, dismiss: dismissHints } = useTourHints('lab-results')
   const { hasAccess } = useFeature('progress')
+  const isUk = isUkrainianLocale()
+  const copy = isUk ? LAB_RESULTS_COPY.uk : LAB_RESULTS_COPY.en
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -293,7 +357,7 @@ export default function LabResultsList() {
               className="vtl-button-primary inline-flex items-center justify-center gap-2 px-5 text-sm"
             >
               <Upload className="h-4 w-4" />
-              Upload Results
+              {copy.uploadResults}
             </button>
           )}
         />
@@ -318,11 +382,11 @@ export default function LabResultsList() {
         {sortedItems.length === 0 ? (
           <div className="space-y-4 py-8">
             <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-              No results yet. Start symptom-first flow to build context, then upload labs linked to your concern.
+              {copy.noResults}
             </div>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => navigate('/questionnaire')} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">Start symptom check</button>
-              <button onClick={() => navigate('/lab-plan')} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700">Open lab plan</button>
+              <button onClick={() => navigate('/questionnaire')} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">{copy.startSymptom}</button>
+              <button onClick={() => navigate('/lab-plan')} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700">{copy.openLabPlan}</button>
             </div>
             <div className="py-6">
               <EmptyStateIllustration type="upload" size="lg" />
@@ -333,16 +397,16 @@ export default function LabResultsList() {
             <div className="space-y-3">
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="vtl-light-card p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Uploads</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.uploads}</p>
                   <p className="mt-1 text-2xl font-bold text-slate-900">{sortedItems.length}</p>
                 </div>
                 <div className="vtl-light-card p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Most recent lab</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{sortedItems[0]?.lab_name || 'Upload history'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.mostRecent}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{sortedItems[0]?.lab_name || copy.uploadHistory}</p>
                 </div>
                 <div className="vtl-light-card p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Retest plan</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">Review in 8-12 weeks</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.retestPlan}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{copy.reviewWindow}</p>
                 </div>
               </div>
 
@@ -362,7 +426,7 @@ export default function LabResultsList() {
                         disabled={!uploadId}
                         className="flex-1 min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        <p className="truncate text-sm font-semibold text-slate-800">{item?.lab_name || `Lab Results #${sortedItems.length - index}`}</p>
+                        <p className="truncate text-sm font-semibold text-slate-800">{item?.lab_name || copy.labResults(sortedItems.length - index)}</p>
                         <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
                           <Calendar className="h-3 w-3" />
                           {date}
@@ -370,9 +434,9 @@ export default function LabResultsList() {
                       </button>
 
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">Optimal {optimal}</span>
-                        <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">Warning {warning}</span>
-                        <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">Review {critical}</span>
+                        <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">{copy.optimal} {optimal}</span>
+                        <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">{copy.warning} {warning}</span>
+                        <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">{copy.review} {critical}</span>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -381,7 +445,7 @@ export default function LabResultsList() {
                           disabled={!uploadId}
                           className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-40"
                         >
-                          View Results
+                          {copy.viewResults}
                           <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>
@@ -396,15 +460,15 @@ export default function LabResultsList() {
                   <div className="flex items-start gap-3">
                     <Sparkles className="mt-0.5 h-5 w-5 text-amber-600" />
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-amber-800">Premium features available</p>
+                      <p className="text-sm font-semibold text-amber-800">{copy.premiumTitle}</p>
                       <p className="mt-1 text-sm text-amber-700">
-                        Upgrade to see your complete lab history, track trends over time, and keep action plans connected to follow-up check-ins.
+                        {copy.premiumBody}
                       </p>
                       <button
                         onClick={triggerLabHistoryAccessPaywall}
                         className="mt-3 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition"
                       >
-                        Upgrade for $19.99/month
+                        {copy.premiumCta}
                       </button>
                     </div>
                   </div>
@@ -412,7 +476,7 @@ export default function LabResultsList() {
               )}
             </div>
 
-            <ClinicalProgressPanel overview={overview} loading={overviewLoading} t={t} />
+            <ClinicalProgressPanel overview={overview} loading={overviewLoading} t={t} copy={copy} />
           </div>
         )}
       </div>
