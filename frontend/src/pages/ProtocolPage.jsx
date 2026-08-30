@@ -6,6 +6,11 @@ import { useFeature } from '../hooks/useFeature.js'
 import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
 import { isUkrainianLocale } from '../lib/locale.js'
 import { biomarkerDisplayName, evidenceDisplayLabel } from '../lib/biomarker-display.js'
+// coach-shell/coach-card/etc. have no built-in styles of their own — every
+// rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
+// so each page using CoachUI must import it directly or it renders as
+// unstyled browser-default HTML, not a build error.
+import '../styles/coach-design-system.css'
 
 const PRIORITY_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 }
 const TIMING_LABELS = {

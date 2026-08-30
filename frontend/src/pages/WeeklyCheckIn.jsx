@@ -10,6 +10,11 @@ import api from '../lib/api.js'
 import { gaCheckInSubmit } from '../lib/analytics.js'
 import { CoachButton, CoachCard, CoachProgress } from '../components/coach/CoachUI.jsx'
 import { isUkrainianLocale } from '../lib/locale.js'
+// coach-shell/coach-card/etc. have no built-in styles of their own — every
+// rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
+// so each page using CoachUI must import it directly or it renders as
+// unstyled browser-default HTML, not a build error.
+import '../styles/coach-design-system.css'
 
 const CONCERN_STATUS = ['better', 'same', 'worse']
 const ADHERENCE = ['high', 'medium', 'low']

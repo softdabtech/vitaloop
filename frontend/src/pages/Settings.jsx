@@ -12,6 +12,11 @@ import { isUkrainianLocale } from '../lib/locale.js'
 import { ct } from '../lib/cabinetI18n.js'
 import { CoachButton, CoachCard, CoachInput } from '../components/coach/CoachUI.jsx'
 import '../styles/dashboard2026.css'
+// coach-shell/coach-card/etc. have no built-in styles of their own — every
+// rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
+// so each page using CoachUI must import it directly or it renders as
+// unstyled browser-default HTML, not a build error.
+import '../styles/coach-design-system.css'
 
 const COOKIE_STORAGE_KEY = 'vitaloop-cookie-consent'
 function resetCookieConsent() {

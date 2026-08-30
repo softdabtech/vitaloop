@@ -9,7 +9,6 @@ import UserAvatar from '../UserAvatar.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { buildSubscriptionPath, getCabinetUpgradeTarget } from '../../lib/subscriptionFlow.js'
-import { CABINET_VERSION } from '../../lib/cabinetV511.js'
 import { isUkrainianLocale } from '../../lib/locale.js'
 import '../../styles/dashboard2026.css'
 
@@ -133,7 +132,6 @@ export default function UserCabinetLayout({ children }) {
               </button>
               <div className="min-w-0">
                 <h1 className="truncate text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">{pageMeta.title}</h1>
-                <p className="text-xs text-slate-400">Cabinet {CABINET_VERSION}</p>
               </div>
             </div>
 

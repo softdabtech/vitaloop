@@ -4,6 +4,11 @@ import { ArrowRight, Beaker, CheckCircle2, Circle, Coins, FlaskConical, HelpCirc
 import { CoachBadge, CoachButton, CoachCard, CoachProgress, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
 import { useQuestionnaireSession } from '../hooks/useQueries.js'
 import { isUkrainianLocale } from '../lib/locale.js'
+// coach-shell/coach-card/etc. have no built-in styles of their own — every
+// rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
+// so each page using CoachUI must import it directly or it renders as
+// unstyled browser-default HTML, not a build error.
+import '../styles/coach-design-system.css'
 
 const CORE_LABS = [
   { name: 'CBC', why: 'Baseline blood pattern and inflammation context.', related: 'Fatigue, dizziness, recovery', priority: 'Core' },

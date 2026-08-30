@@ -7,6 +7,11 @@ import { useSubscription } from '../hooks/useSubscription.js'
 import { CoachBadge, CoachButton, CoachCard, CoachProgress, CoachSkeleton, CoachTooltip, EmptyCoachState, InsightCard, KPIBlock } from '../components/coach/CoachUI.jsx'
 import { HEALTH_LOOP_STAGES, getHealthLoopStageIndex } from '../lib/cabinetV511.js'
 import { isUkrainianLocale } from '../lib/locale.js'
+// coach-shell/coach-card/etc. (CoachUI.jsx) have no built-in styles of their
+// own — every rule lives in this stylesheet. Vite code-splits CSS per lazy
+// route chunk, so each page using CoachUI must import it directly or it
+// renders as unstyled browser-default HTML, not a build error.
+import '../styles/coach-design-system.css'
 
 const DASHBOARD_COPY = {
   en: {

@@ -11,6 +11,11 @@ import {
   subscribeToPush,
   unsubscribeFromPush,
 } from '../lib/notifications.ts'
+// coach-shell/coach-card/etc. have no built-in styles of their own — every
+// rule lives in this stylesheet. Belt-and-suspenders here since the parent
+// (Settings.jsx) already imports it and Vite bundles CSS per route chunk,
+// not per component — but this component could be reused elsewhere later.
+import '../styles/coach-design-system.css'
 
 const NOTIFICATION_COPY = {
   en: {

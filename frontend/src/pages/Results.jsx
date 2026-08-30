@@ -24,6 +24,11 @@ import {
 import { isUkrainianLocale } from '../lib/locale.js'
 import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
 import { CoachBadge, CoachCard } from '../components/coach/CoachUI.jsx'
+// coach-shell/coach-card/etc. have no built-in styles of their own — every
+// rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
+// so each page using CoachUI must import it directly or it renders as
+// unstyled browser-default HTML, not a build error.
+import '../styles/coach-design-system.css'
 
 const STATUS_META = {
   DEFICIENT: { rank: 0, label: 'Below range', ukLabel: 'Нижче референсу', badge: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' },
