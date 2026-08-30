@@ -339,6 +339,33 @@ export default function Upload() {
       }, { oncePerSession: true })
       gaLabUpload()
 
+      // Quality Gate completion (cabinet reconciliation): a decision other
+      // than auto_continue means run_lab_analysis_pipeline took its early
+      // needs_confirmation return — no canonical biomarkers were persisted
+      // (Stage 2B's chokepoint), so navigating straight to /results/{uploadId}
+      // here was a dead end (empty "no processed biomarkers yet" state with
+      // no way back into confirmation). Reuses the EXISTING, already-tested
+      // backend contract unchanged: GET /{upload_id}/candidates +
+      // POST /{upload_id}/confirm-candidates (Stage 2B) — no new endpoint, no
+      // gate semantics change. Populates the review UI that already existed
+      // in this file but nothing ever triggered.
+      if (data.analysis_status && data.analysis_status !== 'completed') {
+        try {
+          const { data: reviewData } = await api.get(`/analyze/${uploadId}/candidates`)
+          const candidates = Array.isArray(reviewData?.candidates) ? reviewData.candidates : []
+          if (candidates.length) {
+            setCandidateReview({ uploadId, candidates })
+            setAnalyzing(false)
+            return
+          }
+        } catch (reviewErr) {
+          console.error('Failed to load candidates for review:', reviewErr)
+          // Fall through to the results navigation below — the empty state
+          // there still degrades safely (no biomarkers yet), and the user is
+          // not stuck with no feedback at all.
+        }
+      }
+
       void Promise.allSettled([
         queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
         queryClient.invalidateQueries({ queryKey: ['lab-results-list'] }),
