@@ -5,7 +5,8 @@ import { supabase } from '../lib/supabase.js'
 import { navigateToResolvedPath, resolvePostLoginDestination } from '../auth/postLogin.js'
 import { notifyRegistrationAlert, sendWelcomeEmail } from '../auth/registrationAlert.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
-import { gaSignUp, gaLogin } from '../lib/analytics.js'
+import { gaSignUp, gaLogin, gaSignupCompleted, gaSignupStarted } from '../lib/analytics.js'
+import { getAttributionEventParams, getAttributionMetadata, getSignupUserMetadata } from '../lib/attribution.js'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import Seo from '../components/Seo.jsx'
@@ -58,6 +59,19 @@ function readLocalStorageArray(key) {
 function writeLocalStorageArray(key, value) {
   if (typeof window === 'undefined') return
   window.localStorage.setItem(key, JSON.stringify(value))
+}
+
+function clearSupabaseAuthStorage() {
+  if (typeof window === 'undefined') return
+  try {
+    for (const key of Object.keys(window.localStorage)) {
+      if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        window.localStorage.removeItem(key)
+      }
+    }
+  } catch {
+    // Supabase signOut is the primary cleanup path; direct storage cleanup is best-effort.
+  }
 }
 
 function resolveEmailConfirmationRedirect(returnUrl = null) {
@@ -127,8 +141,8 @@ const AUTH_COPY = {
     defaultAuthError: 'Could not sign in. Try again.',
   },
   uk: {
-    seoTitle: 'Увійти або створити акаунт | VITALOOP Ukraine',
-    seoDescription: 'Увійдіть у VITALOOP Ukraine або створіть акаунт, щоб почати з симптомів, аналізів і персонального плану дій.',
+    seoTitle: 'Увійти або створити акаунт | VITALOOP Україна',
+    seoDescription: 'Увійдіть у VITALOOP Україна або створіть акаунт, щоб почати з симптомів, аналізів і персонального плану дій.',
     backToSite: 'На сайт',
     resetTitle: 'Відновити пароль',
     signupTitle: 'Створити акаунт',
@@ -416,7 +430,7 @@ function MedicalPanel({ side, signup = false }) {
       }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em',
           color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', marginBottom: 6 }}>
-          {isLeft ? 'Your biology,\ndecoded.' : 'HIPAA-ready\narchitecture.'}
+          {isLeft ? 'Your biology,\ndecoded.' : 'Privacy-first\narchitecture.'}
         </div>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.18)', lineHeight: 1.5 }}>
           {isLeft
@@ -442,7 +456,7 @@ function AbstractPanel({ side, variant = 'signin' }) {
 function UaHeroPanel({ isSignUp }) {
   const taglines = isSignUp
     ? {
-        badge: '🇺🇦 Vitaloop Ukraine',
+        badge: '🇺🇦 VITALOOP Україна',
         title: 'Ваше здоров\'я — ваш пріоритет',
         sub: 'Завантажте аналізи або почніть із симптомів. Отримайте персональний план дій.',
         stats: [
@@ -452,7 +466,7 @@ function UaHeroPanel({ isSignUp }) {
         ],
       }
     : {
-        badge: '🇺🇦 Vitaloop Ukraine',
+        badge: '🇺🇦 VITALOOP Україна',
         title: 'Розумійте своє здоров\'я глибше',
         sub: 'AI-аналіз аналізів крові, симптомів і персональний план дій українською.',
         stats: [
@@ -502,7 +516,7 @@ function UaHeroPanel({ isSignUp }) {
           }}>
             <span style={{ fontSize: 14 }}>🇺🇦</span>
             <span style={{ fontSize: 12, fontWeight: 800, color: '#fff', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              Vitaloop Ukraine
+              VITALOOP Україна
             </span>
           </div>
         </div>
@@ -517,7 +531,7 @@ function UaHeroPanel({ isSignUp }) {
           }}>
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }}/>
             <span style={{ fontSize: 11, fontWeight: 700, color: '#a7f3d0', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              AI аналіз · персональний план
+              AI-аналіз · персональний план
             </span>
           </div>
 
@@ -598,6 +612,17 @@ export default function Login() {
     }
     let active = true
 
+    if (searchParams.get('signout') === '1') {
+      supabase.auth.signOut()
+        .catch(() => {})
+        .finally(() => {
+          clearSupabaseAuthStorage()
+        })
+      return () => {
+        active = false
+      }
+    }
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!active || !session?.user || !session?.access_token) {
         return
@@ -629,6 +654,15 @@ export default function Login() {
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
+
+  useEffect(() => {
+    if (!isSignUp || isForgot) return
+    gaSignupStarted('email', getAttributionEventParams())
+    trackFunnelEvent('funnel_signup_started', 'User started signup', {
+      auth_provider: 'email',
+      ...getAttributionMetadata(),
+    }, { oncePerSession: true })
+  }, [isSignUp, isForgot])
 
   const ATTEMPT_KEY = 'vo:auth-attempts'
   const ATTEMPT_WINDOW_MS = 10 * 60 * 1000
@@ -714,8 +748,10 @@ export default function Login() {
   // Handle sign-up completion and navigation
   async function handleSignUpSuccess(authData, normalizedEmail) {
     gaSignUp('email')
+    gaSignupCompleted('email', getAttributionEventParams())
     trackFunnelEvent('funnel_signup_completed', 'User completed signup', {
       auth_provider: 'email',
+      ...getAttributionMetadata(),
     }, { oncePerSession: true })
 
     const returnUrl = searchParams.get('returnUrl')
@@ -780,7 +816,10 @@ export default function Login() {
     const returnUrl = searchParams.get('returnUrl')
     const fn = isSignUp ? signUpWithEmail : signInWithEmail
     const { data: authData, error } = await (isSignUp
-      ? fn(normalizedEmail, password, { emailRedirectTo: resolveEmailConfirmationRedirect(returnUrl) })
+      ? fn(normalizedEmail, password, {
+        emailRedirectTo: resolveEmailConfirmationRedirect(returnUrl),
+        data: getSignupUserMetadata(),
+      })
       : fn(normalizedEmail, password))
     setLoading(false)
 
@@ -989,7 +1028,7 @@ export default function Login() {
             {isUaAuth && (
               <div className="ua-auth-badge" style={{ marginBottom: 18 }}>
                 <span aria-hidden="true">🇺🇦</span>
-                Vitaloop Ukraine
+                VITALOOP Україна
               </div>
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -1027,11 +1066,15 @@ export default function Login() {
               {copy.resetSuccess}
             </div>
           )}
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <form
+            onSubmit={handleSubmit}
+            data-testid="auth-form"
+            style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+          >
             {/* Google reCAPTCHA (only for sign up) — удалено */}
 
             {authAlert && (
-              <div className="ua-alert" style={{
+              <div className="ua-alert" data-testid="auth-alert" style={{
                 background: 'rgba(255,99,71,0.12)',
                 border: '0.5px solid rgba(255,99,71,0.35)',
                 borderRadius: 12,
@@ -1067,6 +1110,8 @@ export default function Login() {
             {/* Honeypot - invisible to users, visible to bots */}
             <input
               type="text"
+              name="company"
+              data-testid="auth-honeypot"
               value={honeypot}
               onChange={(e) => setHoneypot(e.target.value)}
               style={{ position: 'absolute', left: '-9999px', opacity: 0 }}
@@ -1077,13 +1122,16 @@ export default function Login() {
 
             {/* Email */}
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)',
+              <label htmlFor="auth-email" style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)',
                 letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
                 {copy.emailLabel}
               </label>
               <input
+                id="auth-email"
                 type="email"
                 required
+                name="email"
+                data-testid="auth-email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -1103,15 +1151,18 @@ export default function Login() {
             {/* Password */}
             {!isForgot && (
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)',
+                <label htmlFor="auth-password" style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)',
                   letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
                   {copy.passwordLabel}
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showPass ? 'text' : 'password'}
+                    id="auth-password"
                     required
                     minLength={8}
+                    name="password"
+                    data-testid="auth-password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -1160,6 +1211,7 @@ export default function Login() {
             {/* Submit */}
             <button
               type="submit"
+              data-testid="auth-submit"
               disabled={loading}
               style={{
                 width: '100%', background: loading ? '#085041' : '#1D9E75',
@@ -1193,7 +1245,18 @@ export default function Login() {
               {/* Google */}
               <button
                 className="ua-google-btn"
-                onClick={() => { gaLogin('google'); signInWithGoogle() }}
+                onClick={() => {
+                  if (isSignUp) {
+                    gaSignupStarted('google', getAttributionEventParams())
+                    trackFunnelEvent('funnel_signup_started', 'User started signup', {
+                      auth_provider: 'google',
+                      ...getAttributionMetadata(),
+                    }, { oncePerSession: true })
+                  } else {
+                    gaLogin('google')
+                  }
+                  signInWithGoogle()
+                }}
                 style={{
                   width: '100%', background: 'rgba(255,255,255,0.04)',
                   border: '0.5px solid rgba(255,255,255,0.1)',

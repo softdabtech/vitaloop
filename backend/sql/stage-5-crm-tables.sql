@@ -66,9 +66,6 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
     CHECK (plan_name IN ('free', 'core', 'personal')),
   status TEXT DEFAULT 'active'
     CHECK (status IN ('active', 'paused', 'cancelled', 'past_due')),
-  stripe_subscription_id TEXT UNIQUE,
-  stripe_customer_id TEXT,
-  stripe_status TEXT,
   current_period_start TIMESTAMPTZ,
   current_period_end TIMESTAMPTZ,
   cancel_at_period_end BOOLEAN DEFAULT FALSE,
@@ -80,8 +77,6 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON public.subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_plan_name ON public.subscriptions(plan_name);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON public.subscriptions(status);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_id ON public.subscriptions(stripe_subscription_id);
-
 -- ============================================================
 -- 4. CLIENTS
 -- ============================================================

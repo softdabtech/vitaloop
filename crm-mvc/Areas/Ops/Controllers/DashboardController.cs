@@ -140,6 +140,62 @@ public class DashboardController : Controller
         }
     }
 
+    [HttpGet("users/{userId}/profile")]
+    public async Task<IActionResult> UserProfile(Guid userId, [FromQuery] int days = 90, CancellationToken ct = default)
+    {
+        var userCtx = await _userContextAccessor.GetOrThrow(ct);
+        var safeDays = Math.Clamp(days, 7, 365);
+
+        IReadOnlyList<GlobalUser> users;
+        try
+        {
+            users = await _membershipService.GetGlobalUsers(userCtx, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch global users before opening B2C activity profile for {UserId}", userId);
+            TempData["ErrorMessage"] = "Global users feed is temporarily unavailable.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var user = users.FirstOrDefault(u => u.UserId == userId);
+        if (user is null)
+        {
+            TempData["ErrorMessage"] = "B2C user was not found in the global users feed.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var activityJson = "{}";
+        string? activityError = null;
+        try
+        {
+            var doc = await _membershipService.GetUserActivityDetail(userId, safeDays, ct);
+            if (doc is not null)
+            {
+                activityJson = doc.RootElement.GetRawText();
+            }
+            else
+            {
+                activityError = "Backend returned no activity detail for this user.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch B2C activity profile for {UserId}", userId);
+            activityError = "Activity detail is temporarily unavailable.";
+        }
+
+        var model = new OpsUserActivityProfileViewModel
+        {
+            User = ToMemberViewModel(user),
+            Days = safeDays,
+            ActivityJson = activityJson,
+            ActivityError = activityError
+        };
+
+        return View(model);
+    }
+
     [HttpGet("live-snapshot")]
     public async Task<IActionResult> LiveSnapshot(CancellationToken ct)
     {
@@ -286,4 +342,17 @@ public class DashboardController : Controller
 
         return (users, overview, runtimeReadiness, logs, warnings);
     }
+
+    private static MemberViewModel ToMemberViewModel(GlobalUser user) => new()
+    {
+        UserId = user.UserId,
+        Email = user.Email,
+        FullName = user.FullName,
+        Age = user.Age,
+        Sex = user.Sex,
+        GlobalRole = user.GlobalRole,
+        OrgRole = "-",
+        MembershipStatus = user.Status,
+        SubscriptionStatus = user.Status
+    };
 }

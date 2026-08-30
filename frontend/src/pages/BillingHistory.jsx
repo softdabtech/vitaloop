@@ -1,43 +1,20 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, Clock, XCircle, ArrowLeft, CreditCard } from 'lucide-react'
+import { ArrowLeft, Mail } from 'lucide-react'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
 import { useAuth } from '../hooks/useAuth.js'
-import api from '../lib/api.js'
+import { useSubscription } from '../hooks/useSubscription.js'
+import { requestPremiumAccess } from '../lib/premiumAccess.js'
 import '../styles/dashboard2026.css'
-
-const STATUS_META = {
-  active:   { label: 'Active',   icon: CheckCircle2, color: 'text-emerald-700 bg-emerald-100' },
-  past_due: { label: 'Past Due', icon: Clock,        color: 'text-amber-700 bg-amber-100' },
-  paused:   { label: 'Paused',   icon: Clock,        color: 'text-amber-700 bg-amber-100' },
-  cancelled:{ label: 'Cancelled',icon: XCircle,      color: 'text-red-700 bg-red-100' },
-}
-
-function fmt(ts) {
-  if (!ts) return '—'
-  const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts)
-  return isNaN(d) ? '—' : d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
-const PLAN_LABELS = { personal: 'Premium', practitioner: 'Enterprise', core: 'Premium' }
 
 export default function BillingHistory() {
   const { user } = useAuth()
+  const { isPremium, subStatus, planName } = useSubscription()
   const navigate = useNavigate()
-  const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const nextBillingDate = rows[0]?.current_period_end || rows[0]?.period_end || null
 
-  useEffect(() => {
-    if (!user) return
-    setLoading(true)
-    api.get('/stripe/billing-history')
-      .then(({ data }) => setRows(data.history || []))
-      .catch(() => setError('Failed to load billing history.'))
-      .finally(() => setLoading(false))
-  }, [user])
+  async function handlePremiumRequest() {
+    await requestPremiumAccess({ userEmail: user?.email, source: 'billing_history' })
+  }
 
   return (
     <>
@@ -48,80 +25,63 @@ export default function BillingHistory() {
       />
 
       <div className="grid gap-6">
-        <div>
-          <button
-            onClick={() => navigate('/subscription')}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition mb-6"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Subscription
-          </button>
-        </div>
+        <button
+          onClick={() => navigate('/subscription')}
+          className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Subscription
+        </button>
 
-        {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600" />
-          </div>
-        )}
-
-        {!loading && error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800 text-sm">{error}</div>
-        )}
-
-        {!loading && !error && rows.length === 0 && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
-            <CreditCard className="w-10 h-10 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500 font-medium">No billing history yet.</p>
-            <p className="text-slate-400 text-sm mt-1">Subscription events will appear here once you subscribe via Stripe.</p>
-          </div>
-        )}
-
-        {!loading && !error && rows.length > 0 && (
-          <div className="grid gap-4">
-            {nextBillingDate && (
-              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-blue-900">
-                <p className="text-sm font-medium">Next billing date</p>
-                <p className="mt-1 text-base font-semibold">{fmt(nextBillingDate)}</p>
-              </div>
-            )}
-
-            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50">
-                    <th className="text-left px-6 py-4 font-semibold text-slate-600">Plan</th>
-                    <th className="text-left px-6 py-4 font-semibold text-slate-600">Status</th>
-                    <th className="text-left px-6 py-4 font-semibold text-slate-600">Period Start</th>
-                    <th className="text-left px-6 py-4 font-semibold text-slate-600">Period End</th>
-                    <th className="text-left px-6 py-4 font-semibold text-slate-600">Last Updated</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row, idx) => {
-                    const meta = STATUS_META[row.status] || STATUS_META.active
-                    const Icon = meta.icon
-                    return (
-                      <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition">
-                        <td className="px-6 py-4 font-medium text-slate-900">
-                          {PLAN_LABELS[row.plan_name] || row.plan_name || 'Unknown'}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${meta.color}`}>
-                            <Icon className="w-3 h-3" />
-                            {meta.label}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-slate-600">{fmt(row.current_period_start || row.started_at)}</td>
-                        <td className="px-6 py-4 text-slate-600">{fmt(row.current_period_end)}</td>
-                        <td className="px-6 py-4 text-slate-500">{fmt(row.updated_at)}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+        <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="mb-5 flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+              <Mail className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="text-xl font-bold text-slate-950">Premium access support</h2>
+              <p className="text-sm text-slate-500">Premium is currently activated manually by the VITALOOP team.</p>
             </div>
           </div>
-        )}
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Plan</p>
+              <p className="mt-1 text-lg font-bold text-slate-950">{isPremium ? 'Premium' : 'Free'}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
+              <p className="mt-1 text-lg font-bold capitalize text-slate-950">{subStatus || 'free'}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Access key</p>
+              <p className="mt-1 text-lg font-bold capitalize text-slate-950">{planName || (isPremium ? 'premium' : 'free')}</p>
+            </div>
+          </div>
+
+          <p className="mt-6 max-w-2xl text-sm leading-6 text-slate-600">
+            Contact us to activate or review Premium access. VITALOOP does not send symptoms, lab files, biomarkers, reports, or protocol text to billing tools.
+          </p>
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handlePremiumRequest}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
+            >
+              <Mail className="h-4 w-4" />
+              Request Premium access
+            </button>
+            <button
+              type="button"
+              onClick={handlePremiumRequest}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+            >
+              <Mail className="h-4 w-4" />
+              Contact support
+            </button>
+          </div>
+        </section>
       </div>
     </>
   )

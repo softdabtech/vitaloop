@@ -14,7 +14,3 @@ ON public.subscriptions(user_id)
 WHERE status = 'active'
   AND plan_name IN ('core', 'personal')
   AND cancel_at_period_end = false;
-
-CREATE UNIQUE INDEX IF NOT EXISTS subscriptions_stripe_subscription_id_unique
-ON public.subscriptions(stripe_subscription_id)
-WHERE stripe_subscription_id IS NOT NULL;

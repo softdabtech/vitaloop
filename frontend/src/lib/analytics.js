@@ -77,6 +77,31 @@ export function gaSignUp(method = 'email') {
   })
 }
 
+// Stage 2I: gaSignupStarted/gaSignupCompleted were imported by Login.jsx but
+// had no definition anywhere in this file or in git history — a missing
+// live dependency (build-blocking), not a stale import (both call sites use
+// them for a live signup-funnel telemetry step). Follows this file's own
+// existing gaEvent()-wrapper convention (see gaSignUp/gaLogin immediately
+// above) rather than inventing a new telemetry mechanism.
+
+/**
+ * Fire when a user begins the signup form (before submission).
+ * @param {'email'|'google'} method
+ * @param {Record<string, unknown>} [attributionParams] - see lib/attribution.js
+ */
+export function gaSignupStarted(method = 'email', attributionParams = {}) {
+  gaEvent('signup_started', { method, ...attributionParams })
+}
+
+/**
+ * Fire when a signup form submission succeeds (account created).
+ * @param {'email'|'google'} method
+ * @param {Record<string, unknown>} [attributionParams] - see lib/attribution.js
+ */
+export function gaSignupCompleted(method = 'email', attributionParams = {}) {
+  gaEvent('signup_completed', { method, ...attributionParams })
+}
+
 /**
  * Fire when an existing user signs in successfully.
  * @param {'email'|'google'} method

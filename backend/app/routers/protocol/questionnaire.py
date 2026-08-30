@@ -1,12 +1,14 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.dependencies import get_current_user
 from app.services import supabase_service as svc
 from app.services import claude_service
+from app.services.questionnaire_scoring import apply_authoritative_derived_state
+from app.utils.locale import resolve_locale
 
 router = APIRouter()
 
@@ -149,6 +151,16 @@ async def _get_or_create_active_session(user_id: str) -> Dict[str, Any]:
     return create.data[0]
 
 
+async def _get_latest_session(user_id: str) -> Optional[Dict[str, Any]]:
+    sb = svc._get_supabase()
+    resp = await svc._run(
+        lambda: sb.table("questionnaire_sessions")
+        .select("*").eq("user_id", user_id)
+        .order("created_at", desc=True).limit(1).execute()
+    )
+    return resp.data[0] if resp.data else None
+
+
 async def _get_session_answers(session_id: str) -> List[Dict[str, Any]]:
     sb = svc._get_supabase()
     resp = await svc._run(
@@ -219,12 +231,15 @@ async def create_questionnaire(
 async def get_questionnaire_session(current_user: dict = Depends(get_current_user)):
     user_id = current_user.get("sub")
     try:
-        session = await _get_or_create_active_session(user_id)
+        session = await _get_latest_session(user_id)
+        if not session:
+            session = await _get_or_create_active_session(user_id)
         answers = await _get_session_answers(session["id"])
         answered_ids = {str(a.get("question_id")) for a in answers if a.get("question_id")}
         answer_map = {str(a.get("question_id")): int(a.get("answer_value") or 0) for a in answers}
         pending_followups = session.get("pending_followups") or []
-        next_question = _get_next_question(answered_ids, answer_map, pending_followups)
+        is_completed_session = str(session.get("status") or "").lower() == "completed"
+        next_question = None if is_completed_session else _get_next_question(answered_ids, answer_map, pending_followups)
         total = len(QUESTION_BANK) + len(pending_followups)
         answered_count = len(answers)
         await svc.write_audit_log(
@@ -238,7 +253,7 @@ async def get_questionnaire_session(current_user: dict = Depends(get_current_use
             "answered_count": answered_count,
             "remaining_count": max(0, total - answered_count),
             "next_question": next_question,
-            "completed": next_question is None,
+            "completed": is_completed_session or next_question is None,
         }
     except HTTPException:
         raise
@@ -251,6 +266,7 @@ async def get_questionnaire_session(current_user: dict = Depends(get_current_use
 @router.patch("/session/context")
 async def update_questionnaire_context(
     body: QuestionnaireContextRequest,
+    request: Request,
     current_user: dict = Depends(get_current_user),
 ):
     user_id = current_user.get("sub")
@@ -260,7 +276,16 @@ async def update_questionnaire_context(
     if body.active_concern is not None:
         session_metadata["active_concern"] = body.active_concern.strip()
     if body.summary is not None:
-        session_metadata["summary"] = body.summary
+        # Stage 2F.1: `readiness` and `urgency` are derived clinical-adjacent
+        # state, not raw answers — the client may still send them (backward
+        # compatibility with the existing request contract), but they are
+        # never trusted. The backend recomputes both from the same raw
+        # fields, using the same deterministic formulas that previously only
+        # existed client-side (questionnaire_scoring.py), and overwrites
+        # whatever the client submitted before persisting. Any client-
+        # supplied readiness/urgency is discarded here, not merged.
+        locale = resolve_locale(request)
+        session_metadata["summary"] = apply_authoritative_derived_state(body.summary, locale=locale)
 
     await _update_session(session["id"], {"session_metadata": session_metadata})
     updated_session = {**session, "session_metadata": session_metadata}

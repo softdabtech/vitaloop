@@ -25,8 +25,19 @@ function Stepper({ stageIndex }) {
   )
 }
 
+// Stage 2F: only renders a percentage bar when `value` is an actual backend
+// number (not undefined/null) — a missing real value shows truthful "Not yet
+// calculated" text instead of silently defaulting to a fabricated number.
 function ScoreRow({ label, value }) {
-  const v = Math.max(0, Math.min(100, Number(value || 0)))
+  if (value === null || value === undefined) {
+    return (
+      <div>
+        <div className="mb-1 flex items-center justify-between text-xs text-slate-600"><span>{label}</span><span className="text-slate-400">Not yet calculated</span></div>
+        <div className="h-2 overflow-hidden rounded-full bg-slate-100" />
+      </div>
+    )
+  }
+  const v = Math.max(0, Math.min(100, Number(value)))
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-xs text-slate-600"><span>{label}</span><span>{v}%</span></div>
@@ -44,6 +55,18 @@ export default function UserDashboard() {
   const summary = data || {}
   const stats = summary?.stats || {}
   const latestCheckin = summary?.blocks?.latest_checkin || null
+  // Stage 2E: a check-in must be "current" based on real elapsed time, not
+  // just the presence of any historical check-in ever — otherwise the very
+  // first check-in permanently satisfies this forever, and the loop never
+  // asks for one again. week_start mirrors the backend's 7-day interval
+  // (dashboard.py CHECKIN_DUE_INTERVAL_DAYS).
+  const CHECKIN_DUE_INTERVAL_DAYS = 7
+  const isCheckinCurrent = (() => {
+    const reference = latestCheckin?.week_start || latestCheckin?.created_at
+    if (!reference) return false
+    const days = (Date.now() - new Date(reference).getTime()) / 86400000
+    return days >= 0 && days < CHECKIN_DUE_INTERVAL_DAYS
+  })()
   const latestUpload = summary?.blocks?.latest_upload || null
   const assignments = Array.isArray(summary?.blocks?.assignments) ? summary.blocks.assignments : []
   const { data: questionnaireSession } = useQuestionnaireSession()
@@ -56,7 +79,7 @@ export default function UserDashboard() {
   const hasLabPlan = Boolean(concernSummary?.readiness && concernSummary.readiness >= 40)
   const hasResults = Number(stats.total_uploads || 0) > 0
   const hasProtocol = Boolean(stats?.active_program && String(stats.active_program).toLowerCase() !== 'not started')
-  const hasCheckin = Boolean(latestCheckin)
+  const hasCheckin = isCheckinCurrent
 
   const stageIndex = getHealthLoopStageIndex({ hasConcern, hasQuestions, hasLabPlan, hasResults, hasProtocol, hasCheckin })
 
@@ -69,12 +92,21 @@ export default function UserDashboard() {
     return { label: 'Review results & trends', path: '/lab-results', reason: 'Track movement and retest timing.' }
   }, [hasConcern, hasLabPlan, hasResults, hasProtocol, hasCheckin])
 
-  const protocolAdherence = Math.max(0, Math.min(100, Math.round((Number(stats.completed_tasks || 0) / Math.max(assignments.length, 1)) * 100)))
-  const symptomScore = concernSummary?.severity ? Math.max(0, 100 - concernSummary.severity * 9) : 42
-  const biomarkerScore = hasResults ? 70 : 25
-  const safetyScore = concernSummary?.urgency?.includes('No urgent') ? 85 : 45
-  const profileScore = Number(stats?.profile_completion || 55)
-  const labReadiness = Number(concernSummary?.readiness || 38)
+  // Stage 2F: every value below now comes directly from a real, traceable
+  // backend calculation (calculate_health_score() -> health_scores table,
+  // exposed via stats.health_score_components) — none is invented in this
+  // component, and a missing real value renders as "Not yet calculated"
+  // (ScoreRow) rather than a fabricated fallback number. See the Stage 2F
+  // audit report for the full before/after inventory of what this replaced:
+  // biomarkerScore (flat 70/25 constant), safetyScore (binary substring
+  // match), symptomScore (frontend-invented formula over a client-computed-
+  // then-stored questionnaire value), profileScore (read a field that does
+  // not exist in the API response and always fell back to a hardcoded 55).
+  const healthScoreComponents = stats?.health_score_components || {}
+  const symptomScore = healthScoreComponents.symptom
+  const biomarkerScore = healthScoreComponents.biomarker
+  const adherenceScore = healthScoreComponents.adherence
+  const profileScore = summary?.profile?.onboarding?.completion_pct ?? null
 
   return (
     <div className="space-y-6">
@@ -110,31 +142,49 @@ export default function UserDashboard() {
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-            <div className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" /> Health Signal Score</div>
+            <div className="mb-1 flex items-center gap-2 text-base font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" /> Health Signal Score</div>
+            <p className="mb-3 text-xs text-slate-500">
+              {stats?.health_score != null
+                ? `Overall: ${Math.round(stats.health_score)}%`
+                : 'Overall score not yet calculated — upload a lab and complete a check-in to generate it.'}
+            </p>
             <div className="space-y-3">
               <ScoreRow label="Symptoms" value={symptomScore} />
               <ScoreRow label="Biomarkers" value={biomarkerScore} />
-              <ScoreRow label="Adherence" value={protocolAdherence} />
-              <ScoreRow label="Safety/Profile" value={Math.round((safetyScore + profileScore) / 2)} />
+              <ScoreRow label="Check-in adherence" value={adherenceScore} />
+              <ScoreRow label="Profile completeness" value={profileScore} />
             </div>
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-            <div className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900"><Route className="h-4 w-4 text-emerald-600" /> Lab Readiness</div>
-            <div className="mb-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${labReadiness}%` }} /></div>
-            <p className="text-sm text-slate-700">Readiness: {labReadiness}% | Uploads linked: {uploadCount}</p>
+            <div className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900"><Route className="h-4 w-4 text-emerald-600" /> Symptom Check &amp; Lab Plan</div>
+            <p className="text-sm text-slate-700">
+              {!hasConcern
+                ? 'Not started — set an active concern to begin.'
+                : !hasQuestions
+                  ? 'Symptom check in progress.'
+                  : hasLabPlan
+                    ? 'Lab plan ready for upload.'
+                    : 'Symptom check complete — more context needed for a focused lab plan.'}
+              {' '}| Uploads linked: {uploadCount}
+            </p>
           </section>
         </div>
 
         <div className="space-y-6">
-          <section className={`rounded-2xl border p-5 sm:p-6 ${safetyScore >= 70 ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
-            <div className="mb-2 flex items-center gap-2 text-base font-semibold text-slate-900"><ShieldAlert className={`h-4 w-4 ${safetyScore >= 70 ? 'text-emerald-600' : 'text-amber-600'}`} /> Safety</div>
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+            <div className="mb-2 flex items-center gap-2 text-base font-semibold text-slate-900"><ShieldAlert className="h-4 w-4 text-slate-500" /> Safety</div>
             <p className="text-sm text-slate-700">{concernSummary?.urgency || 'No urgent red flags reported.'}</p>
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-            <div className="mb-2 flex items-center gap-2 text-base font-semibold text-slate-900"><ClipboardCheck className="h-4 w-4 text-emerald-600" /> Protocol Cycle</div>
-            <p className="text-sm text-slate-700">Day {Math.min(14, Math.max(1, (new Date().getDate() % 14) || 1))} of 14 | Adherence {protocolAdherence}%</p>
+            <div className="mb-2 flex items-center gap-2 text-base font-semibold text-slate-900"><ClipboardCheck className="h-4 w-4 text-emerald-600" /> Protocol</div>
+            <p className="text-sm text-slate-700">
+              {assignments.length > 0
+                ? `${stats.completed_tasks || 0} of ${assignments.length} tasks completed`
+                : 'No active protocol tasks yet.'}
+              {adherenceScore != null ? ` | Check-in adherence ${Math.round(adherenceScore)}%` : ''}
+            </p>
             <div className="mt-3 flex gap-2">
               <button onClick={() => navigate('/assignments')} className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">Open protocol</button>
               <button onClick={() => navigate('/check-ins')} className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">Check-in now</button>

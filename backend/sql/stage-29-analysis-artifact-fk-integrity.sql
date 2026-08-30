@@ -1,0 +1,131 @@
+-- Stage 2H.1 — referential integrity for the 4 analysis-intelligence-artifact
+-- tables that currently lack an upload_id FK. NOT executed against
+-- production. Review only.
+--
+-- INTENDED OWNERSHIP (traced, Stage 2H.1):
+-- analysis_quality_gates, clinical_data_integrity_events, evidence_gaps, and
+-- health_state_versions are all pure diagnostic/scoring byproducts of ONE
+-- specific analysis attempt on ONE specific upload — none of them are
+-- independently meaningful once that upload's biomarkers are gone (unlike
+-- report_versions, which is user-facing historical content in its own
+-- right). This matches lifecycle category 1 ("child must die with upload")
+-- for all four — not category 2 (RESTRICT) or category 3 (independent
+-- historical record). No table-specific divergence was found; all four get
+-- identical treatment.
+--
+-- PRECEDENT: the three tables that already have a live upload_id FK
+-- (report_versions, safety_events, biomarker_extraction_candidates — added
+-- out-of-band, not from any tracked migration) could not have their exact
+-- ON DELETE rule introspected directly (Supabase's REST/PostgREST API only
+-- exposes the public/graphql_public schemas — information_schema and
+-- pg_catalog are not reachable without a direct Postgres connection, which
+-- this environment does not have). Circumstantial evidence supports CASCADE
+-- as the existing precedent: the only known account-deletion path
+-- (DELETE /auth -> supabase.auth.admin.delete_user(), see
+-- app/routers/identity/auth.py) left ZERO orphan rows in all three of those
+-- tables for the same 2 deleted-account upload_ids that orphaned the four
+-- FK-less tables below — consistent with cascade already having removed
+-- what would otherwise be additional orphans there. This migration proposes
+-- the same rule (CASCADE) for consistency, not because the exact existing
+-- rule was directly confirmed.
+--
+-- SEQUENCING — READ BEFORE RUNNING ANYTHING:
+-- The 2 known orphan upload_ids currently violate an upload_id FK on all
+-- four tables (2 rows each = 8 rows total). Adding the FK below WILL FAIL
+-- while they exist. Section 1 (orphan resolution) and Section 2 (FK
+-- addition) are DELIBERATELY SEPARATE, uncommitted-by-default sections —
+-- resolving Section 1 is a decision for you, not an automatic prerequisite
+-- this file performs on its own.
+
+-- =================================================================
+-- SECTION 1 — ORPHAN RESOLUTION (NOT executed; commented out by design)
+-- =================================================================
+-- Recommended treatment, per the Stage 2H.1 forensic trace: the 2 orphaned
+-- upload_ids belong to a user account that no longer exists (verified: zero
+-- rows in `users` for that user_id) and never reached a completed analysis
+-- (analysis_quality_gates.decision = 'block_or_confirm' for at least one of
+-- the two, meaning the Stage 2B canonical-persistence gate never allowed a
+-- report/safety-event/candidate row to be created for them — confirmed:
+-- zero rows for these upload_ids in report_versions, safety_events, and
+-- biomarker_extraction_candidates too). These 8 rows exist ONLY because
+-- these 4 tables lack the FK/cascade that removed the equivalent rows
+-- elsewhere when the account was deleted — their continued presence is
+-- itself an artifact of the exact gap this migration closes, not
+-- intentional retention. Recommendation: DELETE, once you confirm.
+--
+-- This intentionally does NOT run automatically. Uncomment only after
+-- explicit review/approval, and re-run the precondition query in Section 2
+-- immediately before Section 2, not from memory of this count.
+--
+-- begin;
+-- delete from public.analysis_quality_gates
+--   where upload_id in ('ef17808b-b30c-49df-a427-990feeeb7ca1', 'b1ab887c-f888-430a-9035-350bf0de690d');
+-- delete from public.clinical_data_integrity_events
+--   where upload_id in ('ef17808b-b30c-49df-a427-990feeeb7ca1', 'b1ab887c-f888-430a-9035-350bf0de690d');
+-- delete from public.evidence_gaps
+--   where upload_id in ('ef17808b-b30c-49df-a427-990feeeb7ca1', 'b1ab887c-f888-430a-9035-350bf0de690d');
+-- delete from public.health_state_versions
+--   where upload_id in ('ef17808b-b30c-49df-a427-990feeeb7ca1', 'b1ab887c-f888-430a-9035-350bf0de690d');
+-- commit;
+--
+-- ROLLBACK for Section 1: none possible after commit — these specific 8
+-- rows' content would need to be restored from a pre-delete backup/export if
+-- this decision is ever reversed. Take a `select *` snapshot of the 8 rows
+-- before running Section 1 if you want a manual undo path.
+
+-- =================================================================
+-- SECTION 2 — FK ADDITION (NOT executed; requires Section 1 resolved first)
+-- =================================================================
+
+-- PRECONDITION (run immediately before applying, inside the same review
+-- session — do not rely on the Stage 2H.1 counts, they may be stale):
+--   select upload_id, count(*) from public.analysis_quality_gates
+--     where upload_id not in (select id from public.lab_uploads) group by upload_id;
+--   select upload_id, count(*) from public.clinical_data_integrity_events
+--     where upload_id not in (select id from public.lab_uploads) group by upload_id;
+--   select upload_id, count(*) from public.evidence_gaps
+--     where upload_id not in (select id from public.lab_uploads) group by upload_id;
+--   select upload_id, count(*) from public.health_state_versions
+--     where upload_id not in (select id from public.lab_uploads) group by upload_id;
+-- Expected: zero rows returned by all four (i.e. Section 1's decision has
+-- been applied, or the orphans were resolved some other way). If any
+-- non-zero result remains, STOP — do not run Section 2; it will fail with a
+-- foreign key violation, which is the correct, safe failure mode.
+
+-- begin;
+--
+-- alter table public.analysis_quality_gates
+--   add constraint analysis_quality_gates_upload_id_fkey
+--   foreign key (upload_id) references public.lab_uploads(id) on delete cascade;
+--
+-- alter table public.clinical_data_integrity_events
+--   add constraint clinical_data_integrity_events_upload_id_fkey
+--   foreign key (upload_id) references public.lab_uploads(id) on delete cascade;
+--
+-- alter table public.evidence_gaps
+--   add constraint evidence_gaps_upload_id_fkey
+--   foreign key (upload_id) references public.lab_uploads(id) on delete cascade;
+--
+-- alter table public.health_state_versions
+--   add constraint health_state_versions_upload_id_fkey
+--   foreign key (upload_id) references public.lab_uploads(id) on delete cascade;
+--
+-- commit;
+
+-- POSTCONDITION (run after applying Section 2):
+--   select conname, confdeltype from pg_constraint
+--     where conname in (
+--       'analysis_quality_gates_upload_id_fkey',
+--       'clinical_data_integrity_events_upload_id_fkey',
+--       'evidence_gaps_upload_id_fkey',
+--       'health_state_versions_upload_id_fkey'
+--     );
+--   -- Expected: 4 rows, confdeltype = 'c' (cascade) for each.
+
+-- ROLLBACK for Section 2:
+-- begin;
+-- alter table public.analysis_quality_gates drop constraint if exists analysis_quality_gates_upload_id_fkey;
+-- alter table public.clinical_data_integrity_events drop constraint if exists clinical_data_integrity_events_upload_id_fkey;
+-- alter table public.evidence_gaps drop constraint if exists evidence_gaps_upload_id_fkey;
+-- alter table public.health_state_versions drop constraint if exists health_state_versions_upload_id_fkey;
+-- commit;

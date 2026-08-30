@@ -36,7 +36,7 @@ class ManualBiomarkerEntry:
         self.biomarker_id = biomarker_id
         self.value = value
         self.unit = unit
-        self.date = date or datetime.now(timezone.utc)
+        self.date = date
         self.errors: List[str] = []
         self.is_valid = False
         self.status = "OPTIMAL"
@@ -165,10 +165,22 @@ class BiomarkerService:
         notes: Optional[str] = None,
     ) -> Dict:
         """
-        Create a lab_uploads record and associated biomarkers.
+        Create a lab_uploads record for a manual-entry submission.
+
+        Stage 2B: this function used to ALSO insert the entries directly into the
+        canonical `biomarkers` table, bypassing the quality-gate/confirmation
+        boundary that every other B2C ingestion path (PDF/image/text) now goes
+        through. It no longer does that — canonical biomarker persistence for
+        manual entry now happens the same way as every other ingestion method:
+        inside run_lab_analysis_pipeline(), gated on the quality-gate decision,
+        via the shared save_biomarkers() chokepoint. This function only creates
+        the upload record and returns the entries as candidate-shaped data for
+        the caller to route through that same pipeline.
 
         Returns:
-            Dict with upload_id and biomarkers list (same format as PDF analysis)
+            Dict with upload_id and biomarkers list (same format as PDF analysis) —
+            NOT YET PERSISTED to the biomarkers table; the caller is responsible
+            for routing this through run_lab_analysis_pipeline(persist_biomarkers=True).
         """
         try:
             # Create upload record in database
@@ -177,12 +189,15 @@ class BiomarkerService:
             upload_data = {
                 "user_id": user_id,
                 "lab_name": lab_name or "Manual Entry",
-                "test_date": (test_date or datetime.now(timezone.utc)).isoformat(),
                 "extracted_text": notes or "",
                 "analyze_prompt_version": "manual_v1",
                 "status": "done",
                 "created_at": datetime.now(timezone.utc).isoformat(),
+                "date_source": "user_provided" if test_date else "missing",
+                "date_confidence": "high" if test_date else "low",
             }
+            if test_date:
+                upload_data["test_date"] = test_date.date().isoformat() if isinstance(test_date, datetime) else str(test_date)
 
             # Insert upload record
             upload_response = await svc._run(
@@ -194,25 +209,11 @@ class BiomarkerService:
 
             upload_id = upload_response.data[0]["id"]
 
-            # Insert biomarker records
-            biomarker_records = []
-            for entry in entries:
-                biomarker_dict = entry.to_dict()
-                biomarker_dict.update(
-                    {
-                        "upload_id": upload_id,
-                        "user_id": user_id,
-                        "created_at": datetime.now(timezone.utc).isoformat(),
-                    }
-                )
-                biomarker_records.append(biomarker_dict)
-
-            if biomarker_records:
-                await svc._run(
-                    lambda: sb.table("biomarkers")
-                    .insert(biomarker_records)
-                    .execute()
-                )
+            # Stage 2B: canonical biomarker persistence intentionally removed from
+            # here — see docstring. The upload record above is still created
+            # (it's needed as the analysis_id/upload_id target for candidates and
+            # the pipeline call), but no biomarkers row is written until the
+            # shared quality gate allows it.
 
             # Log the action
             await svc.write_audit_log(
@@ -321,8 +322,9 @@ class BiomarkerService:
             
             response = await svc._run(
                 lambda: sb.table("lab_uploads")
-                .select("id, analyze_prompt_version")
+                .select("id, analyze_prompt_version, status")
                 .eq("user_id", user_id)
+                .neq("status", "failed")
                 .execute()
             )
 
@@ -337,11 +339,6 @@ class BiomarkerService:
             first_upload = uploads[0]
             used_by_type = "manual" if first_upload.get("analyze_prompt_version") == "manual_v1" else "pdf"
             
-            if entry_type == used_by_type:
-                # Same type - shouldn't happen, but allow it
-                return True, "Entry allowed", None
-            
-            # Different type - quota exceeded
             msg = f"You've already used your 1 free biomarker entry via {used_by_type} upload. Upgrade to Premium for unlimited entries."
             return False, msg, used_by_type
 

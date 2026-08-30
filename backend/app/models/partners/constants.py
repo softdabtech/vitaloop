@@ -18,6 +18,7 @@ PARTNER_EVENT_TYPES = {
 }
 
 PARTNER_API_SCOPES = {
+    "labs:analyze",
     "results:write",
     "results:read",
     "embedded:create",

@@ -7,7 +7,6 @@ from httpx import ASGITransport, AsyncClient
 from app.main import app
 from app.dependencies import get_current_user
 from app.routers.analysis import dashboard as dashboard_router
-from app.routers.billing import stripe_router as billing_router
 from app.routers.identity import auth as auth_router
 from app.routers.identity import onboarding as onboarding_router
 from app.routers.protocol import questionnaire as questionnaire_router
@@ -88,57 +87,19 @@ async def test_auth_entitlements_contract(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_stripe_subscription_contract(monkeypatch):
-    user_id = str(uuid.uuid4())
-
-    async def fake_entitlements(_user_id, _current_user):
-        return {
-            "billing_status": "active",
-            "plan_key": "personal",
-            "role": "end_user",
-            "is_premium": True,
-            "has_active_subscription": True,
-            "cancel_at_period_end": False,
-        }
-
-    async def fake_upload_count(_user_id):
-        return 2
-
-    async def fake_active_sub(_user_id):
-        return {
-            "stripe_customer_id": "cus_123",
-            "current_period_end": 9999999999,
-        }
-
-    monkeypatch.setattr(billing_router, "resolve_user_entitlements", fake_entitlements)
-    monkeypatch.setattr(billing_router, "get_user_upload_count", fake_upload_count)
-    monkeypatch.setattr(billing_router, "get_user_active_subscription", fake_active_sub)
-
-    app.dependency_overrides[get_current_user] = lambda: {"sub": user_id}
-    try:
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get("/stripe/subscription")
-            assert response.status_code == 200
-            data = response.json()
-            assert "sub_status" in data
-            assert isinstance(data.get("is_premium"), bool)
-            assert "upload_limit" in data
-            assert "uploads_remaining" in data
-    finally:
-        app.dependency_overrides.clear()
-
-
-@pytest.mark.asyncio
 async def test_questionnaire_session_contract(monkeypatch):
     user_id = str(uuid.uuid4())
 
     async def fake_get_or_create(_user_id):
         return {"id": "sess_1", "status": "active", "session_metadata": {"active_concern": "energy"}}
 
+    async def fake_get_latest(_user_id):
+        return {"id": "sess_1", "status": "active", "session_metadata": {"active_concern": "energy"}}
+
     async def fake_answers(_session_id):
         return []
 
+    monkeypatch.setattr(questionnaire_router, "_get_latest_session", fake_get_latest)
     monkeypatch.setattr(questionnaire_router, "_get_or_create_active_session", fake_get_or_create)
     monkeypatch.setattr(questionnaire_router, "_get_session_answers", fake_answers)
     async def fake_write_audit_log(**_kwargs):
@@ -317,5 +278,66 @@ async def test_onboarding_state_contract(monkeypatch):
             assert "requires_onboarding" in data
             assert "current_stage" in data
             assert "checklist" in data
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_onboarding_state_tolerates_optional_location_failure(monkeypatch):
+    user_id = str(uuid.uuid4())
+
+    async def fake_get_user_account(_user_id):
+        return {"id": user_id, "global_role": "end_user"}
+
+    async def fake_get_user_profile(_user_id):
+        return {"onboarding_complete": False}
+
+    async def failing_get_user_location(_user_id):
+        raise RuntimeError("transient supabase protocol error")
+
+    class _Q:
+        def __init__(self, data):
+            self._data = data
+
+        def select(self, *_args, **_kwargs):
+            return self
+
+        def eq(self, *_args, **_kwargs):
+            return self
+
+        def limit(self, *_args, **_kwargs):
+            return self
+
+        def execute(self):
+            return SimpleNamespace(data=self._data)
+
+    class _SB:
+        def table(self, name):
+            rows = {
+                "recurring_complaints": [],
+                "lab_uploads": [],
+                "questionnaire_sessions": [],
+            }
+            return _Q(rows.get(name, []))
+
+    monkeypatch.setattr(svc, "get_user_account", fake_get_user_account)
+    monkeypatch.setattr(svc, "get_user_profile", fake_get_user_profile)
+    monkeypatch.setattr(svc, "get_user_location", failing_get_user_location)
+    monkeypatch.setattr(svc, "_get_supabase", lambda: _SB())
+
+    async def fake_write_audit_log(**_kwargs):
+        return None
+
+    monkeypatch.setattr(svc, "write_audit_log", fake_write_audit_log)
+
+    app.dependency_overrides[get_current_user] = lambda: {"sub": user_id}
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/auth/onboarding/state")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["checklist"]["location"] is False
+            assert data["current_stage"] in {"profile", "location"}
     finally:
         app.dependency_overrides.clear()

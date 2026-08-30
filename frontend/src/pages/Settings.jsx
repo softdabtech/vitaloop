@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Mail, Bell, Lock, LogOut, AlertTriangle, Cookie, UserCircle2 } from 'lucide-react'
+import { Mail, Lock, LogOut, AlertTriangle, Cookie, UserCircle2, CreditCard, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import NotificationPreferences from '../components/NotificationPreferences.jsx'
@@ -15,7 +15,11 @@ import '../styles/dashboard2026.css'
 
 const COOKIE_STORAGE_KEY = 'vitaloop-cookie-consent'
 function resetCookieConsent() {
-  try { localStorage.removeItem(COOKIE_STORAGE_KEY) } catch {}
+  try {
+    localStorage.removeItem(COOKIE_STORAGE_KEY)
+  } catch {
+    // Continue to reload so the user can retry consent setup even if storage is blocked.
+  }
   window.location.reload()
 }
 
@@ -38,16 +42,10 @@ function safeNavigateToLogin() {
   }
 }
 
-function safeReloadPage() {
-  if (typeof window !== 'undefined') {
-    window.location.reload()
-  }
-}
-
-function validatePasswordInput(newPassword, confirmPassword) {
-  if (!newPassword.trim()) return 'Password cannot be empty'
-  if (newPassword !== confirmPassword) return 'Passwords do not match'
-  if (newPassword.length < 8) return 'Password must be at least 8 characters'
+function validatePasswordInput(newPassword, confirmPassword, isUk = false) {
+  if (!newPassword.trim()) return isUk ? 'Пароль не може бути порожнім' : 'Password cannot be empty'
+  if (newPassword !== confirmPassword) return isUk ? 'Паролі не збігаються' : 'Passwords do not match'
+  if (newPassword.length < 8) return isUk ? 'Пароль має містити щонайменше 8 символів' : 'Password must be at least 8 characters'
   return ''
 }
 
@@ -65,6 +63,7 @@ function Field({ label, children }) {
 export default function Settings() {
   const { user, signOut } = useAuth()
   const { isPremium } = useSubscription()
+  const isUk = isUkrainianLocale()
   const [notifications, setNotifications] = useState({
     weekly_checkin: user?.user_metadata?.weekly_checkin !== false,
     assignment_due: user?.user_metadata?.assignment_due !== false,
@@ -78,11 +77,12 @@ export default function Settings() {
   })
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [newEmail, setNewEmail] = useState('')
   const [saving, setSaving] = useState(false)
+  const [savingEmail, setSavingEmail] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [canceling, setCanceling] = useState(false)
+  const [exportingData, setExportingData] = useState(false)
 
   function focusStyle(event) {
     event.target.style.borderColor = 'rgba(29,158,117,0.72)'
@@ -96,7 +96,7 @@ export default function Settings() {
 
 
   async function updatePassword() {
-    const validationError = validatePasswordInput(newPassword, confirmPassword)
+    const validationError = validatePasswordInput(newPassword, confirmPassword, isUk)
     if (validationError) {
       toast.error(validationError)
       return
@@ -110,14 +110,39 @@ export default function Settings() {
 
       if (error) throw error
 
-      toast.success('Password updated successfully!')
+      toast.success(isUk ? 'Пароль оновлено' : 'Password updated successfully!')
       setNewPassword('')
       setConfirmPassword('')
     } catch (error) {
-      toast.error(error.message || 'Failed to update password')
+      toast.error(error.message || (isUk ? 'Не вдалося оновити пароль' : 'Failed to update password'))
       console.error(error)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function updateEmail() {
+    const trimmedEmail = newEmail.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      toast.error(isUk ? 'Вкажіть коректну email адресу' : 'Enter a valid email address')
+      return
+    }
+    if (trimmedEmail.toLowerCase() === String(user?.email || '').toLowerCase()) {
+      toast.error(isUk ? 'Це вже поточна email адреса' : 'This is already your current email address')
+      return
+    }
+
+    setSavingEmail(true)
+    try {
+      const { error } = await supabase.auth.updateUser({ email: trimmedEmail })
+      if (error) throw error
+      toast.success(isUk ? 'Ми надіслали підтвердження на нову email адресу' : 'We sent a confirmation link to your new email address')
+      setNewEmail('')
+    } catch (error) {
+      toast.error(error.message || (isUk ? 'Не вдалося оновити email' : 'Failed to update email'))
+      console.error(error)
+    } finally {
+      setSavingEmail(false)
     }
   }
 
@@ -125,12 +150,12 @@ export default function Settings() {
     setDeleting(true)
     try {
       await api.delete('/auth')
-      toast.success('Account deleted. Signing out...')
+      toast.success(isUk ? 'Акаунт видалено. Виходимо...' : 'Account deleted. Signing out...')
       setTimeout(() => {
         safeNavigateToLogin()
       }, 1000)
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to delete account')
+      toast.error(error.response?.data?.detail || (isUk ? 'Не вдалося видалити акаунт' : 'Failed to delete account'))
       console.error(error)
     } finally {
       setDeleting(false)
@@ -138,127 +163,155 @@ export default function Settings() {
     }
   }
 
-  async function cancelSubscription() {
-    setCanceling(true)
+  async function exportAccountData() {
+    setExportingData(true)
     try {
-      await api.post('/stripe/cancel')
-      toast.success('Subscription cancelled successfully')
-      setShowCancelConfirm(false)
-      setTimeout(() => {
-        safeReloadPage()
-      }, 1000)
+      const endpoints = [
+        ['profile', '/profile'],
+        ['lab_results', '/progress'],
+        ['timeline', '/timeline'],
+        ['insights', '/insights'],
+        ['checkins', '/checkins/history'],
+      ]
+      const entries = await Promise.all(endpoints.map(async ([key, path]) => {
+        try {
+          const { data } = await api.get(path)
+          return [key, data]
+        } catch (error) {
+          return [key, { unavailable: true, status: error?.response?.status || null }]
+        }
+      }))
+      const payload = {
+        exported_at: new Date().toISOString(),
+        account_email: user?.email || null,
+        data: Object.fromEntries(entries),
+      }
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `vitaloop-account-export-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+      toast.success(isUk ? 'Експорт даних підготовлено' : 'Data export is ready')
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to cancel subscription')
+      toast.error(isUk ? 'Не вдалося підготувати експорт' : 'Failed to prepare export')
       console.error(error)
     } finally {
-      setCanceling(false)
+      setExportingData(false)
     }
   }
 
   return (
-    <>
+    <div className="space-y-6">
       <CabinetPageHeader
         title={ct().settings.title}
         subtitle={ct().settings.subtitle}
-        
       />
 
-      <div className="grid gap-6 max-w-2xl">
+      <div className="grid gap-6 lg:grid-cols-2">
 
-        {/* Avatar Upload */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}
-          style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 20, padding: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-            <span style={{ width: 36, height: 36, borderRadius: 10, background: '#f0fdfa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }} className="rounded-2xl border border-slate-200 bg-white p-6">
+          <div className="mb-5 flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50">
               <UserCircle2 size={18} color="#0d9488" />
             </span>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>
-                {isUkrainianLocale() ? 'Фото профілю' : 'Profile photo'}
-              </div>
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
-                {isUkrainianLocale() ? 'Відображається у кабінеті та сайдбарі' : 'Shown in cabinet and sidebar'}
-              </div>
+              <div className="text-sm font-bold text-slate-900">{isUk ? 'Фото профілю' : 'Profile photo'}</div>
+              <div className="text-xs text-slate-500">{isUk ? 'Відображається у кабінеті та сайдбарі' : 'Shown in cabinet and sidebar'}</div>
             </div>
           </div>
           <AvatarUpload
             user={user}
-            isUk={isUkrainianLocale()}
+            isUk={isUk}
             onUpdate={useCallback(() => {
               supabase.auth.getUser().then(({ data }) => {
-                if (data?.user) toast.success(isUkrainianLocale() ? 'Аватар оновлено' : 'Avatar updated')
+                if (data?.user) toast.success(isUk ? 'Аватар оновлено' : 'Avatar updated')
               })
-            }, [])}
+            }, [isUk])}
           />
-        </motion.div>
+        </motion.section>
 
-        {/* Account Info */}
-        <motion.div
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0 }}
-          className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+          className="rounded-2xl border border-slate-200 bg-white p-6"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-            <Mail size={18} style={{ color: '#1d9e75' }} />
+          <div className="mb-5 flex items-center gap-3">
+            <Mail size={18} className="text-emerald-600" />
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>Email Address</div>
-              <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>Your account login email</div>
+              <div className="text-base font-semibold text-slate-900">{isUk ? 'Email адреса' : 'Email address'}</div>
+              <div className="text-xs text-slate-500">{isUk ? 'Email для входу в акаунт' : 'Your account login email'}</div>
             </div>
           </div>
 
-          <div style={{
-            padding: '12px 14px',
-            background: '#f8fafc',
-            border: '1px solid rgba(15,23,42,0.12)',
-            borderRadius: 14,
-            color: '#0f172a',
-            fontSize: 15,
-          }}>
-            {user?.email || 'No email'}
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-900">
+            {user?.email || (isUk ? 'Email не вказано' : 'No email')}
           </div>
 
-          <p style={{ fontSize: 12, color: '#64748b', marginTop: 10 }}>
-            Contact support@vitaloop.today to change your email address.
-          </p>
-        </motion.div>
+          <div className="mt-4 grid gap-3">
+            <Field label={isUk ? 'Нова email адреса' : 'New email address'}>
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder={isUk ? 'name@example.com' : 'name@example.com'}
+                style={fieldStyle}
+                onFocus={focusStyle}
+                onBlur={blurStyle}
+              />
+            </Field>
+            <button
+              onClick={updateEmail}
+              disabled={savingEmail || !newEmail.trim()}
+              className="rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-3 text-center font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
+            >
+              {savingEmail ? (isUk ? 'Надсилаємо...' : 'Sending...') : (isUk ? 'Надіслати підтвердження' : 'Send confirmation')}
+            </button>
+            <p className="text-xs leading-5 text-slate-500">
+              {isUk ? 'Email зміниться після підтвердження за посиланням у новій пошті.' : 'Your email changes after you confirm the link sent to the new address.'}
+            </p>
+          </div>
+        </motion.section>
 
-        {/* Password */}
-        <motion.div
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+          className="rounded-2xl border border-slate-200 bg-white p-6"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-            <Lock size={18} style={{ color: '#1d9e75' }} />
+          <div className="mb-5 flex items-center gap-3">
+            <Lock size={18} className="text-emerald-600" />
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>Password</div>
-              <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>Change your account password</div>
+              <div className="text-base font-semibold text-slate-900">{isUk ? 'Пароль' : 'Password'}</div>
+              <div className="text-xs text-slate-500">{isUk ? 'Змініть пароль акаунта' : 'Change your account password'}</div>
             </div>
           </div>
 
           <div style={{ display: 'grid', gap: 16 }}>
-            <Field label="New Password">
+            <Field label={isUk ? 'Новий пароль' : 'New Password'}>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="At least 8 characters"
+                placeholder={isUk ? 'Щонайменше 8 символів' : 'At least 8 characters'}
                 style={fieldStyle}
                 onFocus={focusStyle}
                 onBlur={blurStyle}
               />
             </Field>
 
-            <Field label="Confirm Password">
+            <Field label={isUk ? 'Підтвердіть пароль' : 'Confirm Password'}>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter your password"
+                placeholder={isUk ? 'Введіть пароль ще раз' : 'Re-enter your password'}
                 style={fieldStyle}
                 onFocus={focusStyle}
                 onBlur={blurStyle}
@@ -270,45 +323,88 @@ export default function Settings() {
               disabled={saving || !newPassword}
               className="rounded-2xl bg-emerald-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
             >
-              {saving ? 'Updating...' : 'Update Password'}
+              {saving ? (isUk ? 'Оновлення...' : 'Updating...') : (isUk ? 'Оновити пароль' : 'Update Password')}
             </button>
           </div>
-        </motion.div>
+        </motion.section>
 
-        {/* Notifications */}
-        <motion.div
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"
+          className="rounded-2xl border border-slate-200 bg-white p-6"
         >
           <NotificationPreferences
             currentPreferences={notifications}
             onSave={(prefs) => {
               setNotifications(prefs)
-              toast.success('Notification preferences updated!')
+              toast.success(isUk ? 'Налаштування сповіщень оновлено' : 'Notification preferences updated!')
             }}
           />
-        </motion.div>
+        </motion.section>
 
-        {/* Danger Zone */}
-        <motion.div
+        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="rounded-2xl border border-slate-200 bg-white p-6 lg:col-span-2">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50">
+              <Cookie size={18} color="#0d9488" />
+            </span>
+            <div>
+              <div className="text-sm font-bold text-slate-900">{isUk ? 'Налаштування cookie' : 'Cookie Preferences'}</div>
+              <div className="text-xs text-slate-500">{isUk ? 'Керуйте даними, які ми можемо збирати' : 'Manage what data we may collect'}</div>
+            </div>
+          </div>
+          <p className="mb-4 text-sm text-slate-600">
+            {isUk
+              ? 'Перегляньте або оновіть згоду на аналітичні, маркетингові та функціональні cookie. Обовʼязкові cookie для входу та безпеки не можна вимкнути.'
+              : 'Review or update your consent for analytics, marketing and functional cookies. Essential cookies required for login and security cannot be disabled.'}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={resetCookieConsent} className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              {isUk ? 'Оновити налаштування cookie' : 'Update Cookie Settings'}
+            </button>
+            <a href="/privacy-policy/#cookies" target="_blank" rel="noreferrer" className="rounded-full px-4 py-2 text-sm font-semibold text-emerald-700 underline underline-offset-4">
+              {isUk ? 'Політика cookie ↗' : 'Cookie Policy ↗'}
+            </a>
+          </div>
+        </motion.section>
+
+        <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} className="rounded-2xl border border-slate-200 bg-white p-6 lg:col-span-2">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50">
+              <Download size={18} color="#2563eb" />
+            </span>
+            <div>
+              <div className="text-sm font-bold text-slate-900">{isUk ? 'Дані та приватність' : 'Data & Privacy'}</div>
+              <div className="text-xs text-slate-500">{isUk ? 'Експорт основних даних акаунта' : 'Export core account data'}</div>
+            </div>
+          </div>
+          <p className="mb-4 text-sm leading-6 text-slate-600">
+            {isUk
+              ? 'Скачайте копію профілю, завантажених результатів, динаміки, інсайтів і чек-інів у JSON форматі.'
+              : 'Download a JSON copy of your profile, uploaded result history, progress, insights, and check-ins.'}
+          </p>
+          <button onClick={exportAccountData} disabled={exportingData} className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60">
+            {exportingData ? (isUk ? 'Готуємо експорт...' : 'Preparing export...') : (isUk ? 'Скачати мої дані' : 'Download my data')}
+          </button>
+        </motion.section>
+
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="rounded-2xl border border-rose-200 bg-rose-50 p-6 sm:p-8"
+          className="rounded-2xl border border-rose-200 bg-rose-50 p-6 lg:col-span-2"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-            <AlertTriangle size={18} style={{ color: '#dc2626' }} />
+          <div className="mb-4 flex items-center gap-3">
+            <AlertTriangle size={18} className="text-rose-700" />
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#991b1b' }}>Danger Zone</div>
-              <div style={{ fontSize: 13, color: '#7f1d1d', marginTop: 2 }}>Irreversible actions</div>
+              <div className="text-base font-semibold text-rose-900">{isUk ? 'Небезпечна зона' : 'Danger zone'}</div>
+              <div className="text-xs text-rose-700">{isUk ? 'Незворотні дії' : 'Irreversible actions'}</div>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gap: 12 }}>
+          <div className="grid gap-3">
             <div>
               <button
                 onClick={async () => {
@@ -317,121 +413,72 @@ export default function Settings() {
                 }}
                 className="w-full rounded-2xl border border-rose-300 bg-white px-6 py-3 text-center font-semibold text-rose-600 transition hover:bg-rose-50"
               >
-                Sign Out from All Devices
+                <span className="inline-flex items-center gap-2"><LogOut className="h-4 w-4" /> {isUk ? 'Вийти з усіх пристроїв' : 'Sign Out from All Devices'}</span>
               </button>
-              <p style={{ fontSize: 12, color: '#7f1d1d', marginTop: 8 }}>
-                Sign out of VITALOOP on all your devices. You'll need to log in again.
+              <p className="mt-2 text-xs text-rose-700">
+                {isUk ? 'Вийдіть із VITALOOP на всіх пристроях. Потрібно буде увійти знову.' : "Sign out of VITALOOP on all your devices. You'll need to log in again."}
               </p>
             </div>
 
             {isPremium && (
-              <div style={{ borderTop: '1px solid rgba(220, 38, 38, 0.2)', paddingTop: 12 }}>
-                {!showCancelConfirm ? (
-                  <>
-                    <button
-                      onClick={() => setShowCancelConfirm(true)}
-                      className="w-full rounded-2xl border border-red-400 bg-white px-6 py-3 text-center font-semibold text-red-600 transition hover:bg-red-50"
-                    >
-                      Cancel Subscription
-                    </button>
-                    <p style={{ fontSize: 12, color: '#7f1d1d', marginTop: 8 }}>
-                      Cancel your premium subscription. You'll revert to the free plan.
-                    </p>
-                  </>
-                ) : (
-                  <div style={{ padding: '12px 14px', background: 'rgba(220, 38, 38, 0.1)', borderRadius: 12, borderLeft: '4px solid #dc2626' }}>
-                    <p style={{ fontSize: 13, fontWeight: 500, color: '#991b1b', marginBottom: 10 }}>
-                      ⚠️ Are you sure? You'll lose access to premium features and revert to the free plan.
-                    </p>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={cancelSubscription}
-                        disabled={canceling}
-                        className="flex-1 rounded-lg bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-700 transition disabled:opacity-60"
-                      >
-                        {canceling ? 'Canceling...' : 'Yes, Cancel'}
-                      </button>
-                      <button
-                        onClick={() => setShowCancelConfirm(false)}
-                        disabled={canceling}
-                        className="flex-1 rounded-lg border border-rose-300 bg-white text-rose-600 px-4 py-2 font-semibold hover:bg-rose-50 transition disabled:opacity-60"
-                      >
-                        Keep It
-                      </button>
-                    </div>
+              <div className="border-t border-rose-300/50 pt-3">
+                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                  <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-blue-900">
+                    <CreditCard className="h-4 w-4" />
+                    {isUk ? 'Оплата Premium' : 'Premium billing'}
                   </div>
-                )}
+                  <p className="text-xs leading-5 text-blue-800">
+                    {isUk
+                      ? 'Premium доступ активується вручну. Медичні дані не передаються платіжним інструментам.'
+                      : 'Premium access is activated manually. Medical data is not shared with billing tools.'}
+                  </p>
+                  <button type="button" onClick={() => { window.location.href = '/billing-history' }} className="mt-3 inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                    {isUk ? 'Переглянути оплату' : 'View billing'}
+                  </button>
+                </div>
               </div>
             )}
 
-            <div style={{ borderTop: '1px solid rgba(220, 38, 38, 0.2)', paddingTop: 12 }}>
+            <div className="border-t border-rose-300/50 pt-3">
               {!showDeleteConfirm ? (
                 <>
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
                     className="w-full rounded-2xl border border-red-500 bg-white px-6 py-3 text-center font-semibold text-red-700 transition hover:bg-red-50"
                   >
-                    Delete Account Permanently
+                    {isUk ? 'Видалити акаунт назавжди' : 'Delete Account Permanently'}
                   </button>
-                  <p style={{ fontSize: 12, color: '#7f1d1d', marginTop: 8 }}>
-                    Permanently delete your account and all associated data. This cannot be undone.
+                  <p className="mt-2 text-xs text-rose-700">
+                    {isUk ? 'Назавжди видалити акаунт і всі повʼязані дані. Цю дію не можна скасувати.' : 'Permanently delete your account and all associated data. This cannot be undone.'}
                   </p>
                 </>
               ) : (
-                <div style={{ padding: '12px 14px', background: 'rgba(220, 38, 38, 0.1)', borderRadius: 12, borderLeft: '4px solid #991b1b' }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: '#991b1b', marginBottom: 10 }}>
-                    🚨 WARNING: This will permanently delete your account and all data. This action cannot be reversed!
+                <div className="rounded-xl border-l-4 border-rose-800 bg-red-100/80 px-3 py-3">
+                  <p className="mb-2 text-sm font-bold text-rose-900">
+                    {isUk ? 'УВАГА: акаунт і всі дані буде видалено назавжди. Цю дію неможливо скасувати.' : 'WARNING: This will permanently delete your account and all data. This action cannot be reversed!'}
                   </p>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div className="flex gap-2">
                     <button
                       onClick={deleteAccount}
                       disabled={deleting}
                       className="flex-1 rounded-lg bg-red-700 text-white px-4 py-2 font-semibold hover:bg-red-800 transition disabled:opacity-60"
                     >
-                      {deleting ? 'Deleting...' : 'Yes, Delete Everything'}
+                      {deleting ? (isUk ? 'Видалення...' : 'Deleting...') : (isUk ? 'Так, видалити все' : 'Yes, Delete Everything')}
                     </button>
                     <button
                       onClick={() => setShowDeleteConfirm(false)}
                       disabled={deleting}
                       className="flex-1 rounded-lg border border-rose-400 bg-white text-rose-700 px-4 py-2 font-semibold hover:bg-rose-50 transition disabled:opacity-60"
                     >
-                      Cancel
+                      {isUk ? 'Скасувати' : 'Cancel'}
                     </button>
                   </div>
                 </div>
               )}
             </div>
           </div>
-        {/* Cookie Preferences */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
-          style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 20, padding: '24px', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <span style={{ width: 36, height: 36, borderRadius: 10, background: '#f0fdfa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Cookie size={18} color="#0d9488" />
-            </span>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a' }}>Cookie Preferences</div>
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>Manage what data we may collect</div>
-            </div>
-          </div>
-          <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.55, margin: '0 0 16px' }}>
-            Review or update your consent for analytics, marketing and functional cookies.
-            Essential cookies required for login and security cannot be disabled.
-          </p>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button onClick={resetCookieConsent}
-              style={{ padding: '10px 20px', borderRadius: 100, border: '1.5px solid #cbd5e1', background: 'transparent', cursor: 'pointer', fontWeight: 700, fontSize: 13, color: '#475569' }}>
-              Update Cookie Settings
-            </button>
-            <a href="/privacy-policy/#cookies" target="_blank" rel="noreferrer"
-              style={{ padding: '10px 20px', borderRadius: 100, border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#0d9488', textDecoration: 'underline', textUnderlineOffset: 3, display: 'inline-flex', alignItems: 'center' }}>
-              Cookie Policy ↗
-            </a>
-          </div>
-        </motion.div>
-
-        </motion.div>
+        </motion.section>
       </div>
-    </>
+    </div>
   )
 }

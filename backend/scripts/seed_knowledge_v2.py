@@ -387,6 +387,19 @@ RULES = [
          0.78, "moderate", True,
          "MCV ({{mcv_value}} {{mcv_unit}}) exceeds 100 fL. Request B12, folate, TSH and reticulocyte count."),
 
+    rule("rule_low_reticulocyte_volume_indices_context", "Low Reticulocyte Volume Indices — Context Required",
+         "Low reticulocyte volume indices can be useful only when interpreted with CBC, iron, B12/folate, inflammation, symptoms, and age context.",
+         ["mean_reticulocyte_volume", "mean_spherical_cell_volume", "reticulocytes"],
+         {"all": [
+             {"lab_marker": "mean_reticulocyte_volume", "operator": "lt", "value": 92.7, "unit": "fL"},
+             {"lab_marker": "mean_spherical_cell_volume", "operator": "lt", "value": 72.8, "unit": "fL"}
+         ]},
+         {"risk": "reticulocyte_indices_context_required",
+          "summary": "Reticulocyte volume indices are low; interpret with CBC, iron status, B12/folate and symptoms before drawing conclusions.",
+          "recommendation_keys": ["anemia_workup", "serum_iron_tibc_recheck"]},
+         0.66, "moderate", False,
+         "Mean Reticulocyte Volume and Mean Spherical Cell Volume are below reference. Review with CBC indices, ferritin, transferrin saturation, B12, folate and clinical context."),
+
     rule("rule_high_wbc", "Leukocytosis — Elevated WBC",
          "WBC > 11 × 10⁹/L suggests infection, inflammation, haematological malignancy, or stress response.",
          ["wbc"],

@@ -53,6 +53,7 @@ class TableAnalyzer(OpenAIFileAnalyzer):
             result = self._normalize_response(payload, "openai_table")
             result["analysis_time"] = analysis_time
             result["biomarker_count"] = len(biomarkers)
+            result["document_text_excerpt"] = table_text[:80000]
             return result
 
         except Exception as exc:

@@ -144,7 +144,7 @@ public class AuthController : Controller
 
         _logger.LogInformation("CRM logout executed; auth cookie present before clear: {HadTokenCookie}.", hadToken);
 
-        return Redirect(_authOptions.FrontendLoginUrl);
+        return Redirect(BuildFrontendLogoutUrl());
     }
 
     private static string NormalizeReturnUrlOrFallback(string? returnUrl, string fallback)
@@ -167,6 +167,12 @@ public class AuthController : Controller
         var encodedReturnUrl = WebUtility.UrlEncode(returnUrl);
         var separator = _authOptions.FrontendLoginUrl.Contains('?') ? "&" : "?";
         return $"{_authOptions.FrontendLoginUrl}{separator}returnUrl={encodedReturnUrl}";
+    }
+
+    private string BuildFrontendLogoutUrl()
+    {
+        var separator = _authOptions.FrontendLoginUrl.Contains('?') ? "&" : "?";
+        return $"{_authOptions.FrontendLoginUrl}{separator}signout=1&source=crm";
     }
 
     /// <summary>

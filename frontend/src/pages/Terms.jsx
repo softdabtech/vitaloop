@@ -50,23 +50,29 @@ export default function Terms() {
         </div>
         <div>
           <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>3. Subscription</h2>
-          <p>Access to full features requires a paid subscription at {PREMIUM_PRICE_LABEL}. Subscriptions auto-renew monthly. You may cancel at any time from your account settings. No refunds are provided for partial months.</p>
+          <p>Access to full Premium features may require an active subscription or manual access approval at {PREMIUM_PRICE_LABEL}. VITALOOP does not send symptoms, uploaded lab files, biomarker values, or health reports to billing tools.</p>
+          <p>Subscriptions can be cancelled from the account billing area or by contacting <a href="mailto:info@softdab.tech" style={{ color: 'var(--teal-500)' }}>info@softdab.tech</a>. Access usually continues until the end of the active paid period after cancellation.</p>
         </div>
         <div>
-          <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>4. Acceptable use</h2>
+          <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>4. Refunds and billing support</h2>
+          <p>Refund requests are reviewed case by case for duplicate charges, accidental purchases, checkout or access issues, or other billing problems. See the <a href="/refund-policy/" style={{ color: 'var(--teal-500)' }}>Refund Policy</a> for details.</p>
+        </div>
+        <div>
+          <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>5. Acceptable use</h2>
           <p>You agree not to upload data that doesn't belong to you, attempt to reverse-engineer the service, or use VITALOOP for any illegal purpose.</p>
         </div>
         <div>
-          <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>5. Liability limitation</h2>
+          <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>6. Liability limitation</h2>
           <p>VITALOOP is provided "as is." We are not liable for any health outcomes, financial losses, or damages arising from use of this service. Your use is at your own risk.</p>
         </div>
         <div>
-          <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>6. Changes to terms</h2>
+          <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>7. Changes to terms</h2>
           <p>We may update these terms at any time. Continued use after changes constitutes acceptance.</p>
         </div>
         <div>
-          <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>7. Contact</h2>
-          <p>Legal inquiries: <a href="mailto:legal@vitaloop.today" style={{ color: 'var(--teal-500)' }}>legal@vitaloop.today</a></p>
+          <h2 style={{ color: 'var(--gray-900, #1d1d1f)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>8. Contact</h2>
+          <p>Support, billing, privacy, and legal inquiries: <a href="mailto:info@softdab.tech" style={{ color: 'var(--teal-500)' }}>info@softdab.tech</a></p>
+          <p><a href="/pricing/" style={{ color: 'var(--teal-500)' }}>Pricing</a> · <a href="/refund-policy/" style={{ color: 'var(--teal-500)' }}>Refund Policy</a> · <a href="/privacy-policy/" style={{ color: 'var(--teal-500)' }}>Privacy Policy</a></p>
         </div>
       </section>
 

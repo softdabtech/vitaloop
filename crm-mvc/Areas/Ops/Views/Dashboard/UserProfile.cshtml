@@ -1,0 +1,262 @@
+@model OpsUserActivityProfileViewModel
+@{
+  ViewData["Title"] = "B2C User Activity";
+  var encodedActivity = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(Model.ActivityJson));
+}
+
+<style>
+:root {
+  --c-bg: #f4f6f9;
+  --c-card: #ffffff;
+  --c-border: #e8ecf2;
+  --c-text: #0f172a;
+  --c-sub: #64748b;
+  --c-muted: #94a3b8;
+  --c-teal: #1D9E75;
+  --c-teal-d: #0F6E56;
+  --c-red: #ef4444;
+  --c-amber: #f59e0b;
+  --c-blue: #3b82f6;
+}
+
+.ops-profile-wrap { background:var(--c-bg); min-height:100vh; padding:24px; }
+.ops-profile-shell { max-width:1280px; margin:0 auto; display:flex; flex-direction:column; gap:18px; }
+.ops-profile-top {
+  display:flex; justify-content:space-between; gap:16px; align-items:flex-start;
+  background:#fff; border:1px solid var(--c-border); border-radius:16px; padding:22px;
+}
+.eyebrow { margin:0 0 8px; font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--c-teal); }
+.title { margin:0; font-size:28px; line-height:1.1; font-weight:900; color:var(--c-text); }
+.sub { margin:8px 0 0; color:var(--c-sub); font-size:14px; }
+.actions { display:flex; gap:10px; flex-wrap:wrap; }
+.btn-sm {
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  min-height:36px; padding:8px 13px; border-radius:9px; border:1px solid var(--c-border);
+  font-size:13px; font-weight:700; text-decoration:none; cursor:pointer;
+}
+.btn-primary { background:var(--c-teal); border-color:var(--c-teal); color:#fff; }
+.btn-primary:hover { background:var(--c-teal-d); }
+.btn-ghost { background:#fff; color:var(--c-sub); }
+.btn-ghost:hover { background:#f8fafc; color:var(--c-text); }
+.grid { display:grid; grid-template-columns:340px 1fr; gap:18px; align-items:start; }
+.panel {
+  background:#fff; border:1px solid var(--c-border); border-radius:16px; overflow:hidden;
+  box-shadow:0 12px 30px rgba(15,23,42,.04);
+}
+.panel-head { padding:15px 18px; border-bottom:1px solid var(--c-border); display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.panel-title { margin:0; font-size:14px; font-weight:800; color:var(--c-text); }
+.panel-body { padding:18px; }
+.kv { display:flex; justify-content:space-between; gap:16px; padding:11px 0; border-bottom:1px solid #f1f5f9; font-size:13px; }
+.kv:last-child { border-bottom:none; }
+.kv span:first-child { color:var(--c-muted); font-weight:700; }
+.kv span:last-child { color:var(--c-text); font-weight:650; text-align:right; word-break:break-word; }
+.tag {
+  display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px;
+  font-size:12px; font-weight:800; white-space:nowrap;
+}
+.tag-teal { background:#d1fae5; color:#065f46; }
+.tag-blue { background:#dbeafe; color:#1e40af; }
+.tag-amber { background:#fef3c7; color:#92400e; }
+.tag-red { background:#fee2e2; color:#991b1b; }
+.tag-gray { background:#f1f5f9; color:#475569; }
+.metrics { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
+.metric {
+  background:#fff; border:1px solid var(--c-border); border-radius:14px; padding:15px;
+}
+.metric-label { margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--c-muted); font-weight:800; }
+.metric-value { margin:0; font-size:26px; line-height:1; color:var(--c-text); font-weight:900; }
+.section-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.list { display:flex; flex-direction:column; }
+.event { padding:13px 0; border-bottom:1px solid #f1f5f9; }
+.event:last-child { border-bottom:none; }
+.event-title { margin:0; font-size:13px; color:var(--c-text); font-weight:800; }
+.event-meta { margin:5px 0 0; color:var(--c-muted); font-size:12px; line-height:1.45; }
+.event-body { margin:7px 0 0; color:var(--c-sub); font-size:12px; line-height:1.5; }
+.empty { padding:24px; text-align:center; color:var(--c-muted); font-size:13px; }
+.warn { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; border-radius:12px; padding:12px 14px; font-size:13px; }
+.table-wrap { overflow-x:auto; }
+.data-table { width:100%; border-collapse:collapse; font-size:13px; }
+.data-table th {
+  text-align:left; color:var(--c-muted); font-size:11px; text-transform:uppercase;
+  letter-spacing:.06em; padding:10px 12px; border-bottom:1px solid var(--c-border);
+}
+.data-table td { padding:11px 12px; border-bottom:1px solid #f1f5f9; vertical-align:top; color:var(--c-sub); }
+.data-table td strong { color:var(--c-text); }
+@@media (max-width:1050px) {
+  .grid { grid-template-columns:1fr; }
+  .metrics { grid-template-columns:repeat(3,1fr); }
+}
+@@media (max-width:720px) {
+  .ops-profile-wrap { padding:14px; }
+  .ops-profile-top { flex-direction:column; }
+  .title { font-size:23px; }
+  .metrics { grid-template-columns:repeat(2,1fr); }
+  .section-grid { grid-template-columns:1fr; }
+}
+</style>
+
+<div class="ops-profile-wrap">
+  <div class="ops-profile-shell">
+    <section class="ops-profile-top">
+      <div>
+        <p class="eyebrow">B2C client activity</p>
+        <h1 class="title">@Model.User.DisplayName</h1>
+        <p class="sub">@Model.User.Email · @Model.Days-day product activity across the public VITALOOP cabinet</p>
+      </div>
+      <div class="actions">
+        <a class="btn-sm btn-ghost" href="/ops">Back to Ops</a>
+        <a class="btn-sm btn-ghost" href="/ops/users/@Model.User.UserId/activity-data?days=@Model.Days" target="_blank" rel="noopener">Raw activity JSON</a>
+        <button class="btn-sm btn-primary" type="button" onclick="copyUserId('@Model.User.UserId')">Copy user ID</button>
+      </div>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ActivityError))
+    {
+      <div class="warn">@Model.ActivityError</div>
+    }
+
+    <section class="metrics" id="summary-metrics"></section>
+
+    <div class="grid">
+      <aside class="panel">
+        <div class="panel-head">
+          <p class="panel-title">User context</p>
+          <span class="tag tag-teal">B2C</span>
+        </div>
+        <div class="panel-body">
+          <div class="kv"><span>User ID</span><span>@Model.User.UserId</span></div>
+          <div class="kv"><span>Global role</span><span>@Model.User.GlobalRole</span></div>
+          <div class="kv"><span>Subscription</span><span>@(string.IsNullOrWhiteSpace(Model.User.SubscriptionStatus) ? "free" : Model.User.SubscriptionStatus)</span></div>
+          <div class="kv"><span>Status</span><span>@(string.IsNullOrWhiteSpace(Model.User.MembershipStatus) ? "-" : Model.User.MembershipStatus)</span></div>
+          <div class="kv"><span>Age</span><span>@(Model.User.Age?.ToString() ?? "-")</span></div>
+          <div class="kv"><span>Sex</span><span>@(string.IsNullOrWhiteSpace(Model.User.Sex) ? "-" : Model.User.Sex)</span></div>
+        </div>
+      </aside>
+
+      <main class="section-grid">
+        <section class="panel">
+          <div class="panel-head"><p class="panel-title">Lab uploads</p><span class="tag tag-gray" id="uploads-count">0</span></div>
+          <div class="panel-body list" id="uploads-list"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><p class="panel-title">Check-ins</p><span class="tag tag-gray" id="checkins-count">0</span></div>
+          <div class="panel-body list" id="checkins-list"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><p class="panel-title">Insights</p><span class="tag tag-gray" id="insights-count">0</span></div>
+          <div class="panel-body list" id="insights-list"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><p class="panel-title">Timeline</p><span class="tag tag-gray" id="timeline-count">0</span></div>
+          <div class="panel-body list" id="timeline-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <section class="panel">
+      <div class="panel-head">
+        <p class="panel-title">OpenAI / LLM usage</p>
+        <span class="tag tag-blue" id="llm-tracked">tracked</span>
+      </div>
+      <div class="panel-body">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Time</th><th>Task</th><th>Model</th><th>Tokens</th></tr></thead>
+            <tbody id="llm-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const activity = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob('@encodedActivity'), c => c.charCodeAt(0))) || '{}')
+
+function fmtDate(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return String(value).slice(0, 16)
+  return d.toLocaleString(undefined, { year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit' })
+}
+
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))
+}
+
+function metric(label, value, tone = 'gray') {
+  return `<div class="metric"><p class="metric-label">${esc(label)}</p><p class="metric-value">${Number(value || 0).toLocaleString()}</p></div>`
+}
+
+function renderSummary() {
+  const s = activity.summary || {}
+  document.getElementById('summary-metrics').innerHTML = [
+    metric('Uploads', s.uploads),
+    metric('Check-ins', s.checkins),
+    metric('Insights', s.insights),
+    metric('Notifications', s.notifications),
+    metric('Timeline', s.timeline_events),
+    metric('LLM tokens', s.llm_total_tokens)
+  ].join('')
+}
+
+function empty(label) {
+  return `<div class="empty">${esc(label)}</div>`
+}
+
+function renderList(id, countId, items, emptyText, renderItem) {
+  document.getElementById(countId).textContent = items.length
+  document.getElementById(id).innerHTML = items.length ? items.map(renderItem).join('') : empty(emptyText)
+}
+
+function renderSections() {
+  renderList('uploads-list', 'uploads-count', activity.uploads || [], 'No lab uploads in this window', row => `
+    <div class="event">
+      <p class="event-title">${esc(row.lab_name || 'Lab upload')}</p>
+      <p class="event-meta">Status: ${esc(row.status || '—')} · OCR confidence: ${esc(row.ocr_confidence ?? '—')}</p>
+      <p class="event-meta">Uploaded: ${fmtDate(row.created_at)} · Test date: ${esc(row.test_date || '—')}</p>
+    </div>`)
+
+  renderList('checkins-list', 'checkins-count', activity.checkins || [], 'No check-ins in this window', row => `
+    <div class="event">
+      <p class="event-title">Weekly check-in · ${esc(row.week_start || '')}</p>
+      <p class="event-meta">Energy: ${esc(row.energy_score ?? '—')} · Sleep: ${esc(row.sleep_quality ?? '—')} · Mood: ${esc(row.mood_score ?? '—')}</p>
+      <p class="event-meta">Adherence: ${esc(row.protocol_adherence ?? '—')} · ${fmtDate(row.created_at)}</p>
+    </div>`)
+
+  renderList('insights-list', 'insights-count', activity.insights || [], 'No insights in this window', row => `
+    <div class="event">
+      <p class="event-title">${esc(row.title || row.insight_type || 'Insight')}</p>
+      <p class="event-meta">Priority: ${esc(row.priority || '—')} · Dismissed: ${row.dismissed ? 'yes' : 'no'} · ${fmtDate(row.created_at)}</p>
+      ${row.body ? `<p class="event-body">${esc(row.body)}</p>` : ''}
+    </div>`)
+
+  renderList('timeline-list', 'timeline-count', activity.timeline || [], 'No timeline events in this window', row => `
+    <div class="event">
+      <p class="event-title">${esc(row.event_type || 'Timeline event')}</p>
+      <p class="event-meta">${esc(row.source || 'system')} · ${fmtDate(row.occurred_at)}</p>
+      ${row.summary ? `<p class="event-body">${esc(row.summary)}</p>` : ''}
+    </div>`)
+}
+
+function renderLlm() {
+  const usage = activity.llm_usage || {}
+  document.getElementById('llm-tracked').textContent = usage.tracked === false ? 'not tracked' : `${Number(usage.total_tokens || 0).toLocaleString()} tokens`
+  const rows = usage.recent || []
+  document.getElementById('llm-table').innerHTML = rows.length ? rows.map(row => `
+    <tr>
+      <td>${fmtDate(row.created_at)}</td>
+      <td><strong>${esc(row.task_name || 'LLM task')}</strong></td>
+      <td>${esc(row.provider || 'openai')} / ${esc(row.model || '—')}</td>
+      <td>${Number(row.total_tokens || 0).toLocaleString()}</td>
+    </tr>`).join('') : `<tr><td colspan="4"><div class="empty">No LLM usage events in this window</div></td></tr>`
+}
+
+function copyUserId(id) {
+  navigator.clipboard.writeText(id)
+}
+
+renderSummary()
+renderSections()
+renderLlm()
+</script>

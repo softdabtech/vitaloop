@@ -125,6 +125,60 @@ _FALLBACK_PROTOCOLS = [
     },
 ]
 
+_FALLBACK_PROTOCOLS_UK = [
+    {
+        "keywords": ["vitamin d", "25-oh", "вітамін d"],
+        "supplement": "Вітамін D3",
+        "dosage": "Обговоріть дозу з лікарем; часто потрібні повторний 25(OH)D і контроль кальцію",
+        "timing": "morning_with_food",
+        "priority": "HIGH",
+        "rationale": "Низький вітамін D потребує безпечної корекції з урахуванням симптомів, ліків, вагітності та повторного контролю.",
+        "iherb_search": "Vitamin D3",
+    },
+    {
+        "keywords": ["magnesium", "магній"],
+        "supplement": "Магній гліцинат",
+        "dosage": "Обговоріть 200-400 мг елементарного магнію на добу, якщо немає протипоказань",
+        "timing": "evening",
+        "priority": "MEDIUM",
+        "rationale": "Магній може бути релевантним для відновлення та дефіцитних патернів, але потребує обережності при хворобах нирок і взаємодіях з ліками.",
+        "iherb_search": "Magnesium glycinate",
+    },
+    {
+        "keywords": ["ferritin", "iron", "феритин", "заліз"],
+        "supplement": "Контекст заліза: харчування + підтвердження дефіциту",
+        "dosage": "Почніть з харчових джерел заліза, B12 і фолату; добавки заліза тільки після підтвердження та узгодження дози",
+        "timing": "clinician_review",
+        "priority": "HIGH",
+        "rationale": "Низький феритин або маркери заліза потрібно оцінювати разом із гемограмою, симптомами, крововтратою, запаленням і протипоказаннями.",
+        "iherb_search": "iron bisglycinate vitamin c",
+    },
+    {
+        "keywords": ["b12", "в12", "b-12"],
+        "supplement": "Вітамін B12",
+        "dosage": "Підберіть форму і дозу після оцінки B12, фолату, MCV/MCH та симптомів",
+        "timing": "morning_with_food",
+        "priority": "MEDIUM",
+        "rationale": "Низький або прикордонний B12 може впливати на енергію, нервову систему та показники крові, але потребує контексту.",
+        "iherb_search": "Vitamin B12",
+    },
+]
+
+
+def _is_uk_locale(locale: str | None) -> bool:
+    return str(locale or "").lower().startswith("uk")
+
+
+def _protocol_language_instruction(locale: str | None) -> str:
+    if _is_uk_locale(locale):
+        return (
+            "Return every human-facing text value in natural Ukrainian. "
+            "Keep medical wording clear and safe for users in Ukraine. "
+            "Do not output English sentences in supplement, dosage, rationale, or other text values. "
+            "Keep iherb_search short and searchable; English product search terms are allowed only inside iherb_search."
+        )
+    return "Return every human-facing text value in English."
+
 
 def is_llm_configured() -> bool:
     return bool((settings.active_llm_api_key or "").strip())
@@ -283,9 +337,15 @@ def _fallback_extract_biomarkers(text: str) -> List[Dict[str, Any]]:
     return rows
 
 
-def _fallback_generate_protocol(biomarkers: List[Dict[str, Any]], symptoms: List[str]) -> List[Dict[str, Any]]:
+def _fallback_generate_protocol(
+    biomarkers: List[Dict[str, Any]],
+    symptoms: List[str],
+    *,
+    locale: str = "en",
+) -> List[Dict[str, Any]]:
     recommendations: List[Dict[str, Any]] = []
     seen_supplements: set[str] = set()
+    templates = _FALLBACK_PROTOCOLS_UK if _is_uk_locale(locale) else _FALLBACK_PROTOCOLS
 
     for biomarker in biomarkers:
         name = str(biomarker.get("name") or "").lower()
@@ -293,7 +353,7 @@ def _fallback_generate_protocol(biomarkers: List[Dict[str, Any]], symptoms: List
         if status not in {"DEFICIENT", "ELEVATED", "BORDERLINE"}:
             continue
 
-        for template in _FALLBACK_PROTOCOLS:
+        for template in templates:
             if any(keyword in name for keyword in template["keywords"]):
                 supplement = template["supplement"]
                 if supplement in seen_supplements:
@@ -302,16 +362,74 @@ def _fallback_generate_protocol(biomarkers: List[Dict[str, Any]], symptoms: List
                 recommendations.append(dict(template))
                 break
 
-    if not recommendations:
+    if not recommendations and _is_uk_locale(locale):
+        symptom_hint = ", ".join(symptoms[:2]) if symptoms else "зазначені симптоми"
+        recommendations.append(
+            {
+                "supplement": "Профіль здоров'я + підтверджувальні аналізи",
+                "dosage": "Заповніть вік, стать, зріст, вагу, ліки та поточні добавки перед фінальним планом",
+                "timing": "follow_up",
+                "priority": "HIGH",
+                "rationale": f"З цього набору маркерів не можна безпечно вибрати цільову добавку. Потрібно зіставити симптоми ({symptom_hint}), антропометрію та підтверджувальні аналізи.",
+                "iherb_search": "lab test preparation",
+                "category": "profile",
+            }
+        )
+        recommendations.append(
+            {
+                "supplement": "Базове харчування",
+                "dosage": "Кожен основний прийом їжі: джерело білка + продукти з залізом/B12/фолатом + овочі; підтримуйте гідратацію",
+                "timing": "daily_with_meals",
+                "priority": "MEDIUM",
+                "rationale": "Це підтримує інтерпретацію маркерів крові без передчасного призначення добавок.",
+                "iherb_search": "whole food multinutrient",
+                "category": "nutrition",
+            }
+        )
+        recommendations.append(
+            {
+                "supplement": "Цільові добавки тільки після підтвердження",
+                "dosage": "Обговоріть залізо, B12, фолат, вітамін D або інші дози з лікарем після підтверджувальних аналізів",
+                "timing": "clinician_review",
+                "priority": "MEDIUM",
+                "rationale": "Дозування залежить від віку, статі, ваги, вагітності, ліків, початкових значень і протипоказань.",
+                "iherb_search": "iron b12 folate vitamin d",
+                "category": "supplement_safety",
+            }
+        )
+    elif not recommendations:
         symptom_hint = ", ".join(symptoms[:2]) if symptoms else "reported symptoms"
         recommendations.append(
             {
-                "supplement": "Comprehensive re-test plan",
-                "dosage": "Repeat labs in 6-8 weeks",
+                "supplement": "Health profile + confirmatory lab review",
+                "dosage": "Complete age, sex, height, weight, medications and supplements before final protocol",
                 "timing": "follow_up",
+                "priority": "HIGH",
+                "rationale": f"No safe supplement target can be selected from this marker set alone. Use symptoms ({symptom_hint}), anthropometrics, and confirmatory labs before choosing interventions.",
+                "iherb_search": "lab test preparation",
+                "category": "profile",
+            }
+        )
+        recommendations.append(
+            {
+                "supplement": "Nutrition foundation",
+                "dosage": "Each main meal: protein source + iron/B12/folate food source + vegetables; hydrate consistently",
+                "timing": "daily_with_meals",
                 "priority": "MEDIUM",
-                "rationale": f"Fallback mode detected no specific supplement target. Use symptoms ({symptom_hint}) and repeat labs to refine the protocol.",
-                "iherb_search": "electrolyte support",
+                "rationale": "Supports interpretation of blood-count related markers while avoiding premature supplementation.",
+                "iherb_search": "whole food multinutrient",
+                "category": "nutrition",
+            }
+        )
+        recommendations.append(
+            {
+                "supplement": "Targeted supplements only after confirmation",
+                "dosage": "Discuss iron, B12, folate, vitamin D or other dosing with a clinician after confirmatory labs",
+                "timing": "clinician_review",
+                "priority": "MEDIUM",
+                "rationale": "Dosing depends on age, sex, weight, pregnancy status, medications, baseline values and contraindications.",
+                "iherb_search": "iron b12 folate vitamin d",
+                "category": "supplement_safety",
             }
         )
 
@@ -557,8 +675,10 @@ async def generate_protocol(
     biomarkers: List[Dict],
     symptoms: List[str],
     *,
+    user_profile: Dict[str, Any] | None = None,
     user_id: str | None = None,
     upload_id: str | None = None,
+    locale: str = "en",
 ) -> List[Dict[str, Any]]:
     if not is_llm_configured():
         logger.error(
@@ -568,12 +688,19 @@ async def generate_protocol(
             upload_id,
         )
         _analysis_source_cv.set("fallback")
-        return _fallback_generate_protocol(biomarkers, symptoms)
+        return _fallback_generate_protocol(biomarkers, symptoms, locale=locale)
 
     started = time.perf_counter()
     symptoms_str = ", ".join(symptoms) if symptoms else "none reported"
     biomarkers_str = json.dumps(biomarkers, indent=2)
-    prompt = PROTOCOL_PROMPT.replace("{biomarkers}", biomarkers_str).replace("{symptoms}", symptoms_str)
+    profile_str = json.dumps(user_profile or {}, indent=2, ensure_ascii=False)
+    prompt = (
+        PROTOCOL_PROMPT
+        .replace("{biomarkers}", biomarkers_str)
+        .replace("{symptoms}", symptoms_str)
+        .replace("{user_profile}", profile_str)
+        .replace("{language_instruction}", _protocol_language_instruction(locale))
+    )
     try:
         raw = _strip_code_block(
             await _chat_completion(
@@ -592,7 +719,7 @@ async def generate_protocol(
                 upload_id,
             )
             _analysis_source_cv.set("fallback")
-            return _fallback_generate_protocol(biomarkers, symptoms)
+            return _fallback_generate_protocol(biomarkers, symptoms, locale=locale)
         logger.info(
             "abacus_protocol_ok biomarker_count=%s symptom_count=%s prompt_version=%s duration_ms=%s",
             len(biomarkers),
@@ -611,7 +738,7 @@ async def generate_protocol(
             upload_id,
         )
         _analysis_source_cv.set("fallback")
-        return _fallback_generate_protocol(biomarkers, symptoms)
+        return _fallback_generate_protocol(biomarkers, symptoms, locale=locale)
 
 
 # ---------------------------------------------------------------------------

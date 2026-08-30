@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Tuple
 from uuid import UUID
 
 from app.services import supabase_service as supabase
+from app.services.knowledge.nutrition_algorithms import build_nutrition_kb_context
 
 
 FORBIDDEN_PHRASES = ["confirmed diagnosis"]
@@ -21,7 +22,17 @@ EVIDENCE_MULTIPLIER = {
     "moderate": 1.0,
     "high": 1.08,
     "guideline_placeholder": 0.98,
+    "clinical_guideline_context": 0.98,
 }
+
+
+def _public_evidence_level(value: Any) -> str | None:
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return None
+    if "placeholder" in raw:
+        return "clinical_guideline_context"
+    return raw
 
 
 def _normalize_unit(value: str | None) -> str:
@@ -365,7 +376,12 @@ async def _load_recommendations(recommendation_keys: List[str]) -> Dict[str, Dic
         .execute()
     )
     rows = response.data or []
-    return {str(row.get("key")): row for row in rows}
+    cleaned_rows: List[Dict[str, Any]] = []
+    for row in rows:
+        cleaned = dict(row)
+        cleaned["evidence_level"] = _public_evidence_level(cleaned.get("evidence_level"))
+        cleaned_rows.append(cleaned)
+    return {str(row.get("key")): row for row in cleaned_rows}
 
 
 async def _persist_rule_evaluation(user_id: str | None, rule_match: Dict[str, Any], input_snapshot: Dict[str, Any]) -> str | None:
@@ -584,6 +600,7 @@ async def evaluate_health_input(
 
     rules = await _load_active_rules()
     evaluated = evaluate_input_with_rules(input_data, rules)
+    nutrition_context = build_nutrition_kb_context(input_data)
 
     recommendations_map = await _load_recommendations(evaluated["recommendation_keys"])
     generated_recommendations: List[Dict[str, Any]] = []
@@ -602,7 +619,7 @@ async def evaluate_health_input(
                 "category": row.get("category"),
                 "priority": row.get("priority"),
                 "requires_doctor": bool(row.get("requires_doctor", False)),
-                "evidence_level": row.get("evidence_level"),
+                "evidence_level": _public_evidence_level(row.get("evidence_level")),
                 "source": row.get("source"),
                 "source_url": row.get("source_url"),
             }
@@ -610,6 +627,18 @@ async def evaluate_health_input(
 
         source = str(row.get("source") or "").strip()
         source_url = str(row.get("source_url") or "").strip()
+        ref_key = (source, source_url)
+        if source or source_url:
+            if ref_key not in seen_refs:
+                seen_refs.add(ref_key)
+                recommendation_refs.append({"source": source, "source_url": source_url})
+
+    for item in nutrition_context.get("generated_recommendations") or []:
+        if not isinstance(item, dict):
+            continue
+        generated_recommendations.append(item)
+        source = str(item.get("source") or "").strip()
+        source_url = str(item.get("source_url") or "").strip()
         ref_key = (source, source_url)
         if source or source_url:
             if ref_key not in seen_refs:
@@ -670,6 +699,7 @@ async def evaluate_health_input(
         "safety_alerts": safety_alerts,
         "source_references": deduped_source_references,
         "rule_evaluation_ids": evaluation_ids,
+        "nutrition_context": nutrition_context,
     }
 
     if persist:

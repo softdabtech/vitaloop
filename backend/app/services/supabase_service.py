@@ -7,6 +7,8 @@ from fastapi import HTTPException
 import httpx
 from supabase import create_client, Client
 from app.config import settings
+from app.services.lab_date_extraction import choose_measurement_date
+from app.services.lab_normalization.biomarker_mapping import is_metadata_field
 from app.utils.retry import (
     with_retry,
     SUPABASE_RETRY_CONFIG,
@@ -66,6 +68,21 @@ SYMPTOM_LABELS: Dict[str, str] = {
 def _run(fn):
     """Run a synchronous Supabase call in a thread pool to avoid blocking the event loop."""
     return asyncio.to_thread(fn)
+
+
+async def _run_supabase_read(fn, *, attempts: int = 3, label: str = "supabase_read"):
+    """Run a Supabase read with a small retry for transient HTTP/2 protocol resets."""
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return await _run(fn)
+        except (httpx.RemoteProtocolError, httpx.TimeoutException, httpx.ConnectError) as exc:
+            last_error = exc
+            if attempt >= attempts:
+                break
+            _logger.warning("%s_retry attempt=%s/%s error=%s", label, attempt, attempts, repr(exc))
+            await asyncio.sleep(min(0.25 * attempt, 1.0))
+    raise last_error
 
 
 def _clean(value: str) -> str:
@@ -271,6 +288,11 @@ async def save_lab_upload(
     extracted_text: str,
     lab_name: Optional[str] = None,
     test_date: Optional[str] = None,
+    collected_at: Optional[str] = None,
+    reported_at: Optional[str] = None,
+    date_source: Optional[str] = None,
+    date_confidence: Optional[str] = None,
+    date_raw_text: Optional[str] = None,
     ocr_confidence: Optional[float] = None,
     analyze_prompt_version: Optional[str] = None,
 ) -> Dict:
@@ -284,6 +306,16 @@ async def save_lab_upload(
         payload["lab_name"] = lab_name
     if test_date:
         payload["test_date"] = test_date
+    if collected_at:
+        payload["collected_at"] = collected_at
+    if reported_at:
+        payload["reported_at"] = reported_at
+    if date_source:
+        payload["date_source"] = date_source
+    if date_confidence:
+        payload["date_confidence"] = date_confidence
+    if date_raw_text:
+        payload["date_raw_text"] = date_raw_text[:500]
     if ocr_confidence is not None:
         payload["ocr_confidence"] = ocr_confidence
     if analyze_prompt_version:
@@ -308,6 +340,19 @@ async def save_biomarkers(upload_id: str, user_id: str, biomarkers: List[Dict]) 
             "category": b.get("category"),
         }
         for b in biomarkers
+        # Stage 2A (F04): document metadata (dates, IDs, contact/admin fields) must
+        # not become a persisted biomarker row. Reuses the same classifier already
+        # applied in normalize_biomarkers() — this is the shared write chokepoint
+        # for every caller of save_biomarkers(), so filtering here closes the gap
+        # for the canonical `biomarkers` table (and everything that reads it —
+        # dashboard, progress, insights) rather than only the in-memory pipeline
+        # report. See docs/audit/VITALOOP_STAGE2_IMPLEMENTATION_PLAN.md, Stage 2A.
+        if not is_metadata_field(
+            b.get("name"),
+            value=b.get("value"),
+            ref_low=b.get("ref_low"),
+            ref_high=b.get("ref_high"),
+        )
     ]
     # Delete any existing biomarkers for this upload before inserting
     # (handles re-analysis retries; unique constraint on upload_id+lower(name) would fail otherwise)
@@ -315,6 +360,290 @@ async def save_biomarkers(upload_id: str, user_id: str, biomarkers: List[Dict]) 
     resp = await _run(lambda: supabase.table("biomarkers").insert(rows).execute())
     await _run(lambda: supabase.table("lab_uploads").update({"status": "done"}).eq("id", upload_id).execute())
     return resp.data
+
+
+async def save_biomarker_extraction_candidates(
+    *,
+    upload_id: str,
+    user_id: str,
+    candidates: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not candidates:
+        return []
+
+    supabase = _get_supabase()
+    rows = [
+        {
+            "upload_id": upload_id,
+            "user_id": user_id,
+            "source": item.get("source") or "ai",
+            "raw_name": item.get("raw_name"),
+            "raw_value": None if item.get("raw_value") is None else str(item.get("raw_value")),
+            "raw_unit": item.get("raw_unit"),
+            "raw_reference_range": item.get("raw_reference_range"),
+            "parsed_value": item.get("parsed_value"),
+            "confidence_score": item.get("confidence_score"),
+            "confidence_reasons": item.get("confidence_reasons") or [],
+            "status": item.get("status") or "pending",
+            "source_page": item.get("source_page"),
+            "source_row": None if item.get("source_row") is None else str(item.get("source_row")),
+        }
+        for item in candidates
+    ]
+    resp = await _run(lambda: supabase.table("biomarker_extraction_candidates").insert(rows).execute())
+    return resp.data or []
+
+
+async def get_biomarker_extraction_candidates(upload_id: str, user_id: str) -> List[Dict[str, Any]]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("biomarker_extraction_candidates")
+        .select("*")
+        .eq("upload_id", upload_id)
+        .eq("user_id", user_id)
+        .order("created_at")
+        .execute()
+    )
+    return resp.data or []
+
+
+async def update_biomarker_extraction_candidates(
+    *,
+    upload_id: str,
+    user_id: str,
+    decisions: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not decisions:
+        return []
+
+    supabase = _get_supabase()
+    updated_rows: List[Dict[str, Any]] = []
+    for decision in decisions:
+        candidate_id = decision.get("id")
+        if not candidate_id:
+            continue
+
+        patch: Dict[str, Any] = {
+            "status": decision.get("status") or "confirmed",
+        }
+        corrections = decision.get("corrections")
+        if isinstance(corrections, dict):
+            field_map = {
+                "raw_name": "raw_name",
+                "name": "raw_name",
+                "raw_value": "raw_value",
+                "value": "raw_value",
+                "raw_unit": "raw_unit",
+                "unit": "raw_unit",
+                "raw_reference_range": "raw_reference_range",
+                "reference_range": "raw_reference_range",
+                "parsed_value": "parsed_value",
+            }
+            for source_key, target_key in field_map.items():
+                if source_key in corrections:
+                    patch[target_key] = corrections[source_key]
+
+        resp = await _run(
+            lambda candidate_id=candidate_id, patch=patch: supabase.table("biomarker_extraction_candidates")
+            .update(patch)
+            .eq("id", candidate_id)
+            .eq("upload_id", upload_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        updated_rows.extend(resp.data or [])
+    return updated_rows
+
+
+async def save_report_version(
+    *,
+    user_id: str,
+    upload_id: str,
+    version: str,
+    locale: str,
+    input_snapshot: Dict[str, Any],
+    knowledge_report: Dict[str, Any],
+    protocol: Any,
+    safety_result: Dict[str, Any],
+    explainability: Dict[str, Any],
+    interpreted_report: Dict[str, Any] | None = None,
+    status: str = "completed",
+) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    knowledge_payload = knowledge_report or {}
+    if interpreted_report:
+        knowledge_payload = {
+            **knowledge_payload,
+            "interpreted_report": interpreted_report,
+        }
+    payload = {
+        "user_id": user_id,
+        "upload_id": upload_id,
+        "version": version,
+        "locale": locale,
+        "input_snapshot": input_snapshot or {},
+        "knowledge_report": knowledge_payload,
+        "protocol": protocol or {},
+        "safety_result": safety_result or {},
+        "explainability": explainability or {},
+        "status": status,
+    }
+    resp = await _run(lambda: supabase.table("report_versions").insert(payload).execute())
+    return (resp.data or [{}])[0]
+
+
+async def get_latest_report_version(upload_id: str, user_id: str, locale: str) -> Optional[Dict[str, Any]]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("report_versions")
+        .select("*")
+        .eq("upload_id", upload_id)
+        .eq("user_id", user_id)
+        .eq("locale", locale)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    latest = (resp.data or [None])[0]
+    if latest:
+        return latest
+
+    fallback = await _run(
+        lambda: supabase.table("report_versions")
+        .select("*")
+        .eq("upload_id", upload_id)
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return (fallback.data or [None])[0]
+
+
+async def get_report_version(report_version_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("report_versions")
+        .select("*")
+        .eq("id", report_version_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    return (resp.data or [None])[0]
+
+
+async def save_safety_events(
+    *,
+    user_id: str,
+    upload_id: str | None,
+    report_version_id: str | None,
+    safety_events: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    if not safety_events:
+        return []
+
+    supabase = _get_supabase()
+    rows = [
+        {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "report_version_id": report_version_id,
+            "rule_key": event.get("key"),
+            "severity": event.get("severity") or "medium",
+            "action": event.get("action") or "warn",
+            "input_snapshot": event,
+        }
+        for event in safety_events
+    ]
+    resp = await _run(lambda: supabase.table("safety_events").insert(rows).execute())
+    return resp.data or []
+
+
+async def save_analysis_intelligence_artifacts(
+    *,
+    user_id: str,
+    upload_id: str,
+    analysis_input_quality_gate: Dict[str, Any] | None = None,
+    clinical_data_integrity: Dict[str, Any] | None = None,
+    evidence_gaps: Dict[str, Any] | None = None,
+    health_states: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """Persist internal intelligence artifacts for observability and audit.
+
+    These rows are intentionally separate from the user-visible report version.
+    Callers should treat this as best-effort persistence and alert on failures
+    without blocking the analysis result.
+    """
+
+    supabase = _get_supabase()
+    persisted: Dict[str, Any] = {}
+
+    if analysis_input_quality_gate:
+        gate = analysis_input_quality_gate or {}
+        payload = {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "decision": gate.get("decision") or "unknown",
+            "label": gate.get("label"),
+            "score": gate.get("score"),
+            "requires_confirmation": bool(gate.get("requires_confirmation")),
+            "components": gate.get("components") or {},
+            "candidate_summary": gate.get("candidate_summary") or {},
+            "warnings": gate.get("warnings") or [],
+            "blockers": gate.get("blockers") or [],
+            "reasons": gate.get("reasons") or [],
+            "source": gate.get("source") or {},
+            "gate_version": gate.get("version"),
+            "status": "recorded",
+        }
+        resp = await _run(lambda: supabase.table("analysis_quality_gates").insert(payload).execute())
+        persisted["analysis_quality_gate"] = (resp.data or [{}])[0]
+
+    if clinical_data_integrity:
+        integrity = clinical_data_integrity or {}
+        payload = {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "status": integrity.get("status") or "unknown",
+            "integrity_version": integrity.get("version"),
+            "summary": integrity.get("summary") or {},
+            "issues": integrity.get("issues") or [],
+            "profile": integrity.get("profile") or {},
+            "markers": integrity.get("markers") or [],
+        }
+        resp = await _run(lambda: supabase.table("clinical_data_integrity_events").insert(payload).execute())
+        persisted["clinical_data_integrity"] = (resp.data or [{}])[0]
+
+    if evidence_gaps:
+        gaps = evidence_gaps or {}
+        payload = {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "evidence_gaps_version": gaps.get("version"),
+            "gaps": gaps.get("gaps") or [],
+            "summary": gaps.get("summary") or {},
+            "status": "recorded",
+        }
+        resp = await _run(lambda: supabase.table("evidence_gaps").insert(payload).execute())
+        persisted["evidence_gaps"] = (resp.data or [{}])[0]
+
+    if health_states:
+        states = health_states or {}
+        payload = {
+            "user_id": user_id,
+            "upload_id": upload_id,
+            "health_state_version": states.get("version"),
+            "domain_registry_version": states.get("domain_registry_version"),
+            "states": states.get("states") or [],
+            "top_priorities": states.get("top_priorities") or [],
+            "summary": states.get("summary") or {},
+            "status": "recorded",
+        }
+        resp = await _run(lambda: supabase.table("health_state_versions").insert(payload).execute())
+        persisted["health_states"] = (resp.data or [{}])[0]
+
+    return persisted
 
 
 async def update_lab_upload_status(upload_id: str, status: str) -> None:
@@ -325,6 +654,168 @@ async def update_lab_upload_status(upload_id: str, status: str) -> None:
         .eq("id", upload_id)
         .execute()
     )
+
+
+async def update_lab_upload_analysis_payload(
+    upload_id: str,
+    *,
+    extracted_text: Optional[str] = None,
+    analyze_prompt_version: Optional[str] = None,
+    test_date: Optional[str] = None,
+    collected_at: Optional[str] = None,
+    reported_at: Optional[str] = None,
+    date_source: Optional[str] = None,
+    date_confidence: Optional[str] = None,
+    date_raw_text: Optional[str] = None,
+) -> None:
+    payload: Dict[str, Any] = {}
+    if extracted_text is not None:
+        payload["extracted_text"] = extracted_text
+    if analyze_prompt_version is not None:
+        payload["analyze_prompt_version"] = analyze_prompt_version
+    if test_date is not None:
+        payload["test_date"] = test_date
+    if collected_at is not None:
+        payload["collected_at"] = collected_at
+    if reported_at is not None:
+        payload["reported_at"] = reported_at
+    if date_source is not None:
+        payload["date_source"] = date_source
+    if date_confidence is not None:
+        payload["date_confidence"] = date_confidence
+    if date_raw_text is not None:
+        payload["date_raw_text"] = date_raw_text[:500]
+    if not payload:
+        return
+
+    supabase = _get_supabase()
+    await _run(
+        lambda: supabase.table("lab_uploads")
+        .update(payload)
+        .eq("id", upload_id)
+        .execute()
+    )
+
+
+async def update_lab_upload_dates(
+    upload_id: str,
+    user_id: str,
+    *,
+    test_date: Optional[str] = None,
+    collected_at: Optional[str] = None,
+    reported_at: Optional[str] = None,
+    date_source: str = "user_provided",
+    date_confidence: str = "high",
+    date_raw_text: Optional[str] = None,
+    overwrite: bool = False,
+) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    current_resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .select("id,user_id,test_date,collected_at,reported_at,date_source,date_confidence")
+        .eq("id", upload_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    current = (current_resp.data or [None])[0]
+    if not current:
+        raise HTTPException(status_code=404, detail={"detail": "Upload not found", "code": "UPLOAD_NOT_FOUND"})
+
+    existing_source = str(current.get("date_source") or "")
+    existing_confidence = str(current.get("date_confidence") or "")
+    has_high_confidence_date = bool(
+        (current.get("test_date") or current.get("collected_at") or current.get("reported_at"))
+        and existing_source.startswith("extracted_")
+        and existing_confidence == "high"
+    )
+    if has_high_confidence_date and not overwrite:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "detail": "High-confidence extracted lab date already exists",
+                "code": "LAB_DATE_OVERWRITE_REQUIRED",
+            },
+        )
+
+    payload: Dict[str, Any] = {
+        "date_source": date_source,
+        "date_confidence": date_confidence,
+    }
+    if test_date is not None:
+        payload["test_date"] = test_date
+    if collected_at is not None:
+        payload["collected_at"] = collected_at
+    if reported_at is not None:
+        payload["reported_at"] = reported_at
+    if date_raw_text is not None:
+        payload["date_raw_text"] = date_raw_text[:500]
+
+    resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .update(payload)
+        .eq("id", upload_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    result = (resp.data or [{**current, **payload}])[0]
+    await _audit_medical_write(
+        user_id=user_id,
+        action="update",
+        entity_type="lab_upload",
+        entity_id=upload_id,
+        details={"date_source": date_source, "date_confidence": date_confidence},
+    )
+    return result
+
+
+async def get_lab_uploads_for_date_backfill(user_id: str, *, limit: int = 200) -> List[Dict[str, Any]]:
+    supabase = _get_supabase()
+    safe_limit = max(1, min(int(limit or 200), 500))
+    resp = await _run(
+        lambda: supabase.table("lab_uploads")
+        .select(
+            "id,user_id,lab_name,status,created_at,test_date,collected_at,reported_at,"
+            "date_source,date_confidence,date_raw_text,extracted_text"
+        )
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(safe_limit)
+        .execute()
+    )
+    return resp.data or []
+
+
+async def apply_lab_upload_date_backfill(
+    *,
+    user_id: str,
+    decisions: List[Dict[str, Any]],
+    overwrite: bool = False,
+) -> List[Dict[str, Any]]:
+    """Apply date-only backfill decisions.
+
+    This must stay metadata-only: it must not update biomarkers, reports,
+    protocols, safety events, or launch the analysis pipeline.
+    """
+
+    updated: List[Dict[str, Any]] = []
+    for decision in decisions:
+        if decision.get("action") != "update":
+            continue
+        patch = decision.get("patch") or {}
+        row = await update_lab_upload_dates(
+            upload_id=str(decision.get("upload_id")),
+            user_id=user_id,
+            test_date=patch.get("test_date"),
+            collected_at=patch.get("collected_at"),
+            reported_at=patch.get("reported_at"),
+            date_source=patch.get("date_source") or "missing",
+            date_confidence=patch.get("date_confidence") or "low",
+            date_raw_text=patch.get("date_raw_text"),
+            overwrite=overwrite,
+        )
+        updated.append(row)
+    return updated
 
 
 async def assert_upload_belongs_to_user(upload_id: str, user_id: str) -> Dict:
@@ -357,6 +848,33 @@ async def get_biomarkers_by_upload(upload_id: str, user_id: str) -> List[Dict]:
     )
     _logger.debug("get_biomarkers_by_upload completed")
     return resp.data
+
+
+async def get_recent_biomarker_history(user_id: str, *, limit: int = 250) -> List[Dict[str, Any]]:
+    """Return recent biomarker rows for longitudinal trend analysis.
+
+    This is intentionally read-only and fail-open at the caller level; analysis
+    should still complete when historical data is unavailable.
+    """
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("biomarkers")
+        .select(
+            "id,upload_id,user_id,name,value,unit,status,category,created_at,"
+            "lab_uploads(test_date,collected_at,reported_at,created_at,date_source,date_confidence)"
+        )
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    rows = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="biomarkers",
+        details={"count": len(rows), "source": "trend_engine"},
+    )
+    return rows
 
 
 async def get_protocol_by_upload(user_id: str, upload_id: str) -> Optional[Dict]:
@@ -555,13 +1073,100 @@ async def get_platform_symptom_summary(days: int = 30) -> Dict[str, Any]:
 
 
 async def update_user_subscription(user_id: str, sub_status: str, sub_id: Optional[str] = None, plan_tier: Optional[str] = None) -> None:
+    # Stage 2H: users.plan_tier was traced and confirmed to NOT exist on the
+    # live schema (phantom legacy architecture — see Stage 2H report). This
+    # function used to attempt writing it, catch the resulting DB error, then
+    # retry without it on every single call — dead-end control flow with an
+    # identical outcome to simply never attempting it. The canonical plan
+    # state this argument represents is written below, unconditionally, into
+    # the real source of truth (the `subscriptions` table) via
+    # upsert_user_subscription_row() — that write is unaffected by this
+    # simplification. Do NOT reintroduce a users.plan_tier column/write here.
     supabase = _get_supabase()
-    payload: Dict[str, Any] = {"sub_status": sub_status}
+    normalized_status = str(sub_status or "").strip().lower()
+    normalized_plan = str(plan_tier or "").strip().lower() or None
+    payload: Dict[str, Any] = {
+        "sub_status": normalized_status,
+        "subscription_status": normalized_status,
+    }
     if sub_id:
         payload["sub_id"] = sub_id
-    if plan_tier:
-        payload["plan_tier"] = plan_tier
     await _run(lambda: supabase.table("users").update(payload).eq("id", user_id).execute())
+
+    if normalized_plan:
+        canonical_status = "active" if normalized_status in {"active", "trialing"} else normalized_status
+        await upsert_user_subscription_row(
+            user_id=user_id,
+            plan_name=normalized_plan,
+            status=canonical_status,
+            cancel_at_period_end=normalized_status in {"cancelled", "canceled"},
+        )
+
+
+async def get_user_by_email(email: str) -> Dict[str, Any]:
+    """Return a user account by email for payment-provider webhook reconciliation."""
+    clean_email = (email or "").strip().lower()
+    if not clean_email:
+        return {}
+
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.table("users")
+        .select("id, email, full_name, sub_status, subscription_status, global_role, created_at")
+        .eq("email", clean_email)
+        .limit(1)
+        .execute()
+    )
+    return response.data[0] if response.data else {}
+
+
+async def upsert_user_subscription_row(
+    user_id: str,
+    *,
+    plan_name: str,
+    status: str,
+    current_period_start: Optional[str] = None,
+    current_period_end: Optional[str] = None,
+    cancel_at_period_end: bool = False,
+) -> None:
+    """Keep the canonical subscriptions table aligned with external billing state."""
+    supabase = _get_supabase()
+    payload: Dict[str, Any] = {
+        "plan_name": plan_name,
+        "status": status,
+        "cancel_at_period_end": cancel_at_period_end,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    if current_period_start:
+        payload["current_period_start"] = current_period_start
+    if current_period_end:
+        payload["current_period_end"] = current_period_end
+    if status in {"cancelled", "paused"}:
+        payload["cancelled_at"] = datetime.now(timezone.utc).isoformat()
+
+    existing_query = (
+        supabase.table("subscriptions")
+        .select("id")
+        .eq("user_id", user_id)
+        .order("updated_at", desc=True)
+        .limit(1)
+    )
+    if str(plan_name or "").strip().lower() != "free":
+        existing_query = existing_query.neq("plan_name", "free")
+
+    existing = await _run(lambda: existing_query.execute())
+
+    if existing.data:
+        await _run(
+            lambda: supabase.table("subscriptions")
+            .update(payload)
+            .eq("id", existing.data[0]["id"])
+            .execute()
+        )
+        return
+
+    payload.update({"user_id": user_id, "started_at": datetime.now(timezone.utc).isoformat()})
+    await _run(lambda: supabase.table("subscriptions").insert(payload).execute())
 
 
 async def update_admin_user_fields(
@@ -587,104 +1192,53 @@ async def update_admin_user_fields(
     await _run(lambda: supabase.table("users").update(payload).eq("id", user_id).execute())
 
 
-async def get_user_by_stripe_sub(sub_id: str) -> Optional[Dict]:
-    supabase = _get_supabase()
-    resp = await _run(lambda: supabase.table("users").select("id").eq("sub_id", sub_id).execute())
-    return resp.data[0] if resp.data else None
-
-
 async def get_user_active_subscription(user_id: str) -> Optional[Dict]:
     """Return the most recent active subscription row from the subscriptions table."""
     supabase = _get_supabase()
-    resp = await _run(
+    resp = await _run_supabase_read(
         lambda: supabase.table("subscriptions")
-        .select("plan_name, status, stripe_subscription_id, stripe_customer_id, current_period_end, cancel_at_period_end")
+        .select("plan_name, status, current_period_end, cancel_at_period_end")
         .eq("user_id", user_id)
         .in_("status", ["active", "past_due", "paused"])
         .order("updated_at", desc=True)
         .limit(1)
-        .execute()
+        .execute(),
+        label="get_user_active_subscription",
     )
     return resp.data[0] if resp.data else None
 
 
-async def sync_stripe_subscription_to_subscriptions_table(
-    *,
-    user_id: str,
-    stripe_subscription_id: str,
-    stripe_customer_id: Optional[str] = None,
-    stripe_status: str = "active",
-    current_period_start: Optional[str] = None,
-    current_period_end: Optional[str] = None,
-    cancel_at_period_end: bool = False,
-    plan_name: str = "core",
-) -> Optional[Dict]:
-    """Sync Stripe subscription to subscriptions table (idempotent upsert).
-    
-    Maintains normalized subscription record for reporting and audit.
-    """
+async def get_active_subscriptions_by_user_ids(user_ids: List[str]) -> Dict[str, Dict]:
+    """Batch version of get_user_active_subscription() for a list of user_ids —
+    one query instead of N, same "most recent active/past_due/paused row per
+    user" selection rule. Used by CRM member/client list serialization to
+    resolve entitlements via entitlements.resolve_entitlements_from_data()
+    without an N+1 per-member subscriptions fetch."""
+    ids = [str(uid) for uid in dict.fromkeys(user_ids) if uid]
+    if not ids:
+        return {}
+
     supabase = _get_supabase()
-    
-    now = datetime.now(timezone.utc).isoformat()
-    status_map = {
-        "active": "active",
-        "trialing": "active",
-        "past_due": "past_due",
-        "cancelled": "cancelled",
-        "paused": "paused",
-        "unpaid": "past_due",
-    }
-    mapped_status = status_map.get(stripe_status, "active")
-    
-    payload = {
-        "user_id": user_id,
-        "plan_name": plan_name,
-        "status": mapped_status,
-        "stripe_subscription_id": stripe_subscription_id,
-        "stripe_customer_id": stripe_customer_id,
-        "stripe_status": stripe_status,
-        "current_period_start": current_period_start,
-        "current_period_end": current_period_end,
-        "cancel_at_period_end": cancel_at_period_end,
-        "updated_at": now,
-    }
-    
-    # For initial insert, add started_at timestamp
-    # For updates, it will be ignored due to upsert behavior
-    payload["started_at"] = current_period_start or now
-    
-    resp = await _run(
+    resp = await _run_supabase_read(
         lambda: supabase.table("subscriptions")
-        .upsert(payload, on_conflict="stripe_subscription_id")
-        .execute()
+        .select("user_id, plan_name, status, current_period_end, cancel_at_period_end, updated_at")
+        .in_("user_id", ids)
+        .in_("status", ["active", "past_due", "paused"])
+        .order("updated_at", desc=True)
+        .execute(),
+        label="get_active_subscriptions_by_user_ids",
     )
-    
-    return resp.data[0] if resp.data else None
 
-
-async def record_stripe_event(
-    event_id: str,
-    event_type: str,
-    event_payload: Dict[str, Any],
-) -> bool:
-    """Record Stripe webhook event for idempotency and audit (no-op if already processed)."""
-    supabase = _get_supabase()
-    
-    try:
-        await _run(
-            lambda: supabase.table("stripe_events")
-            .insert({
-                "event_id": event_id,
-                "event_type": event_type,
-                "payload": event_payload,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            })
-            .execute()
-        )
-        return True
-    except Exception:
-        # Event already exists (duplicate); idempotent no-op
-        return False
+    # Rows already arrive most-recent-first (order applies across the whole
+    # result set, not per user) — keep only the first row seen per user_id,
+    # which is therefore that user's most recently updated matching row,
+    # identical to what get_user_active_subscription() returns one at a time.
+    latest_by_user: Dict[str, Dict] = {}
+    for row in resp.data or []:
+        uid = row.get("user_id")
+        if uid and uid not in latest_by_user:
+            latest_by_user[uid] = row
+    return latest_by_user
 
 
 async def record_health_failure(
@@ -732,7 +1286,7 @@ async def get_user_subscription_history(user_id: str) -> List[Dict]:
     supabase = _get_supabase()
     resp = await _run(
         lambda: supabase.table("subscriptions")
-        .select("plan_name, status, stripe_status, started_at, current_period_start, current_period_end, cancel_at_period_end, updated_at")
+        .select("plan_name, status, started_at, current_period_start, current_period_end, cancel_at_period_end, updated_at")
         .eq("user_id", user_id)
         .order("updated_at", desc=True)
         .execute()
@@ -753,13 +1307,24 @@ async def get_user_upload_count(user_id: str) -> int:
 
 
 async def get_user_progress(user_id: str) -> List[Dict]:
+    """Return this user's uploads with their biomarkers, in CLINICAL chronological
+    order (real lab date, most recent first) — never upload/created_at order.
+
+    Stage 2D-1: date priority is test_date -> collected_at -> reported_at, via
+    the same choose_measurement_date() helper the extraction pipeline already
+    uses (lab_date_extraction.py) — reused here, not reimplemented. Uploads with
+    none of those three dates are explicitly undated: they are placed AFTER
+    every dated upload (never outrank a real clinical date) and are only
+    ordered relative to each other by created_at, which is a display-stability
+    tiebreaker for the "no medical date" bucket, not a clinical date substitute.
+    """
     supabase = _get_supabase()
-    uploads = await _run(
+    uploads = await _run_supabase_read(
         lambda: supabase.table("lab_uploads")
-        .select("id, created_at, lab_name, test_date")
+        .select("id, created_at, lab_name, test_date, collected_at, reported_at, date_source, date_confidence")
         .eq("user_id", user_id)
-        .order("created_at", desc=False)
-        .execute()
+        .execute(),
+        label="get_user_progress_uploads",
     )
 
     rows = uploads.data or []
@@ -772,12 +1337,13 @@ async def get_user_progress(user_id: str) -> List[Dict]:
         return []
 
     upload_ids = [row["id"] for row in rows]
-    biomarker_rows_resp = await _run(
+    biomarker_rows_resp = await _run_supabase_read(
         lambda: supabase.table("biomarkers")
         .select("upload_id, name, value, unit, status, ref_low, ref_high")
         .in_("upload_id", upload_ids)
         .eq("user_id", user_id)
-        .execute()
+        .execute(),
+        label="get_user_progress_biomarkers",
     )
 
     grouped: Dict[str, List[Dict[str, Any]]] = {}
@@ -796,7 +1362,27 @@ async def get_user_progress(user_id: str) -> List[Dict]:
             }
         )
 
-    result = [{**upload, "biomarkers": grouped.get(upload["id"], [])} for upload in rows]
+    result = [
+        {
+            **upload,
+            "biomarkers": grouped.get(upload["id"], []),
+            # Resolved via the same test_date -> collected_at -> reported_at
+            # priority the extraction pipeline uses; None means genuinely undated.
+            "measurement_date": choose_measurement_date(upload),
+        }
+        for upload in rows
+    ]
+    # Clinical chronology: dated results first (most recent real lab date
+    # first), undated results after — never interleaved by upload time, and an
+    # undated result can never outrank a dated one. choose_measurement_date()
+    # returns a plain "YYYY-MM-DD" ISO string (date.isoformat()), which sorts
+    # correctly lexicographically. Sorting descending on
+    # (measurement_date or "", created_at) means: real dates sort first
+    # (largest date string first); rows with no measurement_date all share the
+    # "" key and therefore sort after every dated row, ordered only among
+    # themselves by created_at — a display-stability tiebreaker, never a
+    # clinical date substitute.
+    result.sort(key=lambda row: (row["measurement_date"] or "", str(row.get("created_at") or "")), reverse=True)
     await _audit_medical_read(
         user_id=user_id,
         entity_type="lab_progress",
@@ -851,7 +1437,7 @@ async def get_admin_overview() -> Dict[str, Any]:
         "premium_subscribers": premium_subscribers,
         "total_uploads": total_uploads,
         "weekly_uploads": weekly_uploads,
-        "mrr": 0,  # requires Stripe data — placeholder
+        "mrr": 0,  # billing provider data not connected
     }
 
 

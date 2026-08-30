@@ -9,10 +9,17 @@ import { motion } from 'framer-motion'
 import AdminShell from '../components/admin/AdminShell.jsx'
 
 async function fetchDashboardData(userId) {
+  // Post-release entitlement consistency fix: this used to read
+  // users.sub_status/sub_current_period_end directly via a client-side
+  // Supabase query — sub_current_period_end isn't even a real column on
+  // users (the real field lives on the subscriptions table), and sub_status
+  // is the same legacy field that can disagree with the canonical resolver.
+  // /auth/entitlements calls the exact same resolve_user_entitlements()
+  // /auth/me and the rest of the product already use.
   const [profileResp, uploadsResp, subscriptionResp, symptomsResp] = await Promise.allSettled([
     supabase.from('users').select('*').eq('id', userId).single(),
     supabase.from('lab_uploads').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-    supabase.from('users').select('sub_status, sub_current_period_end').eq('id', userId).single(),
+    api.get('/auth/entitlements'),
     api.get('/symptoms/summary?days=30'),
   ])
 
@@ -258,21 +265,16 @@ export default function ClientAdmin() {
               <h3 className="font-semibold text-white mb-4">Subscription</h3>
               <div className="mb-4">
                 <p className="text-sm text-gray-400 mb-1">Current Plan</p>
-                <p className={`text-xl font-bold ${subscription?.sub_status === 'active' ? 'text-green-400' : 'text-gray-400'}`}>
-                  {subscription?.sub_status === 'active' ? 'Vitaloop Premium' : 'Vitaloop Free'}
+                <p className={`text-xl font-bold ${subscription?.is_premium ? 'text-green-400' : 'text-gray-400'}`}>
+                  {subscription?.is_premium ? 'Vitaloop Premium' : 'Vitaloop Free'}
                 </p>
               </div>
-              {subscription?.sub_current_period_end && (
-                <p className="text-xs text-gray-400 mb-4">
-                  Renews: {formatDate(subscription.sub_current_period_end)}
-                </p>
-              )}
               <button className={`w-full py-2 rounded-lg font-semibold transition ${
-                subscription?.sub_status === 'active'
+                subscription?.is_premium
                   ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/50'
                   : 'bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700'
               }`}>
-                {subscription?.sub_status === 'active' ? 'Manage Subscription' : 'Upgrade to Premium'}
+                {subscription?.is_premium ? 'Manage Subscription' : 'Upgrade to Premium'}
               </button>
             </motion.div>
 

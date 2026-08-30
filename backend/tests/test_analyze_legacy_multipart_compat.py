@@ -6,6 +6,7 @@ from httpx import ASGITransport, AsyncClient
 from app.dependencies import get_current_user, require_freemium_analyze
 from app.main import app
 from app.routers.analysis import analyze as analyze_router
+from app.services import supabase_service as svc
 
 
 @pytest.mark.asyncio
@@ -53,6 +54,9 @@ async def test_analyze_accepts_legacy_multipart_payload(monkeypatch):
     async def fake_save_timeline_event(*_args, **_kwargs):
         return None
 
+    async def fake_get_user_profile(_user_id):
+        return {"age": 35, "sex": "female", "height_cm": 170, "weight_kg": 65}
+
     monkeypatch.setattr(
         analyze_router.biomarker_service,
         "check_freemium_biomarker_quota",
@@ -60,8 +64,11 @@ async def test_analyze_accepts_legacy_multipart_payload(monkeypatch):
     )
     monkeypatch.setattr(analyze_router.pdf_analyzer, "analyze_lab_pdf", fake_pdf_analyze)
     monkeypatch.setattr(analyze_router, "save_lab_upload", fake_save_lab_upload)
-    monkeypatch.setattr(analyze_router, "save_biomarkers", fake_save_biomarkers)
+    # Stage 2B: save_biomarkers() is now called from inside run_lab_analysis_pipeline
+    # (gated on the quality-gate decision), not directly from analyze.py.
+    monkeypatch.setattr(svc, "save_biomarkers", fake_save_biomarkers)
     monkeypatch.setattr(analyze_router, "save_timeline_event", fake_save_timeline_event)
+    monkeypatch.setattr(analyze_router, "get_user_profile", fake_get_user_profile)
 
     fake_user = {"sub": user_id, "email": "legacy@test.local"}
     app.dependency_overrides[get_current_user] = lambda: fake_user

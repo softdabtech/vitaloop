@@ -103,12 +103,64 @@ def build_deidentified_person_avatar(profile: Dict[str, Any] | None) -> Dict[str
     return {key: value for key, value in avatar.items() if value not in (None, [], "")}
 
 
+def _profile_text_present(value: Any) -> bool:
+    if isinstance(value, list):
+        return any(str(item).strip() for item in value)
+    if isinstance(value, dict):
+        return any(str(item).strip() for item in value.values())
+    return bool(str(value or "").strip())
+
+
+def _profile_item_count(value: Any) -> int:
+    if isinstance(value, list):
+        return len([item for item in value if str(item).strip()])
+    if isinstance(value, dict):
+        return len([item for item in value.values() if str(item).strip()])
+    return 1 if str(value or "").strip() else 0
+
+
+def _normalized_pregnancy_status(value: Any) -> str | None:
+    status = str(value or "").strip().lower()
+    if not status:
+        return None
+    if status in {"pregnant", "yes", "true", "вагітна", "беременность", "pregnancy"}:
+        return "pregnant"
+    if status in {"trying", "planning", "планую", "планирование"}:
+        return "planning"
+    if status in {"breastfeeding", "lactating", "грудне вигодовування", "лактація"}:
+        return "breastfeeding"
+    if status in {"no", "false", "not_pregnant", "не вагітна"}:
+        return "not_pregnant"
+    return "specified"
+
+
+def build_deidentified_safety_context(profile: Dict[str, Any] | None) -> Dict[str, Any]:
+    profile = profile if isinstance(profile, dict) else {}
+    current_medications = profile.get("current_medications") or profile.get("medications")
+    current_supplements = profile.get("current_supplements")
+    context = {
+        "pregnancy_status": _normalized_pregnancy_status(profile.get("pregnancy_status")),
+        "has_current_medications": _profile_text_present(current_medications),
+        "current_medication_count": _profile_item_count(current_medications),
+        "has_current_supplements": _profile_text_present(current_supplements),
+        "current_supplement_count": _profile_item_count(current_supplements),
+        "has_known_allergies": _profile_text_present(profile.get("allergies")),
+        "has_prior_diagnoses": _profile_text_present(profile.get("prior_diagnoses")),
+    }
+    context = {key: value for key, value in context.items() if value not in (None, False, 0, "", [])}
+    if context:
+        context["safety_context_present"] = True
+    return context
+
+
 async def evaluate_biomarkers_with_knowledge(
     *,
     biomarkers: List[Dict[str, Any]],
     symptoms: List[str],
     user_id: str | None,
     upload_id: str | None,
+    user_profile: Dict[str, Any] | None = None,
+    health_context: Dict[str, Any] | None = None,
     persist: bool = True,
 ) -> Dict[str, Any] | None:
     if not settings.knowledge_evaluation_after_analyze_enabled:
@@ -118,8 +170,8 @@ async def evaluate_biomarkers_with_knowledge(
     if not lab_results:
         return None
 
-    profile: Dict[str, Any] = {}
-    if user_id:
+    profile: Dict[str, Any] = user_profile if isinstance(user_profile, dict) else {}
+    if user_id and not profile:
         try:
             profile = await supabase.get_user_profile(user_id)
         except Exception as exc:
@@ -129,6 +181,18 @@ async def evaluate_biomarkers_with_knowledge(
                 exc,
             )
 
+    health_context = health_context if isinstance(health_context, dict) else {}
+    health_profile = (
+        ((health_context.get("inputs") or {}).get("profile") or {})
+        if isinstance(health_context.get("inputs"), dict)
+        else {}
+    )
+    person_avatar = health_profile.get("person_avatar") or build_deidentified_person_avatar(profile)
+    safety_context = health_profile.get("safety_context") or build_deidentified_safety_context(profile)
+    profile_context_fields = health_profile.get("fields") or sorted(
+        [key for key, value in profile.items() if value not in (None, "", [])]
+    )
+
     payload = {
         "lab_results": lab_results,
         "symptoms": symptoms or [],
@@ -136,7 +200,13 @@ async def evaluate_biomarkers_with_knowledge(
             "upload_id": upload_id,
             "source": "biomarker_analyzer",
             "data_age_days": 0,
-            "person_avatar": build_deidentified_person_avatar(profile),
+            "health_context_version": health_context.get("version"),
+            "health_context_readiness": health_context.get("readiness") or {},
+            "biomarker_summary": ((health_context.get("inputs") or {}).get("biomarkers") or {}),
+            "questionnaire_summary": ((health_context.get("inputs") or {}).get("questionnaire") or {}),
+            "person_avatar": person_avatar,
+            "safety_context": safety_context,
+            "profile_context_fields": profile_context_fields,
             "cohort_learning_allowed": bool(profile.get("knowledge_learning_consent")),
         },
     }

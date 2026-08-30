@@ -3,7 +3,7 @@
 -- ============================================================
 -- Fixes:
 -- 1) security_definer_view: public.organization_members
--- 2) rls_disabled_in_public: public.stripe_events, public.organizations,
+-- 2) rls_disabled_in_public: public.organizations,
 --    public.organization_memberships
 -- 3) function_search_path_mutable warnings for trigger/helper functions
 
@@ -30,12 +30,8 @@ $$;
 -- ------------------------------------------------------------
 -- 2) RLS enablement for public-facing tables
 -- ------------------------------------------------------------
-ALTER TABLE IF EXISTS public.stripe_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.organization_memberships ENABLE ROW LEVEL SECURITY;
-
--- stripe_events is webhook/audit infrastructure and should not be readable by
--- client JWT roles. With RLS enabled and no policies, anon/authenticated get no rows.
 
 -- organizations RLS policies (idempotent).
 DO $$

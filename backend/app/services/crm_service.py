@@ -628,7 +628,7 @@ class SubscriptionService:
         self,
         user_id: UUID,
         plan_name: str,
-        stripe_subscription_id: Optional[str] = None,
+        external_subscription_id: Optional[str] = None,
         creator_user_id: Optional[UUID] = None,
     ) -> Dict[str, Any]:
         """Create subscription record."""
@@ -636,7 +636,6 @@ class SubscriptionService:
             "user_id": str(user_id),
             "plan_name": plan_name,
             "status": SubscriptionStatus.ACTIVE.value,
-            "stripe_subscription_id": stripe_subscription_id,
             "started_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }

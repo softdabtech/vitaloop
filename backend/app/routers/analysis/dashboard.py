@@ -44,6 +44,14 @@ def _cache_set(user_id: str, value: Any) -> None:
             _summary_cache.pop(k, None)
 
 
+def invalidate_summary_cache(user_id: str) -> None:
+    """Stage 2E: called by write paths (currently just check-in submission)
+    whose effect must be visible on the very next /dashboard/summary read,
+    rather than waiting out the 45s TTL. Scoped to exactly one user — the
+    cache stays enabled for everyone else, this only clears one entry."""
+    _summary_cache.pop(user_id, None)
+
+
 def _fire_and_forget(coro) -> None:
     """Schedule a coroutine without blocking the hot path."""
     asyncio.ensure_future(coro)
@@ -173,7 +181,7 @@ async def _resolve_onboarding_state(user_id: str, current_user: dict) -> Dict[st
         "onboarding_complete": onboarding_completed,
     }
     done_count = sum(1 for value in checklist.values() if value)
-    pct = round((done_count / len(checklist)) * 100)
+    pct = 100 if not requires_onboarding else round((done_count / len(checklist)) * 100)
 
     return {
         "requires_onboarding": requires_onboarding,
@@ -199,7 +207,33 @@ async def _fetch_assignments(user_id: str, global_role: str) -> List[Dict[str, A
         return []
 
 
-def _build_next_best_action(onboarding: Dict[str, Any], assignments: List[Dict[str, Any]], progress: List[Dict[str, Any]]) -> Dict[str, str]:
+CHECKIN_DUE_INTERVAL_DAYS = 7
+
+
+def _checkin_reference_date(weekly_checkin: Optional[Dict[str, Any]]) -> Optional["datetime.date"]:
+    """Best available date for 'when was the last check-in': week_start is
+    client-supplied (WeeklyCheckIn.jsx sends today's date at submit time, not a
+    computed week-boundary), so fall back to created_at if week_start is
+    missing/unparseable. Returns None if neither is present/parseable."""
+    if not isinstance(weekly_checkin, dict):
+        return None
+    for field in ("week_start", "created_at"):
+        raw = weekly_checkin.get(field)
+        if not raw:
+            continue
+        try:
+            return datetime.fromisoformat(str(raw).replace("Z", "+00:00")).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _build_next_best_action(
+    onboarding: Dict[str, Any],
+    assignments: List[Dict[str, Any]],
+    progress: List[Dict[str, Any]],
+    weekly_checkin: Optional[Dict[str, Any]] = None,
+) -> Dict[str, str]:
     if onboarding.get("requires_onboarding"):
         return {
             "title": onboarding.get("current_stage_label") or "Continue onboarding",
@@ -226,21 +260,31 @@ def _build_next_best_action(onboarding: Dict[str, Any], assignments: List[Dict[s
             "path": "/assignments",
         }
 
+    # Stage 2E: a check-in is only "not due" based on real elapsed time since
+    # the last one — presence of ANY historical check-in must not permanently
+    # suppress this suggestion (see acceptance item E8).
+    reference_date = _checkin_reference_date(weekly_checkin)
+    if reference_date is not None:
+        days_since = (datetime.now(timezone.utc).date() - reference_date).days
+        if 0 <= days_since < CHECKIN_DUE_INTERVAL_DAYS:
+            next_due = reference_date + timedelta(days=CHECKIN_DUE_INTERVAL_DAYS)
+            return {
+                "title": "You're all caught up",
+                "description": f"Your next check-in opens on {next_due.isoformat()}. Review your protocol in the meantime.",
+                "cta_label": "Review protocol",
+                "path": "/protocol",
+            }
+
     return {
         "title": "Run weekly check-in",
         "description": "A quick check-in recalibrates your plan in minutes.",
         "cta_label": "Open check-in",
-        "path": "/checkin",
+        "path": "/check-ins",
     }
 
 
 def _build_start_here(onboarding: Dict[str, Any], progress: List[Dict[str, Any]], created_at: Optional[str]) -> Dict[str, Any]:
-    created_dt = _safe_iso(created_at)
-    account_is_new = False
-    if created_dt is not None:
-        account_is_new = (datetime.now(timezone.utc) - created_dt).days <= 10
-
-    enabled = bool(onboarding.get("requires_onboarding") or len(progress) == 0 or account_is_new)
+    enabled = bool(onboarding.get("requires_onboarding") or len(progress) == 0)
     if onboarding.get("requires_onboarding"):
         return {
             "enabled": True,
@@ -282,9 +326,15 @@ async def _fetch_health_and_streak(user_id: str) -> tuple[Optional[dict], float,
 
     try:
         sb = svc._get_supabase()
+        # Stage 2F: also select the sub-components calculate_health_score()
+        # already computes and persists (symptom_component/biomarker_component/
+        # adherence_component) — these were being silently dropped here even
+        # though they're real, durable, already-existing backend data. Exposing
+        # them lets the dashboard show real per-area scores instead of
+        # frontend-fabricated ones, with no new formula introduced.
         health_resp = await svc._run(
             lambda: sb.table("health_scores")
-            .select("score,calculated_at")
+            .select("score,calculated_at,symptom_component,biomarker_component,adherence_component")
             .eq("user_id", user_id)
             .order("calculated_at", desc=True)
             .limit(2)
@@ -303,7 +353,13 @@ async def _fetch_health_and_streak(user_id: str) -> tuple[Optional[dict], float,
             health_delta = round(float(rows[0].get("score") or 0) - float(rows[1].get("score") or 0), 1) if len(rows) > 1 else 0
         else:
             generated = await svc.calculate_health_score(user_id)
-            health_latest = {"score": generated.get("score"), "calculated_at": generated.get("calculated_at")}
+            health_latest = {
+                "score": generated.get("score"),
+                "calculated_at": generated.get("calculated_at"),
+                "symptom_component": generated.get("symptom_component"),
+                "biomarker_component": generated.get("biomarker_component"),
+                "adherence_component": generated.get("adherence_component"),
+            }
             health_delta = 0
     except Exception:
         health_latest = {"score": None, "calculated_at": None}
@@ -471,10 +527,17 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
         if str(item.get("status") or "").lower() in {"pending", "active", "in_progress"}
     ]
     completed_assignments = [item for item in assignments if str(item.get("status") or "").lower() == "completed"]
-    latest_upload = progress[-1] if progress else None
+    # Stage 2D-1: `progress` (get_user_progress()) is now sorted by real lab
+    # date, not upload time — so progress[0] is the "latest lab result", not
+    # necessarily the most recently uploaded file. These are different
+    # concepts and must not share one field (e.g. a user backfilling an old
+    # historical report after a recent one uploaded it MOST RECENTLY, but it
+    # is NOT the newest clinical result).
+    latest_lab_result = next((row for row in progress if row.get("measurement_date")), None)
+    latest_upload = max(progress, key=lambda row: str(row.get("created_at") or "")) if progress else None
 
     try:
-        next_best_action = _build_next_best_action(onboarding, assignments, progress)
+        next_best_action = _build_next_best_action(onboarding, assignments, progress, weekly_checkin)
     except Exception:
         next_best_action = {
             "title": "Upload your first lab",
@@ -501,6 +564,14 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
         "stats": {
             "health_score": health_latest.get("score") if isinstance(health_latest, dict) else None,
             "health_score_change": health_delta,
+            # Stage 2F: real sub-components of the same backend-computed health
+            # score (calculate_health_score()) — each is null when not yet
+            # calculated, never a fabricated fallback number.
+            "health_score_components": {
+                "symptom": health_latest.get("symptom_component") if isinstance(health_latest, dict) else None,
+                "biomarker": health_latest.get("biomarker_component") if isinstance(health_latest, dict) else None,
+                "adherence": health_latest.get("adherence_component") if isinstance(health_latest, dict) else None,
+            },
             "active_program": "Personal Protocol" if progress else "Not started",
             "completed_tasks": len(completed_assignments),
             "active_assignments": len(active_assignments),
@@ -516,9 +587,10 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
         "blocks": {
             "assignments": assignments,
             "today_focus": active_assignments[:3],
-            "progress": progress[-12:],
+            "progress": progress[:12],
             "insights": insights,
             "latest_upload": latest_upload,
+            "latest_lab_result": latest_lab_result,
             "latest_checkin": weekly_checkin,
             "latest_questionnaire": questionnaire_latest,
         },
