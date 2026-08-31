@@ -20,6 +20,21 @@ Adults only: this product does not serve minors, so age<18 is never passed
 in and reference_ranges is never expected to hold a pediatric band.
 
 No live database connection is used anywhere in this file.
+
+Also covers a real bug caught live after step 1 first shipped: manual
+entries are routed through the SAME shared run_lab_analysis_pipeline() as
+PDF/image uploads (per create_upload_from_manual_entries()'s docstring),
+which recomputes status from ref_low/ref_high via
+normalize_biomarkers()/_status_for_value() — it does NOT trust
+ManualBiomarkerEntry.status. Setting only .status from the KB and leaving
+.ref_low/.ref_high on the old unisex BIOMARKER_DATABASE range meant the
+pipeline silently overwrote the correct KB-aware status with a recomputed,
+demographic-blind one. Confirmed live: HDL=45 mg/dL for a real 38-year-old
+female profile returned OPTIMAL end-to-end despite calculate_status() alone
+correctly returning DEFICIENT. test_h/test_i below assert on
+ManualBiomarkerEntry.ref_low/ref_high directly — the field that actually
+reaches the pipeline — not just .status, so a regression here can't hide
+behind .status looking right in isolation again.
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -27,6 +42,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.services import biomarker_reference as ref
+from app.services.biomarker_service import ManualBiomarkerEntry
 
 
 def _mock_supabase_returning(rows):
@@ -269,3 +285,72 @@ async def test_g_alias_map_resolves_mismatched_keys():
         await ref.get_kb_reference_range("hemoglobin_a1c", "%", sex="female", age=34)
 
     assert seen_keys == ["hba1c"]
+
+
+def _mock_supabase_two_step(lab_marker_rows, range_rows):
+    """lab_markers lookup (1st query) returns lab_marker_rows, then the
+    reference_ranges lookup (2nd query) returns range_rows."""
+    responses = [lab_marker_rows, range_rows]
+
+    def _execute():
+        resp = MagicMock()
+        resp.data = responses.pop(0)
+        return resp
+
+    fake_query = MagicMock()
+    fake_query.select.return_value = fake_query
+    fake_query.eq.return_value = fake_query
+    fake_query.limit.return_value = fake_query
+    fake_query.execute.side_effect = _execute
+    fake_client = MagicMock()
+    fake_client.table.return_value = fake_query
+
+    async def _run(fn):
+        return fn()
+
+    return fake_client, _run
+
+
+@pytest.mark.asyncio
+async def test_h_ref_low_ref_high_reflect_the_kb_range_not_just_status():
+    """The actual bug caught live: .ref_low/.ref_high (not .status) are what
+    reaches the shared pipeline downstream — they must come from the KB row
+    too, not be left on the old BIOMARKER_DATABASE range."""
+    lab_marker_rows = [{"id": "marker-uuid-hdl"}]
+    range_rows = [
+        {"sex": "female", "min_age": 18, "max_age": None, "unit": "mg/dL",
+         "low_value": 50, "high_value": None, "optimal_low_value": 60, "optimal_high_value": None},
+    ]
+    fake_client, fake_run = _mock_supabase_two_step(lab_marker_rows, range_rows)
+
+    entry = ManualBiomarkerEntry(biomarker_id="hdl", value=45.0, unit="mg/dL")
+    with patch("app.services.supabase_service._get_supabase", return_value=fake_client), \
+         patch("app.services.supabase_service._run", side_effect=fake_run):
+        ok = await entry.validate(sex="female", age=38)
+
+    assert ok is True
+    assert entry.ref_low == 50.0
+    assert entry.ref_high is None  # genuinely unbounded — must not become 0/inf here
+    assert entry.status == "DEFICIENT"  # 45 < the female low-HDL cutoff of 50
+
+
+@pytest.mark.asyncio
+async def test_i_same_value_different_sex_yields_different_ref_low_and_status():
+    """Same HDL=45 value, opposite sex on the profile, must resolve
+    differently end to end — proves the sex-awareness is real, matching the
+    live verification against Svetlana's real profile vs. an equivalent male
+    profile (45 -> DEFICIENT for female, BORDERLINE for male)."""
+    lab_marker_rows = [{"id": "marker-uuid-hdl"}]
+    range_rows = [
+        {"sex": "male", "min_age": 18, "max_age": None, "unit": "mg/dL",
+         "low_value": 40, "high_value": None, "optimal_low_value": 60, "optimal_high_value": None},
+    ]
+    fake_client, fake_run = _mock_supabase_two_step(lab_marker_rows, range_rows)
+
+    entry = ManualBiomarkerEntry(biomarker_id="hdl", value=45.0, unit="mg/dL")
+    with patch("app.services.supabase_service._get_supabase", return_value=fake_client), \
+         patch("app.services.supabase_service._run", side_effect=fake_run):
+        await entry.validate(sex="male", age=40)
+
+    assert entry.ref_low == 40.0
+    assert entry.status == "BORDERLINE"  # above the male cutoff, below the 60 "protective" optimal

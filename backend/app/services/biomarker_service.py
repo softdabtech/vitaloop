@@ -15,7 +15,9 @@ from app.services.biomarker_reference import (
     get_biomarker_info,
     validate_biomarker_input,
     convert_unit,
-    calculate_status,
+    get_kb_reference_range,
+    resolve_status_bounds,
+    status_from_bounds,
 )
 from app.services import supabase_service as svc
 from app.services.entitlements import resolve_user_entitlements
@@ -72,15 +74,33 @@ class ManualBiomarkerEntry:
 
         self.display_name = info["display_name"]
 
-        # Calculate status
-        self.status = await calculate_status(
-            self.biomarker_id, self.value, self.unit, sex=sex, age=age
-        )
+        # Prefer a KB (reference_ranges) match over the flat BIOMARKER_DATABASE
+        # default for BOTH the status AND the ref_low/ref_high this entry
+        # reports — fetched ONCE and reused for both, so they can never
+        # disagree (and so this doesn't cost two KB lookups). This matters
+        # beyond self.status: to_dict()'s ref_low/ref_high are what actually
+        # reach run_lab_analysis_pipeline() -> normalize_biomarkers() ->
+        # _status_for_value(), which RECOMPUTES status from ref_low/ref_high
+        # (manual entries are routed through the same shared pipeline as
+        # PDF/image uploads, per create_upload_from_manual_entries()'s
+        # docstring). Setting only self.status and leaving ref_low/ref_high
+        # on the old unisex range would have the pipeline silently overwrite
+        # the KB-aware status with a recomputed one — confirmed live: HDL=45
+        # for a real female profile returned OPTIMAL end-to-end until this
+        # fix, despite the status computed here alone being DEFICIENT.
+        kb_range = await get_kb_reference_range(self.biomarker_id, self.unit, sex=sex, age=age)
+        if kb_range:
+            # kb_range's min/max are already None-when-unbounded (not a
+            # sentinel like 0.0/inf) — safe to use directly.
+            self.ref_low = kb_range["min"]
+            self.ref_high = kb_range["max"]
+        else:
+            unit_data = info["units"].get(self.unit, {})
+            self.ref_low = unit_data.get("min")
+            self.ref_high = unit_data.get("max")
 
-        # Get reference ranges for the unit
-        unit_data = info["units"].get(self.unit, {})
-        self.ref_low = unit_data.get("min")
-        self.ref_high = unit_data.get("max")
+        bounds = resolve_status_bounds(self.biomarker_id, self.unit, kb_range)
+        self.status = status_from_bounds(self.value, *bounds) if bounds else "OPTIMAL"
 
         self.is_valid = True
         return True

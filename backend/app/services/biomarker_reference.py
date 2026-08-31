@@ -1001,12 +1001,64 @@ async def get_kb_reference_range(
     best = max(candidates, key=_specificity)
     low = best.get("low_value")
     high = best.get("high_value")
+    # None here means genuinely unbounded (e.g. HDL has no clinical upper
+    # bound — higher is always better) — kept as None, not 0.0/inf, so a
+    # caller that reports this straight through as ref_low/ref_high (as
+    # ManualBiomarkerEntry.validate() does) doesn't fabricate a bound that
+    # was never in the data. calculate_status() below is the only consumer
+    # that needs 0.0/inf, and does that coercion itself, locally.
     return {
-        "min": float(low) if low is not None else 0.0,
-        "max": float(high) if high is not None else float("inf"),
-        "optimal_min": float(best["optimal_low_value"]) if best.get("optimal_low_value") is not None else (float(low) if low is not None else 0.0),
-        "optimal_max": float(best["optimal_high_value"]) if best.get("optimal_high_value") is not None else (float(high) if high is not None else float("inf")),
+        "min": float(low) if low is not None else None,
+        "max": float(high) if high is not None else None,
+        "optimal_min": float(best["optimal_low_value"]) if best.get("optimal_low_value") is not None else (float(low) if low is not None else None),
+        "optimal_max": float(best["optimal_high_value"]) if best.get("optimal_high_value") is not None else (float(high) if high is not None else None),
     }
+
+
+def status_from_bounds(value: float, ref_min: float, ref_max: float, optimal_min: float, optimal_max: float) -> str:
+    """Pure OPTIMAL/BORDERLINE/DEFICIENT/ELEVATED decision — no I/O. Shared by
+    calculate_status() and ManualBiomarkerEntry.validate() so both derive
+    status from exactly the same bounds they report as ref_low/ref_high,
+    instead of each doing its own (potentially divergent) KB lookup."""
+    if optimal_min <= value <= optimal_max:
+        return "OPTIMAL"
+    if ref_min <= value <= ref_max:
+        return "BORDERLINE"
+    if value < ref_min:
+        return "DEFICIENT"
+    return "ELEVATED"
+
+
+def resolve_status_bounds(
+    biomarker_id: str, unit: str, kb_range: Optional[Dict[str, Optional[float]]]
+) -> Optional[Tuple[float, float, float, float]]:
+    """Given an already-fetched kb_range (or None), resolve the (ref_min,
+    ref_max, optimal_min, optimal_max) bounds to use — from the KB row if
+    one was found, else from BIOMARKER_DATABASE. Returns None only when
+    neither source has anything for this biomarker_id/unit (unknown marker
+    or unit) — callers treat that as "OPTIMAL" (matches the prior default).
+    kb_range's None entries mean genuinely unbounded and are coerced to
+    0.0/inf here, locally — this function's return value is for arithmetic,
+    not for reporting back to a caller as ref_low/ref_high.
+    """
+    if kb_range:
+        ref_min = kb_range["min"] if kb_range["min"] is not None else 0.0
+        ref_max = kb_range["max"] if kb_range["max"] is not None else float("inf")
+        optimal_min = kb_range["optimal_min"] if kb_range["optimal_min"] is not None else ref_min
+        optimal_max = kb_range["optimal_max"] if kb_range["optimal_max"] is not None else ref_max
+        return ref_min, ref_max, optimal_min, optimal_max
+
+    biomarker = BIOMARKER_DATABASE.get(biomarker_id)
+    if not biomarker:
+        return None
+    unit_data = biomarker["units"].get(unit)
+    if not unit_data:
+        return None
+    ref_min = unit_data.get("min", 0)
+    ref_max = unit_data.get("max", float("inf"))
+    optimal_min = unit_data.get("optimal_range", [ref_min, ref_max])[0]
+    optimal_max = unit_data.get("optimal_range", [ref_min, ref_max])[1]
+    return ref_min, ref_max, optimal_min, optimal_max
 
 
 async def calculate_status(
@@ -1023,43 +1075,21 @@ async def calculate_status(
     omitting them (or the KB having nothing yet) reproduces the exact
     pre-existing behavior.
 
+    Callers that also need ref_low/ref_high to report elsewhere (e.g.
+    ManualBiomarkerEntry.validate()) should call get_kb_reference_range()
+    themselves and use resolve_status_bounds() + status_from_bounds()
+    directly instead of this function, to avoid a second, redundant KB
+    lookup — this function exists for simple call sites that only need the
+    status string.
+
     Returns:
         One of: "OPTIMAL", "BORDERLINE", "DEFICIENT", "ELEVATED"
     """
     kb_range = await get_kb_reference_range(biomarker_id, unit, sex=sex, age=age)
-    if kb_range:
-        ref_min = kb_range["min"]
-        ref_max = kb_range["max"]
-        optimal_min = kb_range["optimal_min"]
-        optimal_max = kb_range["optimal_max"]
-    else:
-        biomarker = BIOMARKER_DATABASE.get(biomarker_id)
-        if not biomarker:
-            return "OPTIMAL"  # Default if unknown
-
-        unit_data = biomarker["units"].get(unit)
-        if not unit_data:
-            return "OPTIMAL"  # Default if unit not found
-
-        ref_min = unit_data.get("min", 0)
-        ref_max = unit_data.get("max", float("inf"))
-        optimal_min = unit_data.get("optimal_range", [ref_min, ref_max])[0]
-        optimal_max = unit_data.get("optimal_range", [ref_min, ref_max])[1]
-
-    # Check if value is in optimal range
-    if optimal_min <= value <= optimal_max:
-        return "OPTIMAL"
-
-    # Check if value is in reference range but outside optimal
-    if ref_min <= value <= ref_max:
-        return "BORDERLINE"
-
-    # Check if value is below reference
-    if value < ref_min:
-        return "DEFICIENT"
-
-    # Value is above reference
-    return "ELEVATED"
+    bounds = resolve_status_bounds(biomarker_id, unit, kb_range)
+    if bounds is None:
+        return "OPTIMAL"  # Default if unknown biomarker/unit
+    return status_from_bounds(value, *bounds)
 
 
 def get_conversion_factor(biomarker_id: str, from_unit: str, to_unit: str) -> Optional[float]:
