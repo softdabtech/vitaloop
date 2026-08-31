@@ -381,7 +381,14 @@ function ActionCard({ item, copy, isUk }) {
         {evidence && <CoachBadge tone="neutral">{copy.evidence}: {evidence}</CoachBadge>}
       </div>
       {outcome && <p className="mt-3 text-sm font-semibold text-slate-700">{copy.outcome}: <span className="font-normal text-slate-600">{outcome}</span></p>}
-      {(basedOn.length || domains.length || expectedTimeline || retestMarkers.length) && (
+      {/* !! is required here, not just truthiness: when every one of these is
+          empty (all 3 lengths are 0, expectedTimeline is null), the bare `||`
+          chain evaluates to the number 0 (JS `||`'s last-falsy-operand
+          behavior), and `0 && <details>` renders the literal text "0" in
+          React instead of nothing — this was the "00" showing under every
+          protocol card in production (this guard + the safety one below,
+          both hitting the same bug, back to back with no separator). */}
+      {!!(basedOn.length || domains.length || expectedTimeline || retestMarkers.length) && (
         <details className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-3 text-sm leading-6 text-slate-600">
           <summary className="cursor-pointer font-semibold text-slate-800">{copy.technicalDetails}</summary>
           <div className="mt-3 grid gap-2">
@@ -392,7 +399,7 @@ function ActionCard({ item, copy, isUk }) {
           </div>
         </details>
       )}
-      {(safety || safetyNotes.length) && (
+      {!!(safety || safetyNotes.length) && (
         <div className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
           <span className="font-semibold">{copy.safetyNotes}: </span>
           {[safety, ...safetyNotes].filter(Boolean).join(' ')}
