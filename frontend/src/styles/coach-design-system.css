@@ -566,6 +566,13 @@
   display: flex;
   align-items: center;
   width: 100%;
+  /* Fixed to the largest possible node (.coach-stepper__node--active is
+     38px) so the line centers on the same axis for every step regardless
+     of that step's own node size — without this, the active step's taller
+     node grows its track's auto height, which re-centers just that one
+     segment lower than its neighbors and makes the connector look like it
+     dips down at the active step. */
+  height: 40px;
 }
 
 .coach-stepper__line {
