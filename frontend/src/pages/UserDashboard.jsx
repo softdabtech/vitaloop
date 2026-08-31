@@ -240,19 +240,33 @@ function mapTechnicalStageToHumanIndex(stageIndex) {
   return 5
 }
 
-function JourneyCard({ step, index, active, done, onClick }) {
-  const Icon = step.icon
+// Journey stepper: a fixed node+connector track that shows position in the
+// path regardless of how many steps exist (replaces the old .coach-journey
+// card grid, which was hardcoded to a 5-column layout and orphaned any 6th
+// step onto its own row — see the "00" grid mismatch bug).
+function JourneyStepNode({ step, index, active, done, onClick, isFirst, isLast }) {
   return (
-    <button type="button" onClick={onClick} className={`coach-journey__step text-left ${active ? 'coach-journey__step--active' : ''}`}>
-      <div className="flex items-center justify-between gap-3">
-        <span className="coach-journey__number">{done ? <CheckCircle2 className="h-4 w-4" /> : String(index + 1).padStart(2, '0')}</span>
-        <Icon className={`h-5 w-5 ${active ? 'text-teal-600' : 'text-slate-400'}`} />
+    <button
+      type="button"
+      onClick={onClick}
+      className={`coach-stepper__item ${active ? 'coach-stepper__item--active' : ''}`}
+    >
+      <div className="coach-stepper__track">
+        <span className={`coach-stepper__line ${done || active ? 'coach-stepper__line--filled' : ''}`} style={isFirst ? { visibility: 'hidden' } : undefined} />
+        <span className={`coach-stepper__node ${done ? 'coach-stepper__node--done' : ''} ${active ? 'coach-stepper__node--active' : ''}`}>
+          {done ? <CheckCircle2 className="h-4 w-4" /> : String(index + 1).padStart(2, '0')}
+        </span>
+        <span className={`coach-stepper__line ${done ? 'coach-stepper__line--filled' : ''}`} style={isLast ? { visibility: 'hidden' } : undefined} />
       </div>
-      <h3>{step.label}</h3>
-      <p>{step.helper}</p>
+      <span className="coach-stepper__label">{step.label}</span>
     </button>
   )
 }
+
+// No JourneyFocusCard here by design: the "Your Next Best Step" hero above
+// already shows the current step's label, helper text, and CTA. Repeating
+// that inside the Health Journey card would duplicate the same information
+// twice on one screen — this block stays a pure path map (stepper only).
 
 // Stage 2F: only renders a percentage bar when `value` is an actual backend
 // number (not undefined/null) — a missing real value shows truthful "Not yet
@@ -509,14 +523,16 @@ export default function UserDashboard() {
           </div>
           <CoachBadge tone="neutral">{copy.current}: {journeySteps[humanStageIndex]?.label}</CoachBadge>
         </div>
-        <div className="coach-journey">
+        <div className="coach-stepper">
           {journeySteps.map((step, index) => (
-            <JourneyCard
+            <JourneyStepNode
               key={step.label}
               step={step}
               index={index}
               active={index === humanStageIndex}
               done={index < humanStageIndex}
+              isFirst={index === 0}
+              isLast={index === journeySteps.length - 1}
               onClick={() => navigate(step.path)}
             />
           ))}
@@ -550,7 +566,12 @@ export default function UserDashboard() {
           </div>
         </CoachCard>
 
-        <div className="coach-grid">
+        {/* flex column, not .coach-grid: the sibling "why this matters" card
+            is much taller, and as a CSS grid item this column used to get
+            stretched to match it — with only 3 short rows of text, that left
+            each KPIBlock with a lot of dead space instead of sizing to its
+            own content. */}
+        <div className="flex flex-col gap-6">
           <KPIBlock
             icon={Stethoscope}
             tone={hasConcern ? 'success' : 'warning'}
