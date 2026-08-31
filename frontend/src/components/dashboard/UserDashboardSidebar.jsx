@@ -95,8 +95,14 @@ export default function UserDashboardSidebar({
 
   return (
     <aside className={`${sidebarWidth} flex h-screen flex-col border-r border-slate-200 bg-white transition-[width] duration-300`}>
-      <div className="flex h-[72px] items-center justify-between border-b border-slate-100 px-4">
-        <div className={`flex items-center gap-3 ${collapsed ? 'justify-center w-full' : ''}`}>
+      {/* Collapsed width is 72px, minus 2x16px padding = 40px of content width —
+          exactly one 40px logo box and nothing else. The logo + toggle button
+          used to sit side-by-side in that same row and fight over that 40px,
+          which squeezed the toggle button down to an invisible/unclickable
+          sliver (the empty box reported in production). Collapsed state now
+          stacks them vertically instead, so both get their own full-width row. */}
+      <div className={`flex border-b border-slate-100 ${collapsed ? 'flex-col items-center gap-2 py-3' : 'h-[72px] items-center justify-between px-4'}`}>
+        <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
           <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl">
             <img src="/images/favicon_1.png" alt="VITALOOP" className="h-8 w-8 object-contain" />
           </div>
@@ -110,7 +116,7 @@ export default function UserDashboardSidebar({
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           style={{ visibility: collapsed ? 'visible' : (!mobile ? 'visible' : 'hidden') }}
         >
