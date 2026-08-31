@@ -872,14 +872,16 @@ export default function Results() {
           </div>
         </div>
 
-        {/* Was `grid lg:grid-cols-4` — below the 1024px breakpoint that
-            collapses straight to a single column with no intermediate step,
-            these 4 cards stacked fully vertically. Switched to a horizontally
-            scrolling row (same pattern already used for the Health Journey
-            stepper on Dashboard) so it stays a horizontal row of cards at
-            every viewport width instead of only above `lg`. */}
-        <div className="mt-6 flex gap-4 overflow-x-auto pb-2">
-          <SectionCard icon={CheckCircle2} title={copy.nextSteps} className="min-w-[260px] flex-1">
+        {/* Stacked vertically, one full-width card per row — corrected per
+            direct feedback after the horizontal-row version shipped (was
+            `grid lg:grid-cols-4`, then briefly a horizontal-scroll flex row;
+            neither was the intended layout). Content length varies a lot
+            between these 4 cards (Today/This month are one line, Next
+            steps/Doctor questions are long lists) — stacked full-width lets
+            each size to its own content instead of forcing uneven columns
+            side by side. */}
+        <div className="mt-6 flex flex-col gap-4">
+          <SectionCard icon={CheckCircle2} title={copy.nextSteps}>
             {reportActions.length ? (
               <ul className="space-y-3 text-sm leading-6 text-slate-700">
                 {reportActions.slice(0, 4).map((item, idx) => (
@@ -894,15 +896,15 @@ export default function Results() {
             )}
           </SectionCard>
 
-          <SectionCard icon={ArrowRight} title={copy.today} className="min-w-[260px] flex-1">
+          <SectionCard icon={ArrowRight} title={copy.today}>
             <p className="text-sm leading-6 text-slate-600">{reportActions[0]?.body || reportActions[0]?.title || copy.reviewTopFinding}</p>
           </SectionCard>
 
-          <SectionCard icon={RefreshCw} title={copy.thisMonth} className="min-w-[260px] flex-1">
+          <SectionCard icon={RefreshCw} title={copy.thisMonth}>
             <p className="text-sm leading-6 text-slate-600">{reportRetest[0]?.timing || 'Plan retesting based on symptoms, clinician guidance, and the marker involved.'}</p>
           </SectionCard>
 
-          <SectionCard icon={MessageCircle} title={copy.doctorQuestions} className="min-w-[260px] flex-1">
+          <SectionCard icon={MessageCircle} title={copy.doctorQuestions}>
             {reportDiscussion.length ? (
               <ul className="space-y-2 text-sm leading-6 text-slate-700">
                 {reportDiscussion.slice(0, 5).map((item, idx) => (
