@@ -1708,8 +1708,18 @@ async def _check_and_validate_manual_entries(user_id: str, request: ManualAnalys
     # Convert to ManualBiomarkerEntry objects
     entry_dicts = [entry.model_dump() for entry in request.biomarkers]
 
+    # sex/age (adults only — this product does not serve minors) let
+    # calculate_status() prefer a matching knowledge-base reference range
+    # over the flat BIOMARKER_DATABASE default. Missing/incomplete profile
+    # data degrades gracefully to the prior (age/sex-blind) behavior.
+    profile = await get_user_profile(user_id) or {}
+    profile_sex = profile.get("sex")
+    profile_age = profile.get("age")
+
     # Validate all entries
-    valid_entries, errors = biomarker_service.validate_entries(entry_dicts)
+    valid_entries, errors = await biomarker_service.validate_entries(
+        entry_dicts, sex=profile_sex, age=profile_age
+    )
 
     if errors:
         error_message = "; ".join(errors)
@@ -1718,7 +1728,9 @@ async def _check_and_validate_manual_entries(user_id: str, request: ManualAnalys
     if not valid_entries:
         raise HTTPException(status_code=400, detail=_NO_VALID_BIOMARKERS)
 
-    return biomarker_service.convert_to_standard_units(valid_entries)
+    return await biomarker_service.convert_to_standard_units(
+        valid_entries, sex=profile_sex, age=profile_age
+    )
 
 
 async def _generate_protocol_for_manual_entries(request: ManualAnalysisRequest, converted_entries: list) -> list:

@@ -46,8 +46,14 @@ class ManualBiomarkerEntry:
         self.ref_low = None
         self.ref_high = None
 
-    def validate(self) -> bool:
-        """Validate the entry against biomarker rules."""
+    async def validate(self, *, sex: Optional[str] = None, age: Optional[int] = None) -> bool:
+        """Validate the entry against biomarker rules.
+
+        sex/age (from the user's profile) let calculate_status() prefer an
+        age/sex-matched knowledge-base reference range over the flat
+        BIOMARKER_DATABASE default when one exists. Optional — omitting them
+        reproduces the prior behavior exactly.
+        """
         # Check value is reasonable
         is_valid, error = validate_biomarker_input(
             self.biomarker_id, self.value, self.unit
@@ -67,8 +73,8 @@ class ManualBiomarkerEntry:
         self.display_name = info["display_name"]
 
         # Calculate status
-        self.status = calculate_status(
-            self.biomarker_id, self.value, self.unit
+        self.status = await calculate_status(
+            self.biomarker_id, self.value, self.unit, sex=sex, age=age
         )
 
         # Get reference ranges for the unit
@@ -113,14 +119,16 @@ class BiomarkerService:
             return []
         return list(info["units"].keys())
 
-    def validate_entries(
-        self, entries: List[Dict]
+    async def validate_entries(
+        self, entries: List[Dict], *, sex: Optional[str] = None, age: Optional[int] = None
     ) -> Tuple[List[ManualBiomarkerEntry], List[str]]:
         """
         Validate a list of manually entered biomarkers.
 
         Args:
             entries: List of dicts with biomarker_id, value, unit
+            sex/age: from the user's profile, forwarded to calculate_status()
+                so it can prefer a matching knowledge-base reference range.
 
         Returns:
             (valid_entries, error_messages)
@@ -145,7 +153,7 @@ class BiomarkerService:
                     date=entry.get("date"),
                 )
 
-                if not biomarker_entry.validate():
+                if not await biomarker_entry.validate(sex=sex, age=age):
                     for error in biomarker_entry.errors:
                         errors.append(f"Entry {idx + 1}: {error}")
                 else:
@@ -347,7 +355,9 @@ class BiomarkerService:
             # Be permissive on error - don't block user
             return True, "Unable to verify quota - proceeding anyway", None
 
-    def convert_to_standard_units(self, entries: List[ManualBiomarkerEntry]) -> List[ManualBiomarkerEntry]:
+    async def convert_to_standard_units(
+        self, entries: List[ManualBiomarkerEntry], *, sex: Optional[str] = None, age: Optional[int] = None
+    ) -> List[ManualBiomarkerEntry]:
         """
         Convert all biomarker values to standard units for Claude analysis.
 
@@ -384,7 +394,7 @@ class BiomarkerService:
                         unit=default_unit,
                         date=entry.date,
                     )
-                    new_entry.validate()
+                    await new_entry.validate(sex=sex, age=age)
                     converted.append(new_entry)
 
                     logger.info(

@@ -46,10 +46,10 @@ async def test_manual_entry_then_results_flow(monkeypatch):
     async def fake_check_quota(_user_id, _entry_type):
         return True, "", None
 
-    def fake_validate_entries(entries):
+    async def fake_validate_entries(entries, *, sex=None, age=None):
         return entries, []
 
-    def fake_convert_to_standard_units(entries):
+    async def fake_convert_to_standard_units(entries, *, sex=None, age=None):
         return entries
 
     def fake_format_for_claude_analysis(entries):

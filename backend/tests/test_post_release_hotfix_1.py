@@ -176,10 +176,10 @@ async def test_manual_entry_auto_continue_result_retrievable_via_results_endpoin
     async def fake_check_quota(_user_id, _entry_type):
         return True, "", None
 
-    def fake_validate_entries(entries):
+    async def fake_validate_entries(entries, *, sex=None, age=None):
         return entries, []
 
-    def fake_convert_to_standard_units(entries):
+    async def fake_convert_to_standard_units(entries, *, sex=None, age=None):
         return entries
 
     def fake_format_for_claude_analysis(entries):
@@ -330,10 +330,10 @@ async def test_manual_analyze_wire_json_retains_analysis_status(monkeypatch):
     async def fake_check_quota(_user_id, _entry_type):
         return True, "", None
 
-    def fake_validate_entries(entries):
+    async def fake_validate_entries(entries, *, sex=None, age=None):
         return entries, []
 
-    def fake_convert_to_standard_units(entries):
+    async def fake_convert_to_standard_units(entries, *, sex=None, age=None):
         return entries
 
     async def fake_create_upload_from_manual_entries(user_id, entries, lab_name=None, test_date=None, notes=None):
