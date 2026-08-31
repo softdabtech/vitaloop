@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle, Building2, CheckCircle2, Route, Sparkles, UserCircle2 } from 'lucide-react'
+import { AlertCircle, UserCircle2 } from 'lucide-react'
 import { useSubscription } from '../hooks/useSubscription.js'
 import UploadZone from '../components/UploadZone.jsx'
 import ManualBiomarkerEntry from '../components/ManualBiomarkerEntry.jsx'
-import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import AnalysisProgressIndicator from '../components/AnalysisProgressIndicator.jsx'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
@@ -69,13 +68,6 @@ const UPLOAD_COPY = {
     pageTitle: 'Upload Results',
     pageSubtitle: (concern) => concern ? `Upload results for: ${concern}` : 'Upload results in context of a symptom check and lab plan.',
     pageHelper: 'This upload helps answer your active concern and improves protocol decisions.',
-    concernTitle: 'Concern linkage',
-    concernEmpty: 'No active concern found. Start Symptom Check first for better context.',
-    concernActive: (concern) => `Active concern: ${concern}`,
-    answerTitle: 'This upload will help answer',
-    answerBody: 'What biomarkers currently support or contradict your symptom hypothesis.',
-    nextTitle: 'Next step clarity',
-    nextBody: 'After analysis, open Results & Trends to prioritize markers and retest plan.',
     reviewTitle: 'Review uncertain markers',
     reviewBody: 'Some extracted values need a quick check before VITALOOP uses them in the final report.',
     reviewConfirm: 'Confirm and rebuild report',
@@ -117,13 +109,6 @@ const UPLOAD_COPY = {
     pageTitle: 'Завантажити аналізи',
     pageSubtitle: (concern) => concern ? `Завантаження для: ${concern}` : 'Завантажте результати в контексті симптомів і плану аналізів.',
     pageHelper: 'Це допоможе повʼязати показники з вашою скаргою і пріоритетами.',
-    concernTitle: 'Звʼязок зі скаргою',
-    concernEmpty: 'Активної скарги немає. Почніть із перевірки симптомів для кращого контексту.',
-    concernActive: (concern) => `Активна скарга: ${concern}`,
-    answerTitle: 'Це завантаження допоможе зрозуміти',
-    answerBody: 'Які показники підтримують або спростовують вашу поточну гіпотезу щодо симптомів.',
-    nextTitle: 'Наступний крок',
-    nextBody: 'Після аналізу відкрийте результати й динаміку, щоб побачити пріоритети та план повторної перевірки.',
     reviewTitle: 'Перевірте непевні показники',
     reviewBody: 'Деякі значення потребують швидкої перевірки перед тим, як VITALOOP використає їх у фінальному звіті.',
     reviewConfirm: 'Підтвердити й оновити звіт',
@@ -243,7 +228,12 @@ export default function Upload() {
   const queryClient = useQueryClient()
   const { isPremium, uploadsRemaining, loading: subLoading } = useSubscription()
   const [uploadMode, setUploadMode] = useState('pdf') // 'pdf' | 'manual'
-  const [labName, setLabName] = useState('')
+  // The "Lab / Clinic name" input that set this was removed from the page.
+  // labName now always stays '', so the `if (labName)` guards below are a
+  // permanent no-op (harmless — lab_name was always optional) rather than
+  // dead code that would error. Left in place instead of ripped out in case
+  // the field comes back; setLabName is intentionally unused now.
+  const [labName, setLabName] = useState('') // eslint-disable-line no-unused-vars
   const [analyzing, setAnalyzing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [selectedFileName, setSelectedFileName] = useState('')
@@ -482,22 +472,30 @@ export default function Upload() {
   return (
     <div className="space-y-6">
       <div className="mx-auto w-full max-w-6xl">
-        <CabinetPageHeader
-          title={copy.pageTitle}
-          subtitle={copy.pageSubtitle(activeConcern)}
-          helper={copy.pageHelper}
-        />
-
-        <CoachCard className="mb-6 p-4 sm:p-5">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Was two separate cards (a CabinetPageHeader + a CoachCard right below
+            it) — merged into one, per explicit request, since stacking a page
+            title and a second "flow" heading right under it read as two
+            competing headers. Typography is now consistent between the two
+            headings: same weight (font-bold, not extrabold) and same text
+            color (slate-900), just different sizes so the hierarchy (page
+            title > section heading) is still clear. */}
+        <CoachCard className="mb-6 p-5 sm:p-6">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="coach-eyebrow">{isUk ? 'Процес' : 'Upload flow'}</p>
-              <h2 className="text-xl font-extrabold text-slate-950">{isUk ? 'Від файлу до зрозумілого результату' : 'From file to clear results'}</h2>
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{copy.pageTitle}</h1>
+              <p className="mt-1 text-sm leading-relaxed text-slate-500">{copy.pageSubtitle(activeConcern)}</p>
+              <p className="mt-1 text-xs text-slate-400">{copy.pageHelper}</p>
             </div>
             <CoachBadge tone={analyzing ? 'warning' : candidateReview ? 'primary' : 'neutral'}>
               {analyzing ? (isUk ? 'AI аналізує' : 'AI analysis') : candidateReview ? (isUk ? 'Перевірка' : 'Review') : (isUk ? 'Готово до завантаження' : 'Ready')}
             </CoachBadge>
           </div>
+
+          <div className="mb-3">
+            <p className="coach-eyebrow">{isUk ? 'Процес' : 'Upload flow'}</p>
+            <h2 className="text-base font-bold text-slate-900">{isUk ? 'Від файлу до зрозумілого результату' : 'From file to clear results'}</h2>
+          </div>
+
           <div className="grid gap-3 md:grid-cols-3">
             {[
               { label: isUk ? 'Завантаження' : 'Upload', body: isUk ? 'PDF, фото або ручне введення.' : 'PDF, images, or manual entry.', active: !analyzing && !candidateReview },
@@ -515,21 +513,6 @@ export default function Upload() {
           </div>
           {analyzing && <div className="mt-4"><CoachProgress value={66} label={isUk ? 'Обробка' : 'Processing'} tone="primary" /></div>}
         </CoachCard>
-
-        <div className="mb-6 grid gap-3 lg:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Route className="h-4 w-4 text-emerald-600" /> {copy.concernTitle}</div>
-            <p className="text-sm text-slate-500">{activeConcern ? copy.concernActive(activeConcern) : copy.concernEmpty}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> {copy.answerTitle}</div>
-            <p className="text-sm text-slate-500">{isUk ? 'Ключове питання: які маркери потребують уваги в першу чергу.' : 'Core question: which markers need attention first.'}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" /> {copy.nextTitle}</div>
-            <p className="text-sm text-slate-500">{isUk ? 'Далі: пріоритети, безпечні наступні кроки і план повторної перевірки.' : 'Then: priorities, safer next steps, and retest direction.'}</p>
-          </div>
-        </div>
 
         {!activeConcern && (
           <div className="mb-6 flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
@@ -701,53 +684,11 @@ export default function Upload() {
               </div>
             )}
 
-            <div className="mb-4 grid gap-3 md:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> {isUk ? 'Безпечне завантаження' : 'Secure upload'}</div>
-                <p className="text-sm text-slate-500">{isUk ? 'Файл безпечно завантажується й аналізується для структурованого розбору показників.' : 'Your file is securely uploaded and analyzed to extract biomarker context.'}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" /> {isUk ? 'Що буде далі' : 'What unlocks next'}</div>
-                <p className="text-sm text-slate-500">{isUk ? 'Пріоритетні показники, звʼязок із симптомами, план дій і напрямок повторної перевірки.' : 'Priority markers, symptom-linked interpretation, protocol updates, and retest direction.'}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><AlertCircle className="h-4 w-4 text-amber-500" /> {isUk ? 'Найкраще розпізнавання' : 'Best results'}</div>
-                <p className="text-sm text-slate-500">{isUk ? 'Використовуйте чіткий повносторінковий PDF, де видно назви, значення, одиниці та референси.' : 'Use a clear full-page PDF where marker names, values, units, and ranges are readable.'}</p>
-              </div>
-            </div>
-
-            <div className="mb-6 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
-              <div className={`rounded-xl border px-3 py-2 ${analyzing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
-                1. {isUk ? 'Завантаження файлу' : 'Upload file'}
-              </div>
-              <div className={`rounded-xl border px-3 py-2 ${analyzing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
-                2. {isUk ? 'AI-аналіз' : 'AI analysis'}
-              </div>
-              <div className={`rounded-xl border px-3 py-2 ${!isBusy && selectedFileName ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
-                3. {isUk ? 'Відкрити результати' : 'Open results'}
-              </div>
-            </div>
-
             {errorMessage && (
               <div className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">
                 {errorMessage}
               </div>
             )}
-
-            <div className="mb-6">
-              <label className="mb-1 block text-sm font-medium text-slate-700">{isUk ? 'Назва лабораторії / клініки (необовʼязково)' : 'Lab / Clinic name (optional)'}</label>
-              <input
-                value={labName}
-                disabled={isBusy}
-                onChange={(e) => setLabName(e.target.value)}
-                placeholder={isUk ? 'Сінево, Діла, інша...' : 'Quest, LabCorp, Other...'}
-                className="vtl-focus-ring w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-800 placeholder-slate-400 disabled:cursor-not-allowed disabled:opacity-60 focus:border-emerald-400 focus:outline-none"
-              />
-              <p className="mt-2 flex items-start gap-2 text-xs text-slate-500">
-                <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
-                <span>{isUk ? '* Якщо лабораторії ще немає в базі, це нормально. Ви все одно можете завантажити PDF.' : '* If your clinic or lab is not recognized yet, it is still fine. Our lab database is still growing and more providers will be added soon.'}</span>
-              </p>
-            </div>
 
             <div className="mt-6">
               {analyzing && (
