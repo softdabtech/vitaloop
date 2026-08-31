@@ -817,8 +817,69 @@ export default function Results() {
           </SectionCard>
         </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-4">
-          <SectionCard icon={CheckCircle2} title={copy.nextSteps}>
+        {/* Full biomarker table moved up here (right after Top Findings / Why
+            This Matters) per explicit request — it used to sit near the
+            bottom of the page, after Next Steps/Today/This Month/Doctor
+            Questions and the shopping links, which buried the one place that
+            shows every marker (not just the top 3 priority ones) below a lot
+            of secondary content. */}
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">{copy.tableTitle}</h2>
+              <p className="mt-1 text-sm text-slate-500">{copy.tableSummary(optimalCount, watchCount, outOfRangeCount)}</p>
+            </div>
+            <FeatureGate
+              feature="advanced_protocol"
+              onLocked={triggerSubscriptionRequiredPaywall}
+              fallback={
+                <button onClick={triggerSubscriptionRequiredPaywall} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
+                  {copy.unlockTrends}
+                </button>
+              }
+            >
+              <button onClick={() => navigate('/progress')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
+                {copy.viewTrends}
+              </button>
+            </FeatureGate>
+          </div>
+          <div className="overflow-x-auto rounded-2xl border border-slate-100">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.biomarker}</th>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.value}</th>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.ref}</th>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.status}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {rankedBiomarkers.map((b, idx) => {
+                  const meta = STATUS_META[b.status_normalized] || STATUS_META.BORDERLINE
+                  return (
+                    <tr key={b.id || `${b.name}-${idx}`} className="transition hover:bg-slate-50">
+                      <td className="px-4 py-3 font-medium text-slate-950">{displayBiomarkerName(b, isUk)}</td>
+                      <td className="px-4 py-3 text-slate-700">{formatMetric(b)}</td>
+                      <td className="px-4 py-3 text-slate-500">{formatRange(b, copy)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{isUk ? meta.ukLabel || meta.label : meta.label}</span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Was `grid lg:grid-cols-4` — below the 1024px breakpoint that
+            collapses straight to a single column with no intermediate step,
+            these 4 cards stacked fully vertically. Switched to a horizontally
+            scrolling row (same pattern already used for the Health Journey
+            stepper on Dashboard) so it stays a horizontal row of cards at
+            every viewport width instead of only above `lg`. */}
+        <div className="mt-6 flex gap-4 overflow-x-auto pb-2">
+          <SectionCard icon={CheckCircle2} title={copy.nextSteps} className="min-w-[260px] flex-1">
             {reportActions.length ? (
               <ul className="space-y-3 text-sm leading-6 text-slate-700">
                 {reportActions.slice(0, 4).map((item, idx) => (
@@ -833,15 +894,15 @@ export default function Results() {
             )}
           </SectionCard>
 
-          <SectionCard icon={ArrowRight} title={copy.today}>
+          <SectionCard icon={ArrowRight} title={copy.today} className="min-w-[260px] flex-1">
             <p className="text-sm leading-6 text-slate-600">{reportActions[0]?.body || reportActions[0]?.title || copy.reviewTopFinding}</p>
           </SectionCard>
 
-          <SectionCard icon={RefreshCw} title={copy.thisMonth}>
+          <SectionCard icon={RefreshCw} title={copy.thisMonth} className="min-w-[260px] flex-1">
             <p className="text-sm leading-6 text-slate-600">{reportRetest[0]?.timing || 'Plan retesting based on symptoms, clinician guidance, and the marker involved.'}</p>
           </SectionCard>
 
-          <SectionCard icon={MessageCircle} title={copy.doctorQuestions}>
+          <SectionCard icon={MessageCircle} title={copy.doctorQuestions} className="min-w-[260px] flex-1">
             {reportDiscussion.length ? (
               <ul className="space-y-2 text-sm leading-6 text-slate-700">
                 {reportDiscussion.slice(0, 5).map((item, idx) => (
@@ -852,7 +913,6 @@ export default function Results() {
               <p className="text-sm leading-6 text-slate-600">{copy.discussFallback}</p>
             )}
           </SectionCard>
-
         </div>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -920,55 +980,6 @@ export default function Results() {
             </div>
           </div>
         )}
-
-        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-950">{copy.tableTitle}</h2>
-              <p className="mt-1 text-sm text-slate-500">{copy.tableSummary(optimalCount, watchCount, outOfRangeCount)}</p>
-            </div>
-            <FeatureGate
-              feature="advanced_protocol"
-              onLocked={triggerSubscriptionRequiredPaywall}
-              fallback={
-                <button onClick={triggerSubscriptionRequiredPaywall} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
-                  {copy.unlockTrends}
-                </button>
-              }
-            >
-              <button onClick={() => navigate('/progress')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
-                {copy.viewTrends}
-              </button>
-            </FeatureGate>
-          </div>
-          <div className="overflow-x-auto rounded-2xl border border-slate-100">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-slate-600">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold">{copy.biomarker}</th>
-                  <th className="px-4 py-3 text-left font-semibold">{copy.value}</th>
-                  <th className="px-4 py-3 text-left font-semibold">{copy.ref}</th>
-                  <th className="px-4 py-3 text-left font-semibold">{copy.status}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {rankedBiomarkers.map((b, idx) => {
-                  const meta = STATUS_META[b.status_normalized] || STATUS_META.BORDERLINE
-                  return (
-                    <tr key={b.id || `${b.name}-${idx}`} className="transition hover:bg-slate-50">
-                      <td className="px-4 py-3 font-medium text-slate-950">{displayBiomarkerName(b, isUk)}</td>
-                      <td className="px-4 py-3 text-slate-700">{formatMetric(b)}</td>
-                      <td className="px-4 py-3 text-slate-500">{formatRange(b, copy)}</td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{isUk ? meta.ukLabel || meta.label : meta.label}</span>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
 
         <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
