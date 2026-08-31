@@ -1,3 +1,14 @@
+// NOTE: this page is currently unreachable for real users — App.jsx
+// redirects /assignments and /assignments/:id to /dashboard instead of
+// rendering it. It shows tasks a human practitioner/coach assigned via the
+// CRM (practitioner_assignments table), not the user's own AI-generated
+// protocol — every current self-serve end_user has no practitioner attached,
+// so this was a permanent, confusing dead end reachable from the sidebar's
+// "Protocol" link and the "Follow your plan" journey step (both removed).
+// This is a later-product-stage feature (coached/practitioner-attached
+// users), not deleted — just hidden until that stage exists. Backend
+// (assignment_service.py, /assignments API) is untouched and still serves
+// the practitioner/CRM side of the product.
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'

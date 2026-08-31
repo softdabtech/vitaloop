@@ -796,8 +796,22 @@ export default function App() {
           <Route path="/protocol/:uploadId" element={renderCabinetRoute(<ProtocolPage />)} />
           <Route path="/avatar" element={renderCabinetRoute(<Avatar />)} />
           <Route path="/progress" element={<Navigate to="/lab-results" replace />} />
-          <Route path="/assignments" element={renderCabinetRoute(<Assignments />, { allowBeforeOnboarding: true })} />
-          <Route path="/assignments/:assignmentId" element={renderCabinetRoute(<AssignmentDetails />, { allowBeforeOnboarding: true })} />
+          {/* /assignments and /assignments/:id show tasks a human practitioner/coach
+              assigned via the CRM (practitioner_assignments table) — NOT the user's
+              own AI-generated protocol. Self-serve end_users never have a
+              practitioner attached, so this page is permanently, structurally
+              empty for every current user and only confuses them (a real user hit
+              this directly). Hidden behind a redirect — intentionally, for a later
+              coached/practitioner product stage — rather than deleted, since the
+              Assignments/AssignmentDetails components and their CRM-facing backend
+              are still real and still used by the practitioner side of the
+              product. Do not re-enable this route for end_users without also
+              fixing the "Follow your plan" journey step and nextAction fallback in
+              UserDashboard.jsx, and the removed sidebar entry in
+              UserDashboardSidebar.jsx, which were pointed elsewhere for the same
+              reason. */}
+          <Route path="/assignments" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/assignments/:assignmentId" element={<Navigate to="/dashboard" replace />} />
           <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />, { allowBeforeOnboarding: true })} />
           <Route path="/settings" element={renderCabinetRoute(<Settings />, { allowBeforeOnboarding: true })} />
           <Route path="/health-profile" element={renderCabinetRoute(<HealthProfile />, { allowBeforeOnboarding: true })} />

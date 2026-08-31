@@ -1,3 +1,7 @@
+// NOTE: unreachable for real users — see the same note in Assignments.jsx
+// (App.jsx redirects both /assignments and /assignments/:id to /dashboard).
+// Later-product-stage feature (coached/practitioner-attached users), hidden
+// not deleted.
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Calendar, Target, Sparkles } from 'lucide-react'

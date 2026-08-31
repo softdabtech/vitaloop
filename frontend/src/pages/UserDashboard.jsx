@@ -20,7 +20,12 @@ const DASHBOARD_COPY = {
       { label: 'Prepare your lab plan', helper: 'See which tests matter for your concern.', path: '/lab-plan', icon: ClipboardList },
       { label: 'Upload your labs', helper: 'Add PDF, images, spreadsheets, or manual values.', path: '/upload', icon: UploadCloud },
       { label: 'Understand results', helper: 'See what may connect to your symptoms.', path: '/lab-results', icon: Beaker },
-      { label: 'Follow your plan', helper: 'Turn findings into practical next steps.', path: '/assignments', icon: Route },
+      // Was '/assignments' — that page shows practitioner-assigned CRM tasks,
+      // not the user's own protocol, and is hidden for the current
+      // self-serve product stage (see App.jsx). /lab-results lists every
+      // upload; each one links to its own /protocol/:uploadId, which is
+      // where "your plan" actually lives.
+      { label: 'Follow your plan', helper: 'Turn findings into practical next steps.', path: '/lab-results', icon: Route },
       { label: 'Track progress', helper: 'Check in and compare changes over time.', path: '/progress', icon: CalendarCheck2 },
     ],
     nextBestStep: 'Your Next Best Step',
@@ -121,7 +126,7 @@ const DASHBOARD_COPY = {
       { label: 'Підготуйте план аналізів', helper: 'Подивіться, які перевірки мають сенс для вашої скарги.', path: '/lab-plan', icon: ClipboardList },
       { label: 'Завантажте аналізи', helper: 'Додайте PDF, фото, таблицю або введіть показники вручну.', path: '/upload', icon: UploadCloud },
       { label: 'Зрозумійте результати', helper: 'Побачте, що може бути повʼязано з вашими симптомами.', path: '/lab-results', icon: Beaker },
-      { label: 'Виконуйте план', helper: 'Перетворіть висновки на практичні кроки.', path: '/assignments', icon: Route },
+      { label: 'Виконуйте план', helper: 'Перетворіть висновки на практичні кроки.', path: '/lab-results', icon: Route },
       { label: 'Відстежуйте прогрес', helper: 'Проходьте чек-іни й порівнюйте зміни з часом.', path: '/progress', icon: CalendarCheck2 },
     ],
     nextBestStep: 'Ваш наступний крок',
@@ -378,9 +383,13 @@ export default function UserDashboard() {
       }
     }
     if (!hasProtocol) {
+      // Fallback was '/assignments' (practitioner-assigned CRM tasks, hidden
+      // for this product stage — see App.jsx). If somehow there's no
+      // latestUpload.id yet, /lab-results is the correct, always-valid page
+      // to send the user to instead.
       return {
         label: copy.actions.openActionPlan,
-        path: latestUpload?.id ? `/protocol/${latestUpload.id}` : '/assignments',
+        path: latestUpload?.id ? `/protocol/${latestUpload.id}` : '/lab-results',
         why: copy.nextActions.protocolWhy,
         outcome: copy.nextActions.protocolOutcome,
       }
@@ -417,6 +426,13 @@ export default function UserDashboard() {
       path: latestUpload?.id ? `/results/${latestUpload.id}` : '/upload',
     },
     {
+      // `assignments` (blocks.assignments from /dashboard/summary) is the same
+      // practitioner_assignments-backed data as the hidden /assignments page —
+      // always empty for a self-serve end_user, so this branch is currently
+      // unreachable in practice. Left as a ternary (not hardcoded to the
+      // "missing" branch) rather than restructured, since /assignments' own
+      // redirect to /dashboard makes the '/assignments' path harmless even if
+      // this ever does become reachable — see App.jsx.
       title: assignments.length ? copy.recent.actionsReady : copy.recent.actionsMissing,
       body: assignments.length ? copy.recent.waiting(assignments.length) : copy.recent.generate,
       done: Boolean(assignments.length),

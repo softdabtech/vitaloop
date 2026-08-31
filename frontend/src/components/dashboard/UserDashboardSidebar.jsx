@@ -1,7 +1,6 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   BarChart3,
-  ClipboardList,
   ChevronLeft,
   Clock,
   CreditCard,
@@ -29,7 +28,14 @@ const MENU_ITEMS = [
   { icon: Route, label: 'Lab Plan', ukLabel: 'План аналізів', path: '/lab-plan', badge: null },
   { icon: Upload, label: 'Upload Results', ukLabel: 'Завантажити', path: '/upload', badge: null },
   { icon: FileText, label: 'Results & Trends', ukLabel: 'Результати', path: '/lab-results', badge: null },
-  { icon: ClipboardList, label: 'Protocol', ukLabel: 'План дій', path: '/assignments', badgeKey: 'pending_assignments', premium: true },
+  // "Protocol" -> /assignments removed intentionally, not by accident: that
+  // route shows tasks a human practitioner/coach assigned via the CRM, not
+  // the user's own AI-generated protocol (which lives at /protocol/:uploadId,
+  // reached from Results). Every current self-serve end_user has zero
+  // practitioner_assignments rows, so this nav item was a permanent dead end
+  // labeled with the one word ("Protocol") users most want. Re-add only when
+  // the product actually has a coached/practitioner-attached user tier — see
+  // the matching note on the /assignments route in App.jsx.
   { icon: Clock, label: 'Check-in', ukLabel: 'Чек-ін', path: '/check-ins', badge: null, premium: true },
   { icon: Flame, label: 'Profile & Safety', ukLabel: 'Профіль і безпека', path: '/health-profile', badge: null },
   { icon: CreditCard, label: 'Billing', ukLabel: 'Оплата', path: '/subscription', badge: null },
