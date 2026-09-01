@@ -4,8 +4,8 @@ import { ArrowRight, Beaker, CalendarCheck2, CheckCircle2, ClipboardList, HelpCi
 import { useAuth } from '../hooks/useAuth.js'
 import { useDashboardSummary, useQuestionnaireSession } from '../hooks/useQueries.js'
 import { useSubscription } from '../hooks/useSubscription.js'
-import { CoachBadge, CoachButton, CoachCard, CoachProgress, CoachSkeleton, CoachTooltip, EmptyCoachState, InsightCard, KPIBlock } from '../components/coach/CoachUI.jsx'
-import { HEALTH_LOOP_STAGES, getHealthLoopStageIndex } from '../lib/cabinetV511.js'
+import { CoachBadge, CoachButton, CoachCard, CoachProgress, CoachSkeleton, EmptyCoachState, InsightCard, KPIBlock } from '../components/coach/CoachUI.jsx'
+import { getHealthLoopStageIndex } from '../lib/cabinetV511.js'
 import { isUkrainianLocale } from '../lib/locale.js'
 // coach-shell/coach-card/etc. (CoachUI.jsx) have no built-in styles of their
 // own — every rule lives in this stylesheet. Vite code-splits CSS per lazy
@@ -31,7 +31,6 @@ const DASHBOARD_COPY = {
     nextBestStep: 'Your Next Best Step',
     whyThisStep: 'Why this step?',
     nextAction: 'Next Action',
-    etaTooltip: 'Estimated time is based on the current step, not a medical risk score.',
     journeyProgress: 'Journey progress',
     premiumNotice: 'Premium unlocks deeper protocols, check-ins, and trend guidance when you reach those steps.',
     viewPlans: 'View plans',
@@ -67,11 +66,18 @@ const DASHBOARD_COPY = {
     noLoadBody: 'Your account is safe. Try refreshing, or open your journey to continue from the last saved step.',
     openJourney: 'Open journey',
     healthSignalScore: 'Health Signal Score',
-    overallNotCalculated: 'Overall score not yet calculated — upload a lab and complete a check-in to generate it.',
-    overallLabel: (v) => `Overall: ${v}%`,
     notYetCalculated: 'Not yet calculated',
     safety: 'Safety',
     noRedFlags: 'No urgent red flags reported.',
+    // Stage 2G (mobile-audit follow-up): the score card used to show one flat
+    // qualitative-free number. Tier labels turn "82%" into "On track" so the
+    // score reads as a verdict, not a raw stat the user has to interpret.
+    scoreTierGood: 'On track',
+    scoreTierFair: 'Fair',
+    scoreTierAttention: 'Needs attention',
+    scoreBreakdown: 'Score Breakdown',
+    groupClinical: 'Health Signals',
+    groupEngagement: 'Engagement',
     scoreLabels: {
       symptom: 'Symptoms',
       biomarker: 'Biomarkers',
@@ -132,7 +138,6 @@ const DASHBOARD_COPY = {
     nextBestStep: 'Ваш наступний крок',
     whyThisStep: 'Чому саме цей крок?',
     nextAction: 'Наступна дія',
-    etaTooltip: 'Оцінка часу стосується поточного кроку, а не медичного ризику.',
     journeyProgress: 'Прогрес шляху',
     premiumNotice: 'Premium відкриває глибші протоколи, чек-іни та динаміку, коли ви доходите до цих етапів.',
     viewPlans: 'Переглянути тарифи',
@@ -168,11 +173,15 @@ const DASHBOARD_COPY = {
     noLoadBody: 'Ваш акаунт у безпеці. Оновіть сторінку або відкрийте шлях, щоб продовжити з останнього збереженого кроку.',
     openJourney: 'Відкрити шлях',
     healthSignalScore: 'Індекс здоровʼя',
-    overallNotCalculated: 'Загальний бал ще не розраховано — завантажте аналіз і пройдіть чек-ін, щоб отримати його.',
-    overallLabel: (v) => `Загалом: ${v}%`,
     notYetCalculated: 'Ще не розраховано',
     safety: 'Безпека',
     noRedFlags: 'Термінових тривожних сигналів не повідомлено.',
+    scoreTierGood: 'На хорошому шляху',
+    scoreTierFair: 'Задовільно',
+    scoreTierAttention: 'Потребує уваги',
+    scoreBreakdown: 'Деталі оцінки',
+    groupClinical: 'Медичні сигнали',
+    groupEngagement: 'Активність',
     scoreLabels: {
       symptom: 'Симптоми',
       biomarker: 'Біомаркери',
@@ -223,19 +232,6 @@ const DASHBOARD_COPY = {
   },
 }
 
-function getStageEta(stage) {
-  const byStage = {
-    Concern: '3-5 min',
-    Questions: '4-6 min',
-    'Lab Plan': '2-4 min',
-    Results: '5-8 min',
-    Protocol: '4-6 min',
-    'Check-in': '2-3 min',
-    Retest: '3-4 min',
-  }
-  return byStage[stage] || '3-5 min'
-}
-
 function mapTechnicalStageToHumanIndex(stageIndex) {
   if (stageIndex <= 1) return 0
   if (stageIndex === 2) return 1
@@ -279,7 +275,47 @@ function JourneyStepNode({ step, index, active, done, onClick, isFirst, isLast }
 // Kept as a dedicated component (rather than reusing CoachProgress, which
 // defaults a missing value to 0%) specifically to preserve this distinction
 // — CoachProgress cannot tell "genuinely 0" apart from "not calculated yet".
-function CoachScoreRow({ label, value, notYetCalculated }) {
+// Stage 2G.2: a compact SVG ring gauge for the overall score — used instead
+// of a flat number so the hero status card reads as a real "verdict" widget
+// rather than another stat line, and so it stays legible in a narrow column
+// (unlike a side-by-side split, a ring doesn't need extra horizontal room).
+function ScoreRing({ value, tone, size = 84, strokeWidth = 8 }) {
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const pct = value == null ? 0 : Math.max(0, Math.min(100, value))
+  const offset = circumference * (1 - pct / 100)
+  const strokeColor = {
+    success: 'var(--coach-success)',
+    warning: 'var(--coach-warning)',
+    critical: 'var(--coach-critical)',
+    neutral: '#cbd5e1',
+  }[tone] || 'var(--coach-primary)'
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0" role="img" aria-label={value != null ? `${pct}%` : undefined}>
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e2e8f0" strokeWidth={strokeWidth} />
+      {value != null && (
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          style={{ transition: 'stroke-dashoffset 500ms ease' }}
+        />
+      )}
+      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" fontSize={size * 0.24} fontWeight="800" fill="#0f172a">
+        {value != null ? `${value}%` : '—'}
+      </text>
+    </svg>
+  )
+}
+
+function CoachScoreRow({ label, value, tone = 'primary', notYetCalculated }) {
   if (value === null || value === undefined) {
     return (
       <div className="coach-progress" aria-label={label}>
@@ -292,7 +328,47 @@ function CoachScoreRow({ label, value, notYetCalculated }) {
     )
   }
   const safeValue = Math.max(0, Math.min(100, Number(value)))
-  return <CoachProgress value={safeValue} label={label} />
+  return <CoachProgress value={safeValue} label={label} tone={tone} />
+}
+
+// Stage 2G: turns a raw 0-100 number into the same three-tier verdict
+// everywhere it appears on the dashboard (score badge + progress bar color).
+// Bands are a presentation choice only — not a new clinical calculation and
+// not stored anywhere — so they're safe to define purely in the frontend.
+function scoreTone(value) {
+  if (value === null || value === undefined) return 'neutral'
+  const v = Number(value)
+  if (v >= 70) return 'success'
+  if (v >= 40) return 'warning'
+  return 'critical'
+}
+
+function scoreTierLabel(tone, copy) {
+  if (tone === 'success') return copy.scoreTierGood
+  if (tone === 'warning') return copy.scoreTierFair
+  if (tone === 'critical') return copy.scoreTierAttention
+  return copy.notYetCalculated
+}
+
+// Colors mirror .coach-badge--{success,warning,critical} in
+// coach-design-system.css exactly, so the safety strip reads as the same
+// "tone language" as every badge elsewhere on the page.
+const SAFETY_TONE_STYLES = {
+  success: { bg: '#dcfce7', border: 'rgba(34,197,94,.25)', color: '#15803d' },
+  warning: { bg: '#fef3c7', border: 'rgba(245,158,11,.3)', color: '#92400e' },
+  critical: { bg: '#fee2e2', border: 'rgba(239,68,68,.28)', color: '#b91c1c' },
+}
+
+// The dashboard only ever receives one of the three fixed sentences produced
+// by Questionnaire.jsx's urgencyGuidance() (or the local noRedFlags fallback
+// when no concern is set yet) — this is a closed, code-owned enum, not
+// open-ended user text, so matching on each variant's unique keyword is safe.
+// Keep these keywords in sync with Questionnaire.jsx if that copy changes.
+function classifySafetyTone(text) {
+  const t = String(text || '')
+  if (t.includes('Multiple') || t.includes('кілька')) return 'critical'
+  if (t.includes('Some answers') || t.includes('Деякі відповіді')) return 'warning'
+  return 'success'
 }
 
 export default function UserDashboard() {
@@ -337,8 +413,6 @@ export default function UserDashboard() {
 
   const stageIndex = getHealthLoopStageIndex({ hasConcern, hasQuestions, hasLabPlan, hasResults, hasProtocol, hasCheckin })
   const humanStageIndex = mapTechnicalStageToHumanIndex(stageIndex)
-  const activeStage = HEALTH_LOOP_STAGES[stageIndex]
-  const stageEta = getStageEta(activeStage)
 
   // Stage 2F: every value below comes directly from a real, traceable
   // backend calculation (calculate_health_score() -> health_scores table,
@@ -356,6 +430,15 @@ export default function UserDashboard() {
   const biomarkerScore = healthScoreComponents.biomarker
   const adherenceScore = healthScoreComponents.adherence
   const profileScore = summary?.profile?.onboarding?.completion_pct ?? null
+
+  // Stage 2G: computed once here so the hero status card and the breakdown
+  // card below agree on the exact same numbers instead of each formatting
+  // stats.health_score independently.
+  const overallScore = stats?.health_score != null ? Math.round(stats.health_score) : null
+  const overallTone = scoreTone(overallScore)
+  const safetyText = concernSummary?.urgency || copy.noRedFlags
+  const safetyTone = classifySafetyTone(safetyText)
+  const journeyPct = Math.round(((humanStageIndex + 1) / journeySteps.length) * 100)
 
   const nextAction = useMemo(() => {
     if (!hasConcern) {
@@ -480,19 +563,47 @@ export default function UserDashboard() {
             </div>
           </div>
 
+          {/* Stage 2G.2: dropped the ETA badge — "2-3 min" read as an urgency
+              countdown next to a health score, not what it actually meant
+              (just how long the next step usually takes). This variant swaps
+              the flat "31%" number for a ring gauge — a materially different
+              treatment from the two stacked-number layouts already tried,
+              and one that stays compact at this card's real width (a
+              side-by-side score/safety split was tried here first and broke:
+              this slot only gets ~0.75 of the hero's width, so Tailwind's
+              sm: breakpoint — keyed to viewport width, not this card's own
+              width — never actually kicked in narrow). Everything below the
+              ring stays single-column, which is what this narrow column can
+              actually hold cleanly. */}
           <CoachCard className="p-5" tone="soft">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="coach-eyebrow">{copy.nextAction}</p>
-                <h2 className="text-xl font-extrabold text-slate-950">{nextAction.label}</h2>
-              </div>
-              <CoachTooltip text={copy.etaTooltip}>
-                <CoachBadge tone="primary">{stageEta}</CoachBadge>
-              </CoachTooltip>
+            <p className="coach-eyebrow">{copy.healthSignalScore}</p>
+
+            <div className="mt-2 flex items-center gap-4">
+              <ScoreRing value={overallScore} tone={overallTone} />
+              <CoachBadge tone={overallTone}>{scoreTierLabel(overallTone, copy)}</CoachBadge>
             </div>
-            <p className="mt-4 text-sm leading-6 text-slate-600">{nextAction.outcome}</p>
-            <div className="mt-5">
-              <CoachProgress value={Math.round(((humanStageIndex + 1) / journeySteps.length) * 100)} label={copy.journeyProgress} />
+
+            <div
+              role="note"
+              aria-label={copy.safety}
+              className="mt-4 flex items-start gap-2 rounded-xl border px-3 py-2.5"
+              style={{ background: SAFETY_TONE_STYLES[safetyTone].bg, borderColor: SAFETY_TONE_STYLES[safetyTone].border }}
+            >
+              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[safetyTone].color }} />
+              <p className="text-xs font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[safetyTone].color }}>{safetyText}</p>
+            </div>
+
+            <div className="mt-4 border-t border-slate-200/70 pt-4">
+              <p className="coach-eyebrow mb-1">{copy.nextAction}</p>
+              <p className="text-base font-extrabold text-slate-950">{nextAction.label}</p>
+
+              <div className="mt-4 flex items-baseline justify-between gap-3">
+                <span className="text-xs font-extrabold uppercase tracking-wide text-slate-400">{copy.journeyProgress}</span>
+                <span className="text-lg font-extrabold text-slate-950">{journeyPct}%</span>
+              </div>
+              <div className="mt-2">
+                <CoachProgress value={journeyPct} />
+              </div>
             </div>
           </CoachCard>
         </div>
@@ -507,28 +618,33 @@ export default function UserDashboard() {
         </CoachCard>
       )}
 
+      {/* Stage 2G: the overall number + safety flag now live in the hero
+          status card above, so this card's only job is the breakdown behind
+          that number. Splitting it into "Health Signals" (symptom +
+          biomarker — the actual clinical-ish inputs) vs "Engagement"
+          (check-in adherence + profile completeness — usage/data-completion
+          metrics) fixes the previous flat 2x2 grid, which gave a low
+          check-in-adherence number the exact same red-flag visual weight as
+          a real biomarker finding even though the two mean very different
+          things. Engagement rows intentionally stay a fixed "primary" tone
+          rather than the value-based success/warning/critical bands used for
+          health signals — low adherence is a nudge, not a health alarm. */}
       <CoachCard className="p-5 sm:p-6">
-        <div className="mb-1 flex items-center gap-2 text-lg font-extrabold text-slate-950">
-          <Sparkles className="h-4 w-4 text-emerald-600" /> {copy.healthSignalScore}
+        <div className="mb-4 flex items-center gap-2 text-lg font-extrabold text-slate-950">
+          <Sparkles className="h-4 w-4 text-emerald-600" /> {copy.scoreBreakdown}
         </div>
-        <p className="mb-4 text-sm leading-6 text-slate-600">
-          {stats?.health_score != null
-            ? copy.overallLabel(Math.round(stats.health_score))
-            : copy.overallNotCalculated}
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <CoachScoreRow label={copy.scoreLabels.symptom} value={symptomScore} notYetCalculated={copy.notYetCalculated} />
-          <CoachScoreRow label={copy.scoreLabels.biomarker} value={biomarkerScore} notYetCalculated={copy.notYetCalculated} />
-          <CoachScoreRow label={copy.scoreLabels.adherence} value={adherenceScore} notYetCalculated={copy.notYetCalculated} />
-          <CoachScoreRow label={copy.scoreLabels.profile} value={profileScore} notYetCalculated={copy.notYetCalculated} />
-        </div>
-      </CoachCard>
 
-      <CoachCard className="p-5 sm:p-6">
-        <div className="mb-2 flex items-center gap-2 text-lg font-extrabold text-slate-950">
-          <ShieldAlert className="h-4 w-4 text-slate-500" /> {copy.safety}
+        <p className="mb-2 text-xs font-extrabold uppercase tracking-wide text-slate-400">{copy.groupClinical}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <CoachScoreRow label={copy.scoreLabels.symptom} value={symptomScore} tone={scoreTone(symptomScore)} notYetCalculated={copy.notYetCalculated} />
+          <CoachScoreRow label={copy.scoreLabels.biomarker} value={biomarkerScore} tone={scoreTone(biomarkerScore)} notYetCalculated={copy.notYetCalculated} />
         </div>
-        <p className="text-sm leading-6 text-slate-600">{concernSummary?.urgency || copy.noRedFlags}</p>
+
+        <p className="mb-2 mt-5 text-xs font-extrabold uppercase tracking-wide text-slate-400">{copy.groupEngagement}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <CoachScoreRow label={copy.scoreLabels.adherence} value={adherenceScore} tone="primary" notYetCalculated={copy.notYetCalculated} />
+          <CoachScoreRow label={copy.scoreLabels.profile} value={profileScore} tone="primary" notYetCalculated={copy.notYetCalculated} />
+        </div>
       </CoachCard>
 
       <CoachCard className="p-5 sm:p-6">

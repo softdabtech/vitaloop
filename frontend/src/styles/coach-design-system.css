@@ -319,6 +319,7 @@
 .coach-progress__bar--primary { background: linear-gradient(90deg, var(--coach-primary), #2f80ed); }
 .coach-progress__bar--warning { background: var(--coach-warning); }
 .coach-progress__bar--success { background: var(--coach-success); }
+.coach-progress__bar--critical { background: var(--coach-critical); }
 
 .coach-tooltip {
   position: relative;
