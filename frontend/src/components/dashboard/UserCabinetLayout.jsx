@@ -132,7 +132,17 @@ export default function UserCabinetLayout({ children }) {
         </button>
 
         <main className="flex-1 overflow-x-hidden">
-          <div className="mx-auto w-full max-w-[1380px] px-3 py-5 pb-[calc(var(--vtl-bottom-bar-height)+20px)] sm:px-5 sm:py-7 md:pb-8 lg:px-6">
+          {/* pt-16 (mobile+sm) -> md:pt-7: the floating hamburger button above
+              is `fixed left-3 top-3 h-10 w-10`, only visible below `md`. Content
+              used to start at the same py-5/sm:py-7 top offset the button sits
+              in, so the button's own semi-transparent pill covered the first
+              couple of characters of every page's eyebrow/heading text (e.g.
+              "YOUR NEXT BEST STEP" rendered as "UR NEXT BEST STEP") — confirmed
+              on every cabinet route in a mobile-viewport screenshot audit. This
+              reserves clearance for the button exactly on the widths where it's
+              visible, reverting to the original tighter spacing at md+ where it
+              hides. */}
+          <div className="mx-auto w-full max-w-[1380px] px-3 pt-16 pb-[calc(var(--vtl-bottom-bar-height)+20px)] sm:px-5 md:pt-7 md:pb-8 lg:px-6">
             {location.pathname === '/dashboard' && <PWAInstallBanner />}
             {children}
           </div>
