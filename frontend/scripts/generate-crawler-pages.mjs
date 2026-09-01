@@ -30,13 +30,13 @@ const routes = [
   },
   {
     path: '/how-it-works',
-    title: 'How VITALOOP Health Intelligence Works | Core V3',
+    title: 'How AI Blood Test Analysis Works | VITALOOP',
     description: 'See how VITALOOP connects symptom intake, analysis quality gates, biomarker normalization, Knowledge Base reasoning, evidence gaps, safety notes, protocol actions, trends, and weekly progress tracking.',
     priority: '0.9',
     changefreq: 'monthly',
     text: [
       'VITALOOP starts with symptoms and context.',
-      'The product helps organize what may be useful to check, then interprets uploaded or entered lab results through Health Intelligence Core V3 and turns them into a structured plan.',
+      'The product helps organize what may be useful to check, then interprets uploaded or entered lab results through the VITALOOP Health Intelligence Engine and turns them into a structured plan.',
       'The loop continues with weekly check-ins and retesting cycles.',
     ],
   },
@@ -54,8 +54,8 @@ const routes = [
   },
   {
     path: '/features',
-    title: 'Health Intelligence Core V3 Features | VITALOOP',
-    description: 'Explore symptom intake, Health Intelligence Core V3, extraction quality gates, biomarker reasoning, safety notes, action plans, weekly check-ins, and progress tracking.',
+    title: 'AI Blood Test Analysis Features | VITALOOP',
+    description: 'Explore symptom intake, the VITALOOP Health Intelligence Engine, extraction quality gates, biomarker reasoning, safety notes, action plans, weekly check-ins, and progress tracking.',
     priority: '0.8',
     changefreq: 'monthly',
     text: [
@@ -89,7 +89,7 @@ const routes = [
   {
     path: '/faq',
     title: 'VITALOOP Health Intelligence FAQ | Symptoms, Labs, Safety & Retests',
-    description: 'Answers about symptom intake, blood test uploads, biomarker explanations, Health Intelligence Core V3, privacy, pricing, practitioner workflows, and VITALOOP safety limits.',
+    description: 'Answers about symptom intake, blood test uploads, biomarker explanations, the VITALOOP Health Intelligence Engine, privacy, pricing, practitioner workflows, and VITALOOP safety limits.',
     priority: '0.7',
     changefreq: 'monthly',
     text: [
@@ -120,7 +120,7 @@ const routes = [
   {
     path: '/for-investors',
     title: 'Investor Overview | VITALOOP AI Health Platform',
-    description: 'Learn about VITALOOP as a HealthTech platform connecting symptom intake, lab interpretation, Health Intelligence Core V3, evidence gaps, safety-aware plans, and recurring health loops.',
+    description: 'Learn about VITALOOP as a HealthTech platform connecting symptom intake, lab interpretation, the VITALOOP Health Intelligence Engine, evidence gaps, safety-aware plans, and recurring health loops.',
     priority: '0.6',
     changefreq: 'monthly',
     text: [
