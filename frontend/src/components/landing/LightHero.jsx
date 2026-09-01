@@ -2,23 +2,11 @@ import { ChevronRight, FileText, ListChecks, ShieldCheck, Sparkles } from 'lucid
 import { useNavigate } from 'react-router-dom'
 import { CLIENT_PREMIUM_PLAN } from '../../lib/pricing.js'
 
-const HERO_SCREENS = [
-  {
-    src: '/mockups/cabinet-real/upload-results.webp',
-    alt: 'VITALOOP upload results cabinet screen',
-    label: 'Upload results',
-  },
-  {
-    src: '/mockups/example-report/lab-results.webp',
-    alt: 'VITALOOP lab results table with biomarker status and ranges',
-    label: 'Lab results',
-  },
-  {
-    src: '/mockups/example-report/check-in.webp',
-    alt: 'VITALOOP weekly check-in screen',
-    label: 'Weekly check-in',
-  },
-]
+const HERO_SCREEN = {
+  src: '/mockups/cabinet-real/dashboard-today.webp',
+  alt: 'VITALOOP cabinet dashboard with Health Signal Score, score breakdown, and health journey progress',
+  label: 'Today',
+}
 
 const TRUST_CHIPS = [
   { icon: FileText, label: 'PDF/image lab upload' },
@@ -103,16 +91,8 @@ export function LightHero() {
                 <div className="text-sm text-slate-600">Premium plan</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-slate-900">85+</div>
-                <div className="text-sm text-slate-600">Biomarkers analyzed</div>
-              </div>
-              <div>
                 <div className="text-2xl font-bold text-emerald-600">1 upload</div>
                 <div className="text-sm text-slate-600">Free plan includes one lab upload</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-slate-900">One loop</div>
-                <div className="text-sm text-slate-600">Symptoms, labs, actions, and retests</div>
               </div>
             </div>
           </div>
@@ -132,47 +112,14 @@ export function LightHero() {
 
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
                   <img
-                    src={HERO_SCREENS[0].src}
-                    alt={HERO_SCREENS[0].alt}
+                    src={HERO_SCREEN.src}
+                    alt={HERO_SCREEN.alt}
                     width="1792"
-                    height="928"
+                    height="929"
                     fetchPriority="high"
                     decoding="async"
                     className="aspect-[1.93/1] w-full object-cover object-top"
                   />
-                </div>
-
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  {HERO_SCREENS.slice(1).map((screen) => (
-                    <div key={screen.label} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                      <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-                        <span className="text-xs font-bold text-slate-700">{screen.label}</span>
-                        <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                      </div>
-                      <img
-                        src={screen.src}
-                        alt={screen.alt}
-                        width="1600"
-                        height="1000"
-                        loading="lazy"
-                        decoding="async"
-                        className="aspect-[1.6/1] w-full object-cover object-top"
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  {[
-                    ['85+', 'biomarkers'],
-                    ['Clear', 'priority report'],
-                    ['Weekly', 'progress loop'],
-                  ].map(([value, label]) => (
-                    <div key={label} className="rounded-xl bg-slate-50 px-2 py-3 text-center">
-                      <p className="text-sm font-black text-slate-900 sm:text-base">{value}</p>
-                      <p className="mt-0.5 text-[10px] font-semibold text-slate-500 sm:text-xs">{label}</p>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
