@@ -203,7 +203,7 @@ export default function UserDashboardSidebar({
           >
             <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">{isUk ? 'Преміум доступ' : 'Premium access'}</div>
             <div className="mt-1 text-sm font-semibold text-slate-800">{upgradeTarget.label}</div>
-            <div className="mt-1 text-xs text-slate-500">{isUk ? 'Перейти до оплати Stripe' : 'Continue to Stripe checkout'}</div>
+            <div className="mt-1 text-xs text-slate-500">{isUk ? 'Перейти до преміум доступу' : 'Continue to Premium access'}</div>
           </button>
         )}
 

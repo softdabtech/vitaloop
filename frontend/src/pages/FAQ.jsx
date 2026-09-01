@@ -123,7 +123,7 @@ const FAQ_ITEMS = [
       },
       {
         q: 'How does the protocol engine work?',
-        a: 'Health Intelligence Core V3 organizes extracted biomarkers, confidence signals, related patterns, symptoms, safety context, missing evidence, and available history into prioritized educational actions, protocol sections, retest suggestions, and follow-up questions. Clinical decisions remain with you and your qualified practitioner.',
+        a: 'The VITALOOP Health Intelligence Engine organizes extracted biomarkers, confidence signals, related patterns, symptoms, safety context, missing evidence, and available history into prioritized educational actions, protocol sections, retest suggestions, and follow-up questions. Clinical decisions remain with you and your qualified practitioner.',
       },
       {
         q: 'Does the protocol adapt over time?',
@@ -166,7 +166,7 @@ export default function FAQ() {
     <>
       <Seo
         title="VITALOOP Health Intelligence FAQ | Symptoms, Labs, Safety & Retests"
-        description="Answers about symptom intake, blood test uploads, biomarker explanations, Health Intelligence Core V3, privacy, pricing, practitioner workflows, and VITALOOP safety limits."
+        description="Answers about symptom intake, blood test uploads, biomarker explanations, the VITALOOP Health Intelligence Engine, privacy, pricing, practitioner workflows, and VITALOOP safety limits."
         path="/faq"
         schemas={[
           {

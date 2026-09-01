@@ -56,7 +56,6 @@ const Insights = lazy(() => import('./pages/Insights.jsx'))
 const LabResultsList = lazy(() => import('./pages/LabResultsList.jsx'))
 const Assignments = lazy(() => import('./pages/Assignments.jsx'))
 const AssignmentDetails = lazy(() => import('./pages/AssignmentDetails.jsx'))
-const Avatar = lazy(() => import('./pages/Avatar.jsx'))
 const Settings = lazy(() => import('./pages/Settings.jsx'))
 const HealthProfile = lazy(() => import('./pages/HealthProfile.jsx'))
 const Subscription = lazy(() => import('./pages/Subscription.jsx'))
@@ -209,7 +208,6 @@ function FloatingSupportChat() {
     '/lab-plan',
     '/results/',
     '/protocol/',
-    '/avatar',
     '/progress',
     '/assignments',
     '/lab-results',
@@ -621,7 +619,6 @@ function PublicSymptomPrompt({ disabled = false }) {
     '/lab-plan',
     '/results/',
     '/protocol/',
-    '/avatar',
     '/progress',
     '/assignments',
     '/lab-results',
@@ -794,7 +791,7 @@ export default function App() {
           <Route path="/lab-plan" element={renderCabinetRoute(<LabPlan />, { allowBeforeOnboarding: true })} />
           <Route path="/results/:uploadId" element={renderCabinetRoute(<Results />)} />
           <Route path="/protocol/:uploadId" element={renderCabinetRoute(<ProtocolPage />)} />
-          <Route path="/avatar" element={renderCabinetRoute(<Avatar />)} />
+          <Route path="/avatar" element={<Navigate to="/dashboard" replace />} />
           <Route path="/progress" element={<Navigate to="/lab-results" replace />} />
           {/* /assignments and /assignments/:id show tasks a human practitioner/coach
               assigned via the CRM (practitioner_assignments table) — NOT the user's

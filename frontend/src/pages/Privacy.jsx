@@ -50,7 +50,7 @@ export default function Privacy() {
           <p><strong>Health Data:</strong> Lab test PDFs you upload for analysis, biomarker values and status extracted from labs, personalized protocol information, and progress data such as weekly check-ins and biomarker trends.</p>
           <p><strong>Account Information:</strong> Email address, encrypted password, account creation and login dates, subscription plan, and billing status.</p>
           <p><strong>Usage Data:</strong> Pages visited, features used, time spent, device and browser details, and IP-based city/country-level location data.</p>
-          <p><strong>Payment Information:</strong> Stripe processes all payments. We never store full credit card details on our servers.</p>
+          <p><strong>Payment Information:</strong> Premium access is currently activated manually while we finalize an automated billing integration. We never store full credit card details on our servers, and this policy will be updated when self-serve billing goes live.</p>
         </div>
 
         <div>
@@ -68,7 +68,7 @@ export default function Privacy() {
 
         <div>
           <h2 style={h2Style}>4. Data Sharing and Third Parties</h2>
-          <p>We share only minimal required data with trusted providers to operate VITALOOP: Anthropic (AI processing), Stripe (payments), DigitalOcean (hosting), and Resend/SendGrid (transactional email).</p>
+          <p>We share only minimal required data with trusted providers to operate VITALOOP: Anthropic (AI processing), DigitalOcean (hosting), and Resend/SendGrid (transactional email). When automated billing is enabled, a payment processor will be added to this list.</p>
           <p>We may disclose information only when legally required, to protect rights and safety, prevent fraud, or during business transfers as allowed by law.</p>
         </div>
 

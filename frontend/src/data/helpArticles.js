@@ -117,7 +117,7 @@ export const HELP_ARTICLES = {
         type: 'feature-grid',
         items: [
           { icon: '📤', title: 'Upload or enter lab data', desc: 'Use PDF/image uploads, manual biomarker entry, and structured lab inputs supported by the product flow.' },
-          { icon: '🧠', title: 'Health Intelligence Core V3', desc: 'Names, values, units, ranges, extraction confidence, symptoms, safety context, evidence gaps, and trends are processed through one structured path.' },
+          { icon: '🧠', title: 'VITALOOP Health Intelligence Engine', desc: 'Names, values, units, ranges, extraction confidence, symptoms, safety context, evidence gaps, and trends are processed through one structured path.' },
           { icon: '⚠️', title: 'Prioritized and safety-aware', desc: 'Important findings, safety notes, and clinician discussion points are surfaced clearly.' },
           { icon: '💊', title: 'Structured protocol sections', desc: 'Nutrition, supplements, lifestyle, training/recovery, adherence, and retest suggestions are organized for review.' },
           { icon: '📈', title: 'Longitudinal tracking', desc: 'Compare multiple tests and check-ins over time. See what is changing.' },
@@ -407,7 +407,7 @@ export const HELP_ARTICLES = {
       {
         type: 'list',
         items: [
-          '**Supplement recommendations** — name, exact dosage, form (e.g. Ferrous Bisglycinate vs. Ferrous Sulfate), timing (morning/with food/before bed), and duration.',
+          '**Supplement recommendations** — name, suggested dosage, form (e.g. Ferrous Bisglycinate vs. Ferrous Sulfate), timing (morning/with food/before bed), and duration.',
           '**Lifestyle changes** — sleep, diet, and exercise adjustments specific to your deficiencies.',
           '**Retest schedule** — when to upload your next labs to measure progress.',
           '**Priority levels** — High / Medium / Low for each recommendation.',
@@ -762,7 +762,7 @@ export const HELP_ARTICLES = {
             badge: 'Most popular',
             features: [
               'Unlimited uploads & retests',
-              'Exact dosage protocols',
+              'Structured supplement guidance',
               'Weekly AI check-ins',
               'Progress timeline tracking',
               'Protocol adaptation',
@@ -1253,7 +1253,7 @@ export const HELP_ARTICLES = {
           '**Kantesti** is an enterprise B2B tool built for NHS, hospitals, and clinical networks — not for individuals or small practitioners.',
           '**VITALOOP** is built for health-conscious individuals and independent practitioners who want to track their own or clients\' results over time.',
           'Some tools focus on interpretation only: upload → report → done.',
-          'VITALOOP provides a reusable execution loop: symptoms → labs → shared analysis core → protocol → check-ins → trends → retest.',
+          'VITALOOP provides a reusable execution loop: symptoms → labs → structured health analysis → protocol → check-ins → trends → retest.',
         ],
       },
     ],
