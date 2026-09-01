@@ -30,7 +30,6 @@ import {
 import Seo from '../components/Seo.jsx'
 import { LightHero } from '../components/landing/LightHero.jsx'
 import { StatsBar } from '../components/landing/StatsBar.jsx'
-import { TrustedServicesSection } from '../components/landing/TrustedServicesSection.jsx'
 import { InteractivePricing } from '../components/landing/InteractivePricing.jsx'
 import { AnimatedFAQ } from '../components/landing/AnimatedFAQ.jsx'
 import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx'
