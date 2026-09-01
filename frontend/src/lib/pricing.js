@@ -27,8 +27,13 @@ export const LANDING_PRICING_PLANS = [
   {
     id: PRICING_PLAN_IDS.PERSONAL,
     name: 'Premium',
-    monthly: '$19.99',
-    yearly: '$199',
+    // Corrected 2026-09-01: had drifted to $19.99/mo, $199/yr — the actual
+    // price everywhere else (FAQ.jsx, helpArticles.js, backend email
+    // templates) is $4.99/mo, $49.99/yr. This is the value every paywall
+    // prompt reads via PREMIUM_PRICE_LABEL below, so fixing it here fixes
+    // all of them at once.
+    monthly: '$4.99',
+    yearly: '$49.99',
     period: '/mo',
     annualNote: 'Save 17% on yearly billing',
     desc: 'Full blood test analysis, personalized protocol, and weekly check-ins.',
@@ -87,5 +92,5 @@ export const LANDING_PRICING_PLANS = [
 ]
 
 export const CLIENT_PREMIUM_PLAN = LANDING_PRICING_PLANS.find((plan) => plan.id === PRICING_PLAN_IDS.PERSONAL)
-export const PREMIUM_MONTHLY_PRICE = 19.99
+export const PREMIUM_MONTHLY_PRICE = 4.99
 export const PREMIUM_PRICE_LABEL = `${CLIENT_PREMIUM_PLAN.monthly} / month`

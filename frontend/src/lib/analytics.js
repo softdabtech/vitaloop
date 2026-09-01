@@ -5,6 +5,8 @@
  * Import only what you need; tree-shaking keeps the bundle minimal.
  */
 
+import { PREMIUM_MONTHLY_PRICE } from './pricing.js'
+
 const GA_ID = 'G-LG0BCMBJJE'
 
 function fbqTrack(eventName, params = {}) {
@@ -121,13 +123,13 @@ export function gaLogin(method = 'email') {
 export function gaBeginCheckout(priceLabel = null) {
   gaEvent('begin_checkout', {
     currency: 'USD',
-    value: 19.99,
+    value: PREMIUM_MONTHLY_PRICE,
     items: [
       {
         item_id: 'vitaloop_premium',
         item_name: 'VITALOOP Premium',
         item_category: 'subscription',
-        price: 19.99,
+        price: PREMIUM_MONTHLY_PRICE,
         quantity: 1,
       },
     ],
@@ -135,11 +137,11 @@ export function gaBeginCheckout(priceLabel = null) {
   })
   fbqTrack('InitiateCheckout', {
     currency: 'USD',
-    value: 19.99,
+    value: PREMIUM_MONTHLY_PRICE,
   })
   fbqTrack('AddPaymentInfo', {
     currency: 'USD',
-    value: 19.99,
+    value: PREMIUM_MONTHLY_PRICE,
   })
 }
 
@@ -147,7 +149,7 @@ export function gaBeginCheckout(priceLabel = null) {
  * Fire on a confirmed purchase / successful Stripe checkout return.
  * Pass the Stripe session / transaction ID if available.
  */
-export function gaPurchase(transactionId, value = 19.99) {
+export function gaPurchase(transactionId, value = PREMIUM_MONTHLY_PRICE) {
   gaEvent('purchase', {
     transaction_id: transactionId || `vtl_${Date.now()}`,
     currency: 'USD',

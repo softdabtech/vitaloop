@@ -6,6 +6,16 @@ import { useAuth } from '../../hooks/useAuth.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { buildSignupPath, buildSignupRedirect, buildSubscriptionPath, SUBSCRIPTION_PLAN_IDS } from '../../lib/subscriptionFlow.js'
 
+// Corrected 2026-09-01: this table had drifted to $19.99/mo + a "Pro Premium"
+// $99 tier — neither value matched the actual Premium price documented
+// everywhere else (FAQ.jsx, helpArticles.js, backend email templates all say
+// $4.99/mo, $49.99/yr), and "Pro Premium" was never a real, separate offer.
+// Removed here rather than just re-priced. lib/pricing.js is the correct
+// source of truth for the Personal/Premium price and is what every paywall
+// prompt (PaywallModal, LockedFeatureOverlay, Upload.jsx, Terms.jsx) already
+// reads from — this component still keeps its own copy/layout (points differ
+// from LANDING_PRICING_PLANS's feature list), so keep both numbers in sync
+// if the price ever changes again.
 const PRICING = {
   monthly: [
     {
@@ -19,21 +29,12 @@ const PRICING = {
     },
     {
       name: 'Premium',
-      price: '$19.99',
+      price: '$4.99',
       period: '/month',
       description: 'For people actively tracking labs, symptoms, and protocol response',
       points: ['Unlimited uploads and retests', 'Full explainable Knowledge report', 'Priority action and retest plan', 'Weekly symptom check-ins', 'Progress and trend tracking', 'Protocol adaptation across cycles'],
       cta: 'Upgrade',
       featured: true,
-    },
-    {
-      name: 'Pro Premium',
-      price: '$99',
-      period: '/month',
-      description: 'For practitioners and laboratory/client workflows',
-      points: ['Everything in Premium', 'Practitioner CRM workspace', 'Client and assignment workflows', 'Team roles and visibility', 'White-label/report preparation', 'Laboratory integration direction'],
-      cta: 'Get Pro Premium',
-      featured: false,
     },
   ],
   annual: [
@@ -48,21 +49,12 @@ const PRICING = {
     },
     {
       name: 'Premium',
-      price: '$199',
+      price: '$49.99',
       period: '/year',
       description: 'For people actively tracking labs, symptoms, and protocol response',
       points: ['Unlimited uploads and retests', 'Full explainable Knowledge report', 'Priority action and retest plan', 'Weekly symptom check-ins', 'Progress and trend tracking', 'Save 17% vs monthly'],
       cta: 'Upgrade',
       featured: true,
-    },
-    {
-      name: 'Pro Premium',
-      price: '$990',
-      period: '/year',
-      description: 'For practitioners and laboratory/client workflows',
-      points: ['Everything in Premium', 'Practitioner CRM workspace', 'Client and assignment workflows', 'Team roles and visibility', 'White-label/report preparation', 'Laboratory integration direction'],
-      cta: 'Get Pro Premium',
-      featured: false,
     },
   ],
 }
@@ -79,7 +71,6 @@ export function InteractivePricing() {
 
   function getPlanId(plan) {
     if (plan.name === 'Premium') return SUBSCRIPTION_PLAN_IDS.PERSONAL
-    if (plan.name === 'Pro Premium') return SUBSCRIPTION_PLAN_IDS.PRACTITIONER
     return SUBSCRIPTION_PLAN_IDS.FREE
   }
 
@@ -110,7 +101,10 @@ export function InteractivePricing() {
 
   return (
     <section id="pricing" className="relative py-24 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+      {/* max-w-4xl / md:grid-cols-2: down from a 3-card grid now that Pro
+          Premium is gone — a leftover 3-column track would leave a bare gap
+          next to two cards instead of centering them. */}
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -165,7 +159,7 @@ export function InteractivePricing() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.4 }}
-            className="grid md:grid-cols-3 gap-8"
+            className="grid md:grid-cols-2 gap-8"
           >
             {plans.map((plan, i) => {
               const planId = getPlanId(plan)

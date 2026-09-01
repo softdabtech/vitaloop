@@ -10,6 +10,7 @@ import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
 import { isUkrainianLocale } from '../lib/locale.js'
+import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import '../styles/dashboard2026.css'
 
 // Cabinet reconciliation: full EN/UA coverage ported from origin/main's
@@ -42,7 +43,9 @@ const LAB_RESULTS_COPY = {
     viewResults: 'View Results',
     premiumTitle: 'Premium features available',
     premiumBody: 'Upgrade to see your complete lab history, track trends over time, and keep action plans connected to follow-up check-ins.',
-    premiumCta: 'Upgrade for $19.99/month',
+    // Was hardcoded '$19.99/month' — stale, drifted from the actual price;
+    // sourced from lib/pricing.js now like every other paywall prompt.
+    premiumCta: `Upgrade for ${PREMIUM_PRICE_LABEL}`,
     safetyContext: 'Safety context',
     safetyBody: 'Review out-of-range markers with a qualified clinician when appropriate.',
     nextStep: 'Next step',

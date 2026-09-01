@@ -234,60 +234,14 @@ const SCHEMA_FAQ = {
   })),
 }
 
-const PRICING = {
-  monthly: [
-    {
-      name: 'Free',
-      price: '$0',
-      period: '/month',
-      points: ['1 active upload', 'Basic biomarker summary', 'Core dashboard'],
-      cta: 'Try free',
-      featured: false,
-    },
-    {
-      name: 'Premium',
-      price: '$19.99',
-      period: '/month',
-      points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
-      cta: 'Upgrade',
-      featured: true,
-    },
-    {
-      name: 'Enterprise',
-      price: '$99+',
-      period: '/month',
-      points: ['Team seats', 'Practitioner CRM', 'Workflow automation', 'Dedicated onboarding'],
-      cta: 'Contact sales',
-      featured: false,
-    },
-  ],
-  yearly: [
-    {
-      name: 'Free',
-      price: '$0',
-      period: '/year',
-      points: ['1 active upload', 'Basic biomarker summary', 'Core dashboard'],
-      cta: 'Try free',
-      featured: false,
-    },
-    {
-      name: 'Premium',
-      price: '$199',
-      period: '/year',
-      points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
-      cta: 'Upgrade',
-      featured: true,
-    },
-    {
-      name: 'Enterprise',
-      price: '$990+',
-      period: '/year',
-      points: ['Team seats', 'Practitioner CRM', 'Workflow automation', 'Dedicated onboarding'],
-      cta: 'Contact sales',
-      featured: false,
-    },
-  ],
-}
+// Removed 2026-09-01: a dead `PRICING` const (never referenced anywhere in
+// this file or imported elsewhere) holding a THIRD, independently-drifted
+// copy of pricing numbers (still $19.99, a stale $99+ "Enterprise" tier).
+// The page's actual pricing table is <InteractivePricing /> below, which
+// reads its own copy (now corrected) — this block was dead weight left over
+// from an earlier version of the page, exactly the kind of stale content
+// that makes the site hard to audit. See InteractivePricing.jsx and
+// lib/pricing.js for the current, live pricing sources.
 
 function fadeUp(_reduced, _delay = 0) {
   return { initial: false, whileInView: {}, viewport: { once: true } }

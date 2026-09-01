@@ -1,5 +1,6 @@
 import { ChevronRight, FileText, ListChecks, ShieldCheck, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { CLIENT_PREMIUM_PLAN } from '../../lib/pricing.js'
 
 const HERO_SCREENS = [
   {
@@ -93,7 +94,12 @@ export function LightHero() {
             {/* Key stats */}
             <div className="hidden grid-cols-2 gap-6 border-t border-slate-200 pt-8 sm:grid">
               <div>
-                <div className="text-2xl font-bold text-slate-900">$19.99/mo</div>
+                {/* Read from lib/pricing.js instead of a hardcoded string —
+                    this exact stat drifted to a stale "$19.99/mo" (the real
+                    price is $4.99/mo) because it was a fourth independent
+                    copy of the number; sourcing it removes that failure mode
+                    here. */}
+                <div className="text-2xl font-bold text-slate-900">{CLIENT_PREMIUM_PLAN.monthly}/mo</div>
                 <div className="text-sm text-slate-600">Premium plan</div>
               </div>
               <div>
