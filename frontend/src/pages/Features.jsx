@@ -156,7 +156,7 @@ export default function Features() {
                   <div className="mb-4 inline-flex rounded-2xl bg-emerald-100 p-4 text-emerald-600">
                     <Icon size={24} />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
+                  <h2 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h2>
                   <p className="text-slate-600 mb-6">{feature.description}</p>
                   <ul className="space-y-2">
                     {feature.details.map((detail) => (

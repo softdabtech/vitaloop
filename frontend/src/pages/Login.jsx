@@ -1180,6 +1180,8 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => setShowPass((v) => !v)}
+                    aria-label={showPass ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPass}
                     style={{
                       position: 'absolute', right: 12, top: '50%',
                       transform: 'translateY(-50%)',
