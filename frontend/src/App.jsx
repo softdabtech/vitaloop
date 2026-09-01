@@ -25,6 +25,7 @@ const ForInvestors = lazy(() => import('./pages/ForInvestors.jsx'))
 const ForNutritionists = lazy(() => import('./pages/ForNutritionists.jsx'))
 const Privacy = lazy(() => import('./pages/Privacy.jsx'))
 const Terms = lazy(() => import('./pages/Terms.jsx'))
+const RefundPolicy = lazy(() => import('./pages/RefundPolicy.jsx'))
 const Help = lazy(() => import('./pages/Help.jsx'))
 const SymptomIntake = lazy(() => import('./pages/SymptomIntake.jsx'))
 const HealthHub = lazy(() => import('./pages/HealthHub.jsx'))
@@ -769,6 +770,7 @@ export default function App() {
           <Route path="/privacy" element={<Navigate to="/privacy-policy" replace />} />
           <Route path="/privacy-policy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/refund-policy" element={<RefundPolicy />} />
           <Route path="/help" element={<Help />} />
           <Route path="/help/section/:sectionId" element={<Help />} />
           <Route path="/help/:articleId" element={<Help />} />
