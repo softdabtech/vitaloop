@@ -446,16 +446,18 @@ async def test_adherence_component_reflects_real_checkin_count_no_fabrication(mo
     adherence_component changes ONLY because the underlying checkin count
     changed — not because of any new fabricated boost."""
 
+    # State toggled explicitly between the two calculate_health_score() calls
+    # below, rather than counted by invocation — get_latest_symptom_signal()
+    # (added for the symptom_component fix) now also calls get_weekly_checkins
+    # internally, so a plain call-counter would desync from which outer
+    # "before"/"after" call is actually in flight.
+    checkin_state = {"checkins": []}
+
     async def fake_get_user_symptom_summary(_user_id, days=30):
         return {"average_severity": 5}
 
-    calls = {"n": 0}
-
     async def fake_get_weekly_checkins(_user_id, limit=4):
-        # First call: 0 checkins (pre check-in state). Second call: 1 checkin
-        # (post check-in state) — simulates the real DB reflecting the new row.
-        calls["n"] += 1
-        return [] if calls["n"] == 1 else [{"id": "c1"}]
+        return list(checkin_state["checkins"])
 
     class _Resp:
         def __init__(self, data):
@@ -484,12 +486,35 @@ async def test_adherence_component_reflects_real_checkin_count_no_fabrication(mo
         def execute(self):
             return _Resp([{}])
 
+    class _QuestionnaireSessionsTable:
+        """No completed intake session in this scenario — get_latest_symptom_signal()
+        falls through to the (also-empty, in the 'before' state) check-in path,
+        landing on the neutral 50.0 default in both calls so this test's actual
+        subject (adherence_component) is the only thing that moves."""
+
+        def select(self, *_a, **_k):
+            return self
+
+        def eq(self, *_a, **_k):
+            return self
+
+        def order(self, *_a, **_k):
+            return self
+
+        def limit(self, *_a, **_k):
+            return self
+
+        def execute(self):
+            return _Resp([])
+
     class _Client:
         def table(self, name):
             if name == "biomarkers":
                 return _BiomarkersTable()
             if name == "health_scores":
                 return _HealthScoresTable()
+            if name == "questionnaire_sessions":
+                return _QuestionnaireSessionsTable()
             raise AssertionError(name)
 
     async def fake_run(fn):
@@ -509,6 +534,7 @@ async def test_adherence_component_reflects_real_checkin_count_no_fabrication(mo
     monkeypatch.setattr(svc, "_audit_medical_write", fake_audit_write)
 
     before = await svc.calculate_health_score("user-hotfix-5")
+    checkin_state["checkins"] = [{"id": "c1"}]
     after = await svc.calculate_health_score("user-hotfix-5")
 
     assert before["adherence_component"] == 0.0

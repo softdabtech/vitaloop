@@ -2306,13 +2306,78 @@ async def dismiss_insight(user_id: str, insight_id: str) -> None:
 # HEALTH SCORE
 # ──────────────────────────────────────────────
 
+async def get_latest_symptom_signal(user_id: str) -> Optional[float]:
+    """0-100 wellness signal (higher = feeling better), sourced from whichever
+    is more recent: the last completed questionnaire session's completion_score
+    (already a 0-100 composite of the adaptive wellness-dimension answers), or
+    the last weekly check-in's structured energy/sleep/mood scores (1-10 each,
+    averaged and scaled to 0-100 so both sources share the same direction and
+    range). Returns None when neither exists yet - caller decides the neutral
+    default, same "no data yet" convention biomarker_component already uses
+    below rather than silently claiming a perfect or empty score.
+
+    Replaces the previous computation, which read the `symptoms` table via
+    get_user_symptom_summary() - that table has no write path from any current
+    frontend flow (confirmed via full-repo search), so avg_severity was always
+    0 and symptom_component was a hardcoded 100 for every user, regardless of
+    what they actually reported in the questionnaire or check-ins.
+    """
+    supabase = _get_supabase()
+
+    session_resp = await _run(
+        lambda: supabase.table("questionnaire_sessions")
+        .select("completion_score, completed_at")
+        .eq("user_id", user_id)
+        .eq("status", "completed")
+        .order("completed_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    session_row = session_resp.data[0] if session_resp.data else None
+
+    checkins = await get_weekly_checkins(user_id, limit=1)
+    checkin_row = checkins[0] if checkins else None
+
+    session_date = None
+    if session_row and session_row.get("completed_at"):
+        try:
+            session_date = datetime.fromisoformat(str(session_row["completed_at"]).replace("Z", "+00:00")).date()
+        except ValueError:
+            session_date = None
+
+    checkin_date = None
+    if checkin_row and checkin_row.get("week_start"):
+        try:
+            checkin_date = datetime.fromisoformat(str(checkin_row["week_start"])).date()
+        except ValueError:
+            checkin_date = None
+
+    use_checkin = checkin_date is not None and (session_date is None or checkin_date >= session_date)
+
+    if use_checkin:
+        scores = [
+            checkin_row.get("energy_score"),
+            checkin_row.get("sleep_quality"),
+            checkin_row.get("mood_score"),
+        ]
+        scores = [s for s in scores if s is not None]
+        if scores:
+            return round((sum(scores) / len(scores)) * 10, 2)
+
+    if session_row and session_row.get("completion_score") is not None:
+        return round(float(session_row["completion_score"]), 2)
+
+    return None
+
+
 async def calculate_health_score(user_id: str) -> Dict[str, Any]:
-    symptom_data = await get_user_symptom_summary(user_id, days=30)
     checkins = await get_weekly_checkins(user_id, limit=4)
     supabase = _get_supabase()
 
-    avg_sev = symptom_data.get("average_severity", 5)
-    symptom_component = round(max(0.0, 100.0 - (avg_sev * 10)), 2)
+    symptom_signal = await get_latest_symptom_signal(user_id)
+    # 50.0 mirrors biomarker_component's own "no data yet" fallback a few
+    # lines below - neutral/unknown, not a false "everything is fine" 100.
+    symptom_component = symptom_signal if symptom_signal is not None else 50.0
     adherence_component = round(min(100.0, (len(checkins) / 4) * 100), 2)
 
     bio_resp = await _run(
