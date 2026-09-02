@@ -2,7 +2,6 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   BarChart3,
   ChevronLeft,
-  Clock,
   CreditCard,
   Crown,
   FileText,
@@ -24,6 +23,10 @@ import UserAvatar from '../UserAvatar.jsx'
 
 const MENU_ITEMS = [
   { icon: Home, label: 'Today', ukLabel: 'Сьогодні', path: '/dashboard', badge: null },
+  // Structural merge: the former separate "Check-in" nav item (premium-gated,
+  // path: '/check-ins') now lives inside this same page — Questionnaire.jsx
+  // shows the full intake wizard or the short weekly pulse depending on
+  // whether the user already has an active concern and is due for one.
   { icon: Target, label: 'Symptom Check', ukLabel: 'Симптоми', path: '/questionnaire', badge: null },
   { icon: Route, label: 'Lab Plan', ukLabel: 'План аналізів', path: '/lab-plan', badge: null },
   { icon: Upload, label: 'Upload Results', ukLabel: 'Завантажити', path: '/upload', badge: null },
@@ -36,7 +39,6 @@ const MENU_ITEMS = [
   // labeled with the one word ("Protocol") users most want. Re-add only when
   // the product actually has a coached/practitioner-attached user tier — see
   // the matching note on the /assignments route in App.jsx.
-  { icon: Clock, label: 'Check-in', ukLabel: 'Чек-ін', path: '/check-ins', badge: null, premium: true },
   { icon: Flame, label: 'Profile & Safety', ukLabel: 'Профіль і безпека', path: '/health-profile', badge: null },
   { icon: CreditCard, label: 'Billing', ukLabel: 'Оплата', path: '/subscription', badge: null },
   { icon: Settings, label: 'Account', ukLabel: 'Акаунт', path: '/settings', badge: null },

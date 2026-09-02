@@ -62,7 +62,6 @@ const HealthProfile = lazy(() => import('./pages/HealthProfile.jsx'))
 const Subscription = lazy(() => import('./pages/Subscription.jsx'))
 const BillingHistory = lazy(() => import('./pages/BillingHistory.jsx'))
 const Onboarding = lazy(() => import('./pages/Onboarding.jsx'))
-const WeeklyCheckIn = lazy(() => import('./pages/WeeklyCheckIn.jsx'))
 const Questionnaire = lazy(() => import('./pages/Questionnaire.jsx'))
 const UserCabinetLayout = lazy(() => import('./components/dashboard/UserCabinetLayout.jsx'))
 
@@ -827,10 +826,15 @@ export default function App() {
           <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
           <Route path="/onboarding" element={renderCabinetRoute(<Onboarding />, { allowBeforeOnboarding: true })} />
           <Route path="/questionnaire" element={renderCabinetRoute(<Questionnaire />, { allowBeforeOnboarding: true })} />
-          <Route path="/check-ins" element={renderCabinetRoute(<WeeklyCheckIn />)} />
           <Route path="/insights" element={renderCabinetRoute(<Insights />)} />
           {/* Legacy route redirects */}
-          <Route path="/checkin" element={<Navigate to="/check-ins" replace />} />
+          {/* Structural merge: /check-ins and /questionnaire became one page
+              (Questionnaire.jsx now has an 'intake'/'pulse' mode instead of
+              two separate wizards) — both old URLs keep working as redirects
+              rather than breaking bookmarks, the sidebar's former Check-in
+              link, and the dashboard's "complete check-in" CTA. */}
+          <Route path="/check-ins" element={<Navigate to="/questionnaire" replace />} />
+          <Route path="/checkin" element={<Navigate to="/questionnaire" replace />} />
           <Route path="/timeline" element={<Navigate to="/insights" replace />} />
           <Route path="/dashboard-legacy" element={<Navigate to="/dashboard" replace />} />
           <Route path="/ops/legacy" element={<Navigate to="/ops" replace />} />

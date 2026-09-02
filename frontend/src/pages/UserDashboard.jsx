@@ -479,8 +479,10 @@ export default function UserDashboard() {
     }
     if (!hasCheckin) {
       return {
+        // Structural merge: /check-ins now redirects into /questionnaire's
+        // 'pulse' mode (same page, no separate check-in wizard anymore).
         label: copy.actions.completeCheckin,
-        path: '/check-ins',
+        path: '/questionnaire',
         why: copy.nextActions.checkinWhy,
         outcome: copy.nextActions.checkinOutcome,
       }
