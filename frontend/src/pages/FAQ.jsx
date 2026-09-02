@@ -144,7 +144,7 @@ const FAQ_ITEMS = [
       },
       {
         q: 'When do you bill?',
-        a: 'Premium is available as $4.99 monthly billing or $49.99 yearly billing. The cabinet shows your current Free or Premium status.',
+        a: 'Premium is available as $9.99 monthly billing or $99.99 yearly billing. The cabinet shows your current Free or Premium status.',
       },
       {
         q: 'What\'s your refund policy?',

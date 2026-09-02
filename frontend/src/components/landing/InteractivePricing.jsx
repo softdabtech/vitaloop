@@ -6,16 +6,12 @@ import { useAuth } from '../../hooks/useAuth.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { buildSignupPath, buildSignupRedirect, buildSubscriptionPath, SUBSCRIPTION_PLAN_IDS } from '../../lib/subscriptionFlow.js'
 
-// Corrected 2026-09-01: this table had drifted to $19.99/mo + a "Pro Premium"
-// $99 tier — neither value matched the actual Premium price documented
-// everywhere else (FAQ.jsx, helpArticles.js, backend email templates all say
-// $4.99/mo, $49.99/yr), and "Pro Premium" was never a real, separate offer.
-// Removed here rather than just re-priced. lib/pricing.js is the correct
-// source of truth for the Personal/Premium price and is what every paywall
-// prompt (PaywallModal, LockedFeatureOverlay, Upload.jsx, Terms.jsx) already
-// reads from — this component still keeps its own copy/layout (points differ
-// from LANDING_PRICING_PLANS's feature list), so keep both numbers in sync
-// if the price ever changes again.
+// Business pricing update 2026-09-02: Premium moved from $4.99/mo, $49.99/yr
+// to $9.99/mo, $99.99/yr. lib/pricing.js is the source of truth for the
+// Personal/Premium price and is what every paywall prompt (PaywallModal,
+// LockedFeatureOverlay, Upload.jsx, Terms.jsx) reads from — this component
+// still keeps its own copy/layout (points differ from LANDING_PRICING_PLANS's
+// feature list), so keep both numbers in sync if the price ever changes again.
 const PRICING = {
   monthly: [
     {
@@ -29,7 +25,7 @@ const PRICING = {
     },
     {
       name: 'Premium',
-      price: '$4.99',
+      price: '$9.99',
       period: '/month',
       description: 'For people actively tracking labs, symptoms, and protocol response',
       points: ['Unlimited uploads and retests', 'Full explainable Knowledge report', 'Priority action and retest plan', 'Weekly symptom check-ins', 'Progress and trend tracking', 'Protocol adaptation across cycles'],
@@ -49,7 +45,7 @@ const PRICING = {
     },
     {
       name: 'Premium',
-      price: '$49.99',
+      price: '$99.99',
       period: '/year',
       description: 'For people actively tracking labs, symptoms, and protocol response',
       points: ['Unlimited uploads and retests', 'Full explainable Knowledge report', 'Priority action and retest plan', 'Weekly symptom check-ins', 'Progress and trend tracking', 'Save 17% vs monthly'],

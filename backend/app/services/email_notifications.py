@@ -144,7 +144,7 @@ async def send_free_to_premium_upsell(user_email: str, user_name: str) -> bool:
                 <li>✅ Supplement recommendations with iHerb links</li>
                 <li>✅ Priority support</li>
             </ul>
-            <p><strong style="color: #1D9E75; font-size: 18px;">Only $4.99/month</strong></p>
+            <p><strong style="color: #1D9E75; font-size: 18px;">Only $9.99/month</strong></p>
             <p><a href="{settings.frontend_base_url}/dashboard?tab=subscription&action=upgrade"
                    style="display: inline-block; padding: 12px 24px; background-color: #1D9E75;
                           color: white; text-decoration: none; border-radius: 6px; margin-top: 20px;">

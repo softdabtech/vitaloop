@@ -226,7 +226,7 @@ async def test_send_free_to_premium_upsell():
         mock_send.assert_called_once()
         args = mock_send.call_args
         assert "Premium" in args[1]["subject"]
-        assert "$4.99/month" in args[1]["html"]
+        assert "$9.99/month" in args[1]["html"]
         assert "#pricing" in args[1]["html"]
 
 

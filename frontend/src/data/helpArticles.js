@@ -757,7 +757,7 @@ export const HELP_ARTICLES = {
           },
           {
             name: 'Premium',
-            price: '$4.99/month',
+            price: '$9.99/month',
             color: '#1d9e75',
             badge: 'Most popular',
             features: [
