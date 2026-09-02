@@ -218,6 +218,25 @@ function saveConcernContext(payload) {
   })
 }
 
+// Same three-tier tone convention used across the cabinet (dashboard health
+// score, results status pills): >=70 good, 40-69 worth watching, <40 needs
+// attention. completion_score here is a wellness composite (energy, sleep,
+// stress, etc. 0-100), not a diagnostic score.
+function checkScoreTone(value) {
+  if (value === null || value === undefined) return 'primary'
+  const v = Number(value)
+  if (v >= 70) return 'success'
+  if (v >= 40) return 'warning'
+  return 'critical'
+}
+
+function formatCheckDate(iso) {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
 function NumericScale({ value, onChange, isUk = false }) {
   return (
     <div className="grid gap-3">
@@ -257,6 +276,8 @@ export default function Questionnaire() {
   const [answeredCount, setAnsweredCount] = useState(0)
   const [remainingCount, setRemainingCount] = useState(0)
   const [results, setResults] = useState(null)
+  const [previousChecks, setPreviousChecks] = useState([])
+  const [previousChecksLoading, setPreviousChecksLoading] = useState(true)
 
   const [concern, setConcern] = useState('')
   const [duration, setDuration] = useState('')
@@ -331,8 +352,34 @@ export default function Questionnaire() {
     }
   }
 
+  // Same list-of-past-items principle as LabResultsList.jsx: GET the user's
+  // history (here, completed questionnaire sessions instead of lab uploads),
+  // show only what already finished, most recent first — the backend list
+  // endpoint (GET /questionnaire) already orders by created_at desc.
+  async function loadPreviousChecks() {
+    setPreviousChecksLoading(true)
+    try {
+      const { data } = await api.get('/questionnaire')
+      const items = Array.isArray(data?.questionnaires) ? data.questionnaires : []
+      setPreviousChecks(items.filter((item) => String(item?.status).toLowerCase() === 'completed'))
+    } catch {
+      // Non-critical — the new-check wizard below still works without history.
+      setPreviousChecks([])
+    } finally {
+      setPreviousChecksLoading(false)
+    }
+  }
+
+  function startCheckAgain(item) {
+    const concernText = toText(item?.session_metadata?.active_concern)
+    if (concernText) setConcern(concernText)
+    setStep(0)
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   useEffect(() => {
     loadSession()
+    loadPreviousChecks()
   }, [])
 
   function toggleRelated(label) {
@@ -466,6 +513,47 @@ export default function Questionnaire() {
         <h1 className="coach-title-xl">{isUk ? 'Розкажіть VITALOOP, що відчувається не так.' : 'Tell VITALOOP what feels off.'}</h1>
         <p className="coach-body mt-4 max-w-2xl">{isUk ? 'Спочатку простий вхід, потім точний контекст. Ми використовуємо це, щоб повʼязати симптоми, аналізи, безпеку й наступний крок.' : 'Low barrier first, precise context next. We use this to connect symptoms, labs, safety context, and your next step.'}</p>
       </section>
+
+      {!previousChecksLoading && previousChecks.length > 0 && (
+        <CoachCard className="p-5 sm:p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="coach-eyebrow">{isUk ? 'Історія перевірок' : 'Check history'}</p>
+              <h2 className="coach-title-lg mt-1">{isUk ? 'Раніше пройдені перевірки симптомів' : 'Previously completed symptom checks'}</h2>
+            </div>
+            <CoachBadge tone="primary">{previousChecks.length}</CoachBadge>
+          </div>
+          <div className="space-y-3">
+            {previousChecks.map((item) => {
+              const concernText = toText(item?.session_metadata?.active_concern) || (isUk ? 'Без опису' : 'Untitled check')
+              const dateLabel = formatCheckDate(item?.completed_at || item?.created_at)
+              const score = item?.completion_score
+              return (
+                <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-800">{concernText}</p>
+                    {dateLabel && (
+                      <p className="mt-1 text-xs text-slate-400">{dateLabel}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {score !== null && score !== undefined && (
+                      <CoachBadge tone={checkScoreTone(score)}>{Math.round(score)}/100</CoachBadge>
+                    )}
+                    <button
+                      onClick={() => startCheckAgain(item)}
+                      className="inline-flex items-center gap-1 text-sm font-semibold text-teal-700 transition hover:text-teal-800"
+                    >
+                      {isUk ? 'Перевірити знову' : 'Check again'}
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </CoachCard>
+      )}
 
       <div className="coach-grid coach-grid--2">
         <CoachCard className="p-5 sm:p-6">
