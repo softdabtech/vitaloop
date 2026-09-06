@@ -21,6 +21,7 @@ const EmailConfirmation = lazy(() => import('./pages/EmailConfirmation.jsx'))
 const ExampleReport = lazy(() => import('./pages/ExampleReport.jsx'))
 const HowItWorks = lazy(() => import('./pages/HowItWorks.jsx'))
 const About = lazy(() => import('./pages/About.jsx'))
+const Contact = lazy(() => import('./pages/Contact.jsx'))
 const ForInvestors = lazy(() => import('./pages/ForInvestors.jsx'))
 const ForNutritionists = lazy(() => import('./pages/ForNutritionists.jsx'))
 const Privacy = lazy(() => import('./pages/Privacy.jsx'))
@@ -783,6 +784,7 @@ export default function App() {
           <Route path="/example-report" element={<ExampleReport />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/for-investors" element={<ForInvestors />} />
           <Route path="/for-nutritionists" element={<ForNutritionists />} />
           <Route path="/privacy" element={<Navigate to="/privacy-policy" replace />} />
