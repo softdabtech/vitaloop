@@ -136,6 +136,9 @@ def assemble_frozen_response(
     frozen_protocol_snapshot = sanitize_protocol_for_safety(
         report_version.get("protocol"), profile=user_profile, locale=locale
     )
+    sanitized_protocol_recommendations = sanitize_protocol_for_safety(
+        protocol_recommendations, profile=user_profile, locale=locale
+    )
     safety_result = sanitize_safety_result_for_output(report_version.get("safety_result"), locale=locale)
 
     sanitized_report_version = {
@@ -152,7 +155,7 @@ def assemble_frozen_response(
         "upload_id": upload_id,
         "analysis_status": "blocked" if is_blocked else "completed",
         "biomarkers": biomarkers,
-        "protocol": protocol_recommendations,
+        "protocol": sanitized_protocol_recommendations,
         "knowledge_evaluation": knowledge_evaluation,
         "knowledge_report": knowledge_report,
         "interpreted_report": interpreted_report,

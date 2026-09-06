@@ -576,6 +576,7 @@ def _sanitize_protocol_item(
     locale: str = "en",
 ) -> tuple[Dict[str, Any], bool]:
     sensitive_context = _is_pediatric_profile(profile) or _is_pregnancy_profile(profile)
+    supplement_key = _contains_sensitive_supplement(item)
     sanitized, changed = _redact_diagnosis_like_dict_fields(item, locale, _RECOMMENDATION_TEXT_FIELDS)
     sanitized = dict(sanitized)
 
@@ -586,7 +587,7 @@ def _sanitize_protocol_item(
             sanitized[field] = new_value
             changed = True
 
-    supplement_key = _contains_sensitive_supplement(sanitized)
+    supplement_key = supplement_key or _contains_sensitive_supplement(sanitized)
     if supplement_key and _contains_explicit_dosage(sanitized):
         sanitized["original_dosage_hidden"] = True
         sanitized["dosage"] = _clinician_review_dosage_text(locale)
