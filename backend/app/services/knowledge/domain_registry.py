@@ -11,10 +11,20 @@ logger = logging.getLogger("uvicorn.error")
 _DOMAIN_REGISTRY: Dict[str, Dict[str, Any]] = {
     "iron_status": {
         "label": "Iron status",
-        "marker_aliases": ["ferritin", "iron", "transferrin", "hemoglobin", "hematocrit", "rbc"],
+        "marker_aliases": [
+            "ferritin",
+            "iron",
+            "transferrin",
+            "hemoglobin",
+            "hematocrit",
+            "rbc",
+            "reticulocyte",
+            "mean_reticulocyte_volume",
+            "mean_spherical_cell_volume",
+        ],
         "symptom_aliases": ["fatigue", "weakness", "dizziness", "shortness of breath", "втома", "слабкість"],
         "required_markers": ["ferritin", "hemoglobin"],
-        "retest_markers": ["Ferritin", "CBC", "Iron panel"],
+        "retest_markers": ["Ferritin", "CBC", "Iron panel", "Reticulocyte indices"],
         "protocol_sections": ["nutrition", "supplements", "training_recovery"],
         "expected_timeline": "Review safety first; reassess symptoms in 2-4 weeks and labs at the recommended retest interval.",
         "evidence_level": "clinical_context",

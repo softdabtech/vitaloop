@@ -1,21 +1,19 @@
 import { useState } from 'react'
-import api from '../lib/api.js'
-import toast from 'react-hot-toast'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
-import { gaBeginCheckout } from '../lib/analytics.js'
+import { useAuth } from '../hooks/useAuth.js'
+import { requestPremiumAccess } from '../lib/premiumAccess.js'
 
 export default function Paywall() {
   const [loading, setLoading] = useState(false)
+  const { user } = useAuth()
 
-  async function handleCheckout() {
+  async function handlePremiumRequest() {
     setLoading(true)
     try {
-      gaBeginCheckout()
-      const { data } = await api.post('/stripe/checkout', { plan_id: 'personal' })
-      window.location.href = data.checkout_url
-    } catch (error) {
-      const message = error?.response?.data?.detail || 'Could not start checkout. Please try again.'
-      toast.error(message)
+      await requestPremiumAccess({ userEmail: user?.email, source: 'paywall' })
+    } catch {
+      requestPremiumAccess({ userEmail: user?.email, source: 'paywall_retry' })
+    } finally {
       setLoading(false)
     }
   }
@@ -33,11 +31,11 @@ export default function Paywall() {
         <p className="text-white font-bold text-lg mb-1">Unlock Your Action Plan</p>
         <p className="text-gray-400 text-sm mb-4">Subscribe to see priorities, trends, and follow-up guidance.</p>
         <button
-          onClick={handleCheckout}
+          onClick={handlePremiumRequest}
           disabled={loading}
           className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl transition"
         >
-          {loading ? 'Redirecting…' : `Continue — ${PREMIUM_PRICE_LABEL}`}
+          {loading ? 'Preparing…' : `Request Premium — ${PREMIUM_PRICE_LABEL}`}
         </button>
       </div>
     </div>

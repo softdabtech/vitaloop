@@ -1,7 +1,12 @@
 import { motion } from 'framer-motion'
 import { Clock, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react'
+import { isUkrainianLocale } from '../../lib/locale.js'
 
 export default function AssignmentCard({ assignment, onClick, animated = true, delay = 0 }) {
+  const isUk = isUkrainianLocale()
+  const copy = isUk
+    ? { noDueDate: 'Немає терміну', untitled: 'Завдання без назви', defaultDescription: 'Виконайте це завдання' }
+    : { noDueDate: 'No due date', untitled: 'Untitled Assignment', defaultDescription: 'Complete this assignment' }
   const statusColors = {
     pending: 'bg-amber-50 text-amber-700 border-amber-200',
     in_progress: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -20,7 +25,7 @@ export default function AssignmentCard({ assignment, onClick, animated = true, d
   const StatusIcon = statusIcons[status] || Clock
   const statusClass = statusColors[status] || statusColors.pending
 
-  const dueDate = assignment.due_date ? new Date(assignment.due_date).toLocaleDateString() : 'No due date'
+  const dueDate = assignment.due_date ? new Date(assignment.due_date).toLocaleDateString(isUk ? 'uk-UA' : undefined) : copy.noDueDate
   const priority = assignment?.priority
 
   const impactTone = {
@@ -77,10 +82,10 @@ export default function AssignmentCard({ assignment, onClick, animated = true, d
       {/* Content */}
       <div className="flex-1 min-w-0">
         <h3 className="text-slate-900 font-semibold truncate group-hover:text-emerald-700 transition text-sm">
-          {assignment.title || assignment.name || 'Untitled Assignment'}
+          {assignment.title || assignment.name || copy.untitled}
         </h3>
         <p className="text-slate-500 text-xs truncate mb-2">
-          {assignment.description || 'Complete this assignment'}
+          {assignment.description || copy.defaultDescription}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-slate-400 text-xs">{dueDate}</p>

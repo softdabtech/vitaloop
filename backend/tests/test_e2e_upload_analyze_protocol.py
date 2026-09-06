@@ -24,6 +24,18 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
         extracted_text,
         lab_name=None,
         test_date=None,
+        # Stage 2PRE.1: production save_lab_upload() (supabase_service.py) gained
+        # collected_at/reported_at/date_source/date_confidence/date_raw_text as part
+        # of the lab-date-metadata work (stage-26/stage-27) — this mock predated
+        # that and was missing them, causing a live TypeError on every /analyze
+        # call in this test. Mirroring the real signature here; no assertion in
+        # this test reads these fields, so they're accepted and stored for
+        # completeness but don't change any existing behavior.
+        collected_at=None,
+        reported_at=None,
+        date_source=None,
+        date_confidence=None,
+        date_raw_text=None,
         ocr_confidence=None,
         analyze_prompt_version=None,
     ):
@@ -34,6 +46,11 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
             "extracted_text": extracted_text,
             "lab_name": lab_name,
             "test_date": test_date,
+            "collected_at": collected_at,
+            "reported_at": reported_at,
+            "date_source": date_source,
+            "date_confidence": date_confidence,
+            "date_raw_text": date_raw_text,
             "ocr_confidence": ocr_confidence,
             "analyze_prompt_version": analyze_prompt_version,
         }
@@ -144,7 +161,12 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
 
     monkeypatch.setattr(analyze_router, "save_lab_upload", fake_save_lab_upload)
     monkeypatch.setattr(analyze_router, "extract_biomarkers", fake_extract_biomarkers)
-    monkeypatch.setattr(analyze_router, "save_biomarkers", fake_save_biomarkers)
+    # Stage 2B: save_biomarkers() is now called from inside run_lab_analysis_pipeline
+    # (gated on the quality-gate decision), not directly from analyze.py — patch it
+    # on the module the pipeline actually imports it from.
+    from app.services import supabase_service as svc
+
+    monkeypatch.setattr(svc, "save_biomarkers", fake_save_biomarkers)
     monkeypatch.setattr(analyze_router, "save_timeline_event", fake_save_timeline_event)
     monkeypatch.setattr(analyze_router, "get_user_profile", fake_get_user_profile)
 

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { PageHeader } from '../components/landing/PageHeader.jsx'
 import {
-  ArrowLeft,
   BrainCircuit,
   TrendingUp,
   Sparkles,
@@ -27,15 +27,15 @@ const FEATURES = [
   },
   {
     icon: TrendingUp,
-    title: 'Shared Analysis Core V2',
-    description: 'Run symptoms, biomarkers, safety context, trends, and retest logic through one versioned analysis path used by the user product and partner API.',
-    details: ['Knowledge Base rules', 'Safety flags', 'Trend context', 'B2C/B2B output reuse'],
+    title: 'Lab Direction Framework',
+    description: 'Get a practical map of what may be useful to check next and why it matters before your next discussion with a clinician.',
+    details: ['Biomarker category guidance', 'Priority ordering', 'Question prep for appointments', 'Action-ready summaries'],
   },
   {
     icon: Sparkles,
     title: 'Personalized Action Plan',
-    description: 'Turn symptom and biomarker context into organized nutrition, supplement, lifestyle, training/recovery, and retest discussion points.',
-    details: ['Prioritized actions', 'Plain-language rationale', 'Safety notes', 'Retest planning'],
+    description: 'Turn symptom and biomarker context into organized nutrition, supplement, lifestyle, and retest discussion points.',
+    details: ['Prioritized actions', 'Plain-language rationale', 'Adherence tracking', 'Retest planning'],
   },
   {
     icon: HeartPulse,
@@ -52,8 +52,8 @@ const FEATURES = [
   {
     icon: Zap,
     title: 'Contextual AI Guidance',
-    description: 'Ask questions about your results and receive educational explanations grounded in available symptoms, biomarkers, Knowledge Base context, and safety limits.',
-    details: ['Natural-language Q&A', 'Biomarker context', 'Evidence-aware explanations', 'Safety reminders'],
+    description: 'Ask questions about your results and receive educational explanations grounded in your available symptom and lab context.',
+    details: ['Natural-language Q&A', 'Biomarker context', 'Educational explanations', 'Safety reminders'],
   },
   {
     icon: BarChart3,
@@ -70,8 +70,8 @@ const FEATURES = [
   {
     icon: FileText,
     title: 'Structured Reports',
-    description: 'Review normalized values, priority markers, why the system reached a conclusion, what data was used, safety notes, and next-step questions.',
-    details: ['Normalized values', 'Priority findings', 'Quality snapshot', 'Discussion points'],
+    description: 'Review normalized values, priority markers, explanations, and next-step questions in a consistent report format.',
+    details: ['Normalized values', 'Priority findings', 'Trend visualizations', 'Discussion points'],
   },
   {
     icon: Users,
@@ -99,24 +99,13 @@ export default function Features() {
   return (
     <>
       <Seo
-        title="Health Intelligence Features | VITALOOP Shared Analysis Core"
-        description="Explore symptom intake, Shared Analysis Core V2, Knowledge Base biomarker reasoning, safety notes, personalized action plans, weekly check-ins, and progress tracking."
+        title="AI Blood Test Analysis Features | VITALOOP"
+        description="Explore symptom intake, AI blood test analysis, biomarker explanations, personalized action plans, weekly check-ins, and progress tracking."
         path="/features"
       />
 
       <div className="min-h-screen bg-white">
-        {/* Header */}
-        <div className="border-b border-slate-200 bg-white">
-          <div className="mx-auto max-w-[1240px] px-4 sm:px-6 py-6">
-            <button
-              onClick={() => navigate('/')}
-              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
-            >
-              <ArrowLeft size={16} />
-              Back to home
-            </button>
-          </div>
-        </div>
+        <PageHeader />
 
         {/* Hero Section */}
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6 py-16 sm:py-24">
@@ -128,13 +117,13 @@ export default function Features() {
           >
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2">
               <Sparkles size={16} className="text-emerald-600" />
-              <span className="text-sm font-semibold text-slate-900">Shared Analysis Core V2</span>
+              <span className="text-sm font-semibold text-slate-900">One Connected Health Workflow</span>
             </div>
             <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 mb-6 leading-tight">
-              Understand Symptoms, Blood Tests, Trends, and Next Steps in One Place
+              Understand Symptoms and Blood Tests in One Place
             </h1>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Organize how you feel, understand blood test results through governed Knowledge Base logic, prepare better questions, and track what changes over time.
+              Organize how you feel, understand blood test results, prepare better questions, and track what changes over time.
             </p>
           </motion.div>
         </div>
@@ -156,7 +145,7 @@ export default function Features() {
                   <div className="mb-4 inline-flex rounded-2xl bg-emerald-100 p-4 text-emerald-600">
                     <Icon size={24} />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
+                  <h2 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h2>
                   <p className="text-slate-600 mb-6">{feature.description}</p>
                   <ul className="space-y-2">
                     {feature.details.map((detail) => (

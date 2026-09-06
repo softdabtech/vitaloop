@@ -5,7 +5,7 @@ import os
 import re
 import tempfile
 from collections import deque
-from datetime import date
+from datetime import date, datetime, timezone
 from time import monotonic
 
 from fastapi import APIRouter, HTTPException, Depends, Header, File, UploadFile, Form, Request
@@ -13,9 +13,9 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Any, Dict
 import logging
 
-from app.dependencies import require_freemium_analyze, get_current_user
+from app.dependencies import get_current_user
 from app.services.ai.openai_service import extract_biomarkers, EXTRACT_PROMPT_VERSION, is_llm_configured, get_analysis_source
-from app.services.claude_pdf_analyzer import OpenAIPDFAnalyzer, create_file_analyzer
+from app.services.ai.openai_pdf_analyzer import OpenAIPDFAnalyzer, create_file_analyzer
 from app.services.supabase_service import (
     assert_upload_belongs_to_user,
     get_biomarker_extraction_candidates,
@@ -23,12 +23,14 @@ from app.services.supabase_service import (
     get_latest_report_version,
     get_protocol_by_upload,
     get_user_profile,
-    save_biomarkers,
+    has_any_report_version,
     save_biomarker_extraction_candidates,
     save_lab_upload,
     save_protocol,
     save_timeline_event,
     update_biomarker_extraction_candidates,
+    update_lab_upload_dates,
+    update_lab_upload_analysis_payload,
     update_lab_upload_status,
     write_audit_log,
 )
@@ -46,10 +48,20 @@ from app.models.biomarker import (
 )
 from app.services.biomarker_service import BiomarkerService
 from app.services.biomarker_reference import get_all_biomarkers
-from app.services.analysis_candidates import build_candidate_payloads, candidate_to_biomarker
+from app.services.analysis_candidates import build_candidate_payloads, candidate_to_biomarker, enrich_candidates_from_biomarkers
+from app.services.lab_date_extraction import extract_date_bearing_snippets, extract_lab_dates
 from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
 from app.services.knowledge.report import build_knowledge_report
 from app.services.lab_analysis_pipeline import run_lab_analysis_pipeline
+from app.services.safety import sanitize_protocol_for_safety
+from app.services.report_history import (
+    REPORT_SOURCE_FROZEN,
+    REPORT_SOURCE_LEGACY_FALLBACK,
+    REPORT_SOURCE_LOCALE_UNAVAILABLE,
+    REPORT_SOURCE_REGENERATED,
+    assemble_frozen_response,
+    is_frozen_report_version,
+)
 from app.utils.locale import resolve_locale
 
 router = APIRouter()
@@ -138,19 +150,40 @@ class AnalyzeRequest(BaseModel):
     symptoms: List[str] = Field(default_factory=list)
 
 
+class LabDatePatchRequest(BaseModel):
+    test_date: date
+    date_source: str = Field(default="user_provided", pattern="^user_provided$")
+    overwrite: bool = False
+
+
 class AnalyzeResponse(BaseModel):
     upload_id: str
     biomarkers: List[dict]
     analysis_source: Optional[str] = None
     knowledge_evaluation: Optional[dict] = None
     knowledge_report: Optional[dict] = None
+    interpreted_report: Optional[dict] = None
     protocol: Optional[Any] = None
     retest_schedule: Optional[List[dict]] = None
     summary: Optional[dict] = None
     final_analysis: Optional[dict] = None
     safety_result: Optional[dict] = None
     explainability: Optional[dict] = None
+    analysis_input_quality_gate: Optional[dict] = None
+    clinical_data_integrity: Optional[dict] = None
+    evidence_gaps: Optional[dict] = None
     report_version: Optional[dict] = None
+    # Hotfix 1 — post-release: these three were already computed and returned
+    # in every route handler's dict, but FastAPI's response_model filtering
+    # silently dropped them from the actual wire JSON because they weren't
+    # declared here. GET /analyze/{upload_id} and GET /results/{upload_id}
+    # (no response_model declared) were never affected — only the bare
+    # POST "" compatibility route, POST /manual, and
+    # POST /{upload_id}/regenerate were. Optional with a
+    # default so no existing client that ignores these fields breaks.
+    analysis_status: Optional[str] = None
+    report_source: Optional[str] = None
+    safety_notice: Optional[str] = None
 
 
 class CandidateDecision(BaseModel):
@@ -250,6 +283,15 @@ def _normalize_biomarker_category(category: Any, name: str = "") -> str:
     return "other"
 
 
+def _normalize_reference_bounds(
+    ref_low: float | None,
+    ref_high: float | None,
+) -> tuple[float | None, float | None]:
+    if ref_low is not None and ref_high is not None and ref_low > ref_high:
+        return None, ref_high
+    return ref_low, ref_high
+
+
 def _unique_biomarker_name(name: str, unit: str, seen_names: set[str]) -> str | None:
     base_name = str(name or "").strip()
     if not base_name:
@@ -319,6 +361,7 @@ def _sanitize_extracted_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dic
             range_low, range_high = _extract_reference_bounds(raw.get("reference_range"))
             ref_low = ref_low if ref_low is not None else range_low
             ref_high = ref_high if ref_high is not None else range_high
+        ref_low, ref_high = _normalize_reference_bounds(ref_low, ref_high)
 
         sanitized.append(
             {
@@ -347,7 +390,7 @@ async def analyze_lab_file(
     lab_name: Optional[str] = Form(default=None),
     symptoms: List[str] = Form(default_factory=list),
     current_user: dict = Depends(get_current_user),
-    _freemium_check: None = Depends(require_freemium_analyze),
+    idempotency_key: Optional[str] = Header(default=None, alias="X-Idempotency-Key"),
 ):
     """
     Universal file analyzer for all lab report formats.
@@ -361,6 +404,7 @@ async def analyze_lab_file(
     user_id: str = current_user["sub"]
     response_locale = _resolve_response_locale(request)
     user_profile = await _require_analysis_profile_context(user_id, response_locale)
+    normalized_symptoms = _normalize_symptoms(symptoms or [])
 
     # Check quota (unified biomarker quota)
     quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "file")
@@ -404,6 +448,45 @@ async def analyze_lab_file(
         if not upload_bytes:
             raise HTTPException(status_code=400, detail={"detail": "Uploaded file is empty", "code": "EMPTY_FILE"})
 
+        normalized_key = _normalize_idempotency_key(idempotency_key)
+        if normalized_key:
+            fingerprint = _file_request_fingerprint(
+                upload_bytes=upload_bytes,
+                filename=filename,
+                lab_name=lab_name,
+                normalized_symptoms=normalized_symptoms,
+            )
+            cached = await _get_idempotency_cached_response(
+                user_id=user_id,
+                idempotency_key=normalized_key,
+                fingerprint=fingerprint,
+            )
+            if cached is not None:
+                return cached
+
+        try:
+            upload = await save_lab_upload(
+                user_id=user_id,
+                extracted_text=json.dumps(
+                    {
+                        "status": "processing",
+                        "filename": file.filename,
+                        "file_type": file_ext,
+                    },
+                    ensure_ascii=True,
+                ),
+                lab_name=lab_name or file.filename,
+                analyze_prompt_version="openai_file_processing_v1",
+            )
+        except Exception as exc:
+            logger.error("analyze_file_save_upload_failed user_id=%s error=%s", user_id, repr(exc), exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail={"detail": "Could not store uploaded lab data", "code": "LAB_UPLOAD_SAVE_FAILED"},
+            ) from exc
+
+        upload_id = upload["id"]
+
         # Save file temporarily with correct extension
         with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
             tmp.write(upload_bytes)
@@ -420,7 +503,7 @@ async def analyze_lab_file(
             )
 
         try:
-            analysis = await file_analyzer.analyze(temp_path, symptoms=symptoms)
+            analysis = await file_analyzer.analyze(temp_path, symptoms=normalized_symptoms)
         except Exception as e:
             logger.error(f"Analysis failed for file {file.filename}: {e}", exc_info=True)
             raise HTTPException(
@@ -453,17 +536,14 @@ async def analyze_lab_file(
                 detail={"detail": "Could not extract biomarkers from the uploaded file. Try uploading a clearer lab report with visible biomarker values and reference ranges.", "code": "BIOMARKERS_NOT_EXTRACTED"},
             )
 
-        upload_payload = {
-            "analysis_method": analysis.get("analysis_method"),
-            "analysis_time": analysis.get("analysis_time"),
-            "document_parser": analysis.get("document_parser"),
-            "document_input_chars": analysis.get("document_input_chars"),
-            "document_chunks": analysis.get("document_chunks"),
-            "summary": analysis.get("summary", {}),
-            "top_priority": analysis.get("top_priority", []),
-            "retest_schedule": analysis.get("retest_schedule", []),
-            "biomarker_count": len(biomarkers),
-        }
+        lab_date_extraction = _extract_dates_from_analysis(analysis)
+        upload_payload = _build_file_upload_payload(
+            analysis=analysis,
+            biomarkers=biomarkers,
+            lab_date_extraction=lab_date_extraction,
+            filename=file.filename or "lab-report",
+            file_ext=file_ext,
+        )
 
         # Determine prompt version based on analysis method
         analysis_method = analysis.get("analysis_method", "unknown")
@@ -478,21 +558,16 @@ async def analyze_lab_file(
         analysis_source = "llm" if "openai" in prompt_version else _stable_analysis_source("fallback")
 
         try:
-            upload = await save_lab_upload(
-                user_id=user_id,
-                extracted_text=json.dumps(upload_payload, ensure_ascii=True),
-                lab_name=lab_name or file.filename,
+            await update_lab_upload_analysis_payload(
+                upload_id,
+                extracted_text=json.dumps(upload_payload, ensure_ascii=False),
                 analyze_prompt_version=prompt_version,
+                **_date_payload_from_extraction(lab_date_extraction),
             )
         except Exception as exc:
-            logger.error("analyze_file_save_upload_failed user_id=%s error=%s", user_id, repr(exc), exc_info=True)
-            raise HTTPException(
-                status_code=500,
-                detail={"detail": "Could not store uploaded lab data", "code": "LAB_UPLOAD_SAVE_FAILED"},
-            ) from exc
+            logger.warning("analyze_file_update_upload_payload_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
 
-        upload_id = upload["id"]
-
+        candidates = []
         try:
             candidates = build_candidate_payloads(
                 biomarkers=biomarkers,
@@ -502,31 +577,37 @@ async def analyze_lab_file(
         except Exception as exc:
             logger.warning("analyze_file_save_candidates_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
 
-        try:
-            saved_biomarkers = await save_biomarkers(upload_id=upload_id, user_id=user_id, biomarkers=biomarkers)
-        except Exception as exc:
-            logger.error("analyze_file_save_biomarkers_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc), exc_info=True)
-            raise HTTPException(
-                status_code=500,
-                detail={"detail": "Could not save extracted biomarkers", "code": "BIOMARKER_SAVE_FAILED"},
-            ) from exc
-
+        # Stage 2B: canonical biomarker persistence now happens inside the pipeline,
+        # gated on the quality-gate decision (auto_continue only) — see
+        # run_lab_analysis_pipeline(). Do not persist biomarkers here; a failure to
+        # persist now surfaces via the route's existing generic exception handler
+        # (marks the upload "failed", per Stage 2B's rule that `failed` is reserved
+        # for genuine technical failure, not confirmation-pending state).
         pipeline_result = await run_lab_analysis_pipeline(
-            biomarkers=saved_biomarkers,
-            symptoms=symptoms,
+            biomarkers=biomarkers,
+            symptoms=normalized_symptoms,
             user_profile=user_profile,
             user_id=user_id,
             analysis_id=str(upload_id),
-            source_metadata={"source": "b2c_file", "file_type": file_ext, "analysis_method": analysis_method},
+            source_metadata={
+                "source": "b2c_file",
+                "file_type": file_ext,
+                "analysis_method": analysis_method,
+                "candidates": candidates,
+                **_date_payload_from_extraction(lab_date_extraction),
+            },
             persist_knowledge=True,
             persist_report_version=True,
+            persist_biomarkers=True,
             locale=response_locale,
         )
+        analysis_status = pipeline_result.get("analysis_status", "completed")
+        saved_biomarkers = (pipeline_result.get("saved_biomarkers") or []) if analysis_status == "completed" else []
         knowledge_evaluation = pipeline_result.get("knowledge_evaluation")
         knowledge_report = pipeline_result.get("knowledge_report")
 
         protocol = pipeline_result.get("protocol", {})
-        if protocol:
+        if protocol and analysis_status == "completed":
             try:
                 await save_protocol(
                     user_id=user_id,
@@ -543,23 +624,26 @@ async def analyze_lab_file(
                     exc_info=True,
                 )
 
-        try:
-            await save_timeline_event(
-                user_id=user_id,
-                event_type="lab_analyzed",
-                summary=f"Lab report analyzed: {len(saved_biomarkers)} biomarkers found",
-                metadata={
-                    "upload_id": upload_id,
-                    "biomarker_count": len(saved_biomarkers),
-                    "analysis_method": analysis.get("analysis_method", "unknown"),
-                    "file_type": file_ext,
-                },
-            )
-        except Exception as exc:
-            logger.warning("analyze_file_timeline_event_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
+        if analysis_status == "completed":
+            try:
+                await save_timeline_event(
+                    user_id=user_id,
+                    event_type="lab_analyzed",
+                    summary=f"Lab report analyzed: {len(saved_biomarkers)} biomarkers found",
+                    metadata={
+                        "upload_id": upload_id,
+                        "biomarker_count": len(saved_biomarkers),
+                        "analysis_method": analysis.get("analysis_method", "unknown"),
+                        "file_type": file_ext,
+                        **_date_payload_from_extraction(lab_date_extraction),
+                    },
+                )
+            except Exception as exc:
+                logger.warning("analyze_file_timeline_event_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
 
-        return {
+        result = {
             "upload_id": upload_id,
+            "analysis_status": analysis_status,
             "biomarkers": saved_biomarkers,
             "top_priority": pipeline_result.get("prioritized_biomarkers", []),
             "protocol": protocol,
@@ -570,19 +654,33 @@ async def analyze_lab_file(
             "analysis_source": analysis_source,
             "knowledge_evaluation": knowledge_evaluation,
             "knowledge_report": knowledge_report,
+            "interpreted_report": pipeline_result.get("interpreted_report"),
+            "analysis_input_quality_gate": pipeline_result.get("analysis_input_quality_gate"),
+            "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+            "evidence_gaps": pipeline_result.get("evidence_gaps"),
             "safety_result": pipeline_result.get("safety_result"),
+            "safety_notice": pipeline_result.get("safety_notice"),
             "explainability": pipeline_result.get("explainability"),
             "report_version": pipeline_result.get("report_version"),
             "final_analysis": pipeline_result,
         }
+        if normalized_key:
+            await _complete_idempotency(user_id=user_id, idempotency_key=normalized_key, response=result)
+        return result
     except HTTPException:
         if upload_id:
             await update_lab_upload_status(upload_id, "failed")
+        normalized_key = _normalize_idempotency_key(idempotency_key)
+        if normalized_key:
+            await _drop_idempotency(user_id=user_id, idempotency_key=normalized_key)
         raise
     except Exception as exc:
         logger.error("analyze_pdf_failed user_id=%s error=%s", user_id, repr(exc), exc_info=True)
         if upload_id:
             await update_lab_upload_status(upload_id, "failed")
+        normalized_key = _normalize_idempotency_key(idempotency_key)
+        if normalized_key:
+            await _drop_idempotency(user_id=user_id, idempotency_key=normalized_key)
         raise HTTPException(status_code=500, detail={"detail": "Error analyzing lab report", "code": "ANALYZE_FAILED"})
     finally:
         try:
@@ -593,11 +691,74 @@ async def analyze_lab_file(
             os.remove(temp_path)
 
 
+def _build_file_upload_payload(
+    *,
+    analysis: Dict[str, Any],
+    biomarkers: List[Dict[str, Any]],
+    lab_date_extraction,
+    filename: str,
+    file_ext: str,
+) -> Dict[str, Any]:
+    source_text = str(analysis.get("document_text_excerpt") or "")
+    date_payload = _date_payload_from_extraction(lab_date_extraction)
+    has_lab_date = bool(
+        lab_date_extraction.test_date
+        or lab_date_extraction.collected_at
+        or lab_date_extraction.reported_at
+    )
+    lab_date_status = (
+        "user_provided"
+        if lab_date_extraction.date_source == "user_provided"
+        else ("extracted" if has_lab_date else "missing")
+    )
+    return {
+        "analysis_method": analysis.get("analysis_method"),
+        "analysis_time": analysis.get("analysis_time"),
+        "document_parser": analysis.get("document_parser"),
+        "document_input_chars": analysis.get("document_input_chars"),
+        "document_chunks": analysis.get("document_chunks"),
+        "document_metadata": analysis.get("document_metadata", {}),
+        "document_text_excerpt": source_text[:80_000],
+        "date_bearing_snippets": extract_date_bearing_snippets(source_text),
+        "source_document": {
+            "filename": filename,
+            "file_type": file_ext,
+            "original_file_retained": False,
+        },
+        "analysis_metadata": {
+            "has_lab_date": has_lab_date,
+            "lab_date_status": lab_date_status,
+            "source_text_retained": bool(source_text),
+            "source_text_retention_chars": min(len(source_text), 80_000),
+            "lab_date_extraction_version": getattr(lab_date_extraction, "version", None),
+            **date_payload,
+        },
+        "summary": analysis.get("summary", {}),
+        "top_priority": analysis.get("top_priority", []),
+        "retest_schedule": analysis.get("retest_schedule", []),
+        "biomarker_count": len(biomarkers),
+    }
+
+
 def _normalize_lab_text(text: str) -> str:
     cleaned = text.replace("\x00", "").strip()
     # Keep line breaks but normalize excessive spacing
     cleaned = "\n".join(" ".join(line.split()) for line in cleaned.splitlines())
     return cleaned
+
+
+def _date_payload_from_extraction(extraction) -> Dict[str, Any]:
+    return {
+        key: value
+        for key, value in extraction.as_payload().items()
+        if value is not None or key in {"date_source", "date_confidence"}
+    }
+
+
+def _extract_dates_from_analysis(analysis: Dict[str, Any], *, fallback_text: str = ""):
+    metadata = analysis.get("document_metadata") if isinstance(analysis.get("document_metadata"), dict) else {}
+    raw_text = str(analysis.get("document_text_excerpt") or fallback_text or "")
+    return extract_lab_dates(raw_text, document_metadata=metadata)
 
 
 def _request_fingerprint(
@@ -616,6 +777,40 @@ def _request_fingerprint(
     }
     raw = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _file_request_fingerprint(
+    *,
+    upload_bytes: bytes,
+    filename: str,
+    lab_name: Optional[str],
+    normalized_symptoms: List[str],
+) -> str:
+    payload = {
+        "file_sha256": hashlib.sha256(upload_bytes).hexdigest(),
+        "filename": filename,
+        "lab_name": lab_name.strip() if lab_name else None,
+        "symptoms": normalized_symptoms,
+    }
+    raw = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _normalize_idempotency_key(idempotency_key: Optional[str]) -> Optional[str]:
+    if not idempotency_key:
+        return None
+    normalized_key = idempotency_key.strip()
+    if not normalized_key:
+        return None
+    if len(normalized_key) > MAX_IDEMPOTENCY_KEY_LENGTH:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "detail": f"X-Idempotency-Key is too long (max {MAX_IDEMPOTENCY_KEY_LENGTH} chars)",
+                "code": "IDEMPOTENCY_KEY_TOO_LONG",
+            },
+        )
+    return normalized_key
 
 
 async def _get_idempotency_cached_response(
@@ -689,7 +884,6 @@ async def _drop_idempotency(*, user_id: str, idempotency_key: str) -> None:
 async def analyze_lab(
     request: Request,
     current_user: dict = Depends(get_current_user),
-    _freemium_check: None = Depends(require_freemium_analyze),
     idempotency_key: Optional[str] = Header(default=None, alias="X-Idempotency-Key"),
 ):
     content_type = (request.headers.get("content-type") or "").lower()
@@ -743,35 +937,70 @@ async def analyze_lab(
                         status_code=422,
                         detail={"detail": "Could not extract biomarkers from PDF", "code": "BIOMARKERS_NOT_EXTRACTED"},
                     )
+                lab_date_extraction = _extract_dates_from_analysis(analysis)
 
                 upload = await save_lab_upload(
                     user_id=user_id,
                     extracted_text="legacy_multipart_pdf",
                     lab_name=lab_name_form or getattr(file, "filename", None),
                     analyze_prompt_version="legacy_pdf_v1",
+                    **_date_payload_from_extraction(lab_date_extraction),
                 )
                 upload_id = upload["id"]
 
-                saved_biomarkers = await save_biomarkers(upload_id=upload_id, user_id=user_id, biomarkers=biomarkers)
-                knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
-                    biomarkers=saved_biomarkers,
+                # Stage 2B: canonical biomarker persistence now happens inside the
+                # pipeline, gated on the quality-gate decision — see
+                # run_lab_analysis_pipeline().
+                pipeline_result = await run_lab_analysis_pipeline(
+                    biomarkers=biomarkers,
                     symptoms=symptoms_form,
-                    user_id=user_id,
-                    upload_id=str(upload_id),
                     user_profile=user_profile,
-                )
-                await save_timeline_event(
                     user_id=user_id,
-                    event_type="lab_analyzed",
-                    summary=f"Lab report analyzed: {len(saved_biomarkers)} biomarkers found",
-                    metadata={"upload_id": upload_id, "biomarker_count": len(saved_biomarkers), "analysis_method": "legacy_pdf"},
+                    analysis_id=str(upload_id),
+                    source_metadata={
+                        "source": "legacy_multipart_pdf",
+                        "analysis_method": "legacy_pdf",
+                        **_date_payload_from_extraction(lab_date_extraction),
+                    },
+                    persist_knowledge=True,
+                    persist_report_version=True,
+                    persist_biomarkers=True,
+                    locale=_resolve_response_locale(request),
                 )
+                analysis_status = pipeline_result.get("analysis_status", "completed")
+                saved_biomarkers = (pipeline_result.get("saved_biomarkers") or []) if analysis_status == "completed" else []
+                if analysis_status == "completed":
+                    await save_timeline_event(
+                        user_id=user_id,
+                        event_type="lab_analyzed",
+                        summary=f"Lab report analyzed: {len(saved_biomarkers)} biomarkers found",
+                        metadata={
+                            "upload_id": upload_id,
+                            "biomarker_count": len(saved_biomarkers),
+                            "analysis_method": "legacy_pdf",
+                            **_date_payload_from_extraction(lab_date_extraction),
+                        },
+                    )
 
                 return {
                     "upload_id": upload_id,
+                    "analysis_status": analysis_status,
                     "biomarkers": saved_biomarkers,
                     "analysis_source": _stable_analysis_source("fallback"),
-                    "knowledge_evaluation": knowledge_evaluation,
+                    "knowledge_evaluation": pipeline_result.get("knowledge_evaluation"),
+                    "knowledge_report": pipeline_result.get("knowledge_report"),
+                    "interpreted_report": pipeline_result.get("interpreted_report"),
+                    "protocol": pipeline_result.get("protocol", {}),
+                    "retest_schedule": pipeline_result.get("retest_suggestions", []),
+                    "summary": pipeline_result.get("health_summary", {}),
+                    "analysis_input_quality_gate": pipeline_result.get("analysis_input_quality_gate"),
+                    "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+                    "evidence_gaps": pipeline_result.get("evidence_gaps"),
+                    "safety_result": pipeline_result.get("safety_result"),
+                    "safety_notice": pipeline_result.get("safety_notice"),
+                    "explainability": pipeline_result.get("explainability"),
+                    "report_version": pipeline_result.get("report_version"),
+                    "final_analysis": pipeline_result,
                 }
             finally:
                 try:
@@ -787,7 +1016,6 @@ async def analyze_lab(
             lab_name=lab_name_form,
             symptoms=symptoms_form,
             current_user=current_user,
-            _freemium_check=None,
         )
 
     try:
@@ -827,6 +1055,10 @@ async def analyze_lab(
     normalized_text = _normalize_lab_text(request_data.extracted_text)
     normalized_symptoms = _normalize_symptoms(request_data.symptoms or [])
     normalized_lab_name = request_data.lab_name.strip() if request_data.lab_name else None
+    lab_date_extraction = extract_lab_dates(
+        normalized_text,
+        user_provided_test_date=request_data.test_date,
+    )
 
     if request_data.ocr_confidence is not None and not (0 <= request_data.ocr_confidence <= 100):
         raise HTTPException(
@@ -875,9 +1107,9 @@ async def analyze_lab(
                 user_id=user_id,
                 extracted_text=normalized_text,
                 lab_name=normalized_lab_name,
-                test_date=request_data.test_date.isoformat() if request_data.test_date else None,
                 ocr_confidence=request_data.ocr_confidence,
                 analyze_prompt_version=EXTRACT_PROMPT_VERSION,
+                **_date_payload_from_extraction(lab_date_extraction),
             )
         except Exception as exc:
             logger.error("analyze_save_upload_failed user_id=%s error=%s", user_id, repr(exc), exc_info=True)
@@ -895,7 +1127,8 @@ async def analyze_lab(
             entity_id=str(upload_id),
             new_value={
                 "lab_name": normalized_lab_name,
-                "has_test_date": bool(request_data.test_date),
+                "has_test_date": bool(lab_date_extraction.test_date or lab_date_extraction.collected_at or lab_date_extraction.reported_at),
+                "date_source": lab_date_extraction.date_source,
                 "has_symptoms": bool(normalized_symptoms),
             },
         )
@@ -933,6 +1166,7 @@ async def analyze_lab(
             )
         analysis_source = _stable_analysis_source("llm" if is_llm_configured() else "fallback")
 
+        candidates = []
         try:
             candidates = build_candidate_payloads(
                 biomarkers=biomarkers,
@@ -942,61 +1176,71 @@ async def analyze_lab(
         except Exception as exc:
             logger.warning("analyze_text_save_candidates_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
 
-        # Persist biomarkers
-        try:
-            saved = await save_biomarkers(
-                upload_id=upload_id,
-                user_id=user_id,
-                biomarkers=biomarkers,
-            )
-        except Exception as exc:
-            logger.error("analyze_save_biomarkers_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc), exc_info=True)
-            raise HTTPException(
-                status_code=500,
-                detail={"detail": "Could not save extracted biomarkers", "code": "BIOMARKER_SAVE_FAILED"},
-            ) from exc
-
-        await write_audit_log(
-            user_id=user_id,
-            action="create",
-            entity_type="biomarkers",
-            entity_id=str(upload_id),
-            new_value={"count": len(saved)},
-        )
-
-        try:
-            await save_timeline_event(
-                user_id,
-                event_type="lab_uploaded",
-                summary=f"Lab uploaded from {normalized_lab_name or 'unknown lab'}",
-                metadata={"upload_id": upload_id, "biomarker_count": len(saved)},
-            )
-        except Exception as exc:
-            # Timeline should not fail the request after successful biomarker persistence.
-            logger.warning("analyze_timeline_event_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
-
+        # Stage 2B: canonical biomarker persistence now happens inside the
+        # pipeline, gated on the quality-gate decision (auto_continue only) — see
+        # run_lab_analysis_pipeline(). A persistence failure now surfaces via this
+        # route's existing generic `except Exception` handler below (marks the
+        # upload "failed" — genuine technical failure, not confirmation-pending).
         pipeline_result = await run_lab_analysis_pipeline(
-            biomarkers=saved,
+            biomarkers=biomarkers,
             symptoms=normalized_symptoms,
             user_profile=user_profile,
             user_id=user_id,
             analysis_id=str(upload_id),
-            source_metadata={"source": "b2c_text", "lab_name": normalized_lab_name},
+            source_metadata={
+                "source": "b2c_text",
+                "lab_name": normalized_lab_name,
+                "candidates": candidates,
+                **_date_payload_from_extraction(lab_date_extraction),
+            },
             persist_knowledge=True,
             persist_report_version=True,
+            persist_biomarkers=True,
             locale=_resolve_response_locale(request),
         )
+        analysis_status = pipeline_result.get("analysis_status", "completed")
+        saved = (pipeline_result.get("saved_biomarkers") or []) if analysis_status == "completed" else []
+
+        if analysis_status == "completed":
+            await write_audit_log(
+                user_id=user_id,
+                action="create",
+                entity_type="biomarkers",
+                entity_id=str(upload_id),
+                new_value={"count": len(saved)},
+            )
+            try:
+                await save_timeline_event(
+                    user_id,
+                    event_type="lab_uploaded",
+                    summary=f"Lab uploaded from {normalized_lab_name or 'unknown lab'}",
+                    metadata={
+                        "upload_id": upload_id,
+                        "biomarker_count": len(saved),
+                        **_date_payload_from_extraction(lab_date_extraction),
+                    },
+                )
+            except Exception as exc:
+                # Timeline should not fail the request after successful biomarker persistence.
+                logger.warning("analyze_timeline_event_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
+
         knowledge_evaluation = pipeline_result.get("knowledge_evaluation")
         result = {
             "upload_id": upload_id,
+            "analysis_status": analysis_status,
             "biomarkers": saved,
             "analysis_source": analysis_source,
             "knowledge_evaluation": knowledge_evaluation,
             "knowledge_report": pipeline_result.get("knowledge_report"),
+            "interpreted_report": pipeline_result.get("interpreted_report"),
             "protocol": pipeline_result.get("protocol", {}),
             "retest_schedule": pipeline_result.get("retest_suggestions", []),
             "summary": pipeline_result.get("health_summary", {}),
+            "analysis_input_quality_gate": pipeline_result.get("analysis_input_quality_gate"),
+            "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+            "evidence_gaps": pipeline_result.get("evidence_gaps"),
             "safety_result": pipeline_result.get("safety_result"),
+            "safety_notice": pipeline_result.get("safety_notice"),
             "explainability": pipeline_result.get("explainability"),
             "report_version": pipeline_result.get("report_version"),
             "final_analysis": pipeline_result,
@@ -1028,6 +1272,45 @@ async def get_biomarker_options_static(current_user: dict = Depends(get_current_
         raise HTTPException(status_code=500, detail=_FAILED_LOAD_BIOMARKERS)
 
 
+@router.patch("/{upload_id}/lab-date")
+async def patch_upload_lab_date(
+    upload_id: str,
+    body: LabDatePatchRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    user_id = current_user.get("sub")
+    await assert_upload_belongs_to_user(upload_id, user_id)
+    today = datetime.now(timezone.utc).date()
+    if body.test_date > today:
+        raise HTTPException(
+            status_code=422,
+            detail={"detail": "Lab test date cannot be in the future", "code": "LAB_DATE_IN_FUTURE"},
+        )
+    if body.test_date.year < 1990:
+        raise HTTPException(
+            status_code=422,
+            detail={"detail": "Lab test date is outside the supported range", "code": "LAB_DATE_OUT_OF_RANGE"},
+        )
+
+    updated = await update_lab_upload_dates(
+        upload_id=upload_id,
+        user_id=user_id,
+        test_date=body.test_date.isoformat(),
+        date_source=body.date_source,
+        date_confidence="high",
+        date_raw_text=f"user_provided: {body.test_date.isoformat()}",
+        overwrite=body.overwrite,
+    )
+    return {
+        "upload_id": upload_id,
+        "test_date": updated.get("test_date"),
+        "collected_at": updated.get("collected_at"),
+        "reported_at": updated.get("reported_at"),
+        "date_source": updated.get("date_source"),
+        "date_confidence": updated.get("date_confidence"),
+    }
+
+
 @router.get("/{upload_id}/candidates")
 async def get_upload_candidates(
     upload_id: str,
@@ -1036,12 +1319,31 @@ async def get_upload_candidates(
     user_id = current_user.get("sub")
     await assert_upload_belongs_to_user(upload_id, user_id)
     candidates = await get_biomarker_extraction_candidates(upload_id, user_id)
+    biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
+    user_profile = await get_user_profile(user_id) or {}
+    pipeline_result = await run_lab_analysis_pipeline(
+        biomarkers=biomarkers,
+        symptoms=[],
+        user_profile=user_profile,
+        user_id=user_id,
+        analysis_id=str(upload_id),
+        source_metadata={"source": "candidate_quality_review", "candidates": candidates},
+        persist_knowledge=False,
+        persist_report_version=False,
+        generate_ai_protocol=False,
+    )
+    quality_gate = pipeline_result.get("analysis_input_quality_gate") or {}
+    gate_requires_confirmation = bool(quality_gate.get("requires_confirmation"))
     return {
         "upload_id": upload_id,
+        "analysis_input_quality_gate": quality_gate,
+        "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+        "evidence_gaps": pipeline_result.get("evidence_gaps"),
+        "requires_confirmation": gate_requires_confirmation,
         "candidates": [
             {
                 **candidate,
-                "requires_confirmation": float(candidate.get("confidence_score") or 0) < 0.55,
+                "requires_confirmation": gate_requires_confirmation or float(candidate.get("confidence_score") or 0) < 0.80,
                 "confidence_label": (
                     "high"
                     if float(candidate.get("confidence_score") or 0) >= 0.80
@@ -1062,13 +1364,17 @@ async def confirm_upload_candidates(
 ):
     user_id = current_user.get("sub")
     await assert_upload_belongs_to_user(upload_id, user_id)
+    existing_biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
 
     updated = await update_biomarker_extraction_candidates(
         upload_id=upload_id,
         user_id=user_id,
         decisions=[item.model_dump() for item in body.candidates],
     )
-    confirmed = [candidate for candidate in updated if candidate.get("status") in {"confirmed", "corrected"}]
+    confirmed = enrich_candidates_from_biomarkers(
+        [candidate for candidate in updated if candidate.get("status") in {"confirmed", "corrected"}],
+        existing_biomarkers,
+    )
     biomarkers = [item for item in (candidate_to_biomarker(candidate) for candidate in confirmed) if item]
     if not biomarkers:
         raise HTTPException(
@@ -1076,22 +1382,33 @@ async def confirm_upload_candidates(
             detail={"detail": "No confirmed biomarker candidates were provided", "code": "NO_CONFIRMED_CANDIDATES"},
         )
 
-    saved = await save_biomarkers(upload_id=upload_id, user_id=user_id, biomarkers=biomarkers)
     user_profile = await get_user_profile(user_id) or {}
     locale = _resolve_response_locale(request)
+    # Stage 2B: do NOT persist biomarkers here. Pass the confirmed/corrected
+    # candidates (status="confirmed"/"corrected") into the gate re-evaluation via
+    # source_metadata — analysis_quality_gate.py's _candidate_scores() boosts
+    # confirmed/corrected candidate confidence to >=0.85, which is the mechanism
+    # that naturally resolves the gate to auto_continue once real confirmation has
+    # happened (no separate override flag, no invented retry limit). If the
+    # confirmed data still fails the gate (e.g. an unresolved integrity conflict),
+    # the pipeline returns the same abbreviated needs_confirmation result as
+    # before — the upload simply stays pending, exactly as required.
     pipeline_result = await run_lab_analysis_pipeline(
-        biomarkers=saved,
+        biomarkers=biomarkers,
         symptoms=_normalize_symptoms(body.symptoms),
         user_profile=user_profile,
         user_id=user_id,
         analysis_id=str(upload_id),
-        source_metadata={"source": "candidate_confirmation"},
+        source_metadata={"source": "candidate_confirmation", "candidates": confirmed},
         persist_knowledge=True,
         persist_report_version=True,
+        persist_biomarkers=True,
         locale=locale,
     )
+    analysis_status = pipeline_result.get("analysis_status", "completed")
+    saved = (pipeline_result.get("saved_biomarkers") or []) if analysis_status == "completed" else []
     protocol = pipeline_result.get("protocol", {})
-    if protocol:
+    if protocol and analysis_status == "completed":
         try:
             await save_protocol(
                 user_id=user_id,
@@ -1104,11 +1421,17 @@ async def confirm_upload_candidates(
 
     return {
         "upload_id": upload_id,
+        "analysis_status": analysis_status,
         "biomarkers": saved,
         "candidates": updated,
         "knowledge_report": pipeline_result.get("knowledge_report"),
+        "interpreted_report": pipeline_result.get("interpreted_report"),
         "protocol": protocol,
+        "analysis_input_quality_gate": pipeline_result.get("analysis_input_quality_gate"),
+        "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+        "evidence_gaps": pipeline_result.get("evidence_gaps"),
         "safety_result": pipeline_result.get("safety_result"),
+        "safety_notice": pipeline_result.get("safety_notice"),
         "explainability": pipeline_result.get("explainability"),
         "report_version": pipeline_result.get("report_version"),
         "final_analysis": pipeline_result,
@@ -1129,10 +1452,76 @@ async def get_results(
 
     # Get biomarkers
     biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
+    try:
+        candidates = await get_biomarker_extraction_candidates(upload_id, user_id)
+    except Exception as exc:
+        logger.warning(
+            "results_read_candidates_unavailable upload_id=%s user_id=%s error=%s",
+            upload_id,
+            user_id,
+            repr(exc),
+        )
+        candidates = []
     user_profile = await get_user_profile(user_id) or {}
     protocol = await get_protocol_by_upload(user_id, upload_id)
     protocol_recommendations = protocol.get("recommendations", []) if protocol else []
     locale = _resolve_response_locale(request)
+    # Stage 2C: defense-in-depth re-sanitization at the READ boundary. protocols.
+    # recommendations is read verbatim from the DB — rows written before this
+    # stage's fix (or by any future write path that forgets to sanitize) must
+    # still never reach a live response unsanitized. Reuses the same function/
+    # detectors as the write path; a no-op for already-sanitized content.
+    protocol_recommendations = sanitize_protocol_for_safety(protocol_recommendations, profile=user_profile, locale=locale)
+
+    try:
+        report_version = await get_latest_report_version(upload_id, user_id, locale)
+    except Exception as exc:
+        logger.warning("results_read_report_version_unavailable upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
+        report_version = None
+
+    # Stage 2G: a completed analysis with a persisted report version is an
+    # immutable historical artifact — serve it from the frozen row, never
+    # recompute it with today's pipeline/prompts/knowledge rules/safety
+    # behavior. Only when NO frozen version exists (a still-pending upload,
+    # or a genuinely legacy upload predating report_versions) do we fall back
+    # to building a live/reconstructed report below.
+    if is_frozen_report_version(report_version):
+        response = assemble_frozen_response(
+            upload_id=upload_id,
+            biomarkers=biomarkers,
+            protocol_recommendations=protocol_recommendations,
+            report_version=report_version,
+            user_profile=user_profile,
+            locale=locale,
+        )
+        await write_audit_log(
+            user_id=user_id,
+            action="read",
+            entity_type="results",
+            entity_id=str(upload_id),
+            new_value={"biomarker_count": len(biomarkers), "has_protocol": bool(protocol_recommendations), "report_source": REPORT_SOURCE_FROZEN},
+        )
+        response["final_analysis"] = dict(response)
+        return response
+
+    # Protocol-locale fix (cabinet reconciliation): `protocols` is one mutable
+    # row PER UPLOAD with no locale column of its own (see report_history.py's
+    # module docstring) — it cannot tell us what language `protocol_recommendations`
+    # is actually written in. If a frozen report_versions row exists for this
+    # upload in ANY locale (just not the requested one — the same situation
+    # get_latest_report_version's locale fix now surfaces as None instead of
+    # silently substituting), the existing protocols row cannot be trusted to
+    # match the requested locale either: it was almost certainly written by
+    # that other locale's generation event. Force a fresh, correct-locale
+    # protocol generation in that case, and never persist over the existing
+    # row — persisting would overwrite the other locale's legitimately correct
+    # protocol next time IT is requested. This is transient/read-only, same
+    # non-persisting posture as the knowledge_report rebuild below; no schema
+    # change needed. A genuinely legacy upload (no report_versions row in any
+    # locale) keeps the exact prior behavior — untouched.
+    locale_mismatch = bool(protocol_recommendations) and await has_any_report_version(upload_id, user_id)
+    if locale_mismatch:
+        protocol_recommendations = []
 
     # Build the current report on read so older uploads are upgraded without re-uploading.
     pipeline_result = await run_lab_analysis_pipeline(
@@ -1141,7 +1530,7 @@ async def get_results(
         user_profile=user_profile,
         user_id=user_id,
         analysis_id=str(upload_id),
-        source_metadata={"source": "results_read"},
+        source_metadata={"source": "results_read", "candidates": candidates},
         persist_knowledge=False,
         locale=locale,
         generate_ai_protocol=not bool(protocol_recommendations),
@@ -1151,45 +1540,69 @@ async def get_results(
 
     generated_recommendations = pipeline_result.get("recommendations") or []
     if not protocol_recommendations and generated_recommendations:
-        try:
-            protocol = await save_protocol(
-                user_id=user_id,
-                upload_id=upload_id,
-                recommendations=generated_recommendations,
-                prompt_version="results_read_v2",
-            )
-            protocol_recommendations = protocol.get("recommendations", [])
-        except Exception as exc:
-            logger.warning(
-                "results_read_save_protocol_failed upload_id=%s user_id=%s error=%s",
-                upload_id,
-                user_id,
-                repr(exc),
-                exc_info=True,
-            )
+        if locale_mismatch:
+            # Transient only — do not overwrite the other locale's protocols
+            # row (see docstring above).
+            protocol_recommendations = generated_recommendations
+        else:
+            try:
+                protocol = await save_protocol(
+                    user_id=user_id,
+                    upload_id=upload_id,
+                    recommendations=generated_recommendations,
+                    prompt_version="results_read_v2",
+                )
+                protocol_recommendations = protocol.get("recommendations", [])
+            except Exception as exc:
+                logger.warning(
+                    "results_read_save_protocol_failed upload_id=%s user_id=%s error=%s",
+                    upload_id,
+                    user_id,
+                    repr(exc),
+                    exc_info=True,
+                )
+
+    # Stage 2G: this branch only runs when no frozen report_versions row was
+    # found for the requested locale. `locale_mismatch` distinguishes "a
+    # frozen version exists, just in a different locale" (tagged
+    # REPORT_SOURCE_LOCALE_UNAVAILABLE, transient render, DB row never
+    # retroactively created) from a genuinely legacy upload that predates
+    # report_versions entirely (REPORT_SOURCE_LEGACY_FALLBACK, unchanged from
+    # prior behavior — no mass migration/backfill happens here either).
+    if locale_mismatch:
+        report_source = REPORT_SOURCE_LOCALE_UNAVAILABLE
+    else:
+        report_source = REPORT_SOURCE_LEGACY_FALLBACK if biomarkers else None
 
     await write_audit_log(
         user_id=user_id,
         action="read",
         entity_type="results",
         entity_id=str(upload_id),
-        new_value={"biomarker_count": len(biomarkers), "has_protocol": bool(protocol_recommendations)},
+        new_value={"biomarker_count": len(biomarkers), "has_protocol": bool(protocol_recommendations), "report_source": report_source},
     )
-    try:
-        report_version = await get_latest_report_version(upload_id, user_id, locale)
-    except Exception as exc:
-        logger.warning("results_read_report_version_unavailable upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
-        report_version = None
 
     return {
         "upload_id": upload_id,
+        # Stage 2B: naturally reflects "needs_confirmation" when this upload has no
+        # canonical biomarkers yet (get_biomarkers_by_upload returns [] for an
+        # unconfirmed upload, which the gate correctly re-derives as
+        # block_or_confirm — no special-casing needed here, the same gate logic
+        # that governs write time governs this read).
+        "analysis_status": pipeline_result.get("analysis_status", "completed"),
         "biomarkers": biomarkers,
         "protocol": protocol_recommendations,
         "knowledge_evaluation": knowledge_evaluation,
         "knowledge_report": knowledge_report,
+        "interpreted_report": pipeline_result.get("interpreted_report"),
+        "analysis_input_quality_gate": pipeline_result.get("analysis_input_quality_gate"),
+        "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+        "evidence_gaps": pipeline_result.get("evidence_gaps"),
         "safety_result": pipeline_result.get("safety_result"),
+        "safety_notice": pipeline_result.get("safety_notice"),
         "explainability": pipeline_result.get("explainability"),
         "report_version": report_version,
+        "report_source": report_source,
         "final_analysis": pipeline_result,
     }
 
@@ -1209,6 +1622,9 @@ async def regenerate_results(
     user_profile = await get_user_profile(user_id) or {}
     protocol = await get_protocol_by_upload(user_id, upload_id)
     protocol_recommendations = protocol.get("recommendations", []) if protocol else []
+    # Stage 2C: same read-boundary defense-in-depth as get_results — regenerate
+    # must not resurrect unsanitized pre-existing protocol content either.
+    protocol_recommendations = sanitize_protocol_for_safety(protocol_recommendations, profile=user_profile, locale=locale)
 
     pipeline_result = await run_lab_analysis_pipeline(
         biomarkers=biomarkers,
@@ -1237,13 +1653,20 @@ async def regenerate_results(
 
     return {
         "upload_id": upload_id,
+        "analysis_status": pipeline_result.get("analysis_status", "completed"),
         "biomarkers": biomarkers,
         "protocol": protocol_recommendations or pipeline_result.get("recommendations") or [],
         "knowledge_evaluation": pipeline_result.get("knowledge_evaluation"),
         "knowledge_report": pipeline_result.get("knowledge_report"),
+        "interpreted_report": pipeline_result.get("interpreted_report"),
+        "analysis_input_quality_gate": pipeline_result.get("analysis_input_quality_gate"),
+        "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+        "evidence_gaps": pipeline_result.get("evidence_gaps"),
         "safety_result": pipeline_result.get("safety_result"),
+        "safety_notice": pipeline_result.get("safety_notice"),
         "explainability": pipeline_result.get("explainability"),
         "report_version": pipeline_result.get("report_version"),
+        "report_source": REPORT_SOURCE_REGENERATED,
         "final_analysis": pipeline_result,
     }
 
@@ -1285,8 +1708,18 @@ async def _check_and_validate_manual_entries(user_id: str, request: ManualAnalys
     # Convert to ManualBiomarkerEntry objects
     entry_dicts = [entry.model_dump() for entry in request.biomarkers]
 
+    # sex/age (adults only — this product does not serve minors) let
+    # calculate_status() prefer a matching knowledge-base reference range
+    # over the flat BIOMARKER_DATABASE default. Missing/incomplete profile
+    # data degrades gracefully to the prior (age/sex-blind) behavior.
+    profile = await get_user_profile(user_id) or {}
+    profile_sex = profile.get("sex")
+    profile_age = profile.get("age")
+
     # Validate all entries
-    valid_entries, errors = biomarker_service.validate_entries(entry_dicts)
+    valid_entries, errors = await biomarker_service.validate_entries(
+        entry_dicts, sex=profile_sex, age=profile_age
+    )
 
     if errors:
         error_message = "; ".join(errors)
@@ -1295,7 +1728,9 @@ async def _check_and_validate_manual_entries(user_id: str, request: ManualAnalys
     if not valid_entries:
         raise HTTPException(status_code=400, detail=_NO_VALID_BIOMARKERS)
 
-    return biomarker_service.convert_to_standard_units(valid_entries)
+    return await biomarker_service.convert_to_standard_units(
+        valid_entries, sex=profile_sex, age=profile_age
+    )
 
 
 async def _generate_protocol_for_manual_entries(request: ManualAnalysisRequest, converted_entries: list) -> list:
@@ -1368,42 +1803,85 @@ async def analyze_manual_biomarkers(
         upload_id = upload_result["upload_id"]
         biomarkers_data = upload_result["biomarkers"]
         user_profile = await get_user_profile(user_id) or {}
+        manual_candidates = build_candidate_payloads(
+            biomarkers=biomarkers_data,
+            source="manual",
+        )
+        try:
+            await save_biomarker_extraction_candidates(
+                upload_id=upload_id,
+                user_id=user_id,
+                candidates=manual_candidates,
+            )
+        except Exception as exc:
+            logger.warning(
+                "analyze_manual_save_candidates_failed upload_id=%s user_id=%s error=%s",
+                upload_id,
+                user_id,
+                repr(exc),
+            )
 
+        # Stage 2B: manual entry now follows the SAME canonical-data boundary as
+        # every other B2C ingestion path — biomarker_service.create_upload_from_
+        # manual_entries() no longer writes to the biomarkers table itself (see
+        # its docstring); persistence happens inside the pipeline, gated on the
+        # quality-gate decision, via the shared save_biomarkers() chokepoint.
+        # build_candidate_payloads(source="manual") already marks these candidates
+        # status="confirmed" with a boosted confidence score for well-formed
+        # entries (analysis_candidates.py) — reusing the SAME confirmed-candidate
+        # boost the gate already applies elsewhere, so valid manual input
+        # naturally resolves to auto_continue without a second gate
+        # implementation, per this stage's explicit requirement.
         pipeline_result = await run_lab_analysis_pipeline(
             biomarkers=biomarkers_data,
             symptoms=[],
             user_profile=user_profile,
             user_id=user_id,
             analysis_id=str(upload_id),
-            source_metadata={"source": "b2c_manual", "lab_name": request.lab_name},
+            source_metadata={
+                "source": "b2c_manual",
+                "lab_name": request.lab_name,
+                "candidates": manual_candidates,
+            },
             persist_knowledge=True,
             persist_report_version=True,
+            persist_biomarkers=True,
             locale=response_locale,
         )
-        protocol = pipeline_result.get("protocol", {})
-        legacy_manual_recommendations = (
-            []
-            if response_locale == "uk"
-            else await _generate_protocol_for_manual_entries(request, converted_entries)
-        )
-        recommendations_to_save = legacy_manual_recommendations or pipeline_result.get("recommendations") or []
-        protocol_response = legacy_manual_recommendations or protocol
+        analysis_status = pipeline_result.get("analysis_status", "completed")
+        saved_biomarkers = (pipeline_result.get("saved_biomarkers") or []) if analysis_status == "completed" else []
 
-        # Save protocol
-        if recommendations_to_save:
-            await save_protocol_for_upload(user_id, upload_id, recommendations_to_save)
+        protocol = pipeline_result.get("protocol", {})
+        legacy_manual_recommendations = []
+        protocol_response = protocol
+        if analysis_status == "completed":
+            legacy_manual_recommendations = (
+                []
+                if response_locale == "uk"
+                else await _generate_protocol_for_manual_entries(request, converted_entries)
+            )
+            recommendations_to_save = legacy_manual_recommendations or pipeline_result.get("recommendations") or []
+            protocol_response = legacy_manual_recommendations or protocol
+            if recommendations_to_save:
+                await save_protocol_for_upload(user_id, upload_id, recommendations_to_save)
 
         return {
             "upload_id": upload_id,
-            "biomarkers": biomarkers_data,
+            "analysis_status": analysis_status,
+            "biomarkers": saved_biomarkers,
             "analysis_source": _stable_analysis_source("llm" if is_llm_configured() else "fallback"),
             "knowledge_evaluation": pipeline_result.get("knowledge_evaluation"),
             "knowledge_report": pipeline_result.get("knowledge_report"),
-            "protocol": protocol_response,
+            "interpreted_report": pipeline_result.get("interpreted_report"),
+            "analysis_input_quality_gate": pipeline_result.get("analysis_input_quality_gate"),
+            "clinical_data_integrity": pipeline_result.get("clinical_data_integrity"),
+            "evidence_gaps": pipeline_result.get("evidence_gaps"),
+            "protocol": protocol_response if analysis_status == "completed" else {},
             "shopping_links": pipeline_result.get("shopping_links", []),
             "retest_schedule": pipeline_result.get("retest_suggestions", []),
             "summary": pipeline_result.get("health_summary", {}),
             "safety_result": pipeline_result.get("safety_result"),
+            "safety_notice": pipeline_result.get("safety_notice"),
             "explainability": pipeline_result.get("explainability"),
             "report_version": pipeline_result.get("report_version"),
             "final_analysis": pipeline_result,
@@ -1417,18 +1895,29 @@ async def analyze_manual_biomarkers(
 
 
 async def save_protocol_for_upload(user_id: str, upload_id: str, recommendations: List[dict]):
-    """Save generated protocol to database"""
+    """Save generated protocol to database.
+
+    Hotfix 1 — post-release: this used to build its own insert payload with
+    `"created_at": asyncio.get_event_loop().time()` — a monotonic-clock float
+    (e.g. "4766498.437"), not a timestamp, which Postgres always rejected for
+    the `timestamptz` column. Every manual-entry protocol has therefore never
+    actually persisted since this endpoint existed; the error was swallowed
+    by the bare `except: pass` below, so `POST /analyze/manual` still
+    returned 201 with a real protocol in its own response body, while a
+    later GET always saw an empty one.
+
+    Fixed by delegating to the same canonical persistence path every other
+    ingestion source (PDF upload, confirm-candidates) already uses —
+    `supabase_service.save_protocol()`, which never sets `created_at` itself
+    and relies on the table's own `now()` default. No second protocol model,
+    no duplicated insert logic.
+    """
     try:
-        protocol_data = {
-            "user_id": user_id,
-            "upload_id": upload_id,
-            "recommendations": recommendations,
-            "created_at": asyncio.get_event_loop().time(),
-        }
-        from app.services.supabase_service import _get_supabase, _run
-        sb = _get_supabase()
-        await _run(
-            lambda: sb.table("protocols").insert(protocol_data).execute()
+        await save_protocol(
+            user_id=user_id,
+            upload_id=upload_id,
+            recommendations=recommendations,
+            prompt_version="manual_entry_v1",
         )
     except Exception as e:
         logger.error(f"Failed to save protocol: {e}")

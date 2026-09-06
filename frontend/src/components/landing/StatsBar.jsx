@@ -13,13 +13,13 @@ const STATS = [
   },
   {
     icon: FileSearch,
-    number: 'Core V2',
-    label: 'Shared analysis path for user and partner flows'
+    number: '85+',
+    label: 'Biomarkers normalized after upload'
   },
   {
     icon: Repeat2,
-    number: 'Trends',
-    label: 'Check-ins, safety notes, and retests stay connected'
+    number: 'Weekly loop',
+    label: 'Check-ins connect symptoms to progress'
   },
 ]
 

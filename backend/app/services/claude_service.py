@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from app.config import settings
 from app.services.knowledge.integration import build_biomarker_extraction_knowledge_context
@@ -33,6 +33,7 @@ PROTOCOL_PROMPT_VERSION = "protocol_v1"
 logger = logging.getLogger("uvicorn.error")
 
 _BIOMARKER_KEYS = {"name", "value", "unit", "status"}
+_BIOMARKER_OPTIONAL_KEYS = {"assay_qualifier"}  # Optional fields added to biomarker extraction
 _PROTOCOL_KEYS = {"supplement", "dosage", "timing", "priority", "rationale", "iherb_search"}
 _SYSTEM_PROMPT = (
     "You are a precise health data assistant. "
@@ -516,6 +517,33 @@ async def _persist_usage_event(
         logger.warning("llm_usage_event_failed task=%s reason=%s", task_name, ex)
 
 
+def _is_retryable_llm_error(exc: BaseException) -> bool:
+    """Only retry failures a second attempt could plausibly fix: network
+    timeouts/connection drops, 429 rate limits, and 5xx server errors. A 400
+    (bad request) or 401/403 (auth) will fail identically on retry — burning
+    the retry budget on those just delays falling back to the local
+    regex/template path for no benefit."""
+    if isinstance(exc, (httpx.TimeoutException, httpx.ConnectError, httpx.ReadError)):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        status = exc.response.status_code
+        return status == 429 or status >= 500
+    return False
+
+
+# Found 2026-09-03: extract_biomarkers()/generate_protocol() below each carry
+# their own @retry, but both wrap this call in a try/except that swallows
+# every exception into a local fallback and returns normally — so those
+# outer decorators never actually see a failure to retry, ever. A single
+# transient timeout/429/5xx dropped straight to the fallback with zero
+# retries despite the decorator's presence. The real retry now lives here,
+# on the actual network call, and only for errors a retry can plausibly fix.
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception(_is_retryable_llm_error),
+    reraise=True,
+)
 async def _chat_completion(
     prompt: str,
     *,
@@ -579,6 +607,9 @@ def _validate_biomarker_payload(payload: Any) -> List[Dict[str, Any]]:
         missing = _BIOMARKER_KEYS - set(item.keys())
         if missing:
             raise ValueError(f"Biomarker item missing keys: {sorted(missing)}")
+        # assay_qualifier and other future optional fields are allowed but not required
+        # Extraction parsing is feature-gated, so assay_qualifier won't be present
+        # until explicitly enabled in Phase C
     return payload
 
 
@@ -594,7 +625,8 @@ def _validate_protocol_payload(payload: Any) -> List[Dict[str, Any]]:
     return payload
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+# No @retry here — it never fired (see the comment above _chat_completion's
+# own @retry, which is where retries actually happen now).
 async def extract_biomarkers(
     text: str,
     symptoms: List[str],
@@ -670,7 +702,7 @@ async def extract_biomarkers(
         return _fallback_extract_biomarkers(text)
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+# No @retry here either, same reason as extract_biomarkers above.
 async def generate_protocol(
     biomarkers: List[Dict],
     symptoms: List[str],
@@ -679,6 +711,7 @@ async def generate_protocol(
     user_id: str | None = None,
     upload_id: str | None = None,
     locale: str = "en",
+    clinical_context: Dict[str, Any] | None = None,
 ) -> List[Dict[str, Any]]:
     if not is_llm_configured():
         logger.error(
@@ -694,6 +727,11 @@ async def generate_protocol(
     symptoms_str = ", ".join(symptoms) if symptoms else "none reported"
     biomarkers_str = json.dumps(biomarkers, indent=2)
     profile_str = json.dumps(user_profile or {}, indent=2, ensure_ascii=False)
+    # clinical_context carries the deterministic engine's output: matched rules,
+    # safety alerts, risk flags, marker coverage.  When present, it is injected
+    # into the prompt so the LLM sees what the system already computed instead of
+    # re-deriving it from raw biomarkers.
+    clinical_context_str = json.dumps(clinical_context, indent=2, ensure_ascii=False) if clinical_context else ""
     prompt = (
         PROTOCOL_PROMPT
         .replace("{biomarkers}", biomarkers_str)
@@ -701,6 +739,14 @@ async def generate_protocol(
         .replace("{user_profile}", profile_str)
         .replace("{language_instruction}", _protocol_language_instruction(locale))
     )
+    # Append clinical context section if available
+    if clinical_context_str:
+        prompt += (
+            "\n\n## Clinical Engine Analysis (deterministic, already computed)\n"
+            "Use this as the authoritative analysis of the biomarkers above. "
+            "Do NOT contradict the matched rules or safety alerts below.\n\n"
+            f"{clinical_context_str}"
+        )
     try:
         raw = _strip_code_block(
             await _chat_completion(

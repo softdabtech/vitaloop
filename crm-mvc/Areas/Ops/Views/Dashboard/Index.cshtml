@@ -336,6 +336,7 @@
                           onclick="openModal('@u.UserId','@u.DisplayName','@u.Email','@u.GlobalRole','@u.SubscriptionStatus','@u.MembershipStatus','@u.Age','@u.Sex')">
                           Detail
                         </button>
+                        <a href="/ops/users/@u.UserId/profile" class="btn-xs btn-save">Activity</a>
                       </div>
                     </form>
                   </td>
@@ -396,6 +397,7 @@
                     <td>
                       <div class="act-row">
                         <a href="/admin/members/@p.UserId/profile" class="btn-xs btn-ghost">Profile</a>
+                        <a href="/ops/users/@p.UserId/profile" class="btn-xs btn-ghost">Activity</a>
                         <a href="/admin/assignments?userId=@p.UserId" class="btn-xs btn-ghost">Clients</a>
                       </div>
                     </td>
@@ -647,7 +649,7 @@
       <div id="modal-activity-content" style="color:var(--c-muted);font-size:13px">Loading…</div>
     </div>
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--c-border);display:flex;gap:10px;">
-      <a id="modal-profile-link" href="#" class="btn-xs btn-save">Open Profile →</a>
+      <a id="modal-profile-link" href="#" class="btn-xs btn-save">Open Client Activity →</a>
       <button onclick="closeModal()" class="btn-xs btn-ghost">Close</button>
     </div>
   </div>
@@ -680,7 +682,7 @@ function openModal(id, name, email, role, tariff, status, age, sex) {
   document.getElementById('modal-status').textContent = status || '-'
   document.getElementById('modal-age').textContent    = age || '-'
   document.getElementById('modal-sex').textContent    = sex || '-'
-  document.getElementById('modal-profile-link').href  = '/admin/members/' + id + '/profile'
+  document.getElementById('modal-profile-link').href  = '/ops/users/' + id + '/profile'
   document.getElementById('modal-activity-content').textContent = 'Loading…'
   document.getElementById('user-modal').classList.add('open')
 

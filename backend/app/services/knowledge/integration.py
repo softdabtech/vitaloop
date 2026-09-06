@@ -6,7 +6,8 @@ from typing import Any, Dict, List
 from app.config import settings
 from app.services import supabase_service as supabase
 from app.services.lab_normalization.biomarker_mapping import to_canonical_name
-from app.services.knowledge.evaluator import evaluate_health_input
+from app.services.knowledge.evaluator import evaluate_health_input, _is_eligible_for_kb_numeric_classification
+from app.services.clinical_engine.units import is_percentage_unit as _is_percentage_unit
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -24,6 +25,14 @@ def _knowledge_marker_key(name: str) -> str:
 def biomarkers_to_knowledge_lab_results(biomarkers: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     lab_results: Dict[str, Dict[str, Any]] = {}
     for item in biomarkers or []:
+        # P0 Reference Safety Fix: Filter ineligible statuses before KB evaluation
+        is_eligible, ineligible_reason = _is_eligible_for_kb_numeric_classification(item)
+        if not is_eligible:
+            # Ineligible biomarkers (UNEVALUATED, UNKNOWN, NEEDS_CONFIRMATION) are excluded
+            # from KB numeric abnormality evaluation but remain in the biomarker record
+            # for display and Safety Engine independent evaluation
+            continue
+
         name = str(item.get("name") or item.get("display_name") or "").strip()
         if not name:
             continue
@@ -36,15 +45,28 @@ def biomarkers_to_knowledge_lab_results(biomarkers: List[Dict[str, Any]]) -> Dic
             numeric_value = float(value)
         except (TypeError, ValueError):
             continue
-        lab_results.setdefault(
-            key,
-            {
-                "value": numeric_value,
-                "unit": unit,
-                "source_name": name,
-                "status": item.get("status"),
-            },
-        )
+        entry = {
+            "value": numeric_value,
+            "unit": unit,
+            "assay_qualifier": item.get("assay_qualifier"),  # Preserve assay qualifier (FEU/DDU)
+            "source_name": name,
+            "status": item.get("status"),
+        }
+        existing = lab_results.get(key)
+        if existing is None:
+            lab_results[key] = entry
+            continue
+        # A differential is reported twice: "Lymphocytes Percentage 38 %" and
+        # "Absolute Lymphocytes 5.66 10^9/L". Both resolve to the same analyte, and
+        # first-seen previously won -- which is the percentage row, because that is
+        # the order labs print them. Every KB rule for these markers is written
+        # against an absolute count, so keeping the percentage discarded the only
+        # value that could be evaluated (lymphocytes 5.66 10^9/L against a
+        # >4.0 10^9/L rule, in the stored uploads). Prefer the absolute row; this
+        # is a choice between two reported values, never a unit conversion -- a
+        # percentage and a count stay unconvertible in the evaluator.
+        if _is_percentage_unit(existing.get("unit")) and not _is_percentage_unit(unit):
+            lab_results[key] = entry
     return lab_results
 
 

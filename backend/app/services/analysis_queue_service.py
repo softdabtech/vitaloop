@@ -1,5 +1,6 @@
 """Service for managing deferred PDF analysis tasks."""
-from datetime import datetime, timedelta
+import asyncio
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import uuid
 import logging
@@ -16,7 +17,7 @@ def init_scheduler():
     """Initialize the APScheduler background scheduler."""
     global _scheduler
     if _scheduler is None:
-        _scheduler = BackgroundScheduler()
+        _scheduler = BackgroundScheduler(timezone=timezone.utc)
         _scheduler.start()
         logger.info("Analysis queue scheduler initialized")
     return _scheduler
@@ -28,6 +29,14 @@ def get_scheduler() -> BackgroundScheduler:
     if _scheduler is None:
         init_scheduler()
     return _scheduler
+
+
+def shutdown_scheduler() -> None:
+    """Stop the background scheduler during application shutdown."""
+    global _scheduler
+    if _scheduler is not None and _scheduler.running:
+        _scheduler.shutdown(wait=False)
+        logger.info("Analysis queue scheduler stopped")
 
 
 async def schedule_pdf_analysis(
@@ -143,3 +152,90 @@ def get_scheduled_tasks(user_id: str) -> list:
                 "next_run_time": job.next_run_time.isoformat() if job.next_run_time else None,
             })
     return tasks
+
+
+async def run_retention_cleanup_once() -> dict:
+    """Redact old raw upload text once.
+
+    APScheduler's BackgroundScheduler calls sync functions. Keeping the async
+    body here lets tests call the retention logic directly while production
+    schedules a synchronous wrapper that awaits it explicitly.
+    """
+    from app.config import settings
+    from app.services import supabase_service as svc
+
+    retention_days = settings.lab_upload_raw_retention_days
+    batch_size = settings.lab_upload_retention_batch_size
+
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=retention_days)
+    cutoff_iso = cutoff_date.isoformat()
+
+    supabase = svc._get_supabase()
+
+    eligible = await svc._run(
+        lambda: supabase.table("lab_uploads")
+        .select("id")
+        .lt("created_at", cutoff_iso)
+        .not_.is_("extracted_text", "null")
+        .limit(batch_size)
+        .execute()
+    )
+
+    uploads_to_redact = eligible.data if eligible else []
+    count = len(uploads_to_redact)
+
+    if count > 0:
+        upload_ids = [u["id"] for u in uploads_to_redact if u.get("id")]
+        await svc._run(
+            lambda: supabase.table("lab_uploads")
+            .update({"extracted_text": None})
+            .in_("id", upload_ids)
+            .lt("created_at", cutoff_iso)
+            .not_.is_("extracted_text", "null")
+            .execute()
+        )
+        logger.info("Retention cleanup: redacted %s uploads older than %s days", count, retention_days)
+    else:
+        logger.info("Retention cleanup: no uploads eligible for cleanup")
+
+    return {"redacted": count, "cutoff": cutoff_iso, "retention_days": retention_days}
+
+
+def run_retention_cleanup_job() -> dict | None:
+    """Synchronous APScheduler entrypoint for retention cleanup."""
+    try:
+        return asyncio.run(run_retention_cleanup_once())
+    except Exception as exc:
+        logger.error("Retention cleanup job failed: %s", exc.__class__.__name__)
+        return None
+
+
+def schedule_retention_cleanup():
+    """
+    Schedule recurring lab upload raw data retention cleanup job.
+
+    Runs daily at 2 AM UTC.
+    Redacts/deletes raw upload text older than configured retention_days.
+    """
+    scheduler = get_scheduler()
+
+    # Schedule job: run daily at 2 AM UTC
+    job_id = "retention_cleanup_daily"
+    job = scheduler.add_job(
+        run_retention_cleanup_job,
+        'cron',
+        hour=2,
+        minute=0,
+        id=job_id,
+        name="retention_cleanup_daily",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+
+    logger.info(
+        "Retention cleanup job scheduled: daily at 2 AM UTC; job_count=%s next_run=%s",
+        len(scheduler.get_jobs()),
+        job.next_run_time.isoformat() if job.next_run_time else None,
+    )
+    return job

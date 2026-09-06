@@ -27,10 +27,17 @@ export const LANDING_PRICING_PLANS = [
   {
     id: PRICING_PLAN_IDS.PERSONAL,
     name: 'Premium',
-    monthly: '$4.99',
-    yearly: '$49.99',
+    // Business pricing update 2026-09-02: Premium moved from $4.99/mo,
+    // $49.99/yr to $9.99/mo, $99.99/yr. This is the value every paywall
+    // prompt reads via PREMIUM_PRICE_LABEL below, so changing it here
+    // propagates everywhere that imports from this file. Other surfaces
+    // that keep their own copy of the number (InteractivePricing.jsx,
+    // FAQ.jsx, helpArticles.js, index.html JSON-LD, backend email
+    // templates) were updated alongside this in the same change.
+    monthly: '$9.99',
+    yearly: '$99.99',
     period: '/mo',
-    annualNote: 'Save with annual billing',
+    annualNote: 'Save 17% on yearly billing',
     desc: 'Full blood test analysis, personalized protocol, and weekly check-ins.',
     badge: 'MOST POPULAR',
     dark: false,
@@ -87,5 +94,5 @@ export const LANDING_PRICING_PLANS = [
 ]
 
 export const CLIENT_PREMIUM_PLAN = LANDING_PRICING_PLANS.find((plan) => plan.id === PRICING_PLAN_IDS.PERSONAL)
-export const PREMIUM_MONTHLY_PRICE = 4.99
+export const PREMIUM_MONTHLY_PRICE = 9.99
 export const PREMIUM_PRICE_LABEL = `${CLIENT_PREMIUM_PLAN.monthly} / month`

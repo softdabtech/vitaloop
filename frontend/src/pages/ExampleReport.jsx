@@ -26,14 +26,14 @@ const SCREENSHOTS = [
   },
   {
     title: 'Lab results',
-    description: 'Normalized biomarkers with values, units, reference ranges, status, interpretation context, and quality signals.',
+    description: 'Normalized biomarkers with values, units, reference ranges, status, and interpretation context.',
     image: '/mockups/example-report/lab-results.webp',
     alt: 'VITALOOP lab results page with biomarker rows and status indicators',
     icon: FlaskConical,
   },
   {
     title: 'Upload flow',
-    description: 'Upload PDF/image results or use structured entry, then keep the source context connected to the analysis.',
+    description: 'Drop in a PDF report and keep the original file connected to the structured analysis.',
     image: '/mockups/example-report/upload.webp',
     alt: 'VITALOOP upload page for lab report PDFs',
     icon: Upload,
@@ -62,9 +62,9 @@ const SCREENSHOTS = [
 ]
 
 const REPORT_HIGHLIGHTS = [
-  { label: 'Analysis engine', value: 'Core V2', detail: 'shared B2C/B2B pipeline' },
+  { label: 'Biomarkers parsed', value: '85+', detail: 'names, values, units, and ranges' },
   { label: 'Workflow', value: '5 steps', detail: 'symptoms -> labs -> protocol -> check-in' },
-  { label: 'Output', value: 'Structured', detail: 'priorities, safety, trends, and next actions' },
+  { label: 'Output', value: 'Structured', detail: 'priorities, context, and next actions' },
 ]
 
 const BIOMARKERS = [
@@ -78,7 +78,7 @@ const WORKFLOW = [
   {
     icon: FileText,
     title: 'Upload a report',
-    body: 'VITALOOP reads lab inputs, extracts biomarkers where possible, and preserves the source context.',
+    body: 'VITALOOP reads the PDF, extracts biomarkers, and preserves the source context.',
   },
   {
     icon: FlaskConical,
@@ -88,7 +88,7 @@ const WORKFLOW = [
   {
     icon: CheckCircle2,
     title: 'Prioritize what matters',
-    body: 'The system groups findings into review priorities, explains why, and surfaces safety notes instead of leaving you with a raw table.',
+    body: 'The system groups findings into review priorities instead of leaving you with a raw table.',
   },
   {
     icon: TrendingUp,
@@ -109,8 +109,8 @@ export default function ExampleReport() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
-        title="Health Intelligence Example Report | VITALOOP"
-        description="Preview a VITALOOP health intelligence report with normalized biomarkers, Knowledge Base reasoning, priority findings, safety notes, discussion points, retest timing, and progress tracking."
+        title="AI Blood Test Analysis Example Report | VITALOOP"
+        description="Preview an AI blood test analysis with normalized biomarkers, plain-English explanations, priority findings, discussion points, and progress tracking."
         path="/example-report"
       />
 
@@ -123,10 +123,10 @@ export default function ExampleReport() {
               Example report
             </motion.p>
             <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 text-4xl font-black tracking-[-0.035em] text-slate-950 sm:text-5xl md:text-6xl">
-              From lab results to a working health intelligence dashboard.
+              From lab PDF to a working health dashboard.
             </motion.h1>
             <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-              This page shows the real VITALOOP workflow: upload results, review structured biomarkers, understand priorities and safety notes, then keep progress moving through weekly check-ins and retests.
+              This page shows the real VITALOOP workflow: upload results, review structured biomarkers, understand priorities, and keep progress moving through weekly check-ins.
             </motion.p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -213,7 +213,7 @@ export default function ExampleReport() {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Structured interpretation</p>
             <h2 className="mt-3 text-4xl font-black tracking-[-0.03em] text-slate-950">A report becomes priorities, not just numbers.</h2>
             <p className="mt-4 text-lg leading-8 text-slate-600">
-              VITALOOP keeps results readable: each marker is normalized, statused, and connected to the broader workflow with rationale, safety context, trends, and retest direction. The output is educational decision support, not a diagnosis.
+              VITALOOP keeps results readable: each marker is normalized, statused, and connected to the broader workflow. The output is educational decision support, not a diagnosis.
             </p>
             <div className="mt-6 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900">
               <ShieldCheck className="h-5 w-5 shrink-0" />

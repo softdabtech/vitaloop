@@ -9,7 +9,7 @@ Scope: `frontend/src/pages/Landing.jsx` and `frontend/src/components/landing/*`.
 - Upload format: PDF uploads (do not claim image/photo uploads)
 - Analysis scope: 85+ biomarkers
 - Free plan limit: 1 active lab upload
-- Premium: $4.99/month or $49.99/year
+- Premium: $19.99/month or $199/year
 - Pro Premium: $99/month or $990/year (practitioner/teams positioning)
 
 ## Canonical Plan Names
@@ -37,7 +37,7 @@ Avoid near-duplicates such as:
 Only use metrics that are product-grounded and currently present in app/config copy:
 - 85+ biomarkers analyzed
 - 1 active lab upload (Free)
-- $4.99/month, $49.99/year (Premium)
+- $19.99/month, $199/year (Premium)
 - $99/month, $990/year (Pro Premium)
 
 Avoid unsupported claims unless verified with source data:

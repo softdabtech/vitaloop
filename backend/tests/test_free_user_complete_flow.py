@@ -195,7 +195,9 @@ async def test_free_user_complete_flow(monkeypatch):
     monkeypatch.setattr(svc, "get_user_account", fake_get_user_account)
     monkeypatch.setattr(analyze_router, "save_lab_upload", fake_save_lab_upload)
     monkeypatch.setattr(analyze_router, "extract_biomarkers", fake_extract_biomarkers)
-    monkeypatch.setattr(analyze_router, "save_biomarkers", fake_save_biomarkers)
+    # Stage 2B: save_biomarkers() is now called from inside run_lab_analysis_pipeline
+    # (gated on the quality-gate decision), not directly from analyze.py.
+    monkeypatch.setattr(svc, "save_biomarkers", fake_save_biomarkers)
     monkeypatch.setattr(analyze_router, "save_timeline_event", fake_save_timeline_event)
     monkeypatch.setattr(analyze_router, "get_user_profile", fake_get_user_profile)
     monkeypatch.setattr(protocol_router, "get_biomarkers_by_upload", fake_get_biomarkers_by_upload)

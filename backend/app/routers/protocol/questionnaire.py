@@ -1,12 +1,14 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.dependencies import get_current_user
 from app.services import supabase_service as svc
 from app.services import claude_service
+from app.services.questionnaire_scoring import apply_authoritative_derived_state
+from app.utils.locale import resolve_locale
 
 router = APIRouter()
 
@@ -264,6 +266,7 @@ async def get_questionnaire_session(current_user: dict = Depends(get_current_use
 @router.patch("/session/context")
 async def update_questionnaire_context(
     body: QuestionnaireContextRequest,
+    request: Request,
     current_user: dict = Depends(get_current_user),
 ):
     user_id = current_user.get("sub")
@@ -273,7 +276,16 @@ async def update_questionnaire_context(
     if body.active_concern is not None:
         session_metadata["active_concern"] = body.active_concern.strip()
     if body.summary is not None:
-        session_metadata["summary"] = body.summary
+        # Stage 2F.1: `readiness` and `urgency` are derived clinical-adjacent
+        # state, not raw answers — the client may still send them (backward
+        # compatibility with the existing request contract), but they are
+        # never trusted. The backend recomputes both from the same raw
+        # fields, using the same deterministic formulas that previously only
+        # existed client-side (questionnaire_scoring.py), and overwrites
+        # whatever the client submitted before persisting. Any client-
+        # supplied readiness/urgency is discarded here, not merged.
+        locale = resolve_locale(request)
+        session_metadata["summary"] = apply_authoritative_derived_state(body.summary, locale=locale)
 
     await _update_session(session["id"], {"session_metadata": session_metadata})
     updated_session = {**session, "session_metadata": session_metadata}
