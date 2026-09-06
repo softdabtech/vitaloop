@@ -11,6 +11,7 @@ _DIAGNOSIS_PATTERNS = [
     r"\byou have\b",
     r"\bdiagnosed with\b",
     r"\bconfirmed diagnosis\b",
+    r"\biron deficiency anemia\b",
     r"\bу вас є діагноз\b",
     r"\bу вас діагностовано\b",
 ]
@@ -20,6 +21,8 @@ _SENSITIVE_SUPPLEMENTS = {
     "vitamin_d": ["vitamin d", "d3", "вітамін d", "витамин d"],
     "b12": ["b12", "б12"],
     "folate": ["folate", "folic", "фолат", "фоліє", "фолиев"],
+    "magnesium": ["magnesium", "магній", "магни"],
+    "potassium": ["potassium", "potassium chloride", "калій", "калий"],
 }
 
 _DOSAGE_PATTERN = re.compile(
@@ -42,7 +45,12 @@ def _num(value: Any) -> float | None:
 
 
 def _marker_name(item: Dict[str, Any]) -> str:
-    return str(item.get("canonical_name") or item.get("name") or item.get("source_name") or "").strip().lower()
+    parts = [
+        str(item.get("canonical_name") or "").replace("canonical_", "").replace("_", " "),
+        str(item.get("name") or ""),
+        str(item.get("source_name") or ""),
+    ]
+    return " ".join(part.strip().lower() for part in parts if part.strip())
 
 
 def _add_event(events: List[Dict[str, Any]], *, key: str, severity: str, message: str, item: Any = None) -> None:
@@ -230,6 +238,55 @@ def _check_critical_vitamin_d(value: float, unit: str) -> bool:
     return False
 
 
+def _as_10e9_per_l(value: float, unit: str) -> float | None:
+    norm_unit = normalize_unit(unit)
+    if not norm_unit or norm_unit == "unit":
+        return None
+    if norm_unit in {"10^9/l", "g/l", "г/л"}:
+        return value
+    return None
+
+
+def _as_g_per_dl(marker_key: str, value: float, unit: str) -> float | None:
+    norm_unit = normalize_unit(unit)
+    if not norm_unit or norm_unit == "unit":
+        return None
+    if norm_unit == "g/dl":
+        return value
+    converted = convert_value(marker_key, value, unit, "g/dl")
+    return converted
+
+
+def _as_mmol_per_l(marker_key: str, value: float, unit: str) -> float | None:
+    norm_unit = normalize_unit(unit)
+    if not norm_unit or norm_unit == "unit":
+        return None
+    if norm_unit == "mmol/l":
+        return value
+    converted = convert_value(marker_key, value, unit, "mmol/l")
+    return converted
+
+
+def _check_critical_anc(value: float, unit: str) -> bool:
+    converted = _as_10e9_per_l(value, unit)
+    return converted is not None and converted <= 0.5
+
+
+def _check_critical_potassium(value: float, unit: str) -> bool:
+    converted = _as_mmol_per_l("potassium", value, unit)
+    return converted is not None and converted < 3.0
+
+
+def _check_critical_platelets(value: float, unit: str) -> bool:
+    converted = _as_10e9_per_l(value, unit)
+    return converted is not None and converted < 75
+
+
+def _check_critical_hemoglobin(value: float, unit: str) -> bool:
+    converted = _as_g_per_dl("hemoglobin", value, unit)
+    return converted is not None and converted < 9.0
+
+
 def _dangerous_lab_events(biomarkers: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Identify dangerous lab values using unit-safe critical thresholds.
 
@@ -273,6 +330,23 @@ def _dangerous_lab_events(biomarkers: Iterable[Dict[str, Any]]) -> List[Dict[str
         # Unit-safe Vitamin D check
         if "vitamin" in name and "d" in name and _check_critical_vitamin_d(value, unit):
             _add_event(events, key="severe_vitamin_d", severity="high", message="Severe vitamin D insufficiency should be reviewed medically.", item=item)
+
+        if (
+            name == "anc"
+            or "absolute neutrophil" in name
+            or "neutrophils absolute" in name
+            or "absolute neutrophils" in name
+        ) and _check_critical_anc(value, unit):
+            _add_event(events, key="critical_absolute_neutrophils", severity="critical", message="Very low absolute neutrophils require prompt medical review.", item=item)
+
+        if "potassium" in name and _check_critical_potassium(value, unit):
+            _add_event(events, key="critical_potassium", severity="critical", message="Very low potassium requires prompt medical review.", item=item)
+
+        if ("platelet" in name or name in {"plt", "thrombocytes"}) and _check_critical_platelets(value, unit):
+            _add_event(events, key="critical_platelets", severity="critical", message="Very low platelets require prompt medical review.", item=item)
+
+        if ("hemoglobin" in name or name in {"hb", "hgb"}) and _check_critical_hemoglobin(value, unit):
+            _add_event(events, key="critical_hemoglobin", severity="critical", message="Very low hemoglobin requires prompt medical review.", item=item)
 
     return events
 
@@ -372,6 +446,62 @@ def _diagnosis_like_replacement_text(locale: str) -> str:
     return "This finding should be discussed with a qualified clinician — VITALOOP does not provide a diagnosis."
 
 
+def _clinician_review_action_text(locale: str) -> str:
+    if str(locale or "").lower().startswith("uk"):
+        return "Обговоріть доречність, дозування і безпечність цього кроку з кваліфікованим лікарем."
+    return "Discuss whether this step is appropriate, including dose and safety, with a qualified clinician."
+
+
+def urgent_review_notice(locale: str) -> str:
+    if str(locale or "").lower().startswith("uk"):
+        return (
+            "У цьому звіті є показники, які можуть потребувати швидкого медичного перегляду. "
+            "Зв'яжіться з лікарем або невідкладною допомогою, особливо якщо симптоми виражені чи погіршуються."
+        )
+    return (
+        "This report contains lab values that may require prompt medical review. "
+        "Contact a qualified clinician or urgent care, especially if symptoms are severe or worsening."
+    )
+
+
+def _sanitize_user_text(value: Any, locale: str) -> Any:
+    if not isinstance(value, str) or not value.strip():
+        return value
+    text = value
+    replacement = _diagnosis_like_replacement_text(locale)
+    text = re.sub(r"\biron deficiency anemia\b", "a possible iron-status/anemia pattern requiring clinical confirmation", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bconfirmed diagnosis\b", "a pattern requiring clinical confirmation", text, flags=re.IGNORECASE)
+    text = re.sub(r"\byou have\b", "your results may be consistent with", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bdiagnosed with\b", "requires clinician review for", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"\bsupplementation is necessary\b",
+        "supplementation should be discussed with a qualified clinician",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\b(?:take|use|start)\s+[^.?!;\n]*\d+(?:[.,]\d+)?\s*(?:mg|mcg|µg|ug|g|iu|мг|мкг|мо|од\.?)[^.?!;\n]*[.?!;]?",
+        _clinician_review_action_text(locale),
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\baddress smoking, physical inactivity and metabolic syndrome\b[.]?",
+        "If relevant, discuss smoking status, activity level, and metabolic risk factors with a clinician.",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\bsmoking increases your risk\b",
+        "If you smoke, this may be relevant to discuss with a clinician",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if _diagnosis_like_text(text):
+        return replacement
+    return text
+
+
 def blocked_content_notice(locale: str) -> str:
     """Plain-language, user-facing notice for when validate_report() returns
     status="blocked" and content has been redacted. Deliberately does not
@@ -385,6 +515,12 @@ def _diagnosis_like_safety_note(locale: str) -> str:
     if str(locale or "").lower().startswith("uk"):
         return "Частину тексту приховано, оскільки він звучав як медичний діагноз."
     return "Part of this content was withheld because it read as a medical diagnosis."
+
+
+def _prescriptive_safety_note(locale: str) -> str:
+    if str(locale or "").lower().startswith("uk"):
+        return "Самостійні дозування або призначення приховано з міркувань безпеки."
+    return "Self-directed dosing or prescriptive wording was withheld for safety."
 
 
 # Fields plausibly containing recommendation-facing prose. Kept narrow and
@@ -433,6 +569,38 @@ def _redact_diagnosis_like_dict_fields(item: Dict[str, Any], locale: str, fields
     return item, False
 
 
+def _sanitize_protocol_item(
+    item: Dict[str, Any],
+    *,
+    profile: Dict[str, Any] | None = None,
+    locale: str = "en",
+) -> tuple[Dict[str, Any], bool]:
+    sensitive_context = _is_pediatric_profile(profile) or _is_pregnancy_profile(profile)
+    sanitized, changed = _redact_diagnosis_like_dict_fields(item, locale, _RECOMMENDATION_TEXT_FIELDS)
+    sanitized = dict(sanitized)
+
+    for field in _RECOMMENDATION_TEXT_FIELDS:
+        value = sanitized.get(field)
+        new_value = _sanitize_user_text(value, locale)
+        if new_value != value:
+            sanitized[field] = new_value
+            changed = True
+
+    supplement_key = _contains_sensitive_supplement(sanitized)
+    if supplement_key and _contains_explicit_dosage(sanitized):
+        sanitized["original_dosage_hidden"] = True
+        sanitized["dosage"] = _clinician_review_dosage_text(locale)
+        sanitized["requires_doctor"] = True
+        notes = list(sanitized.get("safety_notes") or [])
+        note = _supplement_dosage_safety_note(locale) if sensitive_context else _prescriptive_safety_note(locale)
+        if note not in notes:
+            notes.insert(0, note)
+        sanitized["safety_notes"] = notes
+        changed = True
+
+    return sanitized if changed else item, changed
+
+
 def sanitize_protocol_for_safety(
     protocol: Any,
     *,
@@ -455,27 +623,10 @@ def sanitize_protocol_for_safety(
     supplement, _contains_explicit_dosage) — no new safety logic is introduced
     here, only enforcement of what those detectors already decide.
     """
-    sensitive_context = _is_pediatric_profile(profile) or _is_pregnancy_profile(profile)
-
     def sanitize_item(item: Any) -> Any:
         if not isinstance(item, dict):
             return item
-        sanitized, changed = _redact_diagnosis_like_dict_fields(item, locale, _RECOMMENDATION_TEXT_FIELDS)
-        sanitized = dict(sanitized)
-
-        if sensitive_context:
-            supplement_key = _contains_sensitive_supplement(sanitized)
-            if supplement_key and _contains_explicit_dosage(sanitized):
-                sanitized["original_dosage_hidden"] = True
-                sanitized["dosage"] = _clinician_review_dosage_text(locale)
-                sanitized["requires_doctor"] = True
-                notes = list(sanitized.get("safety_notes") or [])
-                note = _supplement_dosage_safety_note(locale)
-                if note not in notes:
-                    notes.insert(0, note)
-                sanitized["safety_notes"] = notes
-                changed = True
-
+        sanitized, changed = _sanitize_protocol_item(item, profile=profile, locale=locale)
         return sanitized if changed else item
 
     if isinstance(protocol, dict):
@@ -528,17 +679,25 @@ def sanitize_knowledge_report_for_safety(
         for item in why_it_matters:
             if isinstance(item, dict):
                 redacted, _changed = _redact_diagnosis_like_dict_fields(item, locale, _WHY_IT_MATTERS_TEXT_FIELDS)
+                redacted = {
+                    key: (_sanitize_user_text(value, locale) if key in _WHY_IT_MATTERS_TEXT_FIELDS else value)
+                    for key, value in redacted.items()
+                }
                 new_items.append(redacted)
             else:
-                new_items.append(item)
+                new_items.append(_sanitize_user_text(item, locale))
         sanitized["why_it_matters"] = new_items
 
     doctor_discussion = sanitized.get("doctor_discussion")
     if isinstance(doctor_discussion, list):
         sanitized["doctor_discussion"] = [
-            _diagnosis_like_replacement_text(locale) if isinstance(point, str) and _diagnosis_like_text(point) else point
+            _sanitize_user_text(point, locale)
             for point in doctor_discussion
         ]
+
+    action_plan = sanitized.get("action_plan")
+    if isinstance(action_plan, list):
+        sanitized["action_plan"] = sanitize_protocol_for_safety(action_plan, locale=locale)
 
     return sanitized
 
@@ -570,11 +729,42 @@ def sanitize_knowledge_evaluation_for_safety(
     for rule in matched_rules:
         if isinstance(rule, dict):
             redacted, _changed = _redact_diagnosis_like_dict_fields(rule, locale, _MATCHED_RULE_TEXT_FIELDS)
+            redacted = {
+                key: (_sanitize_user_text(value, locale) if key in _MATCHED_RULE_TEXT_FIELDS else value)
+                for key, value in redacted.items()
+            }
             new_rules.append(redacted)
         else:
-            new_rules.append(rule)
+            new_rules.append(_sanitize_user_text(rule, locale))
     sanitized["matched_rules"] = new_rules
     return sanitized
+
+
+def sanitize_safety_result_for_output(
+    safety_result: Dict[str, Any] | None,
+    *,
+    locale: str = "en",
+) -> Dict[str, Any] | None:
+    """Defense-in-depth for served safety payloads.
+
+    validate_*() now stores sanitized copies in warnings/blocked_items, but
+    historical frozen rows may still contain raw recommendation objects. This
+    keeps the public safety_result useful without allowing it to become a
+    backdoor for diagnosis-like or prescriptive text.
+    """
+    if not isinstance(safety_result, dict):
+        return safety_result
+
+    def clean(value: Any) -> Any:
+        if isinstance(value, dict):
+            if any(key in value for key in ("title", "body", "rationale", "dosage", "supplement", "instructions", "summary", "notes")):
+                return _sanitize_protocol_item(value, locale=locale)[0]
+            return {key: clean(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [clean(item) for item in value]
+        return _sanitize_user_text(value, locale)
+
+    return clean(safety_result)
 
 
 def _diagnosis_like_text(value: Any) -> bool:
@@ -586,6 +776,7 @@ def validate_recommendation(
     recommendation: Dict[str, Any],
     *,
     profile: Dict[str, Any] | None = None,
+    locale: str = "en",
 ) -> Dict[str, Any]:
     warnings: List[Dict[str, Any]] = []
     blocked_items: List[Dict[str, Any]] = []
@@ -594,37 +785,41 @@ def validate_recommendation(
     supplement_key = _contains_sensitive_supplement(recommendation)
     has_explicit_dosage = _contains_explicit_dosage(recommendation)
     if supplement_key and not _has_safety_wording(recommendation):
+        public_item, _ = _sanitize_protocol_item(recommendation, profile=profile, locale=locale)
         warning = {
             "key": f"{supplement_key}_safety_wording",
             "message": "Sensitive supplement recommendation needs confirmation/clinician safety wording.",
-            "item": recommendation,
+            "item": public_item,
         }
         warnings.append(warning)
         _add_event(events, key=warning["key"], severity="medium", message=warning["message"], item=recommendation)
 
     if supplement_key and has_explicit_dosage:
+        public_item, _ = _sanitize_protocol_item(recommendation, profile=profile, locale=locale)
         warning = {
             "key": f"{supplement_key}_dosage_requires_clinician_review",
             "message": "Explicit supplement dosage requires clinician review and must not be presented as self-directed advice.",
-            "item": recommendation,
+            "item": public_item,
         }
         warnings.append(warning)
         _add_event(events, key=warning["key"], severity="high", message=warning["message"], item=recommendation)
 
     if supplement_key and has_explicit_dosage and (_is_pediatric_profile(profile) or _is_pregnancy_profile(profile)):
+        public_item, _ = _sanitize_protocol_item(recommendation, profile=profile, locale=locale)
         blocked = {
             "key": f"{supplement_key}_dosage_blocked_for_sensitive_context",
             "message": "Explicit supplement dosage is blocked for pediatric or pregnancy context.",
-            "item": recommendation,
+            "item": public_item,
         }
         blocked_items.append(blocked)
         _add_event(events, key=blocked["key"], severity="high", message=blocked["message"], item=recommendation)
 
     if any(_diagnosis_like_text(value) for value in recommendation.values()):
+        public_item, _ = _sanitize_protocol_item(recommendation, profile=profile, locale=locale)
         blocked = {
             "key": "diagnosis_like_wording",
             "message": "Recommendation contains diagnosis-like wording.",
-            "item": recommendation,
+            "item": public_item,
         }
         blocked_items.append(blocked)
         _add_event(events, key="diagnosis_like_wording", severity="high", message=blocked["message"], item=recommendation)
@@ -643,6 +838,7 @@ def validate_protocol(
     protocol: Any,
     *,
     profile: Dict[str, Any] | None = None,
+    locale: str = "en",
 ) -> Dict[str, Any]:
     warnings: List[Dict[str, Any]] = []
     blocked_items: List[Dict[str, Any]] = []
@@ -657,7 +853,7 @@ def validate_protocol(
         items.extend(item for item in protocol if isinstance(item, dict))
 
     for item in items:
-        result = validate_recommendation(item, profile=profile)
+        result = validate_recommendation(item, profile=profile, locale=locale)
         warnings.extend(result["warnings"])
         blocked_items.extend(result["blocked_items"])
         events.extend(result["safety_events"])
@@ -678,6 +874,7 @@ def validate_report(
     knowledge_report: Dict[str, Any] | None = None,
     protocol: Any = None,
     profile: Dict[str, Any] | None = None,
+    locale: str = "en",
 ) -> Dict[str, Any]:
     warnings: List[Dict[str, Any]] = []
     blocked_items: List[Dict[str, Any]] = []
@@ -690,7 +887,7 @@ def validate_report(
         blocked_items.append({"key": "diagnosis_like_report_wording", "message": "Report contains diagnosis-like wording."})
         _add_event(events, key="diagnosis_like_report_wording", severity="high", message="Report contains diagnosis-like wording.")
 
-    protocol_result = validate_protocol(protocol, profile=profile)
+    protocol_result = validate_protocol(protocol, profile=profile, locale=locale)
     warnings.extend(protocol_result["warnings"])
     blocked_items.extend(protocol_result["blocked_items"])
     events.extend(protocol_result["safety_events"])
@@ -699,8 +896,12 @@ def validate_report(
         warnings.append({"key": "critical_lab_value", "message": "Critical lab value requires medical review."})
 
     status = "blocked" if blocked_items else ("approved_with_warnings" if warnings or events else "approved")
+    urgent_review_required = any(str(event.get("severity")) == "critical" for event in events)
     return {
         "status": status,
+        "risk_level": "urgent_review" if urgent_review_required else ("medical_review" if warnings or blocked_items or events else "routine"),
+        "urgent_review_required": urgent_review_required,
+        "prominent_user_warning": urgent_review_notice(locale) if urgent_review_required else None,
         "warnings": warnings,
         "blocked_items": blocked_items,
         "doctor_discussion_required": bool(warnings or blocked_items or events),

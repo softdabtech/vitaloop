@@ -53,6 +53,7 @@ from app.services.safety import (
     sanitize_knowledge_evaluation_for_safety,
     sanitize_knowledge_report_for_safety,
     sanitize_protocol_for_safety,
+    sanitize_safety_result_for_output,
 )
 from app.services.safety.safety_engine import blocked_content_notice
 
@@ -135,6 +136,7 @@ def assemble_frozen_response(
     frozen_protocol_snapshot = sanitize_protocol_for_safety(
         report_version.get("protocol"), profile=user_profile, locale=locale
     )
+    safety_result = sanitize_safety_result_for_output(report_version.get("safety_result"), locale=locale)
 
     sanitized_report_version = {
         **report_version,
@@ -160,12 +162,12 @@ def assemble_frozen_response(
         "analysis_input_quality_gate": input_snapshot.get("analysis_input_quality_gate"),
         "clinical_data_integrity": input_snapshot.get("clinical_data_integrity"),
         "evidence_gaps": input_snapshot.get("evidence_gaps"),
-        "safety_result": report_version.get("safety_result"),
+        "safety_result": safety_result,
         # Pure locale-template boilerplate derived from the frozen status —
         # no AI/knowledge-rule recomputation involved (see
         # safety_engine.blocked_content_notice's docstring).
         "safety_notice": blocked_content_notice(locale) if is_blocked else None,
         "explainability": report_version.get("explainability"),
-        "report_version": sanitized_report_version,
+        "report_version": {**sanitized_report_version, "safety_result": safety_result},
         "report_source": REPORT_SOURCE_FROZEN,
     }

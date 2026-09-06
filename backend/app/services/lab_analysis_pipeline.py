@@ -32,6 +32,7 @@ from app.services.safety import (
     sanitize_knowledge_evaluation_for_safety,
     sanitize_knowledge_report_for_safety,
     sanitize_protocol_for_safety,
+    sanitize_safety_result_for_output,
     validate_report,
 )
 from app.services.safety.safety_engine import blocked_content_notice
@@ -796,6 +797,9 @@ async def run_lab_analysis_pipeline(
             clinical_context=clinical_context,
         )
         ai_protocol = ai_orchestration.get("items") or []
+    ai_protocol = sanitize_protocol_for_safety(ai_protocol, profile=user_profile, locale=locale)
+    if isinstance(ai_orchestration, dict):
+        ai_orchestration = {**ai_orchestration, "items": ai_protocol}
     recommendations = [
         *rule_recommendations,
         *[{**item, "source": item.get("source") or "ai_protocol"} for item in ai_protocol if isinstance(item, dict)],
@@ -822,6 +826,7 @@ async def run_lab_analysis_pipeline(
         knowledge_report=knowledge_report,
         protocol=protocol,
         profile=user_profile,
+        locale=locale,
     )
     retest_suggestions = knowledge_report.get("retest_plan") or []
     protocol = enrich_protocol(
@@ -841,7 +846,9 @@ async def run_lab_analysis_pipeline(
         knowledge_report=knowledge_report,
         protocol=protocol,
         profile=user_profile,
+        locale=locale,
     )
+    safety_result = sanitize_safety_result_for_output(safety_result, locale=locale) or safety_result
     # Stage 2C: plain-language, user-facing notice — never exposes blocked_items'
     # internal rule keys — surfaced consistently alongside safety_result in every
     # live response path (see analyze.py's response dicts).
@@ -910,6 +917,10 @@ async def run_lab_analysis_pipeline(
     )
     health_summary = {
         **(knowledge_report.get("summary") or {}),
+        "risk_level": safety_result.get("risk_level") or (knowledge_report.get("summary") or {}).get("risk_level"),
+        "requires_doctor": bool(safety_result.get("doctor_discussion_required") or (knowledge_report.get("summary") or {}).get("requires_doctor")),
+        "urgent_review_required": bool(safety_result.get("urgent_review_required")),
+        "prominent_user_warning": safety_result.get("prominent_user_warning"),
         "what_was_found": knowledge_report.get("what_was_found") or {},
         "trend_overview": {
             "version": trend_analysis.get("version"),
