@@ -339,6 +339,35 @@ def test_g6_frozen_response_exposes_both_current_and_frozen_protocol_shapes():
     assert response["report_version"]["protocol"]["nutrition"][0]["title"] == "FROZEN nutrition item"
 
 
+def test_g6b_frozen_response_sanitizes_current_protocol_cache_on_read():
+    unsafe_protocol = [
+        {
+            "title": "Iron deficiency anemia protocol",
+            "body": "Confirmed diagnosis of iron deficiency anemia.",
+            "dosage": "Ferrous sulfate 325 mg once daily",
+            "rationale": "Take 100 mg iron daily. Smoking increases your risk.",
+        }
+    ]
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=unsafe_protocol,
+        report_version=_frozen_row(),
+        user_profile={"age": 52, "sex": "female"},
+        locale="en",
+    )
+
+    served_text = str(response["protocol"]).lower()
+    assert "iron deficiency anemia" not in served_text
+    assert "confirmed diagnosis" not in served_text
+    assert "325 mg" not in served_text
+    assert "100 mg" not in served_text
+    assert "once daily" not in served_text
+    assert "smoking increases your risk" not in served_text
+    assert "clinical confirmation" in served_text or "does not provide a diagnosis" in served_text
+    assert unsafe_protocol[0]["title"] == "Iron deficiency anemia protocol"
+
+
 # --- G7: pre-2C unsafe persisted text is sanitized on read, DB not mutated ------
 
 
