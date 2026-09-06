@@ -729,7 +729,7 @@ async def create_subscription(
         subscription = await subscription_service.create_subscription(
             request.user_id,
             request.plan_name.value,
-            request.stripe_subscription_id,
+            request.external_subscription_id,
             user_context.user_id,
         )
         return SubscriptionResponse(**subscription)

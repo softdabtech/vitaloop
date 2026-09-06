@@ -147,8 +147,16 @@ export const useUserEntitlements = () =>
         throw error
       }
     },
-    staleTime: 30 * 60 * 1000,
-    gcTime: 60 * 60 * 1000,
+    // Post-release entitlement consistency fix: a 30-minute staleTime meant
+    // a Premium grant made out-of-band (CRM) could stay invisible to an
+    // already-open client for up to 30 minutes — the global QueryClient
+    // already has refetchOnWindowFocus/refetchOnReconnect enabled
+    // (main.jsx), but React Query only actually refetches on focus/reconnect
+    // when the data IS stale, so a long staleTime silently defeated both.
+    // A short staleTime lets those existing triggers work as intended,
+    // without adding any new polling.
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   })
 
 // Symptom check session/context

@@ -7,6 +7,15 @@ from app.services.knowledge.domain_registry import DOMAIN_REGISTRY_VERSION, get_
 
 PROTOCOL_ENRICHMENT_VERSION = "protocol_enrichment_v1"
 
+
+def _public_evidence_level(value: Any) -> str:
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return "clinical_context"
+    if "placeholder" in raw:
+        return "clinical_guideline_context"
+    return raw
+
 _SECTION_DEFAULT_TIMELINES = {
     "nutrition": "Start this week; reassess consistency after 2-4 weeks.",
     "supplements": "Confirm safety first; reassess after the recommended retest interval.",
@@ -213,7 +222,7 @@ def _domain_context(
             {
                 "domain": domain,
                 "label": _DOMAIN_LABELS_UK.get(domain, definition.get("label")) if _is_uk(locale) else definition.get("label"),
-                "evidence_level": definition.get("evidence_level"),
+                "evidence_level": _public_evidence_level(definition.get("evidence_level")),
                 "expected_timeline": _EXPECTED_TIMELINES_UK.get(domain, definition.get("expected_timeline"))
                 if _is_uk(locale)
                 else definition.get("expected_timeline"),
@@ -277,7 +286,7 @@ def enrich_protocol(
                     "category": raw_item.get("category") or section,
                     "priority": _priority(raw_item, section),
                     "source": raw_item.get("source") or "vitaloop_analysis_core",
-                    "evidence_level": raw_item.get("evidence_level") or "clinical_context",
+                    "evidence_level": _public_evidence_level(raw_item.get("evidence_level")),
                     "based_on": raw_item.get("based_on")
                     or _fallback_based_on(
                         section=section,

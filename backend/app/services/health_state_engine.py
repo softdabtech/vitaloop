@@ -10,7 +10,10 @@ _STATUS_PENALTY = {
     "ELEVATED": 22,
     "DEFICIENT": 22,
     "BORDERLINE": 10,
+    "UNKNOWN": 8,      # Unknown status (no reference range) — small penalty
     "OPTIMAL": 0,
+    # NOTE: UNEVALUATED removed — does not drive state scoring
+    # UNEVALUATED markers are non-clinical and should not affect health state
 }
 
 

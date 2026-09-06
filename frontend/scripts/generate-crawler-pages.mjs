@@ -6,29 +6,37 @@ import { HEALTH_HUB_ARTICLES, HEALTH_HUB_CLUSTERS } from '../src/data/healthHubC
 const DIST_DIR = path.resolve(process.cwd(), 'dist')
 const BASE_URL = 'https://vitaloop.today'
 const DEFAULT_IMAGE = `${BASE_URL}/vitaloop-social-preview-2026-06.png`
+const UA_ALTERNATE_BY_EN_PATH = {
+  '/': 'https://ua.vitaloop.today/',
+  '/symptom-intake/': 'https://ua.vitaloop.today/samopochuttia/',
+  '/about/': 'https://ua.vitaloop.today/about/',
+  '/privacy-policy/': 'https://ua.vitaloop.today/privacy-policy/',
+  '/terms/': 'https://ua.vitaloop.today/terms/',
+  '/health-hub/': 'https://ua.vitaloop.today/health-hub/',
+}
 
 const routes = [
   {
     path: '/',
-    title: 'Health Intelligence for Symptoms, Blood Tests & Retests | VITALOOP',
-    description: 'Start with symptoms or upload blood test results. Get Knowledge Base biomarker reasoning, safety notes, priorities, clinician discussion guidance, protocol actions, trends, and retest timing.',
+    title: 'AI Health Intelligence for Lab Results Over Time | VITALOOP',
+    description: 'VITALOOP helps you make sense of symptoms, lab results, biomarker patterns, safety context, retests, and progress over time with AI.',
     priority: '1.0',
     changefreq: 'weekly',
     text: [
-      'VITALOOP is a symptom-first health intelligence platform.',
-      'Start with fatigue, sleep, low energy, brain fog, hair loss, digestion, or other signals.',
-      'VITALOOP helps connect symptoms, lab direction, biomarker results, safety notes, protocol actions, trends, retests, and weekly progress into one clear health action loop.',
+      'VITALOOP helps people make sense of health data and lab results over time using AI.',
+      'Start with symptoms or upload blood test results when you have them.',
+      'VITALOOP connects biomarker patterns, symptom context, Knowledge Base rules, safety notes, clinician discussion points, retest timing, and progress tracking into one clear health action loop.',
     ],
   },
   {
     path: '/how-it-works',
-    title: 'How VITALOOP Health Intelligence Works | Shared Analysis Core V2',
-    description: 'See how VITALOOP connects symptom intake, lab discussion guidance, biomarker normalization, Knowledge Base reasoning, safety notes, protocol actions, trends, and weekly progress tracking.',
+    title: 'How AI Blood Test Analysis Works | VITALOOP',
+    description: 'See how VITALOOP connects symptom intake, analysis quality gates, biomarker normalization, Knowledge Base reasoning, evidence gaps, safety notes, protocol actions, trends, and weekly progress tracking.',
     priority: '0.9',
     changefreq: 'monthly',
     text: [
       'VITALOOP starts with symptoms and context.',
-      'The product helps organize what may be useful to check, then interprets uploaded or entered lab results through Shared Analysis Core V2 and turns them into a structured plan.',
+      'The product helps organize what may be useful to check, then interprets uploaded or entered lab results through the VITALOOP Health Intelligence Engine and turns them into a structured plan.',
       'The loop continues with weekly check-ins and retesting cycles.',
     ],
   },
@@ -46,8 +54,8 @@ const routes = [
   },
   {
     path: '/features',
-    title: 'Health Intelligence Features | VITALOOP Shared Analysis Core',
-    description: 'Explore symptom intake, Shared Analysis Core V2, Knowledge Base biomarker reasoning, safety notes, personalized action plans, weekly check-ins, and progress tracking.',
+    title: 'AI Blood Test Analysis Features | VITALOOP',
+    description: 'Explore symptom intake, the VITALOOP Health Intelligence Engine, extraction quality gates, biomarker reasoning, safety notes, action plans, weekly check-ins, and progress tracking.',
     priority: '0.8',
     changefreq: 'monthly',
     text: [
@@ -81,7 +89,7 @@ const routes = [
   {
     path: '/faq',
     title: 'VITALOOP Health Intelligence FAQ | Symptoms, Labs, Safety & Retests',
-    description: 'Answers about symptom intake, blood test uploads, biomarker explanations, Shared Analysis Core V2, privacy, pricing, practitioner workflows, and VITALOOP safety limits.',
+    description: 'Answers about symptom intake, blood test uploads, biomarker explanations, the VITALOOP Health Intelligence Engine, privacy, pricing, practitioner workflows, and VITALOOP safety limits.',
     priority: '0.7',
     changefreq: 'monthly',
     text: [
@@ -91,13 +99,32 @@ const routes = [
     ],
   },
   {
+    path: '/pricing',
+    title: 'VITALOOP Pricing | Premium Lab Intelligence Subscription',
+    description: 'Compare VITALOOP Free and Premium access for lab uploads, explainable health reports, protocols, progress tracking, and weekly check-ins.',
+    priority: '0.8',
+    changefreq: 'monthly',
+    text: [
+      'VITALOOP offers free access for getting started and Premium access for deeper lab intelligence.',
+      'Premium includes full lab analysis, explainable reports, personalized protocols, progress tracking, and weekly check-ins.',
+      'VITALOOP is educational software and does not diagnose, treat, prescribe, or replace professional medical care.',
+      'Premium access is currently activated manually. VITALOOP does not send uploaded lab files, symptoms, biomarker values, health reports, or protocol text to billing tools.',
+    ],
+    links: [
+      { href: '/refund-policy/', label: 'Refund policy' },
+      { href: '/terms/', label: 'Terms' },
+      { href: '/privacy-policy/', label: 'Privacy policy' },
+      { href: '/contact/', label: 'Contact' },
+    ],
+  },
+  {
     path: '/for-investors',
-    title: 'VITALOOP Investor Overview | AI Health Platform',
-    description: 'Learn about VITALOOP as a HealthTech platform connecting symptom intake, lab interpretation, Shared Analysis Core V2, protocols, and recurring health loops.',
+    title: 'Investor Overview | VITALOOP AI Health Platform',
+    description: 'Learn about VITALOOP as a HealthTech platform connecting symptom intake, lab interpretation, the VITALOOP Health Intelligence Engine, evidence gaps, safety-aware plans, and recurring health loops.',
     priority: '0.6',
     changefreq: 'monthly',
     text: [
-      'VITALOOP is building a HealthTech product around symptom-first onboarding, lab interpretation, shared analysis core artifacts, personalized protocols, and recurring feedback loops.',
+      'VITALOOP is building a HealthTech product around symptom-first onboarding, lab interpretation, quality-gated analysis artifacts, safety-aware plans, and recurring feedback loops.',
     ],
   },
   {
@@ -127,7 +154,16 @@ const routes = [
     description: 'Read the VITALOOP terms of service for using the website, user cabinet, subscriptions, and health support features.',
     priority: '0.3',
     changefreq: 'yearly',
-    text: ['VITALOOP terms of service for website and product use.'],
+    text: [
+      'VITALOOP terms of service for website and product use.',
+      'Premium access can be cancelled from the account billing area or by contacting support when active.',
+      'Refund requests are reviewed case by case under the VITALOOP refund policy.',
+    ],
+    links: [
+      { href: '/pricing/', label: 'Pricing' },
+      { href: '/refund-policy/', label: 'Refund policy' },
+      { href: '/contact/', label: 'Contact' },
+    ],
   },
   {
     path: '/privacy-policy',
@@ -135,7 +171,49 @@ const routes = [
     description: 'Learn how VITALOOP collects, processes, stores, protects, exports, and deletes symptom data, blood test reports, biomarker results, and account information.',
     priority: '0.3',
     changefreq: 'yearly',
-    text: ['VITALOOP privacy policy covering account data, lab uploads, analytics, security, and user rights.'],
+    text: [
+      'VITALOOP privacy policy covering account data, lab uploads, analytics, security, and user rights.',
+      'Health data is not shared with marketing or billing tools. Payment processors receive only account and checkout metadata required for billing.',
+    ],
+    links: [
+      { href: '/pricing/', label: 'Pricing' },
+      { href: '/refund-policy/', label: 'Refund policy' },
+      { href: '/contact/', label: 'Contact' },
+    ],
+  },
+  {
+    path: '/refund-policy',
+    title: 'Refund Policy and Cancellation Support | VITALOOP',
+    description: 'Read VITALOOP refund, cancellation, subscription access, and billing support rules for Premium subscriptions.',
+    priority: '0.3',
+    changefreq: 'yearly',
+    text: [
+      'VITALOOP Premium subscriptions can be cancelled from the account billing area or by contacting support.',
+      'Refund requests are reviewed case by case for duplicate charges, accidental purchases, checkout or access issues, or other billing problems.',
+      'VITALOOP is educational wellness and health-data organization software. Refund decisions are not based on medical outcomes.',
+    ],
+    links: [
+      { href: '/pricing/', label: 'Pricing' },
+      { href: '/terms/', label: 'Terms' },
+      { href: '/privacy-policy/', label: 'Privacy policy' },
+      { href: '/contact/', label: 'Contact' },
+    ],
+  },
+  {
+    path: '/contact',
+    title: 'Contact VITALOOP | Support and Billing Help',
+    description: 'Contact VITALOOP for account support, billing questions, cancellation and refund requests, privacy requests, partnerships, and product feedback.',
+    priority: '0.5',
+    changefreq: 'yearly',
+    text: [
+      'Contact VITALOOP for account support, billing questions, cancellation and refund requests, privacy requests, partnerships, and product feedback.',
+      'VITALOOP is educational software and is not a medical provider.',
+    ],
+    links: [
+      { href: 'mailto:info@softdab.tech', label: 'info@softdab.tech' },
+      { href: '/pricing/', label: 'Pricing' },
+      { href: '/refund-policy/', label: 'Refund policy' },
+    ],
   },
   {
     path: '/about',
@@ -298,6 +376,8 @@ const privateRoutes = [
   '/avatar',
   '/assignments',
   '/lab-results',
+  '/results',
+  '/protocol',
   '/progress',
   '/settings',
   '/health-profile',
@@ -371,7 +451,13 @@ function renderHtml(baseHtml, route, { noindex = false } = {}) {
   html = upsertTag(html, /<meta\s+name="twitter:description"\s+content="[^"]*"[^>]*\/?>/i, `<meta name="twitter:description" content="${escapeHtml(route.description)}" data-rh="true" />`)
   if (route.path !== '/') {
     html = html.replace(/\s*<link\s+rel="alternate"\s+hreflang="[^"]+"\s+href="[^"]*"\s*\/?>/gi, '')
-    html = html.replace('</head>', `    <link rel="alternate" hreflang="en" href="${canonical}" />\n  </head>`)
+    const uaAlternate = UA_ALTERNATE_BY_EN_PATH[canonicalPath]
+    const alternates = [
+      `<link rel="alternate" hreflang="en" href="${canonical}" />`,
+      uaAlternate ? `<link rel="alternate" hreflang="uk-UA" href="${uaAlternate}" />` : null,
+      uaAlternate ? `<link rel="alternate" hreflang="x-default" href="${canonical}" />` : null,
+    ].filter(Boolean).join('\n    ')
+    html = html.replace('</head>', `    ${alternates}\n  </head>`)
   }
   html = html.replace(/<div id="root"><\/div>/i, renderStaticRoot(route))
   return html
@@ -473,15 +559,17 @@ ${urls}
 > VITALOOP is a symptom-first HealthTech platform that helps people connect symptoms, lab direction, biomarker results, personalized recommendations, and progress tracking.
 
 ## Official URLs
-- Website: ${BASE_URL}/
-- How it works: ${BASE_URL}/how-it-works/
-- Features: ${BASE_URL}/features/
-- Symptom intake: ${BASE_URL}/symptom-intake/
-- Example report: ${BASE_URL}/example-report/
-- FAQ: ${BASE_URL}/faq/
-- Practitioners: ${BASE_URL}/for-nutritionists/
-- Privacy policy: ${BASE_URL}/privacy-policy/
-- Terms: ${BASE_URL}/terms/
+- [Website](${BASE_URL}/)
+- [How it works](${BASE_URL}/how-it-works/)
+- [Features](${BASE_URL}/features/)
+- [Symptom intake](${BASE_URL}/symptom-intake/)
+- [Example report](${BASE_URL}/example-report/)
+- [FAQ](${BASE_URL}/faq/)
+- [Practitioners](${BASE_URL}/for-nutritionists/)
+- [Privacy policy](${BASE_URL}/privacy-policy/)
+- [Terms](${BASE_URL}/terms/)
+- [Sitemap](${BASE_URL}/sitemap.xml)
+- [Robots](${BASE_URL}/robots.txt)
 
 ## What VITALOOP does
 - Starts with symptoms and health context.

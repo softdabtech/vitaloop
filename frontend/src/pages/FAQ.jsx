@@ -1,8 +1,8 @@
-import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ChevronDown, HelpCircle } from 'lucide-react'
+import { ChevronDown, HelpCircle } from 'lucide-react'
 import { useState } from 'react'
 import Seo from '../components/Seo.jsx'
+import { PageHeader } from '../components/landing/PageHeader.jsx'
 
 const FAQ_ITEMS = [
   {
@@ -52,7 +52,7 @@ const FAQ_ITEMS = [
     questions: [
       {
         q: 'What\'s the difference between Free and Premium?',
-        a: 'Free includes one active upload, a basic biomarker summary, and the core dashboard. Premium adds unlimited uploads, personalized action plans, weekly check-ins, priority insights, and progress tracking.',
+        a: 'Free includes one active upload, a starter structured report, and the core dashboard. Premium adds unlimited uploads, full evidence-aware reports, action plans, weekly check-ins, progress tracking, and retest planning.',
       },
       {
         q: 'Can I cancel my subscription anytime?',
@@ -98,7 +98,7 @@ const FAQ_ITEMS = [
       },
       {
         q: 'How far back do you track history?',
-        a: 'As far back as you upload. Some users have 5+ years of data in the system. The longitudinal engine lets you see multi-year trends and patterns.',
+        a: 'As far back as you upload. The longitudinal engine is designed to compare repeated uploads over time, so one result becomes a baseline and later results can show direction.',
       },
       {
         q: 'Can you import data from wearables?',
@@ -119,11 +119,11 @@ const FAQ_ITEMS = [
       },
       {
         q: 'Can I chat with an AI about my results?',
-        a: 'Yes. The AI Health Coach lets you ask questions about your biomarkers, supplements, nutrition, and protocol. Answers are personalized to your test results.',
+        a: 'VITALOOP focuses on structured educational explanations inside your report and protocol. Where AI support is available, it is constrained by your biomarkers, symptoms, Knowledge Base context, evidence gaps, and safety limits.',
       },
       {
         q: 'How does the protocol engine work?',
-        a: 'Shared Analysis Core V2 organizes out-of-range markers, related patterns, symptoms, safety context, and available history into prioritized educational actions, protocol sections, retest suggestions, and follow-up questions. Clinical decisions remain with you and your qualified practitioner.',
+        a: 'The VITALOOP Health Intelligence Engine organizes extracted biomarkers, confidence signals, related patterns, symptoms, safety context, missing evidence, and available history into prioritized educational actions, protocol sections, retest suggestions, and follow-up questions. Clinical decisions remain with you and your qualified practitioner.',
       },
       {
         q: 'Does the protocol adapt over time?',
@@ -136,26 +136,25 @@ const FAQ_ITEMS = [
     questions: [
       {
         q: 'How do I contact support?',
-        a: 'Email support@vitaloop.today or use the chat widget in the app. We typically respond within 24 hours.',
+        a: 'Email info@softdab.tech or use the chat widget in the app. We typically respond within 24 hours.',
       },
       {
         q: 'What payment methods do you accept?',
-        a: 'We accept all major credit cards (Visa, Mastercard, Amex), Apple Pay, and Google Pay. Enterprise customers can arrange invoicing.',
+        a: 'Premium access is currently activated manually while we configure payment processing. VITALOOP does not send symptoms, lab files, biomarker values, or health reports to billing tools.',
       },
       {
         q: 'When do you bill?',
-        a: 'Monthly subscriptions are billed on the same date each month. You\'ll get a reminder 7 days before renewal.',
+        a: 'Premium is available as $9.99 monthly billing or $99.99 yearly billing. The cabinet shows your current Free or Premium status.',
       },
       {
         q: 'What\'s your refund policy?',
-        a: 'Subscriptions can be cancelled before the next billing date. Access continues through the paid period; review the current Terms of Service for refund conditions.',
+        a: 'Contact info@softdab.tech for cancellation or refund questions. We review requests based on the active access arrangement.',
       },
     ],
   },
 ]
 
 export default function FAQ() {
-  const navigate = useNavigate()
   const [expandedId, setExpandedId] = useState(null)
 
   const toggleExpanded = (id) => {
@@ -166,7 +165,7 @@ export default function FAQ() {
     <>
       <Seo
         title="VITALOOP Health Intelligence FAQ | Symptoms, Labs, Safety & Retests"
-        description="Answers about symptom intake, blood test uploads, biomarker explanations, Shared Analysis Core V2, privacy, pricing, practitioner workflows, and VITALOOP safety limits."
+        description="Answers about symptom intake, blood test uploads, biomarker explanations, the VITALOOP Health Intelligence Engine, privacy, pricing, practitioner workflows, and VITALOOP safety limits."
         path="/faq"
         schemas={[
           {
@@ -187,18 +186,7 @@ export default function FAQ() {
       />
 
       <div className="min-h-screen bg-white">
-        {/* Header */}
-        <div className="border-b border-slate-200 bg-white">
-          <div className="mx-auto max-w-[1240px] px-4 sm:px-6 py-6">
-            <button
-              onClick={() => navigate('/')}
-              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
-            >
-              <ArrowLeft size={16} />
-              Back to home
-            </button>
-          </div>
-        </div>
+        <PageHeader />
 
         {/* Hero Section */}
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6 py-16 sm:py-24">
@@ -216,7 +204,7 @@ export default function FAQ() {
               Frequently Asked Questions
             </h1>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Everything you need to know about VITALOOP. Can't find what you're looking for? Email us at support@vitaloop.today
+              Everything you need to know about VITALOOP. Can't find what you're looking for? Email us at info@softdab.tech
             </p>
           </motion.div>
         </div>
@@ -295,7 +283,7 @@ export default function FAQ() {
               Our support team is here to help. Reach out anytime.
             </p>
             <a
-              href="mailto:support@vitaloop.today"
+              href="mailto:info@softdab.tech"
               className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-8 py-4 text-lg font-bold text-white hover:bg-emerald-700 transition shadow-lg"
             >
               Contact Support

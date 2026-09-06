@@ -439,11 +439,6 @@ export default function ForInvestors() {
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Early adopters</div>
-                <div className="mt-1 text-sm font-semibold">17 early users</div>
-                <div className="mt-1 text-[11px] text-emerald-700">Validated in live product usage</div>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Lab compatibility</div>
                 <div className="mt-1 text-sm font-semibold">Quest, LabCorp, and 50+ report formats</div>
               </div>

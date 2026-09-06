@@ -10,7 +10,7 @@ export const HEALTH_HUB_ARTICLES = [
     eyebrow: 'Start with the pattern',
     icon: BatteryLow,
     readTime: '8 min',
-    updated: 'June 20, 2026',
+    updated: 'September 1, 2026',
     summary: 'Fatigue is a signal, not a diagnosis. Its timing, triggers, associated symptoms, and effect on daily life often provide more useful direction than ordering a random panel.',
     keyPoints: [
       'Track onset, duration, daily timing, sleep quality, activity response, medications, and associated symptoms.',
@@ -58,7 +58,7 @@ export const HEALTH_HUB_ARTICLES = [
     eyebrow: 'Prepare a focused appointment',
     icon: FlaskConical,
     readTime: '9 min',
-    updated: 'June 20, 2026',
+    updated: 'September 1, 2026',
     summary: 'There is no single “fatigue test.” Testing should be selected from your history and symptoms, not ordered as an indiscriminate checklist.',
     keyPoints: [
       'A clinician may consider blood count, iron status, thyroid, glucose, liver, kidney, inflammation, or nutrient testing depending on context.',
@@ -108,7 +108,7 @@ export const HEALTH_HUB_ARTICLES = [
     eyebrow: 'Biomarker deep dive',
     icon: Droplets,
     readTime: '8 min',
-    updated: 'June 20, 2026',
+    updated: 'September 1, 2026',
     summary: 'Ferritin reflects stored iron and can fall before iron-deficiency anemia develops. It is useful, but it should not be interpreted alone.',
     keyPoints: [
       'Ferritin is a commonly used measure of iron stores.',
@@ -156,7 +156,7 @@ export const HEALTH_HUB_ARTICLES = [
     eyebrow: 'Biomarker deep dive',
     icon: Sun,
     readTime: '7 min',
-    updated: 'June 20, 2026',
+    updated: 'September 1, 2026',
     summary: 'Vitamin D status is commonly assessed with serum 25-hydroxyvitamin D. Fatigue alone cannot identify vitamin D deficiency, and a result needs risk and safety context.',
     keyPoints: [
       'Serum 25-hydroxyvitamin D is the main laboratory indicator of vitamin D status.',
@@ -203,7 +203,7 @@ export const HEALTH_HUB_ARTICLES = [
     eyebrow: 'Sleep & recovery',
     icon: Moon,
     readTime: '8 min',
-    updated: 'June 20, 2026',
+    updated: 'September 1, 2026',
     summary: 'Sleep quantity is only one part of recovery. Timing, continuity, breathing, schedule consistency, and whether sleep feels restorative can change the direction of an assessment.',
     keyPoints: [
       'Record bedtime, wake time, awakenings, naps, snoring, and daytime sleepiness for at least one to two weeks.',
@@ -227,7 +227,7 @@ export const HEALTH_HUB_ARTICLES = [
     eyebrow: 'Hair & thyroid',
     icon: ScanLine,
     readTime: '8 min',
-    updated: 'June 20, 2026',
+    updated: 'September 1, 2026',
     summary: 'Hair loss can reflect many different processes. Pattern, onset, scalp findings, recent stressors, nutrition, medications, and associated symptoms determine which tests may be useful.',
     keyPoints: [
       'Diffuse shedding, patchy loss, and patterned thinning are not the same presentation.',
@@ -254,7 +254,7 @@ export const HEALTH_HUB_ARTICLES = [
     eyebrow: 'Cognition & focus',
     icon: Brain,
     readTime: '8 min',
-    updated: 'June 20, 2026',
+    updated: 'September 1, 2026',
     summary: '“Brain fog” is a useful description but not a diagnosis. Clarifying memory, attention, processing speed, timing, triggers, and associated symptoms makes the concern more actionable.',
     keyPoints: [
       'Define whether the main issue is attention, memory, word finding, slowed thinking, or mental exhaustion.',
@@ -281,7 +281,7 @@ export const HEALTH_HUB_ARTICLES = [
     eyebrow: 'Symptom pattern',
     icon: ThermometerSnowflake,
     readTime: '7 min',
-    updated: 'June 20, 2026',
+    updated: 'September 1, 2026',
     summary: 'Feeling unusually cold can be subjective, environmental, or part of a broader pattern. The surrounding symptoms determine whether thyroid, blood count, iron, or other evaluation is useful.',
     keyPoints: [
       'Track whether cold intolerance is new, generalized, seasonal, or limited to hands and feet.',
@@ -308,7 +308,7 @@ export const HEALTH_HUB_ARTICLES = [
     eyebrow: 'Biomarker deep dive',
     icon: Gauge,
     readTime: '8 min',
-    updated: 'June 20, 2026',
+    updated: 'September 1, 2026',
     summary: 'TSH reflects signaling between the pituitary gland and thyroid. It is a central thyroid test, but the result needs symptoms, medication timing, pregnancy status, and sometimes additional thyroid tests.',
     keyPoints: [
       'High or low TSH can point toward different thyroid patterns but does not stand alone as a complete diagnosis.',
@@ -335,7 +335,7 @@ export const HEALTH_HUB_ARTICLES = [
     eyebrow: 'Biomarker deep dive',
     icon: Sparkles,
     readTime: '8 min',
-    updated: 'June 20, 2026',
+    updated: 'September 1, 2026',
     summary: 'Vitamin B12 supports blood and nerve health. Deficiency can cause fatigue and neurological changes, but intake alone does not determine status because absorption matters.',
     keyPoints: [
       'Risk can increase with vegan diets, malabsorption, pernicious anemia, gastrointestinal surgery, and some medications.',
@@ -362,7 +362,7 @@ export const HEALTH_HUB_ARTICLES = [
     eyebrow: 'Metabolic biomarker',
     icon: Activity,
     readTime: '8 min',
-    updated: 'June 20, 2026',
+    updated: 'September 1, 2026',
     summary: 'HbA1c estimates average blood glucose over roughly three months. It is useful for diabetes screening and management, but several conditions can make the result misleading.',
     keyPoints: [
       'HbA1c reflects glucose exposure over the lifespan of red blood cells.',
@@ -389,7 +389,7 @@ export const HEALTH_HUB_ARTICLES = [
     eyebrow: 'Biomarker deep dive',
     icon: ShieldAlert,
     readTime: '7 min',
-    updated: 'June 20, 2026',
+    updated: 'September 1, 2026',
     summary: 'CRP is a nonspecific marker of inflammation. It can show that inflammation is present or changing, but it cannot identify the cause by itself.',
     keyPoints: [
       'CRP can rise with infection, injury, inflammatory disease, and other conditions.',
@@ -413,7 +413,7 @@ export const HEALTH_HUB_ARTICLES = [
     eyebrow: 'Foundational blood test',
     icon: Droplets,
     readTime: '9 min',
-    updated: 'June 20, 2026',
+    updated: 'September 1, 2026',
     summary: 'A CBC is a group of measurements, not one result. Red-cell indices, white-cell patterns, platelets, symptoms, and trends are interpreted together.',
     keyPoints: [
       'A CBC measures the number and characteristics of several blood-cell types.',

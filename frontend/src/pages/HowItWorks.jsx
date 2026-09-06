@@ -32,14 +32,14 @@ export default function HowItWorks() {
     {
       icon: Upload,
       title: 'Upload lab results',
-      description: 'Upload a PDF or image, use manual entry, or add structured biomarker data. VITALOOP normalizes the results and connects them to symptoms and previous context.',
+      description: 'Upload your PDF lab report and get normalized biomarker interpretation connected to your symptoms and previous context.',
       code: '04',
       color: 'from-emerald-500/20 to-violet-500/15',
     },
     {
       icon: LayoutDashboard,
-      title: 'Review the versioned analysis',
-      description: 'Results include prioritized biomarkers, why a conclusion was made, what data was used, safety notes, protocol actions, trends, and retest timing.',
+      title: 'Run and adapt your protocol',
+      description: 'Weekly check-ins and retest cycles help refine your plan over time instead of restarting from scratch.',
       code: '05',
       color: 'from-emerald-500/20 to-cyan-500/15',
     },
@@ -48,12 +48,12 @@ export default function HowItWorks() {
   const guideCards = [
     {
       title: 'Biomarker interpretation',
-      body: 'Learn how ferritin, thyroid, cortisol, lipids, inflammation, and metabolic markers are evaluated as domains, not isolated values.',
+      body: 'Learn how ferritin, thyroid, cortisol, lipids, inflammation, and metabolic markers should be read as a system instead of isolated values.',
       icon: FileText,
     },
     {
       title: 'Protocol design',
-      body: 'See how VITALOOP converts patterns into nutrition, supplement, lifestyle, training/recovery, safety, adherence, and retest actions.',
+      body: 'See how VITALOOP converts patterns into supplements, food changes, and adherence tasks that can actually be executed.',
       icon: Sparkles,
     },
     {
@@ -65,15 +65,15 @@ export default function HowItWorks() {
 
   const outcomes = [
     { label: 'Starting point', value: 'Symptom-first', icon: HeartPulse },
-    { label: 'Analysis engine', value: 'Core V2', icon: TrendingUp },
+    { label: 'Biomarkers tracked', value: '85+', icon: TrendingUp },
     { label: 'Execution model', value: 'Weekly loop', icon: CheckCircle2 },
   ]
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
-        title="How VITALOOP Health Intelligence Works | Shared Analysis Core V2"
-        description="See how VITALOOP connects symptom intake, lab discussion guidance, biomarker normalization, Knowledge Base reasoning, safety notes, protocol actions, trends, and weekly progress tracking."
+        title="How AI Blood Test Analysis Works | VITALOOP"
+        description="See how VITALOOP connects symptom intake, lab discussion guidance, AI blood test analysis, biomarker explanations, and weekly progress tracking."
         path="/how-it-works"
         schemas={[
           {
@@ -98,7 +98,7 @@ export default function HowItWorks() {
               {
                 '@type': 'HowToStep',
                 name: 'Get lab direction and upload results',
-                text: 'Review suggested biomarker categories, then upload results or enter biomarkers for structured interpretation.',
+                text: 'Review suggested biomarker categories, then upload your PDF lab report for structured interpretation.',
                 position: 3,
               },
               {
@@ -130,10 +130,10 @@ export default function HowItWorks() {
             Health Intelligence Hub
           </motion.p>
           <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 text-5xl font-bold tracking-[-0.03em] text-slate-900 md:text-6xl">
-            From symptoms and blood tests to explainable health intelligence
+            From symptoms and blood tests to a clearer next step
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-            Start with what you feel, understand which lab categories may be worth discussing, upload results, and review a structured analysis with priorities, rationale, safety notes, trends, and retest timing.
+            Start with what you feel, understand which lab categories may be worth discussing, upload results, and keep every next step connected over time.
           </motion.p>
 
           <div className="mt-8 flex flex-wrap gap-3">
@@ -181,7 +181,7 @@ export default function HowItWorks() {
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="text-xs uppercase tracking-[0.16em] text-slate-600">Current loop</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">Symptoms → Labs → Core V2 → Action → Retest</div>
+                <div className="mt-2 text-lg font-semibold text-slate-900">Upload → Insight → Action → Retest</div>
                 <div className="mt-3 text-sm leading-relaxed text-slate-600">Each cycle compounds rather than resetting your context.</div>
               </div>
             </div>

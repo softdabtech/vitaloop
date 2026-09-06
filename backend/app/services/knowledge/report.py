@@ -7,7 +7,8 @@ STATUS_PRIORITY = {
     "DEFICIENT": 0,
     "ELEVATED": 1,
     "BORDERLINE": 2,
-    "OPTIMAL": 3,
+    "UNKNOWN": 3,
+    "OPTIMAL": 4,
 }
 
 SEVERITY_PRIORITY = {
@@ -27,12 +28,14 @@ STATUS_LABELS = {
         "DEFICIENT": "deficient",
         "ELEVATED": "elevated",
         "BORDERLINE": "borderline",
+        "UNKNOWN": "no reference range",
         "OPTIMAL": "in range",
     },
     "uk": {
         "DEFICIENT": "нижче референсу",
         "ELEVATED": "вище референсу",
         "BORDERLINE": "потребує спостереження",
+        "UNKNOWN": "референс невідомий",
         "OPTIMAL": "у межах референсу",
     },
 }
@@ -182,7 +185,7 @@ def _status(value: Any) -> str:
         return "OPTIMAL"
     if raw in STATUS_PRIORITY:
         return raw
-    return "BORDERLINE"
+    return "UNKNOWN"
 
 
 def _number(value: Any) -> float | None:
@@ -255,13 +258,15 @@ def _localized_recommendation_text(rec: Dict[str, Any], field: str, fallback: st
 
 def _what_found(biomarkers: List[Dict[str, Any]], locale: str = "en") -> Dict[str, Any]:
     locale = _locale(locale)
-    counts = {"total": len(biomarkers), "optimal": 0, "borderline": 0, "deficient": 0, "elevated": 0}
+    counts = {"total": len(biomarkers), "optimal": 0, "borderline": 0, "deficient": 0, "elevated": 0, "unknown": 0}
     flagged: List[Dict[str, Any]] = []
 
     for item in _sort_biomarkers(biomarkers):
         status = _status(item.get("status"))
         if status == "OPTIMAL":
             counts["optimal"] += 1
+        elif status == "UNKNOWN":
+            counts["unknown"] += 1
         elif status == "BORDERLINE":
             counts["borderline"] += 1
         elif status == "DEFICIENT":
@@ -269,7 +274,7 @@ def _what_found(biomarkers: List[Dict[str, Any]], locale: str = "en") -> Dict[st
         elif status == "ELEVATED":
             counts["elevated"] += 1
 
-        if status != "OPTIMAL":
+        if status not in ("OPTIMAL", "UNKNOWN"):
             flagged.append(
                 {
                     "name": _marker_label(item, locale),
@@ -292,7 +297,12 @@ def _what_found(biomarkers: List[Dict[str, Any]], locale: str = "en") -> Dict[st
         review=counts["deficient"] + counts["elevated"] + counts["borderline"],
         optimal=counts["optimal"],
     )
-    return {"headline": headline, "counts": counts, "flagged_markers": flagged[:8]}
+    # The cap used to be 8 while `counts` reported the true total, so a
+    # comprehensive panel produced "17 need review" above a list of 8 -- 104
+    # flagged marker instances were dropped across the 15 stored uploads. The
+    # list stays sorted worst-first; 24 covers a full metabolic panel with a
+    # differential without reinstating that silent gap.
+    return {"headline": headline, "counts": counts, "flagged_markers": flagged[:24]}
 
 
 def _rule_priority(rule: Dict[str, Any]) -> tuple[int, float]:
@@ -326,7 +336,9 @@ def _interpretation(knowledge_evaluation: Dict[str, Any], locale: str = "en") ->
                 "source_url": rule.get("source_url"),
             }
         )
-    return items[:8]
+    # Findings, not actions: a cut here loses a rule that actually fired (34 of 95
+    # across the 15 stored uploads). Ordered worst-first by severity/confidence.
+    return items[:24]
 
 
 def _fallback_interpretation(flagged_markers: List[Dict[str, Any]], locale: str = "en") -> List[Dict[str, Any]]:
@@ -463,12 +475,21 @@ def _action_plan(knowledge_evaluation: Dict[str, Any], locale: str = "en") -> Li
     return actions[:8]
 
 
-def _fallback_action_plan(flagged_markers: List[Dict[str, Any]], locale: str = "en") -> List[Dict[str, Any]]:
+def _profile_context_complete(user_profile: Dict[str, Any] | None) -> bool:
+    profile = user_profile if isinstance(user_profile, dict) else {}
+    return all(profile.get(key) not in (None, "", [], {}) for key in ("age", "sex", "height_cm", "weight_kg"))
+
+
+def _fallback_action_plan(
+    flagged_markers: List[Dict[str, Any]],
+    locale: str = "en",
+    user_profile: Dict[str, Any] | None = None,
+) -> List[Dict[str, Any]]:
     if not flagged_markers:
         return []
     if _locale(locale) == "uk":
-        return [
-            {
+        actions = [
+            *([] if _profile_context_complete(user_profile) else [{
                 "key": "profile_required",
                 "title": _copy(locale, "profile_title"),
                 "body": _copy(locale, "profile_body"),
@@ -476,7 +497,7 @@ def _fallback_action_plan(flagged_markers: List[Dict[str, Any]], locale: str = "
                 "priority": "high",
                 "requires_doctor": False,
                 "evidence_level": "context_required",
-            },
+            }]),
             {
                 "key": "nutrition_foundation",
                 "title": _copy(locale, "nutrition_title"),
@@ -496,8 +517,9 @@ def _fallback_action_plan(flagged_markers: List[Dict[str, Any]], locale: str = "
                 "evidence_level": "safety",
             },
         ]
+        return actions
     return [
-        {
+        *([] if _profile_context_complete(user_profile) else [{
             "key": "profile_required",
             "title": "Complete anthropometrics before final interpretation",
             "body": "Add age, sex, height, weight, current medications and supplements. Pediatric and adult reference interpretation can differ.",
@@ -505,7 +527,7 @@ def _fallback_action_plan(flagged_markers: List[Dict[str, Any]], locale: str = "
             "priority": "high",
             "requires_doctor": False,
             "evidence_level": "context_required",
-        },
+        }]),
         {
             "key": "nutrition_foundation",
             "title": "Stabilize nutrition basics before over-interpreting",
@@ -532,6 +554,7 @@ def build_knowledge_report(
     biomarkers: List[Dict[str, Any]],
     knowledge_evaluation: Dict[str, Any] | None,
     locale: str = "en",
+    user_profile: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     locale = _locale(locale)
     evaluation = knowledge_evaluation if isinstance(knowledge_evaluation, dict) else {}
@@ -541,9 +564,15 @@ def build_knowledge_report(
         interpretation = _fallback_interpretation(found["flagged_markers"], locale=locale)
     actions = _action_plan(evaluation, locale=locale)
     if not actions:
-        actions = _fallback_action_plan(found["flagged_markers"], locale=locale)
+        actions = _fallback_action_plan(found["flagged_markers"], locale=locale, user_profile=user_profile)
     safety_alerts = evaluation.get("safety_alerts") if isinstance(evaluation.get("safety_alerts"), list) else []
     requires_doctor = bool(evaluation.get("requires_doctor")) or bool(safety_alerts)
+    # Per-marker outcome accounting travelled only inside knowledge_evaluation, so
+    # nothing that renders a report could tell the reader which of their markers
+    # the knowledge base actually looked at. Carried here unchanged (no new text,
+    # no interpretation) so a report surface can state it.
+    marker_coverage = evaluation.get("marker_coverage") if isinstance(evaluation.get("marker_coverage"), dict) else {}
+    unevaluated_markers = evaluation.get("unevaluated_markers") if isinstance(evaluation.get("unevaluated_markers"), list) else []
 
     return {
         "version": "knowledge_report_v1",
@@ -557,10 +586,13 @@ def build_knowledge_report(
             "disclaimer": _copy(locale, "disclaimer"),
         },
         "what_was_found": found,
+        "marker_coverage": marker_coverage,
+        "unevaluated_markers": unevaluated_markers,
         "why_it_matters": interpretation,
         "action_plan": actions,
         "doctor_discussion": _discussion_points(evaluation, found["flagged_markers"], locale=locale),
         "retest_plan": _retest_plan(biomarkers, evaluation, locale=locale),
         "safety_alerts": safety_alerts,
+        "nutrition_context": evaluation.get("nutrition_context") if isinstance(evaluation.get("nutrition_context"), dict) else {},
         "source_references": evaluation.get("source_references") if isinstance(evaluation.get("source_references"), list) else [],
     }

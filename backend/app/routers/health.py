@@ -2,11 +2,10 @@ import asyncio
 import time
 import httpx
 from fastapi import APIRouter, Header, HTTPException
-from starlette.responses import PlainTextResponse
+from starlette.responses import JSONResponse, PlainTextResponse
 from app.config import settings
 from app.services import supabase_service as svc
 from app.utils.build_info import get_build_info
-from app.utils.stripe_config import is_stripe_price_configured
 from app.services.b2b.analyze_labs import render_b2b_metrics
 from app.services.cost_analytics import render_cost_metrics
 import logging
@@ -80,6 +79,45 @@ async def _probe_llm_connectivity(timeout_seconds: float = 5.0) -> dict:
     return result
 
 
+async def _probe_supabase_readiness(*, timeout_seconds: float = 2.5, attempts: int = 2) -> dict:
+    """Run a lightweight Supabase readiness probe with one retry.
+
+    Readiness is called by external monitors frequently, so avoid exact
+    counts or heavy queries here. A transient HTTP/2 reset or one slow edge
+    request should not page ops if the next attempt succeeds.
+    """
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            await asyncio.wait_for(
+                svc._run(
+                    lambda: svc._get_supabase()
+                    .from_("users")
+                    .select("id")
+                    .limit(1)
+                    .execute()
+                ),
+                timeout=timeout_seconds,
+            )
+            return {"ok": True, "attempt": attempt}
+        except Exception as exc:
+            last_error = exc
+            if attempt < attempts:
+                logger.warning(
+                    "readiness_check supabase retry attempt=%s/%s error=%s",
+                    attempt,
+                    attempts,
+                    str(exc)[:100],
+                )
+                await asyncio.sleep(0.25 * attempt)
+
+    return {
+        "ok": False,
+        "error": str(last_error)[:100] if last_error else "unknown",
+        "attempts": attempts,
+    }
+
+
 @router.get("/health")
 async def health_check():
     """Quick liveness probe (always fast, no external calls).
@@ -118,7 +156,6 @@ async def detailed_health_check():
     
     Checks:
     - Supabase connectivity
-    - Stripe configuration
     - Email provider configuration
     - Runtime configuration
     """
@@ -148,23 +185,6 @@ async def detailed_health_check():
         checks["status"] = "degraded"
     except Exception as e:
         checks["services"]["supabase"] = {"status": "error", "error": str(e)[:100]}
-        checks["status"] = "degraded"
-
-    # Check API Gateway configuration
-    stripe_ok = bool(
-        settings.stripe_secret_key
-        and is_stripe_price_configured(
-            settings.stripe_price_id,
-            settings.stripe_price_id_personal,
-            settings.stripe_price_id_personal_monthly,
-            settings.stripe_price_id_personal_yearly,
-            settings.stripe_price_id_practitioner,
-            settings.stripe_price_id_practitioner_monthly,
-            settings.stripe_price_id_practitioner_yearly,
-        )
-    )
-    checks["services"]["stripe"] = {"status": "ok" if stripe_ok else "unconfigured"}
-    if not stripe_ok:
         checks["status"] = "degraded"
 
     # Check Email provider
@@ -212,27 +232,23 @@ async def readiness_check():
     }
 
     # 1. Check Supabase (CRITICAL)
-    try:
-        await asyncio.wait_for(
-            svc._run(
-                lambda: svc._get_supabase()
-                .from_("users")
-                .select("count", count="exact")
-                .limit(1)
-                .execute()
-            ),
-            timeout=3.0,
-        )
+    supabase_probe = await _probe_supabase_readiness()
+    if supabase_probe.get("ok"):
         checks["checks"]["supabase"] = "ok"
-    except Exception as e:
+        checks["checks"]["supabase_attempt"] = supabase_probe.get("attempt", 1)
+    else:
         checks["ready"] = False
-        checks["reason"] = f"supabase_unavailable: {str(e)[:50]}"
+        checks["reason"] = f"supabase_unavailable: {supabase_probe.get('error', '')[:50]}"
         checks["checks"]["supabase"] = "failed"
+        checks["checks"]["supabase_attempts"] = supabase_probe.get("attempts", 2)
         logger.error(
             "readiness_check failed: supabase unavailable",
-            extra={"error": str(e)[:100]},
+            extra={"error": supabase_probe.get("error", "")[:100]},
         )
-        return {"ready": False, "reason": checks["reason"], "status_code": 503}
+        return JSONResponse(
+            status_code=503,
+            content={"ready": False, "reason": checks["reason"], "checks": checks["checks"]},
+        )
 
     # 2. Check required configuration
     required_env = {
@@ -249,7 +265,10 @@ async def readiness_check():
                 "readiness_check failed: missing required config",
                 extra={"missing": env_name},
             )
-            return {"ready": False, "reason": checks["reason"], "status_code": 503}
+            return JSONResponse(
+                status_code=503,
+                content={"ready": False, "reason": checks["reason"], "checks": checks["checks"]},
+            )
         checks["checks"][env_name] = "ok"
 
     logger.info("readiness_check passed", extra={"checks": checks["checks"]})

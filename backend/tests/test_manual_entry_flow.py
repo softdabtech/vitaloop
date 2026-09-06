@@ -14,6 +14,7 @@ async def test_manual_entry_then_results_flow(monkeypatch):
     fake_upload_id = str(uuid.uuid4())
     state = {
         "saved_protocol": None,
+        "saved_candidates": None,
         "saved_biomarkers": [
             {
                 "id": str(uuid.uuid4()),
@@ -45,10 +46,10 @@ async def test_manual_entry_then_results_flow(monkeypatch):
     async def fake_check_quota(_user_id, _entry_type):
         return True, "", None
 
-    def fake_validate_entries(entries):
+    async def fake_validate_entries(entries, *, sex=None, age=None):
         return entries, []
 
-    def fake_convert_to_standard_units(entries):
+    async def fake_convert_to_standard_units(entries, *, sex=None, age=None):
         return entries
 
     def fake_format_for_claude_analysis(entries):
@@ -86,6 +87,10 @@ async def test_manual_entry_then_results_flow(monkeypatch):
             "recommendations": recommendations,
         }
 
+    async def fake_save_biomarker_extraction_candidates(upload_id, user_id, candidates):
+        state["saved_candidates"] = candidates
+        return candidates
+
     async def fake_assert_upload_belongs_to_user(upload_id, user_id):
         if upload_id != fake_upload_id or user_id != fake_user_id:
             from fastapi import HTTPException
@@ -103,8 +108,43 @@ async def test_manual_entry_then_results_flow(monkeypatch):
             return saved
         return None
 
+    async def fake_has_any_report_version(_upload_id, _user_id):
+        return False
+
     async def fake_write_audit_log(**_kwargs):
         return None
+
+    async def fake_run_lab_analysis_pipeline(**kwargs):
+        if kwargs["source_metadata"]["source"] == "b2c_manual":
+            assert kwargs["source_metadata"]["candidates"][0]["status"] == "confirmed"
+            assert kwargs["source_metadata"]["candidates"][0]["confidence_score"] == 1.0
+            # Stage 2B (manual-entry gap closure): manual entry now routes through
+            # the same persist_biomarkers-gated pipeline as every other ingestion
+            # method; this fake simulates the pipeline's own auto_continue
+            # persistence and response shape.
+            assert kwargs.get("persist_biomarkers") is True
+        return {
+            "analysis_status": "completed",
+            "saved_biomarkers": state["saved_biomarkers"],
+            "knowledge_evaluation": {"matched_rules": []},
+            "knowledge_report": {"summary": {}},
+            "interpreted_report": {"summary": {}},
+            "analysis_input_quality_gate": {
+                "decision": "auto_continue",
+                "requires_confirmation": False,
+                "candidate_summary": {"count": len(kwargs["source_metadata"].get("candidates") or [])},
+            },
+            "clinical_data_integrity": {"status": "pass"},
+            "evidence_gaps": {"gaps": []},
+            "protocol": {"nutrition": []},
+            "recommendations": [{"title": "Review nutrition basics"}],
+            "shopping_links": [],
+            "retest_suggestions": [],
+            "health_summary": {},
+            "safety_result": {"status": "approved"},
+            "explainability": {"version": "test"},
+            "report_version": {"id": "report-1"},
+        }
 
     monkeypatch.setattr(analyze_router.biomarker_service, "check_freemium_biomarker_quota", fake_check_quota)
     monkeypatch.setattr(analyze_router.biomarker_service, "validate_entries", fake_validate_entries)
@@ -115,9 +155,12 @@ async def test_manual_entry_then_results_flow(monkeypatch):
     monkeypatch.setattr(analyze_router, "is_llm_configured", lambda: True)
     monkeypatch.setattr(analyze_router, "extract_biomarkers", fake_extract_biomarkers)
     monkeypatch.setattr(analyze_router, "save_protocol_for_upload", fake_save_protocol_for_upload)
+    monkeypatch.setattr(analyze_router, "save_biomarker_extraction_candidates", fake_save_biomarker_extraction_candidates)
+    monkeypatch.setattr(analyze_router, "run_lab_analysis_pipeline", fake_run_lab_analysis_pipeline)
     monkeypatch.setattr(analyze_router, "assert_upload_belongs_to_user", fake_assert_upload_belongs_to_user)
     monkeypatch.setattr(analyze_router, "get_biomarkers_by_upload", fake_get_biomarkers_by_upload)
     monkeypatch.setattr(analyze_router, "get_protocol_by_upload", fake_get_protocol_by_upload)
+    monkeypatch.setattr(analyze_router, "has_any_report_version", fake_has_any_report_version)
     monkeypatch.setattr(analyze_router, "write_audit_log", fake_write_audit_log)
 
     fake_user = {"sub": fake_user_id, "email": "manual@vitaloop.test"}
@@ -141,6 +184,9 @@ async def test_manual_entry_then_results_flow(monkeypatch):
             manual_json = manual_resp.json()
             assert manual_json["upload_id"] == fake_upload_id
             assert len(manual_json["biomarkers"]) == 2
+            assert manual_json["analysis_input_quality_gate"]["requires_confirmation"] is False
+            assert state["saved_candidates"] is not None
+            assert state["saved_candidates"][0]["status"] == "confirmed"
             assert state["saved_protocol"] is not None
             assert len(state["saved_protocol"]["recommendations"]) == 1
 

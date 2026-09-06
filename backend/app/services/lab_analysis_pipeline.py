@@ -9,20 +9,59 @@ from app.config import settings
 from app.services.affiliate import build_iherb_url
 from app.services.ai.openai_service import is_llm_configured
 from app.services.ai_orchestrator import generate_ai_protocol_orchestrated
+from app.services.analysis_quality_gate import build_analysis_input_quality_gate
 from app.services.analysis_quality_snapshot import build_analysis_quality_snapshot
+from app.services.clinical_data_integrity import validate_clinical_data_integrity
 from app.services.cost_analytics import record_analysis_cost
+from app.services.evidence_gaps import build_evidence_gaps
 from app.services.explainability import build_recommendation_explanations
 from app.services.health_context import build_health_context
 from app.services.health_state_engine import evaluate_health_states
+from app.services.knowledge.domain_registry import DOMAIN_REGISTRY_VERSION, resolve_domain_definitions
 from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
+from app.services.knowledge.nutrition_algorithms import NUTRITION_ALGORITHMS_VERSION
 from app.services.knowledge.report import build_knowledge_report
-from app.services.knowledge.domain_registry import resolve_domain_definitions
-from app.services.lab_normalization.biomarker_mapping import infer_category, to_canonical_name
+from app.services.lab_normalization.biomarker_mapping import infer_category, is_metadata_field, to_canonical_name
+# Clinical engine — единая точка для normalize/prioritize/risk_flags
+from app.services.clinical_engine.normalizer import normalize_biomarkers as _engine_normalize_biomarkers
+from app.services.clinical_engine import prioritize_biomarkers as _engine_prioritize_biomarkers
+from app.services.clinical_engine import build_risk_flags as _engine_build_risk_flags
 from app.services.protocol_enrichment import enrich_protocol
-from app.services.safety import validate_report
+from app.services.report_interpretation import REPORT_INTERPRETATION_VERSION, build_interpreted_report
+from app.services.safety import (
+    sanitize_knowledge_evaluation_for_safety,
+    sanitize_knowledge_report_for_safety,
+    sanitize_protocol_for_safety,
+    validate_report,
+)
+from app.services.safety.safety_engine import blocked_content_notice
+from app.services.safety.safety_engine import SAFETY_ENGINE_VERSION
 from app.services.trend_engine import evaluate_biomarker_trends
 
 logger = logging.getLogger("uvicorn.error")
+
+LAB_ANALYSIS_PIPELINE_VERSION = "lab_analysis_pipeline_v2"
+
+_DOMAIN_LABELS_UK = {
+    "iron_status": "Статус заліза",
+    "metabolic_health": "Метаболічне здоровʼя",
+    "cardiovascular": "Серцево-судинний профіль",
+    "inflammation": "Запалення",
+    "thyroid": "Щитоподібна залоза",
+    "liver": "Печінка",
+    "kidney": "Нирки",
+    "micronutrients": "Мікронутрієнти",
+    "recovery_energy": "Відновлення й енергія",
+    "blood_count": "Загальний аналіз крові",
+    "general": "Загальний контекст",
+}
+
+
+def _localized_domain_label(domain: Any, fallback: Any, locale: str) -> str:
+    key = str(domain or "").strip()
+    if str(locale or "").lower().startswith("uk") and key in _DOMAIN_LABELS_UK:
+        return _DOMAIN_LABELS_UK[key]
+    return str(fallback or key or "Health domain")
 
 
 DISCLAIMER = (
@@ -41,7 +80,8 @@ _STATUS_PRIORITY = {
     "DEFICIENT": 0,
     "ELEVATED": 1,
     "BORDERLINE": 2,
-    "OPTIMAL": 3,
+    "UNKNOWN": 3,
+    "OPTIMAL": 4,
 }
 
 _PLACEHOLDER_SOURCE_HOSTS = ("example.org", "example.com")
@@ -166,6 +206,31 @@ def _infer_category_from_name(display_name: str, canonical: str) -> str:
     return inferred if inferred and inferred != "other" else "other"
 
 
+def _reference_range_fallback(canonical: str, unit: str) -> tuple[float | None, float | None]:
+    """Reference bounds from the codebase's own reference table when the lab
+    report carried none.
+
+    Some labs print values without a range. Those markers previously reached
+    _status_for_value() with nothing to compare against and fell through to its
+    BORDERLINE default -- 96 marker instances across the 15 stored uploads
+    presented as "needs review", including CRP 1.52 mg/L and LDL 2.26 mmol/L,
+    which are unremarkable. BIOMARKER_DATABASE (LabCorp/Mayo ranges, already
+    used by manual entry and calculate_status) covers part of that set, so it is
+    consulted here rather than leaving the marker unassessed. Nothing is
+    invented: a marker or unit the table does not carry still returns (None,
+    None) and keeps the existing behaviour.
+    """
+    from app.services.biomarker_reference import resolve_status_bounds
+
+    bounds = resolve_status_bounds(str(canonical or "").removeprefix("canonical_"), str(unit or ""), None)
+    if not bounds:
+        return None, None
+    ref_min, ref_max, _optimal_min, _optimal_max = bounds
+    low = None if ref_min in (None, 0) else float(ref_min)
+    high = None if ref_max in (None, float("inf")) else float(ref_max)
+    return low, high
+
+
 def _status_for_value(value: float, ref_low: float | None, ref_high: float | None, raw_status: Any = None) -> str:
     if ref_low is not None and value < ref_low:
         return "DEFICIENT"
@@ -186,67 +251,24 @@ def _status_for_value(value: float, ref_low: float | None, ref_high: float | Non
     return aliases.get(status, status if status in _STATUS_PRIORITY else "BORDERLINE")
 
 
-def normalize_biomarkers(raw_biomarkers: Iterable[Dict[str, Any]], *, name_aliases: Optional[Dict[str, str]] = None) -> List[Dict[str, Any]]:
-    normalized: List[Dict[str, Any]] = []
-    seen: set[str] = set()
+def normalize_biomarkers(
+    raw_biomarkers: Iterable[Dict[str, Any]],
+    *,
+    name_aliases: Optional[Dict[str, str]] = None,
+    sex: Optional[str] = None,
+    age: Optional[int] = None,
+) -> List[Dict[str, Any]]:
+    """Delegates to clinical_engine.normalizer.normalize_biomarkers().
 
-    for item in raw_biomarkers or []:
-        if not isinstance(item, dict):
-            continue
+    Kept here for backward compatibility — routers and tests import this name.
 
-        name = item.get("name") or item.get("display_name") or item.get("canonical_name")
-        if not name:
-            continue
-        value = item.get("value")
-        unit = item.get("unit")
-        if value in (None, "") or not unit:
-            continue
-
-        try:
-            numeric_value = float(value)
-        except (TypeError, ValueError):
-            continue
-
-        display_name, canonical = _normalize_name(str(name), name_aliases=name_aliases)
-        raw_unit = str(unit)
-        numeric_value, normalized_unit = _normalize_value_unit(canonical, numeric_value, raw_unit)
-        ref_low = item.get("ref_low") or item.get("reference_low")
-        ref_high = item.get("ref_high") or item.get("reference_high")
-        if ref_low in (None, "") or ref_high in (None, ""):
-            parsed_low, parsed_high = _parse_reference_range(item.get("reference_range"))
-            ref_low = ref_low if ref_low not in (None, "") else parsed_low
-            ref_high = ref_high if ref_high not in (None, "") else parsed_high
-        ref_low = float(ref_low) if ref_low not in (None, "") else None
-        ref_high = float(ref_high) if ref_high not in (None, "") else None
-        ref_low, ref_high = _convert_reference_range_for_unit(canonical, ref_low, ref_high, raw_unit)
-        status = _status_for_value(numeric_value, ref_low, ref_high, item.get("status"))
-
-        unique_key = canonical
-        if unique_key in seen:
-            unique_key = f"{canonical}_{len(seen) + 1}"
-        seen.add(unique_key)
-
-        normalized.append(
-            {
-                "name": display_name,
-                "canonical_name": canonical,
-                "value": numeric_value,
-                "unit": normalized_unit,
-                "ref_low": ref_low,
-                "ref_high": ref_high,
-                "status": status,
-                "category": (
-                    _infer_category_from_name(display_name, canonical)
-                    if str(item.get("category") or "").lower() in {"", "other", "unknown"}
-                    else item.get("category")
-                ),
-                "reference_range": item.get("reference_range"),
-                "collected_at": _iso_or_none(item.get("collected_at")),
-                "lab_name": item.get("lab_name"),
-            }
-        )
-
-    return normalized
+    Args:
+        raw_biomarkers: List of biomarker dicts with name, value, unit
+        name_aliases: Optional custom biomarker name mappings
+        sex: Optional user sex ('male', 'female') for sex-specific reference ranges
+        age: Optional user age (years) for age-specific assessment
+    """
+    return _engine_normalize_biomarkers(raw_biomarkers, name_aliases=name_aliases, sex=sex, age=age)
 
 
 def _iso_or_none(value: Any) -> str | None:
@@ -268,83 +290,13 @@ def _priority_for_status(status: str) -> str:
 
 
 def _prioritize_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    ordered = sorted(
-        biomarkers,
-        key=lambda item: (
-            _STATUS_PRIORITY.get(str(item.get("status") or "BORDERLINE"), 9),
-            str(item.get("category") or ""),
-            str(item.get("name") or ""),
-        ),
-    )
-    result: List[Dict[str, Any]] = []
-    for item in ordered:
-        status = str(item.get("status") or "BORDERLINE")
-        if status == "OPTIMAL":
-            continue
-        result.append(
-            {
-                "name": item["name"],
-                "canonical_name": item["canonical_name"],
-                "value": item["value"],
-                "unit": item["unit"],
-                "status": status,
-                "category": item.get("category"),
-                "priority": _priority_for_status(status),
-                "rationale": "Prioritized because the value is outside or near the provided reference range.",
-                "reference_range": item.get("reference_range")
-                or (
-                    f"{item.get('ref_low')} - {item.get('ref_high')} {item.get('unit')}"
-                    if item.get("ref_low") is not None and item.get("ref_high") is not None
-                    else None
-                ),
-            }
-        )
-    return result[:12]
+    """Delegates to clinical_engine.prioritize_biomarkers()."""
+    return _engine_prioritize_biomarkers(biomarkers)
 
 
 def _risk_flags(knowledge_report: Dict[str, Any], prioritized: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    flags: List[Dict[str, Any]] = []
-    for alert in knowledge_report.get("safety_alerts") or []:
-        if not isinstance(alert, dict):
-            continue
-        flags.append(
-            {
-                "type": "safety_alert",
-                "severity": "critical",
-                "title": f"{alert.get('marker') or 'Marker'} requires medical review",
-                "rationale": alert.get("message") or "Safety alert requires medical review.",
-                "biomarker": alert.get("marker"),
-                "requires_doctor": True,
-            }
-        )
-
-    for rule in knowledge_report.get("why_it_matters") or []:
-        if not isinstance(rule, dict):
-            continue
-        flags.append(
-            {
-                "type": "knowledge_rule",
-                "severity": str(rule.get("severity") or "moderate"),
-                "title": str(rule.get("title") or "Matched health pattern"),
-                "rationale": str(rule.get("why_it_matters") or rule.get("summary") or ""),
-                "biomarker": None,
-                "requires_doctor": bool(rule.get("requires_doctor")),
-            }
-        )
-
-    if not flags:
-        for item in prioritized[:5]:
-            flags.append(
-                {
-                    "type": "biomarker_flag",
-                    "severity": item["priority"],
-                    "title": f"{item['name']} is {str(item['status']).lower()}",
-                    "rationale": item["rationale"],
-                    "biomarker": item["canonical_name"],
-                    "requires_doctor": item["priority"] == "high",
-                }
-            )
-    return flags[:10]
+    """Delegates to clinical_engine.build_risk_flags()."""
+    return _engine_build_risk_flags(knowledge_report, prioritized)
 
 
 def _localized_knowledge_evaluation_for_response(
@@ -663,11 +615,33 @@ async def run_lab_analysis_pipeline(
     source_metadata: Optional[Dict[str, Any]] = None,
     persist_knowledge: bool = False,
     persist_report_version: bool = False,
+    persist_biomarkers: bool = False,
     locale: str = "en",
     biomarker_name_aliases: Optional[Dict[str, str]] = None,
     generate_ai_protocol: bool = True,
 ) -> Dict[str, Any]:
-    normalized_biomarkers = normalize_biomarkers(biomarkers, name_aliases=biomarker_name_aliases)
+    # Extract sex and age from user_profile for sex/age-specific reference ranges
+    user_sex = None
+    user_age = None
+    if user_profile:
+        user_sex = str(user_profile.get("sex") or "").strip().lower() or None
+        user_age = user_profile.get("age")
+        if user_age is not None:
+            try:
+                user_age = int(user_age)
+            except (TypeError, ValueError):
+                user_age = None
+
+    normalized_biomarkers = normalize_biomarkers(
+        biomarkers,
+        name_aliases=biomarker_name_aliases,
+        sex=user_sex,
+        age=user_age,
+    )
+    clinical_integrity = validate_clinical_data_integrity(
+        biomarkers=normalized_biomarkers,
+        profile=user_profile,
+    )
     normalized_symptoms = [str(item).strip().lower() for item in (symptoms or []) if str(item).strip()]
     health_context = build_health_context(
         biomarkers=normalized_biomarkers,
@@ -677,6 +651,53 @@ async def run_lab_analysis_pipeline(
         source_metadata=source_metadata,
         locale=locale,
     )
+    analysis_input_quality_gate = build_analysis_input_quality_gate(
+        biomarkers=normalized_biomarkers,
+        candidates=(source_metadata or {}).get("candidates") if isinstance(source_metadata, dict) else None,
+        clinical_integrity=clinical_integrity,
+        health_context=health_context,
+        source_metadata=source_metadata,
+    )
+
+    # Stage 2B: canonical-data persistence boundary. Extraction candidates are
+    # persisted unconditionally by the caller before this function ever runs
+    # (unchanged — raw capture is low-risk). Canonical biomarkers, and everything
+    # downstream of them (report, protocol, report_version, trend/health-state
+    # evaluation), must NOT be produced/persisted until the gate allows automatic
+    # continuation. When a user confirms/corrects low-confidence candidates,
+    # analysis_quality_gate.py's own _candidate_scores() already boosts
+    # confirmed/corrected candidate confidence to >=0.85 — so re-running this same
+    # gate against the updated candidates is the mechanism that naturally resolves
+    # to auto_continue once real confirmation has happened, with no separate
+    # override flag and no artificial retry limit (see
+    # docs/audit/VITALOOP_STAGE2_IMPLEMENTATION_PLAN.md, Stage 2B).
+    if analysis_input_quality_gate["decision"] != "auto_continue":
+        return {
+            "analysis_id": analysis_id or "",
+            "status": "needs_confirmation",
+            "analysis_status": "needs_confirmation",
+            "normalized_biomarkers": normalized_biomarkers,
+            "clinical_data_integrity": clinical_integrity,
+            "health_context": health_context,
+            "analysis_input_quality_gate": analysis_input_quality_gate,
+            "metadata": {
+                "source": source_metadata or {},
+                "questionnaire_present": bool(questionnaire),
+                "profile_present": bool(user_profile),
+                "biomarker_count": len(normalized_biomarkers),
+                "analysis_core_version": LAB_ANALYSIS_PIPELINE_VERSION,
+            },
+        }
+
+    saved_biomarkers: List[Dict[str, Any]] | None = None
+    if persist_biomarkers and user_id and analysis_id:
+        from app.services import supabase_service as supabase
+
+        saved_biomarkers = await supabase.save_biomarkers(
+            upload_id=analysis_id,
+            user_id=user_id,
+            biomarkers=normalized_biomarkers,
+        )
 
     knowledge_evaluation = await evaluate_biomarkers_with_knowledge(
         biomarkers=normalized_biomarkers,
@@ -687,10 +708,12 @@ async def run_lab_analysis_pipeline(
         health_context=health_context,
         persist=persist_knowledge,
     )
+    knowledge_evaluation = knowledge_evaluation if isinstance(knowledge_evaluation, dict) else {}
     knowledge_report = build_knowledge_report(
         biomarkers=normalized_biomarkers,
         knowledge_evaluation=knowledge_evaluation,
         locale=locale,
+        user_profile=user_profile,
     )
     knowledge_report = _strip_placeholder_source_urls(knowledge_report)
     knowledge_evaluation = _strip_placeholder_source_urls(knowledge_evaluation)
@@ -710,6 +733,47 @@ async def run_lab_analysis_pipeline(
         domain_definitions=domain_definitions,
     )
     rule_recommendations = knowledge_report.get("action_plan") or []
+    # Build clinical context for LLM — the deterministic engine's output
+    risk_flags = _risk_flags(knowledge_report, prioritized)
+    from app.services.clinical_engine.marker_coverage import enrich_coverage
+    _raw_mc = knowledge_evaluation.get("marker_coverage", {})
+    _enriched_mc = enrich_coverage(_raw_mc, normalized_biomarkers)
+    clinical_context = {
+        "engine_version": "clinical_engine_v1",
+        "biomarker_count": len(normalized_biomarkers),
+        "abnormal_count": sum(1 for b in normalized_biomarkers if b.get("status") in ("DEFICIENT", "ELEVATED", "BORDERLINE")),
+        "unknown_count": sum(1 for b in normalized_biomarkers if b.get("status") == "UNKNOWN"),
+        "matched_rules": [
+            {"rule_key": r.get("rule_key"), "name": r.get("name"), "severity": r.get("severity"),
+             "summary": r.get("summary"), "requires_doctor": r.get("requires_doctor")}
+            for r in knowledge_evaluation.get("matched_rules", [])
+        ],
+        "safety_alerts": [
+            {"marker": a.get("marker"), "message": a.get("message")}
+            for a in knowledge_evaluation.get("safety_alerts", [])
+        ],
+        "risk_flags": [
+            {"type": f.get("type"), "severity": f.get("severity"), "title": f.get("title"), "biomarker": f.get("biomarker")}
+            for f in risk_flags[:12]
+        ],
+        "prioritized_abnormal": [
+            {"name": b["name"], "canonical_name": b["canonical_name"], "value": b["value"],
+             "unit": b["unit"], "status": b["status"], "priority": b.get("priority"),
+             "reference_range": b.get("reference_range")}
+            for b in prioritized[:12]
+        ],
+        "knowledge_headline": (knowledge_report.get("summary") or {}).get("headline"),
+        "knowledge_risk_level": (knowledge_report.get("summary") or {}).get("risk_level"),
+        "requires_doctor": bool(knowledge_evaluation.get("requires_doctor")),
+        "confidence": knowledge_evaluation.get("confidence", 0.0),
+        "marker_coverage_summary": {
+            "evaluated": len(_enriched_mc.get("evaluated", [])),
+            "fired": len(_enriched_mc.get("fired", [])),
+            "no_matching_rule": len(_enriched_mc.get("no_matching_rule", [])),
+            "unit_blocked": len(_enriched_mc.get("unit_blocked", [])),
+            "unknown_status": len(_enriched_mc.get("unknown_status", [])),
+        },
+    }
     ai_protocol = []
     ai_orchestration = {
         "version": "ai_orchestration_v1",
@@ -729,18 +793,30 @@ async def run_lab_analysis_pipeline(
             knowledge_report=knowledge_report,
             health_states=health_states,
             trend_analysis=trend_analysis,
+            clinical_context=clinical_context,
         )
         ai_protocol = ai_orchestration.get("items") or []
     recommendations = [
         *rule_recommendations,
         *[{**item, "source": item.get("source") or "ai_protocol"} for item in ai_protocol if isinstance(item, dict)],
     ]
+    # Stage 2C: `recommendations` is a separate flat list from `protocol` (both
+    # are built from the same rule/AI items, but shaped differently) and is what
+    # gets persisted into the `protocols` table (see supabase_service.save_protocol
+    # call sites in analyze.py) — that table's content is what GET /{upload_id}
+    # actually serves as "protocol" to a returning user. Previously only
+    # `protocol` was sanitized, leaving `recommendations`/`protocols.recommendations`
+    # to serve unsanitized content even after this exact same safety engine had
+    # already flagged it. Sanitizing both, using the identical function/detectors,
+    # closes that gap without a second sanitization implementation.
+    recommendations = sanitize_protocol_for_safety(recommendations, profile=user_profile, locale=locale)
     protocol = _protocol_sections_from_ai_and_rules(rule_actions=rule_recommendations, ai_protocol=ai_protocol)
     protocol = _fill_protocol_section_fallbacks(
         protocol,
         biomarkers=normalized_biomarkers,
         prioritized=prioritized,
     )
+    protocol = sanitize_protocol_for_safety(protocol, profile=user_profile, locale=locale)
     safety_result = validate_report(
         biomarkers=normalized_biomarkers,
         knowledge_report=knowledge_report,
@@ -759,12 +835,30 @@ async def run_lab_analysis_pipeline(
         domain_definitions=domain_definitions,
         locale=locale,
     )
+    protocol = sanitize_protocol_for_safety(protocol, profile=user_profile, locale=locale)
     safety_result = validate_report(
         biomarkers=normalized_biomarkers,
         knowledge_report=knowledge_report,
         protocol=protocol,
         profile=user_profile,
     )
+    # Stage 2C: plain-language, user-facing notice — never exposes blocked_items'
+    # internal rule keys — surfaced consistently alongside safety_result in every
+    # live response path (see analyze.py's response dicts).
+    safety_notice = blocked_content_notice(locale) if safety_result.get("status") == "blocked" else None
+    # Stage 2C (report-level gap): validate_report() above already detected
+    # diagnosis-like wording using the RAW knowledge_report (preserving accurate
+    # blocked-status detection) — now sanitize knowledge_report itself before it
+    # is used any further (interpreted_report build, API response,
+    # report_versions persistence), so the exact flagged text cannot survive in
+    # any live output while safety_result still correctly reports "blocked".
+    knowledge_report = sanitize_knowledge_report_for_safety(knowledge_report, locale=locale)
+    # Same gap, one more location: knowledge_evaluation (the upstream rule-match
+    # object) is served independently of knowledge_report in every response and
+    # in B2B's raw pipeline-result spread — the report-level fix alone does not
+    # reach it. See sanitize_knowledge_evaluation_for_safety()'s docstring for
+    # the exact traced field list.
+    knowledge_evaluation = sanitize_knowledge_evaluation_for_safety(knowledge_evaluation, locale=locale)
     shopping_links = _shopping_links(
         biomarkers=normalized_biomarkers,
         prioritized=prioritized,
@@ -777,6 +871,22 @@ async def run_lab_analysis_pipeline(
         knowledge_evaluation=knowledge_evaluation,
         recommendations=recommendations,
         safety_result=safety_result,
+    )
+    interpreted_report = build_interpreted_report(
+        biomarkers=normalized_biomarkers,
+        knowledge_report=knowledge_report,
+        health_states=health_states,
+        explainability=explainability,
+        safety_result=safety_result,
+        health_context=health_context,
+        profile=user_profile,
+        locale=locale,
+    )
+    evidence_gaps = build_evidence_gaps(
+        biomarkers=normalized_biomarkers,
+        health_states=health_states,
+        interpreted_report=interpreted_report,
+        clinical_integrity=clinical_integrity,
     )
     output_knowledge_evaluation = _localized_knowledge_evaluation_for_response(
         knowledge_evaluation,
@@ -819,6 +929,7 @@ async def run_lab_analysis_pipeline(
             "top_domains": [
                 {
                     "domain": item.get("domain"),
+                    "label": _localized_domain_label(item.get("domain"), item.get("label"), locale),
                     "score": item.get("score"),
                     "risk_level": item.get("risk_level"),
                     "confidence": item.get("confidence"),
@@ -827,10 +938,36 @@ async def run_lab_analysis_pipeline(
             ],
         },
     }
+    version_provenance = {
+        "pipeline_version": LAB_ANALYSIS_PIPELINE_VERSION,
+        "kb_version": knowledge_report.get("version") or knowledge_evaluation.get("version"),
+        "domain_registry_version": (
+            (domain_definitions[0] or {}).get("registry_version")
+            if domain_definitions
+            else DOMAIN_REGISTRY_VERSION
+        ),
+        "nutrition_rules_version": (
+            ((knowledge_evaluation.get("nutrition_context") or {}).get("version"))
+            or NUTRITION_ALGORITHMS_VERSION
+        ),
+        "safety_engine_version": SAFETY_ENGINE_VERSION,
+        "prompt_version": (ai_orchestration.get("metadata") or {}).get("prompt_version"),
+        "model": (
+            (ai_orchestration.get("metadata") or {}).get("model")
+            or (ai_orchestration.get("metadata") or {}).get("llm_model")
+            or getattr(settings, "active_llm_model", None)
+        ),
+        "locale": locale,
+        "report_interpretation_version": REPORT_INTERPRETATION_VERSION,
+        "analysis_input_quality_gate_version": analysis_input_quality_gate.get("version"),
+        "clinical_data_integrity_version": clinical_integrity.get("version"),
+        "evidence_gaps_version": evidence_gaps.get("version"),
+    }
 
     result = {
         "analysis_id": analysis_id or "",
         "status": "completed",
+        "analysis_status": "completed",
         "health_summary": health_summary,
         "trend_analysis": trend_analysis,
         "health_states": health_states,
@@ -845,10 +982,16 @@ async def run_lab_analysis_pipeline(
         "doctor_summary": " ".join(knowledge_report.get("doctor_discussion") or [])[:2000],
         "knowledge_evaluation": output_knowledge_evaluation,
         "knowledge_report": knowledge_report,
+        "interpreted_report": interpreted_report,
+        "analysis_input_quality_gate": analysis_input_quality_gate,
+        "clinical_data_integrity": clinical_integrity,
+        "evidence_gaps": evidence_gaps,
         "safety_result": safety_result,
+        "safety_notice": safety_notice,
         "explainability": explainability,
         "disclaimer": (knowledge_report.get("summary") or {}).get("disclaimer") or DISCLAIMER,
         "normalized_biomarkers": normalized_biomarkers,
+        "saved_biomarkers": saved_biomarkers,
         "cost_metadata": cost_metadata,
         "quality_snapshot": quality_snapshot,
         "health_context": health_context,
@@ -863,7 +1006,8 @@ async def run_lab_analysis_pipeline(
             "ai_analysis_source": (ai_orchestration.get("metadata") or {}).get("analysis_source"),
             "quality_snapshot_version": quality_snapshot.get("version"),
             "biomarker_count": len(normalized_biomarkers),
-            "analysis_core_version": "lab_analysis_pipeline_v1",
+            "analysis_core_version": LAB_ANALYSIS_PIPELINE_VERSION,
+            "version_provenance": version_provenance,
         },
     }
 
@@ -882,21 +1026,35 @@ async def run_lab_analysis_pipeline(
                     "profile_context_fields": result["metadata"]["profile_context_fields"],
                     "source": source_metadata or {},
                     "health_context": health_context,
+                    "analysis_input_quality_gate": analysis_input_quality_gate,
+                    "clinical_data_integrity": clinical_integrity,
                     "health_states": health_states,
                     "trend_analysis": trend_analysis,
-            "ai_orchestration": ai_orchestration,
-            "quality_snapshot": quality_snapshot,
-            "cost_metadata": cost_metadata,
-            "knowledge_domain_definitions": {
-                "count": len(domain_definitions),
-                "registry_version": (domain_definitions[0] or {}).get("registry_version") if domain_definitions else None,
-                "domains": [item.get("key") for item in domain_definitions],
-            },
-        },
+                    "evidence_gaps": evidence_gaps,
+                    "version_provenance": version_provenance,
+                    "ai_orchestration": ai_orchestration,
+                    "quality_snapshot": quality_snapshot,
+                    "cost_metadata": cost_metadata,
+                    "knowledge_domain_definitions": {
+                        "count": len(domain_definitions),
+                        "registry_version": (domain_definitions[0] or {}).get("registry_version") if domain_definitions else None,
+                        "domains": [item.get("key") for item in domain_definitions],
+                    },
+                },
                 knowledge_report=knowledge_report,
                 protocol=protocol,
                 safety_result=safety_result,
-                explainability=explainability,
+                explainability={
+                    **(explainability or {}),
+                    "evidence_gaps": evidence_gaps,
+                    "version_provenance": version_provenance,
+                    # Stage 2G: knowledge_evaluation has no dedicated report_versions
+                    # column; nested here (the existing catch-all envelope) so a
+                    # frozen GET can serve it without recomputing — see
+                    # app/services/report_history.py::frozen_knowledge_evaluation().
+                    "knowledge_evaluation": output_knowledge_evaluation,
+                },
+                interpreted_report=interpreted_report,
                 status="completed" if safety_result.get("status") != "blocked" else "blocked",
             )
             result["report_version"] = report_version
@@ -906,9 +1064,61 @@ async def run_lab_analysis_pipeline(
                 report_version_id=report_version.get("id"),
                 safety_events=safety_result.get("safety_events") or [],
             )
+            try:
+                result["analysis_intelligence_artifacts"] = await supabase.save_analysis_intelligence_artifacts(
+                    user_id=user_id,
+                    upload_id=analysis_id,
+                    analysis_input_quality_gate=analysis_input_quality_gate,
+                    clinical_data_integrity=clinical_integrity,
+                    evidence_gaps=evidence_gaps,
+                    health_states=health_states,
+                )
+            except Exception as exc:
+                result["analysis_intelligence_artifacts"] = {
+                    "persisted": False,
+                    "error": type(exc).__name__,
+                }
+                try:
+                    from app.services.ops_alerts import send_ops_alert
+
+                    await send_ops_alert(
+                        code="ANALYSIS_INTELLIGENCE_ARTIFACT_PERSISTENCE_FAILED",
+                        title="Analysis intelligence artifact persistence failed",
+                        severity="error",
+                        source="backend.analysis",
+                        details={
+                            "user_id": user_id,
+                            "upload_id": analysis_id,
+                            "error_type": type(exc).__name__,
+                            "error": str(exc)[:500],
+                            "pipeline_version": LAB_ANALYSIS_PIPELINE_VERSION,
+                            "quality_gate_decision": analysis_input_quality_gate.get("decision"),
+                            "clinical_integrity_status": clinical_integrity.get("status"),
+                            "evidence_gap_count": (evidence_gaps.get("summary") or {}).get("gap_count"),
+                            "health_state_count": len(health_states.get("states") or []),
+                        },
+                    )
+                except Exception:
+                    pass
         except Exception:
             # Report-version persistence must not break the existing analysis flow.
             result["report_version"] = None
+            try:
+                from app.services.ops_alerts import send_ops_alert
+
+                await send_ops_alert(
+                    code="REPORT_VERSION_PERSISTENCE_FAILED",
+                    title="Report version persistence failed",
+                    severity="error",
+                    source="backend.analysis",
+                    details={
+                        "user_id": user_id,
+                        "upload_id": analysis_id,
+                        "pipeline_version": LAB_ANALYSIS_PIPELINE_VERSION,
+                    },
+                )
+            except Exception:
+                pass
 
     source_value = result["metadata"].get("source") or {}
     record_analysis_cost(

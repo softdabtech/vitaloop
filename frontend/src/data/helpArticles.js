@@ -117,7 +117,7 @@ export const HELP_ARTICLES = {
         type: 'feature-grid',
         items: [
           { icon: '📤', title: 'Upload or enter lab data', desc: 'Use PDF/image uploads, manual biomarker entry, and structured lab inputs supported by the product flow.' },
-          { icon: '🧠', title: 'Shared Analysis Core V2', desc: 'Names, values, units, ranges, symptoms, safety context, and trends are processed through one structured path.' },
+          { icon: '🧠', title: 'VITALOOP Health Intelligence Engine', desc: 'Names, values, units, ranges, extraction confidence, symptoms, safety context, evidence gaps, and trends are processed through one structured path.' },
           { icon: '⚠️', title: 'Prioritized and safety-aware', desc: 'Important findings, safety notes, and clinician discussion points are surfaced clearly.' },
           { icon: '💊', title: 'Structured protocol sections', desc: 'Nutrition, supplements, lifestyle, training/recovery, adherence, and retest suggestions are organized for review.' },
           { icon: '📈', title: 'Longitudinal tracking', desc: 'Compare multiple tests and check-ins over time. See what is changing.' },
@@ -167,11 +167,11 @@ export const HELP_ARTICLES = {
           },
           {
             title: 'Review your results',
-            body: 'Once complete, you\'ll land on the Results page showing:\n- All detected biomarkers with current values\n- Status for each: Deficient / Borderline / Optimal / Elevated\n- **Top Priority** card — the one marker to focus on first',
+            body: 'Once complete, you\'ll land on the Results page showing:\n- Detected biomarkers with current values\n- Reference status such as below range, in range, above range, or needs review\n- A short health summary, key findings, evidence gaps, safety notes, and next-step questions',
           },
           {
             title: 'Check your protocol',
-            body: 'Navigate to the **Protocol** tab to see your personalized recommendations with exact dosages, timing, and a retest schedule.',
+            body: 'Navigate to the **Protocol** tab to see education-oriented next steps, safety notes, clinician discussion points, and a retest schedule where supported by the available context.',
           },
         ],
       },
@@ -365,7 +365,7 @@ export const HELP_ARTICLES = {
       {
         type: 'list',
         items: [
-          'Filter by status: **All / Deficient / Borderline / Optimal / Elevated**',
+          'Filter by status: **All / Below range / In range / Above range / Needs review**',
           'Sort by: priority, alphabetical, or deviation from range',
           'Search by biomarker name',
         ],
@@ -407,7 +407,7 @@ export const HELP_ARTICLES = {
       {
         type: 'list',
         items: [
-          '**Supplement recommendations** — name, exact dosage, form (e.g. Ferrous Bisglycinate vs. Ferrous Sulfate), timing (morning/with food/before bed), and duration.',
+          '**Supplement recommendations** — name, suggested dosage, form (e.g. Ferrous Bisglycinate vs. Ferrous Sulfate), timing (morning/with food/before bed), and duration.',
           '**Lifestyle changes** — sleep, diet, and exercise adjustments specific to your deficiencies.',
           '**Retest schedule** — when to upload your next labs to measure progress.',
           '**Priority levels** — High / Medium / Low for each recommendation.',
@@ -606,13 +606,13 @@ export const HELP_ARTICLES = {
         items: [
           { title: 'Go to the Sign Up page', body: 'Click **"Sign Up Free"** on the landing page or visit vitaloop.today/login?signup=true.' },
           { title: 'Enter your email and password', body: 'Use any valid email address. Password must be at least 8 characters.' },
-          { title: 'Confirm your email', body: 'Check your inbox for a confirmation link from noreply@vitaloop.today. Click the link to activate your account.' },
+          { title: 'Confirm your email', body: 'Check your inbox for a confirmation link from info@softdab.tech. Click the link to activate your account.' },
           { title: 'Sign in', body: 'Return to vitaloop.today/login and sign in with your email and password. You can also continue with Google.' },
         ],
       },
       {
         type: 'tip',
-        text: "If you don't receive the confirmation email within 5 minutes, check your spam folder. The sender is noreply@vitaloop.today.",
+        text: "If you don't receive the confirmation email within 5 minutes, check your spam folder. The sender is info@softdab.tech.",
       },
     ],
   },
@@ -738,7 +738,7 @@ export const HELP_ARTICLES = {
     content: [
       {
         type: 'intro',
-        text: 'VITALOOP offers three plans: Free, Premium, and Enterprise (for practitioners and teams).',
+        text: 'VITALOOP currently focuses on two user-facing access levels: Free and Premium.',
       },
       {
         type: 'plan-table',
@@ -757,35 +757,23 @@ export const HELP_ARTICLES = {
           },
           {
             name: 'Premium',
-            price: '$4.99/month',
+            price: '$9.99/month',
             color: '#1d9e75',
             badge: 'Most popular',
             features: [
               'Unlimited uploads & retests',
-              'Exact dosage protocols',
+              'Structured supplement guidance',
               'Weekly AI check-ins',
               'Progress timeline tracking',
               'Protocol adaptation',
               'Priority support',
             ],
           },
-          {
-            name: 'Enterprise',
-            price: 'Custom',
-            color: '#0f172a',
-            features: [
-              'Practitioner CRM (10+ clients)',
-              'Client progress dashboards',
-              'Assignment workflows',
-              'API access & integrations',
-              'Team management',
-            ],
-          },
         ],
       },
       {
         type: 'paragraph',
-        text: 'All plans include the same AI analysis quality. Premium unlocks longitudinal tracking, full protocols, and weekly check-ins.',
+        text: 'All plans use the same analysis-quality principles. Premium unlocks longitudinal tracking, fuller evidence-aware reports, action planning, and weekly check-ins.',
       },
     ],
   },
@@ -799,20 +787,20 @@ export const HELP_ARTICLES = {
     content: [
       {
         type: 'intro',
-        text: 'Upgrade to Premium to unlock unlimited uploads, full protocols, and longitudinal tracking.',
+        text: 'Upgrade to Premium to unlock unlimited uploads, fuller evidence-aware reports, action planning, and longitudinal tracking.',
       },
       {
         type: 'steps',
         items: [
           { title: 'Open the Subscription page', body: 'Go to Settings → Subscription, or click the **"Upgrade"** button that appears when you try to access a Premium feature.' },
-          { title: 'Choose your plan', body: 'Select Premium ($4.99/month). Annual billing option available at $49.99/year.' },
-          { title: 'Enter payment details', body: 'Payments are processed securely by Stripe. VITALOOP never sees or stores your card number.' },
-          { title: 'Access unlocked immediately', body: 'Your Premium features are active as soon as payment is confirmed.' },
+          { title: 'Request access', body: 'Premium is currently activated manually by the VITALOOP team.' },
+          { title: 'Confirm your account', body: 'Email info@softdab.tech from the address connected to your VITALOOP account.' },
+          { title: 'Access unlocks after confirmation', body: 'Premium features become available after support confirms your access.' },
         ],
       },
       {
         type: 'tip',
-        text: 'Billing starts immediately. You can cancel at any time from Settings → Subscription.',
+        text: 'Support will confirm when Premium access is active and how your current billing arrangement works.',
       },
     ],
   },
@@ -832,9 +820,9 @@ export const HELP_ARTICLES = {
         type: 'list',
         items: [
           '**Current plan** — shows active plan, next billing date, and amount.',
-          '**Update payment method** — click to open Stripe\'s secure card update form.',
-          '**Billing history** — full list of past invoices with download links.',
-          '**Cancel subscription** — see the cancellation article below.',
+          '**Access status** — shows whether Free or Premium is active.',
+          '**Billing support** — contact VITALOOP for invoices, cancellation, or access changes.',
+          '**Billing history** — support can provide invoice records when available.',
         ],
       },
     ],
@@ -855,7 +843,7 @@ export const HELP_ARTICLES = {
         type: 'steps',
         items: [
           { title: 'Go to Settings → Subscription', body: 'Find the active plan section.' },
-          { title: 'Click "Cancel Subscription"', body: 'Confirm when prompted.' },
+          { title: 'Contact support', body: 'Send your cancellation request from the Subscription page or email info@softdab.tech.' },
           { title: 'Access until end of period', body: 'Your Premium access continues until the end of the current billing period. You won\'t be charged again.' },
           { title: 'Data remains available', body: 'After cancellation, your account reverts to Free. Your lab history and protocols remain visible — you won\'t lose your data.' },
         ],
@@ -880,23 +868,23 @@ export const HELP_ARTICLES = {
     content: [
       {
         type: 'intro',
-        text: 'Having trouble with a charge or payment? Here\'s what to do.',
+        text: 'Having trouble with Premium access or billing? Here\'s what to do.',
       },
       {
         type: 'heading',
-        text: 'Payment failed',
+        text: 'Access change failed',
       },
       {
         type: 'paragraph',
-        text: 'If your card is declined: 1) Check the card details in Settings → Subscription → Update payment method. 2) Contact your bank to confirm the charge isn\'t being blocked. 3) Try a different card.',
+        text: 'If a payment or access change fails, contact info@softdab.tech with your account email and a short description of what happened.',
       },
       {
         type: 'heading',
-        text: 'Unexpected charge',
+        text: 'Unexpected billing issue',
       },
       {
         type: 'paragraph',
-        text: 'All charges come from **Stripe** on behalf of VITALOOP. If you see a charge you don\'t recognize, check your billing history in Settings → Billing History. If it\'s still unclear, email info@softdab.tech with the charge date and amount.',
+        text: 'If you see billing information you don\'t recognize, check Settings → Billing History. If it is still unclear, email info@softdab.tech with your account email and the relevant date.',
       },
       {
         type: 'heading',
@@ -1118,7 +1106,7 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'paragraph',
-        text: 'If you just registered and see an "Email not confirmed" message, check your inbox for the confirmation email from noreply@vitaloop.today. Click the link to activate your account.',
+        text: 'If you just registered and see an "Email not confirmed" message, check your inbox for the confirmation email from info@softdab.tech. Click the link to activate your account.',
       },
       {
         type: 'heading',
@@ -1128,7 +1116,7 @@ export const HELP_ARTICLES = {
         type: 'list',
         items: [
           'Check your spam / junk folder.',
-          'Add noreply@vitaloop.today to your safe senders list.',
+          'Add info@softdab.tech to your safe senders list.',
           'Wait 5 minutes — there may be a short delay.',
           'If still not received, contact info@softdab.tech with your email address.',
         ],
@@ -1265,7 +1253,7 @@ export const HELP_ARTICLES = {
           '**Kantesti** is an enterprise B2B tool built for NHS, hospitals, and clinical networks — not for individuals or small practitioners.',
           '**VITALOOP** is built for health-conscious individuals and independent practitioners who want to track their own or clients\' results over time.',
           'Some tools focus on interpretation only: upload → report → done.',
-          'VITALOOP provides a reusable execution loop: symptoms → labs → shared analysis core → protocol → check-ins → trends → retest.',
+          'VITALOOP provides a reusable execution loop: symptoms → labs → structured health analysis → protocol → check-ins → trends → retest.',
         ],
       },
     ],

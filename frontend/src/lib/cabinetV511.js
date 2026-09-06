@@ -1,4 +1,4 @@
-export const CABINET_VERSION = 'V5.1'
+export const CABINET_VERSION = 'V5.1.1'
 
 export const HEALTH_LOOP_STAGES = [
   'Concern',

@@ -9,8 +9,13 @@ class Settings(BaseSettings):
     supabase_service_key: str = ""
     supabase_jwt_secret: str = ""  # Legacy HS256 (leave empty if using ES256)
     supabase_jwt_public_key_jwk: str = ""  # ES256 EC public key as JWK JSON string
-    anthropic_api_key: str = ""
-    anthropic_model: str = "claude-sonnet-4-20250514"
+    # anthropic_api_key/anthropic_model removed 2026-09-03: dead fields, never
+    # read anywhere outside this class. active_llm_api_key/base_url/model
+    # (below) resolve to OpenAI unconditionally — there is no provider switch.
+    # The LLM layer's file/function names (claude_service.py,
+    # claude_pdf_analyzer.py, the claude_* settings right below) are legacy
+    # naming from before the provider was OpenAI; renaming them is a separate,
+    # larger change, not done here.
     claude_analysis_timeout: int = 120
     claude_max_tokens: int = 8192
     claude_pdf_max_size_mb: int = 10
@@ -44,34 +49,25 @@ class Settings(BaseSettings):
     retention_alert_email: str = ""
     iherb_rcode: str = "VIT123"
     iherb_base_url: str = "https://www.iherb.com/search"
-    stripe_secret_key: str = ""
-    stripe_webhook_secret: str = ""
-    stripe_price_id: str = ""  # Legacy fallback (same as stripe_price_id_personal)
-    stripe_price_id_personal: str = ""  # Premium $4.99/mo
-    stripe_price_id_practitioner: str = ""  # Practitioner Premium $29/mo
-    stripe_price_id_personal_monthly: str = ""  # Preferred personal monthly price ID
-    stripe_price_id_personal_yearly: str = ""  # Personal yearly price ID
-    stripe_price_id_practitioner_monthly: str = ""  # Preferred practitioner monthly price ID
-    stripe_price_id_practitioner_yearly: str = ""  # Practitioner yearly price ID
-    stripe_success_url: str = "https://vitaloop.today/dashboard?sub=success"
-    stripe_cancel_url: str = "https://vitaloop.today/dashboard?sub=cancelled"
-    stripe_portal_return_url: str = "https://vitaloop.today/dashboard"
     freemium_upload_limit: int = 1  # free-tier lab uploads allowed before paywall
     resend_api_key: str = ""
     resend_from_email: str = "onboarding@resend.dev"
     sendgrid_api_key: str = ""
-    sendgrid_from_email: str = "VITALOOP <noreply@vitaloop.today>"
+    sendgrid_from_email: str = "VITALOOP <info@softdab.tech>"
     registration_alert_email: str = "info@softdab.tech"
+    ops_alert_email: str = "info@softdab.tech"
+    ops_alerts_enabled: bool = True
+    ops_alerts_max_emails_per_day: int = 2
+    ops_alert_state_file: str = "/tmp/vitaloop_ops_alerts.json"
     sentry_dsn: str = ""
     sentry_traces_sample_rate: float = 0.1
     frontend_base_url: str = "https://vitaloop.today"
     crm_base_url: str = "https://crm.vitaloop.today"
     webpush_vapid_public_key: str = ""
     webpush_vapid_private_key: str = ""
-    webpush_vapid_subject: str = "mailto:support@vitaloop.today"
+    webpush_vapid_subject: str = "mailto:info@softdab.tech"
     webpush_dispatch_secret: str = ""
     emergency_fixes_enabled: bool = False
-    analysis_service_url: str = "http://127.0.0.1:8006"
     knowledge_context_enabled: bool = True
     knowledge_evaluation_after_analyze_enabled: bool = True
 

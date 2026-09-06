@@ -6,6 +6,7 @@ import FeatureGate from '../components/FeatureGate.jsx'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import BiomarkerContextTooltip from '../components/BiomarkerContextTooltip.jsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
+import { gaResultsView } from '../lib/analytics.js'
 import {
   ArrowLeft,
   ArrowRight,
@@ -23,7 +24,12 @@ import {
 } from 'lucide-react'
 import { isUkrainianLocale } from '../lib/locale.js'
 import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
-import { CoachBadge, CoachCard, CoachButton } from '../components/coach/CoachUI.jsx'
+import { CoachBadge, CoachCard } from '../components/coach/CoachUI.jsx'
+// coach-shell/coach-card/etc. have no built-in styles of their own — every
+// rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
+// so each page using CoachUI must import it directly or it renders as
+// unstyled browser-default HTML, not a build error.
+import '../styles/coach-design-system.css'
 
 const STATUS_META = {
   DEFICIENT: { rank: 0, label: 'Below range', ukLabel: 'Нижче референсу', badge: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' },
@@ -159,7 +165,7 @@ const RESULTS_COPY = {
     shoppingTitle: 'Optional items to discuss before buying',
     shoppingBody: 'These are educational search shortcuts based on your report context. Confirm supplement choice, dose, and interactions with a qualified clinician.',
     findIherb: 'Find on iHerb',
-    v2Eyebrow: 'Shared Analysis Core V2',
+    v2Eyebrow: 'VITALOOP Health Intelligence Engine',
     domainsTitle: 'Health domain states',
     domainsBody: 'Domain-level interpretation from biomarkers, symptoms, profile context, and knowledge-base rules.',
     whyConclusion: 'Why this conclusion',
@@ -242,7 +248,7 @@ const RESULTS_COPY = {
     shoppingTitle: 'Опційні позиції для обговорення перед покупкою',
     shoppingBody: 'Це освітні пошукові посилання на основі вашого звіту. Підтвердьте вибір добавки, дозу й взаємодії з кваліфікованим фахівцем.',
     findIherb: 'Знайти на iHerb',
-    v2Eyebrow: 'Shared Analysis Core V2',
+    v2Eyebrow: 'VITALOOP Health Intelligence Engine',
     domainsTitle: 'Доменний стан здоровʼя',
     domainsBody: 'Доменна інтерпретація на основі біомаркерів, симптомів, профілю та правил бази знань.',
     whyConclusion: 'Чому зроблено висновок',
@@ -497,10 +503,16 @@ export default function Results() {
     let active = true
     async function load() {
       try {
-        const [{ data }, analysisResponse] = await Promise.all([
-          api.get(`/results/${uploadId}`),
-          api.get(`/analyze/${uploadId}`).catch(() => null),
-        ])
+        // Cabinet reconciliation: a single call to /results/{uploadId} is
+        // sufficient — no second /analyze/{uploadId} fetch. Verified against
+        // the current backend contract (report_history.py::assemble_frozen_response
+        // + both GET callers): explainability/safety_result are present at the
+        // TOP LEVEL of the response for a frozen historical report, and nested
+        // under final_analysis.explainability/final_analysis.safety_result for
+        // the live-rendered fallback path (run_lab_analysis_pipeline's return
+        // dict always carries both keys) — so this fallback chain covers both
+        // cases with one request instead of two.
+        const { data } = await api.get(`/results/${uploadId}`)
         if (!active) return
         setBiomarkers(data.biomarkers ?? [])
         setProtocol(data.protocol ?? [])
@@ -511,10 +523,11 @@ export default function Results() {
               ? data.final_analysis.shopping_links
               : []
         )
-        setKnowledgeReport(analysisResponse?.data?.knowledge_report ?? data.knowledge_report ?? null)
-        setFinalAnalysis(analysisResponse?.data?.final_analysis ?? data.final_analysis ?? null)
-        setExplainability(analysisResponse?.data?.explainability ?? null)
-        setSafetyResult(analysisResponse?.data?.safety_result ?? null)
+        setKnowledgeReport(data.knowledge_report ?? null)
+        setFinalAnalysis(data.final_analysis ?? null)
+        setExplainability(data.explainability ?? data.final_analysis?.explainability ?? null)
+        setSafetyResult(data.safety_result ?? data.final_analysis?.safety_result ?? null)
+        gaResultsView(uploadId)
       } catch (_e) {
         if (!active) return
         setBiomarkers([])
@@ -806,7 +819,70 @@ export default function Results() {
           </SectionCard>
         </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-4">
+        {/* Full biomarker table moved up here (right after Top Findings / Why
+            This Matters) per explicit request — it used to sit near the
+            bottom of the page, after Next Steps/Today/This Month/Doctor
+            Questions and the shopping links, which buried the one place that
+            shows every marker (not just the top 3 priority ones) below a lot
+            of secondary content. */}
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">{copy.tableTitle}</h2>
+              <p className="mt-1 text-sm text-slate-500">{copy.tableSummary(optimalCount, watchCount, outOfRangeCount)}</p>
+            </div>
+            <FeatureGate
+              feature="advanced_protocol"
+              onLocked={triggerSubscriptionRequiredPaywall}
+              fallback={
+                <button onClick={triggerSubscriptionRequiredPaywall} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
+                  {copy.unlockTrends}
+                </button>
+              }
+            >
+              <button onClick={() => navigate('/progress')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
+                {copy.viewTrends}
+              </button>
+            </FeatureGate>
+          </div>
+          <div className="overflow-x-auto rounded-2xl border border-slate-100">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.biomarker}</th>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.value}</th>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.ref}</th>
+                  <th className="px-4 py-3 text-left font-semibold">{copy.status}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {rankedBiomarkers.map((b, idx) => {
+                  const meta = STATUS_META[b.status_normalized] || STATUS_META.BORDERLINE
+                  return (
+                    <tr key={b.id || `${b.name}-${idx}`} className="transition hover:bg-slate-50">
+                      <td className="px-4 py-3 font-medium text-slate-950">{displayBiomarkerName(b, isUk)}</td>
+                      <td className="px-4 py-3 text-slate-700">{formatMetric(b)}</td>
+                      <td className="px-4 py-3 text-slate-500">{formatRange(b, copy)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{isUk ? meta.ukLabel || meta.label : meta.label}</span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Stacked vertically, one full-width card per row — corrected per
+            direct feedback after the horizontal-row version shipped (was
+            `grid lg:grid-cols-4`, then briefly a horizontal-scroll flex row;
+            neither was the intended layout). Content length varies a lot
+            between these 4 cards (Today/This month are one line, Next
+            steps/Doctor questions are long lists) — stacked full-width lets
+            each size to its own content instead of forcing uneven columns
+            side by side. */}
+        <div className="mt-6 flex flex-col gap-4">
           <SectionCard icon={CheckCircle2} title={copy.nextSteps}>
             {reportActions.length ? (
               <ul className="space-y-3 text-sm leading-6 text-slate-700">
@@ -841,7 +917,6 @@ export default function Results() {
               <p className="text-sm leading-6 text-slate-600">{copy.discussFallback}</p>
             )}
           </SectionCard>
-
         </div>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -909,55 +984,6 @@ export default function Results() {
             </div>
           </div>
         )}
-
-        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-950">{copy.tableTitle}</h2>
-              <p className="mt-1 text-sm text-slate-500">{copy.tableSummary(optimalCount, watchCount, outOfRangeCount)}</p>
-            </div>
-            <FeatureGate
-              feature="advanced_protocol"
-              onLocked={triggerSubscriptionRequiredPaywall}
-              fallback={
-                <button onClick={triggerSubscriptionRequiredPaywall} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
-                  {copy.unlockTrends}
-                </button>
-              }
-            >
-              <button onClick={() => navigate('/progress')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
-                {copy.viewTrends}
-              </button>
-            </FeatureGate>
-          </div>
-          <div className="overflow-x-auto rounded-2xl border border-slate-100">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-slate-600">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold">{copy.biomarker}</th>
-                  <th className="px-4 py-3 text-left font-semibold">{copy.value}</th>
-                  <th className="px-4 py-3 text-left font-semibold">{copy.ref}</th>
-                  <th className="px-4 py-3 text-left font-semibold">{copy.status}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {rankedBiomarkers.map((b, idx) => {
-                  const meta = STATUS_META[b.status_normalized] || STATUS_META.BORDERLINE
-                  return (
-                    <tr key={b.id || `${b.name}-${idx}`} className="transition hover:bg-slate-50">
-                      <td className="px-4 py-3 font-medium text-slate-950">{displayBiomarkerName(b, isUk)}</td>
-                      <td className="px-4 py-3 text-slate-700">{formatMetric(b)}</td>
-                      <td className="px-4 py-3 text-slate-500">{formatRange(b, copy)}</td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{isUk ? meta.ukLabel || meta.label : meta.label}</span>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
 
         <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

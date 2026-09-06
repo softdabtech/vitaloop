@@ -30,20 +30,17 @@ import {
 import Seo from '../components/Seo.jsx'
 import { LightHero } from '../components/landing/LightHero.jsx'
 import { StatsBar } from '../components/landing/StatsBar.jsx'
-import { TrustedServicesSection } from '../components/landing/TrustedServicesSection.jsx'
 import { InteractivePricing } from '../components/landing/InteractivePricing.jsx'
 import { AnimatedFAQ } from '../components/landing/AnimatedFAQ.jsx'
 import { HowItWorksTimeline } from '../components/landing/HowItWorksTimeline.jsx'
 import Footer from '../components/landing/Footer.jsx'
 import BrandMark from '../components/landing/BrandMark.jsx'
-import WellbeingCheckModal from '../components/landing/WellbeingCheckModal.jsx'
 import { trackPublicFunnelEvent } from '../lib/publicFunnel.js'
 
 const NAV_LINKS = [
   { id: 'problem', label: 'How it works' },
   { id: 'example-report', label: 'Example report', route: '/example-report' },
   { id: 'pricing', label: 'Pricing' },
-  { id: 'about', label: 'About', route: '/about' },
   { id: 'for-nutritionists', label: 'For professionals', route: '/for-nutritionists' },
 ]
 
@@ -58,14 +55,14 @@ const STEPS = [
   { icon: HeartPulse, title: 'Start with symptoms', body: 'Describe what you feel and for how long' },
   { icon: BrainCircuit, title: 'Answer follow-ups', body: 'Smart questions organize your context' },
   { icon: FlaskConical, title: 'Get lab direction', body: 'See what may be useful to check next' },
-  { icon: Upload, title: 'Upload results', body: 'Normalize biomarkers and run them through Shared Analysis Core V2' },
+  { icon: Upload, title: 'Upload results', body: 'Analyze 85+ biomarkers after testing' },
   { icon: Sparkles, title: 'Run and refine', body: 'Weekly check-ins adapt your protocol' },
 ]
 
 const BENEFITS = [
   {
     title: 'Explainable, not generic AI',
-    body: 'Each report runs through Shared Analysis Core V2: governed Knowledge Base rules, biomarker context, safety flags, and traceable reasoning instead of loose chatbot guesses.',
+    body: 'Each report is grounded in governed Knowledge Base rules, marker context, and safety-aware wording instead of loose chatbot guesses.',
     icon: BrainCircuit,
     stat: 'KB',
     label: 'Explainable logic'
@@ -86,7 +83,7 @@ const BENEFITS = [
   },
   {
     title: 'Built for repeat cycles',
-    body: 'Each upload, check-in, trend, and retest adds versioned context for the next decision instead of treating every report as a one-off PDF.',
+    body: 'Each upload, check-in, and retest adds structure for the next decision instead of treating every report as a one-off PDF.',
     icon: TrendingUp,
     stat: 'Progress',
     label: 'Retest learning'
@@ -96,7 +93,7 @@ const BENEFITS = [
 const PREMIUM_FEATURES = [
   {
     title: 'Full Knowledge report',
-    body: 'Explainable biomarker patterns, Knowledge Base reasoning, doctor discussion points, safety notes, and quality context.',
+    body: 'Explainable biomarker patterns, source-backed reasoning, doctor discussion points, and safety-aware summaries.',
     icon: BrainCircuit,
   },
   {
@@ -111,7 +108,7 @@ const PREMIUM_FEATURES = [
   },
   {
     title: 'Progress and retest tracking',
-    body: 'Compare uploads, trends, expected timelines, and retest cycles instead of reading each lab report in isolation.',
+    body: 'Compare uploads and retest cycles instead of reading each lab report in isolation.',
     icon: Upload,
   },
 ]
@@ -170,7 +167,7 @@ const HERO_TRUST_SIGNALS = [
   },
   {
     title: 'Privacy-first architecture',
-    body: 'Strict auth controls, tenant-aware processing, and protected metrics for sensitive lab data.',
+    body: 'Strict auth controls and secure processing for sensitive lab data.',
     icon: Lock,
   },
   {
@@ -195,7 +192,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'What do I get after uploading lab results?',
-    answer: 'You receive normalized biomarker interpretation, prioritized issues, safety notes, clinician discussion points, protocol sections, trends when available, and retest timing.',
+    answer: 'You receive normalized biomarker interpretation, prioritized issues, and a structured protocol you can follow and refine over time.',
   },
   {
     question: 'Can practitioners use VITALOOP with clients?',
@@ -203,7 +200,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'How is this different from generic AI chat?',
-    answer: 'VITALOOP runs structured symptoms and biomarkers through a governed analysis core with Knowledge Base rules, safety context, trend logic, and reusable outputs instead of producing a one-off chat reply.',
+    answer: 'VITALOOP keeps your structured health context over time and connects symptom intake, lab normalization, and weekly feedback into one continuous workflow.',
   },
   {
     question: 'How much does VITALOOP cost?',
@@ -236,60 +233,14 @@ const SCHEMA_FAQ = {
   })),
 }
 
-const PRICING = {
-  monthly: [
-    {
-      name: 'Free',
-      price: '$0',
-      period: '/month',
-      points: ['1 active upload', 'Basic biomarker summary', 'Core dashboard'],
-      cta: 'Try free',
-      featured: false,
-    },
-    {
-      name: 'Premium',
-      price: '$4.99',
-      period: '/month',
-      points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
-      cta: 'Upgrade',
-      featured: true,
-    },
-    {
-      name: 'Enterprise',
-      price: '$99+',
-      period: '/month',
-      points: ['Team seats', 'Practitioner CRM', 'Workflow automation', 'Dedicated onboarding'],
-      cta: 'Contact sales',
-      featured: false,
-    },
-  ],
-  yearly: [
-    {
-      name: 'Free',
-      price: '$0',
-      period: '/year',
-      points: ['1 active upload', 'Basic biomarker summary', 'Core dashboard'],
-      cta: 'Try free',
-      featured: false,
-    },
-    {
-      name: 'Premium',
-      price: '$49.99',
-      period: '/year',
-      points: ['Unlimited uploads', 'Personalized protocol', 'Weekly AI check-ins', 'Priority insights'],
-      cta: 'Upgrade',
-      featured: true,
-    },
-    {
-      name: 'Enterprise',
-      price: '$990+',
-      period: '/year',
-      points: ['Team seats', 'Practitioner CRM', 'Workflow automation', 'Dedicated onboarding'],
-      cta: 'Contact sales',
-      featured: false,
-    },
-  ],
-}
+// Removed 2026-09-01: a dead `PRICING` const (never referenced anywhere in
+// this file or imported elsewhere) holding a THIRD, independently-drifted
+// copy of pricing numbers (still $19.99, a stale $99+ "Enterprise" tier).
+// The page's actual pricing table is <InteractivePricing /> below, which
+// reads its own copy (now corrected) — this block was dead weight left over
+// from an earlier version of the page, exactly the kind of stale content
+// that makes the site hard to audit. See InteractivePricing.jsx and
+// lib/pricing.js for the current, live pricing sources.
 
 function fadeUp(_reduced, _delay = 0) {
   return { initial: false, whileInView: {}, viewport: { once: true } }
@@ -414,9 +365,9 @@ function MockupScreenContent({ title }) {
       <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Your protocol · 7 actions</div>
       <div className="space-y-1.5">
         {[
-          { rank: '01', label: 'Iron bisglycinate 36mg with Vit C', cat: 'Supplement', prio: 'Critical', bg: '#f8717120', border: '#f87171', col: '#fca5a5', bar: '#f87171aa', pct: 92 },
+          { rank: '01', label: 'Iron support with Vitamin C', cat: 'Supplement', prio: 'Critical', bg: '#f8717120', border: '#f87171', col: '#fca5a5', bar: '#f87171aa', pct: 92 },
           { rank: '02', label: 'Reduce inflammatory foods 4× week', cat: 'Nutrition', prio: 'High', bg: '#fbbf2420', border: '#fbbf24', col: '#fde68a', bar: '#fbbf24aa', pct: 78 },
-          { rank: '03', label: 'Vitamin D3 4000 IU daily with K2', cat: 'Supplement', prio: 'High', bg: '#60a5fa20', border: '#60a5fa', col: '#93c5fd', bar: '#60a5faaa', pct: 70 },
+          { rank: '03', label: 'Vitamin D3 + K2 supplementation', cat: 'Supplement', prio: 'High', bg: '#60a5fa20', border: '#60a5fa', col: '#93c5fd', bar: '#60a5faaa', pct: 70 },
           { rank: '04', label: 'Weekly check-in — track fatigue', cat: 'Lifestyle', prio: 'Medium', bg: '#34d39920', border: '#34d399', col: '#6ee7b7', bar: '#34d399aa', pct: 55 },
         ].map((item) => (
           <div key={item.rank} className="flex items-center gap-2 rounded-lg px-2 py-1.5" style={{ background: item.bg, border: `1px solid ${item.border}35` }}>
@@ -667,7 +618,6 @@ export default function Landing() {
   const reduced = useReducedMotion()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showBackToTop, setShowBackToTop] = useState(false)
-  const [wellbeingOpen, setWellbeingOpen] = useState(false)
   const { user, loading: authLoading } = useAuth()
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
@@ -704,8 +654,8 @@ export default function Landing() {
   return (
     <div className={rootClasses}>
       <Seo
-        title="Health Intelligence for Symptoms, Blood Tests & Retests | VITALOOP"
-        description="Start with symptoms or upload blood test results. Get Knowledge Base biomarker reasoning, safety notes, priorities, clinician discussion guidance, protocol actions, trends, and retest timing."
+        title="AI Blood Test Analysis & Symptom Checker | VITALOOP"
+        description="Start with symptoms or upload blood test results. Get clear biomarker explanations, lab discussion guidance, and a health action plan you can track."
         path="/"
         schemas={[SCHEMA_HOWTO, SCHEMA_FAQ]}
       />
@@ -980,8 +930,8 @@ export default function Landing() {
                 </button>
               </div>
               <img
-                src="/mockups/example-report/dashboard.webp?v=20260606"
-                alt="VITALOOP cabinet dashboard preview"
+                src="/mockups/example-report/results-report.webp?v=20260901"
+                alt="VITALOOP health report with priority findings, why-it-matters context, and top biomarker results"
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 object-cover shadow-xl"
                 loading="eager"
               />
@@ -1239,7 +1189,7 @@ export default function Landing() {
                 </h2>
                 <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-200 md:text-base">
                   Use VITALOOP for client workflows, lab-result interpretation, embedded insights, and follow-up loops.
-                  The consumer app, practitioner cabinet, and B2B API reuse the same Knowledge Base, safety flags, protocol generation, retest logic, and structured output path.
+                  The consumer product and B2B product share the same Knowledge Base foundation.
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
@@ -1352,7 +1302,7 @@ export default function Landing() {
               Move from uncertainty to a clear plan with symptom intake, lab interpretation, and adaptive weekly execution.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <button onClick={() => setWellbeingOpen(true)} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
+              <button onClick={() => navigate('/login?signup=true')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
                 Start with symptoms
               </button>
               <button onClick={() => navigate('/example-report')} className={`${ctaBase} ${'border border-slate-300 bg-white text-slate-900 hover:border-emerald-300'}`}>
@@ -1371,7 +1321,6 @@ export default function Landing() {
         <AnimatedFAQ />
       </main>
 
-      <WellbeingCheckModal open={wellbeingOpen} onClose={() => setWellbeingOpen(false)} />
       <Footer />
     </div>
   )

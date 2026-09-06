@@ -12,8 +12,6 @@ export default function HintBanner({ hints, onDone }) {
   const [step, setStep] = useState(0)
   const total = hints.length
 
-  if (!Array.isArray(hints) || total === 0) return null
-
   function next() {
     if (step < total - 1) {
       setStep((s) => s + 1)
@@ -23,62 +21,89 @@ export default function HintBanner({ hints, onDone }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-label="Page tips">
-      <button
-        type="button"
-        onClick={onDone}
-        className="absolute inset-0 bg-slate-950/45 backdrop-blur-[1px]"
-        aria-label="Close tips"
-      />
+    <div
+      style={{
+        marginBottom: 20,
+        borderRadius: 16,
+        border: '1px solid rgba(16,185,129,0.28)',
+        background: 'linear-gradient(135deg, rgba(16,185,129,0.07) 0%, rgba(255,255,255,0.92) 100%)',
+        padding: '14px 18px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 12,
+        position: 'relative',
+      }}
+    >
+      {/* Icon */}
+      <div style={{
+        flexShrink: 0, marginTop: 2,
+        width: 30, height: 30, borderRadius: '50%',
+        background: 'rgba(16,185,129,0.12)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Lightbulb size={15} color="#10b981" />
+      </div>
 
-      <div className="relative z-[91] w-full max-w-xl rounded-3xl border border-emerald-200 bg-white p-5 shadow-2xl sm:p-6">
-        <button
-          onClick={onDone}
-          aria-label="Dismiss hints"
-          className="absolute right-3 top-3 rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-        >
-          <X size={16} />
-        </button>
-
-        <div className="mb-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100">
-          <Lightbulb size={16} color="#10b981" />
-        </div>
-
-        <div className="mb-2 flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-emerald-700">
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#059669' }}>
             Tip {step + 1} of {total}
           </span>
-          <div className="flex gap-1">
+          {/* Dot progress */}
+          <div style={{ display: 'flex', gap: 4 }}>
             {hints.map((_, i) => (
               <div
                 key={i}
-                className={`h-1.5 rounded-full transition-all ${i === step ? 'w-5 bg-emerald-500' : i < step ? 'w-2 bg-emerald-400' : 'w-2 bg-slate-200'}`}
+                style={{
+                  width: i === step ? 16 : 6, height: 6, borderRadius: 3,
+                  background: i <= step ? '#10b981' : 'rgba(15,23,42,0.1)',
+                  transition: 'all 0.2s',
+                }}
               />
             ))}
           </div>
         </div>
-
-        <p className="text-base leading-7 text-slate-800">{hints[step]}</p>
-
-        <div className="mt-5 flex flex-wrap items-center gap-3">
+        <p style={{ margin: 0, fontSize: 14, color: '#1e293b', lineHeight: 1.55 }}>
+          {hints[step]}
+        </p>
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
             onClick={next}
-            className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              background: '#10b981', color: '#fff',
+              border: 'none', borderRadius: 8,
+              padding: '7px 14px', fontSize: 13, fontWeight: 600,
+              cursor: 'pointer',
+            }}
           >
-            {step < total - 1 ? 'Next tip' : 'Got it'}
-            {step < total - 1 && <ChevronRight size={14} />}
+            {step < total - 1 ? 'Next' : 'Got it'}
+            {step < total - 1 && <ChevronRight size={13} />}
           </button>
-
-          {step < total - 1 && (
+          {step === 0 && total > 1 && (
             <button
               onClick={onDone}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#94a3b8' }}
             >
-              Skip walkthrough
+              Skip all tips
             </button>
           )}
         </div>
       </div>
+
+      {/* Close */}
+      <button
+        onClick={onDone}
+        aria-label="Dismiss hints"
+        style={{
+          position: 'absolute', top: 10, right: 10,
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: '#94a3b8', padding: 4, lineHeight: 0,
+        }}
+      >
+        <X size={15} />
+      </button>
     </div>
   )
 }

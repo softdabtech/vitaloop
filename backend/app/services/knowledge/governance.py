@@ -10,7 +10,14 @@ from fastapi import HTTPException
 from app.services import supabase_service as supabase
 
 ALLOWED_GOVERNANCE_STATUS = {"draft", "reviewed", "active", "deprecated"}
-ALLOWED_OPERATORS = {"lt", "lte", "gt", "gte", "eq", "neq", "in", "not_in", "exists"}
+# "between" was missing here despite evaluator.py (the actual runtime rule
+# engine) implementing it — found 2026-09-03 while staging draft copies:
+# 2 live active rules (rule_prediabetes_hba1c, rule_borderline_low_b12) use
+# it in production and work fine at runtime (evaluator.py doesn't go through
+# this validator), but create_draft_copy()/update_rule() would reject any
+# attempt to re-submit them through governance. Expects a 2-element
+# [low, high] under "value", matching how those two rules already store it.
+ALLOWED_OPERATORS = {"lt", "lte", "gt", "gte", "eq", "neq", "in", "not_in", "exists", "between"}
 FORBIDDEN_WORDING = ("confirmed diagnosis", "diagnosis confirmed")
 
 
@@ -417,6 +424,15 @@ async def update_rule(rule_id: str, payload: Dict[str, Any], *, actor_user_id: s
 
     next_payload = {
         "explanation_template": payload.get("explanation_template", existing.get("explanation_template")),
+        # `conditions` was missing here — _validate_common_payload always
+        # calls _validate_conditions_schema(payload.get("conditions")), so
+        # without this key every update_rule() call, on every field, failed
+        # with "conditions must be an object" regardless of what the caller
+        # actually changed. Found 2026-09-03: zero prior test coverage
+        # exercised a successful draft edit (the one update_rule test only
+        # covers the active-rule-blocked path), so this shipped silently
+        # broken — the CRM "edit draft rule" governance flow has never worked.
+        "conditions": payload.get("conditions", existing.get("conditions")),
         "outputs": payload.get("outputs", existing.get("outputs")),
         "source": payload.get("source", existing.get("source")),
         "source_url": payload.get("source_url", existing.get("source_url")),

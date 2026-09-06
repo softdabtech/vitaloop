@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -6,6 +7,7 @@ from app.dependencies import get_current_user
 from app.services import supabase_service as svc
 
 router = APIRouter(prefix="/auth/onboarding", tags=["onboarding"])
+logger = logging.getLogger(__name__)
 
 _CRM_ROLES = {"super_admin", "admin", "org_admin", "org_owner", "client_admin", "manager", "practitioner"}
 _PROFILE_NOT_FOUND = "Profile not found"
@@ -65,13 +67,26 @@ async def _has_user_row(table: str, user_id: str, *, status: Optional[str] = Non
         return False
 
 
+async def _safe_optional_lookup(label: str, user_id: str, coro, default):
+    try:
+        return await coro
+    except Exception as exc:
+        logger.warning(
+            "onboarding_optional_lookup_failed label=%s user_id=%s error=%r",
+            label,
+            user_id,
+            exc,
+        )
+        return default
+
+
 @router.get("/state")
 async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
     user_id = current_user.get("sub")
 
-    account = await svc.get_user_account(user_id)
-    profile = await svc.get_user_profile(user_id)
-    location = await svc.get_user_location(user_id) or {}
+    account = await _safe_optional_lookup("user_account", user_id, svc.get_user_account(user_id), {})
+    profile = await _safe_optional_lookup("user_profile", user_id, svc.get_user_profile(user_id), {})
+    location = await _safe_optional_lookup("user_location", user_id, svc.get_user_location(user_id), {}) or {}
 
     role = _normalize_role(account.get("global_role"), current_user.get("global_role"), current_user.get("role"))
     onboarding_completed = _as_bool(profile.get("onboarding_complete") or current_user.get("onboarding_completed"))

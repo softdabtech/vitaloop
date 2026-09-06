@@ -285,9 +285,15 @@ async def delete_account(current_user: dict = Depends(get_current_user)):
 
     supabase = svc._get_supabase()
 
-    # Delete the user account from Supabase auth
+    # Delete the user account from Supabase auth.
+    # Database FK CASCADE will automatically remove all user-owned records
+    # per schema definition.
+    #
+    # Note: Uploaded PDF files are not persisted in storage.
+    # They are processed by OpenAI's file API and then discarded.
+    # Extracted text is stored in the database and deleted via cascade.
     await svc._run(
         lambda: supabase.auth.admin.delete_user(user_id)
     )
 
-    return {"ok": True, "message": "Account deleted successfully"}
+    return {"ok": True, "message": "Account and all associated data deleted successfully"}

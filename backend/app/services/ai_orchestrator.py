@@ -60,6 +60,7 @@ async def generate_ai_protocol_orchestrated(
     knowledge_report: Dict[str, Any],
     health_states: Dict[str, Any],
     trend_analysis: Dict[str, Any],
+    clinical_context: Dict[str, Any] | None = None,
     generator: ProtocolGenerator = generate_protocol,
 ) -> Dict[str, Any]:
     started = time.perf_counter()
@@ -69,6 +70,8 @@ async def generate_ai_protocol_orchestrated(
         health_states=health_states,
         trend_analysis=trend_analysis,
     )
+    # Pass clinical_context (from ClinicalAnalysisEngine.context_for_llm())
+    # to the LLM generator so it sees the deterministic engine's output.
     items = await generator(
         biomarkers,
         symptoms,
@@ -76,6 +79,7 @@ async def generate_ai_protocol_orchestrated(
         user_id=user_id,
         upload_id=upload_id,
         locale=locale,
+        clinical_context=clinical_context,
     )
     source = get_analysis_source()
     return {
@@ -95,5 +99,6 @@ async def generate_ai_protocol_orchestrated(
                 "protocol_enrichment",
             ],
             "context_snapshot": context_snapshot,
+            "clinical_context_provided": clinical_context is not None,
         },
     }

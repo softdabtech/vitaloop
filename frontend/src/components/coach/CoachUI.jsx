@@ -53,12 +53,15 @@ export function CoachInput({ label, helper, error, className = '', children }) {
 
 export function CoachProgress({ value = 0, label, tone = 'primary' }) {
   const safeValue = Math.max(0, Math.min(100, Number(value) || 0))
+  // Displayed label is rounded (e.g. "93%" not "92.86%") — bar width still
+  // uses the unrounded value so it stays pixel-accurate.
+  const displayValue = Math.round(safeValue)
   return (
     <div className="coach-progress" aria-label={label}>
       {label && (
         <div className="coach-progress__header">
           <span>{label}</span>
-          <span>{safeValue}%</span>
+          <span>{displayValue}%</span>
         </div>
       )}
       <div className="coach-progress__track">

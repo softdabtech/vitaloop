@@ -2,8 +2,8 @@ import { Helmet } from 'react-helmet-async'
 import { useEffect } from 'react'
 
 const BASE_URL = 'https://vitaloop.today'
-const DEFAULT_TITLE = 'Health Intelligence for Symptoms, Blood Tests & Retests | VITALOOP'
-const DEFAULT_DESCRIPTION = 'Start with symptoms or upload blood test results. Get Knowledge Base biomarker reasoning, safety notes, priorities, protocol actions, trends, and retest timing.'
+const DEFAULT_TITLE = 'AI Blood Test Analysis & Symptom Checker | VITALOOP'
+const DEFAULT_DESCRIPTION = 'Start with symptoms or upload blood test results. Get clear biomarker explanations, lab discussion guidance, and a health action plan you can track.'
 
 function canonicalizePath(path) {
   if (!path || path === '/') return '/'
@@ -27,7 +27,7 @@ export default function Seo({
   canonicalUrl,
   locale = 'en_US',
   image = `${BASE_URL}/vitaloop-social-preview-2026-06.png`,
-  imageAlt = 'VITALOOP health intelligence dashboard with biomarker reasoning, personalized protocols, safety notes, and progress tracking',
+  imageAlt = 'VITALOOP AI-powered health tracking dashboard with biomarker analysis, personalized protocols, and progress tracking',
   noindex = false,
   schemas = [],
 }) {

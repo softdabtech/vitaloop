@@ -30,7 +30,7 @@ async def get_data_integrity_report() -> Dict[str, Any]:
         svc._run(lambda: sb.table("clients").select("user_id").execute()),
         svc._run(
             lambda: sb.table("subscriptions")
-            .select("user_id,status,plan_name,cancel_at_period_end,stripe_customer_id,stripe_subscription_id")
+            .select("user_id,status,plan_name,cancel_at_period_end")
             .execute()
         ),
         svc._run(
@@ -62,15 +62,12 @@ async def get_data_integrity_report() -> Dict[str, Any]:
     ]
 
     paid_by_user: Dict[str, int] = {}
-    premium_without_customer: List[str] = []
-    free_with_paid_subscription_id: List[str] = []
+    inactive_paid_rows: List[str] = []
     for row in active_paid:
         uid = str(row.get("user_id") or "")
         if not uid:
             continue
         paid_by_user[uid] = paid_by_user.get(uid, 0) + 1
-        if not row.get("stripe_customer_id"):
-            premium_without_customer.append(uid)
 
     duplicate_active_paid = sorted([uid for uid, count in paid_by_user.items() if count > 1])
 
@@ -80,8 +77,8 @@ async def get_data_integrity_report() -> Dict[str, Any]:
             continue
         is_paid_plan = str(row.get("plan_name") or "").lower() in {"core", "personal", "practitioner"}
         is_active = str(row.get("status") or "").lower() == "active"
-        if row.get("stripe_subscription_id") and is_paid_plan and not is_active:
-            free_with_paid_subscription_id.append(uid)
+        if is_paid_plan and not is_active:
+            inactive_paid_rows.append(uid)
 
     stale_cutoff = _iso_days_ago(1)
     onboarding_stuck = sorted([
@@ -102,8 +99,7 @@ async def get_data_integrity_report() -> Dict[str, Any]:
         _issue("USER_WITHOUT_PROFILE", "high", missing_profile, "Backfill missing user_profile rows."),
         _issue("USER_WITHOUT_CLIENT", "medium", missing_client, "Backfill clients rows for public users."),
         _issue("DUPLICATE_ACTIVE_PAID_SUBSCRIPTIONS", "critical", duplicate_active_paid, "Resolve duplicate paid rows and add partial unique index."),
-        _issue("PREMIUM_WITHOUT_STRIPE_CUSTOMER", "high", sorted(set(premium_without_customer)), "Sync Stripe customer_id into subscriptions table."),
-        _issue("FREE_WITH_PAID_STRIPE_SUBSCRIPTION_ID", "high", sorted(set(free_with_paid_subscription_id)), "Reconcile subscription status from Stripe webhooks."),
+        _issue("INACTIVE_PAID_SUBSCRIPTION_ROWS", "medium", sorted(set(inactive_paid_rows)), "Review inactive paid subscription rows and reconcile user access state."),
         _issue("ONBOARDING_STUCK_GT_24H", "medium", onboarding_stuck, "Trigger onboarding remediation workflow."),
         _issue("STALE_ACTIVE_QUESTIONNAIRE_SESSION", "low", stale_questionnaire_sessions, "Close stale sessions or prompt user continuation."),
     ]
