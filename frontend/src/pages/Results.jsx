@@ -124,6 +124,8 @@ const RESULTS_COPY = {
     watchList: 'watch list',
     outOfRange: 'out of range',
     medicalSignal: 'Medical review signal',
+    urgentSignal: 'Prompt medical review signal',
+    urgentFallback: 'Some values in this report may require prompt medical review. Contact a qualified clinician or urgent care if symptoms are severe or worsening.',
     alertFallback: (marker) => `${marker || 'A marker'} should be reviewed with a clinician.`,
     priorityMarkers: 'Priority markers',
     reference: 'reference',
@@ -207,6 +209,8 @@ const RESULTS_COPY = {
     watchList: 'спостерігати',
     outOfRange: 'поза референсом',
     medicalSignal: 'Сигнал для медичного перегляду',
+    urgentSignal: 'Сигнал для швидкого медичного перегляду',
+    urgentFallback: 'Деякі значення у звіті можуть потребувати швидкого медичного перегляду. Зверніться до лікаря або невідкладної допомоги, якщо симптоми виражені чи погіршуються.',
     alertFallback: (marker) => `${marker || 'Показник'} варто обговорити з лікарем.`,
     priorityMarkers: 'Пріоритетні показники',
     reference: 'референс',
@@ -570,6 +574,9 @@ export default function Results() {
   const reportDiscussion = Array.isArray(knowledgeReport?.doctor_discussion) ? knowledgeReport.doctor_discussion : []
   const reportRetest = Array.isArray(knowledgeReport?.retest_plan) ? knowledgeReport.retest_plan : []
   const reportAlerts = Array.isArray(knowledgeReport?.safety_alerts) ? knowledgeReport.safety_alerts : []
+  const urgentWarning = safetyResult?.urgent_review_required
+    ? (safetyResult?.prominent_user_warning || copy.urgentFallback)
+    : null
   const explanations = Array.isArray(explainability?.recommendations)
     ? explainability.recommendations
     : Array.isArray(explainability?.marker_explanations)
@@ -747,6 +754,16 @@ export default function Results() {
         </div>
 
         <AnalysisCoreV2Panel finalAnalysis={finalAnalysis} copy={copy} />
+
+        {!!urgentWarning && (
+          <div className="mb-6 rounded-2xl border border-rose-300 bg-rose-50 p-5 text-rose-950 shadow-sm">
+            <div className="mb-2 flex items-center gap-2 font-semibold">
+              <ShieldAlert className="h-5 w-5" />
+              {copy.urgentSignal}
+            </div>
+            <p className="text-sm leading-6">{urgentWarning}</p>
+          </div>
+        )}
 
         {!!reportAlerts.length && (
           <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-900">
