@@ -57,14 +57,14 @@ const WORKFLOW_STEPS = [
     icon: Upload,
     step: '02',
     title: 'Symptoms and labs are structured together',
-    body: 'Patients start with symptom context and upload lab results or enter biomarkers. VITALOOP normalizes names, units, ranges, and priorities through the shared analysis core.',
+    body: 'Patients start with symptom context and upload a PDF. VITALOOP analyzes 85+ biomarkers, normalizes units, and highlights priorities.',
     accent: '#0ea5e9',
   },
   {
     icon: BrainCircuit,
     step: '03',
-    title: 'Core V3 drafts explainable outputs',
-    body: 'Based on extraction confidence, biomarkers, symptoms, missing evidence, safety context, and history, the system proposes education-oriented nutrition, lifestyle, retest, and discussion outputs that you finalize as the practitioner.',
+    title: 'AI drafts your protocol',
+    body: 'Based on biomarkers, symptoms, and history, the system proposes a nutrition protocol that you finalize as the practitioner.',
     accent: '#8b5cf6',
   },
   {
@@ -111,8 +111,8 @@ const FEATURES = [
   },
   {
     icon: Sparkles,
-    title: 'AI as explainable support, not a replacement',
-    body: 'The platform provides Knowledge Base reasoning, safety notes, trend context, and drafts. Final decisions remain in your hands as the expert.',
+    title: 'AI as a second opinion, not a replacement',
+    body: 'The platform provides drafts and signals. Final decisions remain in your hands as the expert.',
   },
 ]
 
@@ -144,8 +144,8 @@ const USE_CASES = [
 ]
 
 const METRICS = [
-  { value: 'Core V3', label: 'Shared B2C, practitioner, and B2B analysis path' },
-  { value: 'Structured', label: 'Complete biomarker, safety, protocol, and retest output' },
+  { value: '85+', label: 'Biomarkers analyzed from a single report' },
+  { value: 'End-to-end', label: 'Complete biomarker analysis draft' },
   { value: '100%', label: 'Patient history in one place' },
   { value: '1:N', label: 'One practitioner, many active patients' },
 ]
@@ -271,7 +271,7 @@ export default function ForNutritionists() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
-        title="Health Intelligence Platform for Nutritionists | VITALOOP"
+        title="AI Blood Test Analysis for Nutritionists | VITALOOP"
         description="Organize client symptoms, review blood test results, prepare nutrition protocols, and track follow-up progress in one practitioner workspace."
         path="/for-nutritionists"
         schemas={[
@@ -404,7 +404,7 @@ export default function ForNutritionists() {
             <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
               <div className="mb-1 flex items-center gap-2 text-xs font-semibold text-emerald-600">
                 <BrainCircuit className="h-3.5 w-3.5" />
-                  Explainable plan draft
+                  AI protocol draft
               </div>
               <p className="text-xs leading-relaxed text-slate-600">
                   Priority: restore iron and vitamin D while monitoring symptom response. Suggested plan and timing are reviewed by practitioner before patient execution.

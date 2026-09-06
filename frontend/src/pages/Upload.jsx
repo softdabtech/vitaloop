@@ -1,24 +1,28 @@
 import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle, Building2, CheckCircle2, Route, Sparkles, UserCircle2 } from 'lucide-react'
+import { AlertCircle, UserCircle2 } from 'lucide-react'
 import { useSubscription } from '../hooks/useSubscription.js'
 import UploadZone from '../components/UploadZone.jsx'
 import ManualBiomarkerEntry from '../components/ManualBiomarkerEntry.jsx'
-import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import AnalysisProgressIndicator from '../components/AnalysisProgressIndicator.jsx'
 import api from '../lib/api.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
-import { gaAnalysisStarted, gaLabUpload } from '../lib/analytics.js'
-import { getAttributionEventParams, getAttributionMetadata } from '../lib/attribution.js'
+import { gaLabUpload } from '../lib/analytics.js'
 import toast from 'react-hot-toast'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import { useQuestionnaireSession } from '../hooks/useQueries.js'
 import { isUkrainianLocale } from '../lib/locale.js'
 import { CoachBadge, CoachCard, CoachProgress } from '../components/coach/CoachUI.jsx'
 import '../styles/dashboard2026.css'
+// coach-shell/coach-card/etc. have no built-in styles of their own — every
+// rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
+// so each page using CoachUI must import it directly or it renders as
+// unstyled browser-default HTML, not a build error.
+import '../styles/coach-design-system.css'
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
+const ANALYSIS_UPLOAD_TIMEOUT_MS = 180000
 
 const SUPPORTED_FILE_TYPES = {
   'application/pdf': ['.pdf'],
@@ -45,18 +49,6 @@ const UPLOAD_COPY = {
   en: {
     loadingMessages: LOADING_MESSAGES,
     profileIncomplete: 'Complete profile first',
-    profileRequiredTitle: 'Complete health profile before analysis',
-    profileRequiredBody: 'Age, sex, height, and weight are required before lab analysis. This helps VITALOOP distinguish pediatric and adult reference context and avoid unsafe recommendations.',
-    profileRequiredUploadError: 'Complete age, sex, height, and weight before uploading lab results.',
-    profileChecking: 'Checking health profile…',
-    profileRequiredCta: 'Complete profile',
-    missingFieldsPrefix: 'Missing',
-    missingFields: {
-      age: 'age',
-      sex: 'sex',
-      height_cm: 'height',
-      weight_kg: 'weight',
-    },
     uploading: (name, kb) => `Uploading ${name}… (${kb}KB)`,
     analysisComplete: 'Analysis complete!',
     longerWarning: 'This is taking longer than usual. Large files may take 1-2 minutes.',
@@ -68,8 +60,6 @@ const UPLOAD_COPY = {
     invalidFileType: 'Please upload a valid PDF, image, XLS/XLSX, or CSV file.',
     fileTooLarge: 'File too large for processing. Please upload a file under 20MB.',
     tooMany: 'Too many uploads. Please wait and try again later.',
-    timeout: 'Analysis is taking longer than expected. Please wait a moment and open Lab Results before retrying.',
-    inProgress: 'This file is still being processed. Please wait a moment and open Lab Results.',
     fallbackError: 'Analysis failed. Please try again.',
     quotaManual: 'You\'ve already entered biomarkers manually. Free plan includes 1 lab analysis (file upload or manual entry). Upgrade to Premium for unlimited analyses, advanced protocols, and health tracking.',
     quotaUpload: 'You\'ve reached your free analysis limit (1 per month). Upgrade to Premium for unlimited lab uploads, AI-generated protocols, and personalized health insights.',
@@ -78,18 +68,10 @@ const UPLOAD_COPY = {
     pageTitle: 'Upload Results',
     pageSubtitle: (concern) => concern ? `Upload results for: ${concern}` : 'Upload results in context of a symptom check and lab plan.',
     pageHelper: 'This upload helps answer your active concern and improves protocol decisions.',
-    concernTitle: 'Concern linkage',
-    concernEmpty: 'No active concern found. Start Symptom Check first for better context.',
-    concernActive: (concern) => `Active concern: ${concern}`,
-    answerTitle: 'This upload will help answer',
-    answerBody: 'What biomarkers currently support or contradict your symptom hypothesis.',
-    nextTitle: 'Next step clarity',
-    nextBody: 'After analysis, open Results & Trends to prioritize markers and retest plan.',
     reviewTitle: 'Review uncertain markers',
     reviewBody: 'Some extracted values need a quick check before VITALOOP uses them in the final report.',
-    reviewQuality: (score, decision) => `Input quality: ${score}% · ${decision === 'confirm' ? 'confirmation required' : 'review required'}`,
-    reviewReasonTitle: 'Why this review is needed',
     reviewConfirm: 'Confirm and rebuild report',
+    reviewSkip: 'Open report without changes',
     reviewReject: 'Reject',
     reviewKeep: 'Use',
     reviewLow: 'low confidence',
@@ -108,18 +90,6 @@ const UPLOAD_COPY = {
       '✅ Майже готово...',
     ],
     profileIncomplete: 'Спочатку заповніть профіль',
-    profileRequiredTitle: 'Спочатку заповніть профіль здоровʼя',
-    profileRequiredBody: 'Перед аналізом потрібні вік, стать, зріст і вага. Для дитячих аналізів це критично: VITALOOP має відрізнити дитячий і дорослий контекст референсів та не давати випадкові рекомендації.',
-    profileRequiredUploadError: 'Перед завантаженням аналізів заповніть вік, стать, зріст і вагу.',
-    profileChecking: 'Перевіряємо профіль здоровʼя…',
-    profileRequiredCta: 'Заповнити профіль',
-    missingFieldsPrefix: 'Не заповнено',
-    missingFields: {
-      age: 'вік',
-      sex: 'стать',
-      height_cm: 'зріст',
-      weight_kg: 'вага',
-    },
     uploading: (name, kb) => `Завантажуємо ${name}… (${kb}KB)`,
     analysisComplete: 'Аналіз готовий!',
     longerWarning: 'Обробка триває довше, ніж зазвичай. Великі файли можуть займати 1-2 хвилини.',
@@ -131,8 +101,6 @@ const UPLOAD_COPY = {
     invalidFileType: 'Завантажте коректний PDF, зображення, XLS/XLSX або CSV.',
     fileTooLarge: 'Файл завеликий для обробки. Завантажте файл до 20MB.',
     tooMany: 'Забагато спроб. Зачекайте і спробуйте ще раз.',
-    timeout: 'Аналіз триває довше, ніж очікувалось. Зачекайте трохи й відкрийте список результатів перед повторною спробою.',
-    inProgress: 'Цей файл ще обробляється. Зачекайте трохи й відкрийте список результатів.',
     fallbackError: 'Аналіз не вдався. Спробуйте ще раз.',
     quotaManual: 'Ви вже ввели показники вручну. Безкоштовний план включає 1 аналіз: файл або ручне введення. Premium відкриває необмежені аналізи, розширені плани та динаміку.',
     quotaUpload: 'Ви досягли ліміту безкоштовного аналізу. Premium відкриває необмежені завантаження, AI-плани та персональні підсумки.',
@@ -141,18 +109,10 @@ const UPLOAD_COPY = {
     pageTitle: 'Завантажити аналізи',
     pageSubtitle: (concern) => concern ? `Завантаження для: ${concern}` : 'Завантажте результати в контексті симптомів і плану аналізів.',
     pageHelper: 'Це допоможе повʼязати показники з вашою скаргою і пріоритетами.',
-    concernTitle: 'Звʼязок зі скаргою',
-    concernEmpty: 'Активної скарги немає. Почніть із перевірки симптомів для кращого контексту.',
-    concernActive: (concern) => `Активна скарга: ${concern}`,
-    answerTitle: 'Це завантаження допоможе зрозуміти',
-    answerBody: 'Які показники підтримують або спростовують вашу поточну гіпотезу щодо симптомів.',
-    nextTitle: 'Наступний крок',
-    nextBody: 'Після аналізу відкрийте результати й динаміку, щоб побачити пріоритети та план повторної перевірки.',
     reviewTitle: 'Перевірте непевні показники',
     reviewBody: 'Деякі значення потребують швидкої перевірки перед тим, як VITALOOP використає їх у фінальному звіті.',
-    reviewQuality: (score, decision) => `Якість розпізнавання: ${score}% · ${decision === 'confirm' ? 'потрібно підтвердити' : 'потрібен перегляд'}`,
-    reviewReasonTitle: 'Чому потрібна перевірка',
     reviewConfirm: 'Підтвердити й оновити звіт',
+    reviewSkip: 'Відкрити звіт без змін',
     reviewReject: 'Відхилити',
     reviewKeep: 'Використати',
     reviewLow: 'низька впевненість',
@@ -218,22 +178,11 @@ function maybeTriggerPaywall({ status, errorCode, usedBy }) {
 }
 
 function resolveAnalysisErrorMessage({ status, errorCode, errorDetail, usedBy, copy = UPLOAD_COPY.en }) {
-  if (!status && errorCode === 'ECONNABORTED') {
-    return copy.timeout
-  }
-
-  if (status === 409 && errorCode === 'ANALYZE_IN_PROGRESS') {
-    return copy.inProgress
-  }
-
   if (status === 402) {
     return build402ErrorMessage({ errorCode, errorDetail, usedBy, copy })
   }
 
   if (status === 422) {
-    if (errorCode === 'PROFILE_CONTEXT_REQUIRED') {
-      return errorDetail || copy.profileRequiredUploadError
-    }
     if (errorCode === 'BIOMARKERS_NOT_EXTRACTED') {
       return copy.biomarkersNotExtracted
     }
@@ -261,7 +210,7 @@ function handleAnalysisError(err, copy = UPLOAD_COPY.en) {
 
   // Handle nested error structure: detail contains {detail, code, used_by}
   const innerError = typeof errorData?.detail === 'object' ? errorData.detail : errorData
-  const errorCode = innerError?.code || errorData?.code || err.code
+  const errorCode = innerError?.code || errorData?.code
   const errorDetail = typeof innerError?.detail === 'string' ? innerError.detail : typeof errorData?.detail === 'string' ? errorData.detail : null
   const usedBy = innerError?.used_by || errorData?.used_by
 
@@ -274,46 +223,21 @@ function resolveUploadId(data) {
   return typeof value === 'string' && value.trim() ? value.trim() : ''
 }
 
-async function buildFileIdempotencyKey(file, labName = '') {
-  const encoder = new TextEncoder()
-  const metadata = `${file.name || 'file'}:${file.size || 0}:${file.lastModified || 0}:${labName || ''}`
-  try {
-    if (window.crypto?.subtle) {
-      const fileHash = await window.crypto.subtle.digest('SHA-256', await file.arrayBuffer())
-      const metadataHash = await window.crypto.subtle.digest('SHA-256', encoder.encode(metadata))
-      const toHex = (buffer) => Array.from(new Uint8Array(buffer)).map(byte => byte.toString(16).padStart(2, '0')).join('')
-      return `lab-file:${toHex(fileHash).slice(0, 48)}:${toHex(metadataHash).slice(0, 16)}`
-    }
-  } catch {
-    // Fall through to a deterministic metadata key when browser hashing is unavailable.
-  }
-  const safeMetadata = metadata.replace(/[^a-zA-Z0-9:_-]/g, '_').slice(0, 96)
-  return `lab-file:${safeMetadata}`
-}
-
-function getMissingAnalysisProfileFields(profile = {}) {
-  return ['age', 'sex', 'height_cm', 'weight_kg'].filter(field => {
-    const value = profile[field]
-    return value === undefined || value === null || String(value).trim() === ''
-  })
-}
-
-function formatMissingProfileFields(fields, copy) {
-  return fields.map(field => copy.missingFields[field] || field).join(', ')
-}
-
 export default function Upload() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { isPremium, uploadsRemaining, loading: subLoading } = useSubscription()
   const [uploadMode, setUploadMode] = useState('pdf') // 'pdf' | 'manual'
-  const [labName, setLabName] = useState('')
+  // The "Lab / Clinic name" input that set this was removed from the page.
+  // labName now always stays '', so the `if (labName)` guards below are a
+  // permanent no-op (harmless — lab_name was always optional) rather than
+  // dead code that would error. Left in place instead of ripped out in case
+  // the field comes back; setLabName is intentionally unused now.
+  const [labName, setLabName] = useState('') // eslint-disable-line no-unused-vars
   const [analyzing, setAnalyzing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [selectedFileName, setSelectedFileName] = useState('')
-  const [profileChecking, setProfileChecking] = useState(true)
   const [profileIncomplete, setProfileIncomplete] = useState(false)
-  const [missingProfileFields, setMissingProfileFields] = useState([])
   const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0])
   const [loadingWarning, setLoadingWarning] = useState('')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -327,39 +251,16 @@ export default function Upload() {
   const activeConcern = sessionContext?.active_concern || ''
 
   useEffect(() => {
-    let active = true
-    Promise.allSettled([
-      api.get('/profile'),
-      api.get('/auth/onboarding/state'),
-    ]).then(([profileResult, onboardingResult]) => {
-      if (!active) return
-
-      const profileData = profileResult.status === 'fulfilled' ? profileResult.value?.data || {} : {}
-      const profile = profileData.profile || profileData
-      const missing = getMissingAnalysisProfileFields(profile)
-      const checklist = onboardingResult.status === 'fulfilled' ? onboardingResult.value?.data?.checklist || {} : {}
-      const onboardingComplete = onboardingResult.status === 'fulfilled' && onboardingResult.value?.data?.completed === true
-      const basicsMissing = !onboardingComplete && !checklist.profile_basics
-
-      setMissingProfileFields(missing)
-      setProfileIncomplete(missing.length > 0 || basicsMissing)
-      setProfileChecking(false)
-
-      if (profileResult.status === 'rejected') {
-        console.error('Failed to load profile:', profileResult.reason)
+    api.get('/auth/onboarding/state').then(r => {
+      const checklist = r.data?.checklist || {}
+      const isComplete = r.data?.completed === true
+      if (!isComplete && !checklist.profile_basics) {
+        setProfileIncomplete(true)
       }
-      if (onboardingResult.status === 'rejected') {
-        console.error('Failed to load onboarding state:', onboardingResult.reason)
-      }
-    }).catch(() => {
-      if (!active) return
-      setProfileChecking(false)
-      setProfileIncomplete(true)
+    }).catch((err) => {
+      console.error('Failed to load onboarding state:', err)
+      // Continue without blocking - onboarding check is optional
     })
-
-    return () => {
-      active = false
-    }
   }, [])
 
   const isBusy = analyzing
@@ -395,16 +296,8 @@ export default function Upload() {
     }
   }, [analyzing, copy])
 
-  async function handleFile(file, options = {}) {
+  async function handleFile(file) {
     if (isBusy) return
-
-    if (profileChecking || profileIncomplete) {
-      const missing = missingProfileFields.length ? ` ${copy.missingFieldsPrefix}: ${formatMissingProfileFields(missingProfileFields, copy)}.` : ''
-      const message = profileChecking ? copy.profileChecking : `${copy.profileRequiredUploadError}${missing}`
-      setErrorMessage(message)
-      toast.error(message)
-      return
-    }
 
     const validationError = validateFileInput(file, copy)
     if (validationError) {
@@ -416,42 +309,19 @@ export default function Upload() {
     setErrorMessage('')
     setSelectedFileName(file.name)
     setSelectedFile(file)
-    if (!options.isRetry) {
-      setRetryCount(0)
-    }
+    setRetryCount(0)
 
     toast(copy.uploading(file.name, (file.size / 1024).toFixed(0)), { icon: '📄' })
 
     setAnalyzing(true)
     try {
-      const analysisStartedMetadata = {
-        source: 'file_upload',
-        file_type: String(file.type || '').slice(0, 80) || 'unknown',
-        file_size_kb: Math.round(file.size / 1024),
-        has_lab_name: Boolean(labName),
-        is_retry: Boolean(options.isRetry),
-        ...getAttributionMetadata(),
-      }
-      trackFunnelEvent('funnel_analysis_started', 'User started lab analysis', analysisStartedMetadata, { oncePerSession: true })
-      gaAnalysisStarted({
-        source: 'file_upload',
-        file_type: analysisStartedMetadata.file_type,
-        is_retry: Boolean(options.isRetry),
-        ...getAttributionEventParams(),
-      })
-
       const formData = new FormData()
       formData.append('file', file)
       if (labName) {
         formData.append('lab_name', labName)
       }
 
-      const { data } = await api.post('/analyze/pdf', formData, {
-        timeout: 150_000,
-        headers: {
-          'X-Idempotency-Key': await buildFileIdempotencyKey(file, labName),
-        },
-      })
+      const { data } = await api.post('/analyze/pdf', formData, { timeout: ANALYSIS_UPLOAD_TIMEOUT_MS })
 
       const uploadId = resolveUploadId(data)
       if (!uploadId) {
@@ -464,7 +334,34 @@ export default function Upload() {
       }, { oncePerSession: true })
       gaLabUpload()
 
-      await Promise.all([
+      // Quality Gate completion (cabinet reconciliation): a decision other
+      // than auto_continue means run_lab_analysis_pipeline took its early
+      // needs_confirmation return — no canonical biomarkers were persisted
+      // (Stage 2B's chokepoint), so navigating straight to /results/{uploadId}
+      // here was a dead end (empty "no processed biomarkers yet" state with
+      // no way back into confirmation). Reuses the EXISTING, already-tested
+      // backend contract unchanged: GET /{upload_id}/candidates +
+      // POST /{upload_id}/confirm-candidates (Stage 2B) — no new endpoint, no
+      // gate semantics change. Populates the review UI that already existed
+      // in this file but nothing ever triggered.
+      if (data.analysis_status && data.analysis_status !== 'completed') {
+        try {
+          const { data: reviewData } = await api.get(`/analyze/${uploadId}/candidates`)
+          const candidates = Array.isArray(reviewData?.candidates) ? reviewData.candidates : []
+          if (candidates.length) {
+            setCandidateReview({ uploadId, candidates })
+            setAnalyzing(false)
+            return
+          }
+        } catch (reviewErr) {
+          console.error('Failed to load candidates for review:', reviewErr)
+          // Fall through to the results navigation below — the empty state
+          // there still degrades safely (no biomarkers yet), and the user is
+          // not stuck with no feedback at all.
+        }
+      }
+
+      void Promise.allSettled([
         queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
         queryClient.invalidateQueries({ queryKey: ['lab-results-list'] }),
         queryClient.invalidateQueries({ queryKey: ['progress'] }),
@@ -474,25 +371,6 @@ export default function Upload() {
       ])
 
       toast.success(copy.analysisComplete)
-      const candidatesResponse = await api.get(`/analyze/${uploadId}/candidates`).catch(() => null)
-      const candidates = candidatesResponse?.data?.candidates || []
-      const qualityGate = candidatesResponse?.data?.analysis_input_quality_gate || data.analysis_input_quality_gate || data.final_analysis?.analysis_input_quality_gate || null
-      const gateRequiresConfirmation = Boolean(candidatesResponse?.data?.requires_confirmation || qualityGate?.requires_confirmation)
-      const reviewCandidates = candidates.filter(candidate => candidate.requires_confirmation || candidate.confidence_label === 'low')
-      if ((gateRequiresConfirmation || reviewCandidates.length > 0) && candidates.length > 0) {
-        setCandidateReview({
-          uploadId,
-          qualityGate,
-          candidates: (reviewCandidates.length ? reviewCandidates : candidates).map(candidate => ({
-            ...candidate,
-            decision: 'confirmed',
-            raw_name: candidate.raw_name || '',
-            raw_value: candidate.raw_value ?? candidate.parsed_value ?? '',
-            raw_unit: candidate.raw_unit || '',
-          })),
-        })
-        return
-      }
       navigate(`/results/${uploadId}`)
     } catch (err) {
       const message = handleAnalysisError(err, copy)
@@ -507,7 +385,7 @@ export default function Upload() {
     if (!selectedFile || retryCount >= 3) return
     setRetryCount(prev => prev + 1)
     setErrorMessage('')
-    await handleFile(selectedFile, { isRetry: true })
+    await handleFile(selectedFile)
   }
 
   function handleUploadZoneError(message) {
@@ -594,22 +472,30 @@ export default function Upload() {
   return (
     <div className="space-y-6">
       <div className="mx-auto w-full max-w-6xl">
-        <CabinetPageHeader
-          title={copy.pageTitle}
-          subtitle={copy.pageSubtitle(activeConcern)}
-          helper={copy.pageHelper}
-        />
-
-        <CoachCard className="mb-6 p-4 sm:p-5">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Was two separate cards (a CabinetPageHeader + a CoachCard right below
+            it) — merged into one, per explicit request, since stacking a page
+            title and a second "flow" heading right under it read as two
+            competing headers. Typography is now consistent between the two
+            headings: same weight (font-bold, not extrabold) and same text
+            color (slate-900), just different sizes so the hierarchy (page
+            title > section heading) is still clear. */}
+        <CoachCard className="mb-6 p-5 sm:p-6">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="coach-eyebrow">{isUk ? 'Процес' : 'Upload flow'}</p>
-              <h2 className="text-xl font-extrabold text-slate-950">{isUk ? 'Від файлу до зрозумілого результату' : 'From file to clear results'}</h2>
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{copy.pageTitle}</h1>
+              <p className="mt-1 text-sm leading-relaxed text-slate-500">{copy.pageSubtitle(activeConcern)}</p>
+              <p className="mt-1 text-xs text-slate-400">{copy.pageHelper}</p>
             </div>
             <CoachBadge tone={analyzing ? 'warning' : candidateReview ? 'primary' : 'neutral'}>
               {analyzing ? (isUk ? 'AI аналізує' : 'AI analysis') : candidateReview ? (isUk ? 'Перевірка' : 'Review') : (isUk ? 'Готово до завантаження' : 'Ready')}
             </CoachBadge>
           </div>
+
+          <div className="mb-3">
+            <p className="coach-eyebrow">{isUk ? 'Процес' : 'Upload flow'}</p>
+            <h2 className="text-base font-bold text-slate-900">{isUk ? 'Від файлу до зрозумілого результату' : 'From file to clear results'}</h2>
+          </div>
+
           <div className="grid gap-3 md:grid-cols-3">
             {[
               { label: isUk ? 'Завантаження' : 'Upload', body: isUk ? 'PDF, фото або ручне введення.' : 'PDF, images, or manual entry.', active: !analyzing && !candidateReview },
@@ -627,21 +513,6 @@ export default function Upload() {
           </div>
           {analyzing && <div className="mt-4"><CoachProgress value={66} label={isUk ? 'Обробка' : 'Processing'} tone="primary" /></div>}
         </CoachCard>
-
-        <div className="mb-6 grid gap-3 lg:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Route className="h-4 w-4 text-emerald-600" /> {copy.concernTitle}</div>
-            <p className="text-sm text-slate-500">{activeConcern ? copy.concernActive(activeConcern) : copy.concernEmpty}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> {copy.answerTitle}</div>
-            <p className="text-sm text-slate-500">{isUk ? 'Ключове питання: які маркери потребують уваги в першу чергу.' : 'Core question: which markers need attention first.'}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" /> {copy.nextTitle}</div>
-            <p className="text-sm text-slate-500">{isUk ? 'Далі: пріоритети, безпечні наступні кроки і план повторної перевірки.' : 'Then: priorities, safer next steps, and retest direction.'}</p>
-          </div>
-        </div>
 
         {!activeConcern && (
           <div className="mb-6 flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
@@ -683,21 +554,18 @@ export default function Upload() {
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3.5 text-sm">
             <UserCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
             <div className="flex-1">
-              <p className="font-semibold text-blue-800">{copy.profileRequiredTitle}</p>
+              <p className="font-semibold text-blue-800">{isUk ? 'Профіль здоровʼя не заповнений' : 'Your health profile is incomplete'}</p>
               <p className="mt-0.5 text-blue-700">
-                {copy.profileRequiredBody}
+                {isUk
+                  ? 'Профіль із віком, вагою, цілями та ліками допомагає зробити аналіз точнішим. Ви можете завантажити файл зараз, але профіль краще заповнити.'
+                  : 'A complete profile (height, weight, goals, medications) helps the AI and nutritionist give you more accurate, personalized analysis. You can still upload, but completing your profile first is recommended.'}
               </p>
-              {missingProfileFields.length > 0 && (
-                <p className="mt-1 text-xs font-semibold text-blue-800">
-                  {copy.missingFieldsPrefix}: {formatMissingProfileFields(missingProfileFields, copy)}.
-                </p>
-              )}
             </div>
             <button
               onClick={() => navigate('/onboarding')}
               className="ml-1 shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition"
             >
-              {copy.profileRequiredCta}
+              {isUk ? 'Заповнити профіль' : 'Complete profile'}
             </button>
           </div>
         )}
@@ -727,29 +595,18 @@ export default function Upload() {
             {candidateReview && (
               <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-	                  <div>
-	                    <h2 className="text-lg font-semibold text-slate-950">{copy.reviewTitle}</h2>
-	                    <p className="mt-1 text-sm text-amber-800">{copy.reviewBody}</p>
-	                    {candidateReview.qualityGate && (
-	                      <p className="mt-2 inline-flex rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-bold text-amber-900">
-	                        {copy.reviewQuality(Math.round((candidateReview.qualityGate.score || 0) * 100), candidateReview.qualityGate.decision)}
-	                      </p>
-	                    )}
-	                    {candidateReview.qualityGate && (
-	                      <div className="mt-3 rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs text-amber-900">
-	                        <p className="font-black uppercase tracking-wide">{copy.reviewReasonTitle}</p>
-	                        <ul className="mt-1 space-y-1">
-	                          {[...(candidateReview.qualityGate.blockers || []), ...(candidateReview.qualityGate.warnings || [])].slice(0, 4).map((item, index) => (
-	                            <li key={`${item.key || 'reason'}-${index}`} className="flex gap-2">
-	                              <span aria-hidden="true">•</span>
-	                              <span>{item.message || item.key || (isUk ? 'Потрібна ручна перевірка даних.' : 'Manual data review is needed.')}</span>
-	                            </li>
-	                          ))}
-	                        </ul>
-	                      </div>
-	                    )}
-		                  </div>
-	                </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-950">{copy.reviewTitle}</h2>
+                    <p className="mt-1 text-sm text-amber-800">{copy.reviewBody}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/results/${candidateReview.uploadId}`)}
+                    className="rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-amber-100"
+                  >
+                    {copy.reviewSkip}
+                  </button>
+                </div>
 
                 <div className="space-y-3">
                   {candidateReview.candidates.map(candidate => (
@@ -827,53 +684,11 @@ export default function Upload() {
               </div>
             )}
 
-            <div className="mb-4 grid gap-3 md:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> {isUk ? 'Безпечне завантаження' : 'Secure upload'}</div>
-                <p className="text-sm text-slate-500">{isUk ? 'Файл безпечно завантажується й аналізується для структурованого розбору показників.' : 'Your file is securely uploaded and analyzed to extract biomarker context.'}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" /> {isUk ? 'Що буде далі' : 'What unlocks next'}</div>
-                <p className="text-sm text-slate-500">{isUk ? 'Пріоритетні показники, звʼязок із симптомами, план дій і напрямок повторної перевірки.' : 'Priority markers, symptom-linked interpretation, protocol updates, and retest direction.'}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900"><AlertCircle className="h-4 w-4 text-amber-500" /> {isUk ? 'Найкраще розпізнавання' : 'Best results'}</div>
-                <p className="text-sm text-slate-500">{isUk ? 'Використовуйте чіткий повносторінковий PDF, де видно назви, значення, одиниці та референси.' : 'Use a clear full-page PDF where marker names, values, units, and ranges are readable.'}</p>
-              </div>
-            </div>
-
-            <div className="mb-6 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
-              <div className={`rounded-xl border px-3 py-2 ${analyzing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
-                1. {isUk ? 'Завантаження файлу' : 'Upload file'}
-              </div>
-              <div className={`rounded-xl border px-3 py-2 ${analyzing ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
-                2. {isUk ? 'AI-аналіз' : 'AI analysis'}
-              </div>
-              <div className={`rounded-xl border px-3 py-2 ${!isBusy && selectedFileName ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
-                3. {isUk ? 'Відкрити результати' : 'Open results'}
-              </div>
-            </div>
-
             {errorMessage && (
               <div className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">
                 {errorMessage}
               </div>
             )}
-
-            <div className="mb-6">
-              <label className="mb-1 block text-sm font-medium text-slate-700">{isUk ? 'Назва лабораторії / клініки (необовʼязково)' : 'Lab / Clinic name (optional)'}</label>
-              <input
-                value={labName}
-                disabled={isBusy}
-                onChange={(e) => setLabName(e.target.value)}
-                placeholder={isUk ? 'Сінево, Діла, інша...' : 'Quest, LabCorp, Other...'}
-                className="vtl-focus-ring w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-800 placeholder-slate-400 disabled:cursor-not-allowed disabled:opacity-60 focus:border-emerald-400 focus:outline-none"
-              />
-              <p className="mt-2 flex items-start gap-2 text-xs text-slate-500">
-                <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
-                <span>{isUk ? '* Якщо лабораторії ще немає в базі, це нормально. Ви все одно можете завантажити PDF.' : '* If your clinic or lab is not recognized yet, it is still fine. Our lab database is still growing and more providers will be added soon.'}</span>
-              </p>
-            </div>
 
             <div className="mt-6">
               {analyzing && (
@@ -908,7 +723,7 @@ export default function Upload() {
                 </div>
               )}
 
-              {!analyzing && <UploadZone onFile={handleFile} onError={handleUploadZoneError} disabled={isBusy || profileChecking || profileIncomplete} />}
+              {!analyzing && <UploadZone onFile={handleFile} onError={handleUploadZoneError} disabled={isBusy} />}
             </div>
           </>
         ) : (

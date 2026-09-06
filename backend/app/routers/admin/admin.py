@@ -7,7 +7,6 @@ from app.dependencies import get_current_user
 from app.services import supabase_service as svc
 from app.services.ai.openai_service import is_llm_configured
 from app.services.email_service import send_ops_alert_email
-from app.utils.stripe_config import is_stripe_price_configured
 
 router = APIRouter()
 
@@ -113,17 +112,6 @@ async def _build_runtime_readiness_payload() -> dict:
         "llm_provider_key": is_llm_configured(),
         "resend_api_key": _is_set(settings.resend_api_key),
         "resend_from_email": _is_set(settings.resend_from_email),
-        "stripe_secret_key": _is_set(settings.stripe_secret_key),
-        "stripe_webhook_secret": _is_set(settings.stripe_webhook_secret),
-        "stripe_price_id": is_stripe_price_configured(
-            settings.stripe_price_id,
-            settings.stripe_price_id_personal,
-            settings.stripe_price_id_personal_monthly,
-            settings.stripe_price_id_personal_yearly,
-            settings.stripe_price_id_practitioner,
-            settings.stripe_price_id_practitioner_monthly,
-            settings.stripe_price_id_practitioner_yearly,
-        ),
         "rate_limit_backend": _is_set(settings.rate_limit_backend),
         "rate_limit_redis_url": (not requires_redis_url) or redis_url_configured,
     }
@@ -203,8 +191,11 @@ async def admin_update_user(
         user_id,
         full_name=full_name,
         global_role=global_role,
-        sub_status=sub_status,
+        sub_status=None,
     )
+    if sub_status is not None:
+        plan_tier = "personal" if sub_status in {"active", "trialing"} else "free"
+        await svc.update_user_subscription(user_id=user_id, sub_status=sub_status, plan_tier=plan_tier)
     return {
         "ok": True,
         "user_id": user_id,
@@ -287,48 +278,6 @@ async def admin_audit_logs(
 @router.get("/runtime-readiness")
 async def admin_runtime_readiness(_: dict = Depends(_require_super_admin)):
     return await _build_runtime_readiness_payload()
-
-
-@router.get("/stripe-readiness")
-async def admin_stripe_readiness(_: dict = Depends(_require_super_admin)):
-    checks = {
-        "stripe_secret_key": _is_set(settings.stripe_secret_key),
-        "stripe_price_id": _is_set(settings.stripe_price_id),
-        "stripe_success_url": _is_http_url(settings.stripe_success_url),
-        "stripe_cancel_url": _is_http_url(settings.stripe_cancel_url),
-        "stripe_webhook_secret": _is_set(settings.stripe_webhook_secret),
-    }
-
-    checkout_required = [
-        "stripe_secret_key",
-        "stripe_price_id",
-        "stripe_success_url",
-        "stripe_cancel_url",
-    ]
-    webhook_required = [
-        "stripe_secret_key",
-        "stripe_webhook_secret",
-    ]
-
-    missing_checkout = [name for name in checkout_required if not checks[name]]
-    missing_webhook = [name for name in webhook_required if not checks[name]]
-
-    return {
-        "ok": len(missing_checkout) == 0 and len(missing_webhook) == 0,
-        "checks": checks,
-        "checkout": {
-            "ready": len(missing_checkout) == 0,
-            "missing": missing_checkout,
-        },
-        "webhook": {
-            "ready": len(missing_webhook) == 0,
-            "missing": missing_webhook,
-        },
-        "notes": [
-            "This is a config-only smoke check (no outbound Stripe API calls).",
-            "Use /stripe/checkout and Stripe webhook tests after readiness is green.",
-        ],
-    }
 
 
 @router.get("/red-flags")

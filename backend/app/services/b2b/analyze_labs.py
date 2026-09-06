@@ -615,9 +615,67 @@ async def analyze_labs_for_partner(
             biomarker_name_aliases=pilot_config["biomarker_mappings"],
         )
 
+        # Stage 2B: honor the same quality-gate boundary consumer uploads get.
+        # decision != auto_continue -> pipeline_result is the abbreviated
+        # needs_confirmation shape (no canonical biomarkers, no report/protocol).
+        # B2B gets its own status name (needs_review) since partners are a machine
+        # consumer, not a human confirmation UX — but the underlying rule is
+        # identical: no canonical biomarkers/report/protocol before the boundary,
+        # using the SAME pipeline (no separate B2B medical pipeline).
+        analysis_status = pipeline_result.get("analysis_status", "completed")
         normalized_biomarkers = pipeline_result.pop("normalized_biomarkers", [])
         cost_metadata = pipeline_result.get("cost_metadata") or {}
         quality_snapshot = pipeline_result.get("quality_snapshot") or {}
+
+        if analysis_status != "completed":
+            response_payload = {
+                **pipeline_result,
+                "analysis_id": partner_lab_result_id,
+                "status": "needs_review",
+                "analysis_status": "needs_review",
+            }
+            response_payload["metadata"] = {
+                **(response_payload.get("metadata") or {}),
+                "partner_id": principal.partner_id,
+                "external_user_id": request.external_user_id,
+                "request_hash": request_hash,
+                "idempotency_key": effective_idempotency_key or None,
+                "retention_days": pilot_config["retention_days"],
+                "api_version": api_version,
+                "key_prefix": principal.key_prefix,
+            }
+
+            # No canonical biomarkers persisted before the review boundary — neither
+            # to the partner_biomarkers table nor into partner_lab_results' own
+            # normalized_biomarkers column.
+            await _update_partner_lab_result(
+                partner_lab_result_id,
+                status="needs_review",
+                canonical_payload={
+                    "normalized_biomarkers": [],
+                    "final_response": response_payload,
+                    "analysis_status": "needs_review",
+                    "cost_metadata": cost_metadata,
+                },
+            )
+            await _track_usage(
+                partner_id=principal.partner_id,
+                api_key_id=principal.key_id,
+                partner_lab_result_id=partner_lab_result_id,
+                cost_metadata=cost_metadata,
+                quality_snapshot=quality_snapshot,
+                biomarker_count=0,
+                request_hash=request_hash,
+            )
+            await _write_b2b_audit(
+                principal=principal,
+                action="request_needs_review",
+                entity_id=partner_lab_result_id,
+                new_value={"request_hash": request_hash, "quality_gate_decision": analysis_status},
+            )
+            record_b2b_metric("needs_review", partner_id=principal.partner_id)
+            return response_payload
+
         response_payload = {
             **pipeline_result,
             "analysis_id": partner_lab_result_id,

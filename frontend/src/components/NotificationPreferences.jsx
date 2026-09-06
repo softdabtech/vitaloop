@@ -2,6 +2,7 @@ import { Mail, Zap, Calendar, AlertCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../lib/api.js'
+import { CoachButton, CoachCard } from './coach/CoachUI.jsx'
 import { isUkrainianLocale } from '../lib/locale.js'
 import {
   getPushStatus,
@@ -10,103 +11,113 @@ import {
   subscribeToPush,
   unsubscribeFromPush,
 } from '../lib/notifications.ts'
+// coach-shell/coach-card/etc. have no built-in styles of their own — every
+// rule lives in this stylesheet. Belt-and-suspenders here since the parent
+// (Settings.jsx) already imports it and Vite bundles CSS per route chunk,
+// not per component — but this component could be reused elsewhere later.
+import '../styles/coach-design-system.css'
 
-const NOTIFICATION_TYPES = {
-  weekly_checkin: {
-    label: 'Weekly Check-in Reminder',
-    description: 'Friday 6pm - Remind me to complete weekly symptom check-in',
-    icon: Calendar,
-    color: 'purple',
-    default: true,
+const NOTIFICATION_COPY = {
+  en: {
+    title: 'Notification Preferences',
+    subtitle: 'Choose which notifications keep you engaged and motivated',
+    pushTitle: 'Browser & Mobile Push',
+    pushEnabled: (count) => `Enabled on ${count} device(s)`,
+    pushDisabled: 'Disabled on this device',
+    pushUnsupported: 'Push is not supported in this browser',
+    enablePush: 'Enable Push',
+    sendTest: 'Send Test',
+    disablePush: 'Disable Push',
+    on: 'ON',
+    save: 'Save Notification Preferences',
+    saving: 'Saving...',
+    savedToast: 'Notification preferences saved!',
+    saveFailedToast: 'Failed to save preferences',
+    pushGrantFailedToast: 'Push permission not granted or VAPID key is missing',
+    pushEnabledToast: 'Push notifications enabled for this device',
+    pushEnableFailedToast: 'Failed to enable push notifications',
+    pushDisabledToast: 'Push notifications disabled on this device',
+    pushDisableFailedToast: 'Failed to disable push notifications',
+    testSentToast: 'Test push sent',
+    testNoSubscriptionToast: 'No active push subscription for this device',
+    testFailedToast: 'Failed to send test push',
+    howWeNotify: 'HOW WE NOTIFY:',
+    howList: [
+      'In-app notifications appear while you use the app',
+      'Browser/mobile push works after you enable permission on this device',
+      'Email reminders sent to your registered email',
+      'No spam - we respect your time',
+      'You control everything here',
+    ],
+    types: {
+      weekly_checkin: { label: 'Weekly Check-in Reminder', description: 'Friday 6pm - Remind me to complete weekly symptom check-in' },
+      assignment_due: { label: 'Upcoming Assignment', description: 'Nudge when active tasks stay pending' },
+      retest_reminder: { label: 'Lab Retest Reminder', description: 'After ~10 weeks from last lab upload' },
+      streak_reminder: { label: 'Streak Reminder', description: 'Keep your streak alive - daily nudge at preferred time' },
+      weekly_digest: { label: 'Weekly Digest', description: 'Sunday evening - Summary of your week' },
+      achievement_unlock: { label: 'Achievement Unlocked', description: 'Celebrate when you unlock new badges' },
+      biomarker_alert: { label: 'Biomarker Alerts', description: 'Important marker shifts or safety-related context changes' },
+      insight_published: { label: 'New Next-step Insight', description: 'Notify when a new next-step recommendation appears' },
+    },
   },
-  assignment_due: {
-    label: 'Upcoming Assignment',
-    description: 'Nudge when active tasks stay pending',
-    icon: AlertCircle,
-    color: 'orange',
-    default: true,
-  },
-  retest_reminder: {
-    label: 'Lab Retest Reminder',
-    description: 'After ~10 weeks from last lab upload',
-    icon: Calendar,
-    color: 'blue',
-    default: true,
-  },
-  streak_reminder: {
-    label: 'Streak Reminder',
-    description: 'Keep your streak alive - daily nudge at preferred time',
-    icon: Zap,
-    color: 'red',
-    default: true,
-  },
-  weekly_digest: {
-    label: 'Weekly Digest',
-    description: 'Sunday evening - Summary of your week',
-    icon: Mail,
-    color: 'blue',
-    default: true,
-  },
-  achievement_unlock: {
-    label: 'Achievement Unlocked',
-    description: 'Celebrate when you unlock new badges',
-    icon: Zap,
-    color: 'yellow',
-    default: true,
-  },
-  biomarker_alert: {
-    label: 'Biomarker Alerts',
-    description: 'Important marker shifts or safety-related context changes',
-    icon: AlertCircle,
-    color: 'red',
-    default: true,
-  },
-  insight_published: {
-    label: 'New Next-step Insight',
-    description: 'Notify when a new next-step recommendation appears',
-    icon: Zap,
-    color: 'purple',
-    default: true,
+  uk: {
+    title: 'Налаштування сповіщень',
+    subtitle: 'Оберіть, які сповіщення підтримують вашу залученість',
+    pushTitle: 'Push у браузері та на мобільному',
+    pushEnabled: (count) => `Увімкнено на ${count} пристроях`,
+    pushDisabled: 'Вимкнено на цьому пристрої',
+    pushUnsupported: 'Push не підтримується в цьому браузері',
+    enablePush: 'Увімкнути push',
+    sendTest: 'Надіслати тест',
+    disablePush: 'Вимкнути push',
+    on: 'УВІМК',
+    save: 'Зберегти налаштування сповіщень',
+    saving: 'Зберігаємо...',
+    savedToast: 'Налаштування сповіщень збережено!',
+    saveFailedToast: 'Не вдалося зберегти налаштування',
+    pushGrantFailedToast: 'Дозвіл на push не надано або відсутній VAPID-ключ',
+    pushEnabledToast: 'Push-сповіщення увімкнено для цього пристрою',
+    pushEnableFailedToast: 'Не вдалося увімкнути push-сповіщення',
+    pushDisabledToast: 'Push-сповіщення вимкнено на цьому пристрої',
+    pushDisableFailedToast: 'Не вдалося вимкнути push-сповіщення',
+    testSentToast: 'Тестове сповіщення надіслано',
+    testNoSubscriptionToast: 'Немає активної push-підписки для цього пристрою',
+    testFailedToast: 'Не вдалося надіслати тестове сповіщення',
+    howWeNotify: 'ЯК МИ СПОВІЩАЄМО:',
+    howList: [
+      'Сповіщення в застосунку зʼявляються під час використання',
+      'Push у браузері/на мобільному працює після надання дозволу на цьому пристрої',
+      'Нагадування на вашу зареєстровану пошту',
+      'Без спаму — ми цінуємо ваш час',
+      'Ви керуєте всім тут',
+    ],
+    types: {
+      weekly_checkin: { label: 'Нагадування про щотижневий чек-ін', description: 'Пʼятниця 18:00 — нагадати пройти щотижневий чек-ін симптомів' },
+      assignment_due: { label: 'Найближче завдання', description: 'Нагадування, коли активні завдання залишаються невиконаними' },
+      retest_reminder: { label: 'Нагадування про повторний аналіз', description: 'Через ~10 тижнів після останнього завантаження' },
+      streak_reminder: { label: 'Нагадування про серію', description: 'Підтримуйте серію — щоденне нагадування у зручний час' },
+      weekly_digest: { label: 'Щотижневий дайджест', description: 'Неділя ввечері — підсумок вашого тижня' },
+      achievement_unlock: { label: 'Досягнення розблоковано', description: 'Святкуйте нові значки' },
+      biomarker_alert: { label: 'Сповіщення про біомаркери', description: 'Важливі зміни показників або контексту безпеки' },
+      insight_published: { label: 'Нова підказка наступного кроку', description: 'Сповіщення про нову рекомендацію наступного кроку' },
+    },
   },
 }
 
-const NOTIFICATION_TYPES_UK = {
-  weekly_checkin: {
-    label: 'Щотижневий чек-ін',
-    description: 'Пʼятниця 18:00 - нагадати пройти перевірку симптомів',
-  },
-  assignment_due: {
-    label: 'Активне завдання',
-    description: 'Нагадування, коли завдання довго залишаються невиконаними',
-  },
-  retest_reminder: {
-    label: 'Нагадування про повторні аналізи',
-    description: 'Приблизно через 10 тижнів після останнього аналізу',
-  },
-  streak_reminder: {
-    label: 'Нагадування про серію',
-    description: 'Щоденний поштовх у вибраний час, щоб не втрачати ритм',
-  },
-  weekly_digest: {
-    label: 'Щотижневий дайджест',
-    description: 'Неділя ввечері - підсумок вашого тижня',
-  },
-  achievement_unlock: {
-    label: 'Нове досягнення',
-    description: 'Сповіщення, коли відкриваєте нові бейджі',
-  },
-  biomarker_alert: {
-    label: 'Важливі маркери',
-    description: 'Суттєві зміни показників або контекст безпеки',
-  },
-  insight_published: {
-    label: 'Нова рекомендація',
-    description: 'Сповіщення, коли зʼявляється наступний крок',
-  },
+const NOTIFICATION_ICONS = {
+  weekly_checkin: { icon: Calendar, color: 'purple', default: true },
+  assignment_due: { icon: AlertCircle, color: 'orange', default: true },
+  retest_reminder: { icon: Calendar, color: 'blue', default: true },
+  streak_reminder: { icon: Zap, color: 'red', default: true },
+  weekly_digest: { icon: Mail, color: 'blue', default: true },
+  achievement_unlock: { icon: Zap, color: 'yellow', default: true },
+  biomarker_alert: { icon: AlertCircle, color: 'red', default: true },
+  insight_published: { icon: Zap, color: 'purple', default: true },
 }
 
 export default function NotificationPreferences({ currentPreferences = {}, onSave }) {
   const isUk = isUkrainianLocale()
+  const copy = isUk ? NOTIFICATION_COPY.uk : NOTIFICATION_COPY.en
   const [preferences, setPreferences] = useState(currentPreferences)
   const [saving, setSaving] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
@@ -155,9 +166,9 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
     try {
       await api.patch('/settings/notifications', preferences)
       if (onSave) onSave(preferences)
-      toast.success(isUk ? 'Налаштування сповіщень збережено' : 'Notification preferences saved!')
+      toast.success(copy.savedToast)
     } catch (error) {
-      toast.error(isUk ? 'Не вдалося зберегти налаштування' : 'Failed to save preferences')
+      toast.error(copy.saveFailedToast)
       console.error(error)
     } finally {
       setSaving(false)
@@ -169,7 +180,7 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
     try {
       const ok = await subscribeToPush()
       if (!ok) {
-        toast.error(isUk ? 'Дозвіл на push не надано або VAPID-ключ відсутній' : 'Push permission not granted or VAPID key is missing')
+        toast.error(copy.pushGrantFailedToast)
         return
       }
 
@@ -177,9 +188,9 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
       const status = await getPushStatus()
       setPushCount(Number(status.count || 0))
       await sendTestPush()
-      toast.success(isUk ? 'Push-сповіщення ввімкнено для цього пристрою' : 'Push notifications enabled for this device')
+      toast.success(copy.pushEnabledToast)
     } catch (error) {
-      toast.error(isUk ? 'Не вдалося ввімкнути push-сповіщення' : 'Failed to enable push notifications')
+      toast.error(copy.pushEnableFailedToast)
       console.error(error)
     } finally {
       setPushBusy(false)
@@ -192,9 +203,9 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
       await unsubscribeFromPush()
       setPushEnabled(false)
       setPushCount(0)
-      toast.success(isUk ? 'Push-сповіщення вимкнено на цьому пристрої' : 'Push notifications disabled on this device')
+      toast.success(copy.pushDisabledToast)
     } catch (error) {
-      toast.error(isUk ? 'Не вдалося вимкнути push-сповіщення' : 'Failed to disable push notifications')
+      toast.error(copy.pushDisableFailedToast)
       console.error(error)
     } finally {
       setPushBusy(false)
@@ -206,12 +217,12 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
     try {
       const sent = await sendTestPush()
       if (sent > 0) {
-        toast.success(isUk ? 'Тестове push-сповіщення надіслано' : 'Test push sent')
+        toast.success(copy.testSentToast)
       } else {
-        toast.error(isUk ? 'На цьому пристрої немає активної push-підписки' : 'No active push subscription for this device')
+        toast.error(copy.testNoSubscriptionToast)
       }
     } catch (error) {
-      toast.error(isUk ? 'Не вдалося надіслати тестове push-сповіщення' : 'Failed to send test push')
+      toast.error(copy.testFailedToast)
       console.error(error)
     } finally {
       setPushBusy(false)
@@ -219,62 +230,49 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
-        <h3 className="text-base font-bold text-slate-900 mb-1">{isUk ? 'Налаштування сповіщень' : 'Notification Preferences'}</h3>
-        <p className="text-xs text-slate-600">
-          {isUk ? 'Оберіть, які сповіщення допомагатимуть тримати ритм' : 'Choose which notifications keep you engaged and motivated'}
-        </p>
+        <h3 className="coach-title-lg">{copy.title}</h3>
+        <p className="coach-body mt-1">{copy.subtitle}</p>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <CoachCard className="p-4" tone="soft">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-slate-900">{isUk ? 'Push у браузері та на мобільному' : 'Browser & Mobile Push'}</p>
-            <p className="text-xs text-slate-600 mt-1">
+            <p className="text-sm font-semibold text-slate-900">{copy.pushTitle}</p>
+            <p className="mt-1 text-xs text-slate-600">
               {isPushSupported()
-                ? (pushEnabled
-                  ? (isUk ? `Увімкнено на ${pushCount} пристрої(ях)` : `Enabled on ${pushCount} device(s)`)
-                  : (isUk ? 'Вимкнено на цьому пристрої' : 'Disabled on this device'))
-                : (isUk ? 'Цей браузер не підтримує push' : 'Push is not supported in this browser')}
+                ? (pushEnabled ? copy.pushEnabled(pushCount) : copy.pushDisabled)
+                : copy.pushUnsupported}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {!pushEnabled ? (
-              <button
-                onClick={enablePush}
-                disabled={pushBusy || !isPushSupported()}
-                className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-              >
-                {isUk ? 'Увімкнути push' : 'Enable Push'}
-              </button>
+              <CoachButton size="sm" onClick={enablePush} disabled={pushBusy || !isPushSupported()}>
+                {copy.enablePush}
+              </CoachButton>
             ) : (
               <>
-                <button
-                  onClick={triggerTestPush}
-                  disabled={pushBusy}
-                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
-                >
-                  {isUk ? 'Надіслати тест' : 'Send Test'}
-                </button>
+                <CoachButton size="sm" variant="secondary" onClick={triggerTestPush} disabled={pushBusy}>
+                  {copy.sendTest}
+                </CoachButton>
                 <button
                   onClick={disablePush}
                   disabled={pushBusy}
                   className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
                 >
-                  {isUk ? 'Вимкнути push' : 'Disable Push'}
+                  {copy.disablePush}
                 </button>
               </>
             )}
           </div>
         </div>
-      </div>
+      </CoachCard>
 
       {/* Notifications List */}
-      <div className="grid gap-2 md:grid-cols-2">
-        {Object.entries(NOTIFICATION_TYPES).map(([key, notification]) => {
-          const localized = isUk ? { ...notification, ...(NOTIFICATION_TYPES_UK[key] || {}) } : notification
-          const Icon = notification.icon
+      <div className="space-y-3">
+        {Object.entries(NOTIFICATION_ICONS).map(([key, meta]) => {
+          const Icon = meta.icon
           const colorClasses = {
             purple: 'border-purple-200 bg-purple-50',
             orange: 'border-orange-200 bg-orange-50',
@@ -283,63 +281,57 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
             yellow: 'border-yellow-200 bg-yellow-50',
           }
 
-          const isEnabled = preferences[key] ?? notification.default
+          const isEnabled = preferences[key] ?? meta.default
+          const notificationCopy = copy.types[key]
 
           return (
             <div
               key={key}
-              className={`rounded-xl border p-3 transition ${
+              className={`flex items-start gap-4 rounded-2xl border-2 p-4 transition ${
                 isEnabled
-                  ? colorClasses[notification.color]
+                  ? colorClasses[meta.color]
                   : 'border-slate-200 bg-slate-50'
               }`}
             >
-              <div className="flex items-start gap-3">
-                <div className="pt-0.5">
+              <div className="pt-1">
                 <input
                   type="checkbox"
                   checked={isEnabled}
                   onChange={() => handleToggle(key)}
-                  className="h-4 w-4 rounded cursor-pointer"
+                  className="h-5 w-5 cursor-pointer rounded"
                 />
-                </div>
+              </div>
 
-                <div className="flex-1 min-w-0">
-                <label className="flex items-start gap-2 cursor-pointer">
-                  <Icon className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <Icon className="mt-0.5 h-5 w-5 flex-shrink-0" />
                   <div>
-                    <p className="font-semibold text-sm text-slate-900">{localized.label}</p>
-                    <p className="mt-0.5 text-xs text-slate-600">{localized.description}</p>
+                    <p className="text-sm font-semibold text-slate-900">{notificationCopy.label}</p>
+                    <p className="mt-1 text-xs text-slate-600">{notificationCopy.description}</p>
                   </div>
                 </label>
               </div>
-              </div>
 
+              {isEnabled && (
+                <div className="whitespace-nowrap text-sm font-semibold text-slate-600">
+                  {copy.on}
+                </div>
+              )}
             </div>
           )
         })}
       </div>
 
-      {/* Save Button */}
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-      >
-        {saving ? (isUk ? 'Збереження...' : 'Saving...') : (isUk ? 'Зберегти налаштування сповіщень' : 'Save Notification Preferences')}
-      </button>
+      <CoachButton className="w-full justify-center" onClick={handleSave} disabled={saving}>
+        {saving ? copy.saving : copy.save}
+      </CoachButton>
 
-      {/* Info */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-        <p className="text-xs font-semibold text-slate-600 mb-2">{isUk ? 'ЯК МИ СПОВІЩАЄМО:' : 'HOW WE NOTIFY:'}</p>
-        <ul className="text-xs text-slate-600 space-y-1">
-          <li>{isUk ? 'Сповіщення в кабінеті зʼявляються під час користування сервісом' : 'In-app notifications appear while you use the app'}</li>
-          <li>{isUk ? 'Push у браузері або на мобільному працює після дозволу на цьому пристрої' : 'Browser/mobile push works after you enable permission on this device'}</li>
-          <li>{isUk ? 'Email-нагадування надсилаються на зареєстровану адресу' : 'Email reminders sent to your registered email'}</li>
-          <li>{isUk ? 'Без спаму - ми поважаємо ваш час' : 'No spam - we respect your time'}</li>
-          <li>{isUk ? 'Усі налаштування під вашим контролем' : 'You control everything here'}</li>
+      <CoachCard className="p-4" tone="soft">
+        <p className="mb-2 text-xs font-semibold text-slate-600">💡 {copy.howWeNotify}</p>
+        <ul className="space-y-1 text-xs text-slate-600">
+          {copy.howList.map((item) => <li key={item}>✓ {item}</li>)}
         </ul>
-      </div>
+      </CoachCard>
     </div>
   )
 }

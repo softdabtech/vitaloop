@@ -225,9 +225,31 @@ def build_progress_overview(progress_rows: List[Dict[str, Any]] | None) -> Dict[
     comparable_markers = 0
     changes: List[Dict[str, Any]] = []
     stable_markers_all: List[Dict[str, Any]] = []
+    # Stage 2D-2: markers seen on exactly one dated occasion have no prior
+    # value to diff against — they were previously dropped from the response
+    # entirely (silently absent), which forces a frontend consumer to GUESS
+    # whether "not in top_changes/stable_markers" means "new marker" or "no
+    # data at all". Made explicit here instead: an additive, machine-readable
+    # status so the frontend never has to infer it. No new formula — reuses
+    # the exact same `_same_day_average()` collapse already computed below.
+    insufficient_history_markers: List[Dict[str, Any]] = []
     for key, marker_points in points_by_marker.items():
         collapsed = _same_day_average(marker_points)
         if len(collapsed) < 2:
+            if len(collapsed) == 1:
+                only = collapsed[0]
+                insufficient_history_markers.append(
+                    {
+                        "canonical_name": key,
+                        "name": _marker_label(marker_points, key),
+                        "unit": only.get("unit"),
+                        "latest_value": only["value"],
+                        "latest_date": only["date"],
+                        "current_status": only.get("status"),
+                        "current_status_group": only.get("status_group"),
+                        "status": "insufficient_history",
+                    }
+                )
             continue
         comparable_markers += 1
         first = collapsed[0]
@@ -264,6 +286,7 @@ def build_progress_overview(progress_rows: List[Dict[str, Any]] | None) -> Dict[
 
     top_changes = sorted(changes, key=_change_priority)[:5]
     stable_markers = sorted(stable_markers_all, key=lambda item: item["name"])[:12]
+    insufficient_history_markers = sorted(insufficient_history_markers, key=lambda item: item["name"])
     all_comparable_markers = sorted(
         [*changes, *stable_markers_all],
         key=lambda item: (item["latest_date"], item["name"]),
@@ -311,6 +334,7 @@ def build_progress_overview(progress_rows: List[Dict[str, Any]] | None) -> Dict[
             "unique_lab_dates": unique_lab_dates,
             "biomarker_rows": biomarker_rows,
             "markers_with_2plus_dates": comparable_markers,
+            "markers_with_single_date": len(insufficient_history_markers),
             "date_span_days": span_days,
             "first_lab_date": date_spine[0]["date"] if date_spine else None,
             "latest_lab_date": date_spine[-1]["date"] if date_spine else None,
@@ -320,6 +344,7 @@ def build_progress_overview(progress_rows: List[Dict[str, Any]] | None) -> Dict[
         "top_changes": top_changes,
         "stable_markers": stable_markers,
         "all_comparable_markers": all_comparable_markers,
+        "insufficient_history_markers": insufficient_history_markers,
         "undated_uploads": undated_uploads,
         "timeline": date_spine,
         "rule_insights": [

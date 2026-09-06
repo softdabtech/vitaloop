@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
+import { PageHeader } from '../components/landing/PageHeader.jsx'
 import {
-  ArrowLeft,
   BrainCircuit,
   Clock3,
   DollarSign,
@@ -100,23 +100,12 @@ export default function About() {
     <>
       <Seo
         title="About VITALOOP | Symptom & Lab Health Intelligence"
-        description="Learn why VITALOOP connects symptom intake, biomarker analysis, Knowledge Base reasoning, safety context, and longitudinal progress in one health workflow."
+        description="Learn why VITALOOP connects symptom intake, AI blood test analysis, biomarker explanations, and longitudinal progress in one health workflow."
         path="/about"
       />
 
       <div className="min-h-screen bg-white">
-        {/* Header */}
-        <div className="border-b border-slate-200 bg-white">
-          <div className="mx-auto max-w-[1240px] px-4 sm:px-6 py-6">
-            <button
-              onClick={() => navigate('/')}
-              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
-            >
-              <ArrowLeft size={16} />
-              Back to home
-            </button>
-          </div>
-        </div>
+        <PageHeader />
 
         {/* SECTION 1: HERO */}
         <div className="bg-gradient-to-b from-slate-50 to-white">

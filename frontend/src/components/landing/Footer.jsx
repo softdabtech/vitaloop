@@ -49,7 +49,7 @@ export default function Footer() {
             <BrandMark />
           </div>
           <p className="mt-4 max-w-md leading-relaxed text-slate-500">
-            Symptom-first lab intelligence powered by a shared analysis core, explainable Knowledge reports, safety notes, trends, and weekly health-loop tracking for people and professional teams.
+            Symptom-first lab intelligence, explainable Knowledge reports, and weekly health-loop tracking for people and professional teams.
           </p>
           <p className="mt-4 text-xs font-medium uppercase tracking-[0.16em] text-slate-600">Not medical advice. Always work with a qualified clinician for diagnosis and treatment decisions.</p>
           <div className="mt-6 flex flex-col items-start gap-2">

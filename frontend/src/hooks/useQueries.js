@@ -106,7 +106,7 @@ export const useUserProfile = () =>
   useQuery({
     queryKey: ['user-profile'],
     queryFn: async () => {
-      const { data } = await api.get('/profile')
+      const { data } = await api.get('/user/profile')
       return data || null
     },
     staleTime: 30 * 60 * 1000,
@@ -132,24 +132,13 @@ export const useUserEntitlements = () =>
       }
 
       try {
-        const { data } = await api.get('/auth/entitlements')
-        const entitlements = data?.entitlements || data || {}
-        const billingStatus = String(entitlements?.billing_status || entitlements?.subscription_status || 'free').toLowerCase()
-        const isPremium = typeof entitlements?.is_premium === 'boolean'
-          ? entitlements.is_premium
-          : Boolean(entitlements?.has_active_subscription || entitlements?.subscription_active || billingStatus === 'active')
-
-        return {
-          ...freeEntitlements,
-          ...entitlements,
-          is_premium: isPremium,
-          billing_status: billingStatus,
-          plan_key: entitlements?.plan_key || entitlements?.plan_name || (isPremium ? 'personal' : 'free'),
-          has_active_subscription: Boolean(isPremium || entitlements?.has_active_subscription || entitlements?.subscription_active),
-          features: {
-            ...freeEntitlements.features,
-            ...(entitlements?.features || {}),
-          },
+        const { data } = await api.get('/auth/me')
+        return data?.entitlements || {
+          is_premium: Boolean(data?.has_active_subscription || data?.subscription_active),
+          billing_status: String(data?.subscription_status || 'free').toLowerCase(),
+          plan_key: data?.plan_name || 'free',
+          has_active_subscription: Boolean(data?.has_active_subscription || data?.subscription_active),
+          features: freeEntitlements.features,
         }
       } catch (error) {
         if (error?.response?.status === 401) {
@@ -158,10 +147,16 @@ export const useUserEntitlements = () =>
         throw error
       }
     },
-    staleTime: 15 * 1000,
-    gcTime: 60 * 60 * 1000,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    // Post-release entitlement consistency fix: a 30-minute staleTime meant
+    // a Premium grant made out-of-band (CRM) could stay invisible to an
+    // already-open client for up to 30 minutes — the global QueryClient
+    // already has refetchOnWindowFocus/refetchOnReconnect enabled
+    // (main.jsx), but React Query only actually refetches on focus/reconnect
+    // when the data IS stale, so a long staleTime silently defeated both.
+    // A short staleTime lets those existing triggers work as intended,
+    // without adding any new polling.
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   })
 
 // Symptom check session/context

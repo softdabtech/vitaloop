@@ -61,6 +61,19 @@ function writeLocalStorageArray(key, value) {
   window.localStorage.setItem(key, JSON.stringify(value))
 }
 
+function clearSupabaseAuthStorage() {
+  if (typeof window === 'undefined') return
+  try {
+    for (const key of Object.keys(window.localStorage)) {
+      if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        window.localStorage.removeItem(key)
+      }
+    }
+  } catch {
+    // Supabase signOut is the primary cleanup path; direct storage cleanup is best-effort.
+  }
+}
+
 function resolveEmailConfirmationRedirect(returnUrl = null) {
   const configured = import.meta.env.VITE_EMAIL_CONFIRMATION_PATH
   if (configured && /^https?:\/\//i.test(configured)) {
@@ -598,6 +611,17 @@ export default function Login() {
       setShowResetInfo(true)
     }
     let active = true
+
+    if (searchParams.get('signout') === '1') {
+      supabase.auth.signOut()
+        .catch(() => {})
+        .finally(() => {
+          clearSupabaseAuthStorage()
+        })
+      return () => {
+        active = false
+      }
+    }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!active || !session?.user || !session?.access_token) {
@@ -1156,6 +1180,8 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => setShowPass((v) => !v)}
+                    aria-label={showPass ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPass}
                     style={{
                       position: 'absolute', right: 12, top: '50%',
                       transform: 'translateY(-50%)',

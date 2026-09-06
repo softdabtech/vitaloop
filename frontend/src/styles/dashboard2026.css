@@ -1,6 +1,4 @@
 :root {
-  --vtl-font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --vtl-font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --vtl-bg-dark: #0a0f1c;
   --vtl-bg-light: #f8fafc;
   --vtl-surface-dark: #111827;
@@ -18,9 +16,6 @@
   --vtl-shadow-dark: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.2);
   --vtl-shadow-light: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --vtl-emerald-glow: 0 0 0 3px rgba(var(--brand-rgb, 29, 158, 117), 0.18);
-  --vtl-card-border: rgba(15, 23, 42, 0.1);
-  --vtl-card-shadow: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05);
-  --vtl-card-shadow-hover: 0 12px 30px rgba(15, 23, 42, 0.12), 0 4px 10px rgba(15, 23, 42, 0.06);
   /* Bottom nav height so pages can account for it */
   --vtl-bottom-bar-height: 72px;
 }
@@ -77,7 +72,6 @@ button[aria-label].inline-icon {
 
 .vtl-shell {
   min-height: 100svh;
-  font-family: var(--vtl-font-body);
   background: radial-gradient(circle at 8% 5%, rgba(var(--brand-rgb, 29, 158, 117), 0.14), transparent 28%),
               radial-gradient(circle at 92% 0%, rgba(var(--brand-rgb, 29, 158, 117), 0.1), transparent 26%),
               var(--vtl-bg-dark);
@@ -110,37 +104,26 @@ button[aria-label].inline-icon {
 .vtl-button-primary {
   min-height: 44px;
   border-radius: var(--vtl-radius-btn);
-  border: 1px solid rgba(var(--brand-rgb, 29, 158, 117), 0.48);
-  background: linear-gradient(135deg, #13a579 0%, #0e8f75 55%, #0d6b9e 100%);
+  border: 1px solid rgba(var(--brand-rgb, 29, 158, 117), 0.72);
+  background: linear-gradient(135deg, var(--vtl-accent), #0f7f5f);
   color: #ffffff;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  box-shadow: 0 8px 20px rgba(var(--brand-rgb, 29, 158, 117), 0.24);
-  transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  font-weight: 700;
+  transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
 }
 
 .vtl-button-primary:hover {
-  transform: translateY(-1px) scale(1.01);
+  transform: translateY(-1px);
   filter: brightness(1.06);
-  border-color: rgba(var(--brand-rgb, 29, 158, 117), 0.7);
-  box-shadow: 0 12px 26px rgba(var(--brand-rgb, 29, 158, 117), 0.3);
+  box-shadow: var(--vtl-emerald-glow);
 }
 
 .vtl-button-secondary {
   min-height: 44px;
   border-radius: var(--vtl-radius-btn);
   border: 1px solid rgba(148, 163, 184, 0.35);
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.72));
-  color: #f8fafc;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
-}
-
-.vtl-button-secondary:hover {
-  transform: translateY(-1px);
-  border-color: rgba(148, 163, 184, 0.58);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
+  background: rgba(15, 23, 42, 0.65);
+  color: var(--vtl-text-primary-dark);
+  font-weight: 600;
 }
 
 .vtl-upload-zone {
@@ -178,35 +161,15 @@ button[aria-label].inline-icon {
    ───────────────────────────────────────── */
 .vtl-page {
   min-height: 100svh;
-  font-family: var(--vtl-font-body);
   background: #f8fafc;
   color: #0f172a;
 }
 
-.vtl-page h1,
-.vtl-page h2,
-.vtl-page h3,
-.vtl-page h4 {
-  font-family: var(--vtl-font-display);
-  letter-spacing: -0.01em;
-}
-
-.vtl-page button {
-  font-family: var(--vtl-font-body);
-  font-weight: 700;
-  letter-spacing: 0.005em;
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background-color 160ms ease;
-}
-
-.vtl-page button:hover {
-  transform: translateY(-1px);
-}
-
 .vtl-light-card {
   border-radius: var(--vtl-radius-card);
-  border: 1px solid var(--vtl-card-border);
+  border: 1px solid rgba(15, 23, 42, 0.08);
   background: #ffffff;
-  box-shadow: var(--vtl-card-shadow);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .vtl-light-card-hover {
@@ -215,49 +178,9 @@ button[aria-label].inline-icon {
 
 .vtl-light-card-hover:hover {
   transform: scale(1.015);
-  box-shadow: var(--vtl-card-shadow-hover);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.09), 0 1px 3px rgba(15, 23, 42, 0.05);
   border-color: rgba(16, 185, 129, 0.3);
 }
-
-/* Unify the visual rhythm for legacy card blocks across all cabinet pages */
-.vtl-page .rounded-2xl.border {
-  border-color: var(--vtl-card-border);
-  box-shadow: var(--vtl-card-shadow);
-}
-
-.vtl-page .rounded-2xl.border:hover {
-  box-shadow: var(--vtl-card-shadow-hover);
-}
-
-/* Shared card utility for new/updated sections */
-.vtl-unified-card {
-  border-radius: var(--vtl-radius-card);
-  border: 1px solid var(--vtl-card-border);
-  background: #fff;
-  box-shadow: var(--vtl-card-shadow);
-}
-
-/* Subtle reveal animation for 2026-like polished feel */
-@keyframes vtl-rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.995);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.vtl-reveal {
-  opacity: 0;
-  animation: vtl-rise-in 460ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-.vtl-reveal-delay-1 { animation-delay: 40ms; }
-.vtl-reveal-delay-2 { animation-delay: 90ms; }
-.vtl-reveal-delay-3 { animation-delay: 140ms; }
-.vtl-reveal-delay-4 { animation-delay: 190ms; }
 
 /* Override vtl-card when nested inside light page */
 .vtl-page .vtl-card {
@@ -286,14 +209,5 @@ button[aria-label].inline-icon {
 @media (prefers-reduced-motion: reduce) {
   .vtl-light-card-hover {
     transition: none !important;
-  }
-
-  .vtl-reveal,
-  .vtl-reveal-delay-1,
-  .vtl-reveal-delay-2,
-  .vtl-reveal-delay-3,
-  .vtl-reveal-delay-4 {
-    animation: none !important;
-    opacity: 1 !important;
   }
 }

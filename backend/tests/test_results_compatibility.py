@@ -89,11 +89,22 @@ async def test_results_by_upload_success(monkeypatch):
             },
         }
 
+    async def fake_get_latest_report_version(_upload_id, _user_id, _locale):
+        # Stage 2G: this is the legacy-fallback case — no persisted
+        # report_versions row exists yet, so the endpoint must fall back to
+        # the live pipeline exactly as it did before this stage.
+        return None
+
+    async def fake_has_any_report_version(_upload_id, _user_id):
+        return False
+
     monkeypatch.setattr(compatibility_router, "assert_upload_belongs_to_user", fake_assert_upload_belongs_to_user)
     monkeypatch.setattr(compatibility_router, "get_biomarkers_by_upload", fake_get_biomarkers_by_upload)
     monkeypatch.setattr(compatibility_router, "get_protocol_by_upload", fake_get_protocol_by_upload)
     monkeypatch.setattr(compatibility_router, "get_user_profile", fake_get_user_profile)
     monkeypatch.setattr(compatibility_router, "run_lab_analysis_pipeline", fake_run_lab_analysis_pipeline)
+    monkeypatch.setattr(compatibility_router, "get_latest_report_version", fake_get_latest_report_version)
+    monkeypatch.setattr(compatibility_router, "has_any_report_version", fake_has_any_report_version)
 
     fake_user = {"sub": fake_user_id, "email": "results@vitaloop.test"}
     app.dependency_overrides[get_current_user] = lambda: fake_user
@@ -114,6 +125,7 @@ async def test_results_by_upload_success(monkeypatch):
         assert payload["knowledge_report"]["why_it_matters"][0]["title"] == "Low vitamin D"
         assert payload["knowledge_report"]["why_it_matters"][0]["source_url"] is None
         assert payload["shopping_links"][0]["label"] == "Vitamin D3"
+        assert payload["report_source"] == "legacy_fallback"
     finally:
         app.dependency_overrides.clear()
 

@@ -115,6 +115,25 @@ const translations = {
       biomarkerAlerts: 'Biomarker Alerts',
       noInsights: 'No insights yet — upload your first lab result.',
     },
+    // Stage 2D-2: clinical/biomarker progress panel, backed by GET /progress/overview.
+    // These are display-copy labels only — the underlying data (dates, values,
+    // direction, status) always comes from the backend overview, never computed here.
+    labProgress: {
+      title: 'Clinical progress',
+      helperTimeTrend: 'Backend-computed change since your previous dated result.',
+      helperSnapshot: 'One dated result so far — a trend needs a second dated lab.',
+      helperUndated: 'None of your results have a lab date yet — add lab dates to see progress.',
+      helperEmpty: 'Upload a lab result to start tracking progress.',
+      changed: 'Changed',
+      stable: 'Stable',
+      newMarkers: 'New / not yet comparable',
+      insufficientHistory: 'Insufficient history',
+      direction: { rising: 'Increased', falling: 'Decreased', stable: 'Unchanged' },
+      previousLabel: 'Previous',
+      latestLabel: 'Latest',
+      onLabel: 'on',
+      moreStable: (count) => `+${count} more stable`,
+    },
   },
   uk: {
     dashboard: {
@@ -223,6 +242,22 @@ const translations = {
       currentInsights: 'Поточні висновки',
       biomarkerAlerts: 'Попередження біомаркерів',
       noInsights: 'Висновків ще немає — завантажте перший результат аналізів.',
+    },
+    labProgress: {
+      title: 'Клінічна динаміка',
+      helperTimeTrend: 'Зміна з попереднього датованого результату, розрахована на бекенді.',
+      helperSnapshot: 'Поки що один датований результат — для динаміки потрібен другий датований аналіз.',
+      helperUndated: 'Жоден результат ще не має дати аналізу — додайте дати, щоб побачити динаміку.',
+      helperEmpty: 'Завантажте результат аналізу, щоб почати відстежувати динаміку.',
+      changed: 'Змінилось',
+      stable: 'Стабільно',
+      newMarkers: 'Нові / ще не порівнянні',
+      insufficientHistory: 'Недостатньо історії',
+      direction: { rising: 'Збільшилось', falling: 'Зменшилось', stable: 'Без змін' },
+      previousLabel: 'Попереднє',
+      latestLabel: 'Останнє',
+      onLabel: 'від',
+      moreStable: (count) => `ще +${count} стабільних`,
     },
   },
 }

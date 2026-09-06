@@ -1,509 +1,812 @@
-import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import {
-  AlertTriangle,
-  CalendarClock,
-  CheckCircle2,
-  ChevronDown,
-  ChevronRight,
-  Clock3,
-  Info,
-  Route,
-  ShieldCheck,
-  UploadCloud,
-} from 'lucide-react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { motion } from 'framer-motion'
+import { CheckCircle2, Droplets, Moon, Pill, Sparkles, Sun, Waves } from 'lucide-react'
+import ProgressChart from '../components/ProgressChart.jsx'
+import ProgressPhotoGallery from '../components/ProgressPhotoGallery.jsx'
+import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
+import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import { useProgress } from '../hooks/useQueries.js'
+import { useSubscription } from '../hooks/useSubscription.js'
 import api from '../lib/api.js'
-import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
-import { isUkrainianLocale } from '../lib/locale.js'
+import { supabase } from '../lib/supabase.js'
+import '../styles/dashboard2026.css'
 
-const UK_COPY = {
-  emptyTitle: 'Даних для динаміки ще немає',
-  emptyBody: 'Завантажте перший результат аналізів, щоб створити базову точку. VITALOOP покаже тренди лише коли буде щонайменше дві різні лабораторні дати.',
-  upload: 'Завантажити результати',
-  unableTitle: 'Не вдалося завантажити динаміку',
-  unableBody: 'Спробуйте ще раз. Ваші завантаження та звіти не змінено.',
-  retry: 'Повторити',
-  eyebrow: 'Прогрес за лабораторними датами',
-  title: 'Що змінилося між аналізами?',
-  dateSpine: 'Вісь дат',
-  confidence: 'Надійність порівняння',
-  topChanges: 'Головні зміни',
-  stable: 'Стабільно між датами',
-  allMarkers: 'Усі порівнювані маркери',
-  timeline: 'Хронологія за датою аналізу',
-  nextStep: 'Наступний найкращий крок',
-  markers: 'показників',
-  uploads: 'завантажень',
-  uniqueDates: 'унікальні дати',
-  comparable: 'порівнювані маркери',
-  missingDates: 'без дати',
-  dateSpan: 'період',
-  days: 'дн.',
-  startCheckin: 'Почати check-in',
-  uploadAnother: 'Завантажити ще аналіз',
-  hiddenPercent: 'Відсоток не акцентується: перше значення близьке до нуля або зміна може виглядати непропорційно.',
-  noProgressTitle: 'Це ще не прогрес у часі',
-  noProgressBody: 'VITALOOP не будує часову динаміку без щонайменше двох різних лабораторних дат. Дата завантаження файлу не використовується як дата аналізу.',
-  undatedTitle: 'Потрібні дати аналізів',
-  snapshotTitle: 'Snapshot, не trend',
-  trendTitle: 'Динаміка за датами',
-  strongTrendTitle: 'Сильніша динаміка',
-  educational: 'Освітня інтерпретація. Це не діагноз і не заміна консультації лікаря.',
-}
-
-const EN_COPY = {
-  emptyTitle: 'No progress data yet',
-  emptyBody: 'Upload your first lab result to create a baseline. VITALOOP will only show trends after there are at least two different lab dates.',
-  upload: 'Upload results',
-  unableTitle: 'Unable to load progress',
-  unableBody: 'Please try again. Your uploads and reports are not changed.',
-  retry: 'Retry',
-  eyebrow: 'Progress by lab dates',
-  title: 'What changed between lab tests?',
-  dateSpine: 'Date spine',
-  confidence: 'Comparison confidence',
-  topChanges: 'Top changes',
-  stable: 'Stable across dates',
-  allMarkers: 'All comparable markers',
-  timeline: 'Timeline by lab date',
-  nextStep: 'Next best step',
-  markers: 'markers',
-  uploads: 'uploads',
-  uniqueDates: 'unique dates',
-  comparable: 'comparable markers',
-  missingDates: 'missing dates',
-  dateSpan: 'date span',
-  days: 'days',
-  startCheckin: 'Start check-in',
-  uploadAnother: 'Upload another lab',
-  hiddenPercent: 'Percent is not emphasized because the first value is close to zero or the change may look disproportionate.',
-  noProgressTitle: 'This is not progress over time yet',
-  noProgressBody: 'VITALOOP does not build time progress without at least two different lab dates. File upload date is not used as the lab date.',
-  undatedTitle: 'Lab dates needed',
-  snapshotTitle: 'Snapshot, not trend',
-  trendTitle: 'Date-aware trend',
-  strongTrendTitle: 'Higher-confidence trend',
-  educational: 'Educational interpretation. This is not a diagnosis or a replacement for medical care.',
-}
-
-function formatDate(value, isUk = false) {
-  if (!value) return isUk ? 'Дата відсутня' : 'Date missing'
-  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10)
-  return date.toLocaleDateString(isUk ? 'uk-UA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function formatValue(value, unit = '') {
-  if (value == null || Number.isNaN(Number(value))) return '-'
-  const numeric = Number(value)
-  const rounded = Math.abs(numeric) >= 100 ? Math.round(numeric) : Math.round(numeric * 100) / 100
-  return `${rounded}${unit ? ` ${unit}` : ''}`
-}
-
-function formatDelta(value, unit = '') {
-  if (value == null || Number.isNaN(Number(value))) return '-'
-  const numeric = Number(value)
-  const sign = numeric > 0 ? '+' : ''
-  const rounded = Math.abs(numeric) >= 100 ? Math.round(numeric) : Math.round(numeric * 100) / 100
-  return `${sign}${rounded}${unit ? ` ${unit}` : ''}`
-}
-
-function toneForStatus(statusGroup) {
-  if (statusGroup === 'needs_review') return 'warning'
-  if (statusGroup === 'monitor') return 'attention'
-  if (statusGroup === 'stable') return 'success'
-  return 'neutral'
-}
-
-function modeView(mode, copy) {
-  if (mode === 'undated') return { title: copy.undatedTitle, tone: 'attention' }
-  if (mode === 'snapshot') return { title: copy.snapshotTitle, tone: 'warning' }
-  if (mode === 'high_confidence_time_trend') return { title: copy.strongTrendTitle, tone: 'success' }
-  if (mode === 'time_trend') return { title: copy.trendTitle, tone: 'primary' }
-  return { title: copy.noProgressTitle, tone: 'neutral' }
-}
-
-function progressHeroBody(overview, isUk) {
-  const summary = overview?.summary || {}
-  if (overview?.mode === 'undated') {
-    return isUk
-      ? `Є ${summary.biomarker_rows || 0} рядків показників, але лабораторні дати не знайдені. Ці дані не потрапляють на вісь прогресу.`
-      : `${summary.biomarker_rows || 0} biomarker rows are present, but lab dates were not found. These data points stay off the progress timeline.`
+function toNumber(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const normalized = value.replace(',', '.').trim()
+    if (!normalized) return null
+    const parsed = Number(normalized)
+    return Number.isFinite(parsed) ? parsed : null
   }
-  if (overview?.mode === 'snapshot') {
-    return isUk
-      ? `Знайдена одна лабораторна дата: ${formatDate(summary.first_lab_date, true)}. Це знімок стану, а не зміна в часі.`
-      : `One lab date was found: ${formatDate(summary.first_lab_date)}. This is a health snapshot, not change over time.`
-  }
-  if (overview?.timeline_eligible) {
-    return isUk
-      ? `Порівнюємо ${summary.unique_lab_dates} лабораторні дати з ${formatDate(summary.first_lab_date, true)} до ${formatDate(summary.latest_lab_date, true)}.`
-      : `Comparing ${summary.unique_lab_dates} lab dates from ${formatDate(summary.first_lab_date)} to ${formatDate(summary.latest_lab_date)}.`
-  }
-  return isUk ? 'Після наступного аналізу з лабораторною датою тут зʼявиться чесна динаміка.' : 'After another dated lab result, this page will show a reliable timeline.'
+  return null
 }
 
-function MetricTile({ label, value, tone = 'neutral' }) {
-  const className = tone === 'warning'
-    ? 'border-amber-200 bg-amber-50 text-amber-900'
-    : tone === 'success'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-      : 'border-slate-200 bg-white text-slate-950'
-  return (
-    <div className={`rounded-3xl border p-4 shadow-sm ${className}`}>
-      <p className="text-xs font-bold uppercase tracking-wide opacity-70">{label}</p>
-      <p className="mt-2 text-2xl font-black">{value ?? '-'}</p>
-    </div>
-  )
+
+function deltaPct(first, last) {
+  if (first == null || last == null || first === 0) return null
+  const delta = ((last - first) / first) * 100
+  return Number.isFinite(delta) ? Math.round(delta) : null
 }
 
-function DateSpine({ overview, copy, isUk }) {
-  const dates = overview?.date_spine || []
-  if (!dates.length) {
+function formatMetricValue(value) {
+  if (value == null) return '-'
+  if (Math.abs(value) >= 1000) return Math.round(value).toLocaleString('en-US')
+  if (Math.abs(value) >= 100) return value.toFixed(1)
+  return value.toFixed(2)
+}
+
+function shortMetricValue(value) {
+  if (value == null) return '-'
+  if (Math.abs(value) >= 100) return Math.round(value).toLocaleString('en-US')
+  if (Math.abs(value) >= 10) return value.toFixed(1)
+  return value.toFixed(2)
+}
+
+function normalizeBiomarkerName(name) {
+  return String(name || '').replace(/\s+/g, ' ').trim()
+}
+
+const BIOMARKER_NAME_TRANSLATIONS = [
+  [/^Глюкоза/i, 'Glucose'],
+  [/^Гемоглобін|^Гемоглобин/i, 'Hemoglobin'],
+  [/^Гематокрит/i, 'Hematocrit'],
+  [/^Креатинін/i, 'Creatinine'],
+  [/^Сечовина/i, 'Blood Urea Nitrogen'],
+  [/^Магній/i, 'Magnesium'],
+  [/^Кальцій/i, 'Calcium'],
+  [/^Натрій/i, 'Sodium'],
+  [/^Калій/i, 'Potassium'],
+  [/^Хлор/i, 'Chloride'],
+  [/^Лейкоцити/i, 'White Blood Cells'],
+  [/^Тромбоцити/i, 'Platelets'],
+  [/^Еритроцити/i, 'Red Blood Cells'],
+  [/^Тригліцериди/i, 'Triglycerides'],
+  [/^Холестерин/i, 'Total Cholesterol'],
+  [/^ЛПНЩ/i, 'LDL Cholesterol'],
+  [/^ЛПВЩ/i, 'HDL Cholesterol'],
+  [/^Вітамін D|^Витамин D/i, 'Vitamin D'],
+]
+
+const KNOWN_BIOMARKER_TOKENS = [
+  'glucose', 'hemoglobin', 'hematocrit', 'ferritin', 'vitamin', 'magnesium', 'omega',
+  'cholesterol', 'triglycerides', 'ldl', 'hdl', 'creatinine', 'urea', 'bun', 'sodium',
+  'potassium', 'chloride', 'calcium', 'platelets', 'white blood cells', 'red blood cells',
+  'wbc', 'rbc', 'hba1c', 'insulin', 'crp', 'esr', 'alt', 'ast', 'ggt', 'albumin', 'protein',
+]
+
+function toEnglishBiomarkerName(rawName) {
+  const raw = normalizeBiomarkerName(rawName)
+  if (!raw) return ''
+
+  for (const [pattern, translated] of BIOMARKER_NAME_TRANSLATIONS) {
+    if (pattern.test(raw)) return translated
+  }
+
+  return raw
+}
+
+function hasReadableBiomarkerName(name) {
+  const english = toEnglishBiomarkerName(name)
+  if (!english) return false
+  if (english.length < 2 || english.length > 60) return false
+
+  // English-only rendering rule for Progress cards.
+  if (!/^[A-Za-z0-9()/%+\-.,\s]+$/.test(english)) return false
+
+  const words = english.split(/\s+/).filter(Boolean)
+  if (words.length > 6) return false
+
+  const letters = (english.match(/[A-Za-z]/g) || []).length
+  if (letters < 3) return false
+
+  const hasKnownToken = KNOWN_BIOMARKER_TOKENS.some((token) => english.toLowerCase().includes(token))
+  return hasKnownToken
+}
+
+function buildBiomarkerSeries(uploads) {
+  const seriesMap = new Map()
+
+  uploads.forEach((upload, uploadIndex) => {
+    const markers = Array.isArray(upload?.biomarkers) ? upload.biomarkers : []
+
+    markers.forEach((marker) => {
+      const name = toEnglishBiomarkerName(marker?.name)
+      const value = toNumber(marker?.value)
+      if (!name || value == null || !hasReadableBiomarkerName(name)) return
+
+      if (!seriesMap.has(name)) {
+        seriesMap.set(name, {
+          name,
+          unit: marker?.unit || '',
+          points: [],
+          latestMarker: marker,
+          latestUploadIndex: uploadIndex,
+        })
+      }
+
+      const entry = seriesMap.get(name)
+      entry.points.push(value)
+      entry.latestUploadIndex = uploadIndex
+      entry.latestMarker = marker
+      if (!entry.unit && marker?.unit) {
+        entry.unit = marker.unit
+      }
+    })
+  })
+
+  return [...seriesMap.values()]
+}
+
+function buildBiomarkerTrends(uploads) {
+  const series = buildBiomarkerSeries(uploads)
+
+  const trends = []
+  series.forEach((entry) => {
+    if (!entry.points || entry.points.length < 2) return
+
+    const firstPoint = entry.points[0]
+    const lastPoint = entry.points[entry.points.length - 1]
+    const pct = deltaPct(firstPoint, lastPoint)
+    if (pct == null) return
+
+    trends.push({
+      name: entry.name,
+      unit: entry.unit,
+      start: firstPoint,
+      end: lastPoint,
+      pct,
+      direction: pct >= 0 ? 'up' : 'down',
+    })
+  })
+
+  return trends.sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct))
+}
+
+function buildMarkerOverview(uploads, trends) {
+  const series = buildBiomarkerSeries(uploads)
+  const trendMap = new Map(trends.map((trend) => [trend.name, trend]))
+
+  const sortedByTrend = series
+    .filter((item) => item.points.length >= 2)
+    .sort((a, b) => {
+      const pctA = Math.abs(trendMap.get(a.name)?.pct || 0)
+      const pctB = Math.abs(trendMap.get(b.name)?.pct || 0)
+      if (pctA !== pctB) return pctB - pctA
+      return b.latestUploadIndex - a.latestUploadIndex
+    })
+
+  const latestUpload = uploads[uploads.length - 1] || null
+  const latestUnique = (latestUpload?.biomarkers || [])
+    .map((item) => ({
+      name: normalizeBiomarkerName(item?.name),
+      value: toNumber(item?.value),
+      unit: item?.unit || '',
+      marker: item,
+    }))
+    .filter((item) => item.name && item.value != null && hasReadableBiomarkerName(item.name))
+    .filter((item, index, arr) => arr.findIndex((candidate) => candidate.name === item.name) === index)
+
+  const selectedNames = new Set()
+  const selected = []
+
+  sortedByTrend.forEach((item) => {
+    if (selected.length >= 4) return
+    if (selectedNames.has(item.name)) return
+    selected.push(item)
+    selectedNames.add(item.name)
+  })
+
+  latestUnique.forEach((item) => {
+    if (selected.length >= 4) return
+    if (selectedNames.has(item.name)) return
+
+    selected.push({
+      name: item.name,
+      unit: item.unit,
+      points: [item.value],
+      latestMarker: item.marker,
+      latestUploadIndex: uploads.length - 1,
+    })
+    selectedNames.add(item.name)
+  })
+
+  return selected.map((item) => {
+    const firstValue = item.points[0] ?? null
+    const latestValue = item.points[item.points.length - 1] ?? null
+    const delta = firstValue != null && latestValue != null ? latestValue - firstValue : null
+    const trend = trendMap.get(item.name)
+    const inRange =
+      item.latestMarker
+      && Number.isFinite(Number(item.latestMarker.ref_low))
+      && Number.isFinite(Number(item.latestMarker.ref_high))
+      && latestValue != null
+        ? latestValue >= Number(item.latestMarker.ref_low) && latestValue <= Number(item.latestMarker.ref_high)
+        : null
+
+    const statusLabel =
+      inRange == null
+        ? (item.points.length >= 2 ? (delta == null || delta >= 0 ? 'Improving' : 'Review') : 'Latest')
+        : inRange
+          ? 'Optimal'
+          : 'Needs focus'
+
+    return {
+      key: item.name.toLowerCase(),
+      name: item.name,
+      subtitle: 'Biomarker Trend',
+      markerName: item.name,
+      unit: item.unit || '',
+      points: item.points,
+      latestValue,
+      firstValue,
+      delta,
+      statusLabel,
+      trendPct: trend?.pct ?? null,
+    }
+  })
+}
+
+const TIMING_TO_LABEL = {
+  morning: 'Daily in the morning',
+  with_breakfast: 'Daily with breakfast',
+  before_breakfast: 'Before breakfast',
+  with_food: 'Daily with meal',
+  with_lunch: 'Daily with lunch',
+  afternoon: 'Daily in the afternoon',
+  with_dinner: 'Daily with dinner',
+  morning_with_food: 'Morning with meal',
+  morning_empty: 'Morning on empty stomach',
+  between_meals: 'Between meals',
+  evening: 'Daily in the evening',
+  night: 'Daily at night',
+  before_bed: 'Before bed',
+  bedtime: 'At bedtime',
+}
+
+function normalizeProtocolRow(item) {
+  if (!item || typeof item !== 'object') return null
+
+  const supplement = String(item.supplement || item.name || '').trim()
+  if (!supplement) return null
+
+  const dose = String(item.dosage || item.dose || '-').trim() || '-'
+  const timingRaw = String(item.timing || item.schedule || '').trim()
+  const schedule = TIMING_TO_LABEL[timingRaw] || timingRaw.replaceAll('_', ' ') || '-'
+
+  return { supplement, dose, schedule }
+}
+
+function supplementIcon(name) {
+  const normalized = String(name || '').toLowerCase()
+  if (normalized.includes('vitamin d') || normalized.includes('k2')) return Sun
+  if (normalized.includes('omega')) return Waves
+  if (normalized.includes('magnesium')) return Moon
+  if (normalized.includes('iron')) return Pill
+  if (normalized.includes('b complex') || normalized.includes('vitamin b')) return Droplets
+  return Pill
+}
+
+function sortProtocolRecommendations(rows) {
+  const priorityWeight = { HIGH: 0, MEDIUM: 1, LOW: 2 }
+  return [...rows].sort((a, b) => {
+    const prA = priorityWeight[String(a?.priority || '').toUpperCase()] ?? 9
+    const prB = priorityWeight[String(b?.priority || '').toUpperCase()] ?? 9
+    if (prA !== prB) return prA - prB
+    return String(a?.supplement || '').localeCompare(String(b?.supplement || ''))
+  })
+}
+
+function Sparkline({ points = [], color = '#14b8a6' }) {
+  if (!Array.isArray(points) || points.length === 0) {
     return (
-      <CoachCard tone="attention" className="p-5 sm:p-6">
-        <div className="flex items-start gap-3">
-          <div className="rounded-2xl bg-amber-100 p-3 text-amber-700"><CalendarClock className="h-5 w-5" /></div>
-          <div>
-            <p className="coach-eyebrow">{copy.dateSpine}</p>
-            <h2 className="coach-title-lg">{copy.undatedTitle}</h2>
-            <p className="mt-2 text-sm leading-6 text-amber-950">{copy.noProgressBody}</p>
-          </div>
-        </div>
-      </CoachCard>
+      <svg viewBox="0 0 100 30" className="h-10 w-full" role="img" aria-label="No trend data">
+        <line x1="0" y1="16" x2="100" y2="16" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4 4" />
+      </svg>
     )
   }
 
+  const min = Math.min(...points)
+  const max = Math.max(...points)
+  const range = max - min || 1
+  const step = points.length > 1 ? 100 / (points.length - 1) : 0
+
+  const polyline = points
+    .map((value, index) => {
+      const x = step * index
+      const y = 26 - ((value - min) / range) * 20
+      return `${x},${y}`
+    })
+    .join(' ')
+
   return (
-    <CoachCard className="p-5 sm:p-6">
-      <div className="mb-5 flex items-center gap-2">
-        <Route className="h-5 w-5 text-teal-600" />
-        <div>
-          <p className="coach-eyebrow">{copy.dateSpine}</p>
-          <h2 className="coach-title-lg">{isUk ? 'Лабораторні дати, які реально порівнюються' : 'Lab dates used for comparison'}</h2>
-        </div>
-      </div>
-      <div className="grid gap-3 md:grid-cols-3">
-        {dates.map((item, index) => (
-          <div key={item.date} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-lg font-black text-slate-950">{formatDate(item.date, isUk)}</p>
-              <CoachBadge tone={index === dates.length - 1 ? 'primary' : 'neutral'}>
-                {index === 0 ? (isUk ? 'Перша' : 'First') : index === dates.length - 1 ? (isUk ? 'Остання' : 'Latest') : (isUk ? 'Проміжна' : 'Mid')}
-              </CoachBadge>
-            </div>
-            <p className="mt-2 text-sm font-semibold text-slate-600">{item.upload_count} {copy.uploads} · {item.marker_count} {copy.markers}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {Object.entries(item.status_counts || {}).map(([key, value]) => (
-                <CoachBadge key={key} tone={toneForStatus(key)}>{key.replace('_', ' ')} {value}</CoachBadge>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </CoachCard>
+    <svg viewBox="0 0 100 30" className="h-10 w-full" role="img" aria-label="Biomarker trend">
+      <polyline points={polyline} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle
+        cx={step * (points.length - 1)}
+        cy={26 - ((points[points.length - 1] - min) / range) * 20}
+        r="2.8"
+        fill={color}
+      />
+    </svg>
   )
 }
 
-function ConfidenceBlock({ overview, copy, isUk }) {
-  const summary = overview?.summary || {}
-  const confidence = overview?.confidence || {}
-  const mode = modeView(overview?.mode, copy)
-  return (
-    <CoachCard className="p-5 sm:p-6">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="coach-eyebrow">{copy.confidence}</p>
-          <h2 className="coach-title-lg">{mode.title}</h2>
-        </div>
-        <CoachBadge tone={mode.tone}>{confidence.label || 'none'} · {Math.round((confidence.score || 0) * 100)}%</CoachBadge>
-      </div>
-      <div className="grid gap-3 md:grid-cols-5">
-        <MetricTile label={copy.dateSpan} value={summary.date_span_days != null ? `${summary.date_span_days} ${copy.days}` : '-'} />
-        <MetricTile label={copy.uniqueDates} value={summary.unique_lab_dates || 0} />
-        <MetricTile label={copy.comparable} value={summary.markers_with_2plus_dates || 0} />
-        <MetricTile label={copy.markers} value={summary.biomarker_rows || 0} />
-        <MetricTile label={copy.missingDates} value={summary.uploads_missing_lab_date || 0} tone={summary.uploads_missing_lab_date ? 'warning' : 'success'} />
-      </div>
-      {confidence.warnings?.length ? (
-        <div className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-          {isUk ? 'Обмеження порівняння: ' : 'Comparison limits: '}
-          {confidence.warnings.map((item) => item.replaceAll('_', ' ')).join(', ')}.
-        </div>
-      ) : null}
-    </CoachCard>
-  )
+function triggerSubscriptionRequiredPaywall() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'SUBSCRIPTION_REQUIRED' } }))
+  }
 }
 
-function ChangeCard({ item, isUk }) {
-  const tone = toneForStatus(item.current_status_group)
-  const percent = Number.isFinite(Number(item.percent_change)) && Math.abs(Number(item.percent_change)) <= 300
-    ? `${Number(item.percent_change) > 0 ? '+' : ''}${Math.round(Number(item.percent_change) * 10) / 10}%`
-    : null
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-sky-50/70 p-5 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-lg font-extrabold text-slate-950">{item.name}</h3>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
-            {isUk
-              ? `${formatDate(item.previous_date, true)}: ${formatValue(item.previous_value, item.unit)} → ${formatDate(item.latest_date, true)}: ${formatValue(item.latest_value, item.unit)}.`
-              : `${formatDate(item.previous_date)}: ${formatValue(item.previous_value, item.unit)} → ${formatDate(item.latest_date)}: ${formatValue(item.latest_value, item.unit)}.`}
-          </p>
-        </div>
-        <CoachBadge tone={tone}>{item.current_status_group?.replace('_', ' ') || item.current_status || 'status'}</CoachBadge>
-      </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <MetricTile label={isUk ? 'Фактична зміна' : 'Absolute change'} value={formatDelta(item.absolute_change, item.unit)} tone={tone === 'warning' ? 'warning' : 'neutral'} />
-        <MetricTile label={isUk ? 'Відсоток' : 'Percent'} value={percent || (isUk ? 'не акцентуємо' : 'not emphasized')} />
-        <MetricTile label={isUk ? 'Надійність' : 'Reliability'} value={item.reliability || 'medium'} tone={item.reliability === 'high' ? 'success' : 'neutral'} />
-      </div>
-      {!percent ? <p className="mt-3 text-xs font-semibold text-amber-700">{isUk ? UK_COPY.hiddenPercent : EN_COPY.hiddenPercent}</p> : null}
-    </div>
-  )
-}
-
-function MarkerRow({ item, isUk }) {
-  const tone = toneForStatus(item.current_status_group)
-  return (
-    <div className="grid gap-3 border-b border-slate-100 py-3 last:border-0 md:grid-cols-[1.2fr_1fr_0.8fr_0.8fr] md:items-center">
-      <div className="min-w-0">
-        <p className="truncate font-bold text-slate-950">{item.name}</p>
-        <p className="text-xs text-slate-500">{formatDate(item.first_date, isUk)} → {formatDate(item.latest_date, isUk)}</p>
-      </div>
-      <p className="text-sm font-semibold text-slate-700">{formatValue(item.first_value, item.unit)} → {formatValue(item.latest_value, item.unit)}</p>
-      <CoachBadge tone={tone}>{item.direction || 'stable'}</CoachBadge>
-      <p className="text-sm font-semibold text-slate-600">{formatDelta(item.absolute_change, item.unit)}</p>
-    </div>
-  )
-}
-
-function RuleInsights({ items = [], isUk }) {
-  if (!items.length) return null
-  const translated = items.map((item) => {
-    if (!isUk) return item
-    if (item.key === 'lab_dates_only') {
-      return { ...item, title: 'Тільки лабораторні дати', body: 'Дата завантаження не використовується як дата аналізу.' }
+async function executePhotoAction(action, onPaywall) {
+  try {
+    return await action()
+  } catch (error) {
+    if (error.response?.status === 402) {
+      onPaywall()
+      return null
     }
-    if (item.key === 'not_diagnostic') {
-      return { ...item, title: 'Освітня інтерпретація', body: 'Зміни призначені для обговорення з лікарем, а не для самостійного діагнозу.' }
-    }
-    return item
-  })
-  return (
-    <CoachCard className="p-5 sm:p-6">
-      <div className="mb-5">
-        <p className="coach-eyebrow">{isUk ? 'Правила читання' : 'Reading rules'}</p>
-        <h2 className="coach-title-lg">{isUk ? 'Як VITALOOP читає прогрес' : 'How VITALOOP reads progress'}</h2>
-      </div>
-      <div className="grid gap-3 md:grid-cols-2">
-        {translated.map((item) => (
-          <div key={item.key || item.title} className="rounded-3xl border border-emerald-100 bg-emerald-50/70 p-4">
-            <p className="font-extrabold text-slate-950">{item.title}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-700">{item.body}</p>
-          </div>
-        ))}
-      </div>
-    </CoachCard>
-  )
+    throw error
+  }
 }
 
 export default function Progress() {
   const navigate = useNavigate()
-  const isUk = isUkrainianLocale()
-  const copy = isUk ? UK_COPY : EN_COPY
-  const [showAllMarkers, setShowAllMarkers] = useState(false)
+  const queryClient = useQueryClient()
+  const { data = [], isLoading, isError, error, refetch } = useProgress()
+  const { isActive: hasPremium, loading: subscriptionLoading, refresh: refreshSubscription } = useSubscription()
+  const [photos, setPhotos] = useState([])
+  const [protocolRowsFromDb, setProtocolRowsFromDb] = useState([])
 
-  const { data: overview, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['progress-overview'],
-    queryFn: async () => {
-      const { data } = await api.get('/progress/overview')
-      return data || null
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    retry: 1,
-  })
+  const uploadsWithBiomarkers = data.filter((upload) => Array.isArray(upload?.biomarkers) && upload.biomarkers.length > 0)
+  const chronologicalUploads = useMemo(
+    () => [...uploadsWithBiomarkers].sort((a, b) => {
+      const aTime = new Date(a?.test_date || a?.created_at || 0).getTime()
+      const bTime = new Date(b?.test_date || b?.created_at || 0).getTime()
+      return aTime - bTime
+    }),
+    [uploadsWithBiomarkers]
+  )
+  const biomarkerTrends = useMemo(
+    () => buildBiomarkerTrends(chronologicalUploads),
+    [chronologicalUploads]
+  )
+  const improving = biomarkerTrends.filter((item) => item.pct > 0).slice(0, 6)
+  const worsening = biomarkerTrends.filter((item) => item.pct < 0).slice(0, 6)
+  const topMovement = biomarkerTrends.slice(0, 6)
+  const overviewCards = useMemo(
+    () => buildMarkerOverview(chronologicalUploads, biomarkerTrends),
+    [chronologicalUploads, biomarkerTrends]
+  )
+  const latestUpload = chronologicalUploads[chronologicalUploads.length - 1] || null
+  const latestUploadId = latestUpload?.id
+  const latestMarkers = latestUpload?.biomarkers?.length || 0
+  const momentumScore = biomarkerTrends.length
+    ? Math.round((improving.length / biomarkerTrends.length) * 100)
+    : 0
 
-  const summary = overview?.summary || {}
-  const mode = useMemo(() => modeView(overview?.mode, copy), [overview?.mode, copy])
-  const nextAction = overview?.next_action || {}
-  const nextHref = nextAction.href || '/check-ins'
-  const comparableMarkers = overview?.all_comparable_markers || [
-    ...(overview?.top_changes || []),
-    ...(overview?.stable_markers || []),
-  ]
+  useEffect(() => {
+    let canceled = false
 
-  if (isLoading) return <div className="coach-shell"><CoachSkeleton rows={4} /></div>
+    async function loadLatestProtocol() {
+      if (!latestUploadId) {
+        if (!canceled) setProtocolRowsFromDb([])
+        return
+      }
 
-  if (isError) {
+      try {
+        const { data: protocolRow, error: protocolError } = await supabase
+          .from('protocols')
+          .select('recommendations')
+          .eq('upload_id', latestUploadId)
+          .single()
+
+        if (protocolError) {
+          if (!canceled) setProtocolRowsFromDb([])
+          return
+        }
+
+        const sourceRows = Array.isArray(protocolRow?.recommendations)
+          ? protocolRow.recommendations
+          : []
+        const normalized = sortProtocolRecommendations(sourceRows)
+          .map(normalizeProtocolRow)
+          .filter(Boolean)
+          .slice(0, 5)
+
+        if (!canceled) {
+          setProtocolRowsFromDb(normalized)
+        }
+      } catch {
+        if (!canceled) setProtocolRowsFromDb([])
+      }
+    }
+
+    loadLatestProtocol()
+
+    return () => {
+      canceled = true
+    }
+  }, [latestUploadId])
+
+  const protocolRows = protocolRowsFromDb
+
+  const handlePaywall = useCallback(() => {
+    triggerSubscriptionRequiredPaywall()
+  }, [])
+
+  const handlePhotoUpload = async (formData) => {
+    try {
+      const response = await executePhotoAction(() => api.post('/progress/photos', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }), handlePaywall)
+      if (!response) {
+        return
+      }
+      setPhotos((prev) => [...prev, response.data])
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['progress'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+      ])
+    } catch (error) {
+      console.error('Photo upload failed:', error)
+      throw error
+    }
+  }
+
+  const handlePhotoDelete = async (photoId) => {
+    try {
+      const deleted = await executePhotoAction(() => api.delete(`/progress/photos/${photoId}`), handlePaywall)
+      if (!deleted) {
+        return
+      }
+      setPhotos((prev) => prev.filter((p) => p.id !== photoId))
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['progress'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+      ])
+    } catch (error) {
+      console.error('Photo delete failed:', error)
+      throw error
+    }
+  }
+
+  if (isLoading) {
     return (
-      <div className="coach-shell">
-        <EmptyCoachState
-          icon={AlertTriangle}
-          title={copy.unableTitle}
-          body={error?.response?.status === 404 ? copy.emptyBody : copy.unableBody}
-          actionLabel={copy.retry}
-          onAction={refetch}
-        />
+      <div className="mx-auto w-full max-w-6xl">
+        <div className="mb-6 h-8 w-48 animate-pulse rounded-xl bg-slate-200" />
+        <div className="mb-6 grid gap-3 sm:grid-cols-3">
+          {[1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-slate-100" />)}
+        </div>
+        <div className="mb-4 h-56 animate-pulse rounded-xl bg-slate-100" />
       </div>
     )
   }
 
-  if (!overview || summary.upload_count === 0) {
+  if (isError) {
+    const isPaywallError = error?.response?.status === 402
+    const shouldShowPremiumLock = isPaywallError && !subscriptionLoading && !hasPremium
+
+    if (shouldShowPremiumLock) {
+      return (
+        <div className="mx-auto w-full max-w-6xl">
+          <CabinetPageHeader
+            title="Progress Tracker"
+            subtitle="See how your biomarkers are changing over time. Upload multiple tests to track your improvements."
+          />
+          <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 p-8 text-center">
+            <p className="text-lg font-semibold text-blue-900">📊 Advanced Trend Charts</p>
+            <p className="mt-2 text-sm text-blue-700">Progress analytics is available on Premium plan.</p>
+            <button
+              onClick={handlePaywall}
+              className="mt-4 rounded-lg bg-blue-600 hover:bg-blue-700 px-6 py-2 text-sm font-semibold text-white transition"
+            >
+              Unlock Premium
+            </button>
+          </div>
+        </div>
+      )
+    }
+
     return (
-      <div className="coach-shell">
-        <EmptyCoachState
-          icon={UploadCloud}
-          title={copy.emptyTitle}
-          body={copy.emptyBody}
-          actionLabel={copy.upload}
-          onAction={() => navigate('/upload')}
+      <div className="mx-auto w-full max-w-6xl">
+        <CabinetPageHeader
+          title="Progress Tracker"
+          subtitle="See how your biomarkers are changing over time. Upload multiple tests to track your improvements."
         />
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center">
+          <p className="text-lg font-semibold text-rose-900">Unable to load progress data</p>
+          <p className="mt-2 text-sm text-rose-700">Please try again in a few seconds.</p>
+          <button
+            onClick={async () => {
+              await refreshSubscription()
+              await refetch()
+            }}
+            className="mt-4 rounded-lg bg-rose-600 hover:bg-rose-700 px-6 py-2 text-sm font-semibold text-white transition"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="coach-shell coach-grid pb-10">
-      <section className="coach-hero">
-        <div className="relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div>
-            <p className="coach-eyebrow">{copy.eyebrow}</p>
-            <h1 className="coach-title-xl">{copy.title}</h1>
-            <p className="coach-body mt-4 max-w-2xl">{progressHeroBody(overview, isUk)}</p>
-          </div>
-          <CoachCard tone={overview.mode === 'undated' || overview.mode === 'snapshot' ? 'attention' : 'soft'} className="p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="coach-eyebrow">{isUk ? 'Поточний режим' : 'Current mode'}</p>
-                <h2 className="text-xl font-extrabold text-slate-950">{mode.title}</h2>
-              </div>
-              <CoachBadge tone={mode.tone}>{overview.mode}</CoachBadge>
-            </div>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              {summary.upload_count} {copy.uploads} · {summary.biomarker_rows} {copy.markers} · {summary.markers_with_2plus_dates} {copy.comparable}
-            </p>
-          </CoachCard>
-        </div>
-      </section>
-
-      <DateSpine overview={overview} copy={copy} isUk={isUk} />
-      <ConfidenceBlock overview={overview} copy={copy} isUk={isUk} />
-
-      <CoachCard className="p-5 sm:p-6">
-        <div className="mb-5">
-          <p className="coach-eyebrow">{copy.topChanges}</p>
-          <h2 className="coach-title-lg">
-            {overview.top_changes?.length ? (isUk ? '3-5 змін, які варто переглянути першими' : '3-5 changes to review first') : copy.noProgressTitle}
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            {overview.top_changes?.length
-              ? (isUk ? 'Список сформований backend-ом на основі різних лабораторних дат, не дати завантаження.' : 'This list is produced by the backend from different lab dates, not upload dates.')
-              : copy.noProgressBody}
-          </p>
-        </div>
-        {overview.top_changes?.length ? (
-          <div className="space-y-4">{overview.top_changes.map((item) => <ChangeCard key={`${item.canonical_name}-${item.latest_date}`} item={item} isUk={isUk} />)}</div>
-        ) : (
-          <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5">
-            <div className="flex items-start gap-3">
-              <Info className="mt-1 h-5 w-5 text-amber-700" />
-              <p className="text-sm leading-6 text-amber-950">{copy.noProgressBody}</p>
-            </div>
-          </div>
-        )}
-      </CoachCard>
-
-      <InsightCard
-        icon={Clock3}
-        eyebrow={copy.nextStep}
-        title={isUk ? 'Звʼяжіть зміни з самопочуттям' : 'Connect changes with how you feel'}
-        body={isUk
-          ? (nextAction.reason === 'Progress requires real lab dates, not upload dates.' ? 'Додайте лабораторні дати до недатованих завантажень. Без них маркери не потраплять на часову вісь.' : 'Короткий check-in допоможе читати зміни маркерів разом із симптомами, навантаженням, харчуванням і самопочуттям.')
-          : (nextAction.reason || 'A short check-in helps connect symptoms with dated lab results.')}
-        actionLabel={nextHref.includes('upload') ? copy.uploadAnother : copy.startCheckin}
-        onAction={() => navigate(nextHref)}
+    <div className="mx-auto w-full max-w-6xl">
+      <CabinetPageHeader
+        title="Progress Tracker"
+        subtitle="Your main health momentum view: trends, biggest changes, and what to retest next."
       />
-
-      {overview.stable_markers?.length ? (
-        <CoachCard className="p-5 sm:p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-teal-600" />
-            <h2 className="text-lg font-extrabold text-slate-950">{copy.stable}</h2>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {overview.stable_markers.slice(0, 6).map((item) => <MarkerRow key={`${item.canonical_name}-${item.latest_date}`} item={item} isUk={isUk} />)}
-          </div>
-        </CoachCard>
-      ) : null}
-
-      <CoachCard className="p-5 sm:p-6">
-        <button type="button" onClick={() => setShowAllMarkers((value) => !value)} className="flex w-full items-center justify-between gap-4 text-left" aria-expanded={showAllMarkers}>
-          <div>
-            <p className="coach-eyebrow">{copy.allMarkers}</p>
-            <h2 className="coach-title-lg">{isUk ? 'Повний список порівнюваних маркерів' : 'Full comparable marker list'}</h2>
-            <p className="mt-2 text-sm text-slate-600">
-              {summary.markers_with_2plus_dates || 0} {copy.comparable}. {summary.uploads_missing_lab_date || 0} {copy.missingDates}.
-            </p>
-          </div>
-          {showAllMarkers ? <ChevronDown className="h-5 w-5 text-slate-500" /> : <ChevronRight className="h-5 w-5 text-slate-500" />}
-        </button>
-        {showAllMarkers && (
-          <div className="mt-5">
-            {comparableMarkers.length ? (
-              <div className="divide-y divide-slate-100">
-                {comparableMarkers.map((item) => <MarkerRow key={`${item.canonical_name}-${item.latest_date}-all`} item={item} isUk={isUk} />)}
-              </div>
-            ) : (
-              <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">{copy.noProgressBody}</p>
-            )}
-          </div>
-        )}
-      </CoachCard>
-
-      <CoachCard className="p-5 sm:p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <Route className="h-5 w-5 text-teal-600" />
-          <h2 className="text-lg font-extrabold text-slate-950">{copy.timeline}</h2>
+      {data.length === 0 ? (
+        <div className="py-8">
+          <EmptyStateIllustration type="results" size="lg" />
         </div>
-        {overview.timeline?.length ? (
-          <div className="space-y-3">
-            {overview.timeline.map((item) => (
-              <div key={item.date} className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-bold text-slate-950">{formatDate(item.date, isUk)}</p>
-                  <CoachBadge tone="neutral">{item.marker_count} {copy.markers}</CoachBadge>
-                </div>
-                <p className="mt-1 text-sm text-slate-600">{item.upload_count} {copy.uploads}</p>
+      ) : (
+        <>
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 sm:p-7"
+          >
+            <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h3 className="text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl">Biomarker Overview</h3>
+                <p className="mt-1 text-base leading-relaxed text-slate-500">Track what matters. Optimize your health.</p>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="rounded-2xl bg-amber-50 p-4 text-sm leading-6 text-amber-950">{copy.noProgressBody}</p>
-        )}
-      </CoachCard>
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-teal-100 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-700">
+                <Sparkles className="h-4 w-4" />
+                <div>
+                  <p>AI Analysis</p>
+                  <p className="text-xs font-medium text-teal-600">Updated today</p>
+                </div>
+              </div>
+            </div>
 
-      <RuleInsights items={overview.rule_insights || []} isUk={isUk} />
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {overviewCards.map((card) => {
+                const isGood = card.statusLabel === 'Optimal' || card.statusLabel === 'Improving'
+                const isNoData = card.statusLabel === 'No data'
+                return (
+                  <div key={card.key} className="flex min-h-[272px] flex-col rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+                    <p className="line-clamp-2 text-[26px] font-semibold leading-tight text-slate-900">{card.name}</p>
+                    <p className="text-sm text-slate-500">{card.subtitle}</p>
+                    <p className="mt-4 text-6xl font-bold leading-none tracking-tight text-slate-900">{shortMetricValue(card.latestValue)}</p>
+                    <p className="mt-2 text-base font-medium text-slate-600">{card.unit || 'value'}</p>
+                    <div className="mt-3">
+                      <Sparkline points={card.points} color={isNoData ? '#94a3b8' : isGood ? '#14b8a6' : '#f59e0b'} />
+                    </div>
+                    <p className={`mt-3 text-sm font-semibold ${isNoData ? 'text-slate-500' : isGood ? 'text-teal-700' : 'text-amber-700'}`}>
+                      {card.latestValue == null
+                        ? 'Add more uploads to unlock trend'
+                        : card.delta == null
+                          ? 'No historical delta yet'
+                          : `${card.delta >= 0 ? '↑' : '↓'} ${shortMetricValue(Math.abs(card.delta))} from ${shortMetricValue(card.firstValue)}`}
+                    </p>
+                    <span className={`mt-3 inline-flex w-fit rounded-full px-4 py-1.5 text-sm font-semibold ${isNoData ? 'bg-slate-100 text-slate-600' : isGood ? 'bg-teal-50 text-teal-700' : 'bg-amber-50 text-amber-700'}`}>
+                      {card.statusLabel}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </motion.div>
 
-      {overview.undated_uploads?.length ? (
-        <CoachCard tone="attention" className="p-5 sm:p-6">
-          <div className="flex items-start gap-3">
-            <ShieldCheck className="mt-1 h-5 w-5 text-amber-700" />
-            <div>
-              <h2 className="text-lg font-extrabold text-amber-950">{isUk ? 'Недатовані завантаження не входять у тренди' : 'Undated uploads are excluded from trends'}</h2>
-              <p className="mt-2 text-sm leading-6 text-amber-900">
-                {isUk
-                  ? `${overview.undated_uploads.length} завантаження залишаються поза віссю часу. Додайте дату вручну або завантажте файл, де дата аналізу читається.`
-                  : `${overview.undated_uploads.length} uploads stay off the timeline. Add the lab date manually or upload a file where the test date is readable.`}
-              </p>
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.05 }}
+            className="mb-8 rounded-3xl border border-slate-200 bg-white p-5 sm:p-7"
+          >
+            <h3 className="text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl">Your Personalized Protocol</h3>
+            <p className="mt-1 text-base leading-relaxed text-slate-500">AI-designed based on your labs, goals and health data.</p>
+
+            <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+              <div className="overflow-hidden rounded-2xl border border-slate-200">
+                <div className="hidden grid-cols-[minmax(0,1fr)_160px_180px] bg-slate-50 px-5 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 sm:grid">
+                  <span>Supplement</span>
+                  <span>Dose</span>
+                  <span>Timing</span>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {protocolRows.length > 0 ? protocolRows.map((row) => {
+                    const Icon = supplementIcon(row.supplement)
+                    return (
+                      <div key={row.supplement} className="grid gap-2 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_160px_180px] sm:items-center">
+                        <p className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+                          <Icon className="h-5 w-5 text-teal-500" />
+                          <span>{row.supplement}</span>
+                        </p>
+                        <p className="text-sm font-medium text-slate-600">{row.dose}</p>
+                        <p className="text-sm font-medium text-slate-600">{row.schedule}</p>
+                      </div>
+                    )
+                  }) : (
+                    <div className="px-5 py-6 text-sm text-slate-500">
+                      No protocol recommendations generated yet for your latest uploaded labs.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-teal-100 bg-teal-50 p-5">
+                <p className="text-2xl font-semibold leading-tight text-slate-900">Why these?</p>
+                <ul className="mt-3 space-y-3 text-sm text-slate-700">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-teal-600" />
+                    Targets your lowest biomarkers first
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-teal-600" />
+                    Supports your energy, recovery and focus goals
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-teal-600" />
+                    Aligned with biomarker trends and reference ranges
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-teal-600" />
+                    Safe and practical dosage cadence
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </motion.div>
+
+          <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Lab uploads</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">{data.length}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest markers</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">{latestMarkers}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Compared biomarkers</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">{biomarkerTrends.length}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Momentum score</p>
+              <p className="mt-2 text-2xl font-bold text-emerald-700">{momentumScore}%</p>
             </div>
           </div>
-        </CoachCard>
-      ) : null}
 
-      <p className="px-1 text-xs text-slate-500">{copy.educational}</p>
+          <div className="mb-8 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-emerald-200 bg-white p-5">
+              <p className="text-sm font-semibold text-slate-900">Top improvements</p>
+              <p className="mt-1 text-xs text-slate-500">Largest positive shifts between first and latest upload.</p>
+              <div className="mt-4 space-y-3">
+                {improving.length > 0 ? improving.map((item) => (
+                  <div key={item.name} className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-slate-900">{item.name}</p>
+                      <p className="text-sm font-bold text-emerald-700">+{item.pct}%</p>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-600">
+                      {formatMetricValue(item.start)} → {formatMetricValue(item.end)}{item.unit ? ` ${item.unit}` : ''}
+                    </p>
+                    <div className="mt-2 h-1.5 rounded-full bg-emerald-100">
+                      <div className="h-1.5 rounded-full bg-emerald-500" style={{ width: `${Math.min(Math.abs(item.pct), 100)}%` }} />
+                    </div>
+                  </div>
+                )) : (
+                  <p className="text-sm text-slate-500">Not enough comparable biomarker data yet.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-amber-200 bg-white p-5">
+              <p className="text-sm font-semibold text-slate-900">Needs attention</p>
+              <p className="mt-1 text-xs text-slate-500">Markers with negative movement that may need protocol adjustment.</p>
+              <div className="mt-4 space-y-3">
+                {worsening.length > 0 ? worsening.map((item) => (
+                  <div key={item.name} className="rounded-xl border border-amber-100 bg-amber-50/40 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-slate-900">{item.name}</p>
+                      <p className="text-sm font-bold text-amber-700">{item.pct}%</p>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-600">
+                      {formatMetricValue(item.start)} → {formatMetricValue(item.end)}{item.unit ? ` ${item.unit}` : ''}
+                    </p>
+                    <div className="mt-2 h-1.5 rounded-full bg-amber-100">
+                      <div className="h-1.5 rounded-full bg-amber-500" style={{ width: `${Math.min(Math.abs(item.pct), 100)}%` }} />
+                    </div>
+                  </div>
+                )) : (
+                  <p className="text-sm text-slate-500">No negative trends detected in comparable biomarkers.</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {topMovement.length > 0 && (
+            <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-5">
+              <p className="text-sm font-semibold text-slate-900">Biggest biomarker movements</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {topMovement.map((item) => (
+                  <div key={item.name} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{item.name}</p>
+                    <p className={`mt-1 text-lg font-bold ${item.direction === 'up' ? 'text-emerald-700' : 'text-amber-700'}`}>
+                      {item.direction === 'up' ? '↑' : '↓'} {Math.abs(item.pct)}%
+                    </p>
+                    <p className="text-xs text-slate-600">
+                      {formatMetricValue(item.start)} → {formatMetricValue(item.end)}{item.unit ? ` ${item.unit}` : ''}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {uploadsWithBiomarkers.length >= 2 ? (
+            <div className="mb-8">
+              <ProgressChart data={uploadsWithBiomarkers} />
+            </div>
+          ) : (
+            <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-500">
+              Upload at least 2 tests to unlock timeline chart comparisons.
+            </div>
+          )}
+
+          {/* Upload Timeline */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="rounded-2xl border border-slate-200 bg-white p-6 mb-8"
+          >
+            <p className="mb-1 text-lg font-semibold text-slate-900">Retest Timeline</p>
+            <p className="mb-5 text-sm text-slate-500">Chronological history of your uploads to keep retest cadence visible.</p>
+            <div className="space-y-4">
+              {data.map((upload, index) => (
+                <motion.div
+                  key={upload.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  className="flex items-center gap-4 pb-4 last:pb-0 border-b last:border-b-0"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+                    <span className="text-sm font-bold text-emerald-700">#{data.length - index}</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900">{upload.test_date || upload.created_at?.slice(0, 10) || 'Unknown date'}</p>
+                    <p className="text-sm text-slate-500">{upload.lab_name || 'Lab name not specified'}</p>
+                  </div>
+                  {Array.isArray(upload.biomarkers) && upload.biomarkers.length > 0 && (
+                    <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                      {upload.biomarkers.length} markers
+                    </span>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Progress Photo Gallery */}
+          <div className="mb-8">
+            <ProgressPhotoGallery
+              photos={photos}
+              onUpload={handlePhotoUpload}
+              onDelete={handlePhotoDelete}
+            />
+          </div>
+
+          {/* Call to Action */}
+          <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 p-6 text-center">
+            <p className="text-lg font-semibold text-emerald-900">Ready for a Retest?</p>
+            <p className="mt-2 text-sm text-emerald-700">Recommended every 90 days to track improvements</p>
+            <button onClick={() => navigate('/upload')} className="vtl-button-primary mt-4 px-8">
+              Upload New Test
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

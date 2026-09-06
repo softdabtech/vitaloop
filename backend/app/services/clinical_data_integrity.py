@@ -47,6 +47,23 @@ _KNOWN_UNIT_FAMILIES = {
     "ukat/L": "enzyme_activity",
     "mL/min/1.73m²": "filtration_rate",
     "mL/min/1.73m2": "filtration_rate",
+    "mm/h": "sedimentation_rate",
+}
+
+_UNIT_ALIASES = {
+    "г/л": "g/L",
+    "г/дл": "g/dL",
+    "мг/дл": "mg/dL",
+    "ммоль/л": "mmol/L",
+    "нг/мл": "ng/mL",
+    "мкг/л": "ug/L",
+    "од/л": "U/L",
+    "мо/л": "IU/L",
+    "фл": "fL",
+    "пг": "pg",
+    "мм/год": "mm/h",
+    "10^9/л": "x10^9/L",
+    "10^12/л": "x10^12/L",
 }
 
 _REFERENCE_UNIT_FAMILIES = {
@@ -72,12 +89,24 @@ _PLAUSIBLE_LIMITS = {
 
 def _unit_key(value: Any) -> str:
     raw = str(value or "").strip()
-    return (
+    normalized = (
         raw.replace("μ", "µ")
         .replace("㎍", "µg")
         .replace("㎎", "mg")
         .replace("⁄", "/")
     )
+    return _UNIT_ALIASES.get(normalized.lower(), normalized)
+
+
+def _plausible_limits(canonical: str, unit: str) -> tuple[float, float] | None:
+    unit_key = _unit_lookup_key(unit).lower()
+    if canonical == "canonical_hemoglobin":
+        return (10, 300) if unit_key == "g/l" else (1, 30)
+    if canonical == "canonical_glucose":
+        return (0.5, 83.3) if unit_key == "mmol/l" else (10, 1500)
+    if canonical == "canonical_creatinine" and unit_key in {"µmol/l", "umol/l"}:
+        return (0, 4500)
+    return _PLAUSIBLE_LIMITS.get(canonical)
 
 
 def _unit_lookup_key(value: Any) -> str:
@@ -114,6 +143,49 @@ def _profile_age(profile: Dict[str, Any] | None) -> float | None:
         if age is not None:
             return age
     return None
+
+
+def _determine_evaluation_status(
+    canonical: str,
+    value: float | None,
+    unit: str,
+    plausible_range: tuple[float, float] | None,
+    has_value_qualifier: bool,
+    unit_compatibility_issue: str | None,
+) -> tuple[str, List[str]]:
+    """Determine if a marker can be clinically evaluated and why.
+
+    Returns: (status, blocking_issues)
+      status: 'EVALUABLE', 'NEEDS_CONFIRMATION', 'UNEVALUATED'
+      blocking_issues: reasons why it cannot be safely evaluated
+    """
+    blocking_issues: List[str] = []
+
+    # Check 1: Unit compatibility (FIX 2)
+    if unit_compatibility_issue:
+        blocking_issues.append(f"incompatible_unit:{unit_compatibility_issue}")
+
+    # Check 2: Value has inequality qualifier (FIX 1)
+    if has_value_qualifier and value is not None:
+        # Inequality-qualified values need special handling by clinical engine
+        blocking_issues.append("value_has_inequality_qualifier")
+
+    # Check 3: Physiologically implausible (FIX 3)
+    if value is not None and plausible_range and not (plausible_range[0] <= value <= plausible_range[1]):
+        blocking_issues.append("physiologically_implausible_value")
+
+    # Determine status based on issues
+    if blocking_issues:
+        # If unit is incompatible or value is impossible, mark UNEVALUATED
+        if any("incompatible_unit" in issue for issue in blocking_issues):
+            return "UNEVALUATED", blocking_issues
+        if any("physiologically_implausible" in issue for issue in blocking_issues):
+            return "NEEDS_CONFIRMATION", blocking_issues
+        if any("inequality_qualifier" in issue for issue in blocking_issues):
+            # Inequality qualifiers may still be evaluable by safety engine
+            return "EVALUABLE", blocking_issues
+
+    return "EVALUABLE", []
 
 
 def _profile_completeness(profile: Dict[str, Any] | None) -> Dict[str, Any]:
@@ -153,17 +225,46 @@ def validate_clinical_data_integrity(
         reference_range = item.get("reference_range")
         duplicate_keys[canonical or name.lower()] = duplicate_keys.get(canonical or name.lower(), 0) + 1
 
+        # NEW: Extract inequality qualifier and unit compatibility issue (FIX 1, FIX 2)
+        value_qualifier = item.get("value_qualifier")
+        unit_compatibility_issue = item.get("unit_compatibility_issue")
+
         marker_issues: List[str] = []
         unit_family = _known_unit_family(unit)
         if not unit_family:
             marker_issues.append("unknown_unit")
             issues.append({"key": "unknown_unit", "severity": "medium", "marker": name, "unit": unit})
 
+        # NEW: Add unit compatibility issue (FIX 2)
+        if unit_compatibility_issue:
+            marker_issues.append("unit_marker_incompatible")
+            issues.append(
+                {
+                    "key": "unit_marker_incompatible",
+                    "severity": "high",
+                    "marker": name,
+                    "unit": unit,
+                    "reason": unit_compatibility_issue,
+                }
+            )
+
+        # NEW: Add inequality qualifier issue (FIX 1)
+        if value_qualifier:
+            marker_issues.append("value_has_qualifier")
+            issues.append(
+                {
+                    "key": "value_has_qualifier",
+                    "severity": "medium",
+                    "marker": name,
+                    "qualifier": value_qualifier,
+                }
+            )
+
         if value is None:
             marker_issues.append("missing_numeric_value")
             issues.append({"key": "missing_numeric_value", "severity": "high", "marker": name})
         else:
-            plausible = _PLAUSIBLE_LIMITS.get(canonical)
+            plausible = _plausible_limits(canonical, unit)
             if plausible and not (plausible[0] <= value <= plausible[1]):
                 marker_issues.append("physiologically_implausible_value")
                 issues.append(
@@ -191,6 +292,17 @@ def validate_clinical_data_integrity(
                 }
             )
 
+        # NEW: Determine evaluation status (FIX 3)
+        plausible = _plausible_limits(canonical, unit)
+        evaluation_status, blocking_issues = _determine_evaluation_status(
+            canonical=canonical,
+            value=value,
+            unit=unit,
+            plausible_range=plausible,
+            has_value_qualifier=bool(value_qualifier),
+            unit_compatibility_issue=unit_compatibility_issue,
+        )
+
         marker_summaries.append(
             {
                 "name": name,
@@ -205,6 +317,9 @@ def validate_clinical_data_integrity(
                 "reference_source": "lab_provided" if (ref_low is not None or ref_high is not None or reference_range) else "missing",
                 "unit_family": unit_family or "unknown",
                 "issues": marker_issues,
+                "evaluation_status": evaluation_status,
+                "blocking_issues": blocking_issues,
+                "value_qualifier": value_qualifier,
             }
         )
 

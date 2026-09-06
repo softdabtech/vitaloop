@@ -153,7 +153,7 @@ class SubscriptionCreateRequest(BaseModel):
     """Create/update subscription."""
     user_id: UUID
     plan_name: SubscriptionPlan
-    stripe_subscription_id: Optional[str] = None
+    external_subscription_id: Optional[str] = None
 
 
 # ============================================================
@@ -277,7 +277,7 @@ class SubscriptionResponse(BaseModel):
     user_id: UUID
     plan_name: SubscriptionPlan
     status: SubscriptionStatus
-    stripe_subscription_id: Optional[str]
+    external_subscription_id: Optional[str] = None
     current_period_start: Optional[datetime]
     current_period_end: Optional[datetime]
     started_at: datetime

@@ -12,27 +12,55 @@ Biomarker results:
 {biomarkers}
 
 Rules:
-- Return 4–8 action items across nutrition, supplements, retesting, lifestyle, and clinician discussion.
+- Return only as many items as THIS case genuinely supports — often 1-3 for a
+  narrow, isolated finding, more only when multiple distinct systems are
+  actually flagged. Never pad the list to hit a target count.
+- Do not include generic wellness filler (hydration, "exercise regularly",
+  "get good sleep", "routine check-up") unless a specific biomarker, symptom,
+  or profile detail in THIS case directly motivates it — e.g. "sleep" is only
+  relevant here if cortisol, a sleep-linked symptom, or a sleep-relevant
+  biomarker pattern is actually present in the data below, not as a
+  default entry.
+- Reason across the whole panel together, not marker-by-marker in isolation.
+  When several related markers are provided (e.g. a liver panel, a thyroid
+  panel, an iron panel), explicitly note which pattern the COMBINATION
+  suggests and which it argues against — e.g. "ALT/AST/GGT normal with only
+  direct bilirubin mildly elevated points away from hepatocellular injury,
+  more consistent with a mild conjugation/excretion issue" is far more
+  useful than restating each marker's status separately. Only reach for
+  supplement/nutrient items when the flagged marker(s) are ones a nutrient
+  actually addresses (iron/B12/folate/vitamin D/etc.) — a liver or kidney
+  finding does not default to those.
 - Prioritize DEFICIENT and ELEVATED biomarkers.
 - Correlate symptoms with deficiencies explicitly.
 - Use age, sex, height, weight, pregnancy status, medications, and current supplements when present.
 - If profile context is incomplete, make completion of profile and confirmatory labs the first priority.
 - Be specific but safe: do not diagnose, do not prescribe medication, and do not give high-risk dosing without clinical confirmation.
 - Supplements are allowed only when the biomarker pattern supports them. Include dosage ranges, timing, and safety caveats.
-- Nutrition guidance should be food-first and practical: protein, iron/B12/folate sources, vitamin D context, hydration, sleep and recovery where relevant.
+- Nutrition guidance should be food-first and practical, and only included when the flagged markers are nutrient-related.
 - For children, pregnancy, chronic disease, medication interactions, or unclear markers, prefer clinician review and confirmatory tests over supplement dosing.
 - Return ONLY valid JSON array. No explanations. No markdown.
 - Keep JSON field names and enum values exactly as specified below.
 
-JSON schema for each item:
+JSON schema for each item (illustrative shape only — do not reuse this
+example's content; every field must be written fresh from the actual
+biomarkers/symptoms/profile above):
 {
-  "supplement": "Food-first iron/B12/folate support",
-  "dosage": "2-3 meals/day with protein + iron/B12/folate food source; supplements only after confirmatory labs",
+  "supplement": "<specific to what this case's data actually shows>",
+  "dosage": "<specific dosing/action, or a food-first / retest-first plan>",
   "timing": "morning_with_food",
   "priority": "HIGH",
-  "rationale": "Blood-count related markers need context from symptoms, age/sex, diet, ferritin, B12 and folate before choosing supplementation.",
-  "iherb_search": "iron b12 folate"
+  "rationale": "<references the actual marker(s)/value(s) and, where relevant, how they relate to each other>",
+  "iherb_search": "<only when a real supplement is warranted>"
 }
+
+Two contrasting examples of right-sized output, NOT to be copied:
+- A panel with one isolated mild finding and everything else normal:
+  1-2 items (e.g. a retest/workup item + a "discuss with clinician" item).
+  No supplement or lifestyle filler added just to reach a higher count.
+- A panel with multiple genuinely flagged, related markers (e.g. low
+  ferritin + low B12 + fatigue symptom): 3-5 items that reason about them
+  together, plus food-first guidance and a confirmatory-labs item.
 
 Timing values: morning_empty | morning_with_food | afternoon | evening | night | daily_with_meals | follow_up | clinician_review
 Priority values: HIGH | MEDIUM | LOW

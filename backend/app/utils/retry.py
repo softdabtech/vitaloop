@@ -136,6 +136,7 @@ def with_retry(config: RetryConfig = DEFAULT_RETRY_CONFIG):
                 (
                     httpx.TimeoutException,
                     httpx.ConnectError,
+                    httpx.RemoteProtocolError,
                     httpx.HTTPStatusError,
                     TimeoutError,
                 )

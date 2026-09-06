@@ -92,3 +92,69 @@ def test_evaluator_merges_nutrition_context_with_rule_output():
     assert rule_result["matched_rules"] == []
     assert rule_result["recommendation_keys"] == []
     assert nutrition["nutrition_signals"][0]["nutrient"] == "iron"
+
+
+# ---------------------------------------------------------------------------
+# Cohort coverage — regression tests for the 2026-09-03 audit finding: teens
+# 14-18 fell into child_9_13's numbers, under-4s and pregnancy/lactation fell
+# through to a generic adult default with no dedicated RDA/UL at all.
+# ---------------------------------------------------------------------------
+
+
+def test_teen_male_uses_teen_band_not_child_9_13():
+    result = build_nutrition_kb_context({"lab_results": {}, "profile": {"age": 16, "sex": "male"}})
+    assert result["person_group"] == "teen_male_14_18"
+    iron_row = next(row for row in result["nutrient_requirements"] if row["nutrient"] == "iron")
+    assert iron_row["rda_or_ai"] == 11
+
+
+def test_teen_female_iron_rda_higher_than_teen_male():
+    result = build_nutrition_kb_context({"lab_results": {}, "profile": {"age": 16, "sex": "female"}})
+    assert result["person_group"] == "teen_female_14_18"
+    iron_row = next(row for row in result["nutrient_requirements"] if row["nutrient"] == "iron")
+    # Menstruation onset — this is exactly the gap that made lumping all
+    # teens into one band (or child_9_13's numbers) the wrong call.
+    assert iron_row["rda_or_ai"] == 15
+
+
+def test_under_4_gets_referral_not_a_silent_adult_default():
+    result = build_nutrition_kb_context({"lab_results": {}, "profile": {"age": 2, "sex": "female"}})
+    assert result["person_group"] == "needs_pediatric_referral"
+    assert result["referral_required"] is True
+    assert result["nutrient_requirements"] == []
+
+
+def test_pregnant_adult_gets_pregnancy_band():
+    result = build_nutrition_kb_context(
+        {"lab_results": {}, "profile": {"age": 28, "sex": "female", "pregnancy_status": "pregnant"}}
+    )
+    assert result["person_group"] == "pregnant"
+    assert result["referral_required"] is False
+    iron_row = next(row for row in result["nutrient_requirements"] if row["nutrient"] == "iron")
+    assert iron_row["rda_or_ai"] == 27
+
+
+def test_breastfeeding_adult_gets_breastfeeding_band():
+    result = build_nutrition_kb_context(
+        {"lab_results": {}, "profile": {"age": 30, "sex": "female", "pregnancy_status": "breastfeeding"}}
+    )
+    assert result["person_group"] == "breastfeeding"
+    folate_row = next(row for row in result["nutrient_requirements"] if row["nutrient"] == "folate")
+    assert folate_row["rda_or_ai"] == 500
+
+
+def test_pregnant_early_teen_gets_specialist_referral_not_generic_pregnancy_numbers():
+    result = build_nutrition_kb_context(
+        {"lab_results": {}, "profile": {"age": 13, "sex": "female", "pregnancy_status": "pregnant"}}
+    )
+    assert result["person_group"] == "needs_specialist_referral"
+    assert result["referral_required"] is True
+    assert result["nutrient_requirements"] == []
+
+
+def test_pregnancy_with_unknown_age_still_routes_to_pregnancy_band():
+    # Deidentified context: no age available at all, only pregnancy status.
+    result = build_nutrition_kb_context(
+        {"lab_results": {}, "context": {"person_avatar": {"pregnancy_status": "pregnant", "sex": "female"}}}
+    )
+    assert result["person_group"] == "pregnant"

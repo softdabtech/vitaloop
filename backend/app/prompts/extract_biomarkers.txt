@@ -9,16 +9,28 @@ Patient-reported symptoms are only context for ambiguous documents, not for diag
 
 Extraction rules:
 1. Extract every visible lab marker/analyte with a numeric result.
-2. Preserve the original printed marker label in source_name when possible.
-3. Normalize name to the clearest display name.
-4. Set marker_key only when the marker confidently matches a known VITALOOP lab marker key from the knowledge context.
-5. Extract value as a number only. Put units in unit.
-6. Extract ref_low/ref_high when a numeric reference range is visible.
-7. If the reference range cannot be split, include the raw text in reference_range.
-8. Status must be one of: OPTIMAL, BORDERLINE, DEFICIENT, ELEVATED.
-9. If status is not printed, infer from value and reference range only; otherwise use OPTIMAL.
-10. Category must be one of: blood_count, metabolic, lipids, liver, kidney, thyroid, vitamins, minerals, hormones, inflammation, electrolytes, urinalysis, coagulation, other.
-11. Do not invent missing values, units, or reference ranges.
+2. Do NOT extract document metadata as a biomarker. This includes: Report Date,
+   Collection Date, Order Date, Date of Birth (DOB), Patient ID, Specimen ID,
+   Accession Number, Lab Number, Page Number, Age, Phone, Address, Provider,
+   Doctor, and Reference Number. These are administrative/identifying fields,
+   not lab analyte results, even when they contain a number (e.g. "Report Date:
+   2026-07-29" or "Page: 1 of 3" must never become a biomarker entry).
+3. Preserve the original printed marker label in source_name when possible.
+4. Normalize name to the clearest display name.
+5. Set marker_key only when the marker confidently matches a known VITALOOP lab marker key from the knowledge context.
+6. Extract value as a number only. Put units in unit.
+7. Extract ref_low/ref_high when a numeric reference range is visible.
+8. If the reference range cannot be split, include the raw text in reference_range.
+9. Status must be one of: OPTIMAL, BORDERLINE, DEFICIENT, ELEVATED.
+10. If status is not printed, infer from value and reference range only; otherwise use OPTIMAL.
+11. Category must be one of: blood_count, metabolic, lipids, liver, kidney, thyroid, vitamins, minerals, hormones, inflammation, electrolytes, urinalysis, coagulation, other.
+12. For D-dimer only: extract assay_qualifier when present.
+    If the unit string contains "(FEU)", "FEU", "[FEU]" (case-insensitive), set assay_qualifier="FEU".
+    If the unit string contains "(DDU)", "DDU", "[DDU]" (case-insensitive), set assay_qualifier="DDU".
+    Otherwise, do not set assay_qualifier (null is correct for unknown/plain units).
+    Always put the dimensional unit only in the "unit" field (e.g., "ng/mL", "μg/L").
+    CRITICAL: Do NOT guess qualifiers. Only FEU and DDU are recognized.
+13. Do not invent missing values, units, or reference ranges.
 
 Return ONLY valid JSON array. No markdown. No commentary.
 
@@ -29,12 +41,30 @@ JSON schema for each item:
   "name": "Vitamin D",
   "value": 18.5,
   "unit": "ng/mL",
+  "assay_qualifier": null,
   "ref_low": 30.0,
   "ref_high": 100.0,
   "reference_range": "30-100 ng/mL",
   "status": "DEFICIENT",
   "category": "vitamins",
   "confidence": 0.92,
+  "notes": null
+}
+
+D-dimer example with FEU qualifier:
+{
+  "marker_key": "d_dimer",
+  "source_name": "D-dimer (FEU)",
+  "name": "D-dimer",
+  "value": 600,
+  "unit": "ng/mL",
+  "assay_qualifier": "FEU",
+  "ref_low": null,
+  "ref_high": 500,
+  "reference_range": "<500 ng/mL",
+  "status": "ELEVATED",
+  "category": "coagulation",
+  "confidence": 0.95,
   "notes": null
 }
 

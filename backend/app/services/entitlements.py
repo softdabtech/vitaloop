@@ -8,7 +8,9 @@ from app.utils.roles import normalize_global_role, as_bool
 
 def _is_paid_subscription(active_sub: Optional[Dict[str, Any]], account: Dict[str, Any]) -> tuple[bool, str, str, str, bool]:
     # Deprecated compatibility source; prefer canonical subscriptions rows.
-    subscription_status = str(account.get('sub_status') or account.get('subscription_status') or '').strip().lower()
+    explicit_subscription_status = str(account.get('subscription_status') or '').strip().lower()
+    legacy_sub_status = str(account.get('sub_status') or '').strip().lower()
+    subscription_status = explicit_subscription_status or legacy_sub_status
     account_plan = str(account.get('plan_tier') or '').strip().lower()
 
     sub_table_status = str((active_sub or {}).get('status') or 'free').lower()
@@ -25,6 +27,11 @@ def _is_paid_subscription(active_sub: Optional[Dict[str, Any]], account: Dict[st
     paid_from_account = bool(
         subscription_status == 'active'
         and account_plan != 'free'
+        and (
+            bool(account_plan)
+            or not explicit_subscription_status
+            or explicit_subscription_status == 'active'
+        )
     )
     is_paid = paid_from_sub_table or paid_from_account
 
@@ -51,14 +58,22 @@ def _is_paid_subscription(active_sub: Optional[Dict[str, Any]], account: Dict[st
     return is_paid, billing_status, plan_key, source, cancel_at_period_end
 
 
-async def resolve_user_entitlements(user_id: str, current_user: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    current_user = current_user or {}
-
-    account = await svc.get_user_account(user_id)
-    profile = await svc.get_user_profile(user_id)
-    active_sub = await svc.get_user_active_subscription(user_id)
-
-    jwt_role = str(current_user.get('global_role') or current_user.get('role') or '').lower()
+def resolve_entitlements_from_data(
+    *,
+    user_id: str,
+    account: Dict[str, Any],
+    active_sub: Optional[Dict[str, Any]],
+    jwt_role: str = "",
+) -> Dict[str, Any]:
+    """Pure, batch-compatible core of resolve_user_entitlements() — takes
+    already-fetched `account` (a users row) and `active_sub` (a subscriptions
+    row) instead of fetching them itself. This is the SAME rule
+    resolve_user_entitlements() uses, extracted so a caller that needs
+    entitlements for MANY users at once (e.g. CRM member/client lists) can
+    batch-fetch users + subscriptions once and call this per row with zero
+    additional DB round-trips — not a second entitlement resolver, just this
+    one made reusable without the N+1 per-user fetch pattern.
+    """
     global_role = normalize_global_role(account.get('global_role'), jwt_role)
 
     is_paid, billing_status, plan_key, source, cancel_at_period_end = _is_paid_subscription(active_sub, account)
@@ -88,7 +103,19 @@ async def resolve_user_entitlements(user_id: str, current_user: Optional[Dict[st
         'source': source,
         'needs_sync': bool(source == 'users' and active_sub),
         'features': features,
-        'profile': {
-            'onboarding_complete': as_bool(profile.get('onboarding_complete')),
-        },
     }
+
+
+async def resolve_user_entitlements(user_id: str, current_user: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    current_user = current_user or {}
+
+    account = await svc.get_user_account(user_id)
+    profile = await svc.get_user_profile(user_id)
+    active_sub = await svc.get_user_active_subscription(user_id)
+
+    jwt_role = str(current_user.get('global_role') or current_user.get('role') or '').lower()
+    result = resolve_entitlements_from_data(user_id=user_id, account=account, active_sub=active_sub, jwt_role=jwt_role)
+    result['profile'] = {
+        'onboarding_complete': as_bool(profile.get('onboarding_complete')),
+    }
+    return result

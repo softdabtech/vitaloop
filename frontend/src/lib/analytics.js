@@ -5,6 +5,8 @@
  * Import only what you need; tree-shaking keeps the bundle minimal.
  */
 
+import { PREMIUM_MONTHLY_PRICE } from './pricing.js'
+
 const GA_ID = 'G-LG0BCMBJJE'
 
 function fbqTrack(eventName, params = {}) {
@@ -41,6 +43,25 @@ export function gaEvent(eventName, params = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Identity — stitch logged-in sessions across visits/devices
+// ---------------------------------------------------------------------------
+
+/**
+ * Set (or clear) the GA4 user_id for the current session.
+ * Pass the Supabase auth user id (a UUID, never email/PII) on login/hydration;
+ * pass null on logout so later anonymous activity in the same tab doesn't
+ * keep attributing to the previous account.
+ * @param {string|null} userId
+ */
+export function gaSetUserId(userId) {
+  try {
+    gtag('set', { user_id: userId || undefined })
+  } catch {
+    // Never throw from analytics
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Navigation — SPA page views
 // ---------------------------------------------------------------------------
 
@@ -70,11 +91,42 @@ export function gaPageView(path, title) {
  */
 export function gaSignUp(method = 'email') {
   gaEvent('sign_up', { method })
+  // `close_convert_lead` was pre-defined as a GA4 key event with no code ever
+  // firing it (found empty during a 2026-09-02 tracking audit). Per business
+  // decision that day: it marks a lead converting into a registered account —
+  // paired with sign_up rather than replacing it, so existing sign_up history
+  // stays intact.
+  gaEvent('close_convert_lead', { method })
   fbqTrack('CompleteRegistration', {
     content_name: 'signup',
     status: true,
     method,
   })
+}
+
+// Stage 2I: gaSignupStarted/gaSignupCompleted were imported by Login.jsx but
+// had no definition anywhere in this file or in git history — a missing
+// live dependency (build-blocking), not a stale import (both call sites use
+// them for a live signup-funnel telemetry step). Follows this file's own
+// existing gaEvent()-wrapper convention (see gaSignUp/gaLogin immediately
+// above) rather than inventing a new telemetry mechanism.
+
+/**
+ * Fire when a user begins the signup form (before submission).
+ * @param {'email'|'google'} method
+ * @param {Record<string, unknown>} [attributionParams] - see lib/attribution.js
+ */
+export function gaSignupStarted(method = 'email', attributionParams = {}) {
+  gaEvent('signup_started', { method, ...attributionParams })
+}
+
+/**
+ * Fire when a signup form submission succeeds (account created).
+ * @param {'email'|'google'} method
+ * @param {Record<string, unknown>} [attributionParams] - see lib/attribution.js
+ */
+export function gaSignupCompleted(method = 'email', attributionParams = {}) {
+  gaEvent('signup_completed', { method, ...attributionParams })
 }
 
 /**
@@ -96,13 +148,13 @@ export function gaLogin(method = 'email') {
 export function gaBeginCheckout(priceLabel = null) {
   gaEvent('begin_checkout', {
     currency: 'USD',
-    value: 4.99,
+    value: PREMIUM_MONTHLY_PRICE,
     items: [
       {
         item_id: 'vitaloop_premium',
         item_name: 'VITALOOP Premium',
         item_category: 'subscription',
-        price: 4.99,
+        price: PREMIUM_MONTHLY_PRICE,
         quantity: 1,
       },
     ],
@@ -110,11 +162,11 @@ export function gaBeginCheckout(priceLabel = null) {
   })
   fbqTrack('InitiateCheckout', {
     currency: 'USD',
-    value: 4.99,
+    value: PREMIUM_MONTHLY_PRICE,
   })
   fbqTrack('AddPaymentInfo', {
     currency: 'USD',
-    value: 4.99,
+    value: PREMIUM_MONTHLY_PRICE,
   })
 }
 
@@ -122,7 +174,7 @@ export function gaBeginCheckout(priceLabel = null) {
  * Fire on a confirmed purchase / successful Stripe checkout return.
  * Pass the Stripe session / transaction ID if available.
  */
-export function gaPurchase(transactionId, value = 4.99) {
+export function gaPurchase(transactionId, value = PREMIUM_MONTHLY_PRICE) {
   gaEvent('purchase', {
     transaction_id: transactionId || `vtl_${Date.now()}`,
     currency: 'USD',
@@ -205,6 +257,15 @@ export function gaSymptomAssessmentComplete({ assessmentId, labCount } = {}) {
     ...(assessmentId ? { assessment_id: assessmentId } : {}),
     ...(Number.isFinite(labCount) ? { recommended_lab_count: labCount } : {}),
   })
+  // `qualify_lead` was pre-defined as a GA4 key event with no code ever
+  // firing it (found empty during a 2026-09-02 tracking audit). Per business
+  // decision that day: an anonymous visitor finishing the public symptom
+  // intake IS the lead-qualification moment — paired here, not replacing
+  // symptom_assessment_completed, so existing history stays intact.
+  gaEvent('qualify_lead', {
+    event_category: 'activation',
+    ...(assessmentId ? { assessment_id: assessmentId } : {}),
+  })
 }
 
 /** Fire for high-intent public CTAs that lead into account creation. */
@@ -212,32 +273,6 @@ export function gaSignupIntent(source = 'public_site') {
   gaEvent('signup_intent', {
     event_category: 'acquisition',
     source,
-  })
-}
-
-/** Fire when a visitor opens or submits the account creation flow. */
-export function gaSignupStarted(method = 'email', params = {}) {
-  gaEvent('signup_started', {
-    event_category: 'acquisition',
-    method,
-    ...params,
-  })
-}
-
-/** Fire after account creation succeeds. Mirrors sign_up with campaign-safe fields. */
-export function gaSignupCompleted(method = 'email', params = {}) {
-  gaEvent('signup_completed', {
-    event_category: 'acquisition',
-    method,
-    ...params,
-  })
-}
-
-/** Fire when lab/manual analysis starts. Never include file names or health values. */
-export function gaAnalysisStarted(params = {}) {
-  gaEvent('analysis_started', {
-    event_category: 'activation',
-    ...params,
   })
 }
 

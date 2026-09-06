@@ -7,7 +7,6 @@ from httpx import ASGITransport, AsyncClient
 from app.main import app
 from app.dependencies import get_current_user
 from app.routers.analysis import dashboard as dashboard_router
-from app.routers.billing import stripe_router as billing_router
 from app.routers.identity import auth as auth_router
 from app.routers.identity import onboarding as onboarding_router
 from app.routers.protocol import questionnaire as questionnaire_router
@@ -83,48 +82,6 @@ async def test_auth_entitlements_contract(monkeypatch):
             data = response.json()
             assert isinstance(data.get("is_premium"), bool)
             assert "billing_status" in data
-    finally:
-        app.dependency_overrides.clear()
-
-
-@pytest.mark.asyncio
-async def test_stripe_subscription_contract(monkeypatch):
-    user_id = str(uuid.uuid4())
-
-    async def fake_entitlements(_user_id, _current_user):
-        return {
-            "billing_status": "active",
-            "plan_key": "personal",
-            "role": "end_user",
-            "is_premium": True,
-            "has_active_subscription": True,
-            "cancel_at_period_end": False,
-        }
-
-    async def fake_upload_count(_user_id):
-        return 2
-
-    async def fake_active_sub(_user_id):
-        return {
-            "stripe_customer_id": "cus_123",
-            "current_period_end": 9999999999,
-        }
-
-    monkeypatch.setattr(billing_router, "resolve_user_entitlements", fake_entitlements)
-    monkeypatch.setattr(billing_router, "get_user_upload_count", fake_upload_count)
-    monkeypatch.setattr(billing_router, "get_user_active_subscription", fake_active_sub)
-
-    app.dependency_overrides[get_current_user] = lambda: {"sub": user_id}
-    try:
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get("/stripe/subscription")
-            assert response.status_code == 200
-            data = response.json()
-            assert "sub_status" in data
-            assert isinstance(data.get("is_premium"), bool)
-            assert "upload_limit" in data
-            assert "uploads_remaining" in data
     finally:
         app.dependency_overrides.clear()
 

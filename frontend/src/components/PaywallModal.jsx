@@ -8,22 +8,24 @@
  * Or mount with explicit `open` prop for page-level use.
  */
 import { useState, useEffect } from 'react'
-import api from '../lib/api.js'
 import toast from 'react-hot-toast'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import { useUserEntitlements } from '../hooks/useQueries.js'
 import { isUkrainianLocale } from '../lib/locale.js'
+import { requestPremiumAccess } from '../lib/premiumAccess.js'
+import { useAuth } from '../hooks/useAuth.js'
+import { gaPaywallImpression } from '../lib/analytics.js'
 
 const COPY = {
   en: {
     title: 'Vitaloop Premium',
     features: [
-  'Unlimited lab uploads and manual entries',
-  'Personal action plans after each report',
-  'Biomarker trend tracking and progress charts',
-  'Longitudinal history across uploads',
-  'Follow-up check-ins and retest planning',
-  'Exportable summaries for clinician visits',
+      'Unlimited lab uploads and manual entries',
+      'Personal action plans after each report',
+      'Biomarker trend tracking and progress charts',
+      'Longitudinal history across uploads',
+      'Follow-up check-ins and retest planning',
+      'Exportable summaries for clinician visits',
     ],
     reasons: {
       UPLOAD_LIMIT_REACHED: 'Free plan includes 1 analysis total (PDF upload or manual entry). Upgrade for unlimited analyses.',
@@ -31,10 +33,10 @@ const COPY = {
       SUBSCRIPTION_REQUIRED: 'This feature is available with Vitaloop Premium.',
     },
     fallback: 'Unlock unlimited analyses, action plans, and longitudinal tracking.',
-    checkoutError: 'Could not start checkout. Please try again.',
-    redirecting: 'Redirecting to Stripe…',
-    continue: 'Continue',
-    footer: 'Cancel anytime · Secure checkout via Stripe',
+    accessError: 'Please email info@softdab.tech to activate Premium access.',
+    redirecting: 'Preparing email…',
+    continue: 'Request access',
+    footer: 'Premium access is currently activated manually.',
     close: 'Close',
   },
   uk: {
@@ -53,10 +55,10 @@ const COPY = {
       SUBSCRIPTION_REQUIRED: 'Ця функція доступна у VITALOOP Premium.',
     },
     fallback: 'Відкрийте необмежені аналізи, плани дій і відстеження динаміки.',
-    checkoutError: 'Не вдалося перейти до оплати. Спробуйте ще раз.',
-    redirecting: 'Переходимо до Stripe…',
-    continue: 'Продовжити',
-    footer: 'Скасувати можна будь-коли · Безпечна оплата через Stripe',
+    accessError: 'Напишіть на info@softdab.tech, щоб активувати Premium.',
+    redirecting: 'Готуємо лист…',
+    continue: 'Запросити доступ',
+    footer: 'Premium зараз активується вручну.',
     close: 'Закрити',
   },
 }
@@ -65,7 +67,8 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState(null)
   const [loading, setLoading] = useState(false)
-  const { data: entitlements, isLoading: entitlementsLoading } = useUserEntitlements()
+  const { user } = useAuth()
+  const { data: entitlements } = useUserEntitlements()
   const copy = isUkrainianLocale() ? COPY.uk : COPY.en
 
   // Listen for global paywall events
@@ -90,18 +93,30 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
 
   const isVisible = (open || controlledOpen) && !entitlements?.is_premium
 
+  // Fire once per actual open (reason changes each time paywall:trigger fires
+  // with a new detail, and controlled `open` toggles false->true on reuse) —
+  // not on every re-render while the modal stays open.
+  useEffect(() => {
+    if (isVisible) gaPaywallImpression(reason)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVisible, reason])
+
   function handleClose() {
     setOpen(false)
     onClose?.()
   }
 
-  async function handleCheckout() {
+  async function handlePremiumRequest() {
     setLoading(true)
     try {
-      const { data } = await api.post('/stripe/checkout')
-      window.location.href = data.checkout_url
+      await requestPremiumAccess({
+        userEmail: user?.email,
+        source: 'paywall_modal',
+        successMessage: copy.accessError,
+      })
     } catch {
-      toast.error(copy.checkoutError)
+      toast.error(copy.accessError)
+    } finally {
       setLoading(false)
     }
   }
@@ -138,7 +153,7 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
           </ul>
 
           <button
-            onClick={handleCheckout}
+            onClick={handlePremiumRequest}
             disabled={loading}
             className="w-full rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-semibold py-3.5 transition"
           >

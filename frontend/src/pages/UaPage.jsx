@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowRight,
   BarChart3,
@@ -95,16 +95,16 @@ const PAGE_CONTENT = {
   },
   tarify: {
     eyebrow: 'Тарифи',
-    title: 'Безкоштовно для старту, Premium для регулярної роботи',
+    title: 'Free для старту, Premium для регулярної роботи',
     description:
       'Почніть безкоштовно, а коли потрібні більше аналізів, динаміка й повніші підсумки, перейдіть на Premium.',
     icon: Sparkles,
     cta: 'Почати безкоштовно',
     blocks: [],
     steps: [
-      ['Безкоштовно', 'Перший розбір стану, базові симптоми й стартовий підсумок.'],
+      ['Free', 'Перший розбір стану, базові симптоми й стартовий підсумок.'],
       ['Premium', 'Більше завантажень, динаміка, повніші пояснення і пріоритети.'],
-      ['199 грн/міс', 'Проста ціна для регулярної роботи зі станом.'],
+      ['399 грн/міс', 'Проста ціна для регулярної роботи зі станом.'],
     ],
   },
   ferytyn: {
@@ -313,9 +313,9 @@ export default function UaPage({ pageSlug }) {
                   {page.cta}
                   <ArrowRight className="h-4 w-4" />
                 </button>
-                <Link to={getUaPath('/')} className={SECONDARY_BUTTON}>
+                <button onClick={() => navigate(getUaPath('/'))} className={SECONDARY_BUTTON}>
                   На головну
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -387,10 +387,10 @@ export default function UaPage({ pageSlug }) {
               Опишіть, що турбує зараз, і Vitaloop допоможе скласти перший зрозумілий маршрут.
             </p>
           </div>
-          <Link to={getUaAuthPath({ signup: true })} className={CTA_CLASS}>
+          <button onClick={startSignup} className={CTA_CLASS}>
             Отримати персональну оцінку
             <ArrowRight className="h-4 w-4" />
-          </Link>
+          </button>
         </section>
 
         <UaFooter />

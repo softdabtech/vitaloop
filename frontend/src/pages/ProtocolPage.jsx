@@ -6,6 +6,12 @@ import { useFeature } from '../hooks/useFeature.js'
 import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
 import { isUkrainianLocale } from '../lib/locale.js'
 import { biomarkerDisplayName, evidenceDisplayLabel } from '../lib/biomarker-display.js'
+import { gaProtocolView } from '../lib/analytics.js'
+// coach-shell/coach-card/etc. have no built-in styles of their own — every
+// rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
+// so each page using CoachUI must import it directly or it renders as
+// unstyled browser-default HTML, not a build error.
+import '../styles/coach-design-system.css'
 
 const PRIORITY_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 }
 const TIMING_LABELS = {
@@ -174,34 +180,6 @@ const HEALTH_DOMAIN_LABELS_UK = {
   'recovery and energy': 'Відновлення й енергія',
 }
 
-const CATEGORY_LABELS = {
-  nutrition: { en: 'Nutrition', uk: 'Харчування' },
-  nutrition_context: { en: 'Nutrition context', uk: 'Харчовий контекст' },
-  supplements: { en: 'Supplements', uk: 'Добавки' },
-  supplement: { en: 'Supplement', uk: 'Добавка' },
-  lifestyle: { en: 'Lifestyle', uk: 'Спосіб життя' },
-  training_recovery: { en: 'Training and recovery', uk: 'Тренування та відновлення' },
-  trainingRecovery: { en: 'Training and recovery', uk: 'Тренування та відновлення' },
-  hematology: { en: 'Blood markers', uk: 'Показники крові' },
-  micronutrient: { en: 'Micronutrients', uk: 'Мікронутрієнти' },
-  metabolic: { en: 'Metabolic context', uk: 'Метаболічний контекст' },
-  safety: { en: 'Safety', uk: 'Безпека' },
-}
-
-function humanizeCategory(value, isUk = false) {
-  const raw = String(value || '').trim()
-  if (!raw) return ''
-  const key = raw.replace(/\s+/g, '_')
-  const normalizedKey = key.toLowerCase()
-  const entry = CATEGORY_LABELS[key] || CATEGORY_LABELS[normalizedKey]
-  if (entry) return isUk ? entry.uk : entry.en
-  return raw
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase())
-}
-
 function formatPriority(priority, isUk = false) {
   return String(priority || 'LOW').toUpperCase()
     .replace('HIGH', isUk ? 'ВИСОКИЙ' : 'HIGH')
@@ -272,8 +250,8 @@ function protocolTiming(item, isUk = false) {
   return labels[raw] || raw.replaceAll('_', ' ') || ''
 }
 
-function protocolCategory(item, isUk = false) {
-  return humanizeCategory(item?.category || item?.type, isUk)
+function protocolCategory(item) {
+  return String(item?.category || item?.type || '').trim()
 }
 
 function effortLabel(item) {
@@ -378,7 +356,7 @@ function ActionCard({ item, copy, isUk }) {
   const title = protocolTitle(item)
   const body = protocolBody(item)
   const timing = protocolTiming(item, isUk)
-  const category = protocolCategory(item, isUk)
+  const category = protocolCategory(item)
   const effort = effortLabel(item)
   const outcome = outcomeLabel(item)
   const evidence = displayEvidence(evidenceLabel(item), isUk)
@@ -404,7 +382,14 @@ function ActionCard({ item, copy, isUk }) {
         {evidence && <CoachBadge tone="neutral">{copy.evidence}: {evidence}</CoachBadge>}
       </div>
       {outcome && <p className="mt-3 text-sm font-semibold text-slate-700">{copy.outcome}: <span className="font-normal text-slate-600">{outcome}</span></p>}
-      {(basedOn.length || domains.length || expectedTimeline || retestMarkers.length) && (
+      {/* !! is required here, not just truthiness: when every one of these is
+          empty (all 3 lengths are 0, expectedTimeline is null), the bare `||`
+          chain evaluates to the number 0 (JS `||`'s last-falsy-operand
+          behavior), and `0 && <details>` renders the literal text "0" in
+          React instead of nothing — this was the "00" showing under every
+          protocol card in production (this guard + the safety one below,
+          both hitting the same bug, back to back with no separator). */}
+      {!!(basedOn.length || domains.length || expectedTimeline || retestMarkers.length) && (
         <details className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-3 text-sm leading-6 text-slate-600">
           <summary className="cursor-pointer font-semibold text-slate-800">{copy.technicalDetails}</summary>
           <div className="mt-3 grid gap-2">
@@ -415,7 +400,7 @@ function ActionCard({ item, copy, isUk }) {
           </div>
         </details>
       )}
-      {(safety || safetyNotes.length) && (
+      {!!(safety || safetyNotes.length) && (
         <div className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
           <span className="font-semibold">{copy.safetyNotes}: </span>
           {[safety, ...safetyNotes].filter(Boolean).join(' ')}
@@ -464,7 +449,7 @@ async function exportProtocolPdf({ protocolRows, retestPlan, doctorDiscussion, u
   protocolRows.forEach((item, index) => {
     addText(`${index + 1}. ${protocolTitle(item)}${item?.priority ? ` [${formatPriority(item.priority, isUk)}]` : ''}`, 11)
     addText(protocolBody(item), 9)
-    const meta = [protocolTiming(item, isUk), protocolCategory(item, isUk), displayEvidence(evidenceLabel(item), isUk)].filter(Boolean).join(' · ')
+    const meta = [protocolTiming(item, isUk), protocolCategory(item), evidenceLabel(item)].filter(Boolean).join(' · ')
     addText(meta, 9)
   })
   addTitle(copy.pdfDiscussion, 14)
@@ -506,6 +491,7 @@ export default function ProtocolPage() {
         setRetestPlan(data.retestPlan)
         setSafetyAlerts(data.safetyAlerts)
         setShoppingLinks(data.shoppingLinks)
+        gaProtocolView(uploadId)
       } catch (err) {
         if (!active) return
         const status = err?.response?.status
@@ -636,7 +622,7 @@ export default function ProtocolPage() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <h3 className="font-extrabold text-slate-950">{item.label || item.search_query}</h3>
-                    {(item.category || item.type) && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-emerald-700">{humanizeCategory(item.category || item.type, isUk)}</p>}
+                    {item.category && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-emerald-700">{item.category}</p>}
                   </div>
                   {item.priority && <CoachBadge tone={priorityTone(item.priority)}>{formatPriority(item.priority, isUk)}</CoachBadge>}
                 </div>

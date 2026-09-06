@@ -27,6 +27,17 @@ FOOD_SOURCES = {
     "zinc": ["meat", "seafood", "pumpkin seeds", "beans", "nuts", "whole grains"],
 }
 
+# DRI values below are from the same USDA/NIH ODS reference basis as
+# SOURCE_BASIS above. Pregnancy/lactation and 14-18 figures added 2026-09-03
+# (audit finding: this cohort table only had 4 groups — teens 14-18 fell into
+# child_9_13's numbers, under-4s and pregnancy/lactation fell through to the
+# generic adult default with no dedicated RDA/UL at all). This module is not
+# currently wired into the live report pipeline (see module docstring below
+# _person_group), so this is a correctness fix for when/if it is, not a live
+# patch. Every generated recommendation's rationale already carries a
+# "confirm with a qualified clinician" hedge (see _recommendation_from_signal
+# below) — these numbers are a reference starting point, not a substitute
+# for that guidance, most of all for pregnancy/lactation.
 REQUIREMENTS = {
     "child_4_8": {
         "iron": {"rda": 10, "unit": "mg/day", "ul": 40},
@@ -60,7 +71,52 @@ REQUIREMENTS = {
         "magnesium": {"rda": 420, "unit": "mg/day", "ul": 350},
         "zinc": {"rda": 11, "unit": "mg/day", "ul": 40},
     },
+    "teen_male_14_18": {
+        "iron": {"rda": 11, "unit": "mg/day", "ul": 45},
+        "vitamin_d": {"rda": 15, "unit": "mcg/day", "ul": 100},
+        "vitamin_b12": {"rda": 2.4, "unit": "mcg/day", "ul": None},
+        "folate": {"rda": 400, "unit": "mcg DFE/day", "ul": 800},
+        "magnesium": {"rda": 410, "unit": "mg/day", "ul": 350},
+        "zinc": {"rda": 11, "unit": "mg/day", "ul": 34},
+    },
+    "teen_female_14_18": {
+        # Iron RDA is notably higher than the male teen band (menstruation
+        # onset) — this is exactly the gap that made lumping all teens into
+        # child_9_13's numbers (or a generic adult default) the wrong call.
+        "iron": {"rda": 15, "unit": "mg/day", "ul": 45},
+        "vitamin_d": {"rda": 15, "unit": "mcg/day", "ul": 100},
+        "vitamin_b12": {"rda": 2.4, "unit": "mcg/day", "ul": None},
+        "folate": {"rda": 400, "unit": "mcg DFE/day", "ul": 800},
+        "magnesium": {"rda": 360, "unit": "mg/day", "ul": 350},
+        "zinc": {"rda": 9, "unit": "mg/day", "ul": 34},
+    },
+    "pregnant": {
+        "iron": {"rda": 27, "unit": "mg/day", "ul": 45},
+        "vitamin_d": {"rda": 15, "unit": "mcg/day", "ul": 100},
+        "vitamin_b12": {"rda": 2.6, "unit": "mcg/day", "ul": None},
+        "folate": {"rda": 600, "unit": "mcg DFE/day", "ul": 1000},
+        "magnesium": {"rda": 350, "unit": "mg/day", "ul": 350},
+        "zinc": {"rda": 11, "unit": "mg/day", "ul": 40},
+    },
+    "breastfeeding": {
+        "iron": {"rda": 9, "unit": "mg/day", "ul": 45},
+        "vitamin_d": {"rda": 15, "unit": "mcg/day", "ul": 100},
+        "vitamin_b12": {"rda": 2.8, "unit": "mcg/day", "ul": None},
+        "folate": {"rda": 500, "unit": "mcg DFE/day", "ul": 1000},
+        "magnesium": {"rda": 310, "unit": "mg/day", "ul": 350},
+        "zinc": {"rda": 12, "unit": "mg/day", "ul": 40},
+    },
 }
+
+# Ages below the youngest band this table covers (4y). DRI figures for
+# infants/toddlers are structured very differently from the child/adult
+# bands above (by-month for the first year, then a 1-3y band with its own
+# units) and toddler iron/vitamin-A tolerance is materially less forgiving
+# than any band in this table — not a case where reusing a neighboring
+# band's numbers "as an approximation" is defensible. Rather than silently
+# falling through to an adult default (the bug found 2026-09-03), this age
+# range gets routed to a pediatric-referral signal instead of a numeric RDA.
+MIN_SUPPORTED_AGE = 4
 
 
 def _num(value: Any) -> float | None:
@@ -99,18 +155,46 @@ def _extract_avatar(input_data: Dict[str, Any] | None) -> Dict[str, Any]:
     return {}
 
 
+NEEDS_PEDIATRIC_REFERRAL = "needs_pediatric_referral"
+NEEDS_SPECIALIST_REFERRAL = "needs_specialist_referral"
+
+
+def _normalized_pregnancy_flag(avatar: Dict[str, Any]) -> str | None:
+    status = str(avatar.get("pregnancy_status") or "").strip().lower()
+    if status in {"pregnant", "yes", "true"}:
+        return "pregnant"
+    if status in {"breastfeeding", "lactating"}:
+        return "breastfeeding"
+    return None
+
+
 def _person_group(input_data: Dict[str, Any] | None) -> str:
     avatar = _extract_avatar(input_data)
     age = _num(avatar.get("age") or avatar.get("age_years"))
     age_band = str(avatar.get("age_band") or "").strip().lower()
     sex = str(avatar.get("sex") or "").strip().lower()
+    pregnancy = _normalized_pregnancy_flag(avatar)
+
+    if age is not None and age < MIN_SUPPORTED_AGE:
+        return NEEDS_PEDIATRIC_REFERRAL
+
+    if pregnancy:
+        # Pregnancy in early adolescence needs dedicated clinical guidance,
+        # not the standard adult pregnancy RDA table (built for the general
+        # reproductive-age population, not a still-growing 12-13 year old).
+        # Age is unknown in a deidentified context, so pregnancy still wins
+        # over the generic teen bands below in that case.
+        if age is not None and age < 14:
+            return NEEDS_SPECIALIST_REFERRAL
+        return "pregnant" if pregnancy == "pregnant" else "breastfeeding"
+
     if age is not None:
         if 4 <= age <= 8:
             return "child_4_8"
         if 9 <= age <= 13:
             return "child_9_13"
-        if age < 18:
-            return "child_9_13"
+        if 14 <= age < 18:
+            return "teen_female_14_18" if sex in {"female", "f"} else "teen_male_14_18"
     if age_band in {"under_18", "child", "pediatric", "paediatric"}:
         # Deidentified context does not expose exact age; use conservative child band.
         return "child_9_13"
@@ -120,6 +204,11 @@ def _person_group(input_data: Dict[str, Any] | None) -> str:
 
 
 def _requirement_rows(group: str) -> List[Dict[str, Any]]:
+    if group in {NEEDS_PEDIATRIC_REFERRAL, NEEDS_SPECIALIST_REFERRAL}:
+        # No numeric RDA/UL row for these — silently reusing a neighboring
+        # band's numbers (the 2026-09-03 audit finding) is worse than
+        # surfacing nothing plus an explicit referral signal.
+        return []
     rows = []
     for nutrient, values in (REQUIREMENTS.get(group) or REQUIREMENTS["adult_male"]).items():
         rows.append(
@@ -309,6 +398,11 @@ def build_nutrition_kb_context(input_data: Dict[str, Any]) -> Dict[str, Any]:
         "person_group": group,
         "source_basis": SOURCE_BASIS,
         "nutrient_requirements": _requirement_rows(group),
+        # Explicit signal for the two cases with no numeric RDA table (see
+        # _requirement_rows) — a consumer checking only nutrient_requirements
+        # would otherwise read "empty list" as "no data available" rather
+        # than "referral needed instead of a generic number".
+        "referral_required": group in {NEEDS_PEDIATRIC_REFERRAL, NEEDS_SPECIALIST_REFERRAL},
         "nutrition_signals": signals[:12],
         "generated_recommendations": recommendations,
     }

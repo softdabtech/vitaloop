@@ -280,7 +280,7 @@ Extraction rules:
 7. Status must be one of: {_EXTRACTION_STATUS_VALUES}.
 8. If status is not printed, infer from value and reference range only; otherwise use OPTIMAL.
 9. Category must be one of: {_EXTRACTION_CATEGORIES}.
-10. Include document metadata when visible: lab_name, report_date, patient_name, specimen_date, collection_date.
+10. Include document metadata when visible: lab_name, report_date, patient_name, specimen_date, collection_date. Do NOT also duplicate these (or other administrative fields such as Patient ID, Specimen ID, Accession Number, Page Number, Phone, Address, Provider, Doctor) as entries in the biomarkers array — they are not lab analyte results.
 11. Include extraction_notes for uncertainty, missing units, unreadable rows, duplicate pages, or non-lab content.
 
 Return ONLY valid JSON. No markdown. No commentary.
@@ -449,6 +449,7 @@ class PDFTextAnalyzer(OpenAIFileAnalyzer):
             result["document_parser"] = document_parser
             result["document_input_chars"] = len(extracted_text)
             result["document_chunks"] = len(chunks)
+            result["document_text_excerpt"] = extracted_text[:80000]
             return result
 
         except Exception as exc:

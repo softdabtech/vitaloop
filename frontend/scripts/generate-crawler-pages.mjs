@@ -30,13 +30,13 @@ const routes = [
   },
   {
     path: '/how-it-works',
-    title: 'How VITALOOP Health Intelligence Works | Core V3',
+    title: 'How AI Blood Test Analysis Works | VITALOOP',
     description: 'See how VITALOOP connects symptom intake, analysis quality gates, biomarker normalization, Knowledge Base reasoning, evidence gaps, safety notes, protocol actions, trends, and weekly progress tracking.',
     priority: '0.9',
     changefreq: 'monthly',
     text: [
       'VITALOOP starts with symptoms and context.',
-      'The product helps organize what may be useful to check, then interprets uploaded or entered lab results through Health Intelligence Core V3 and turns them into a structured plan.',
+      'The product helps organize what may be useful to check, then interprets uploaded or entered lab results through the VITALOOP Health Intelligence Engine and turns them into a structured plan.',
       'The loop continues with weekly check-ins and retesting cycles.',
     ],
   },
@@ -54,8 +54,8 @@ const routes = [
   },
   {
     path: '/features',
-    title: 'Health Intelligence Core V3 Features | VITALOOP',
-    description: 'Explore symptom intake, Health Intelligence Core V3, extraction quality gates, biomarker reasoning, safety notes, action plans, weekly check-ins, and progress tracking.',
+    title: 'AI Blood Test Analysis Features | VITALOOP',
+    description: 'Explore symptom intake, the VITALOOP Health Intelligence Engine, extraction quality gates, biomarker reasoning, safety notes, action plans, weekly check-ins, and progress tracking.',
     priority: '0.8',
     changefreq: 'monthly',
     text: [
@@ -89,7 +89,7 @@ const routes = [
   {
     path: '/faq',
     title: 'VITALOOP Health Intelligence FAQ | Symptoms, Labs, Safety & Retests',
-    description: 'Answers about symptom intake, blood test uploads, biomarker explanations, Health Intelligence Core V3, privacy, pricing, practitioner workflows, and VITALOOP safety limits.',
+    description: 'Answers about symptom intake, blood test uploads, biomarker explanations, the VITALOOP Health Intelligence Engine, privacy, pricing, practitioner workflows, and VITALOOP safety limits.',
     priority: '0.7',
     changefreq: 'monthly',
     text: [
@@ -99,9 +99,28 @@ const routes = [
     ],
   },
   {
+    path: '/pricing',
+    title: 'VITALOOP Pricing | Premium Lab Intelligence Subscription',
+    description: 'Compare VITALOOP Free and Premium access for lab uploads, explainable health reports, protocols, progress tracking, and weekly check-ins.',
+    priority: '0.8',
+    changefreq: 'monthly',
+    text: [
+      'VITALOOP offers free access for getting started and Premium access for deeper lab intelligence.',
+      'Premium includes full lab analysis, explainable reports, personalized protocols, progress tracking, and weekly check-ins.',
+      'VITALOOP is educational software and does not diagnose, treat, prescribe, or replace professional medical care.',
+      'Premium access is currently activated manually. VITALOOP does not send uploaded lab files, symptoms, biomarker values, health reports, or protocol text to billing tools.',
+    ],
+    links: [
+      { href: '/refund-policy/', label: 'Refund policy' },
+      { href: '/terms/', label: 'Terms' },
+      { href: '/privacy-policy/', label: 'Privacy policy' },
+      { href: '/contact/', label: 'Contact' },
+    ],
+  },
+  {
     path: '/for-investors',
     title: 'Investor Overview | VITALOOP AI Health Platform',
-    description: 'Learn about VITALOOP as a HealthTech platform connecting symptom intake, lab interpretation, Health Intelligence Core V3, evidence gaps, safety-aware plans, and recurring health loops.',
+    description: 'Learn about VITALOOP as a HealthTech platform connecting symptom intake, lab interpretation, the VITALOOP Health Intelligence Engine, evidence gaps, safety-aware plans, and recurring health loops.',
     priority: '0.6',
     changefreq: 'monthly',
     text: [
@@ -135,7 +154,16 @@ const routes = [
     description: 'Read the VITALOOP terms of service for using the website, user cabinet, subscriptions, and health support features.',
     priority: '0.3',
     changefreq: 'yearly',
-    text: ['VITALOOP terms of service for website and product use.'],
+    text: [
+      'VITALOOP terms of service for website and product use.',
+      'Premium access can be cancelled from the account billing area or by contacting support when active.',
+      'Refund requests are reviewed case by case under the VITALOOP refund policy.',
+    ],
+    links: [
+      { href: '/pricing/', label: 'Pricing' },
+      { href: '/refund-policy/', label: 'Refund policy' },
+      { href: '/contact/', label: 'Contact' },
+    ],
   },
   {
     path: '/privacy-policy',
@@ -143,7 +171,49 @@ const routes = [
     description: 'Learn how VITALOOP collects, processes, stores, protects, exports, and deletes symptom data, blood test reports, biomarker results, and account information.',
     priority: '0.3',
     changefreq: 'yearly',
-    text: ['VITALOOP privacy policy covering account data, lab uploads, analytics, security, and user rights.'],
+    text: [
+      'VITALOOP privacy policy covering account data, lab uploads, analytics, security, and user rights.',
+      'Health data is not shared with marketing or billing tools. Payment processors receive only account and checkout metadata required for billing.',
+    ],
+    links: [
+      { href: '/pricing/', label: 'Pricing' },
+      { href: '/refund-policy/', label: 'Refund policy' },
+      { href: '/contact/', label: 'Contact' },
+    ],
+  },
+  {
+    path: '/refund-policy',
+    title: 'Refund Policy and Cancellation Support | VITALOOP',
+    description: 'Read VITALOOP refund, cancellation, subscription access, and billing support rules for Premium subscriptions.',
+    priority: '0.3',
+    changefreq: 'yearly',
+    text: [
+      'VITALOOP Premium subscriptions can be cancelled from the account billing area or by contacting support.',
+      'Refund requests are reviewed case by case for duplicate charges, accidental purchases, checkout or access issues, or other billing problems.',
+      'VITALOOP is educational wellness and health-data organization software. Refund decisions are not based on medical outcomes.',
+    ],
+    links: [
+      { href: '/pricing/', label: 'Pricing' },
+      { href: '/terms/', label: 'Terms' },
+      { href: '/privacy-policy/', label: 'Privacy policy' },
+      { href: '/contact/', label: 'Contact' },
+    ],
+  },
+  {
+    path: '/contact',
+    title: 'Contact VITALOOP | Support and Billing Help',
+    description: 'Contact VITALOOP for account support, billing questions, cancellation and refund requests, privacy requests, partnerships, and product feedback.',
+    priority: '0.5',
+    changefreq: 'yearly',
+    text: [
+      'Contact VITALOOP for account support, billing questions, cancellation and refund requests, privacy requests, partnerships, and product feedback.',
+      'VITALOOP is educational software and is not a medical provider.',
+    ],
+    links: [
+      { href: 'mailto:info@softdab.tech', label: 'info@softdab.tech' },
+      { href: '/pricing/', label: 'Pricing' },
+      { href: '/refund-policy/', label: 'Refund policy' },
+    ],
   },
   {
     path: '/about',

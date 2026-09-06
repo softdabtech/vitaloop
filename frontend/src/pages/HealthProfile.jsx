@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Target, User, Activity, TrendingUp, ShieldCheck, Info } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
 import { useAuth } from '../hooks/useAuth.js'
 import api from '../lib/api.js'
-import { isUkrainianLocale } from '../lib/locale.js'
 import { trackFunnelEvent } from '../lib/funnel.js'
 import { gaEvent } from '../lib/analytics.js'
+import { CoachButton, CoachCard, CoachInput, CoachProgress } from '../components/coach/CoachUI.jsx'
+import { isUkrainianLocale } from '../lib/locale.js'
 import '../styles/dashboard2026.css'
+// coach-shell/coach-card/etc. have no built-in styles of their own — every
+// rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
+// so each page using CoachUI must import it directly or it renders as
+// unstyled browser-default HTML, not a build error.
+import '../styles/coach-design-system.css'
 
 const TIMEZONES = [
   'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
@@ -19,6 +24,21 @@ const TIMEZONES = [
   'Australia/Sydney', 'Pacific/Auckland',
 ]
 
+const GOAL_KEYS = [
+  'more_energy',
+  'better_sleep',
+  'hormone_balance',
+  'improve_digestion',
+  'cardiometabolic_health',
+  'reduce_inflammation',
+  'sports_performance',
+  'healthy_aging',
+]
+
+// The backend stores goal text verbatim (no enum) — English canonical labels
+// are what's persisted/read back either way, so goal VALUES stay English
+// regardless of UI locale (this is stored, comparable data, not display
+// copy) while the checkbox LABEL the user sees is localized via GOAL_LABELS.
 const GOAL_OPTIONS = [
   'More energy',
   'Better sleep',
@@ -30,15 +50,119 @@ const GOAL_OPTIONS = [
   'Healthy aging',
 ]
 
-const GOAL_LABELS_UK = {
-  'More energy': 'Більше енергії',
-  'Better sleep': 'Кращий сон',
-  'Hormone balance': 'Баланс гормонів',
-  'Improve digestion': 'Покращити травлення',
-  'Cardiometabolic health': 'Кардіометаболічне здоровʼя',
-  'Reduce inflammation': 'Зменшити запалення',
-  'Sports performance': 'Спортивна продуктивність',
-  'Healthy aging': 'Здорове старіння',
+const HEALTH_PROFILE_COPY = {
+  en: {
+    loadingProfile: 'Loading saved profile details...',
+    basics: 'Basics',
+    age: 'Age',
+    agePlaceholder: 'Enter your age',
+    sex: 'Sex',
+    selectSex: 'Select sex',
+    male: 'Male',
+    female: 'Female',
+    other: 'Other',
+    heightCm: 'Height (cm)',
+    weightKg: 'Weight (kg)',
+    timezone: 'Timezone',
+    goals: 'Goals',
+    goalsBody: 'Select goals to personalize your protocol recommendations.',
+    goalLabels: {
+      more_energy: 'More energy',
+      better_sleep: 'Better sleep',
+      hormone_balance: 'Hormone balance',
+      improve_digestion: 'Improve digestion',
+      cardiometabolic_health: 'Cardiometabolic health',
+      reduce_inflammation: 'Reduce inflammation',
+      sports_performance: 'Sports performance',
+      healthy_aging: 'Healthy aging',
+    },
+    conditionsTitle: 'Conditions & Contraindications',
+    conditionsBody: 'This information helps us interpret biomarkers safely and avoid dangerous recommendations.',
+    medications: 'Current medications (if any)',
+    medicationsPlaceholder: 'e.g., Aspirin 100mg daily, Vitamin D supplementation...',
+    allergies: 'Known allergies',
+    allergiesPlaceholder: 'e.g., Shellfish, Penicillin, Nuts...',
+    pregnancyStatus: 'Pregnancy / Breastfeeding status',
+    selectStatus: 'Select status',
+    pregnant: 'Currently pregnant',
+    breastfeeding: 'Breastfeeding',
+    planning: 'Planning to conceive',
+    notApplicable: 'Not applicable',
+    currentSupplements: 'Current supplements (comma-separated)',
+    supplementsPlaceholder: 'e.g., Vitamin D 2000IU, Magnesium 400mg, Omega-3...',
+    currentMedications: 'Current prescribed medications (comma-separated)',
+    currentMedicationsPlaceholder: 'e.g., Metformin 500mg, Lisinopril 10mg...',
+    priorDiagnoses: 'Prior diagnoses / chronic conditions',
+    priorDiagnosesPlaceholder: 'e.g., Type 2 diabetes, Hypothyroidism, IBS...',
+    privacyNote: 'Your medical information is kept private and only used to provide safe, personalized recommendations.',
+    save: 'Save Profile & Safety',
+    saving: 'Saving...',
+    savedToast: 'Profile & Safety updated!',
+    saveFailedToast: 'Failed to save profile',
+    profileCompletion: 'Profile Completion',
+    bmi: 'BMI',
+    ageMetric: 'Age',
+    weightMetric: 'Weight',
+    heightMetric: 'Height',
+    tip: 'TIP',
+    tipBody: 'Your profile data is used to personalize supplement recommendations, nutrition guidance, and protocol timing. Keep it updated!',
+  },
+  uk: {
+    loadingProfile: 'Завантажуємо збережений профіль...',
+    basics: 'Основне',
+    age: 'Вік',
+    agePlaceholder: 'Введіть ваш вік',
+    sex: 'Стать',
+    selectSex: 'Оберіть стать',
+    male: 'Чоловіча',
+    female: 'Жіноча',
+    other: 'Інша',
+    heightCm: 'Зріст (см)',
+    weightKg: 'Вага (кг)',
+    timezone: 'Часовий пояс',
+    goals: 'Цілі',
+    goalsBody: 'Оберіть цілі, щоб персоналізувати рекомендації протоколу.',
+    goalLabels: {
+      more_energy: 'Більше енергії',
+      better_sleep: 'Кращий сон',
+      hormone_balance: 'Гормональний баланс',
+      improve_digestion: 'Покращення травлення',
+      cardiometabolic_health: 'Кардіометаболічне здоровʼя',
+      reduce_inflammation: 'Зменшення запалення',
+      sports_performance: 'Спортивні результати',
+      healthy_aging: 'Здорове старіння',
+    },
+    conditionsTitle: 'Стани та протипоказання',
+    conditionsBody: 'Ця інформація допомагає безпечно інтерпретувати біомаркери та уникати небезпечних рекомендацій.',
+    medications: 'Поточні ліки (якщо є)',
+    medicationsPlaceholder: 'напр., Аспірин 100мг щодня, вітамін D...',
+    allergies: 'Відомі алергії',
+    allergiesPlaceholder: 'напр., Морепродукти, пеніцилін, горіхи...',
+    pregnancyStatus: 'Вагітність / грудне вигодовування',
+    selectStatus: 'Оберіть статус',
+    pregnant: 'Наразі вагітна',
+    breastfeeding: 'Годування груддю',
+    planning: 'Планую вагітність',
+    notApplicable: 'Не застосовується',
+    currentSupplements: 'Поточні добавки (через кому)',
+    supplementsPlaceholder: 'напр., Вітамін D 2000МО, Магній 400мг, Омега-3...',
+    currentMedications: 'Поточні призначені ліки (через кому)',
+    currentMedicationsPlaceholder: 'напр., Метформін 500мг, Лізиноприл 10мг...',
+    priorDiagnoses: 'Попередні діагнози / хронічні стани',
+    priorDiagnosesPlaceholder: 'напр., Діабет 2 типу, Гіпотиреоз, СРК...',
+    privacyNote: 'Ваша медична інформація залишається приватною і використовується лише для безпечних персоналізованих рекомендацій.',
+    save: 'Зберегти профіль і безпеку',
+    saving: 'Зберігаємо...',
+    savedToast: 'Профіль і безпеку оновлено!',
+    saveFailedToast: 'Не вдалося зберегти профіль',
+    profileCompletion: 'Заповненість профілю',
+    bmi: 'ІМТ',
+    ageMetric: 'Вік',
+    weightMetric: 'Вага',
+    heightMetric: 'Зріст',
+    tip: 'ПОРАДА',
+    tipBody: 'Дані профілю персоналізують рекомендації добавок, харчування та терміни протоколу. Тримайте їх актуальними!',
+  },
 }
 
 const DEFAULT_PROFILE = {
@@ -56,26 +180,14 @@ const DEFAULT_PROFILE = {
   prior_diagnoses: '',
 }
 
-const fieldStyle = {
-  width: '100%',
-  minHeight: 44,
-  padding: '10px 14px',
-  background: '#f8fafc',
-  border: '1px solid rgba(15,23,42,0.12)',
-  borderRadius: 14,
-  color: '#0f172a',
-  fontSize: 16,
-  outline: 'none',
-  transition: 'border-color 200ms, box-shadow 200ms',
-}
-
-function Field({ label, children }) {
+function MetricTile({ label, value, tone = 'default' }) {
+  const toneClass = tone === 'success' ? 'border-emerald-200 bg-emerald-50' : 'border-slate-100 bg-slate-50'
+  const valueClass = tone === 'success' ? 'text-emerald-900' : 'text-slate-950'
+  const labelClass = tone === 'success' ? 'text-emerald-700' : 'text-slate-500'
   return (
-    <div>
-      <label style={{ fontSize: 13, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6, lineHeight: 1.3 }}>
-        {label}
-      </label>
-      {children}
+    <div className={`rounded-2xl border p-4 ${toneClass}`}>
+      <p className={`text-xs font-bold uppercase tracking-wide ${labelClass}`}>{label}</p>
+      <p className={`mt-2 text-2xl font-extrabold ${valueClass}`}>{value}</p>
     </div>
   )
 }
@@ -92,19 +204,6 @@ function parseCommaSeparatedList(value) {
   return value
     ? value.split(',').map((item) => item.trim()).filter(Boolean)
     : []
-}
-
-function hasMeaningfulValue(value) {
-  return Boolean(String(value || '').trim())
-}
-
-function isSystemRedFlagText(value) {
-  return /^red flags selected:/i.test(String(value || '').trim())
-}
-
-function isPregnancyContextApplicable(profile) {
-  const age = Number(profile.age)
-  return profile.sex === 'female' && Number.isFinite(age) && age >= 12 && age <= 55
 }
 
 function mapProfileFromApi(data) {
@@ -157,7 +256,7 @@ function buildProfileUpdatePayload(profile) {
     pregnancy_status: profile.pregnancy_status || null,
     current_supplements: supplementsList.length ? supplementsList : null,
     current_medications: medicationsList.length ? medicationsList : null,
-    prior_diagnoses: isSystemRedFlagText(profile.prior_diagnoses) ? null : (profile.prior_diagnoses || null),
+    prior_diagnoses: profile.prior_diagnoses || null,
   }
 }
 
@@ -165,63 +264,22 @@ export default function HealthProfile() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const isUk = isUkrainianLocale()
+  const copy = isUk ? HEALTH_PROFILE_COPY.uk : HEALTH_PROFILE_COPY.en
   const [profile, setProfile] = useState(DEFAULT_PROFILE)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
   const profileCompletion = useMemo(() => {
-    const requiredChecks = [
+    const checks = [
       Boolean(profile.age),
       Boolean(profile.sex),
       Boolean(profile.timezone),
       Boolean(profile.height_cm),
       Boolean(profile.weight_kg),
-    ]
-    const safetyChecks = [
-      hasMeaningfulValue(profile.medications),
-      hasMeaningfulValue(profile.allergies),
-      hasMeaningfulValue(profile.current_supplements),
-      hasMeaningfulValue(profile.current_medications),
-      hasMeaningfulValue(profile.prior_diagnoses) && !isSystemRedFlagText(profile.prior_diagnoses),
-      isPregnancyContextApplicable(profile) ? hasMeaningfulValue(profile.pregnancy_status) : true,
-    ]
-    const goalsComplete = Array.isArray(profile.goals) && profile.goals.length > 0
-    const requiredScore = (requiredChecks.filter(Boolean).length / requiredChecks.length) * 60
-    const goalsScore = goalsComplete ? 10 : 0
-    const safetyScore = (safetyChecks.filter(Boolean).length / safetyChecks.length) * 30
-    return Math.round(requiredScore + goalsScore + safetyScore)
-  }, [profile])
-
-  const safetyCompletion = useMemo(() => {
-    const checks = [
-      hasMeaningfulValue(profile.medications),
-      hasMeaningfulValue(profile.allergies),
-      hasMeaningfulValue(profile.current_supplements),
-      hasMeaningfulValue(profile.current_medications),
-      hasMeaningfulValue(profile.prior_diagnoses) && !isSystemRedFlagText(profile.prior_diagnoses),
-      isPregnancyContextApplicable(profile) ? hasMeaningfulValue(profile.pregnancy_status) : true,
+      Array.isArray(profile.goals) && profile.goals.length > 0,
     ]
     return Math.round((checks.filter(Boolean).length / checks.length) * 100)
   }, [profile])
-
-  const childProfileContext = useMemo(() => {
-    const age = Number(profile.age)
-    return Number.isFinite(age) && age > 0 && age < 18
-  }, [profile.age])
-
-  const systemRedFlagInDiagnoses = isSystemRedFlagText(profile.prior_diagnoses)
-
-  const missingContextItems = useMemo(() => {
-    const items = []
-    if (!profile.age) items.push(isUk ? 'вік' : 'age')
-    if (!profile.sex) items.push(isUk ? 'стать' : 'sex')
-    if (!profile.height_cm) items.push(isUk ? 'зріст' : 'height')
-    if (!profile.weight_kg) items.push(isUk ? 'вага' : 'weight')
-    if (!hasMeaningfulValue(profile.medications)) items.push(isUk ? 'ліки або “немає”' : 'medications or “none”')
-    if (!hasMeaningfulValue(profile.allergies)) items.push(isUk ? 'алергії або “немає”' : 'allergies or “none”')
-    if (isPregnancyContextApplicable(profile) && !hasMeaningfulValue(profile.pregnancy_status)) items.push(isUk ? 'статус вагітності/ГВ' : 'pregnancy/breastfeeding status')
-    return items
-  }, [isUk, profile])
 
   // Calculate BMI
   const bmi = useMemo(() => {
@@ -275,9 +333,9 @@ export default function HealthProfile() {
         queryClient.invalidateQueries({ queryKey: ['insights'] }),
         queryClient.invalidateQueries({ queryKey: ['health-score'] }),
       ])
-      toast.success(isUk ? 'Профіль і контекст безпеки оновлено' : 'Profile & Safety updated!')
+      toast.success(copy.savedToast)
     } catch (error) {
-      toast.error(isUk ? 'Не вдалося зберегти профіль' : 'Failed to save profile')
+      toast.error(copy.saveFailedToast)
       console.error(error)
     } finally {
       setSaving(false)
@@ -285,7 +343,7 @@ export default function HealthProfile() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="coach-shell">
       <CabinetPageHeader
         title={ct().healthProfile.title}
         subtitle={ct().healthProfile.subtitle}
@@ -293,153 +351,237 @@ export default function HealthProfile() {
       />
 
       {loading && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-          {isUk ? 'Завантажуємо збережений профіль...' : 'Loading saved profile details...'}
+        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+          {copy.loadingProfile}
         </div>
       )}
 
-      {childProfileContext && (
-        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-          <div className="mb-1 flex items-center gap-2 font-semibold"><Info className="h-4 w-4" /> {isUk ? 'Профіль дитини' : 'Child profile context'}</div>
-          <p className="leading-6">
-            {isUk
-              ? 'VITALOOP може допомагати батькам готувати освітній огляд аналізів дитини. Інтерпретація має враховувати вік, стать, зріст, вагу, симптоми й консультацію педіатра.'
-              : 'VITALOOP can help parents prepare an educational review of a child’s lab results. Interpretation must account for age, sex, height, weight, symptoms, and pediatric clinician review.'}
-          </p>
-        </div>
-      )}
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="space-y-6">
+          {/* Main grid: Personal Info + Health Goals side by side */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Biometrics Section - Left Column */}
+            <CoachCard className="p-6 sm:p-8">
+              <h3 className="coach-title-lg mb-6">{copy.basics}</h3>
 
-      {systemRedFlagInDiagnoses && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <div className="mb-1 font-semibold">{isUk ? 'Потрібно очистити поле діагнозів' : 'Diagnosis field needs cleanup'}</div>
-          <p className="leading-6">
-            {isUk
-              ? 'У полі попередніх діагнозів знайдено системний текст про red flags. Він не буде збережений як діагноз; перенесіть реальні стани вручну або залиште поле порожнім.'
-              : 'The prior diagnoses field contains system-generated red flag text. It will not be saved as a diagnosis; enter real conditions manually or leave the field blank.'}
-          </p>
-        </div>
-      )}
+              <div className="space-y-5">
+                <CoachInput label={copy.age}>
+                  <input
+                    type="number"
+                    value={profile.age}
+                    onChange={(e) => setProfile({ ...profile, age: e.target.value })}
+                    placeholder={copy.agePlaceholder}
+                    min="0"
+                    max="150"
+                  />
+                </CoachInput>
 
-      <section className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><Activity className="h-3.5 w-3.5 text-emerald-600" /> {isUk ? 'Заповнення профілю' : 'Profile completion'}</div>
-          <p className="text-2xl font-bold text-slate-900">{profileCompletion}%</p>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${profileCompletion}%` }} /></div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> BMI</div>
-          <p className="text-2xl font-bold text-slate-900">{bmi || '—'}</p>
-          <p className="mt-1 text-xs text-slate-500">{isUk ? 'Розраховано за зростом і вагою.' : 'Calculated from height and weight.'}</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><Target className="h-3.5 w-3.5 text-emerald-600" /> {isUk ? 'Активні цілі' : 'Active goals'}</div>
-          <p className="text-2xl font-bold text-slate-900">{Array.isArray(profile.goals) ? profile.goals.length : 0}</p>
-          <p className="mt-1 text-xs text-slate-500">{isUk ? 'Використовується для персоналізації рекомендацій.' : 'Used to personalize recommendations.'}</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:col-span-3">
-          <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> {isUk ? 'Контекст безпеки' : 'Safety context'}</div>
-          <p className="text-2xl font-bold text-slate-900">{safetyCompletion}%</p>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-blue-500" style={{ width: `${safetyCompletion}%` }} /></div>
-          {missingContextItems.length > 0 && (
-            <p className="mt-2 text-xs leading-5 text-slate-500">
-              {isUk ? 'Для точнішої інтерпретації додайте: ' : 'For safer interpretation, add: '}
-              {missingContextItems.slice(0, 5).join(', ')}{missingContextItems.length > 5 ? '…' : '.'}
+                <CoachInput label={copy.sex}>
+                  <select
+                    value={profile.sex}
+                    onChange={(e) => setProfile({ ...profile, sex: e.target.value })}
+                  >
+                    <option value="">{copy.selectSex}</option>
+                    <option value="male">{copy.male}</option>
+                    <option value="female">{copy.female}</option>
+                    <option value="other">{copy.other}</option>
+                  </select>
+                </CoachInput>
+
+                <CoachInput label={copy.heightCm}>
+                  <input
+                    type="number"
+                    value={profile.height_cm}
+                    onChange={(e) => setProfile({ ...profile, height_cm: e.target.value })}
+                    placeholder="e.g., 180"
+                    min="0"
+                    max="300"
+                    step="0.1"
+                  />
+                </CoachInput>
+
+                <CoachInput label={copy.weightKg}>
+                  <input
+                    type="number"
+                    value={profile.weight_kg}
+                    onChange={(e) => setProfile({ ...profile, weight_kg: e.target.value })}
+                    placeholder="e.g., 80"
+                    min="0"
+                    max="500"
+                    step="0.1"
+                  />
+                </CoachInput>
+
+                <CoachInput label={copy.timezone}>
+                  <select
+                    value={profile.timezone}
+                    onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
+                  >
+                    {TIMEZONES.map((tz) => (
+                      <option key={tz} value={tz}>{tz}</option>
+                    ))}
+                  </select>
+                </CoachInput>
+              </div>
+            </CoachCard>
+
+            {/* Health Goals - Right Column */}
+            <CoachCard className="p-6 sm:p-8">
+              <h3 className="coach-title-lg mb-2">{copy.goals}</h3>
+              <p className="coach-body mb-4">{copy.goalsBody}</p>
+
+              <div className="space-y-3">
+                {GOAL_OPTIONS.map((goal, index) => {
+                  const goalKey = GOAL_KEYS[index]
+                  const isChecked = profile.goals.includes(goal)
+                  return (
+                    <label
+                      key={goal}
+                      className={`flex cursor-pointer items-center gap-2.5 rounded-2xl border p-3 transition ${
+                        isChecked ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setProfile({ ...profile, goals: [...profile.goals, goal] })
+                          } else {
+                            setProfile({ ...profile, goals: profile.goals.filter((g) => g !== goal) })
+                          }
+                        }}
+                        className="h-[18px] w-[18px] cursor-pointer"
+                      />
+                      <span className="text-sm font-medium text-slate-900">{copy.goalLabels[goalKey]}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </CoachCard>
+          </div>
+
+          {/* Medical Flags - Important Context */}
+          <CoachCard tone="attention" className="p-6 sm:p-8">
+            <h3 className="mb-2 text-lg font-extrabold text-rose-900">⚠️ {copy.conditionsTitle}</h3>
+            <p className="mb-5 text-sm text-rose-700">{copy.conditionsBody}</p>
+
+            <div className="space-y-5">
+              <CoachInput label={copy.medications}>
+                <textarea
+                  value={profile.medications}
+                  onChange={(e) => setProfile({ ...profile, medications: e.target.value })}
+                  placeholder={copy.medicationsPlaceholder}
+                  rows={3}
+                />
+              </CoachInput>
+
+              <CoachInput label={copy.allergies}>
+                <textarea
+                  value={profile.allergies}
+                  onChange={(e) => setProfile({ ...profile, allergies: e.target.value })}
+                  placeholder={copy.allergiesPlaceholder}
+                  rows={3}
+                />
+              </CoachInput>
+
+              <CoachInput label={copy.pregnancyStatus}>
+                <select
+                  value={profile.pregnancy_status}
+                  onChange={(e) => setProfile({ ...profile, pregnancy_status: e.target.value })}
+                >
+                  <option value="">{copy.selectStatus}</option>
+                  <option value="pregnant">{copy.pregnant}</option>
+                  <option value="breastfeeding">{copy.breastfeeding}</option>
+                  <option value="planning">{copy.planning}</option>
+                  <option value="none">{copy.notApplicable}</option>
+                </select>
+              </CoachInput>
+
+              <CoachInput label={copy.currentSupplements}>
+                <textarea
+                  value={profile.current_supplements}
+                  onChange={(e) => setProfile({ ...profile, current_supplements: e.target.value })}
+                  placeholder={copy.supplementsPlaceholder}
+                  rows={3}
+                />
+              </CoachInput>
+
+              <CoachInput label={copy.currentMedications}>
+                <textarea
+                  value={profile.current_medications}
+                  onChange={(e) => setProfile({ ...profile, current_medications: e.target.value })}
+                  placeholder={copy.currentMedicationsPlaceholder}
+                  rows={3}
+                />
+              </CoachInput>
+
+              <CoachInput label={copy.priorDiagnoses}>
+                <textarea
+                  value={profile.prior_diagnoses}
+                  onChange={(e) => setProfile({ ...profile, prior_diagnoses: e.target.value })}
+                  placeholder={copy.priorDiagnosesPlaceholder}
+                  rows={3}
+                />
+              </CoachInput>
+            </div>
+
+            <p className="mt-4 text-xs text-rose-700">
+              ✓ {copy.privacyNote}
             </p>
+          </CoachCard>
+
+          <CoachButton onClick={saveProfile} disabled={saving}>
+            {saving ? copy.saving : copy.save}
+          </CoachButton>
+        </div>
+
+        {/* Right Sidebar */}
+        <div className="space-y-4">
+          {/* Completion */}
+          <CoachCard className="p-5">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.profileCompletion}</p>
+            <CoachProgress value={profileCompletion} />
+            <p className="mt-2 text-center text-xl font-extrabold text-slate-950">{profileCompletion}%</p>
+          </CoachCard>
+
+          {/* Biometrics Display */}
+          {bmi && (
+            <MetricTile
+              label={copy.bmi}
+              value={bmi}
+              tone={bmi < 25 ? 'success' : 'default'}
+            />
           )}
-        </div>
-      </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-        <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900"><User className="h-4 w-4 text-emerald-600" /> {isUk ? 'Основні дані' : 'Basics'}</div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label={isUk ? 'Вік' : 'Age'}>
-            <input type="number" value={profile.age} onChange={(e) => setProfile({ ...profile, age: e.target.value })} placeholder={isUk ? 'Вкажіть вік' : 'Enter age'} style={fieldStyle} min="0" max="150" />
-          </Field>
-          <Field label={isUk ? 'Стать' : 'Sex'}>
-            <select value={profile.sex} onChange={(e) => setProfile({ ...profile, sex: e.target.value })} style={fieldStyle}>
-              <option value="">{isUk ? 'Оберіть стать' : 'Select sex'}</option>
-              <option value="male">{isUk ? 'Чоловіча' : 'Male'}</option>
-              <option value="female">{isUk ? 'Жіноча' : 'Female'}</option>
-              <option value="other">{isUk ? 'Інше' : 'Other'}</option>
-            </select>
-          </Field>
-          <Field label={isUk ? 'Часовий пояс' : 'Timezone'}>
-            <select value={profile.timezone} onChange={(e) => setProfile({ ...profile, timezone: e.target.value })} style={fieldStyle}>
-              {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
-            </select>
-          </Field>
-          <Field label={isUk ? 'Зріст (см)' : 'Height (cm)'}>
-            <input type="number" value={profile.height_cm} onChange={(e) => setProfile({ ...profile, height_cm: e.target.value })} placeholder={isUk ? 'наприклад, 180' : 'e.g., 180'} style={fieldStyle} min="0" max="300" step="0.1" />
-          </Field>
-          <Field label={isUk ? 'Вага (кг)' : 'Weight (kg)'}>
-            <input type="number" value={profile.weight_kg} onChange={(e) => setProfile({ ...profile, weight_kg: e.target.value })} placeholder={isUk ? 'наприклад, 80' : 'e.g., 80'} style={fieldStyle} min="0" max="500" step="0.1" />
-          </Field>
-        </div>
-      </section>
+          {profile.age && (
+            <MetricTile
+              label={copy.ageMetric}
+              value={profile.age}
+            />
+          )}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{isUk ? 'Цілі' : 'Goals'}</h3>
-        <div className="flex flex-wrap gap-2">
-          {GOAL_OPTIONS.map((goal) => {
-            const selected = profile.goals.includes(goal)
-            return (
-              <button
-                key={goal}
-                type="button"
-                onClick={() => {
-                  if (selected) {
-                    setProfile({ ...profile, goals: profile.goals.filter((g) => g !== goal) })
-                  } else {
-                    setProfile({ ...profile, goals: [...profile.goals, goal] })
-                  }
-                }}
-                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${selected ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50'}`}
-              >
-                {isUk ? (GOAL_LABELS_UK[goal] || goal) : goal}
-              </button>
-            )
-          })}
-        </div>
-      </section>
+          {profile.weight_kg && (
+            <MetricTile
+              label={copy.weightMetric}
+              value={`${profile.weight_kg} kg`}
+            />
+          )}
 
-      <section className="rounded-2xl border border-rose-200 bg-rose-50 p-5 sm:p-6">
-        <h3 className="mb-1 text-base font-semibold text-rose-900">{isUk ? 'Контекст безпеки' : 'Safety context'}</h3>
-        <p className="mb-4 text-sm text-rose-700">{isUk ? 'Допомагає уникати небезпечних порад і робити рекомендації точнішими. Якщо пункт не стосується вас, напишіть “немає” або оберіть “не стосується”.' : 'Used to avoid unsafe suggestions and make recommendations more accurate. If a field does not apply, enter “none” or choose “not applicable”.'}</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={isUk ? 'Поточні ліки (якщо є)' : 'Current medications (if any)'}>
-            <textarea value={profile.medications} onChange={(e) => setProfile({ ...profile, medications: e.target.value })} rows={3} placeholder={isUk ? 'наприклад, аспірин 100 мг щодня' : 'e.g., Aspirin 100mg daily'} style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
-          </Field>
-          <Field label={isUk ? 'Відомі алергії' : 'Known allergies'}>
-            <textarea value={profile.allergies} onChange={(e) => setProfile({ ...profile, allergies: e.target.value })} rows={3} placeholder={isUk ? 'наприклад, пеніцилін' : 'e.g., Penicillin'} style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
-          </Field>
-          <Field label={isUk ? 'Вагітність / грудне вигодовування' : 'Pregnancy / breastfeeding status'}>
-            <select value={profile.pregnancy_status} onChange={(e) => setProfile({ ...profile, pregnancy_status: e.target.value })} style={fieldStyle}>
-              <option value="">{isUk ? 'Оберіть статус' : 'Select status'}</option>
-              <option value="pregnant">{isUk ? 'Зараз вагітна' : 'Currently pregnant'}</option>
-              <option value="breastfeeding">{isUk ? 'Грудне вигодовування' : 'Breastfeeding'}</option>
-              <option value="planning">{isUk ? 'Планування вагітності' : 'Planning to conceive'}</option>
-              <option value="none">{isUk ? 'Не стосується' : 'Not applicable'}</option>
-            </select>
-          </Field>
-          <Field label={isUk ? 'Поточні добавки (через кому)' : 'Current supplements (comma-separated)'}>
-            <textarea value={profile.current_supplements} onChange={(e) => setProfile({ ...profile, current_supplements: e.target.value })} rows={3} placeholder={isUk ? 'наприклад, вітамін D, магній' : 'e.g., Vitamin D, Magnesium'} style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
-          </Field>
-          <Field label={isUk ? 'Призначені ліки (через кому)' : 'Current prescribed medications (comma-separated)'}>
-            <textarea value={profile.current_medications} onChange={(e) => setProfile({ ...profile, current_medications: e.target.value })} rows={3} placeholder={isUk ? 'наприклад, метформін, лізиноприл' : 'e.g., Metformin, Lisinopril'} style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
-          </Field>
-          <Field label={isUk ? 'Попередні діагнози / хронічні стани' : 'Prior diagnoses / chronic conditions'}>
-            <textarea value={profile.prior_diagnoses} onChange={(e) => setProfile({ ...profile, prior_diagnoses: e.target.value })} rows={3} placeholder={isUk ? 'наприклад, гіпотиреоз' : 'e.g., Hypothyroidism'} style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
-          </Field>
-        </div>
-      </section>
+          {profile.height_cm && (
+            <MetricTile
+              label={copy.heightMetric}
+              value={`${profile.height_cm} cm`}
+            />
+          )}
 
-      <button
-        onClick={saveProfile}
-        disabled={saving}
-        className="w-full rounded-2xl bg-emerald-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50 sm:w-auto"
-      >
-        {saving ? (isUk ? 'Збереження...' : 'Saving...') : (isUk ? 'Зберегти профіль здоровʼя' : 'Save Health Profile')}
-      </button>
+          {/* Info Box */}
+          <CoachCard tone="soft" className="p-4">
+            <p className="mb-1.5 text-xs font-bold text-emerald-700">💡 {copy.tip}</p>
+            <p className="text-[13px] leading-relaxed text-emerald-900">{copy.tipBody}</p>
+          </CoachCard>
+        </div>
+      </div>
     </div>
   )
 }

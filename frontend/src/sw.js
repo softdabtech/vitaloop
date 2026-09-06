@@ -12,8 +12,8 @@ cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST || [])
 
 const navigationHandler = new NetworkFirst({
-  cacheName: 'navigation-shell-v20260713-wellbeing',
-  networkTimeoutSeconds: 8,
+  cacheName: 'navigation-shell',
+  networkTimeoutSeconds: 3,
   plugins: [
     new CacheableResponsePlugin({ statuses: [0, 200] }),
   ],
@@ -76,7 +76,7 @@ self.addEventListener('push', (event) => {
     badge: payload.badge || '/icons/icon-192.png?v=20260601-brand',
     tag: payload.tag || 'vitaloop-reminder',
     data: {
-      url: payload.url || '/dashboard/',
+      url: payload.url || '/dashboard',
     },
     requireInteraction: Boolean(payload.requireInteraction),
   }
@@ -86,7 +86,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const targetUrl = event.notification?.data?.url || '/dashboard/'
+  const targetUrl = event.notification?.data?.url || '/dashboard'
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {

@@ -12,6 +12,35 @@ import {
   CheckCircle,
   Heart,
 } from 'lucide-react'
+import { isUkrainianLocale } from '../lib/locale.js'
+
+const ILLUSTRATION_ICONS = {
+  upload: { icon: FileUp, color: 'text-emerald-600', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200' },
+  results: { icon: TrendingUp, color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
+  checkins: { icon: Calendar, color: 'text-amber-600', bgColor: 'bg-amber-50', borderColor: 'border-amber-200' },
+  goals: { icon: Heart, color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
+  error: { icon: AlertCircle, color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
+  success: { icon: CheckCircle, color: 'text-emerald-600', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200' },
+}
+
+const ILLUSTRATION_COPY = {
+  en: {
+    upload: { title: 'No uploads yet', description: 'Start by uploading your first lab report to get personalized biomarker analysis.' },
+    results: { title: 'No results available', description: 'Upload a lab report to see your biomarker analysis and personalized protocol.' },
+    checkins: { title: 'No check-ins yet', description: 'Track your progress by completing weekly check-ins.' },
+    goals: { title: 'No health goals set', description: 'Set health goals to get personalized recommendations.' },
+    error: { title: 'Something went wrong', description: 'Please try again or contact support.' },
+    success: { title: 'All set!', description: 'Your data has been processed successfully.' },
+  },
+  uk: {
+    upload: { title: 'Ще немає завантажень', description: 'Завантажте перший аналіз, щоб отримати персоналізований розбір біомаркерів.' },
+    results: { title: 'Результатів ще немає', description: 'Завантажте аналіз, щоб побачити розбір біомаркерів і персональний план дій.' },
+    checkins: { title: 'Ще немає чек-інів', description: 'Відстежуйте прогрес, проходячи щотижневі чек-іни.' },
+    goals: { title: 'Цілей здоровʼя ще не задано', description: 'Задайте цілі здоровʼя, щоб отримати персональні рекомендації.' },
+    error: { title: 'Щось пішло не так', description: 'Спробуйте ще раз або зверніться до підтримки.' },
+    success: { title: 'Готово!', description: 'Ваші дані успішно оброблено.' },
+  },
+}
 
 export function EmptyStateIllustration({ type = 'upload', size = 'md' }) {
   const sizeMap = {
@@ -20,64 +49,10 @@ export function EmptyStateIllustration({ type = 'upload', size = 'md' }) {
     lg: 'h-24 w-24',
   }
 
-  const illustrations = {
-    upload: {
-      icon: FileUp,
-      color: 'text-emerald-600',
-      bgColor: 'bg-emerald-50',
-      borderColor: 'border-emerald-200',
-      title: 'No uploads yet',
-      description: 'Start by uploading your first lab report to get personalized biomarker analysis.',
-      cta: 'Upload Lab Report',
-    },
-    results: {
-      icon: TrendingUp,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200',
-      title: 'No results available',
-      description: 'Upload a lab report to see your biomarker analysis and personalized protocol.',
-      cta: 'Upload Now',
-    },
-    checkins: {
-      icon: Calendar,
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-50',
-      borderColor: 'border-amber-200',
-      title: 'No check-ins yet',
-      description: 'Track your progress by completing weekly check-ins.',
-      cta: 'Start Check-in',
-    },
-    goals: {
-      icon: Heart,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-200',
-      title: 'No health goals set',
-      description: 'Set health goals to get personalized recommendations.',
-      cta: 'Set Goals',
-    },
-    error: {
-      icon: AlertCircle,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-200',
-      title: 'Something went wrong',
-      description: 'Please try again or contact support.',
-      cta: 'Retry',
-    },
-    success: {
-      icon: CheckCircle,
-      color: 'text-emerald-600',
-      bgColor: 'bg-emerald-50',
-      borderColor: 'border-emerald-200',
-      title: 'All set!',
-      description: 'Your data has been processed successfully.',
-      cta: 'Continue',
-    },
-  }
-
-  const config = illustrations[type] || illustrations.upload
+  const isUk = isUkrainianLocale()
+  const iconConfig = ILLUSTRATION_ICONS[type] || ILLUSTRATION_ICONS.upload
+  const textConfig = (isUk ? ILLUSTRATION_COPY.uk : ILLUSTRATION_COPY.en)[type] || (isUk ? ILLUSTRATION_COPY.uk : ILLUSTRATION_COPY.en).upload
+  const config = { ...iconConfig, ...textConfig }
   const Icon = config.icon
 
   return (

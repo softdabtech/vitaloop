@@ -6,10 +6,25 @@ import { useAuth } from '../hooks/useAuth.js'
 import { useFeature } from '../hooks/useFeature.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
+import HintBanner from '../components/tour/HintBanner.jsx'
+import { useTourHints } from '../hooks/useTourHints.js'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
 import { isUkrainianLocale } from '../lib/locale.js'
+import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
 import '../styles/dashboard2026.css'
 
+// Cabinet reconciliation: full EN/UA coverage ported from origin/main's
+// LabResultsList.jsx (LAB_RESULTS_COPY). Applied on top of the CURRENT
+// file's data logic, not origin/main's — origin/main's version regresses
+// two Stage 2D invariants that must not be ported: (1) its getItemDate()
+// falls back to the upload's created-at timestamp when no real lab date
+// exists, violating Stage 2D-1's test_date -> collected_at -> reported_at
+// chronology; (2) it has no /progress/overview call or ClinicalProgressPanel
+// at all — its sidebar is static placeholder copy, not backend-computed
+// longitudinal data, which is a regression from Stage 2D-2 here, not an
+// upgrade. Kept the current, Stage-2D-compliant logic; only added the
+// missing localization this page previously lacked (hardcoded English
+// throughout body copy, badges, and the empty/premium states).
 const LAB_RESULTS_COPY = {
   en: {
     uploadResults: 'Upload Results',
@@ -28,15 +43,11 @@ const LAB_RESULTS_COPY = {
     viewResults: 'View Results',
     premiumTitle: 'Premium features available',
     premiumBody: 'Upgrade to see your complete lab history, track trends over time, and keep action plans connected to follow-up check-ins.',
-    premiumCta: 'Upgrade for $4.99/month',
-    whatChanged: 'What changed',
-    whatChangedBody: 'Contextual review of priority markers and next retest direction.',
-    stableZone: 'Stable zone',
-    stableBody: 'Keep the routines that support markers currently in range.',
-    needsAttention: 'Needs attention',
-    needsBody: 'Link these markers to symptoms and adjust protocol targets.',
-    clinicianReview: 'Clinician review',
-    clinicianBody: 'Use priority markers and symptoms together when discussing next checks.',
+    // Was hardcoded '$19.99/month' — stale, drifted from the actual price;
+    // sourced from lib/pricing.js now like every other paywall prompt.
+    premiumCta: `Upgrade for ${PREMIUM_PRICE_LABEL}`,
+    safetyContext: 'Safety context',
+    safetyBody: 'Review out-of-range markers with a qualified clinician when appropriate.',
     nextStep: 'Next step',
     nextBody: 'Open the action plan and use check-ins to track whether symptoms change.',
   },
@@ -58,14 +69,8 @@ const LAB_RESULTS_COPY = {
     premiumTitle: 'Доступні Premium-функції',
     premiumBody: 'Оновіть тариф, щоб бачити повну історію аналізів, динаміку та повʼязувати плани дій із чек-інами.',
     premiumCta: 'Оновити тариф',
-    whatChanged: 'Що змінилось',
-    whatChangedBody: 'Контекстний огляд пріоритетних маркерів і напрям повторної перевірки.',
-    stableZone: 'Стабільна зона',
-    stableBody: 'Зберігайте звички, які підтримують показники в межах референсу.',
-    needsAttention: 'Потребує уваги',
-    needsBody: 'Повʼяжіть ці маркери із симптомами й уточніть цілі плану дій.',
-    clinicianReview: 'Обговорити з фахівцем',
-    clinicianBody: 'Використовуйте пріоритетні маркери разом із симптомами під час консультації.',
+    safetyContext: 'Контекст безпеки',
+    safetyBody: 'Обговоріть показники поза референсом із кваліфікованим фахівцем, коли це доречно.',
     nextStep: 'Наступний крок',
     nextBody: 'Відкрийте план дій і використовуйте чек-іни, щоб відстежити зміни симптомів.',
   },
@@ -86,19 +91,16 @@ function normalizeProgressPayload(payload) {
   return []
 }
 
-function getItemDate(item, isUk = false) {
-  return item?.test_date || item?.created_at?.slice(0, 10) || (isUk ? 'Дата не вказана' : 'Unknown date')
+// Stage 2D-1: clinical chronology priority is test_date -> collected_at ->
+// reported_at, matching the backend's choose_measurement_date() helper
+// (app/services/lab_date_extraction.py). created_at (upload time) is
+// deliberately excluded — it is never a substitute for a real lab date.
+function measurementDateValue(item) {
+  return item?.test_date || item?.collected_at || item?.reported_at || null
 }
 
-function displayLabName(item, fallback, isUk) {
-  const raw = String(item?.lab_name || '').trim()
-  if (!raw) return fallback
-  if (/\b(smoke|test fixture|premium feature smoke|premium smoke|qa[-_ ]?)/i.test(raw)) return fallback
-  if (/\.(pdf|png|jpe?g|gif|bmp|webp|tiff?|xls|xlsx|csv)$/i.test(raw)) return fallback
-  if (/[_-]\d{6,}|[a-f0-9]{8}-[a-f0-9]{4}/i.test(raw)) return fallback
-  if (raw.length > 48 && /[_-]/.test(raw)) return fallback
-  if (isUk && raw.toLowerCase() === 'manual entry') return 'Ручне введення'
-  return raw
+function getItemDate(item) {
+  return measurementDateValue(item) || 'Unknown date'
 }
 
 function getBiomarkerCounts(item) {
@@ -148,15 +150,136 @@ function triggerLabHistoryAccessPaywall() {
   }
 }
 
+// Stage 2D-2: /progress/overview is the single backend-owned source of truth
+// for clinical/biomarker longitudinal progress (chronology, comparable marker
+// history, latest/previous clinical values, trend direction). This component
+// only formats/renders that data — it must never independently determine any
+// of those. See app/services/progress_overview.py::build_progress_overview().
+async function fetchProgressOverview() {
+  try {
+    const res = await api.get('/progress/overview')
+    return res.data || null
+  } catch (err) {
+    console.error('LabResultsList overview fetch error:', err)
+    return null
+  }
+}
+
+// Stage 2D-2: status_group is a backend-owned clinical classification
+// ("needs_review" | "monitor" | "stable" | "unknown", see
+// progress_overview.py::_status_group()) — reused here only for badge color,
+// never recomputed from raw status text.
+function statusGroupTone(group) {
+  if (group === 'needs_review') return 'border-rose-200 bg-rose-50 text-rose-700'
+  if (group === 'monitor') return 'border-amber-200 bg-amber-50 text-amber-700'
+  if (group === 'stable') return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+  return 'border-slate-200 bg-slate-50 text-slate-600'
+}
+
+// Stage 2D-2: renders the backend's already-computed `/progress/overview`
+// data. Formatting only — direction, dates, and values below are read
+// directly from the overview payload, never derived in this component.
+function ClinicalProgressPanel({ overview, loading, t, copy }) {
+  const labels = t.labProgress
+
+  if (loading) {
+    return (
+      <aside className="vtl-light-card h-fit p-5">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{labels.title}</h3>
+        <div className="mt-4 space-y-2">
+          <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
+          <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
+        </div>
+      </aside>
+    )
+  }
+
+  const mode = overview?.mode
+  const topChanges = Array.isArray(overview?.top_changes) ? overview.top_changes : []
+  const stableMarkers = Array.isArray(overview?.stable_markers) ? overview.stable_markers : []
+  const newMarkers = Array.isArray(overview?.insufficient_history_markers) ? overview.insufficient_history_markers : []
+  const timelineEligible = overview?.timeline_eligible === true
+
+  let helperText = labels.helperEmpty
+  if (mode === 'undated') helperText = labels.helperUndated
+  else if (mode === 'snapshot') helperText = labels.helperSnapshot
+  else if (timelineEligible) helperText = labels.helperTimeTrend
+
+  return (
+    <aside className="vtl-light-card h-fit p-5">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{labels.title}</h3>
+      <p className="mt-3 text-sm text-slate-500">{helperText}</p>
+
+      {timelineEligible && topChanges.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{labels.changed}</p>
+          {topChanges.map((change) => (
+            <div key={change.canonical_name} className="rounded-xl border border-slate-200 bg-white p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-800">{change.name}</p>
+                <span className={`vtl-status-pill border ${statusGroupTone(change.current_status_group)}`}>
+                  {labels.direction[change.direction] || change.direction}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                {labels.previousLabel} {change.previous_value}{change.unit ? ` ${change.unit}` : ''} ({labels.onLabel} {change.previous_date})
+                {' → '}
+                {labels.latestLabel} {change.latest_value}{change.unit ? ` ${change.unit}` : ''} ({labels.onLabel} {change.latest_date})
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {timelineEligible && stableMarkers.length > 0 && (
+        <p className="mt-3 text-xs text-slate-400">
+          {labels.stable}: {stableMarkers.length}
+        </p>
+      )}
+
+      {newMarkers.length > 0 && (
+        <div className="mt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{labels.newMarkers}</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {newMarkers.slice(0, 8).map((marker) => (
+              <span
+                key={marker.canonical_name}
+                className={`vtl-status-pill border ${statusGroupTone(marker.current_status_group)}`}
+                title={labels.insufficientHistory}
+              >
+                {marker.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 space-y-3">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
+          <p className="text-xs uppercase tracking-wide text-rose-700 font-semibold">{copy.safetyContext}</p>
+          <p className="mt-1 text-sm text-slate-700">{copy.safetyBody}</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{copy.nextStep}</p>
+          <p className="mt-1 text-sm text-slate-700">{copy.nextBody}</p>
+        </div>
+      </div>
+    </aside>
+  )
+}
+
 export default function LabResultsList() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { show: showHints, dismiss: dismissHints } = useTourHints('lab-results')
   const { hasAccess } = useFeature('progress')
   const isUk = isUkrainianLocale()
   const copy = isUk ? LAB_RESULTS_COPY.uk : LAB_RESULTS_COPY.en
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [overview, setOverview] = useState(null)
+  const [overviewLoading, setOverviewLoading] = useState(true)
 
   useEffect(() => {
     if (!user) return
@@ -178,19 +301,36 @@ export default function LabResultsList() {
       if (!active) return
     }
 
+    const fetchOverview = async () => {
+      const data = await fetchProgressOverview()
+      if (!active) return
+      setOverview(data)
+      setOverviewLoading(false)
+    }
+
     fetchLabResults()
+    fetchOverview()
     return () => {
       active = false
     }
   }, [user])
 
   const sortedItems = useMemo(() => {
+    // The backend already returns items in correct clinical order (real lab
+    // date, undated results last — see get_user_progress()). This re-sort only
+    // guards against a non-chronological API response; it must never rank an
+    // undated item above a properly dated one by falling back to created_at.
     return [...items].sort((a, b) => {
-      const da = new Date(a?.test_date || a?.created_at || 0).getTime()
-      const db = new Date(b?.test_date || b?.created_at || 0).getTime()
-      return db - da
+      const da = measurementDateValue(a)
+      const db = measurementDateValue(b)
+      if (!da && !db) return 0
+      if (!da) return 1
+      if (!db) return -1
+      return new Date(db).getTime() - new Date(da).getTime()
     })
   }, [items])
+
+  const t = ct()
 
   if (loading) {
     return (
@@ -225,6 +365,17 @@ export default function LabResultsList() {
           )}
         />
 
+        {showHints && !loading && (
+          <HintBanner
+            hints={[
+              '🗂 This is your lab history — every upload you make is stored here with a biomarker quality snapshot.',
+              '📊 Each row shows how many markers are in range, worth watching, or ready for review. Click "Results" for the full breakdown.',
+              '📋 Open the action plan to see priorities, clinician discussion points, and retest direction.',
+            ]}
+            onDone={dismissHints}
+          />
+        )}
+
         {error && (
           <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
             {error}
@@ -252,14 +403,9 @@ export default function LabResultsList() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.uploads}</p>
                   <p className="mt-1 text-2xl font-bold text-slate-900">{sortedItems.length}</p>
                 </div>
-                <div className="vtl-light-card min-w-0 p-4">
+                <div className="vtl-light-card p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.mostRecent}</p>
-                  <p
-                    className="mt-1 block max-w-full truncate text-sm font-semibold text-slate-900"
-                    title={displayLabName(sortedItems[0], copy.uploadHistory, isUk)}
-                  >
-                    {displayLabName(sortedItems[0], copy.uploadHistory, isUk)}
-                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{sortedItems[0]?.lab_name || copy.uploadHistory}</p>
                 </div>
                 <div className="vtl-light-card p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{copy.retestPlan}</p>
@@ -268,7 +414,7 @@ export default function LabResultsList() {
               </div>
 
               {sortedItems.map((item, index) => {
-                const date = getItemDate(item, isUk)
+                const date = getItemDate(item)
                 const { optimal, warning, critical } = getBiomarkerCounts(item)
                 const uploadId = item?.upload_id || item?.id
 
@@ -277,31 +423,30 @@ export default function LabResultsList() {
                     key={uploadId || `${date}-${index}`}
                     className="vtl-light-card vtl-light-card-hover rounded-2xl px-4 py-3 transition"
                   >
-                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap">
                       <button
                         onClick={() => uploadId && navigate(`/results/${uploadId}`)}
                         disabled={!uploadId}
-                        className="min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60 sm:flex-1"
-                        title={displayLabName(item, copy.labResults(sortedItems.length - index), isUk)}
+                        className="flex-1 min-w-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        <p className="block max-w-full truncate text-sm font-semibold text-slate-800">{displayLabName(item, copy.labResults(sortedItems.length - index), isUk)}</p>
+                        <p className="truncate text-sm font-semibold text-slate-800">{item?.lab_name || copy.labResults(sortedItems.length - index)}</p>
                         <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
                           <Calendar className="h-3 w-3" />
                           {date}
                         </p>
                       </button>
 
-                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <div className="flex items-center gap-2 text-xs">
                         <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">{copy.optimal} {optimal}</span>
                         <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">{copy.warning} {warning}</span>
                         <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">{copy.review} {critical}</span>
                       </div>
 
-                      <div className="flex items-center gap-2 sm:justify-end">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => uploadId && navigate(`/results/${uploadId}`)}
                           disabled={!uploadId}
-                          className="inline-flex min-h-10 items-center gap-1 rounded-lg px-1 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-700 disabled:opacity-40"
+                          className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-40"
                         >
                           {copy.viewResults}
                           <ChevronRight className="h-4 w-4" />
@@ -334,28 +479,7 @@ export default function LabResultsList() {
               )}
             </div>
 
-            <aside className="vtl-light-card h-fit p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{copy.whatChanged}</h3>
-              <p className="mt-3 text-sm text-slate-500">{copy.whatChangedBody}</p>
-              <div className="mt-4 space-y-3">
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-emerald-700 font-semibold">{copy.stableZone}</p>
-                  <p className="mt-1 text-sm text-slate-700">{copy.stableBody}</p>
-                </div>
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-amber-700 font-semibold">{copy.needsAttention}</p>
-                  <p className="mt-1 text-sm text-slate-700">{copy.needsBody}</p>
-                </div>
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-rose-700 font-semibold">{copy.clinicianReview}</p>
-                  <p className="mt-1 text-sm text-slate-700">{copy.clinicianBody}</p>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{copy.nextStep}</p>
-                  <p className="mt-1 text-sm text-slate-700">{copy.nextBody}</p>
-                </div>
-              </div>
-            </aside>
+            <ClinicalProgressPanel overview={overview} loading={overviewLoading} t={t} copy={copy} />
           </div>
         )}
       </div>

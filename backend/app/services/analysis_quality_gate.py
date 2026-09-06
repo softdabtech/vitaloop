@@ -10,9 +10,12 @@ def _candidate_scores(candidates: List[Dict[str, Any]] | None) -> List[float]:
     scores: List[float] = []
     for item in candidates or []:
         try:
-            scores.append(float(item.get("confidence_score")))
+            score = float(item.get("confidence_score"))
         except (TypeError, ValueError):
             continue
+        if str(item.get("status") or "").strip().lower() in {"confirmed", "corrected"}:
+            score = max(score, 0.85)
+        scores.append(min(score, 1.0))
     return scores
 
 
