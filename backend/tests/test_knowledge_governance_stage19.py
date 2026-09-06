@@ -206,12 +206,16 @@ async def test_invalid_conditions_rejected():
 
 @pytest.mark.asyncio
 async def test_invalid_operator_rejected():
+    # "between" used to be this test's example of a rejected operator, but it
+    # is a real operator evaluator.py has always implemented (see
+    # test_between_operator_is_allowed) — governance's validator just hadn't
+    # caught up. Using a genuinely nonexistent operator here instead.
     with pytest.raises(HTTPException) as ex:
         await governance.create_rule(
             {
                 'key': 'rule_invalid_operator',
                 'name': 'Invalid operator',
-                'conditions': {'all': [{'lab_marker': 'ferritin', 'operator': 'between', 'value': 30}]},
+                'conditions': {'all': [{'lab_marker': 'ferritin', 'operator': 'roughly', 'value': 30}]},
                 'outputs': {'risk': 'possible_risk'},
                 'explanation_template': 'text',
                 'source': 'source',
@@ -257,3 +261,74 @@ def test_symptom_shorthand_condition_is_allowed():
             ]
         }
     )
+
+
+def test_between_operator_is_allowed():
+    # evaluator.py (the runtime rule engine) has always supported "between"
+    # (e.g. rule_prediabetes_hba1c: value=[5.7, 6.4]); governance's validator
+    # didn't list it until 2026-09-03, so any create_draft_copy/update_rule
+    # call touching one of those rules' conditions would have been rejected.
+    governance._validate_conditions_schema(
+        {'all': [{'lab_marker': 'hba1c', 'operator': 'between', 'value': [5.7, 6.4], 'unit': '%'}]}
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_rule_succeeds_on_draft_without_touching_conditions(monkeypatch):
+    # Regression test: update_rule()'s validation-only next_payload dict was
+    # missing "conditions", so _validate_conditions_schema(None) rejected
+    # EVERY update_rule call ("conditions must be an object") regardless of
+    # what the caller actually changed — found 2026-09-03 while staging KB
+    # source-citation fixes. No prior test exercised a successful draft edit;
+    # test_active_rule_cannot_be_edited_directly only covers the blocked path.
+    client = _ClientRecorder()
+
+    async def _fake_run(fn):
+        return fn()
+
+    existing_rule = {
+        'id': 'draft-rule-id',
+        'name': 'Low ferritin with fatigue',
+        'description': 'desc',
+        'input_entities': ['ferritin', 'fatigue'],
+        'conditions': {'all': [{'lab_marker': 'ferritin', 'operator': 'lt', 'value': 30, 'unit': 'ng/mL'}]},
+        'outputs': {'risk': 'possible_iron_deficiency_risk', 'recommendation_keys': ['iron_followup_discussion']},
+        'confidence': 0.72,
+        'severity': 'moderate',
+        'requires_doctor': False,
+        'explanation_template': 'template',
+        'source': 'clinical_guideline_placeholder',
+        'source_url': 'https://example.org/source',
+        'governance_status': 'draft',
+        'version': 'v2',
+        'auto_update_allowed': False,
+    }
+
+    async def _fake_load_rule(_rule_id):
+        return existing_rule
+
+    events = []
+
+    async def _fake_audit(**kwargs):
+        events.append(kwargs)
+
+    monkeypatch.setattr(governance, '_load_rule', _fake_load_rule)
+    monkeypatch.setattr(governance.supabase, '_get_supabase', lambda: client)
+    monkeypatch.setattr(governance.supabase, '_run', _fake_run)
+    monkeypatch.setattr(governance.supabase, 'write_audit_log', _fake_audit)
+
+    updated = await governance.update_rule(
+        'draft-rule-id',
+        {
+            # Only touching source/source_url — conditions is untouched, and
+            # must still pass validation via the existing value from _load_rule.
+            'source': 'internal_kb_v2_seed_pending_citation',
+            'source_url': 'internal://kb-v2-seed/pending-citation',
+            'last_modified_by': '11111111-1111-1111-1111-111111111111',
+            'change_note': 'fix placeholder citation',
+        },
+        actor_user_id='11111111-1111-1111-1111-111111111111',
+    )
+
+    assert updated['source'] == 'internal_kb_v2_seed_pending_citation'
+    assert len(events) == 1

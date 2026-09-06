@@ -46,10 +46,10 @@ async def test_manual_entry_then_results_flow(monkeypatch):
     async def fake_check_quota(_user_id, _entry_type):
         return True, "", None
 
-    def fake_validate_entries(entries):
+    async def fake_validate_entries(entries, *, sex=None, age=None):
         return entries, []
 
-    def fake_convert_to_standard_units(entries):
+    async def fake_convert_to_standard_units(entries, *, sex=None, age=None):
         return entries
 
     def fake_format_for_claude_analysis(entries):
@@ -108,6 +108,9 @@ async def test_manual_entry_then_results_flow(monkeypatch):
             return saved
         return None
 
+    async def fake_has_any_report_version(_upload_id, _user_id):
+        return False
+
     async def fake_write_audit_log(**_kwargs):
         return None
 
@@ -115,7 +118,14 @@ async def test_manual_entry_then_results_flow(monkeypatch):
         if kwargs["source_metadata"]["source"] == "b2c_manual":
             assert kwargs["source_metadata"]["candidates"][0]["status"] == "confirmed"
             assert kwargs["source_metadata"]["candidates"][0]["confidence_score"] == 1.0
+            # Stage 2B (manual-entry gap closure): manual entry now routes through
+            # the same persist_biomarkers-gated pipeline as every other ingestion
+            # method; this fake simulates the pipeline's own auto_continue
+            # persistence and response shape.
+            assert kwargs.get("persist_biomarkers") is True
         return {
+            "analysis_status": "completed",
+            "saved_biomarkers": state["saved_biomarkers"],
             "knowledge_evaluation": {"matched_rules": []},
             "knowledge_report": {"summary": {}},
             "interpreted_report": {"summary": {}},
@@ -150,6 +160,7 @@ async def test_manual_entry_then_results_flow(monkeypatch):
     monkeypatch.setattr(analyze_router, "assert_upload_belongs_to_user", fake_assert_upload_belongs_to_user)
     monkeypatch.setattr(analyze_router, "get_biomarkers_by_upload", fake_get_biomarkers_by_upload)
     monkeypatch.setattr(analyze_router, "get_protocol_by_upload", fake_get_protocol_by_upload)
+    monkeypatch.setattr(analyze_router, "has_any_report_version", fake_has_any_report_version)
     monkeypatch.setattr(analyze_router, "write_audit_log", fake_write_audit_log)
 
     fake_user = {"sub": fake_user_id, "email": "manual@vitaloop.test"}

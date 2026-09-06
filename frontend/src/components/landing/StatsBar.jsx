@@ -13,13 +13,13 @@ const STATS = [
   },
   {
     icon: FileSearch,
-    number: 'KB + safety',
-    label: 'Knowledge Base logic with safety guardrails'
+    number: '85+',
+    label: 'Biomarkers normalized after upload'
   },
   {
     icon: Repeat2,
-    number: 'Trends',
-    label: 'Check-ins, safety notes, and retests stay connected'
+    number: 'Weekly loop',
+    label: 'Check-ins connect symptoms to progress'
   },
 ]
 

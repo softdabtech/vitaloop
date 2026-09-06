@@ -1,21 +1,18 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ActivitySquare, Home, Route, TrendingUp, User } from 'lucide-react'
+import { ActivitySquare, Home, Settings, Stethoscope, Upload } from 'lucide-react'
 import { isUkrainianLocale } from '../../lib/locale.js'
 
 const TAB_ITEMS = [
-  { path: '/dashboard', label: 'Dashboard', ukLabel: 'Панель', icon: Home },
-  { path: '/questionnaire', label: 'Journey', ukLabel: 'Шлях', icon: Route },
-  { path: '/lab-results', label: 'Results', ukLabel: 'Результати', icon: ActivitySquare, accent: true },
-  { path: '/progress', label: 'Progress', ukLabel: 'Прогрес', icon: TrendingUp },
-  { path: '/health-profile', label: 'Profile', ukLabel: 'Профіль', icon: User },
+  { path: '/dashboard', label: 'Today', ukLabel: 'Сьогодні', icon: Home },
+  { path: '/questionnaire', label: 'Symptom', ukLabel: 'Симптоми', icon: Stethoscope },
+  { path: '/upload', label: 'Upload', ukLabel: 'Аналізи', icon: Upload, accent: true },
+  { path: '/lab-results', label: 'Results', ukLabel: 'Результати', icon: ActivitySquare },
+  { path: '/settings', label: 'Account', ukLabel: 'Акаунт', icon: Settings },
 ]
 
 function isActive(current, item) {
   if (current === item.path) return true
-  if (item.path === '/questionnaire') return current === '/questionnaire' || current === '/lab-plan' || current === '/upload' || current === '/assignments' || current === '/check-ins'
-  if (item.path === '/lab-results') return current === '/lab-results' || current.startsWith('/results/') || current.startsWith('/protocol/')
-  if (item.path === '/health-profile') return current === '/health-profile' || current === '/settings' || current === '/subscription' || current === '/billing-history'
   if (item.path === '/dashboard') return current === '/dashboard'
   return current.startsWith(`${item.path}/`)
 }
@@ -27,7 +24,7 @@ export default function MobileBottomBar() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/97 backdrop-blur-xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/97 backdrop-blur-xl md:hidden"
       style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))', minHeight: 'var(--vtl-bottom-bar-height)' }}
       aria-label="Main navigation"
     >

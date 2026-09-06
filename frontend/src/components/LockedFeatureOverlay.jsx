@@ -1,8 +1,8 @@
-import api from '../lib/api.js'
 import toast from 'react-hot-toast'
 import { useAppStore } from '../lib/store.js'
 import { PREMIUM_PRICE_LABEL } from '../lib/pricing.js'
-import { gaBeginCheckout } from '../lib/analytics.js'
+import { useAuth } from '../hooks/useAuth.js'
+import { requestPremiumAccess } from '../lib/premiumAccess.js'
 
 const FEATURES = [
   '📈 Full biomarker progress charts',
@@ -14,19 +14,18 @@ const FEATURES = [
 
 export default function LockedFeatureOverlay({ children, locked = true }) {
   const setShowPaywall = useAppStore((s) => s.setShowPaywall)
+  const { user } = useAuth()
 
   if (!locked) return <>{children}</>
 
-  async function handleCheckout() {
-    const toastId = toast.loading('Opening checkout…')
+  async function handlePremiumRequest() {
+    const toastId = toast.loading('Preparing Premium access email…')
     try {
-      gaBeginCheckout()
-      const { data } = await api.post('/stripe/checkout', { plan_id: 'personal' })
+      await requestPremiumAccess({ userEmail: user?.email, source: 'locked_feature' })
       toast.dismiss(toastId)
-      window.location.href = data.checkout_url
     } catch (error) {
       toast.dismiss(toastId)
-      const message = error?.response?.data?.detail || 'Could not start checkout. Please try again.'
+      const message = 'Please contact info@softdab.tech to activate Premium.'
       toast.error(message)
     }
     setShowPaywall(false)
@@ -51,12 +50,12 @@ export default function LockedFeatureOverlay({ children, locked = true }) {
           ))}
         </ul>
         <button
-          onClick={handleCheckout}
+          onClick={handlePremiumRequest}
           className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-xl transition"
         >
           Continue — {PREMIUM_PRICE_LABEL}
         </button>
-        <p className="text-gray-600 text-xs mt-3">Cancel anytime · Secure checkout via Stripe</p>
+        <p className="text-gray-600 text-xs mt-3">Premium access is activated manually.</p>
       </div>
     </div>
   )

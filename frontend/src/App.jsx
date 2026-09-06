@@ -9,11 +9,9 @@ import { useAuth } from './hooks/useAuth.js'
 import { useCRMRoleAccess } from './hooks/useCRMRoleAccess.js'
 import { useEffect, useState } from 'react'
 import { useOnboardingState } from './hooks/useOnboardingState.js'
-import { gaEvent, gaPageView, gaPurchase } from './lib/analytics.js'
+import { gaPageView, gaPurchase, gaSetUserId } from './lib/analytics.js'
 import { trackPublicFunnelEvent } from './lib/publicFunnel.js'
 import { isUkrainianLocale } from './lib/locale.js'
-import { reportClientActivity } from './lib/errorReporter.js'
-import { captureAttributionFromLocation, getAttributionEventParams, shouldTrackFounderXLandingOnce } from './lib/attribution.js'
 
 // Marketing pages — lazy
 const Features = lazy(() => import('./pages/Features.jsx'))
@@ -27,6 +25,10 @@ const ForInvestors = lazy(() => import('./pages/ForInvestors.jsx'))
 const ForNutritionists = lazy(() => import('./pages/ForNutritionists.jsx'))
 const Privacy = lazy(() => import('./pages/Privacy.jsx'))
 const Terms = lazy(() => import('./pages/Terms.jsx'))
+const RefundPolicy = lazy(() => import('./pages/RefundPolicy.jsx'))
+const UaPrivacy = lazy(() => import('./pages/UaPrivacy.jsx'))
+const UaTerms = lazy(() => import('./pages/UaTerms.jsx'))
+const UaRefundPolicy = lazy(() => import('./pages/UaRefundPolicy.jsx'))
 const Help = lazy(() => import('./pages/Help.jsx'))
 const SymptomIntake = lazy(() => import('./pages/SymptomIntake.jsx'))
 const HealthHub = lazy(() => import('./pages/HealthHub.jsx'))
@@ -41,9 +43,6 @@ const UaPage = lazy(() => import('./pages/UaPage.jsx'))
 const UaHealthHubHome = lazy(() => import('./pages/UaHealthHub.jsx').then(m => ({ default: m.UaHealthHubHome })))
 const UaHealthHubCluster = lazy(() => import('./pages/UaHealthHub.jsx').then(m => ({ default: m.UaHealthHubCluster })))
 const UaHealthHubArticle = lazy(() => import('./pages/UaHealthHub.jsx').then(m => ({ default: m.UaHealthHubArticle })))
-const UaAbout = lazy(() => import('./pages/UaLegal.jsx').then(m => ({ default: m.UaAbout })))
-const UaPrivacy = lazy(() => import('./pages/UaLegal.jsx').then(m => ({ default: m.UaPrivacy })))
-const UaTerms = lazy(() => import('./pages/UaLegal.jsx').then(m => ({ default: m.UaTerms })))
 
 // UI components — lazy
 const SupportChat = lazy(() => import('./components/SupportChat.jsx'))
@@ -59,16 +58,13 @@ const Results = lazy(() => import('./pages/Results.jsx'))
 const ProtocolPage = lazy(() => import('./pages/ProtocolPage.jsx'))
 const Insights = lazy(() => import('./pages/Insights.jsx'))
 const LabResultsList = lazy(() => import('./pages/LabResultsList.jsx'))
-const Progress = lazy(() => import('./pages/Progress.jsx'))
 const Assignments = lazy(() => import('./pages/Assignments.jsx'))
 const AssignmentDetails = lazy(() => import('./pages/AssignmentDetails.jsx'))
-const Avatar = lazy(() => import('./pages/Avatar.jsx'))
 const Settings = lazy(() => import('./pages/Settings.jsx'))
 const HealthProfile = lazy(() => import('./pages/HealthProfile.jsx'))
 const Subscription = lazy(() => import('./pages/Subscription.jsx'))
 const BillingHistory = lazy(() => import('./pages/BillingHistory.jsx'))
 const Onboarding = lazy(() => import('./pages/Onboarding.jsx'))
-const WeeklyCheckIn = lazy(() => import('./pages/WeeklyCheckIn.jsx'))
 const Questionnaire = lazy(() => import('./pages/Questionnaire.jsx'))
 const UserCabinetLayout = lazy(() => import('./components/dashboard/UserCabinetLayout.jsx'))
 
@@ -121,26 +117,7 @@ function ScrollToTop() {
 function GAPageTracker() {
   const location = useLocation()
   useEffect(() => {
-    const route = location.pathname + location.search
-    const attribution = captureAttributionFromLocation(location)
-    gaPageView(route)
-    reportClientActivity({
-      type: 'route_view',
-      route,
-      metadata: {
-        hash: location.hash || null,
-      },
-    })
-
-    if (attribution?.captured && attribution.isFounderX && shouldTrackFounderXLandingOnce()) {
-      const eventParams = {
-        event_category: 'acquisition',
-        landing_path: attribution.lastTouch?.landing_path || location.pathname,
-        ...getAttributionEventParams(),
-      }
-      gaEvent('x_landing_visit', eventParams)
-      trackPublicFunnelEvent('x_landing_visit', eventParams)
-    }
+    gaPageView(location.pathname + location.search)
 
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(location.search)
@@ -151,6 +128,21 @@ function GAPageTracker() {
     window.sessionStorage.setItem(purchaseTrackedKey, '1')
     gaPurchase(`stripe_sub_success_${Date.now()}`)
   }, [location.pathname, location.search])
+  return null
+}
+
+// Stitches GA4 sessions to the logged-in user (Supabase user id — a UUID,
+// never email/PII) so cross-visit/cross-device journeys ("who went where")
+// are attributable per user instead of only per anonymous client id. Mounted
+// once at the top level, independent of GAPageTracker, since identity and
+// navigation are separate concerns and this must also fire on plain
+// login/logout with no route change.
+function GAIdentityTracker() {
+  const { user, loading } = useAuth()
+  useEffect(() => {
+    if (loading) return
+    gaSetUserId(user?.id ?? null)
+  }, [loading, user?.id])
   return null
 }
 
@@ -219,14 +211,6 @@ function RegisterRedirect() {
   return <Navigate to={`/login${query ? `?${query}` : '?signup=true'}`} replace />
 }
 
-function FounderXRedirect() {
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.location.replace('/?utm_source=x&utm_medium=founder&utm_campaign=alex_founder')
-  }, [])
-  return <AppLoadingScreen />
-}
-
 function FloatingSupportChat() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -242,7 +226,6 @@ function FloatingSupportChat() {
     '/lab-plan',
     '/results/',
     '/protocol/',
-    '/avatar',
     '/progress',
     '/assignments',
     '/lab-results',
@@ -633,6 +616,121 @@ function FloatingSupportChat() {
   )
 }
 
+const SYMPTOM_PROMPT_STORAGE_KEY = 'vitaloop_symptom_prompt_seen'
+const SYMPTOM_PROMPT_STARTED_AT_KEY = 'vitaloop_symptom_prompt_started_at'
+const SYMPTOM_PROMPT_DELAY_MS = 10000
+
+function PublicSymptomPrompt({ disabled = false }) {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { user, loading } = useAuth()
+  const [visible, setVisible] = useState(false)
+
+  const isExcludedRoute = [
+    '/ua',
+    '/symptom-intake',
+    '/login',
+    '/auth',
+    '/dashboard',
+    '/today',
+    '/upload',
+    '/lab-plan',
+    '/results/',
+    '/protocol/',
+    '/progress',
+    '/assignments',
+    '/lab-results',
+    '/settings',
+    '/health-profile',
+    '/subscription',
+    '/billing-history',
+    '/help-center',
+    '/admin',
+    '/ops',
+    '/crm',
+    '/onboarding',
+    '/questionnaire',
+    '/check-ins',
+    '/checkin',
+    '/insights',
+  ].some((prefix) => location.pathname === prefix || location.pathname.startsWith(prefix))
+
+  useEffect(() => {
+    setVisible(false)
+    if (disabled || loading || user || isExcludedRoute) return undefined
+    if (typeof window === 'undefined') return undefined
+    if (window.sessionStorage.getItem(SYMPTOM_PROMPT_STORAGE_KEY) === '1') return undefined
+
+    const storedStartedAt = Number(window.sessionStorage.getItem(SYMPTOM_PROMPT_STARTED_AT_KEY))
+    const startedAt = Number.isFinite(storedStartedAt) && storedStartedAt > 0 ? storedStartedAt : Date.now()
+    if (startedAt !== storedStartedAt) {
+      window.sessionStorage.setItem(SYMPTOM_PROMPT_STARTED_AT_KEY, String(startedAt))
+    }
+    const remainingDelay = Math.max(0, SYMPTOM_PROMPT_DELAY_MS - (Date.now() - startedAt))
+
+    const timerId = window.setTimeout(() => {
+      window.sessionStorage.setItem(SYMPTOM_PROMPT_STORAGE_KEY, '1')
+      setVisible(true)
+    }, remainingDelay)
+
+    return () => window.clearTimeout(timerId)
+  }, [disabled, loading, user, isExcludedRoute, location.pathname])
+
+  if (!visible) return null
+
+  const closePrompt = () => setVisible(false)
+  const startIntake = () => {
+    setVisible(false)
+    navigate('/symptom-intake')
+  }
+
+  return (
+    <div className="fixed inset-0 z-[3200] flex items-end justify-center bg-slate-950/35 px-4 pb-4 pt-10 backdrop-blur-[2px] sm:items-center sm:pb-10">
+      <div className="w-full max-w-[520px] overflow-hidden rounded-[28px] border border-emerald-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.26)]">
+        <div className="relative bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.20),transparent_38%),linear-gradient(135deg,#ffffff,#f0fdfa)] px-5 py-5 sm:px-6">
+          <button
+            type="button"
+            onClick={closePrompt}
+            aria-label="Close symptom check prompt"
+            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-xl leading-none text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+          >
+            x
+          </button>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Quick symptom check</p>
+          <h2 className="mt-3 max-w-[390px] text-2xl font-bold tracking-tight text-slate-950 sm:text-[28px]">
+            Feel off, but not sure what to check?
+          </h2>
+          <p className="mt-3 max-w-[420px] text-sm leading-6 text-slate-600">
+            Answer a few questions and get a safe lab discussion list before creating an account.
+          </p>
+        </div>
+        <div className="px-5 py-5 sm:px-6">
+          <div className="grid gap-2 text-sm text-slate-700">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold">No login required</div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold">Takes about one minute</div>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
+            <button
+              type="button"
+              onClick={startIntake}
+              className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
+            >
+              Start symptom check
+            </button>
+            <button
+              type="button"
+              onClick={closePrompt}
+              className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-400 hover:text-slate-950"
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const isUaHost = typeof window !== 'undefined' && window.location.hostname.toLowerCase() === 'ua.vitaloop.today'
   const isUaPreviewPath = typeof window !== 'undefined' && (window.location.pathname === '/ua' || window.location.pathname.startsWith('/ua/'))
@@ -653,19 +751,12 @@ export default function App() {
     <BrowserRouter>
       {!isUaLandingShell && <Suspense fallback={null}><PaywallModal /></Suspense>}
       <GAPageTracker />
+      <GAIdentityTracker />
       <ScrollToTop />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={isUaHost ? <UaLanding /> : <Landing />} />
-          <Route path="/x" element={<FounderXRedirect />} />
-          <Route path="/x/" element={<FounderXRedirect />} />
           <Route path="/ua" element={<UaLanding />} />
-          <Route path="/ua/about" element={<UaAbout />} />
-          <Route path="/ua/privacy-policy" element={<UaPrivacy />} />
-          <Route path="/ua/terms" element={<UaTerms />} />
-          <Route path="/ua/health-hub" element={<UaHealthHubHome />} />
-          <Route path="/ua/health-hub/topics/:clusterSlug" element={<UaHealthHubCluster />} />
-          <Route path="/ua/health-hub/:articleSlug" element={<UaHealthHubArticle />} />
           <Route path="/ua/:pageSlug" element={<UaPage />} />
           {/* UA Health Hub */}
           <Route path="/health-hub" element={isUaHost ? <UaHealthHubHome /> : <HealthHub />} />
@@ -691,12 +782,13 @@ export default function App() {
           <Route path="/faq" element={<FAQ />} />
           <Route path="/example-report" element={<ExampleReport />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/about" element={isUaHost ? <UaAbout /> : <About />} />
+          <Route path="/about" element={<About />} />
           <Route path="/for-investors" element={<ForInvestors />} />
           <Route path="/for-nutritionists" element={<ForNutritionists />} />
           <Route path="/privacy" element={<Navigate to="/privacy-policy" replace />} />
           <Route path="/privacy-policy" element={isUaHost ? <UaPrivacy /> : <Privacy />} />
           <Route path="/terms" element={isUaHost ? <UaTerms /> : <Terms />} />
+          <Route path="/refund-policy" element={isUaHost ? <UaRefundPolicy /> : <RefundPolicy />} />
           <Route path="/help" element={<Help />} />
           <Route path="/help/section/:sectionId" element={<Help />} />
           <Route path="/help/:articleId" element={<Help />} />
@@ -719,14 +811,26 @@ export default function App() {
           <Route path="/lab-plan" element={renderCabinetRoute(<LabPlan />, { allowBeforeOnboarding: true })} />
           <Route path="/results/:uploadId" element={renderCabinetRoute(<Results />)} />
           <Route path="/protocol/:uploadId" element={renderCabinetRoute(<ProtocolPage />)} />
-          <Route path="/avatar" element={renderCabinetRoute(<Avatar />)} />
-          <Route path="/progress" element={renderCabinetRoute(<Progress />, { allowBeforeOnboarding: true })} />
-          <Route path="/progress/" element={renderCabinetRoute(<Progress />, { allowBeforeOnboarding: true })} />
-          <Route path="/assignments" element={renderCabinetRoute(<Assignments />, { allowBeforeOnboarding: true })} />
-          <Route path="/assignments/:assignmentId" element={renderCabinetRoute(<AssignmentDetails />, { allowBeforeOnboarding: true })} />
+          <Route path="/avatar" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/progress" element={<Navigate to="/lab-results" replace />} />
+          {/* /assignments and /assignments/:id show tasks a human practitioner/coach
+              assigned via the CRM (practitioner_assignments table) — NOT the user's
+              own AI-generated protocol. Self-serve end_users never have a
+              practitioner attached, so this page is permanently, structurally
+              empty for every current user and only confuses them (a real user hit
+              this directly). Hidden behind a redirect — intentionally, for a later
+              coached/practitioner product stage — rather than deleted, since the
+              Assignments/AssignmentDetails components and their CRM-facing backend
+              are still real and still used by the practitioner side of the
+              product. Do not re-enable this route for end_users without also
+              fixing the "Follow your plan" journey step and nextAction fallback in
+              UserDashboard.jsx, and the removed sidebar entry in
+              UserDashboardSidebar.jsx, which were pointed elsewhere for the same
+              reason. */}
+          <Route path="/assignments" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/assignments/:assignmentId" element={<Navigate to="/dashboard" replace />} />
           <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />, { allowBeforeOnboarding: true })} />
           <Route path="/settings" element={renderCabinetRoute(<Settings />, { allowBeforeOnboarding: true })} />
-          <Route path="/profile" element={<Navigate to="/health-profile" replace />} />
           <Route path="/health-profile" element={renderCabinetRoute(<HealthProfile />, { allowBeforeOnboarding: true })} />
           <Route path="/subscription" element={renderCabinetRoute(<Subscription />, { allowBeforeOnboarding: true })} />
           <Route path="/billing-history" element={renderCabinetRoute(<BillingHistory />, { allowBeforeOnboarding: true })} />
@@ -741,10 +845,15 @@ export default function App() {
           <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
           <Route path="/onboarding" element={renderCabinetRoute(<Onboarding />, { allowBeforeOnboarding: true })} />
           <Route path="/questionnaire" element={renderCabinetRoute(<Questionnaire />, { allowBeforeOnboarding: true })} />
-          <Route path="/check-ins" element={renderCabinetRoute(<WeeklyCheckIn />)} />
           <Route path="/insights" element={renderCabinetRoute(<Insights />)} />
           {/* Legacy route redirects */}
-          <Route path="/checkin" element={<Navigate to="/check-ins" replace />} />
+          {/* Structural merge: /check-ins and /questionnaire became one page
+              (Questionnaire.jsx now has an 'intake'/'pulse' mode instead of
+              two separate wizards) — both old URLs keep working as redirects
+              rather than breaking bookmarks, the sidebar's former Check-in
+              link, and the dashboard's "complete check-in" CTA. */}
+          <Route path="/check-ins" element={<Navigate to="/questionnaire" replace />} />
+          <Route path="/checkin" element={<Navigate to="/questionnaire" replace />} />
           <Route path="/timeline" element={<Navigate to="/insights" replace />} />
           <Route path="/dashboard-legacy" element={<Navigate to="/dashboard" replace />} />
           <Route path="/ops/legacy" element={<Navigate to="/ops" replace />} />
@@ -752,6 +861,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      {!isUaLandingShell && <PublicSymptomPrompt disabled={isUaLandingShell} />}
       {!isUaLandingShell && <FloatingSupportChat />}
     </BrowserRouter>
   )

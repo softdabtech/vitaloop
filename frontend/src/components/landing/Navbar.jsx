@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { EASE } from '../../lib/motion.js'
 import { useAuth } from '../../hooks/useAuth.js'
 import BrandMark from './BrandMark.jsx'
-import { withStoredAttribution } from '../../lib/attribution.js'
 
 const NAV_LINKS = [
   { label: 'Features', href: '#why-vitaloop' },
   { label: 'Pricing', href: '#pricing' },
-  { label: 'About', href: '/about/', page: true },
   { label: 'For Nutritionists', href: '/for-nutritionists/', page: true },
   { label: 'Help', href: '/help/', page: true },
 ]
@@ -34,7 +32,6 @@ function LogoIcon() {
 
 export default function Navbar() {
   const navigate = useNavigate()
-  const location = useLocation()
   const { user } = useAuth()
   const reduced = useReducedMotion()
   const [scrolled, setScrolled]     = useState(false)
@@ -81,18 +78,7 @@ export default function Navbar() {
 
   const scrollTo = (href, page = false) => {
     setMobileOpen(false)
-    if (page) {
-      navigate(href)
-      return
-    }
-
-    // Hash links belong to landing sections. From non-landing routes (e.g. /help),
-    // route to landing with hash instead of trying to scroll current page.
-    if (location.pathname !== '/') {
-      navigate(`/${href}`)
-      return
-    }
-
+    if (page) { navigate(href); return }
     const el = document.getElementById(href.slice(1))
     el?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -187,7 +173,7 @@ export default function Navbar() {
           ) : (
             <>
               <button
-                onClick={() => navigate(withStoredAttribution('/login'))}
+                onClick={() => navigate('/login')}
                 className="hidden md:block"
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
@@ -199,7 +185,7 @@ export default function Navbar() {
                 Sign in
               </button>
               <button
-                onClick={() => navigate(withStoredAttribution('/login?signup=true'))}
+                onClick={() => navigate('/login?signup=true')}
                 className="hidden md:block"
                 style={{
                   background: 'var(--teal-800)', color: 'white',
@@ -318,7 +304,7 @@ export default function Navbar() {
               onClick={(e) => {
                 e.stopPropagation()
                 setMobileOpen(false)
-                navigate(user ? '/dashboard' : withStoredAttribution('/login?signup=true'))
+                navigate(user ? '/dashboard' : '/login?signup=true')
               }}
               initial={reduced ? {} : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

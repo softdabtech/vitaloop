@@ -127,6 +127,87 @@ async def test_successful_json_analysis(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_needs_review_response_when_gate_requires_confirmation(monkeypatch):
+    """Stage 2B, B2B leg: when the shared pipeline returns the abbreviated
+    needs_confirmation shape (analysis_status="needs_confirmation", no canonical
+    biomarkers), the B2B endpoint must surface status="needs_review" and MUST NOT
+    persist any canonical biomarkers — neither to partner_biomarkers (via
+    _replace_partner_biomarkers) nor into partner_lab_results' own
+    normalized_biomarkers column (via _update_partner_lab_result's
+    canonical_payload). This uses the SAME shared pipeline output shape as the
+    consumer path — no separate B2B medical pipeline."""
+    calls = {}
+
+    async def fake_upsert_patient(partner_id, external_user_id, profile=None):
+        return {"id": "patient-1"}
+
+    async def fake_insert_lab(row):
+        return {"id": "analysis-1"}
+
+    async def fake_pipeline(**kwargs):
+        # Mirrors exactly what run_lab_analysis_pipeline() now returns when the
+        # gate decision != auto_continue.
+        return {
+            "analysis_id": kwargs["analysis_id"],
+            "status": "needs_confirmation",
+            "analysis_status": "needs_confirmation",
+            "normalized_biomarkers": [{"canonical_name": "canonical_ferritin", "name": "Ferritin", "value": 12}],
+            "clinical_data_integrity": {"version": "clinical_data_integrity_v1", "status": "pass_with_warnings"},
+            "health_context": {"version": "health_context_v1"},
+            "analysis_input_quality_gate": {"version": "analysis_input_quality_gate_v1", "decision": "confirm", "requires_confirmation": True},
+            "metadata": {},
+        }
+
+    async def no_cached_response(**kwargs):
+        return None
+
+    async def fake_partner_config(partner_id):
+        return {"biomarker_mappings": {}, "retention_days": 30}
+
+    async def tracked_replace_biomarkers(*args, **kwargs):
+        calls["replace_biomarkers_called"] = True
+
+    async def tracked_insert_insight(*args, **kwargs):
+        calls["insert_insight_called"] = True
+
+    async def tracked_update_lab_result(partner_lab_result_id, *, status, canonical_payload):
+        calls["update_status"] = status
+        calls["update_canonical_payload"] = canonical_payload
+
+    async def noop(*args, **kwargs):
+        return {}
+
+    monkeypatch.setattr(svc, "_upsert_partner_patient", fake_upsert_patient)
+    monkeypatch.setattr(svc, "_insert_partner_lab_result", fake_insert_lab)
+    monkeypatch.setattr(svc, "_find_cached_response", no_cached_response)
+    monkeypatch.setattr(svc, "_load_partner_pilot_config", fake_partner_config)
+    monkeypatch.setattr(svc, "run_lab_analysis_pipeline", fake_pipeline)
+    monkeypatch.setattr(svc, "_replace_partner_biomarkers", tracked_replace_biomarkers)
+    monkeypatch.setattr(svc, "_insert_partner_insight", tracked_insert_insight)
+    monkeypatch.setattr(svc, "_update_partner_lab_result", tracked_update_lab_result)
+    monkeypatch.setattr(svc, "_track_usage", noop)
+    monkeypatch.setattr(svc, "_write_b2b_audit", noop)
+    monkeypatch.setattr(svc, "_mark_api_key_used", noop)
+    monkeypatch.setattr(svc, "record_b2b_metric", lambda *a, **k: None)
+
+    result = await svc.analyze_labs_for_partner(
+        request=_payload(),
+        principal=_principal(),
+        idempotency_key="idem-2",
+        request_headers={"cf-ray": "ray", "cf-connecting-ip": "203.0.113.10"},
+        client_host="127.0.0.1",
+    )
+
+    assert result["status"] == "needs_review"
+    assert result["analysis_status"] == "needs_review"
+    assert "replace_biomarkers_called" not in calls, "no canonical biomarkers may reach partner_biomarkers before the review boundary"
+    assert calls["update_status"] == "needs_review"
+    assert calls["update_canonical_payload"]["normalized_biomarkers"] == [], (
+        "partner_lab_results.normalized_biomarkers must also stay empty pre-review"
+    )
+
+
+@pytest.mark.asyncio
 async def test_invalid_api_key(monkeypatch):
     async def missing_key(_hash):
         return None
@@ -312,11 +393,19 @@ async def test_output_contains_disclaimer(monkeypatch):
         return None
 
     monkeypatch.setattr("app.services.lab_analysis_pipeline.evaluate_biomarkers_with_knowledge", fake_eval)
+    # Stage 2B: a bare single-marker, no-profile fixture legitimately scores
+    # "confirm" under the pre-existing gate logic — providing candidate
+    # confidence + a minimal complete profile/questionnaire (realistic inputs)
+    # reaches auto_continue without changing gate scoring itself.
     result = await svc.run_lab_analysis_pipeline(
         biomarkers=[{"name": "Ferritin", "value": 12, "unit": "ng/mL", "reference_range": "30-150"}],
-        symptoms=[],
+        symptoms=["fatigue"],
+        questionnaire={"completed": True},
+        user_profile={"age": 30, "sex": "female", "height_cm": 165, "weight_kg": 60},
         analysis_id="analysis-1",
+        source_metadata={"candidates": [{"confidence_score": 0.95, "status": "pending"}]},
     )
+    assert result["analysis_input_quality_gate"]["decision"] == "auto_continue", result["analysis_input_quality_gate"]
     assert "diagnosis" in result["disclaimer"].lower()
 
 
@@ -326,12 +415,18 @@ async def test_pipeline_fills_empty_protocol_sections_for_flagged_markers(monkey
         return {"matched_rules": [], "safety_alerts": [], "generated_recommendations": []}
 
     monkeypatch.setattr("app.services.lab_analysis_pipeline.evaluate_biomarkers_with_knowledge", fake_eval)
+    # Stage 2B: same fixture enrichment as test_output_contains_disclaimer above,
+    # needed to reach auto_continue under the now-enforced quality gate.
     result = await svc.run_lab_analysis_pipeline(
         biomarkers=[{"name": "Ferritin", "value": 12, "unit": "ng/mL", "reference_range": "30-150"}],
-        symptoms=[],
+        symptoms=["fatigue"],
+        questionnaire={"completed": True},
+        user_profile={"age": 30, "sex": "female", "height_cm": 165, "weight_kg": 60},
         analysis_id="analysis-1",
+        source_metadata={"candidates": [{"confidence_score": 0.95, "status": "pending"}]},
         generate_ai_protocol=False,
     )
+    assert result["analysis_input_quality_gate"]["decision"] == "auto_continue", result["analysis_input_quality_gate"]
     assert result["protocol"]["nutrition"]
     assert result["protocol"]["training_recovery"]
     assert result["protocol"]["training_recovery"][0]["source"] == "vitaloop_analysis_core"
@@ -370,12 +465,18 @@ async def test_pipeline_strips_placeholder_source_urls(monkeypatch):
         }
 
     monkeypatch.setattr("app.services.lab_analysis_pipeline.evaluate_biomarkers_with_knowledge", fake_eval)
+    # Stage 2B: same fixture enrichment as test_output_contains_disclaimer above,
+    # needed to reach auto_continue under the now-enforced quality gate.
     result = await svc.run_lab_analysis_pipeline(
         biomarkers=[{"name": "Ferritin", "value": 12, "unit": "ng/mL", "reference_range": "30-150"}],
-        symptoms=[],
+        symptoms=["fatigue"],
+        questionnaire={"completed": True},
+        user_profile={"age": 30, "sex": "female", "height_cm": 165, "weight_kg": 60},
         analysis_id="analysis-1",
+        source_metadata={"candidates": [{"confidence_score": 0.95, "status": "pending"}]},
         generate_ai_protocol=False,
     )
+    assert result["analysis_input_quality_gate"]["decision"] == "auto_continue", result["analysis_input_quality_gate"]
     assert result["knowledge_report"]["why_it_matters"][0]["source_url"] is None
     assert result["knowledge_report"]["source_references"][0]["source_url"] is None
     assert result["knowledge_evaluation"]["matched_rules"][0]["source_url"] is None
@@ -397,8 +498,29 @@ async def test_b2c_pipeline_shape_not_broken(monkeypatch):
                 "value": 82,
                 "unit": "mg/dL",
                 "status": "OPTIMAL",
+                # Stage 2PRE.1: trend_engine.choose_measurement_date() intentionally
+                # never falls back to created_at (see test_trend_engine.py for the
+                # same fix + rationale) — this fixture must carry a real lab date.
+                "test_date": "2026-01-01",
                 "created_at": "2026-01-01T00:00:00Z",
-            }
+            },
+            # Stage 2PRE.1: evaluate_biomarker_trends(current_upload_id=...) requires
+            # the CURRENT upload's own dated row to be present in historical_biomarkers
+            # to establish current_measured_at (see trend_engine.py's early-return
+            # branch keyed on current_upload_id). In real production this row is
+            # already present by the time _load_historical_biomarkers runs, because
+            # save_biomarkers() always persists the current upload's biomarkers
+            # (joined with lab_uploads.test_date via get_recent_biomarker_history)
+            # before the pipeline call — this mock was missing that row entirely.
+            {
+                "upload_id": "upload-1",
+                "name": "Glucose",
+                "value": 126,
+                "unit": "mg/dL",
+                "status": "ELEVATED",
+                "test_date": "2026-02-01",
+                "created_at": "2026-02-01T00:00:00Z",
+            },
         ]
 
     async def fake_ai_orchestration(**_kwargs):
@@ -494,15 +616,21 @@ async def test_pipeline_persists_core_artifacts_in_report_version(monkeypatch):
     monkeypatch.setattr("app.services.supabase_service.save_report_version", fake_save_report_version)
     monkeypatch.setattr("app.services.supabase_service.save_safety_events", fake_save_safety_events)
 
+    # Stage 2B: mirrors the fixture pattern from test_b2c_pipeline_shape_not_broken
+    # above (current_medications + questionnaire push the score to auto_continue) —
+    # needed now that the gate actually governs whether report_version gets
+    # persisted at all.
     result = await svc.run_lab_analysis_pipeline(
         biomarkers=[{"name": "Ferritin", "value": 12, "unit": "ng/mL", "reference_range": "30-150"}],
         symptoms=["fatigue"],
-        user_profile={"age": 37},
+        questionnaire={"domain_scores": {"sleep": 70}},
+        user_profile={"age": 37, "current_medications": ["metformin"]},
         user_id="user-1",
         analysis_id="upload-1",
         persist_report_version=True,
         generate_ai_protocol=True,
     )
+    assert result["analysis_input_quality_gate"]["decision"] == "auto_continue", result["analysis_input_quality_gate"]
 
     snapshot = captured["report_version"]["input_snapshot"]
     assert result["report_version"] == {"id": "report-1"}

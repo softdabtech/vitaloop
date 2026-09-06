@@ -344,6 +344,20 @@ async def test_pipeline_emits_quality_gate_integrity_evidence_gaps_and_provenanc
     monkeypatch.setattr(lab_analysis_pipeline, "_load_historical_biomarkers", fake_load_historical_biomarkers)
     monkeypatch.setattr(lab_analysis_pipeline, "record_analysis_cost", lambda **kwargs: None)
 
+    # Stage 2B: this test exercises the fully-completed pipeline shape
+    # (evidence_gaps/provenance fields), which now requires the quality gate to
+    # actually resolve to auto_continue — the original fixture (no candidate
+    # confidence, no questionnaire) legitimately scored "confirm" under the
+    # pre-existing gate logic (analysis_quality_gate.py), which simply never
+    # mattered before Stage 2B wired the decision to anything. Providing
+    # high-confidence candidates and a completed questionnaire (both realistic
+    # inputs for an actual extraction) is the minimal change needed to keep this
+    # test verifying its original target (full result shape) rather than the
+    # confirmation-pending shape, without weakening the gate's scoring itself.
+    candidates = [
+        {"confidence_score": 0.95, "status": "pending"},
+        {"confidence_score": 0.95, "status": "pending"},
+    ]
     result = await lab_analysis_pipeline.run_lab_analysis_pipeline(
         biomarkers=[
             {
@@ -361,12 +375,14 @@ async def test_pipeline_emits_quality_gate_integrity_evidence_gaps_and_provenanc
         ],
         user_profile={"age": 8, "sex": "male", "height_cm": 140, "weight_kg": 35},
         symptoms=["fatigue"],
+        questionnaire={"completed": True},
         analysis_id="analysis-test",
-        source_metadata={"source": "unit_test"},
+        source_metadata={"source": "unit_test", "candidates": candidates},
         locale="uk",
         persist_knowledge=False,
         persist_report_version=False,
     )
+    assert result["analysis_input_quality_gate"]["decision"] == "auto_continue", result["analysis_input_quality_gate"]
 
     assert result["analysis_input_quality_gate"]["version"] == "analysis_input_quality_gate_v1"
     assert result["clinical_data_integrity"]["version"] == "clinical_data_integrity_v1"
@@ -523,7 +539,13 @@ async def test_save_report_version_persists_expected_payload(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_get_latest_report_version_falls_back_to_any_locale(monkeypatch):
+async def test_get_latest_report_version_never_falls_back_to_another_locale(monkeypatch):
+    """Locale P0 fix (cabinet reconciliation): a report_versions row that
+    exists only in a different locale (e.g. only a 'uk' row exists, 'en' is
+    requested) must never be returned. Confirmed live as a real production
+    defect on upload 8a818a14-6dae-4740-a76e-52a2b590c6d5 before this fix —
+    this test locks the corrected behavior in. Exactly ONE query is issued
+    (no second, locale-unfiltered fallback query at all)."""
     calls = []
 
     class _Table:
@@ -546,9 +568,8 @@ async def test_get_latest_report_version_falls_back_to_any_locale(monkeypatch):
 
         def execute(self):
             calls.append(list(self.filters))
-            if len(calls) == 1:
-                return type("Resp", (), {"data": []})()
-            return type("Resp", (), {"data": [{"id": "report-en-1", "locale": "en"}]})()
+            # Only an 'en' row exists for this upload; 'uk' is requested.
+            return type("Resp", (), {"data": []})()
 
     class _Client:
         def table(self, name):
@@ -563,14 +584,113 @@ async def test_get_latest_report_version_falls_back_to_any_locale(monkeypatch):
 
     result = await supabase_service.get_latest_report_version("upload-1", "user-1", "uk")
 
-    assert result == {"id": "report-en-1", "locale": "en"}
+    assert result is None
+    assert len(calls) == 1, "must not issue a second, locale-unfiltered fallback query"
     assert ("locale", "uk") in calls[0]
-    assert all(key != "locale" for key, _value in calls[1])
 
 
 @pytest.mark.asyncio
-async def test_get_user_progress_returns_latest_upload_first(monkeypatch):
-    captured = {}
+async def test_get_latest_report_version_returns_matching_locale_row(monkeypatch):
+    class _Table:
+        def select(self, *_args, **_kwargs):
+            return self
+
+        def eq(self, *_args, **_kwargs):
+            return self
+
+        def order(self, *_args, **_kwargs):
+            return self
+
+        def limit(self, *_args, **_kwargs):
+            return self
+
+        def execute(self):
+            return type("Resp", (), {"data": [{"id": "report-uk-1", "locale": "uk"}]})()
+
+    class _Client:
+        def table(self, name):
+            assert name == "report_versions"
+            return _Table()
+
+    async def fake_run(fn):
+        return fn()
+
+    monkeypatch.setattr(supabase_service, "_get_supabase", lambda: _Client())
+    monkeypatch.setattr(supabase_service, "_run", fake_run)
+
+    result = await supabase_service.get_latest_report_version("upload-1", "user-1", "uk")
+
+    assert result == {"id": "report-uk-1", "locale": "uk"}
+
+
+@pytest.mark.asyncio
+async def test_has_any_report_version_true_when_other_locale_row_exists(monkeypatch):
+    class _Table:
+        def select(self, *_args, **_kwargs):
+            return self
+
+        def eq(self, *_args, **_kwargs):
+            return self
+
+        def limit(self, *_args, **_kwargs):
+            return self
+
+        def execute(self):
+            return type("Resp", (), {"data": [{"id": "report-uk-1"}]})()
+
+    class _Client:
+        def table(self, name):
+            assert name == "report_versions"
+            return _Table()
+
+    async def fake_run(fn):
+        return fn()
+
+    monkeypatch.setattr(supabase_service, "_get_supabase", lambda: _Client())
+    monkeypatch.setattr(supabase_service, "_run", fake_run)
+
+    assert await supabase_service.has_any_report_version("upload-1", "user-1") is True
+
+
+@pytest.mark.asyncio
+async def test_has_any_report_version_false_for_genuinely_legacy_upload(monkeypatch):
+    class _Table:
+        def select(self, *_args, **_kwargs):
+            return self
+
+        def eq(self, *_args, **_kwargs):
+            return self
+
+        def limit(self, *_args, **_kwargs):
+            return self
+
+        def execute(self):
+            return type("Resp", (), {"data": []})()
+
+    class _Client:
+        def table(self, name):
+            assert name == "report_versions"
+            return _Table()
+
+    async def fake_run(fn):
+        return fn()
+
+    monkeypatch.setattr(supabase_service, "_get_supabase", lambda: _Client())
+    monkeypatch.setattr(supabase_service, "_run", fake_run)
+
+    assert await supabase_service.has_any_report_version("upload-1", "user-1") is False
+
+
+@pytest.mark.asyncio
+async def test_get_user_progress_orders_by_measurement_date_not_created_at(monkeypatch):
+    """Stage 2D-1: get_user_progress() no longer sorts by created_at at all
+    (neither at the DB query level nor as a clinical-date substitute) — it
+    sorts in Python by the resolved measurement_date
+    (test_date -> collected_at -> reported_at). See
+    tests/test_stage2d1_progress_chronology.py for the full F1-F8 coverage;
+    this is the minimal update to this specific pre-existing test, which
+    previously asserted the now-removed .order("created_at") DB call as
+    expected behavior."""
 
     class _UploadsTable:
         def select(self, *_args, **_kwargs):
@@ -579,15 +699,11 @@ async def test_get_user_progress_returns_latest_upload_first(monkeypatch):
         def eq(self, *_args, **_kwargs):
             return self
 
-        def order(self, key, desc=False):
-            captured["upload_order"] = {"key": key, "desc": desc}
-            return self
-
         def execute(self):
             return type(
                 "Resp",
                 (),
-                {"data": [{"id": "new", "created_at": "2026-08-16T00:00:00Z", "lab_name": "New", "test_date": None}]},
+                {"data": [{"id": "new", "created_at": "2026-08-16T00:00:00Z", "lab_name": "New", "test_date": None, "collected_at": None, "reported_at": None}]},
             )()
 
     class _BiomarkersTable:
@@ -624,7 +740,7 @@ async def test_get_user_progress_returns_latest_upload_first(monkeypatch):
     result = await supabase_service.get_user_progress("user-1")
 
     assert result[0]["id"] == "new"
-    assert captured["upload_order"] == {"key": "created_at", "desc": True}
+    assert result[0]["measurement_date"] is None, "no test_date/collected_at/reported_at means genuinely undated, not created_at"
 
 
 @pytest.mark.asyncio
@@ -833,11 +949,26 @@ async def test_confirm_candidates_endpoint_saves_confirmed_biomarkers(monkeypatc
     async def fake_get_user_profile(_user_id):
         return {"age": 35, "sex": "female", "height_cm": 170, "weight_kg": 65}
 
+    async def fake_get_biomarkers_by_upload(_upload_id, _user_id):
+        return []
+
     async def fake_pipeline(**kwargs):
         assert kwargs["persist_report_version"] is True
+        # Stage 2B: real run_lab_analysis_pipeline() now persists canonical
+        # biomarkers itself (gated on the quality-gate decision) rather than the
+        # caller doing it beforehand. This fake replaces the whole pipeline, so it
+        # simulates that same persistence step to keep this test's assertion
+        # (saved_state populated) meaningful.
+        saved = await fake_save_biomarkers(
+            upload_id=kwargs.get("analysis_id"),
+            user_id=kwargs.get("user_id"),
+            biomarkers=kwargs.get("biomarkers"),
+        )
         return {
+            "analysis_status": "completed",
             "knowledge_report": {"locale": kwargs["locale"]},
             "protocol": {},
+            "saved_biomarkers": saved,
             "safety_result": {"status": "approved"},
             "explainability": {"version": "explainability_v1"},
             "report_version": {"id": "report-1"},
@@ -845,8 +976,8 @@ async def test_confirm_candidates_endpoint_saves_confirmed_biomarkers(monkeypatc
 
     monkeypatch.setattr(analyze_router, "assert_upload_belongs_to_user", fake_assert_upload_belongs_to_user)
     monkeypatch.setattr(analyze_router, "update_biomarker_extraction_candidates", fake_update_candidates)
-    monkeypatch.setattr(analyze_router, "save_biomarkers", fake_save_biomarkers)
     monkeypatch.setattr(analyze_router, "get_user_profile", fake_get_user_profile)
+    monkeypatch.setattr(analyze_router, "get_biomarkers_by_upload", fake_get_biomarkers_by_upload)
     monkeypatch.setattr(analyze_router, "run_lab_analysis_pipeline", fake_pipeline)
     app.dependency_overrides[get_current_user] = lambda: {"sub": user_id}
 

@@ -10,6 +10,7 @@ from app.dependencies import get_current_user
 from app.models.crm import OrganizationMemberCreate
 from app.models.organization import OrganizationCreate, OrganizationUpdate
 from app.services import supabase_service as svc
+from app.services.entitlements import resolve_entitlements_from_data
 from app.services.email_service import send_invitation_accepted_email, send_invitation_email, send_welcome_email, send_ops_alert_email
 
 
@@ -178,7 +179,9 @@ async def _load_users_by_ids(sb, user_ids: list[str]) -> dict[str, dict]:
 
     resp = await svc._run(
         lambda: sb.table("users")
-        .select("id, email, full_name, age, sex, sub_status")
+        # subscription_status/global_role are needed for
+        # entitlements.resolve_entitlements_from_data() — see _serialize_member().
+        .select("id, email, full_name, age, sex, sub_status, subscription_status, global_role")
         .in_("id", ids)
         .execute()
     )
@@ -195,19 +198,47 @@ def _serialize_organization(row: dict, owner: Optional[dict] = None) -> dict[str
     }
 
 
-def _serialize_member(row: dict, user: Optional[dict]) -> dict[str, Any]:
+def _serialize_member(row: dict, user: Optional[dict], active_sub: Optional[dict] = None) -> dict[str, Any]:
+    """Post-release entitlement consistency fix: subscription_active/
+    subscription_status used to read raw users.sub_status directly — a
+    legacy field that can disagree with the canonical resolver (e.g. a
+    stale sub_status="active" left over after a plan actually lapsed, or a
+    real grant recorded only in the subscriptions table that sub_status
+    never reflects). Now goes through the exact same rule
+    resolve_user_entitlements() uses for the product's own /auth/me, via
+    resolve_entitlements_from_data() — the batch-compatible extraction of
+    that same function, not a second entitlement resolver. `active_sub` is
+    the caller's already-batch-fetched subscriptions row for this member
+    (see _load_active_subscriptions_by_ids below); passing None is safe and
+    just means "no active subscription row found," identical semantics to
+    resolve_user_entitlements() when get_user_active_subscription() returns
+    None.
+    """
+    user = user or {}
+    user_id = row.get("user_id")
+    entitlements = resolve_entitlements_from_data(
+        user_id=str(user_id) if user_id else "",
+        account=user,
+        active_sub=active_sub,
+    )
     return {
-        "user_id": row.get("user_id"),
-        "email": (user or {}).get("email") or "",
+        "user_id": user_id,
+        "email": user.get("email") or "",
         "full_name": _display_name(user),
-        "age": (user or {}).get("age"),
-        "sex": (user or {}).get("sex"),
-        "global_role": (user or {}).get("global_role") or "end_user",
+        "age": user.get("age"),
+        "sex": user.get("sex"),
+        "global_role": entitlements["role"],
         "org_role": row.get("role") or "member",
         "membership_status": row.get("status") or "active",
-        "subscription_active": str((user or {}).get("sub_status") or "").lower() == "active",
-        "subscription_status": (user or {}).get("sub_status") or "inactive",
+        "subscription_active": entitlements["is_premium"],
+        "subscription_status": entitlements["billing_status"],
     }
+
+
+async def _load_active_subscriptions_by_ids(sb, user_ids: list[str]) -> dict[str, dict]:
+    """CRM-side wrapper so callers here don't need to import supabase_service
+    directly just for this one batch helper."""
+    return await svc.get_active_subscriptions_by_user_ids([str(uid) for uid in user_ids if uid])
 
 
 def _serialize_assignment(row: dict, users_by_id: dict[str, dict]) -> dict[str, Any]:
@@ -445,7 +476,11 @@ async def list_members(org_id: UUID = Query(...), current_user: dict = Depends(g
     )
     user_ids = [row.get("user_id") for row in (members_resp.data or [])]
     users_by_id = await _load_users_by_ids(sb, user_ids)
-    return [_serialize_member(row, users_by_id.get(str(row.get("user_id")))) for row in (members_resp.data or [])]
+    subs_by_id = await _load_active_subscriptions_by_ids(sb, user_ids)
+    return [
+        _serialize_member(row, users_by_id.get(str(row.get("user_id"))), subs_by_id.get(str(row.get("user_id"))))
+        for row in (members_resp.data or [])
+    ]
 
 
 @router.post("/organizations/{org_id}/members")
@@ -472,6 +507,7 @@ async def add_member(org_id: UUID, req: OrganizationMemberCreate, current_user: 
         raise HTTPException(status_code=400, detail=_FAILED_ADD_MEMBER)
 
     users = await _load_users_by_ids(sb, [str(req.user_id)])
+    subs = await _load_active_subscriptions_by_ids(sb, [str(req.user_id)])
     await _write_audit_log(
         sb,
         actor_user_id=current_user["sub"],
@@ -481,7 +517,7 @@ async def add_member(org_id: UUID, req: OrganizationMemberCreate, current_user: 
         new_value=row,
         organization_id=str(org_id),
     )
-    return _serialize_member(row, users.get(str(req.user_id)))
+    return _serialize_member(row, users.get(str(req.user_id)), subs.get(str(req.user_id)))
 
 
 @router.patch("/members/{user_id}/role")
@@ -527,7 +563,8 @@ async def change_member_role(
     )
 
     users = await _load_users_by_ids(sb, [str(user_id)])
-    return _serialize_member(row, users.get(str(user_id)))
+    subs = await _load_active_subscriptions_by_ids(sb, [str(user_id)])
+    return _serialize_member(row, users.get(str(user_id)), subs.get(str(user_id)))
 
 
 @router.patch("/members/{user_id}/profile")
@@ -551,8 +588,9 @@ async def update_member_profile(
         profile_update["age"] = body.get("age")
     if "sex" in body:
         profile_update["sex"] = str(body.get("sex") or "").strip().lower()
+    requested_sub_status = None
     if "sub_status" in body:
-        profile_update["sub_status"] = str(body.get("sub_status") or "").strip().lower()
+        requested_sub_status = str(body.get("sub_status") or "").strip().lower()
 
     if profile_update:
         await svc._run(
@@ -560,6 +598,14 @@ async def update_member_profile(
             .update(profile_update)
             .eq("id", str(user_id))
             .execute()
+        )
+
+    if requested_sub_status:
+        plan_tier = "personal" if requested_sub_status in {"active", "trialing"} else "free"
+        await svc.update_user_subscription(
+            user_id=str(user_id),
+            sub_status=requested_sub_status,
+            plan_tier=plan_tier,
         )
 
     member_resp = await svc._run(
@@ -575,7 +621,8 @@ async def update_member_profile(
         raise HTTPException(status_code=404, detail=_MEMBER_NOT_FOUND_DETAIL)
 
     users = await _load_users_by_ids(sb, [str(user_id)])
-    return _serialize_member(row, users.get(str(user_id)))
+    subs = await _load_active_subscriptions_by_ids(sb, [str(user_id)])
+    return _serialize_member(row, users.get(str(user_id)), subs.get(str(user_id)))
 
 
 @router.delete("/members/{user_id}")

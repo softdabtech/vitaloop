@@ -4,7 +4,6 @@ import { useAuth } from '../../hooks/useAuth.js'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 import BrandMark from './BrandMark.jsx'
-import { withStoredAttribution } from '../../lib/attribution.js'
 
 const NAV_LINKS = [
   { id: 'why-vitaloop', label: 'Features', route: '/#why-vitaloop' },
@@ -59,7 +58,7 @@ export function PageHeader() {
           {/* Log in link — only for non-authenticated visitors */}
           {!user && (
             <button
-              onClick={() => navigate(withStoredAttribution('/login'))}
+              onClick={() => navigate('/login')}
               className="hidden sm:inline-flex h-11 items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
             >
               Log in
@@ -68,7 +67,7 @@ export function PageHeader() {
 
           {/* Cabinet / Sign Up button */}
           <button
-            onClick={() => navigate(user ? '/dashboard' : withStoredAttribution('/login?signup=true'))}
+            onClick={() => navigate(user ? '/dashboard' : '/login?signup=true')}
             className={`${ctaBase} border border-slate-300 bg-white text-slate-900 hover:border-emerald-300`}
           >
             {user ? 'Cabinet' : 'Sign Up'}
@@ -123,7 +122,7 @@ export function PageHeader() {
                   <button
                     onClick={() => {
                       closeMobileMenu()
-                      navigate(withStoredAttribution('/login?signup=true'))
+                      navigate('/login?signup=true')
                     }}
                     className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-emerald-400"
                   >
@@ -132,7 +131,7 @@ export function PageHeader() {
                   <button
                     onClick={() => {
                       closeMobileMenu()
-                      navigate(withStoredAttribution('/login'))
+                      navigate('/login')
                     }}
                     className="w-full rounded-xl border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >

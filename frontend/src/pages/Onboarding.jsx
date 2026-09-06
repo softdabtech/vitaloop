@@ -27,7 +27,7 @@ const T = {
       { id: 'hormonal', label: 'Hormonal balance' },
       { id: 'prevention', label: 'Prevention and longevity' },
     ],
-    bodyAreas: ['General', 'Head', 'Chest', 'Abdomen', 'Back', 'Arms', 'Legs', 'Skin', 'Mood/Cognition'],
+    bodyAreas: ['General', 'Head', 'Chest', 'Abdomen', t.back, 'Arms', 'Legs', 'Skin', 'Mood/Cognition'],
     durationOptions: ['A few days', '1-2 weeks', '2-6 weeks', '2-6 months', 'More than 6 months'],
     redFlagOptions: [
       'Sudden severe symptom change',
@@ -36,105 +36,77 @@ const T = {
       'High fever with rapid worsening',
       'Recent injury with persistent pain',
     ],
-    steps: ['Intent', 'Main context', 'Follow-up questions', 'Safety', 'Basic profile', 'First action'],
-    headerTitle: 'Setup',
-    headerSub: 'Tell us what brought you to VITALOOP.',
+    steps: ['Intent', 'Main context', t.followupTitle, t.safetyTitle, t.profileTitle, 'First action'],
+    headerTitle: t.headerTitle,
+    headerSub: t.headerSub,
     headerDesc: 'Your answers help VITALOOP suggest useful labs, connect results to symptoms, and build safer recommendations.',
     stepLabel: (n, t) => `STEP ${n} OF ${t}`,
-    intentTitle: 'What brought you to VITALOOP?',
-    intentSub: 'Choose one path. You can change it later.',
+    intentTitle: t.intentTitle,
+    intentSub: t.intentSub,
     contextTitle: 'What\'s your main concern right now?',
-    contextSub: 'Describe what you feel so VITALOOP can focus on the right direction.',
-    contextLabel: 'Describe your main concern',
+    contextSub: t.contextSub,
+    contextLabel: t.contextLabel,
     contextPlaceholder: 'e.g. I\'ve had low energy for 3 months, poor sleep, and some hair loss.',
-    durationLabel: 'How long has this been going on?',
-    bodyAreaLabel: 'Which body area or system is most affected?',
-    triggersLabel: 'Any triggers you notice? (optional)',
+    durationLabel: t.durationLabel,
+    bodyAreaLabel: t.bodyAreaLabel,
+    triggersLabel: t.triggersLabel,
     triggersPlaceholder: 'e.g. gets worse after eating, after stress, in the morning...',
-    symptomsLabel: 'Related symptoms? (optional)',
+    symptomsLabel: t.symptomsLabel,
     symptomsPlaceholder: 'e.g. brain fog, bloating, cold hands...',
-    triedLabel: 'What have you tried? (optional)',
+    triedLabel: t.triedLabel,
     triedPlaceholder: 'e.g. sleep supplements, cut caffeine, vitamin D, saw a GP...',
-    followupTitle: 'Follow-up questions',
-    followupSub: 'A few details help us prioritize safely.',
-    severityLabel: 'How much does this affect daily life?',
-    severityMin: 'Minimal',
-    severityMax: 'Very strongly',
-    goalsLabel: 'Main health goals? (choose up to 3)',
-    safetyTitle: 'Safety',
-    safetySub: 'This helps avoid unsafe recommendations. Your information stays private.',
-    medsLabel: 'Current medications (optional)',
+    followupTitle: t.followupTitle,
+    followupSub: t.followupSub,
+    severityLabel: t.severityLabel,
+    severityMin: t.severityMin,
+    severityMax: t.severityMax,
+    goalsLabel: t.goalsLabel,
+    safetyTitle: t.safetyTitle,
+    safetySub: t.safetySub,
+    medsLabel: t.medsLabel,
     medsPlaceholder: 'e.g. levothyroxine 50mcg, metformin',
-    suppLabel: 'Supplements (optional)',
+    suppLabel: t.suppLabel,
     suppPlaceholder: 'e.g. vitamin D 2000 IU, magnesium glycinate',
-    allergyLabel: 'Known allergies or intolerances (optional)',
+    allergyLabel: t.allergyLabel,
     allergyPlaceholder: 'e.g. penicillin, latex, gluten',
-    pregnancyLabel: 'Pregnancy or breastfeeding (optional)',
+    pregnancyLabel: t.pregnancyLabel,
     pregnancyPlaceholder: 'e.g. 12 weeks pregnant, breastfeeding',
-    redFlagsLabel: 'Mark urgent symptoms if any',
-    profileTitle: 'Basic profile',
-    profileSub: 'Used to personalize reference ranges and recommendations.',
-    firstNameLabel: 'First name',
-    lastNameLabel: 'Last name',
-    ageLabel: 'Age',
-    agePlaceholder: 'e.g. 35',
-    sexLabel: 'Sex',
-    sexPlaceholder: 'Select sex',
-    sexMale: 'Male',
-    sexFemale: 'Female',
-    sexOther: 'Other',
-    heightLabel: 'Height (cm)',
-    weightLabel: 'Weight (kg)',
-    countryLabel: 'Country (optional)',
+    redFlagsLabel: t.redFlagsLabel,
+    profileTitle: t.profileTitle,
+    profileSub: t.profileSub,
+    firstNameLabel: t.firstNameLabel,
+    lastNameLabel: t.lastNameLabel,
+    heightLabel: t.heightLabel,
+    weightLabel: t.weightLabel,
+    countryLabel: t.countryLabel,
     countryPlaceholder: 'e.g. Ukraine',
     finalTitle: 'You\'re set up. Here\'s your first action:',
-    finalSymptoms: 'Your concern is saved. Next: symptom check and lab direction.',
-    finalLabs: 'Great. Continue to Upload Results and connect your symptoms for a more precise protocol.',
-    finalBaseline: 'Your baseline focus is set. Continue to Today to see your starting dashboard.',
-    finalPractitioner: 'Practitioner path confirmed. Continue to upload.',
-    next: 'Next',
-    back: 'Back',
-    skip: 'Skip setup for now',
-    complete: 'Enter dashboard',
+    finalSymptoms: t.finalSymptoms,
+    finalLabs: t.finalLabs,
+    finalBaseline: t.finalBaseline,
+    finalPractitioner: t.finalPractitioner,
+    next: t.next,
+    back: t.back,
+    skip: t.skip,
+    complete: t.complete,
     practitionerConfirmBtn: (confirmed) => confirmed ? 'Confirmed: my practitioner invited me' : 'Click to confirm practitioner invitation',
-    practitionerConfirmSub: 'Confirm practitioner context so we can configure tasks correctly.',
-    hasLabsQuestion: 'Do you have lab results to upload?',
-    hasLabsYes: 'Yes, ready to upload',
-    hasLabsNo: 'No, I will upload later',
-    baselineFocusLabel: 'Which area do you want to track first?',
-    orgTitle: 'Organization setup',
-    orgSub: 'As an organization admin, please create your organization to continue.',
-    orgNameLabel: 'Organization name',
+    practitionerConfirmSub: t.practitionerConfirmSub,
+    hasLabsQuestion: t.hasLabsQuestion,
+    hasLabsYes: t.hasLabsYes,
+    hasLabsNo: t.hasLabsNo,
+    baselineFocusLabel: t.baselineFocusLabel,
+    orgTitle: t.orgTitle,
+    orgSub: t.orgSub,
+    orgNameLabel: t.orgNameLabel,
     orgNamePlaceholder: 'e.g. Vitaloop Health Clinic',
-    orgSave: 'Create organization',
-    orgSaving: 'Creating...',
+    orgSave: t.orgSave,
+    orgSaving: t.orgSaving,
     toastSaved: 'Profile saved',
     toastOrgCreated: (name) => `Organisation "${name}" created`,
     toastError: 'Could not save — please try again.',
     toastSelectIntent: 'Please select how you found us.',
     toastDescribe: 'Please describe your concern first.',
     toastConfirmPractitioner: 'Please confirm practitioner relationship to continue.',
-    toastLabsChoice: 'Tell us whether you already have labs to upload.',
-    toastBaselineFocus: 'Choose what you want to improve first.',
-    toastFollowupRequired: 'Add duration and severity so we can prioritize safely.',
-    toastProfileRequired: 'Add age, sex, height, and weight before continuing.',
-    toastSkipped: 'Setup skipped. You can complete it later from Profile & Safety.',
-    toastOrgName: 'Enter organization name.',
-    toastOrgCreatedSimple: 'Organization created.',
-    toastOrgError: 'Unable to create organization.',
-    orgWelcome: 'Welcome',
-    orgWelcomeSub: 'Name your organization to continue to CRM.',
-    followupDetailsTitle: 'Smart follow-ups',
-    followupDetailsSub: 'These details help prioritize what to check first.',
-    durationSelect: 'Select duration',
-    relatedSymptomsPlaceholder: 'Brain fog, palpitations, GI discomfort...',
-    safetyUrgent: 'Urgent symptoms may require immediate qualified medical review.',
-    commaSeparated: 'Comma-separated',
-    finalLabsNo: 'We will guide you through a practical lab direction before upload.',
-    finalBaselineText: 'Your baseline path is set. Continue to Lab Plan to build your first tracking panel.',
-    disclaimer: 'VITALOOP is a decision-support tool and does not provide diagnosis. Share urgent symptoms with a qualified medical professional.',
-    saving: 'Saving...',
-    startLoop: 'Start my health loop',
   },
   uk: {
     intentOptions: [
@@ -200,13 +172,6 @@ const T = {
     profileSub: 'Використовується для персоналізації референсних меж і рекомендацій.',
     firstNameLabel: 'Ім\'я',
     lastNameLabel: 'Прізвище',
-    ageLabel: 'Вік',
-    agePlaceholder: 'наприклад, 35',
-    sexLabel: 'Стать',
-    sexPlaceholder: 'Оберіть стать',
-    sexMale: 'Чоловіча',
-    sexFemale: 'Жіноча',
-    sexOther: 'Інше',
     heightLabel: 'Зріст (см)',
     weightLabel: 'Вага (кг)',
     countryLabel: 'Країна (необов\'язково)',
@@ -238,27 +203,6 @@ const T = {
     toastSelectIntent: 'Будь ласка, оберіть, що привело вас до Vitaloop.',
     toastDescribe: 'Будь ласка, спочатку опишіть свою скаргу.',
     toastConfirmPractitioner: 'Підтвердіть запрошення від нутриціолога для продовження.',
-    toastLabsChoice: 'Вкажіть, чи є у вас результати аналізів для завантаження.',
-    toastBaselineFocus: 'Оберіть, що хочете покращити першочергово.',
-    toastFollowupRequired: 'Додайте тривалість і силу прояву, щоб ми могли безпечніше визначити пріоритет.',
-    toastProfileRequired: 'Додайте вік, стать, зріст і вагу перед продовженням.',
-    toastSkipped: 'Налаштування пропущено. Ви можете завершити його пізніше в профілі.',
-    toastOrgName: 'Введіть назву організації.',
-    toastOrgCreatedSimple: 'Організацію створено.',
-    toastOrgError: 'Не вдалося створити організацію.',
-    orgWelcome: 'Вітаємо',
-    orgWelcomeSub: 'Вкажіть назву організації, щоб перейти до CRM.',
-    followupDetailsTitle: 'Уточнюючі питання',
-    followupDetailsSub: 'Ці деталі допомагають зрозуміти, що варто перевірити першим.',
-    durationSelect: 'Оберіть тривалість',
-    relatedSymptomsPlaceholder: 'Туман у голові, серцебиття, дискомфорт у животі...',
-    safetyUrgent: 'Термінові симптоми можуть потребувати негайного перегляду кваліфікованим лікарем.',
-    commaSeparated: 'Через кому',
-    finalLabsNo: 'Ми допоможемо сформувати практичний напрямок аналізів перед завантаженням.',
-    finalBaselineText: 'Ваш базовий напрямок визначено. Перейдіть до плану аналізів, щоб зібрати першу панель для відстеження.',
-    disclaimer: 'VITALOOP є освітнім інструментом підтримки рішень і не встановлює діагнози. Термінові симптоми варто обговорити з кваліфікованим лікарем.',
-    saving: 'Збереження...',
-    startLoop: 'Почати мій health loop',
   },
 }
 
@@ -361,7 +305,7 @@ export default function Onboarding() {
     summary: '',
     duration: '',
     severity: 5,
-    body_area: isUkrainianLocale() ? 'Загальне' : 'General',
+    body_area: 'General',
     triggers: '',
     related_symptoms: '',
     tried: '',
@@ -378,8 +322,6 @@ export default function Onboarding() {
   const [profile, setProfile] = useState({
     first_name: '',
     last_name: '',
-    age: '',
-    sex: '',
     height_cm: '',
     weight_kg: '',
     goals: [],
@@ -421,8 +363,6 @@ export default function Onboarding() {
       const loc = r.data?.location || {}
       setProfile((prev) => ({
         ...prev,
-        age: p.age || '',
-        sex: p.sex || '',
         height_cm: p.height_cm || '',
         weight_kg: p.weight_kg || '',
         goals: Array.isArray(p.goals) ? p.goals.filter((goal) => !String(goal).startsWith('intent:')) : [],
@@ -474,7 +414,7 @@ export default function Onboarding() {
         return false
       }
       if (intent === 'labs' && hasLabsNow === null) {
-        toast.error(t.toastLabsChoice)
+        toast.error('Tell us whether you already have labs to upload.')
         return false
       }
       if (intent === 'practitioner' && !practitionerConfirmed) {
@@ -482,21 +422,14 @@ export default function Onboarding() {
         return false
       }
       if (intent === 'baseline' && !baselineFocus.trim()) {
-        toast.error(t.toastBaselineFocus)
+        toast.error('Choose what you want to improve first.')
         return false
       }
     }
 
     if (step === 2 && intent === 'symptoms') {
       if (!concern.duration || !concern.severity) {
-        toast.error(t.toastFollowupRequired)
-        return false
-      }
-    }
-
-    if (step === 4) {
-      if (!profile.age || !profile.sex || !profile.height_cm || !profile.weight_kg) {
-        toast.error(t.toastProfileRequired)
+        toast.error('Add duration and severity so we can prioritize safely.')
         return false
       }
     }
@@ -523,16 +456,10 @@ export default function Onboarding() {
     }
 
     if (intent === 'labs') {
-      const focus = concern.summary.trim()
       return {
-        complaint: focus || (hasLabsNow ? 'Lab interpretation with symptoms context' : 'Lab direction before upload'),
-        duration_description: `${concern.duration || 'Not specified'} | Severity ${concern.severity}/10 | Area: ${concern.body_area} | Lab-first path`,
-        tried_interventions: [
-          hasLabsNow ? 'User has existing labs' : 'User needs lab direction first',
-          concern.tried ? `Tried: ${concern.tried}` : null,
-          concern.triggers ? `Triggers: ${concern.triggers}` : null,
-          concern.related_symptoms ? `Related: ${concern.related_symptoms}` : null,
-        ].filter(Boolean).join(' | '),
+        complaint: hasLabsNow ? 'User has existing labs and wants interpretation context' : 'User needs lab direction before upload',
+        duration_description: 'Lab-first path',
+        tried_interventions: concern.summary ? `Focus: ${concern.summary}` : undefined,
       }
     }
 
@@ -558,8 +485,6 @@ export default function Onboarding() {
       const derivedGoals = [...profile.goals, `intent:${intent}`]
       const profilePayload = {
         full_name: fullName || undefined,
-        age: profile.age ? Number(profile.age) : undefined,
-        sex: profile.sex || undefined,
         height_cm: profile.height_cm ? Number(profile.height_cm) : undefined,
         weight_kg: profile.weight_kg ? Number(profile.weight_kg) : undefined,
         goals: derivedGoals,
@@ -611,7 +536,7 @@ export default function Onboarding() {
       trackFunnelEvent('funnel_onboarding_skipped', 'User skipped onboarding and entered dashboard', {
         stage: steps[step] || 'unknown',
       }, { oncePerSession: true })
-      toast(t.toastSkipped, {
+      toast('Setup skipped. You can complete it later from Profile & Safety.', {
         icon: 'ℹ️',
         style: { background: '#fef9c3', color: '#92400e', fontSize: 14 },
       })
@@ -625,16 +550,16 @@ export default function Onboarding() {
     e.preventDefault()
     const name = orgName.trim()
     if (!name) {
-      toast.error(t.toastOrgName)
+      toast.error('Enter organization name.')
       return
     }
     setOrgSaving(true)
     try {
       await api.post('/auth/onboarding/organization', { name })
-      toast.success(t.toastOrgCreatedSimple)
+      toast.success('Organization created.')
       navigate('/admin/dashboard', { replace: true })
     } catch (err) {
-      toast.error(err?.response?.data?.detail || t.toastOrgError)
+      toast.error(err?.response?.data?.detail || 'Unable to create organization.')
     } finally {
       setOrgSaving(false)
     }
@@ -666,16 +591,16 @@ export default function Onboarding() {
             <motion.div key="org-setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div style={{ textAlign: 'center', marginBottom: 10 }}>
                 <div style={{ fontSize: 30, marginBottom: 10 }}>👋</div>
-                <div style={s.title}>{t.orgWelcome}</div>
-                <div style={s.sub}>{t.orgWelcomeSub}</div>
+                <div style={s.title}>Welcome</div>
+                <div style={s.sub}>Name your organization to continue to CRM.</div>
               </div>
               <form onSubmit={handleCreateOrg}>
                 <label>
-                  <span style={s.label}>{t.orgNameLabel}</span>
+                  <span style={s.label}>Organization Name</span>
                   <input
                     style={s.input}
                     type="text"
-                    placeholder={t.orgNamePlaceholder}
+                    placeholder="HealthFirst Clinic"
                     value={orgName}
                     onChange={(e) => setOrgName(e.target.value)}
                     autoFocus
@@ -683,7 +608,7 @@ export default function Onboarding() {
                   />
                 </label>
                 <button type="submit" style={{ ...s.btnPrimary, marginTop: 16, opacity: orgSaving ? 0.6 : 1 }} disabled={orgSaving}>
-                  {orgSaving ? t.orgSaving : t.orgSave}
+                  {orgSaving ? t.orgSaving : 'Create Organization'}
                 </button>
               </form>
             </motion.div>
@@ -696,13 +621,13 @@ export default function Onboarding() {
               </div>
 
               <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 24, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                {t.stepLabel(step + 1, TOTAL)} - {steps[step]}
+                Step {step + 1} of {TOTAL} - {steps[step]}
               </div>
 
               {step === 0 && (
                 <motion.div key="intent" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}><Sparkles size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />{t.intentTitle}</div>
-                  <div style={s.sub}>{t.intentSub}</div>
+                  <div style={s.title}><Sparkles size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />What brought you to VITALOOP today?</div>
+                  <div style={s.sub}>Choose one starting path. You can refine it anytime in Today.</div>
                   <div style={{ display: 'grid', gap: 10 }}>
                     {t.intentOptions.map((option) => (
                       <button
@@ -805,23 +730,23 @@ export default function Onboarding() {
 
               {step === 2 && (
                 <motion.div key="followups" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}>{t.followupDetailsTitle}</div>
-                  <div style={s.sub}>{t.followupDetailsSub}</div>
+                  <div style={s.title}>Smart follow-ups</div>
+                  <div style={s.sub}>These details help prioritize what to check first.</div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 14 }}>
                     <div>
-                      <span style={s.label}>{t.durationLabel}</span>
+                      <span style={s.label}>Duration</span>
                       <select
                         style={s.input}
                         value={concern.duration}
                         onChange={(e) => setConcern((prev) => ({ ...prev, duration: e.target.value }))}
                       >
-                        <option value="">{t.durationSelect}</option>
+                        <option value="">Select duration</option>
                         {t.durationOptions.map((item) => <option key={item} value={item}>{item}</option>)}
                       </select>
                     </div>
                     <div>
-                      <span style={s.label}>{t.severityLabel}</span>
+                      <span style={s.label}>Severity (1-10)</span>
                       <input
                         style={s.input}
                         type="number"
@@ -835,7 +760,7 @@ export default function Onboarding() {
 
                   <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 14 }}>
                     <div>
-                      <span style={s.label}>{t.bodyAreaLabel}</span>
+                      <span style={s.label}>Body area / system</span>
                       <select
                         style={s.input}
                         value={concern.body_area}
@@ -845,33 +770,33 @@ export default function Onboarding() {
                       </select>
                     </div>
                     <div>
-                      <span style={s.label}>{t.triggersLabel}</span>
+                      <span style={s.label}>Better/worse triggers</span>
                       <input
                         style={s.input}
                         value={concern.triggers}
                         onChange={(e) => setConcern((prev) => ({ ...prev, triggers: e.target.value }))}
-                        placeholder={t.triggersPlaceholder}
+                        placeholder="Sleep loss, stress, meals, exercise..."
                       />
                     </div>
                   </div>
 
                   <div style={{ marginTop: 14 }}>
-                    <span style={s.label}>{t.symptomsLabel}</span>
+                    <span style={s.label}>Related symptoms</span>
                     <input
                       style={s.input}
                       value={concern.related_symptoms}
                       onChange={(e) => setConcern((prev) => ({ ...prev, related_symptoms: e.target.value }))}
-                      placeholder={t.relatedSymptomsPlaceholder}
+                      placeholder="Brain fog, palpitations, GI discomfort..."
                     />
                   </div>
 
                   <div style={{ marginTop: 14 }}>
-                    <span style={s.label}>{t.triedLabel}</span>
+                    <span style={s.label}>What have you tried so far?</span>
                     <input
                       style={s.input}
                       value={concern.tried}
                       onChange={(e) => setConcern((prev) => ({ ...prev, tried: e.target.value }))}
-                      placeholder={t.triedPlaceholder}
+                      placeholder="Supplements, schedule changes, diet, therapy..."
                     />
                   </div>
                 </motion.div>
@@ -879,11 +804,11 @@ export default function Onboarding() {
 
               {step === 3 && (
                 <motion.div key="safety" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}><Shield size={22} style={{ display: 'inline', marginRight: 10, color: '#2563eb' }} />{t.safetyTitle}</div>
-                  <div style={s.sub}>{t.safetySub}</div>
+                  <div style={s.title}><Shield size={22} style={{ display: 'inline', marginRight: 10, color: '#2563eb' }} />Safety context</div>
+                  <div style={s.sub}>This does not diagnose. It helps route you toward safer next steps.</div>
 
                   <div style={{ marginBottom: 12 }}>
-                    <span style={s.label}>{t.redFlagsLabel}</span>
+                    <span style={s.label}>Red-flag check (select any that apply)</span>
                     <div style={{ display: 'grid', gap: 8 }}>
                       {redFlagOptions.map((option) => (
                         <button
@@ -903,31 +828,31 @@ export default function Onboarding() {
                     </div>
                     {safety.redFlags.length > 0 && (
                       <div style={{ marginTop: 10, fontSize: 13, color: '#b91c1c' }}>
-                        {t.safetyUrgent}
+                        Urgent symptoms may require immediate qualified medical review.
                       </div>
                     )}
                   </div>
 
                   <div style={{ marginTop: 12 }}>
-                    <span style={s.label}>{t.medsLabel}</span>
+                    <span style={s.label}>Current medications</span>
                     <input
                       style={s.input}
-                      placeholder={t.commaSeparated}
+                      placeholder="Comma-separated"
                       value={safety.medications}
                       onChange={(e) => setSafety((prev) => ({ ...prev, medications: e.target.value }))}
                     />
                   </div>
                   <div style={{ marginTop: 12 }}>
-                    <span style={s.label}>{t.suppLabel}</span>
+                    <span style={s.label}>Current supplements</span>
                     <input
                       style={s.input}
-                      placeholder={t.commaSeparated}
+                      placeholder="Comma-separated"
                       value={safety.supplements}
                       onChange={(e) => setSafety((prev) => ({ ...prev, supplements: e.target.value }))}
                     />
                   </div>
                   <div style={{ marginTop: 12 }}>
-                    <span style={s.label}>{t.allergyLabel}</span>
+                    <span style={s.label}>Allergies (optional)</span>
                     <input
                       style={s.input}
                       value={safety.allergies}
@@ -935,7 +860,7 @@ export default function Onboarding() {
                     />
                   </div>
                   <div style={{ marginTop: 12 }}>
-                    <span style={s.label}>{t.pregnancyLabel}</span>
+                    <span style={s.label}>Pregnancy/Breastfeeding (optional)</span>
                     <input
                       style={s.input}
                       value={safety.pregnancy}
@@ -947,61 +872,33 @@ export default function Onboarding() {
 
               {step === 4 && (
                 <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}><User size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />{t.profileTitle}</div>
-                  <div style={s.sub}>{t.profileSub}</div>
+                  <div style={s.title}><User size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />Profile basics</div>
+                  <div style={s.sub}>Optional now, useful later for deeper personalization.</div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 14 }}>
                     <div>
-                      <span style={s.label}>{t.firstNameLabel}</span>
+                      <span style={s.label}>First Name</span>
                       <input
                         style={s.input}
                         value={profile.first_name}
                         onChange={(e) => setProfile((prev) => ({ ...prev, first_name: e.target.value }))}
-                        placeholder={isUkrainianLocale() ? 'Олексій' : 'John'}
+                        placeholder="John"
                       />
                     </div>
                     <div>
-                      <span style={s.label}>{t.lastNameLabel}</span>
+                      <span style={s.label}>Last Name</span>
                       <input
                         style={s.input}
                         value={profile.last_name}
                         onChange={(e) => setProfile((prev) => ({ ...prev, last_name: e.target.value }))}
-                        placeholder={isUkrainianLocale() ? 'Шевченко' : 'Doe'}
+                        placeholder="Doe"
                       />
                     </div>
                   </div>
 
                   <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 14 }}>
                     <div>
-                      <span style={s.label}>{t.ageLabel}</span>
-                      <input
-                        style={s.input}
-                        type="number"
-                        min="0"
-                        max="150"
-                        value={profile.age}
-                        onChange={(e) => setProfile((prev) => ({ ...prev, age: e.target.value }))}
-                        placeholder={t.agePlaceholder}
-                      />
-                    </div>
-                    <div>
-                      <span style={s.label}>{t.sexLabel}</span>
-                      <select
-                        style={s.input}
-                        value={profile.sex}
-                        onChange={(e) => setProfile((prev) => ({ ...prev, sex: e.target.value }))}
-                      >
-                        <option value="">{t.sexPlaceholder}</option>
-                        <option value="male">{t.sexMale}</option>
-                        <option value="female">{t.sexFemale}</option>
-                        <option value="other">{t.sexOther}</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 14 }}>
-                    <div>
-                      <span style={s.label}>{t.heightLabel}</span>
+                      <span style={s.label}>Height (cm) - optional</span>
                       <input
                         style={s.input}
                         type="number"
@@ -1013,7 +910,7 @@ export default function Onboarding() {
                       />
                     </div>
                     <div>
-                      <span style={s.label}>{t.weightLabel}</span>
+                      <span style={s.label}>Weight (kg) - optional</span>
                       <input
                         style={s.input}
                         type="number"
@@ -1027,17 +924,17 @@ export default function Onboarding() {
                   </div>
 
                   <div style={{ marginTop: 14 }}>
-                    <span style={s.label}>{t.countryLabel}</span>
+                    <span style={s.label}>Country / Region (optional)</span>
                     <input
                       style={s.input}
                       value={profile.country}
                       onChange={(e) => setProfile((prev) => ({ ...prev, country: e.target.value }))}
-                      placeholder={t.countryPlaceholder}
+                      placeholder="United States"
                     />
                   </div>
 
                   <div style={{ marginTop: 14 }}>
-                    <span style={s.label}>{t.goalsLabel}</span>
+                    <span style={s.label}>Secondary goals</span>
                     <div style={{ display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 10 }}>
                       {t.goalOptions.map((goal) => (
                         <button
@@ -1061,15 +958,16 @@ export default function Onboarding() {
 
               {step === 5 && (
                 <motion.div key="action" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}>{t.finalTitle}</div>
+                  <div style={s.title}>Your first action</div>
                   <div style={s.sub}>
                     {intent === 'symptoms' && t.finalSymptoms}
-                    {intent === 'labs' && (hasLabsNow ? t.finalLabs : t.finalLabsNo)}
-                    {intent === 'baseline' && t.finalBaselineText}
+                    {intent === 'labs' && (hasLabsNow ? 'Great. Continue to Upload Results and connect your symptoms for a precise protocol.' : 'We will guide you through a practical lab direction before upload.')}
+                    {intent === 'baseline' && 'Your baseline path is set. Continue to Lab Plan to build your first tracking panel.'}
                     {intent === 'practitioner' && t.finalPractitioner}
                   </div>
                   <div style={{ padding: '14px 16px', borderRadius: 12, border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.06)', fontSize: 14, color: '#1e293b' }}>
-                    {t.disclaimer}
+                    VITALOOP is a decision-support tool and does not provide diagnosis.
+                    Share urgent symptoms with a qualified medical professional.
                   </div>
                 </motion.div>
               )}
@@ -1077,22 +975,22 @@ export default function Onboarding() {
               <div style={{ display: 'flex', gap: 12, marginTop: 28, alignItems: 'center' }}>
                 {step > 0 && (
                   <button style={{ ...s.btnPrimary, flex: 0.4, background: '#e2e8f0', color: '#475569' }} onClick={() => setStep((prev) => prev - 1)}>
-                    <ChevronLeft size={18} style={{ display: 'inline' }} /> {t.back}
+                    <ChevronLeft size={18} style={{ display: 'inline' }} /> Back
                   </button>
                 )}
                 {step < TOTAL - 1 ? (
                   <button style={{ ...s.btnPrimary, flex: 1 }} onClick={goNext}>
-                    {t.next} <ChevronRight size={18} style={{ display: 'inline' }} />
+                    Next <ChevronRight size={18} style={{ display: 'inline' }} />
                   </button>
                 ) : (
                   <button style={{ ...s.btnPrimary, flex: 1, opacity: saving ? 0.6 : 1 }} onClick={saveAll} disabled={saving}>
-                    {saving ? t.saving : <><CheckCircle size={18} style={{ display: 'inline', marginRight: 6 }} />{t.startLoop}</>}
+                    {saving ? 'Saving...' : <><CheckCircle size={18} style={{ display: 'inline', marginRight: 6 }} />Start my health loop</>}
                   </button>
                 )}
               </div>
 
               <div style={{ textAlign: 'center', marginTop: 16 }}>
-                <button style={s.btnSec} onClick={handleSkipOnboarding}>{t.skip}</button>
+                <button style={s.btnSec} onClick={handleSkipOnboarding}>Skip setup for now</button>
               </div>
             </>
           )}

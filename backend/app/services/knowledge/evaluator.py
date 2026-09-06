@@ -7,6 +7,14 @@ from uuid import UUID
 from app.services import supabase_service as supabase
 from app.services.knowledge.nutrition_algorithms import build_nutrition_kb_context
 
+# Unit logic is now centralized in clinical_engine.units.
+# These local names are kept for backward compatibility (other modules
+# import _normalize_unit from here via `from ...evaluator import _normalize_unit`).
+from app.services.clinical_engine.units import (  # noqa: F401
+    normalize_unit as _normalize_unit,
+    convert_value as _convert_value,
+    unit_matches as _unit_matches,
+)
 
 FORBIDDEN_PHRASES = ["confirmed diagnosis"]
 
@@ -25,6 +33,33 @@ EVIDENCE_MULTIPLIER = {
     "clinical_guideline_context": 0.98,
 }
 
+# P0 Reference Safety Fix: Statuses that must NOT be classified as numeric abnormalities by KB
+# UNEVALUATED: unverified reference interval must not be reclassified
+# UNKNOWN: status unknown; no valid classification available
+# NEEDS_CONFIRMATION: confirmation gate must block earlier; should never reach KB
+# OPTIMAL: Clinical Engine already classified as optimal; KB must not contradict with "abnormal" claims
+KB_INELIGIBLE_STATUSES = {"UNEVALUATED", "UNKNOWN", "NEEDS_CONFIRMATION", "OPTIMAL"}
+
+
+def _is_eligible_for_kb_numeric_classification(biomarker: Dict[str, Any]) -> Tuple[bool, str | None]:
+    """Check if a biomarker is eligible for KB numeric abnormality classification.
+
+    Returns (is_eligible, reason_if_not).
+
+    P0 Reference Safety Fix: UNEVALUATED/UNKNOWN/NEEDS_CONFIRMATION must not be
+    classified as numeric abnormalities by KB rules.
+    """
+    status = str(biomarker.get("status") or "BORDERLINE").strip().upper()
+
+    if status in KB_INELIGIBLE_STATUSES:
+        unevaluated_reason = biomarker.get("unevaluated_reason")
+        reason = f"status={status}"
+        if unevaluated_reason:
+            reason += f" ({unevaluated_reason})"
+        return False, reason
+
+    return True, None
+
 
 def _public_evidence_level(value: Any) -> str | None:
     raw = str(value or "").strip().lower()
@@ -35,55 +70,61 @@ def _public_evidence_level(value: Any) -> str | None:
     return raw
 
 
-def _normalize_unit(value: str | None) -> str:
-    raw = str(value or "").strip().lower().replace("μ", "u").replace("µ", "u")
-    aliases = {
-        "miu/l": "uiu/ml",
-        "mu/l": "uiu/ml",
-        "uiu/ml": "uiu/ml",
-        "u iu/ml": "uiu/ml",
-    }
-    return aliases.get(raw, raw)
+# Unit normalization and conversion are now in clinical_engine.units.
+# _normalize_unit, _convert_value and _unit_matches are imported at the top
+# of this file for backward compatibility.
 
 
-def _convert_value(marker_key: str, value: float, from_unit: str, to_unit: str) -> float | None:
-    marker = str(marker_key).strip().lower()
-    src = _normalize_unit(from_unit)
-    dst = _normalize_unit(to_unit)
-    if src == dst:
-        return value
+def _normalize_assay_qualifier(value: str | None) -> str | None:
+    """Normalize assay qualifier string to standard form.
 
-    if marker == "glucose":
-        if src == "mmol/l" and dst == "mg/dl":
-            return value * 18.0
-        if src == "mg/dl" and dst == "mmol/l":
-            return value / 18.0
-
-    if marker in {"ldl", "hdl"}:
-        if src == "mmol/l" and dst == "mg/dl":
-            return value * 38.67
-        if src == "mg/dl" and dst == "mmol/l":
-            return value / 38.67
-
-    if marker == "triglycerides":
-        if src == "mmol/l" and dst == "mg/dl":
-            return value * 88.57
-        if src == "mg/dl" and dst == "mmol/l":
-            return value / 88.57
-
-    if marker == "vitamin_d":
-        if src == "nmol/l" and dst == "ng/ml":
-            return value / 2.5
-        if src == "ng/ml" and dst == "nmol/l":
-            return value * 2.5
-
-    if marker == "ferritin":
-        if src == "ng/ml" and dst == "ug/l":
-            return value
-        if src == "ug/l" and dst == "ng/ml":
-            return value
-
+    Recognizes: FEU, DDU (case-insensitive, with/without parens/brackets)
+    Returns: 'FEU', 'DDU', or None for unrecognized
+    """
+    if not value:
+        return None
+    normalized = str(value).strip().upper()
+    # Remove common brackets/parens
+    for bracket in ['(', ')', '[', ']', '{', '}']:
+        normalized = normalized.replace(bracket, '')
+    normalized = normalized.strip()
+    # Only recognize FEU and DDU
+    if normalized in ('FEU', 'DDU'):
+        return normalized
     return None
+
+
+def _assay_qualifier_matches(actual: str | None, expected: str | None) -> Tuple[bool, str | None]:
+    """Check if actual assay qualifier matches expected.
+
+    Returns (matches, fail_reason).
+
+    If expected is None/empty: any actual qualifier is acceptable (backward compat)
+    If expected is set: actual must match exactly
+
+    Fail reasons:
+    - assay_semantics_mismatch: actual and expected differ
+    - assay_semantics_unknown: expected set but actual is unknown/null
+    """
+    # Normalize both
+    expected_norm = _normalize_assay_qualifier(expected)
+    actual_norm = _normalize_assay_qualifier(actual)
+
+    # If rule doesn't specify expected qualifier, accept anything (backward compat)
+    if not expected_norm:
+        return True, None
+
+    # Rule requires specific qualifier
+    if not actual_norm:
+        # Input has no qualifier but rule requires one
+        return False, "assay_semantics_unknown"
+
+    if actual_norm != expected_norm:
+        # Qualifiers don't match
+        return False, "assay_semantics_mismatch"
+
+    # Match
+    return True, None
 
 
 def _is_uuid(value: str | None) -> bool:
@@ -112,14 +153,6 @@ def _to_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
-
-
-def _unit_matches(actual_unit: str | None, expected_unit: str | None) -> bool:
-    if not expected_unit:
-        return True
-    if not actual_unit:
-        return False
-    return str(actual_unit).strip().lower() == str(expected_unit).strip().lower()
 
 
 def _evaluate_operator(operator: str, actual: float, expected: Any) -> bool:
@@ -172,9 +205,37 @@ def _evaluate_atom(condition: Dict[str, Any], lab_results: Dict[str, Any], sympt
         if not isinstance(marker_data, dict):
             return False, {"type": "lab_marker", "key": marker_key, "reason": "missing_marker"}
 
+        # P0 Reference Safety Fix: Check biomarker status eligibility at evaluator level
+        # This provides evaluator self-defense so direct evaluator calls are also protected
+        biomarker_status = str(marker_data.get("status") or "BORDERLINE").strip().upper()
+        if biomarker_status in KB_INELIGIBLE_STATUSES:
+            unevaluated_reason = marker_data.get("unevaluated_reason")
+            reason = f"ineligible_status_{biomarker_status.lower()}"
+            if unevaluated_reason:
+                reason += f"_{str(unevaluated_reason).lower()}"
+            return False, {
+                "type": "lab_marker",
+                "key": marker_key,
+                "reason": reason,
+                "status": biomarker_status,
+            }
+
         value = _to_float(marker_data.get("value"))
         if value is None:
             return False, {"type": "lab_marker", "key": marker_key, "reason": "missing_value"}
+
+        # Check assay_qualifier match if rule specifies one
+        expected_assay_qualifier = condition.get("assay_qualifier")
+        actual_assay_qualifier = marker_data.get("assay_qualifier")
+        qualifier_matches, qualifier_fail_reason = _assay_qualifier_matches(actual_assay_qualifier, expected_assay_qualifier)
+        if not qualifier_matches:
+            return False, {
+                "type": "lab_marker",
+                "key": marker_key,
+                "reason": qualifier_fail_reason,
+                "expected_assay_qualifier": expected_assay_qualifier,
+                "actual_assay_qualifier": actual_assay_qualifier,
+            }
 
         expected_unit = condition.get("unit")
         actual_unit = marker_data.get("unit")
@@ -270,6 +331,63 @@ def _evaluate_conditions_tree(conditions: Dict[str, Any], lab_results: Dict[str,
     return matched, [atom_evidence]
 
 
+def _collect_unit_blocks(
+    evidence: Any,
+    rule_key: str,
+    sink: Dict[Tuple[str, str, str], Dict[str, Any]],
+) -> None:
+    """Record atoms skipped because their unit could not be reconciled.
+
+    A skipped atom silently drops the whole rule, so without this the report cannot
+    tell "this marker is fine" apart from "this marker was never checked". Callers
+    surface the result as unevaluated_markers.
+    """
+    if isinstance(evidence, list):
+        for item in evidence:
+            _collect_unit_blocks(item, rule_key, sink)
+        return
+    if not isinstance(evidence, dict):
+        return
+    if evidence.get("items") is not None:
+        _collect_unit_blocks(evidence.get("items"), rule_key, sink)
+        return
+    if evidence.get("reason") != "unit_mismatch":
+        return
+
+    marker = str(evidence.get("key") or "")
+    actual_unit = str(evidence.get("actual_unit") or "")
+    expected_unit = str(evidence.get("expected_unit") or "")
+    entry = sink.setdefault(
+        (marker, actual_unit, expected_unit),
+        {
+            "marker": marker,
+            "reported_unit": actual_unit,
+            "expected_unit": expected_unit,
+            "reason": "unit_not_reconcilable",
+            "blocked_rule_keys": [],
+        },
+    )
+    if rule_key and rule_key not in entry["blocked_rule_keys"]:
+        entry["blocked_rule_keys"].append(rule_key)
+
+
+def _rule_lab_markers(node: Any, sink: set[str]) -> None:
+    """Every lab_marker key referenced anywhere in a rule's condition tree."""
+    if isinstance(node, list):
+        for item in node:
+            _rule_lab_markers(item, sink)
+        return
+    if not isinstance(node, dict):
+        return
+    for group in ("all", "any", "none"):
+        if group in node:
+            _rule_lab_markers(node[group], sink)
+            return
+    marker = node.get("lab_marker")
+    if marker:
+        sink.add(str(marker).strip().lower())
+
+
 def evaluate_input_with_rules(input_data: Dict[str, Any], rules: List[Dict[str, Any]]) -> Dict[str, Any]:
     lab_results_raw = input_data.get("lab_results") if isinstance(input_data, dict) else {}
     lab_results = lab_results_raw if isinstance(lab_results_raw, dict) else {}
@@ -278,6 +396,8 @@ def evaluate_input_with_rules(input_data: Dict[str, Any], rules: List[Dict[str, 
 
     matched_rules: List[Dict[str, Any]] = []
     recommendation_keys: List[str] = []
+    unevaluated: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
+    covered_markers: set[str] = set()
 
     for rule in rules:
         if not bool(rule.get("active", True)):
@@ -291,7 +411,9 @@ def evaluate_input_with_rules(input_data: Dict[str, Any], rules: List[Dict[str, 
         if not isinstance(conditions, dict):
             continue
 
+        _rule_lab_markers(conditions, covered_markers)
         matched, evidence = _evaluate_conditions_tree(conditions, lab_results, symptoms)
+        _collect_unit_blocks(evidence, str(rule.get("key") or ""), unevaluated)
         if not matched:
             continue
 
@@ -328,6 +450,28 @@ def evaluate_input_with_rules(input_data: Dict[str, Any], rules: List[Dict[str, 
 
     deduped_recommendation_keys = list(dict.fromkeys(recommendation_keys))
 
+    # Account for every marker that was handed to the evaluator. Without this a
+    # caller sees only the rules that fired and cannot distinguish "this marker
+    # is fine" from "no rule in the knowledge base looks at this marker at all"
+    # -- in the 15 stored uploads that second case covered 85 marker instances
+    # (hematocrit, RBC, MCH, chloride, monocytes and others), reported to the
+    # user as silence indistinguishable from a normal result.
+    unit_blocked_markers = {entry["marker"] for entry in unevaluated.values()}
+    fired_markers = {
+        str(entity).strip().lower()
+        for rule in matched_rules
+        for entity in (rule.get("input_entities") or [])
+    }
+    marker_coverage = {"evaluated": [], "no_matching_rule": [], "unit_blocked": []}
+    for marker in sorted(lab_results):
+        if marker in unit_blocked_markers:
+            marker_coverage["unit_blocked"].append(marker)
+        elif marker in covered_markers:
+            marker_coverage["evaluated"].append(marker)
+        else:
+            marker_coverage["no_matching_rule"].append(marker)
+    marker_coverage["fired"] = sorted(fired_markers & set(lab_results))
+
     source_refs: List[Dict[str, str]] = []
     seen_refs: set[tuple[str, str]] = set()
     for rule in matched_rules:
@@ -347,6 +491,8 @@ def evaluate_input_with_rules(input_data: Dict[str, Any], rules: List[Dict[str, 
         "requires_doctor": any(bool(r.get("requires_doctor")) for r in matched_rules),
         "max_confidence": max([float(r.get("confidence") or 0) for r in matched_rules], default=0.0),
         "source_references": source_refs,
+        "unevaluated_markers": sorted(unevaluated.values(), key=lambda item: item["marker"]),
+        "marker_coverage": marker_coverage,
     }
 
 
@@ -700,6 +846,11 @@ async def evaluate_health_input(
         "source_references": deduped_source_references,
         "rule_evaluation_ids": evaluation_ids,
         "nutrition_context": nutrition_context,
+        # Markers whose unit could not be reconciled with the rule's expected unit.
+        # Without this a caller cannot tell "marker is fine" from "never checked".
+        "unevaluated_markers": evaluated.get("unevaluated_markers") or [],
+        # Per-marker outcome accounting; see evaluate_input_with_rules().
+        "marker_coverage": evaluated.get("marker_coverage") or {},
     }
 
     if persist:

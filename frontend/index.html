@@ -25,9 +25,9 @@
       }
     </style>
     <!-- Primary SEO -->
-    <title>AI Health Intelligence for Lab Results Over Time | VITALOOP</title>
-    <meta name="description" content="VITALOOP helps you make sense of symptoms, lab results, biomarker patterns, safety context, retests, and progress over time with AI." data-rh="true" />
-    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" data-rh="true" />
+    <title>AI Blood Test Analysis & Symptom Checker | VITALOOP</title>
+    <meta name="description" content="Start with symptoms or upload blood test results. Get clear biomarker explanations, lab discussion guidance, and a health action plan you can track." data-rh="true" />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" data-rh="true" />
     <meta name="author" content="VITALOOP" />
     <meta name="theme-color" content="#10b981" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0A0F1C" media="(prefers-color-scheme: dark)" />
@@ -48,31 +48,31 @@
     <!-- Open Graph -->
     <meta property="og:type" content="website" data-rh="true" />
     <meta property="og:site_name" content="VITALOOP" data-rh="true" />
-    <meta property="og:title" content="AI Health Intelligence for Lab Results Over Time | VITALOOP" data-rh="true" />
-    <meta property="og:description" content="Understand symptoms, lab results, biomarker patterns, safety context, retests, and progress in one clear health action loop." data-rh="true" />
+    <meta property="og:title" content="AI Blood Test Analysis & Symptom Checker | VITALOOP" data-rh="true" />
+    <meta property="og:description" content="Connect symptoms, blood test results, biomarker explanations, and weekly progress in one clear health action loop." data-rh="true" />
     <meta property="og:url" content="https://vitaloop.today/" data-rh="true" />
     <meta property="og:image" content="https://vitaloop.today/vitaloop-social-preview-2026-06.png" data-rh="true" />
     <meta property="og:image:width" content="1200" data-rh="true" />
     <meta property="og:image:height" content="630" data-rh="true" />
-    <meta property="og:image:alt" content="VITALOOP health intelligence product preview with lab result reasoning, safety context, action steps, and progress tracking" data-rh="true" />
+    <meta property="og:image:alt" content="VITALOOP AI-powered health tracking dashboard with biomarker analysis, personalized protocols, and progress tracking" data-rh="true" />
     <meta property="og:locale" content="en_US" data-rh="true" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" data-rh="true" />
     <meta name="twitter:site" content="@vitaloop_today" data-rh="true" />
-    <meta name="twitter:title" content="AI Health Intelligence for Lab Results Over Time | VITALOOP" data-rh="true" />
-    <meta name="twitter:description" content="Make sense of symptoms, lab results, biomarker patterns, retests, and progress with AI-supported health intelligence." data-rh="true" />
+    <meta name="twitter:title" content="AI Blood Test Analysis & Symptom Checker | VITALOOP" data-rh="true" />
+    <meta name="twitter:description" content="Understand symptoms and blood test results, then build a health action plan you can track." data-rh="true" />
     <meta name="twitter:image" content="https://vitaloop.today/vitaloop-social-preview-2026-06.png" data-rh="true" />
-    <meta name="twitter:image:alt" content="VITALOOP health intelligence product preview with lab result reasoning, safety context, action steps, and progress tracking" data-rh="true" />
+    <meta name="twitter:image:alt" content="VITALOOP AI-powered health tracking dashboard with biomarker analysis, personalized protocols, and progress tracking" data-rh="true" />
 
     <!-- Hreflang -->
     <link rel="alternate" hreflang="en" href="https://vitaloop.today/" />
     <link rel="alternate" hreflang="uk-UA" href="https://ua.vitaloop.today/" />
     <link rel="alternate" hreflang="x-default" href="https://vitaloop.today/" />
 
-    <!-- Performance: keep third-party hints cheap; analytics load only after consent. -->
-    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-    <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+    <!-- Performance: preconnect -->
+    <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
+    <link rel="preconnect" href="https://www.google-analytics.com" crossorigin />
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
 
     <!-- JSON-LD: Organization -->
@@ -137,12 +137,12 @@
         },
         {
           "@type": "Offer",
-          "name": "Personal Pro",
-          "price": "4.99",
+          "name": "Premium",
+          "price": "9.99",
           "priceCurrency": "USD",
           "priceSpecification": {
             "@type": "UnitPriceSpecification",
-            "price": "4.99",
+            "price": "9.99",
             "priceCurrency": "USD",
             "unitText": "MONTH"
           },
@@ -162,7 +162,7 @@
       window.gtag = gtag;
       gtag('js', new Date());
       /* send_page_view: false — SPA page views are tracked manually via GAPageTracker in App.jsx */
-      window.__vitaloopGaConfigured = false;
+      gtag('config', 'G-LG0BCMBJJE', { send_page_view: false, cookie_domain: 'vitaloop.today', cookie_flags: 'SameSite=None;Secure' });
 
       if (!window.__fbPixelInit) {
         window.__fbPixelInit = true;
@@ -172,7 +172,8 @@
         window.fbq.loaded = true;
         window.fbq.version = '2.0';
         window.fbq.queue = window.fbq.queue || [];
-        window.__vitaloopFbConfigured = false;
+        fbq('init', '1703367347333580', {}, { cookieDomain: 'vitaloop.today' });
+        fbq('track', 'PageView');
       }
 
       // Analytics loader — called by React CookieConsent after consent decision.
@@ -186,21 +187,12 @@
         if (consent.analytics !== false) {
           scripts.push('https://www.googletagmanager.com/gtag/js?id=G-LG0BCMBJJE');
           scripts.push('https://t.contentsquare.net/uxa/e823a98ecd1a5.js');
-          if (!window.__vitaloopGaConfigured) {
-            window.__vitaloopGaConfigured = true;
-            gtag('config', 'G-LG0BCMBJJE', { send_page_view: false, cookie_domain: 'vitaloop.today', cookie_flags: 'SameSite=None;Secure' });
-          }
         } else {
           // GA opt-out
           window['ga-disable-G-LG0BCMBJJE'] = true;
         }
         if (consent.marketing !== false) {
           scripts.push('https://connect.facebook.net/en_US/fbevents.js');
-          if (!window.__vitaloopFbConfigured && window.fbq) {
-            window.__vitaloopFbConfigured = true;
-            fbq('init', '1703367347333580', {}, { cookieDomain: 'vitaloop.today' });
-            fbq('track', 'PageView');
-          }
         } else {
           // Disable FB pixel tracking
           if (window.fbq) { window.fbq = function(){}; }
@@ -237,8 +229,6 @@
 (function(){
   var STORAGE_KEY = 'vitaloop-cookie-consent';
   var CONSENT_VERSION = '1';
-  var COOKIE_BANNER_DELAY_MS = 10000;
-  var COOKIE_BANNER_SCROLL_DELAY_MS = 2500;
 
   function stored() {
     try {
@@ -267,46 +257,8 @@
 
   function isUk() {
     var h = (window.location.hostname || '').toLowerCase();
-    var p = (window.location.pathname || '').toLowerCase();
     var s = (window.location.search || '');
-    return h === 'ua.vitaloop.today' || p === '/ua' || p.indexOf('/ua/') === 0 || p === '/uk' || p.indexOf('/uk/') === 0 || s.indexOf('lang=uk') !== -1;
-  }
-
-  function legalPath(path) {
-    var preview = location.pathname === '/ua' || location.pathname.indexOf('/ua/') === 0;
-    return preview ? '/ua' + path : path;
-  }
-
-  function isCabinetRoute() {
-    var p = (window.location.pathname || '/').toLowerCase();
-    var privatePrefixes = [
-      '/dashboard',
-      '/today',
-      '/upload',
-      '/lab-plan',
-      '/lab-results',
-      '/results/',
-      '/protocol/',
-      '/progress',
-      '/assignments',
-      '/avatar',
-      '/settings',
-      '/health-profile',
-      '/profile',
-      '/subscription',
-      '/billing-history',
-      '/help-center',
-      '/onboarding',
-      '/questionnaire',
-      '/check-ins',
-      '/insights',
-      '/ops',
-      '/admin',
-      '/crm'
-    ];
-    return privatePrefixes.some(function(prefix) {
-      return p === prefix || p.indexOf(prefix + '/') === 0 || p.indexOf(prefix) === 0;
-    });
+    return h === 'ua.vitaloop.today' || s.indexOf('lang=uk') !== -1;
   }
 
   var L = isUk() ? {
@@ -467,28 +419,28 @@
   function buildBanner(container) {
     container.innerHTML = '';
     var inner = document.createElement('div');
-    inner.style.cssText = 'pointer-events:auto;background:rgba(255,255,255,.96);border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 -4px 6px rgba(0,0,0,.04),0 20px 60px rgba(15,23,42,.18);padding:14px;width:100%;max-width:680px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;backdrop-filter:blur(14px);';
+    inner.style.cssText = 'pointer-events:auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;box-shadow:0 -4px 6px rgba(0,0,0,.04),0 20px 60px rgba(15,23,42,.18);padding:20px 24px;width:100%;max-width:740px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box;';
 
     var top = document.createElement('div');
-    top.style.cssText = 'display:flex;align-items:flex-start;gap:10px;';
+    top.style.cssText = 'display:flex;align-items:flex-start;gap:14px;';
     var emoji = document.createElement('span');
     emoji.textContent = '🍪';
-    emoji.style.cssText = 'font-size:20px;line-height:1;flex-shrink:0;margin-top:2px;';
+    emoji.style.cssText = 'font-size:28px;line-height:1;flex-shrink:0;margin-top:2px;';
     var textBlock = document.createElement('div');
     textBlock.style.flex = '1';
     var h2 = document.createElement('h2');
     h2.textContent = L.title;
-    h2.style.cssText = 'margin:0;font-size:14px;font-weight:800;color:#0f172a;letter-spacing:-.01em;';
+    h2.style.cssText = 'margin:0;font-size:16px;font-weight:800;color:#0f172a;letter-spacing:-.01em;';
     var p = document.createElement('p');
-    p.style.cssText = 'margin:4px 0 0;font-size:12px;color:#475569;line-height:1.45;max-width:560px;';
+    p.style.cssText = 'margin:6px 0 0;font-size:13.5px;color:#475569;line-height:1.55;max-width:520px;';
     p.textContent = L.text + ' ';
     var privA = document.createElement('a');
-    privA.href = legalPath('/privacy-policy/'); privA.target = '_blank'; privA.rel = 'noreferrer';
+    privA.href = '/privacy-policy/'; privA.target = '_blank'; privA.rel = 'noreferrer';
     privA.textContent = L.privacy;
     privA.style.cssText = 'color:#0d9488;text-decoration:underline;text-underline-offset:2px;';
     var sep = document.createTextNode(' · ');
     var cookA = document.createElement('a');
-    cookA.href = legalPath('/privacy-policy/#cookies'); cookA.target = '_blank'; cookA.rel = 'noreferrer';
+    cookA.href = '/privacy-policy/#cookies'; cookA.target = '_blank'; cookA.rel = 'noreferrer';
     cookA.textContent = L.cookie;
     cookA.style.cssText = 'color:#0d9488;text-decoration:underline;text-underline-offset:2px;';
     p.appendChild(privA); p.appendChild(sep); p.appendChild(cookA);
@@ -496,7 +448,7 @@
     top.appendChild(emoji); top.appendChild(textBlock);
 
     var btns = document.createElement('div');
-    btns.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center;';
+    btns.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;align-items:center;';
 
     var aBtn = document.createElement('button'); aBtn.textContent = L.acceptAll; aBtn.style.cssText = PRIMARY_BTN;
     aBtn.addEventListener('click', acceptAll);
@@ -510,98 +462,27 @@
     container.appendChild(inner);
   }
 
-  var PRIMARY_BTN = 'min-height:42px;padding:9px 16px;border-radius:14px;border:none;cursor:pointer;background:linear-gradient(135deg,#0f766e 0%,#14b8a6 100%);color:#fff;font-weight:800;font-size:13px;box-shadow:0 4px 14px rgba(15,118,110,.26);transition:opacity .15s;white-space:nowrap;font-family:inherit;';
-  var SECONDARY_BTN = 'min-height:42px;padding:9px 16px;border-radius:14px;border:none;cursor:pointer;background:#0f172a;color:#fff;font-weight:800;font-size:13px;box-shadow:0 4px 14px rgba(15,23,42,.18);white-space:nowrap;font-family:inherit;';
-  var OUTLINE_BTN = 'min-height:42px;padding:9px 16px;border-radius:14px;cursor:pointer;background:#fff;border:1.5px solid #cbd5e1;color:#475569;font-weight:800;font-size:13px;white-space:nowrap;font-family:inherit;';
-  var GHOST_BTN = 'grid-column:1 / -1;min-height:32px;padding:4px 10px;border-radius:10px;border:none;cursor:pointer;background:transparent;color:#64748b;font-weight:700;font-size:12px;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;font-family:inherit;';
+  var PRIMARY_BTN = 'padding:10px 22px;border-radius:100px;border:none;cursor:pointer;background:linear-gradient(135deg,#0f766e 0%,#14b8a6 100%);color:#fff;font-weight:700;font-size:13.5px;box-shadow:0 4px 14px rgba(15,118,110,.30);transition:opacity .15s;white-space:nowrap;font-family:inherit;';
+  var SECONDARY_BTN = 'padding:10px 22px;border-radius:100px;border:none;cursor:pointer;background:#0f172a;color:#fff;font-weight:700;font-size:13.5px;box-shadow:0 4px 14px rgba(15,23,42,.20);white-space:nowrap;font-family:inherit;';
+  var OUTLINE_BTN = 'padding:10px 22px;border-radius:100px;cursor:pointer;background:transparent;border:1.5px solid #cbd5e1;color:#475569;font-weight:700;font-size:13.5px;white-space:nowrap;font-family:inherit;';
+  var GHOST_BTN = 'padding:10px 16px;border-radius:100px;border:none;cursor:pointer;background:transparent;color:#94a3b8;font-weight:600;font-size:13px;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;font-family:inherit;';
 
-  function createWrap() {
-    var existing = document.getElementById('vl-cookie-banner');
-    if (existing) return existing;
-    var wrap = document.createElement('div');
-    wrap.id = 'vl-cookie-banner';
-    var isMobile = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
-    wrap.style.cssText = isMobile
-      ? 'position:fixed;bottom:0;left:0;right:0;z-index:10000;padding:0 10px max(10px,env(safe-area-inset-bottom));display:flex;justify-content:center;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'
-      : 'position:fixed;right:24px;bottom:24px;z-index:10000;width:min(520px,calc(100vw - 48px));display:flex;justify-content:flex-end;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
-    document.body.appendChild(wrap);
-    return wrap;
-  }
-
-  function hasVisibleModalBlocker() {
-    var blockers = document.querySelectorAll('[data-vl-cookie-modal-blocker="true"], [aria-modal="true"]');
-    for (var i = 0; i < blockers.length; i += 1) {
-      var el = blockers[i];
-      var style = window.getComputedStyle ? window.getComputedStyle(el) : null;
-      var rect = el.getBoundingClientRect ? el.getBoundingClientRect() : { width: 0, height: 0 };
-      if (style && style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0' && rect.width > 0 && rect.height > 0) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  window.openVitaloopCookieSettings = function() {
-    if (isCabinetRoute()) return;
-    var wrap = createWrap();
-    wrap.style.pointerEvents = 'auto';
-    buildSettingsPanel(wrap);
-  };
-
-  if (stored() || isCabinetRoute()) return; // Already decided or inside the app — don't show
+  if (stored()) return; // Already decided — don't show
 
   function init() {
-    if (isCabinetRoute()) return;
-    if (hasVisibleModalBlocker()) {
-      setTimeout(init, 3000);
-      return;
-    }
-    var wrap = createWrap();
+    var wrap = document.createElement('div');
+    wrap.id = 'vl-cookie-banner';
+    wrap.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:10000;padding:0 16px 20px;display:flex;justify-content:center;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
     buildBanner(wrap);
+    document.body.appendChild(wrap);
   }
 
-  function scheduleInit() {
-    var fired = false;
-    var startedAt = Date.now();
-    var timer = setTimeout(showOnce, COOKIE_BANNER_DELAY_MS);
-
-    function cleanup() {
-      window.removeEventListener('scroll', onScroll);
-    }
-
-    function showOnce() {
-      if (fired) return;
-      fired = true;
-      clearTimeout(timer);
-      cleanup();
-      init();
-    }
-
-    function onScroll() {
-      if (fired || window.scrollY < 80) return;
-      var remaining = Math.max(0, COOKIE_BANNER_SCROLL_DELAY_MS - (Date.now() - startedAt));
-      clearTimeout(timer);
-      timer = setTimeout(showOnce, remaining);
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(init, 800); });
+  } else {
+    setTimeout(init, 800);
   }
-
-  scheduleInit();
 })();
-</script>
-
-<script>
-  window.addEventListener('load', function () {
-    if (!('serviceWorker' in navigator)) return;
-    window.setTimeout(function () {
-      navigator.serviceWorker.register('/sw.js').catch(function (error) {
-        if (window.console && console.warn) {
-          console.warn('VITALOOP service worker registration skipped', error);
-        }
-      });
-    }, 2500);
-  });
 </script>
 
 </body>

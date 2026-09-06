@@ -6,6 +6,7 @@ from httpx import ASGITransport, AsyncClient
 from app.dependencies import get_current_user, require_freemium_analyze
 from app.main import app
 from app.routers.analysis import analyze as analyze_router
+from app.services import supabase_service as svc
 
 
 @pytest.mark.asyncio
@@ -63,7 +64,9 @@ async def test_analyze_accepts_legacy_multipart_payload(monkeypatch):
     )
     monkeypatch.setattr(analyze_router.pdf_analyzer, "analyze_lab_pdf", fake_pdf_analyze)
     monkeypatch.setattr(analyze_router, "save_lab_upload", fake_save_lab_upload)
-    monkeypatch.setattr(analyze_router, "save_biomarkers", fake_save_biomarkers)
+    # Stage 2B: save_biomarkers() is now called from inside run_lab_analysis_pipeline
+    # (gated on the quality-gate decision), not directly from analyze.py.
+    monkeypatch.setattr(svc, "save_biomarkers", fake_save_biomarkers)
     monkeypatch.setattr(analyze_router, "save_timeline_event", fake_save_timeline_event)
     monkeypatch.setattr(analyze_router, "get_user_profile", fake_get_user_profile)
 

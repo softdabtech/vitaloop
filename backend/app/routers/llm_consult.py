@@ -13,6 +13,7 @@ from app.dependencies import get_current_user
 from app.services import claude_service
 from app.services import supabase_service as svc
 from app.services import email_service
+from app.services.entitlements import resolve_user_entitlements
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
@@ -53,10 +54,17 @@ def _as_iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).isoformat()
 
 
-def _is_premium_user(current_user: dict) -> bool:
-    status = str(current_user.get("subscription_status") or "").lower()
-    role = str(current_user.get("global_role") or current_user.get("role") or "end_user").lower()
-    return bool(current_user.get("subscription_active") or status == "active" or role != "end_user")
+async def _is_premium_user(current_user: dict) -> bool:
+    """Stage 2H: previously read subscription_status/subscription_active
+    directly off the raw JWT payload (current_user) — those claims are never
+    actually present there (only role-ish claims are), so every real paying
+    end_user silently fell through to the free-tier fallback below, while
+    non-end_user roles passed via the role check alone. Routed through the
+    single canonical resolver (app/services/entitlements.py) instead, so
+    this can no longer diverge from every other premium gate in the app."""
+    user_id = current_user.get("sub")
+    entitlements = await resolve_user_entitlements(user_id, current_user)
+    return bool(entitlements.get("is_premium"))
 
 
 def _tips_fingerprint(user_id: str, biomarkers: List[Dict[str, Any]], user_context: Dict[str, Any]) -> str:
@@ -269,7 +277,7 @@ async def create_health_tips(body: HealthTipsRequest, current_user: dict = Depen
         }
 
     # Free users get immediate basic tips; Premium receives deferred deep analysis.
-    if not _is_premium_user(current_user):
+    if not await _is_premium_user(current_user):
         tips = _fallback_tips(biomarkers)
         return {
             "status": "ready",

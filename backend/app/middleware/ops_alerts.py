@@ -24,7 +24,6 @@ CRITICAL_PREFIXES = (
     "/timeline",
     "/insights",
     "/checkins",
-    "/stripe",
     "/admin",
     "/crm",
     "/assignments",

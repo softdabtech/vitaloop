@@ -13,7 +13,7 @@ Data structure:
 - conversion_factor: To convert from default unit
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from decimal import Decimal, ROUND_HALF_UP
 
 
@@ -878,42 +878,235 @@ def convert_unit(
     raise ValueError(f"Cannot convert {from_unit} to {to_unit} for {biomarker_id}")
 
 
-def calculate_status(
-    biomarker_id: str, value: float, unit: str
-) -> str:
-    """
-    Calculate biomarker status based on value and reference ranges.
+# ──────────────────────────────────────────────
+# KNOWLEDGE-BASE REFERENCE RANGES (Stage 18 foundation, wired in here)
+# ──────────────────────────────────────────────
+# public.lab_markers.key differs from a handful of BIOMARKER_DATABASE ids —
+# only listing the ones that actually differ; everything else maps 1:1
+# (e.g. "ferritin" -> "ferritin") and is looked up directly.
+_LAB_MARKER_KEY_ALIASES: Dict[str, str] = {
+    "t3_free": "free_t3",
+    "t4_free": "free_t4",
+    "hemoglobin_a1c": "hba1c",
+    "cholesterol_total": "total_cholesterol",
+}
 
-    Returns:
-        One of: "OPTIMAL", "BORDERLINE", "DEFICIENT", "ELEVATED"
+# Adults only (18+) — this product does not serve minors, so reference_ranges
+# is never queried with a pediatric age band. A row with a null min_age/
+# max_age is treated as "no bound on that side", not "any age including
+# children" — every row is expected to already scope to adult ranges.
+_ADULT_MIN_AGE = 18
+
+# lab_markers rarely changes (19 rows today, hand-curated via the knowledge
+# governance flow) — caching key -> id for the process lifetime avoids a
+# round trip on every manual-entry validation. A new marker added while the
+# server is running won't be picked up until restart; acceptable for a
+# handful of rows that change through a deliberate admin action, not runtime
+# user activity.
+_lab_marker_id_cache: Dict[str, str] = {}
+
+
+async def _resolve_lab_marker_id(lab_marker_key: str) -> Optional[str]:
+    if lab_marker_key in _lab_marker_id_cache:
+        return _lab_marker_id_cache[lab_marker_key]
+    try:
+        from app.services import supabase_service as svc
+
+        client = svc._get_supabase()
+        resp = await svc._run(
+            lambda: client.table("lab_markers").select("id").eq("key", lab_marker_key).limit(1).execute()
+        )
+        rows = resp.data or []
+        if not rows:
+            return None
+        marker_id = rows[0]["id"]
+        _lab_marker_id_cache[lab_marker_key] = marker_id
+        return marker_id
+    except Exception:
+        # Table/row absent, Supabase unreachable, etc. — the caller falls
+        # back to BIOMARKER_DATABASE, so this must never raise.
+        return None
+
+
+async def get_kb_reference_range(
+    biomarker_id: str, unit: str, *, sex: Optional[str] = None, age: Optional[int] = None
+) -> Optional[Dict[str, float]]:
+    """Look up an age/sex-aware range from public.reference_ranges (Stage 18
+    knowledge base). Returns None whenever no matching row exists yet — the
+    table starts empty, so this is a no-op until Step 2 (populating it)
+    happens; every caller must keep working with BIOMARKER_DATABASE as the
+    fallback in that case, not treat a miss as an error.
     """
+    lab_marker_key = _LAB_MARKER_KEY_ALIASES.get(biomarker_id, biomarker_id)
+    marker_id = await _resolve_lab_marker_id(lab_marker_key)
+    if not marker_id:
+        return None
+
+    normalized_sex = str(sex or "").strip().lower()
+    if normalized_sex not in ("male", "female"):
+        normalized_sex = None
+    lookup_age = age if isinstance(age, (int, float)) and age >= _ADULT_MIN_AGE else None
+
+    try:
+        from app.services import supabase_service as svc
+
+        client = svc._get_supabase()
+        query = (
+            client.table("reference_ranges")
+            .select("sex,min_age,max_age,unit,low_value,high_value,optimal_low_value,optimal_high_value")
+            .eq("lab_marker_id", marker_id)
+            .eq("unit", unit)
+            .eq("active", True)
+        )
+        resp = await svc._run(lambda: query.execute())
+        rows = resp.data or []
+    except Exception:
+        return None
+
+    if not rows:
+        return None
+
+    def _matches(row: Dict[str, Any]) -> bool:
+        row_sex = str(row.get("sex") or "any").strip().lower()
+        if row_sex not in ("any",) and normalized_sex and row_sex != normalized_sex:
+            return False
+        if row_sex not in ("any",) and not normalized_sex:
+            # Row is sex-specific but we don't know the user's sex — do not
+            # guess which one applies.
+            return False
+        min_age = row.get("min_age")
+        max_age = row.get("max_age")
+        if lookup_age is not None:
+            if min_age is not None and lookup_age < min_age:
+                return False
+            if max_age is not None and lookup_age > max_age:
+                return False
+        elif min_age is not None or max_age is not None:
+            # Row is age-scoped but we don't know the user's age — do not
+            # guess which band applies.
+            return False
+        return True
+
+    candidates = [row for row in rows if _matches(row)]
+    if not candidates:
+        return None
+
+    # Prefer the most specific match: exact sex over "any", then a bounded
+    # age band over an unbounded one.
+    def _specificity(row: Dict[str, Any]) -> tuple:
+        sex_score = 0 if str(row.get("sex") or "any").lower() == "any" else 1
+        age_score = int(row.get("min_age") is not None) + int(row.get("max_age") is not None)
+        return (sex_score, age_score)
+
+    best = max(candidates, key=_specificity)
+    low = best.get("low_value")
+    high = best.get("high_value")
+    # None here means genuinely unbounded (e.g. HDL has no clinical upper
+    # bound — higher is always better) — kept as None, not 0.0/inf, so a
+    # caller that reports this straight through as ref_low/ref_high (as
+    # ManualBiomarkerEntry.validate() does) doesn't fabricate a bound that
+    # was never in the data. calculate_status() below is the only consumer
+    # that needs 0.0/inf, and does that coercion itself, locally.
+    return {
+        "min": float(low) if low is not None else None,
+        "max": float(high) if high is not None else None,
+        "optimal_min": float(best["optimal_low_value"]) if best.get("optimal_low_value") is not None else (float(low) if low is not None else None),
+        "optimal_max": float(best["optimal_high_value"]) if best.get("optimal_high_value") is not None else (float(high) if high is not None else None),
+    }
+
+
+def status_from_bounds(value: float, ref_min: float, ref_max: float, optimal_min: float, optimal_max: float) -> str:
+    """Pure OPTIMAL/BORDERLINE/DEFICIENT/ELEVATED decision — no I/O. Shared by
+    calculate_status() and ManualBiomarkerEntry.validate() so both derive
+    status from exactly the same bounds they report as ref_low/ref_high,
+    instead of each doing its own (potentially divergent) KB lookup."""
+    if optimal_min <= value <= optimal_max:
+        return "OPTIMAL"
+    if ref_min <= value <= ref_max:
+        return "BORDERLINE"
+    if value < ref_min:
+        return "DEFICIENT"
+    return "ELEVATED"
+
+
+def resolve_status_bounds(
+    biomarker_id: str,
+    unit: str,
+    kb_range: Optional[Dict[str, Optional[float]]],
+    sex: Optional[str] = None,
+    age: Optional[int] = None,
+) -> Optional[Tuple[float, float, float, float]]:
+    """Given an already-fetched kb_range (or None), resolve the (ref_min,
+    ref_max, optimal_min, optimal_max) bounds to use — from the KB row if
+    one was found, else from BIOMARKER_DATABASE. Returns None only when
+    neither source has anything for this biomarker_id/unit (unknown marker
+    or unit) — callers treat that as "OPTIMAL" (matches the prior default).
+    kb_range's None entries mean genuinely unbounded and are coerced to
+    0.0/inf here, locally — this function's return value is for arithmetic,
+    not for reporting back to a caller as ref_low/ref_high.
+    """
+    if kb_range:
+        ref_min = kb_range["min"] if kb_range["min"] is not None else 0.0
+        ref_max = kb_range["max"] if kb_range["max"] is not None else float("inf")
+        optimal_min = kb_range["optimal_min"] if kb_range["optimal_min"] is not None else ref_min
+        optimal_max = kb_range["optimal_max"] if kb_range["optimal_max"] is not None else ref_max
+        return ref_min, ref_max, optimal_min, optimal_max
+
     biomarker = BIOMARKER_DATABASE.get(biomarker_id)
     if not biomarker:
-        return "OPTIMAL"  # Default if unknown
-
+        return None
     unit_data = biomarker["units"].get(unit)
     if not unit_data:
-        return "OPTIMAL"  # Default if unit not found
+        # The same physical unit reaches us spelled differently by each lab
+        # ("10^9 cells/L" for this table's "x10^9/L", "μmol/L" for "µmol/L"), and
+        # an exact dict lookup dropped the range for markers this table does
+        # cover -- WBC, RBC, platelets, iron and total bilirubin among the 15
+        # stored uploads. Uses the shared unit normalizer from clinical_engine.
+        from app.services.clinical_engine.units import normalize_unit as _normalize_unit
 
+        normalized = _normalize_unit(unit)
+        for candidate_unit, candidate_data in biomarker["units"].items():
+            if _normalize_unit(candidate_unit) == normalized:
+                unit_data = candidate_data
+                break
+    if not unit_data:
+        return None
     ref_min = unit_data.get("min", 0)
     ref_max = unit_data.get("max", float("inf"))
     optimal_min = unit_data.get("optimal_range", [ref_min, ref_max])[0]
     optimal_max = unit_data.get("optimal_range", [ref_min, ref_max])[1]
+    return ref_min, ref_max, optimal_min, optimal_max
 
-    # Check if value is in optimal range
-    if optimal_min <= value <= optimal_max:
-        return "OPTIMAL"
 
-    # Check if value is in reference range but outside optimal
-    if ref_min <= value <= ref_max:
-        return "BORDERLINE"
+async def calculate_status(
+    biomarker_id: str, value: float, unit: str, *, sex: Optional[str] = None, age: Optional[int] = None
+) -> str:
+    """
+    Calculate biomarker status based on value and reference ranges.
 
-    # Check if value is below reference
-    if value < ref_min:
-        return "DEFICIENT"
+    Prefers an age/sex-matched row from the Stage 18 knowledge base
+    (public.reference_ranges) when one exists; falls back to the static
+    BIOMARKER_DATABASE range (same as before this change) whenever the KB
+    has no matching row — including today, while that table is still being
+    populated. sex/age are optional and only ever narrow the KB lookup;
+    omitting them (or the KB having nothing yet) reproduces the exact
+    pre-existing behavior.
 
-    # Value is above reference
-    return "ELEVATED"
+    Callers that also need ref_low/ref_high to report elsewhere (e.g.
+    ManualBiomarkerEntry.validate()) should call get_kb_reference_range()
+    themselves and use resolve_status_bounds() + status_from_bounds()
+    directly instead of this function, to avoid a second, redundant KB
+    lookup — this function exists for simple call sites that only need the
+    status string.
+
+    Returns:
+        One of: "OPTIMAL", "BORDERLINE", "DEFICIENT", "ELEVATED"
+    """
+    kb_range = await get_kb_reference_range(biomarker_id, unit, sex=sex, age=age)
+    bounds = resolve_status_bounds(biomarker_id, unit, kb_range)
+    if bounds is None:
+        return "OPTIMAL"  # Default if unknown biomarker/unit
+    return status_from_bounds(value, *bounds)
 
 
 def get_conversion_factor(biomarker_id: str, from_unit: str, to_unit: str) -> Optional[float]:

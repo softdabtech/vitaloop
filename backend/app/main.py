@@ -18,7 +18,6 @@ from app.middleware.security import (
 from app.utils.build_info import APP_VERSION
 import logging
 from app.utils import checkin_reminder
-from app.utils.stripe_config import is_stripe_price_configured
 
 from app.services.ai.openai_service import is_llm_configured
 
@@ -75,7 +74,6 @@ from app.routers.identity import auth, profile, onboarding, settings as settings
 from app.routers.analysis import analyze, insights, red_flags, timeline, dashboard, uploads
 from app.routers.protocol import protocol, progress, symptoms, checkins, questionnaire, assignments, compatibility
 from app.routers.notifications import notifications, complaints
-from app.routers.billing import stripe_router
 from app.routers.crm import crm, crm_clients, crm_ops
 from app.routers.admin import admin
 from app.routers.admin import data_integrity
@@ -91,23 +89,11 @@ from app.routers import knowledge
 
 
 def _check_runtime_readiness() -> None:
-    stripe_price_configured = is_stripe_price_configured(
-        settings.stripe_price_id,
-        settings.stripe_price_id_personal,
-        settings.stripe_price_id_personal_monthly,
-        settings.stripe_price_id_personal_yearly,
-        settings.stripe_price_id_practitioner,
-        settings.stripe_price_id_practitioner_monthly,
-        settings.stripe_price_id_practitioner_yearly,
-    )
     checks = {
         "supabase_url": bool((settings.supabase_url or "").strip()),
         "supabase_service_role_key": bool((settings.supabase_service_role_key or "").strip()),
         "llm_provider_key": is_llm_configured(),
         "resend_api_key": bool((settings.resend_api_key or "").strip()),
-        "stripe_secret_key": bool((settings.stripe_secret_key or "").strip()),
-        "stripe_webhook_secret": bool((settings.stripe_webhook_secret or "").strip()),
-        "stripe_price_id": stripe_price_configured,
     }
     missing = [name for name, ok in checks.items() if not ok]
     if missing:
@@ -119,7 +105,17 @@ def _check_runtime_readiness() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _check_runtime_readiness()
-    yield
+    # Schedule retention cleanup job
+    from app.services.analysis_queue_service import schedule_retention_cleanup, shutdown_scheduler
+    try:
+        schedule_retention_cleanup()
+        logger.info("Retention cleanup job scheduled on startup")
+    except Exception as e:
+        logger.error(f"Failed to schedule retention cleanup job: {e}")
+    try:
+        yield
+    finally:
+        shutdown_scheduler()
 
 
 app = FastAPI(
@@ -185,7 +181,6 @@ app.add_middleware(
         "X-Embedded-Token",
         "X-Partner-Context",
         "x-supabase-api-version",
-        "stripe-signature",
         "X-Vitaloop-Locale",
     ],
     expose_headers=["X-Request-ID"],
@@ -200,7 +195,6 @@ app.include_router(protocol.router, prefix="/protocol", tags=["protocol"])
 app.include_router(progress.router, prefix="/progress", tags=["progress"])
 app.include_router(symptoms.router, prefix="/symptoms", tags=["symptoms"])
 app.include_router(assessment.router, prefix="/assessment", tags=["assessment"])
-app.include_router(stripe_router.router, prefix="/stripe", tags=["stripe"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
 app.include_router(data_integrity.router, prefix="/admin", tags=["admin"])
 app.include_router(crm_clients.router, tags=["crm"])

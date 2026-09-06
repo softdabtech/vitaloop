@@ -25,9 +25,9 @@ const USER_FLOW = [
 ]
 
 const PREMIUM_UNLOCKS = [
-  'Evidence-aware report',
-  'Nutrition and lifestyle context',
-  'Safety notes and missing evidence',
+  '7-Day Supplement Protocol',
+  'Nutrition Plan by biomarker flags',
+  'Lifestyle Recommendations',
   'Progress trends and Insights',
   'Weekly Check-ins and PDF export',
 ]

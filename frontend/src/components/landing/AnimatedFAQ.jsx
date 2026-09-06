@@ -9,7 +9,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Which lab report formats does VITALOOP support?',
-    answer: 'VITALOOP supports PDF and image uploads, manual biomarker entry, and structured spreadsheet-style inputs in the product flow. The analysis core normalizes names, units, reference ranges, and priority context.',
+    answer: 'VITALOOP currently supports PDF uploads from major laboratories. The analysis engine normalizes units and reference ranges across 85+ biomarkers.',
   },
   {
     question: 'Does VITALOOP diagnose conditions?',
@@ -25,7 +25,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'How is VITALOOP different from generic AI chat?',
-    answer: 'VITALOOP uses a shared analysis core with governed Knowledge Base rules, safety flags, trend context, and structured outputs. It is not a one-off prompt over pasted lab values.',
+    answer: 'VITALOOP keeps structured health context over time and connects symptom intake, lab normalization, and weekly feedback in one continuous workflow.',
   },
   {
     question: 'Can practitioners use VITALOOP for client management?',

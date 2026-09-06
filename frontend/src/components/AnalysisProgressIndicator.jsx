@@ -1,46 +1,19 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircle2, Loader } from 'lucide-react'
-import { isUkrainianLocale } from '../lib/locale.js'
 
 /**
  * Visual progress indicator for lab analysis
  * Shows stages: Uploading → Extracting → Analyzing → Generating → Complete
  */
 export default function AnalysisProgressIndicator({ analyzing = false, elapsedSeconds = 0 }) {
-  const isUk = isUkrainianLocale()
-  const copy = isUk
-    ? {
-        progress: 'Загальний прогрес',
-        stagesTitle: 'Етапи обробки',
-        usuallyTakes: (seconds) => `зазвичай займає ${seconds} с`,
-        complete: '✅ Аналіз готовий!',
-        elapsed: 'Минуло',
-        estimated: 'Орієнтовно',
-        stages: [
-          { id: 'upload', label: 'Завантаження', duration: 3 },
-          { id: 'extract', label: 'Розпізнавання тексту', duration: 8 },
-          { id: 'analyze', label: 'Аналіз біомаркерів', duration: 20 },
-          { id: 'generate', label: 'Формування протоколу', duration: 5 },
-          { id: 'complete', label: 'Готово', duration: 0 },
-        ],
-      }
-    : {
-        progress: 'Overall progress',
-        stagesTitle: 'Processing stages',
-        usuallyTakes: (seconds) => `This usually takes ${seconds}s`,
-        complete: '✅ Analysis complete!',
-        elapsed: 'Elapsed',
-        estimated: 'Estimated',
-        stages: [
-          { id: 'upload', label: 'Uploading', duration: 3 },
-          { id: 'extract', label: 'Extracting text', duration: 8 },
-          { id: 'analyze', label: 'Analyzing biomarkers', duration: 20 },
-          { id: 'generate', label: 'Generating protocol', duration: 5 },
-          { id: 'complete', label: 'Complete', duration: 0 },
-        ],
-      }
-  const stages = copy.stages
+  const stages = [
+    { id: 'upload', label: 'Uploading', duration: 3 },
+    { id: 'extract', label: 'Extracting text', duration: 8 },
+    { id: 'analyze', label: 'Analyzing biomarkers', duration: 20 },
+    { id: 'generate', label: 'Generating protocol', duration: 5 },
+    { id: 'complete', label: 'Complete', duration: 0 },
+  ]
 
   const [currentStage, setCurrentStage] = useState(0)
   const [stageProgress, setStageProgress] = useState(0)
@@ -79,7 +52,7 @@ export default function AnalysisProgressIndicator({ analyzing = false, elapsedSe
       {/* Overall progress bar */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-slate-700">{copy.progress}</p>
+          <p className="text-sm font-medium text-slate-700">Overall progress</p>
           <p className="text-sm font-semibold text-emerald-600">{Math.min(100, Math.round(overallProgress))}%</p>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
@@ -94,7 +67,7 @@ export default function AnalysisProgressIndicator({ analyzing = false, elapsedSe
 
       {/* Stage indicators */}
       <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.stagesTitle}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Processing stages</p>
         <div className="space-y-2">
           {stages.map((stage, idx) => {
             const isActive = idx === currentStage && analyzing
@@ -165,12 +138,12 @@ export default function AnalysisProgressIndicator({ analyzing = false, elapsedSe
               {currentStage < stages.length - 1 && (
                 <span className="text-slate-500">
                   {' '}
-                  — {copy.usuallyTakes(stages[currentStage]?.duration)}
+                  — This usually takes {stages[currentStage]?.duration}s
                 </span>
               )}
             </>
           ) : (
-            copy.complete
+            '✅ Analysis complete!'
           )}
         </p>
       </motion.div>
@@ -183,7 +156,7 @@ export default function AnalysisProgressIndicator({ analyzing = false, elapsedSe
           className="text-center text-xs text-slate-500"
         >
           <p>
-            {copy.elapsed}: <span className="font-mono font-semibold">{Math.floor(elapsedSeconds)}s</span> / {copy.estimated}:{' '}
+            Elapsed: <span className="font-mono font-semibold">{Math.floor(elapsedSeconds)}s</span> / Estimated:{' '}
             <span className="font-mono font-semibold">36s</span>
           </p>
         </motion.div>

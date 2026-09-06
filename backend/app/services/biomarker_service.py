@@ -15,7 +15,9 @@ from app.services.biomarker_reference import (
     get_biomarker_info,
     validate_biomarker_input,
     convert_unit,
-    calculate_status,
+    get_kb_reference_range,
+    resolve_status_bounds,
+    status_from_bounds,
 )
 from app.services import supabase_service as svc
 from app.services.entitlements import resolve_user_entitlements
@@ -36,7 +38,7 @@ class ManualBiomarkerEntry:
         self.biomarker_id = biomarker_id
         self.value = value
         self.unit = unit
-        self.date = date or datetime.now(timezone.utc)
+        self.date = date
         self.errors: List[str] = []
         self.is_valid = False
         self.status = "OPTIMAL"
@@ -46,8 +48,14 @@ class ManualBiomarkerEntry:
         self.ref_low = None
         self.ref_high = None
 
-    def validate(self) -> bool:
-        """Validate the entry against biomarker rules."""
+    async def validate(self, *, sex: Optional[str] = None, age: Optional[int] = None) -> bool:
+        """Validate the entry against biomarker rules.
+
+        sex/age (from the user's profile) let calculate_status() prefer an
+        age/sex-matched knowledge-base reference range over the flat
+        BIOMARKER_DATABASE default when one exists. Optional — omitting them
+        reproduces the prior behavior exactly.
+        """
         # Check value is reasonable
         is_valid, error = validate_biomarker_input(
             self.biomarker_id, self.value, self.unit
@@ -66,15 +74,33 @@ class ManualBiomarkerEntry:
 
         self.display_name = info["display_name"]
 
-        # Calculate status
-        self.status = calculate_status(
-            self.biomarker_id, self.value, self.unit
-        )
+        # Prefer a KB (reference_ranges) match over the flat BIOMARKER_DATABASE
+        # default for BOTH the status AND the ref_low/ref_high this entry
+        # reports — fetched ONCE and reused for both, so they can never
+        # disagree (and so this doesn't cost two KB lookups). This matters
+        # beyond self.status: to_dict()'s ref_low/ref_high are what actually
+        # reach run_lab_analysis_pipeline() -> normalize_biomarkers() ->
+        # _status_for_value(), which RECOMPUTES status from ref_low/ref_high
+        # (manual entries are routed through the same shared pipeline as
+        # PDF/image uploads, per create_upload_from_manual_entries()'s
+        # docstring). Setting only self.status and leaving ref_low/ref_high
+        # on the old unisex range would have the pipeline silently overwrite
+        # the KB-aware status with a recomputed one — confirmed live: HDL=45
+        # for a real female profile returned OPTIMAL end-to-end until this
+        # fix, despite the status computed here alone being DEFICIENT.
+        kb_range = await get_kb_reference_range(self.biomarker_id, self.unit, sex=sex, age=age)
+        if kb_range:
+            # kb_range's min/max are already None-when-unbounded (not a
+            # sentinel like 0.0/inf) — safe to use directly.
+            self.ref_low = kb_range["min"]
+            self.ref_high = kb_range["max"]
+        else:
+            unit_data = info["units"].get(self.unit, {})
+            self.ref_low = unit_data.get("min")
+            self.ref_high = unit_data.get("max")
 
-        # Get reference ranges for the unit
-        unit_data = info["units"].get(self.unit, {})
-        self.ref_low = unit_data.get("min")
-        self.ref_high = unit_data.get("max")
+        bounds = resolve_status_bounds(self.biomarker_id, self.unit, kb_range)
+        self.status = status_from_bounds(self.value, *bounds) if bounds else "OPTIMAL"
 
         self.is_valid = True
         return True
@@ -113,14 +139,16 @@ class BiomarkerService:
             return []
         return list(info["units"].keys())
 
-    def validate_entries(
-        self, entries: List[Dict]
+    async def validate_entries(
+        self, entries: List[Dict], *, sex: Optional[str] = None, age: Optional[int] = None
     ) -> Tuple[List[ManualBiomarkerEntry], List[str]]:
         """
         Validate a list of manually entered biomarkers.
 
         Args:
             entries: List of dicts with biomarker_id, value, unit
+            sex/age: from the user's profile, forwarded to calculate_status()
+                so it can prefer a matching knowledge-base reference range.
 
         Returns:
             (valid_entries, error_messages)
@@ -145,7 +173,7 @@ class BiomarkerService:
                     date=entry.get("date"),
                 )
 
-                if not biomarker_entry.validate():
+                if not await biomarker_entry.validate(sex=sex, age=age):
                     for error in biomarker_entry.errors:
                         errors.append(f"Entry {idx + 1}: {error}")
                 else:
@@ -165,10 +193,22 @@ class BiomarkerService:
         notes: Optional[str] = None,
     ) -> Dict:
         """
-        Create a lab_uploads record and associated biomarkers.
+        Create a lab_uploads record for a manual-entry submission.
+
+        Stage 2B: this function used to ALSO insert the entries directly into the
+        canonical `biomarkers` table, bypassing the quality-gate/confirmation
+        boundary that every other B2C ingestion path (PDF/image/text) now goes
+        through. It no longer does that — canonical biomarker persistence for
+        manual entry now happens the same way as every other ingestion method:
+        inside run_lab_analysis_pipeline(), gated on the quality-gate decision,
+        via the shared save_biomarkers() chokepoint. This function only creates
+        the upload record and returns the entries as candidate-shaped data for
+        the caller to route through that same pipeline.
 
         Returns:
-            Dict with upload_id and biomarkers list (same format as PDF analysis)
+            Dict with upload_id and biomarkers list (same format as PDF analysis) —
+            NOT YET PERSISTED to the biomarkers table; the caller is responsible
+            for routing this through run_lab_analysis_pipeline(persist_biomarkers=True).
         """
         try:
             # Create upload record in database
@@ -177,12 +217,15 @@ class BiomarkerService:
             upload_data = {
                 "user_id": user_id,
                 "lab_name": lab_name or "Manual Entry",
-                "test_date": (test_date or datetime.now(timezone.utc)).isoformat(),
                 "extracted_text": notes or "",
                 "analyze_prompt_version": "manual_v1",
                 "status": "done",
                 "created_at": datetime.now(timezone.utc).isoformat(),
+                "date_source": "user_provided" if test_date else "missing",
+                "date_confidence": "high" if test_date else "low",
             }
+            if test_date:
+                upload_data["test_date"] = test_date.date().isoformat() if isinstance(test_date, datetime) else str(test_date)
 
             # Insert upload record
             upload_response = await svc._run(
@@ -194,25 +237,11 @@ class BiomarkerService:
 
             upload_id = upload_response.data[0]["id"]
 
-            # Insert biomarker records
-            biomarker_records = []
-            for entry in entries:
-                biomarker_dict = entry.to_dict()
-                biomarker_dict.update(
-                    {
-                        "upload_id": upload_id,
-                        "user_id": user_id,
-                        "created_at": datetime.now(timezone.utc).isoformat(),
-                    }
-                )
-                biomarker_records.append(biomarker_dict)
-
-            if biomarker_records:
-                await svc._run(
-                    lambda: sb.table("biomarkers")
-                    .insert(biomarker_records)
-                    .execute()
-                )
+            # Stage 2B: canonical biomarker persistence intentionally removed from
+            # here — see docstring. The upload record above is still created
+            # (it's needed as the analysis_id/upload_id target for candidates and
+            # the pipeline call), but no biomarkers row is written until the
+            # shared quality gate allows it.
 
             # Log the action
             await svc.write_audit_log(
@@ -346,7 +375,9 @@ class BiomarkerService:
             # Be permissive on error - don't block user
             return True, "Unable to verify quota - proceeding anyway", None
 
-    def convert_to_standard_units(self, entries: List[ManualBiomarkerEntry]) -> List[ManualBiomarkerEntry]:
+    async def convert_to_standard_units(
+        self, entries: List[ManualBiomarkerEntry], *, sex: Optional[str] = None, age: Optional[int] = None
+    ) -> List[ManualBiomarkerEntry]:
         """
         Convert all biomarker values to standard units for Claude analysis.
 
@@ -383,7 +414,7 @@ class BiomarkerService:
                         unit=default_unit,
                         date=entry.date,
                     )
-                    new_entry.validate()
+                    await new_entry.validate(sex=sex, age=age)
                     converted.append(new_entry)
 
                     logger.info(

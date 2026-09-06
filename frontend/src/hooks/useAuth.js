@@ -68,7 +68,6 @@ export function useAuth() {
       password,
       options: {
         emailRedirectTo: options.emailRedirectTo || resolveEmailConfirmationRedirect(),
-        ...(options.data ? { data: options.data } : {}),
       },
     })
 

@@ -105,6 +105,11 @@ def _is_in_range(item: Dict[str, Any]) -> bool:
     return _status(item) in {"OPTIMAL", "NORMAL", "IN_RANGE", "IN RANGE"}
 
 
+def _is_unevaluated(item: Dict[str, Any]) -> bool:
+    """Check if marker has unverified reference range or no reference range."""
+    return _status(item) in {"UNEVALUATED", "UNKNOWN"}
+
+
 def _format_marker(item: Dict[str, Any]) -> Dict[str, Any]:
     ref_low = item.get("ref_low")
     ref_high = item.get("ref_high")
