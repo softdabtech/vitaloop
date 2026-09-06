@@ -352,12 +352,20 @@ def test_g6b_frozen_response_sanitizes_current_protocol_cache_on_read():
         upload_id="upload-1",
         biomarkers=[],
         protocol_recommendations=unsafe_protocol,
-        report_version=_frozen_row(),
+        report_version=_frozen_row(
+            input_snapshot={"ai_orchestration": {"items": unsafe_protocol}},
+            explainability={"recommendation_explanations": [{"safety_notes": [{"item": unsafe_protocol[0]}]}]},
+        ),
         user_profile={"age": 52, "sex": "female"},
         locale="en",
     )
 
-    served_text = str(response["protocol"]).lower()
+    served_text = str(
+        {
+            "protocol": response["protocol"],
+            "report_version": response["report_version"],
+        }
+    ).lower()
     assert "iron deficiency anemia" not in served_text
     assert "confirmed diagnosis" not in served_text
     assert "325 mg" not in served_text

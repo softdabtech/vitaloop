@@ -140,15 +140,19 @@ def assemble_frozen_response(
         protocol_recommendations, profile=user_profile, locale=locale
     )
     safety_result = sanitize_safety_result_for_output(report_version.get("safety_result"), locale=locale)
+    sanitized_input_snapshot = sanitize_safety_result_for_output(report_version.get("input_snapshot"), locale=locale)
+    sanitized_explainability = sanitize_safety_result_for_output(report_version.get("explainability"), locale=locale)
 
     sanitized_report_version = {
         **report_version,
         "knowledge_report": sanitized_knowledge_report,
         "protocol": frozen_protocol_snapshot,
+        "input_snapshot": sanitized_input_snapshot,
+        "explainability": sanitized_explainability,
     }
 
     is_blocked = str(report_version.get("status") or "").lower() == "blocked"
-    input_snapshot = report_version.get("input_snapshot")
+    input_snapshot = sanitized_input_snapshot
     input_snapshot = input_snapshot if isinstance(input_snapshot, dict) else {}
 
     return {
