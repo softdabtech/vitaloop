@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import ssl
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4, UUID
@@ -71,7 +72,14 @@ def _run(fn):
 
 
 async def _run_supabase_read(fn, *, attempts: int = 3, label: str = "supabase_read"):
-    """Run a Supabase read with a small retry for transient HTTP/2 protocol resets."""
+    """Run a Supabase read with retry for transient errors including SSL/protocol issues.
+
+    Retries on:
+    - RemoteProtocolError: HTTP/2 protocol resets, EOF violations
+    - TimeoutException: Connection timeouts
+    - ConnectError: Connection refused/reset
+    - SSLError: SSL certificate/protocol issues
+    """
     last_error: Exception | None = None
     for attempt in range(1, attempts + 1):
         try:
@@ -82,7 +90,25 @@ async def _run_supabase_read(fn, *, attempts: int = 3, label: str = "supabase_re
                 break
             _logger.warning("%s_retry attempt=%s/%s error=%s", label, attempt, attempts, repr(exc))
             await asyncio.sleep(min(0.25 * attempt, 1.0))
-    raise last_error
+        except ssl.SSLError as exc:
+            # SSL errors (certificate, protocol version, etc.)
+            last_error = exc
+            if attempt >= attempts:
+                break
+            _logger.warning("%s_ssl_retry attempt=%s/%s error=%s", label, attempt, attempts, repr(exc))
+            await asyncio.sleep(min(0.5 * attempt, 2.0))  # Longer backoff for SSL issues
+        except OSError as exc:
+            # Catch broader OS errors (includes SSL errors on some platforms)
+            if "SSL" in str(exc) or "certificate" in str(exc).lower():
+                last_error = exc
+                if attempt >= attempts:
+                    break
+                _logger.warning("%s_os_error_retry attempt=%s/%s error=%s", label, attempt, attempts, repr(exc))
+                await asyncio.sleep(min(0.5 * attempt, 2.0))
+            else:
+                raise
+    if last_error:
+        raise last_error
 
 
 def _clean(value: str) -> str:
