@@ -1,0 +1,47 @@
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-*
+
+# Node
+node_modules/
+package-lock.json
+yarn.lock
+dist/
+build/
+.parcel-cache/
+.cache/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+.env.local.swp
+
+# Testing
+coverage/
+*.lcov
+
+# Editor
+.editorconfig.local
+.eslintcache
+
+# Build output
+*.js.map
+*.css.map
+
+# Vite specific
+.vite-cache/
