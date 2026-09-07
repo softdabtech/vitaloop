@@ -1,6 +1,6 @@
 # VITALOOP Health Intelligence Core: Input To Result Pipeline
 
-Last updated: 2026-08-13
+Last updated: 2026-09-07
 Source: current repository implementation in `/Users/oleksii/projects/vitaloop`
 Canonical owner document: this file is the single source of truth for how VITALOOP turns cabinet or external inputs into user-visible analysis, reports, protocols, progress, and follow-up guidance.
 
@@ -230,7 +230,13 @@ User confirmation endpoints:
 - `GET /analyze/{upload_id}/candidates`
 - `POST /analyze/{upload_id}/confirm-candidates`
 
-Low-confidence candidates should require confirmation in the UX. High-confidence cases currently continue through the existing flow to avoid blocking reports.
+Current production behavior:
+
+- high confidence: continue automatically;
+- medium confidence: require confirmation;
+- low confidence or integrity conflict: block or require explicit confirmation;
+- confirmed candidates are the trusted boundary. Candidate rows alone must not drive safety, report, or progress;
+- if one confirmed marker still has a marker-level integrity conflict, the unresolved marker is excluded and the safe confirmed subset continues, instead of blocking the entire upload forever.
 
 ## 10. Persistence Order For B2C Uploads
 
@@ -238,10 +244,14 @@ For file upload analysis, backend writes are ordered roughly as:
 
 1. `save_lab_upload(...)` with metadata/prompt version.
 2. `save_biomarker_extraction_candidates(...)` best-effort.
-3. `save_biomarkers(upload_id, user_id, biomarkers)`.
-4. `run_lab_analysis_pipeline(...)` with `persist_knowledge=True`, `persist_report_version=True`.
-5. `save_protocol(...)` when protocol output exists.
-6. `save_timeline_event(...)` with `lab_analyzed`.
+3. `run_lab_analysis_pipeline(...)` with `persist_knowledge=True`, `persist_report_version=True`, and `persist_biomarkers=True`.
+4. Inside the pipeline: extraction quality gate and clinical integrity decide whether canonical biomarkers can be saved.
+5. `save_biomarkers(upload_id, user_id, biomarkers)` only after the input is allowed to continue.
+6. `save_report_version(...)` freezes the result when the generation completes.
+7. `save_protocol(...)` when sanitized protocol output exists.
+8. `save_timeline_event(...)` with `lab_analyzed`.
+
+Important rule: unconfirmed extraction candidates are not treated as canonical biomarkers. After explicit confirmation, confirmed/corrected candidates are allowed to become canonical biomarkers, subject to clinical integrity filtering.
 
 If candidate or report-version persistence fails, the user-facing upload flow should not break unless the core upload/biomarker save fails.
 
@@ -361,14 +371,16 @@ Functions:
 Safety checks include:
 
 - dangerous lab values such as very high/low glucose, high HbA1c, high ALT/AST, very high LDL, severe vitamin D insufficiency;
+- urgent review triggers for severe potassium, hemoglobin, platelets, and absolute neutrophils where unit handling is safe;
 - pediatric context;
 - pregnancy context;
 - current medications;
 - current supplements;
 - allergies;
 - prior diagnoses;
-- sensitive supplement categories: iron, vitamin D, B12, folate;
+- sensitive supplement categories: iron, vitamin D, B12, folate, magnesium, potassium;
 - explicit dosage wording;
+- oral/IV replacement or treatment-protocol wording;
 - diagnosis-like wording.
 
 Safety result shape:
@@ -384,6 +396,8 @@ Safety result shape:
 ```
 
 Safety runs after KB/AI/rule protocol generation and before report-version persistence. Safety events are persisted through `save_safety_events(...)` where schema exists.
+
+The backend also sanitizes user-facing protocol, knowledge-report, knowledge-evaluation, and safety-result payloads at write/read boundaries. Urgent-review content must remain visible, but exact dosages, IV/oral replacement instructions, diagnosis-like claims, and prescription-like wording must not be exposed to users.
 
 ## 18. Explainability Engine
 
@@ -512,6 +526,14 @@ After analysis, results feed:
 
 The loop is intended to continue: symptoms, new uploads, check-ins, protocol adherence, and retests improve future interpretation.
 
+Progress has a backend-owned contract at `GET /progress/overview`. It uses laboratory dates only:
+
+```text
+test_date -> collected_at -> reported_at
+```
+
+`created_at` is not a laboratory date and must not be used for trend points. Uploads without a lab date are `undated`. If there are fewer than two unique lab dates, the UI should show a snapshot or same-day comparison, not longitudinal progress.
+
 ## 24. Cost And Quality Metadata
 
 The pipeline builds:
@@ -527,6 +549,7 @@ The code expects optional persistence tables such as:
 
 - `report_versions`
 - `biomarker_extraction_candidates`
+- `lab_uploads.test_date`, `collected_at`, `reported_at`, `date_source`, `date_confidence`, where stage-26 has been applied
 - `safety_events`
 - Knowledge Base tables from `backend/sql/stage-18-knowledge-base-foundation.sql`
 - managed domain registry from `backend/migrations/20260712225326_create_knowledge_domain_registry.sql`
@@ -566,7 +589,8 @@ Frontend/cabinet consumers:
 
 - The analyzer file `claude_pdf_analyzer.py` and compatibility module `claude_service.py` still use legacy names even though active provider is OpenAI.
 - Some persistence tables are referenced by code but may depend on manually applied Supabase SQL rather than a single migration chain.
-- Low-confidence candidates are persisted and exposed, but the UX should more strongly guide user confirmation before relying on weak extraction.
+- Production `biomarkers` does not yet persist structured `assay_qualifier`; FEU/DDU can be carried through in-memory/KB payloads where present, but saved biomarker rows need a schema change before full structured D-dimer FEU/DDU preservation.
+- Frozen report `explainability` can still contain legacy unsafe `knowledge_evaluation.generated_recommendations` unless `report_history.py` sanitizes the returned `explainability` copy. Top-level protocol and knowledge-evaluation are sanitized.
 - Report quality depends on active KB content, runtime nutrition algorithms, profile completeness, and correct extraction.
 - B2B accepts parsed biomarkers only; external raw file upload is not part of the B2B MVP.
 - Large or complex files can still be slow because full async upload processing is not yet the default architecture.

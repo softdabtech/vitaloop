@@ -94,6 +94,88 @@ def test_prescriptive_supplement_dosage_is_removed_for_adult_profile():
     assert "qualified clinician" in text
 
 
+def test_potassium_replacement_protocol_text_is_removed_from_user_facing_output():
+    unsafe_protocol = [
+        {
+            "key": "hypokalemia_correction",
+            "title": "Hypokalaemia Correction",
+            "body": "K < 3.5 mmol/L: oral potassium chloride 40-80 mmol/day. Assess cause. IV replacement if K < 2.5 or symptomatic.",
+            "priority": "high",
+            "requires_doctor": True,
+        }
+    ]
+
+    sanitized = sanitize_protocol_for_safety(unsafe_protocol, profile=PROFILE_52F, locale="en")
+    text = _flat_text(sanitized).lower()
+
+    assert "40-80 mmol/day" not in text
+    assert "iv replacement" not in text
+    assert "oral potassium chloride" not in text
+    assert "qualified clinician" in text
+    assert sanitized[0]["original_dosage_hidden"] is True
+    assert sanitized[0]["requires_doctor"] is True
+
+
+def test_urgent_review_remains_when_prescriptive_protocol_is_sanitized():
+    unsafe_protocol = {
+        "metabolic": [
+            {
+                "title": "Hypokalaemia Correction",
+                "body": "K < 3.5 mmol/L: oral potassium chloride 40-80 mmol/day. IV replacement if K < 2.5 or symptomatic.",
+                "requires_doctor": True,
+            }
+        ]
+    }
+    sanitized = sanitize_protocol_for_safety(unsafe_protocol, profile=PROFILE_52F, locale="en")
+
+    result = validate_report(
+        biomarkers=SEVERE_BIOMARKERS,
+        knowledge_report={"summary": {"headline": "Educational report"}},
+        protocol=sanitized,
+        profile=PROFILE_52F,
+    )
+    text = _flat_text(sanitized).lower()
+
+    assert result["risk_level"] == "urgent_review"
+    assert result["urgent_review_required"] is True
+    assert result["prominent_user_warning"]
+    assert "40-80 mmol/day" not in text
+    assert "iv replacement" not in text
+
+
+def test_safe_moderate_educational_context_is_preserved():
+    safe_protocol = [
+        {
+            "title": "Review iron context",
+            "body": "Discuss ferritin, CBC indices, B12, folate, symptoms, and nutrition context with a clinician.",
+            "requires_doctor": True,
+        }
+    ]
+
+    sanitized = sanitize_protocol_for_safety(safe_protocol, profile=PROFILE_52F, locale="en")
+
+    assert sanitized == safe_protocol
+
+
+def test_knowledge_evaluation_generated_recommendations_are_sanitized():
+    sanitized = sanitize_knowledge_evaluation_for_safety(
+        {"generated_recommendations": [
+            {
+                "key": "hypokalemia_correction",
+                "body": "K < 3.5 mmol/L: oral potassium chloride 40-80 mmol/day. Assess cause. IV replacement if K < 2.5 or symptomatic.",
+                "requires_doctor": True,
+            }
+        ]},
+        locale="en",
+    )
+
+    text = _flat_text(sanitized).lower()
+    assert "40-80 mmol/day" not in text
+    assert "iv replacement" not in text
+    assert "oral potassium chloride" not in text
+    assert "qualified clinician" in text
+
+
 def test_unsupported_smoking_personalization_is_conditional_when_status_missing():
     sanitized_protocol = sanitize_protocol_for_safety([UNSAFE_ACTION], profile=PROFILE_52F, locale="en")
     sanitized_report = sanitize_knowledge_report_for_safety(

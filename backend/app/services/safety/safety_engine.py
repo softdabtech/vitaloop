@@ -36,6 +36,16 @@ _DOSING_FREQUENCY_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+_PRESCRIPTIVE_TREATMENT_PATTERN = re.compile(
+    r"\b(?:oral|iv|intravenous)\s+[a-z][^.?!;\n]*(?:replacement|therapy|treatment|correction)\b|"
+    r"\b(?:replacement|therapy|treatment|correction)\s+(?:if|when)\b|"
+    r"\b(?:oral|iv|intravenous)\s+[a-z][^.?!;\n]*\d+(?:[.,]\d+)?\s*(?:mmol|meq|mg|mcg|µg|ug|g|iu)\s*(?:/|per)?\s*(?:day|daily|d)\b|"
+    r"\b\d+(?:[.,]\d+)?(?:\s*-\s*\d+(?:[.,]\d+)?)?\s*(?:mmol|meq)\s*(?:/|per)?\s*(?:day|daily|d)\b|"
+    r"\biv\s+replacement\b|"
+    r"\boral\s+potassium\s+chloride\b",
+    re.IGNORECASE,
+)
+
 
 def _num(value: Any) -> float | None:
     try:
@@ -401,10 +411,16 @@ def _is_pregnancy_profile(profile: Dict[str, Any] | None) -> bool:
 
 def _contains_explicit_dosage(item: Dict[str, Any]) -> bool:
     dosage = str(item.get("dosage") or "").strip()
-    if dosage and (_DOSAGE_PATTERN.search(dosage) or _DOSING_FREQUENCY_PATTERN.search(dosage)):
+    if dosage and (
+        _DOSAGE_PATTERN.search(dosage)
+        or _DOSING_FREQUENCY_PATTERN.search(dosage)
+        or _PRESCRIPTIVE_TREATMENT_PATTERN.search(dosage)
+    ):
         return True
 
     text = " ".join(str(item.get(key) or "") for key in ("body", "rationale", "instructions", "supplement"))
+    if _PRESCRIPTIVE_TREATMENT_PATTERN.search(text):
+        return True
     has_amount = bool(_DOSAGE_PATTERN.search(text))
     if not has_amount:
         return False
@@ -469,6 +485,30 @@ def _sanitize_user_text(value: Any, locale: str) -> Any:
         return value
     text = value
     replacement = _diagnosis_like_replacement_text(locale)
+    text = re.sub(
+        r"\b[^.?!;\n]*\boral\s+potassium\s+chloride\b[^.?!;\n]*[.?!;]?",
+        _clinician_review_action_text(locale),
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\b(?:oral|iv|intravenous)\s+[a-z][^.?!;\n]*(?:replacement|therapy|treatment|correction)[^.?!;\n]*[.?!;]?",
+        _clinician_review_action_text(locale),
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\b(?:iv|intravenous)\s+replacement\s+if\b[^.?!;\n]*[.?!;]?",
+        _clinician_review_action_text(locale),
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\b\d+(?:[.,]\d+)?(?:\s*-\s*\d+(?:[.,]\d+)?)?\s*(?:mmol|meq)\s*(?:/|per)?\s*(?:day|daily|d)\b[^.?!;\n]*[.?!;]?",
+        _clinician_review_action_text(locale),
+        text,
+        flags=re.IGNORECASE,
+    )
     text = re.sub(r"\biron deficiency anemia\b", "a possible iron-status/anemia pattern requiring clinical confirmation", text, flags=re.IGNORECASE)
     text = re.sub(r"\bconfirmed diagnosis\b", "a pattern requiring clinical confirmation", text, flags=re.IGNORECASE)
     text = re.sub(r"\byou have\b", "your results may be consistent with", text, flags=re.IGNORECASE)
@@ -577,6 +617,7 @@ def _sanitize_protocol_item(
 ) -> tuple[Dict[str, Any], bool]:
     sensitive_context = _is_pediatric_profile(profile) or _is_pregnancy_profile(profile)
     supplement_key = _contains_sensitive_supplement(item)
+    had_prescriptive_dosage = _contains_explicit_dosage(item)
     sanitized, changed = _redact_diagnosis_like_dict_fields(item, locale, _RECOMMENDATION_TEXT_FIELDS)
     sanitized = dict(sanitized)
 
@@ -588,7 +629,7 @@ def _sanitize_protocol_item(
             changed = True
 
     supplement_key = supplement_key or _contains_sensitive_supplement(sanitized)
-    if supplement_key and _contains_explicit_dosage(sanitized):
+    if supplement_key and (had_prescriptive_dosage or _contains_explicit_dosage(sanitized)):
         sanitized["original_dosage_hidden"] = True
         sanitized["dosage"] = _clinician_review_dosage_text(locale)
         sanitized["requires_doctor"] = True
@@ -721,23 +762,30 @@ def sanitize_knowledge_evaluation_for_safety(
     if not isinstance(knowledge_evaluation, dict):
         return knowledge_evaluation
 
-    matched_rules = knowledge_evaluation.get("matched_rules")
-    if not isinstance(matched_rules, list):
-        return knowledge_evaluation
-
     sanitized = dict(knowledge_evaluation)
-    new_rules = []
-    for rule in matched_rules:
-        if isinstance(rule, dict):
-            redacted, _changed = _redact_diagnosis_like_dict_fields(rule, locale, _MATCHED_RULE_TEXT_FIELDS)
-            redacted = {
-                key: (_sanitize_user_text(value, locale) if key in _MATCHED_RULE_TEXT_FIELDS else value)
-                for key, value in redacted.items()
-            }
-            new_rules.append(redacted)
-        else:
-            new_rules.append(_sanitize_user_text(rule, locale))
-    sanitized["matched_rules"] = new_rules
+
+    matched_rules = knowledge_evaluation.get("matched_rules")
+    if isinstance(matched_rules, list):
+        new_rules = []
+        for rule in matched_rules:
+            if isinstance(rule, dict):
+                redacted, _changed = _redact_diagnosis_like_dict_fields(rule, locale, _MATCHED_RULE_TEXT_FIELDS)
+                redacted = {
+                    key: (_sanitize_user_text(value, locale) if key in _MATCHED_RULE_TEXT_FIELDS else value)
+                    for key, value in redacted.items()
+                }
+                new_rules.append(redacted)
+            else:
+                new_rules.append(_sanitize_user_text(rule, locale))
+        sanitized["matched_rules"] = new_rules
+
+    generated_recommendations = knowledge_evaluation.get("generated_recommendations")
+    if isinstance(generated_recommendations, list):
+        sanitized["generated_recommendations"] = sanitize_protocol_for_safety(
+            generated_recommendations,
+            locale=locale,
+        )
+
     return sanitized
 
 

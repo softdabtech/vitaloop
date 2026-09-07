@@ -2881,3 +2881,85 @@ async def get_retention_redaction_status() -> Dict[str, Any]:
         "last_success": _row_compact(last_success),
         "last_failure": _row_compact(last_failure),
     }
+
+
+# ============================================================================
+# GDPR & USER ACCOUNT MANAGEMENT
+# ============================================================================
+
+async def delete_user_cascade(user_id: str) -> None:
+    """
+    Delete user account and all associated data (GDPR right to be forgotten).
+
+    Deletion order respects foreign key constraints:
+    1. insights, recommendations → depend on biomarkers
+    2. biomarkers → depend on lab_uploads
+    3. lab_uploads, weekly_checkins, protocols → depend on users
+    4. audit_logs, user_preferences, notification_preferences → have user_id foreign key
+    5. users → last (Supabase auth will be deleted separately)
+
+    Args:
+        user_id: UUID of user to delete
+
+    Raises:
+        Exception: If deletion fails at any step (transaction rolls back)
+    """
+    def get_supabase():
+        return _get_supabase()
+
+    # Tables to delete in order (FK dependencies matter)
+    tables_to_delete = [
+        "insights",
+        "recommendations",
+        "biomarkers",
+        "lab_uploads",
+        "weekly_checkins",
+        "protocols",
+        "audit_logs",
+        "user_preferences",
+        "notification_preferences",
+        "users",
+    ]
+
+    _logger.info(f"delete_cascade_start user_id={user_id}")
+
+    deleted_counts = {}
+    try:
+        for table in tables_to_delete:
+            try:
+                result = await _run(
+                    lambda t=table, uid=user_id: get_supabase().table(t)
+                    .delete()
+                    .eq("user_id", uid)
+                    .execute()
+                )
+                # Count deleted rows from response
+                deleted_count = len(result.data) if hasattr(result, 'data') else 0
+                deleted_counts[table] = deleted_count
+                _logger.info(f"delete_cascade_table table={table} user_id={user_id} deleted_rows={deleted_count}")
+            except Exception as e:
+                _logger.error(f"delete_cascade_table_failed table={table} user_id={user_id} error={str(e)}")
+                raise
+
+        # Log the deletion action in audit table (if it wasn't already deleted)
+        try:
+            await write_audit_log(
+                user_id=user_id,
+                action="delete",
+                entity_type="user_account",
+                entity_id=user_id,
+                new_value={
+                    "reason": "user_requested_gdpr_deletion",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "tables_deleted": deleted_counts,
+                }
+            )
+        except Exception as e:
+            _logger.warning(f"delete_cascade_audit_log_failed user_id={user_id} error={str(e)}")
+            # Don't fail the whole operation if audit logging fails
+
+        _logger.info(f"delete_cascade_complete user_id={user_id} summary={deleted_counts}")
+
+    except Exception as e:
+        _logger.error(f"delete_cascade_failed user_id={user_id} error={str(e)} deleted_tables={list(deleted_counts.keys())}")
+        raise

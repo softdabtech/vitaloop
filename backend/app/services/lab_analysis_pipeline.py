@@ -434,6 +434,88 @@ def _log_analysis_core_completion(result: Dict[str, Any]) -> None:
     )
 
 
+_CONFIRMATION_FILTERABLE_MARKER_ISSUES = {
+    "unknown_unit",
+    "unit_marker_incompatible",
+    "missing_numeric_value",
+    "physiologically_implausible_value",
+    "invalid_lab_reference_range",
+}
+
+
+def _marker_identity(item: Dict[str, Any]) -> tuple[str, str, str]:
+    return (
+        str(item.get("canonical_name") or item.get("name") or "").strip().lower(),
+        str(item.get("unit") or "").strip().lower(),
+        str(item.get("value") or "").strip(),
+    )
+
+
+def _is_candidate_confirmation(source_metadata: Dict[str, Any] | None) -> bool:
+    if not isinstance(source_metadata, dict):
+        return False
+    if source_metadata.get("source") != "candidate_confirmation":
+        return False
+    candidates = source_metadata.get("candidates")
+    if not isinstance(candidates, list) or not candidates:
+        return False
+    statuses = {str(item.get("status") or "").strip().lower() for item in candidates if isinstance(item, dict)}
+    return bool(statuses) and statuses <= {"confirmed", "corrected"}
+
+
+def _continue_confirmed_safe_subset(
+    *,
+    normalized_biomarkers: List[Dict[str, Any]],
+    clinical_integrity: Dict[str, Any],
+    source_metadata: Dict[str, Any] | None,
+    user_profile: Dict[str, Any] | None,
+) -> tuple[List[Dict[str, Any]], Dict[str, Any], Dict[str, Any] | None]:
+    """Continue confirmed batches with the usable subset only.
+
+    Before confirmation, any unresolved marker-level integrity conflict still
+    blocks the upload. After explicit confirmation, one conflicted marker should
+    not keep all other confirmed markers out of canonical persistence forever;
+    the conflicted marker is excluded instead of being trusted downstream.
+    """
+
+    if not normalized_biomarkers or not _is_candidate_confirmation(source_metadata):
+        return normalized_biomarkers, clinical_integrity, source_metadata
+
+    conflicted = {
+        _marker_identity(item): item
+        for item in (clinical_integrity.get("markers") or [])
+        if isinstance(item, dict)
+        and set(item.get("issues") or []).intersection(_CONFIRMATION_FILTERABLE_MARKER_ISSUES)
+    }
+    if not conflicted:
+        return normalized_biomarkers, clinical_integrity, source_metadata
+
+    kept = [item for item in normalized_biomarkers if _marker_identity(item) not in conflicted]
+    if not kept:
+        return normalized_biomarkers, clinical_integrity, source_metadata
+
+    excluded = [
+        {
+            "name": item.get("name"),
+            "canonical_name": item.get("canonical_name"),
+            "unit": item.get("unit"),
+            "issues": item.get("issues") or [],
+            "evaluation_status": item.get("evaluation_status"),
+        }
+        for item in conflicted.values()
+    ]
+    updated_source_metadata = {
+        **(source_metadata or {}),
+        "confirmation_safe_subset": {
+            "applied": True,
+            "excluded_marker_count": len(excluded),
+            "excluded_markers": excluded[:12],
+            "reason": "confirmed_batch_marker_integrity_conflict",
+        },
+    }
+    return kept, validate_clinical_data_integrity(biomarkers=kept, profile=user_profile), updated_source_metadata
+
+
 async def _load_historical_biomarkers(user_id: Optional[str]) -> List[Dict[str, Any]]:
     if not user_id:
         return []
@@ -642,6 +724,12 @@ async def run_lab_analysis_pipeline(
     clinical_integrity = validate_clinical_data_integrity(
         biomarkers=normalized_biomarkers,
         profile=user_profile,
+    )
+    normalized_biomarkers, clinical_integrity, source_metadata = _continue_confirmed_safe_subset(
+        normalized_biomarkers=normalized_biomarkers,
+        clinical_integrity=clinical_integrity,
+        source_metadata=source_metadata,
+        user_profile=user_profile,
     )
     normalized_symptoms = [str(item).strip().lower() for item in (symptoms or []) if str(item).strip()]
     health_context = build_health_context(

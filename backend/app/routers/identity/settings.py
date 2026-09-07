@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from pydantic import BaseModel
 from datetime import datetime, timezone
 import logging
@@ -73,3 +73,63 @@ async def update_notification_preferences(
         logger.warning("notification_preferences_table_unavailable user_id=%s error=%s", user_id, repr(exc))
 
     return {"ok": True, "preferences": update_data}
+
+
+@router.post("/delete-account")
+async def delete_account(
+    current_user: dict = Depends(get_current_user),
+    confirmation: str = Body(..., embed=True),
+):
+    """
+    Permanently delete user account and all associated data (GDPR right to be forgotten).
+
+    This action is IRREVERSIBLE. All data including lab uploads, biomarkers, insights,
+    protocols, and preferences will be permanently deleted.
+
+    Args:
+        confirmation: Must be the exact string "DELETE MY ACCOUNT" for safety
+
+    Returns:
+        Success message with timestamp
+    """
+    user_id = current_user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail=_UNAUTHORIZED_DETAIL)
+
+    # Require explicit confirmation to prevent accidental deletion
+    if confirmation != "DELETE MY ACCOUNT":
+        raise HTTPException(
+            status_code=400,
+            detail="Confirmation text must be exactly 'DELETE MY ACCOUNT'",
+        )
+
+    try:
+        logger.info(f"delete_account_start user_id={user_id}")
+
+        # Delete all user data
+        await svc.delete_user_cascade(user_id)
+
+        # Delete from Supabase Auth (sign out from all sessions)
+        try:
+            supabase = svc._get_supabase()
+            await svc._run(
+                lambda: supabase.auth.admin.delete_user(user_id)
+            )
+        except Exception as e:
+            logger.error(f"delete_account_auth_failed user_id={user_id} error={str(e)}")
+            # Continue even if auth deletion fails
+
+        logger.info(f"delete_account_complete user_id={user_id}")
+
+        return {
+            "status": "deleted",
+            "message": "Your account and all associated data have been permanently deleted",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"delete_account_failed user_id={user_id} error={str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Account deletion failed: {str(e)}",
+        )

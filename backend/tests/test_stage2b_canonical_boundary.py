@@ -15,6 +15,7 @@ import pytest
 
 from app.services import lab_analysis_pipeline
 from app.services import supabase_service as svc
+from app.services.progress_overview import build_progress_overview
 
 
 CLEAN_BIOMARKERS = [
@@ -30,6 +31,7 @@ CONFIDENT_PROFILE = {
 }
 LOW_CONFIDENCE_CANDIDATES = [{"confidence_score": 0.3, "status": "pending"}]
 CONFIRMED_CANDIDATES = [{"confidence_score": 0.3, "status": "confirmed"}]
+PROFILE_52F = {"age": 52, "sex": "female", "height_cm": 165, "weight_kg": 92}
 
 
 @pytest.fixture
@@ -169,6 +171,98 @@ async def test_confirmation_that_still_fails_gate_stays_pending_no_arbitrary_lim
         )
         assert result["analysis_status"] == "needs_confirmation"
     assert save_biomarkers_spy == []
+
+
+@pytest.mark.asyncio
+async def test_confirmed_batch_filters_conflicted_marker_and_persists_safe_critical_markers(save_biomarkers_spy):
+    """A confirmed batch may contain one unresolved marker-level conflict.
+
+    The conflicted marker must not be trusted, but it must not keep the safe
+    confirmed markers out of canonical persistence and safety evaluation.
+    """
+
+    biomarkers = [
+        {"name": "Absolute Neutrophils", "value": 0.38, "unit": "x10^9/L", "ref_low": 1.5, "ref_high": 7.5, "status": "DEFICIENT"},
+        {"name": "Potassium", "value": 2.5, "unit": "mmol/L", "ref_low": 3.5, "ref_high": 5.1, "status": "DEFICIENT"},
+        {"name": "Platelets", "value": 54, "unit": "x10^9/L", "ref_low": 150, "ref_high": 400, "status": "DEFICIENT"},
+        {"name": "Hemoglobin", "value": 8.4, "unit": "g/dL", "ref_low": 12, "ref_high": 15.5, "status": "DEFICIENT"},
+        {"name": "Coagulation Marker", "value": 1.8, "unit": "mg/L FEU", "ref_low": 0, "ref_high": 0.5, "status": "ELEVATED"},
+    ]
+    result = await lab_analysis_pipeline.run_lab_analysis_pipeline(
+        biomarkers=biomarkers,
+        symptoms=["severe fatigue", "dizziness", "palpitations"],
+        questionnaire={"completed": True},
+        user_profile=PROFILE_52F,
+        user_id="user-confirmed-critical",
+        analysis_id="upload-confirmed-critical",
+        source_metadata={"source": "candidate_confirmation", "candidates": [{"confidence_score": 0.4, "status": "confirmed"} for _ in biomarkers]},
+        persist_biomarkers=True,
+        generate_ai_protocol=False,
+    )
+
+    assert result["analysis_status"] == "completed", result["analysis_input_quality_gate"]
+    assert result["analysis_input_quality_gate"]["decision"] == "auto_continue"
+    assert result["metadata"]["source"]["confirmation_safe_subset"]["excluded_marker_count"] == 1
+    assert len(save_biomarkers_spy) == 1
+    saved_names = {item["name"] for item in save_biomarkers_spy[0]["biomarkers"]}
+    assert "Coagulation Marker" not in saved_names
+    assert {"Absolute Neutrophils", "Potassium", "Platelets", "Hemoglobin"} <= saved_names
+    assert result["safety_result"]["risk_level"] == "urgent_review"
+    assert result["safety_result"]["urgent_review_required"] is True
+
+
+@pytest.mark.asyncio
+async def test_unconfirmed_conflicted_batch_stays_pending_and_does_not_trigger_urgent_review(save_biomarkers_spy):
+    biomarkers = [
+        {"name": "Absolute Neutrophils", "value": 0.38, "unit": "x10^9/L", "ref_low": 1.5, "ref_high": 7.5, "status": "DEFICIENT"},
+        {"name": "Coagulation Marker", "value": 1.8, "unit": "mg/L FEU", "ref_low": 0, "ref_high": 0.5, "status": "ELEVATED"},
+    ]
+    result = await lab_analysis_pipeline.run_lab_analysis_pipeline(
+        biomarkers=biomarkers,
+        symptoms=["severe fatigue"],
+        user_profile=PROFILE_52F,
+        user_id="user-pending-critical",
+        analysis_id="upload-pending-critical",
+        source_metadata={"source": "b2c_file", "candidates": [{"confidence_score": 0.4, "status": "pending"} for _ in biomarkers]},
+        persist_biomarkers=True,
+        generate_ai_protocol=False,
+    )
+
+    assert result["analysis_status"] == "needs_confirmation"
+    assert save_biomarkers_spy == []
+    assert result.get("safety_result") is None
+
+
+def test_progress_overview_counts_confirmed_lab_date_markers_not_created_at():
+    overview = build_progress_overview(
+        [
+            {
+                "id": "upload-2026-09-07",
+                "lab_name": "Confirmed critical panel",
+                "test_date": "2026-09-07",
+                "created_at": "2026-09-08T12:00:00Z",
+                "biomarkers": [
+                    {"name": "Hemoglobin", "canonical_name": "hemoglobin", "value": 8.4, "unit": "g/dL", "status": "DEFICIENT"},
+                    {"name": "Platelets", "canonical_name": "platelets", "value": 54, "unit": "x10^9/L", "status": "DEFICIENT"},
+                ],
+            },
+            {
+                "id": "upload-2026-09-05",
+                "lab_name": "Previous panel",
+                "test_date": "2026-09-05",
+                "created_at": "2026-09-09T12:00:00Z",
+                "biomarkers": [
+                    {"name": "Hemoglobin", "canonical_name": "hemoglobin", "value": 9.1, "unit": "g/dL", "status": "DEFICIENT"},
+                    {"name": "Platelets", "canonical_name": "platelets", "value": 62, "unit": "x10^9/L", "status": "DEFICIENT"},
+                ],
+            },
+        ]
+    )
+
+    assert overview["summary"]["latest_lab_date"] == "2026-09-07"
+    assert overview["summary"]["markers_with_2plus_dates"] == 2
+    assert "2026-09-08" not in {item["date"] for item in overview["date_spine"]}
+    assert "2026-09-09" not in {item["date"] for item in overview["date_spine"]}
 
 
 # --- D: unconfirmed upload absent from longitudinal contribution -----------------
