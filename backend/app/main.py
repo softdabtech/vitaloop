@@ -15,6 +15,7 @@ from app.middleware.security import (
     RedisRateLimiterBackend,
     SecurityHeadersMiddleware,
 )
+from app.middleware.brute_force_middleware import BruteForceProtectionMiddleware
 from app.utils.build_info import APP_VERSION
 import logging
 from app.utils import checkin_reminder
@@ -138,6 +139,9 @@ app.add_middleware(StructuredLoggingMiddleware)
 
 if settings.security_enable_headers:
     app.add_middleware(SecurityHeadersMiddleware)
+
+# Add brute force protection for auth endpoints
+app.add_middleware(BruteForceProtectionMiddleware)
 
 rate_limit_backend_name = (settings.rate_limit_backend or "inmemory").strip().lower()
 if rate_limit_backend_name == "redis":
