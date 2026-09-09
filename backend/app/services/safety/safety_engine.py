@@ -485,27 +485,38 @@ def _sanitize_user_text(value: Any, locale: str) -> Any:
         return value
     text = value
     replacement = _diagnosis_like_replacement_text(locale)
+
+    # P3 FIX: Better sentence-level replacement to avoid fragmenting text
+    # Replace full clauses/sentences rather than word fragments
+
+    clinical_note = _clinician_review_action_text(locale)
+
+    # Pattern 1: Full prescriptive potassium sentences
+    # Matches entire sentences like "oral potassium chloride 40-80 mmol/day. IV replacement if K < 2.5 or symptomatic."
     text = re.sub(
-        r"\b[^.?!;\n]*\boral\s+potassium\s+chloride\b[^.?!;\n]*[.?!;]?",
-        _clinician_review_action_text(locale),
+        r"oral\s+potassium\s+chloride\s+[\d\s.,\-]+(?:mmol|mg|meq)(?:/\s*(?:day|daily|d))?\s*(?:\.\s*)?"
+        r"(?:IV\s+replacement\s+if\s+K\s*<\s*[\d.]+\s+or\s+symptomatic\s*\.?)?",
+        clinical_note + ".",
         text,
         flags=re.IGNORECASE,
     )
+
+    # P3 FIX: Clean up double/extra punctuation from replacements
+    text = re.sub(r"\.\.+", ".", text)
+    text = re.sub(r"\.\s*\.", ".", text)
+
+    # Pattern 2: "IV replacement if K < X" alone (if not already caught above)
     text = re.sub(
-        r"\b(?:oral|iv|intravenous)\s+[a-z][^.?!;\n]*(?:replacement|therapy|treatment|correction)[^.?!;\n]*[.?!;]?",
-        _clinician_review_action_text(locale),
+        r"\bIV\s+replacement\s+if\s+K\s*<\s*[\d.]+\s+or\s+symptomatic",
+        clinical_note,
         text,
         flags=re.IGNORECASE,
     )
+
+    # Pattern 3: Generic prescriptive dosing patterns
     text = re.sub(
-        r"\b(?:iv|intravenous)\s+replacement\s+if\b[^.?!;\n]*[.?!;]?",
-        _clinician_review_action_text(locale),
-        text,
-        flags=re.IGNORECASE,
-    )
-    text = re.sub(
-        r"\b\d+(?:[.,]\d+)?(?:\s*-\s*\d+(?:[.,]\d+)?)?\s*(?:mmol|meq)\s*(?:/|per)?\s*(?:day|daily|d)\b[^.?!;\n]*[.?!;]?",
-        _clinician_review_action_text(locale),
+        r"(?:iv|intravenous)\s+[a-z\s]+?\d+(?:[.,]\d+)?\s*(?:mmol|meq|mg|mcg)(?:/\s*(?:day|daily|d))?[^.!?]*[.!?]?",
+        clinical_note + ".",
         text,
         flags=re.IGNORECASE,
     )
@@ -635,6 +646,11 @@ def _sanitize_protocol_item(
         sanitized["requires_doctor"] = True
         notes = list(sanitized.get("safety_notes") or [])
         note = _supplement_dosage_safety_note(locale) if sensitive_context else _prescriptive_safety_note(locale)
+
+        # P3 FIX: Prevent duplicate safety notes
+        # Remove notes that are already in the list (exact or similar)
+        notes = [n for n in notes if n != note and "Discuss whether this step is appropriate" not in n]
+
         if note not in notes:
             notes.insert(0, note)
         sanitized["safety_notes"] = notes
