@@ -62,8 +62,23 @@ _UNIT_ALIASES = {
     "фл": "fL",
     "пг": "pg",
     "мм/год": "mm/h",
+    # Cyrillic cell count units
     "10^9/л": "x10^9/L",
     "10^12/л": "x10^12/L",
+    # English cell count units (common CSV format without 'x' prefix)
+    # NOTE: These keys are matched AFTER .lower() so keys should be lowercase
+    "10^3/ul": "x10^3/uL",
+    "10^6/ul": "x10^6/uL",
+    "10^9/ul": "x10^9/L",  # normalize to /L variant
+    "10^12/ul": "x10^12/L",
+    "10^3/µl": "x10^3/uL",
+    "10^6/µl": "x10^6/uL",
+    "10^9/µl": "x10^9/L",
+    "10^12/µl": "x10^12/L",
+    "10^3/l": "x10^3/uL",
+    "10^6/l": "x10^6/uL",
+    "10^9/l": "x10^9/L",  # ← MAIN FIX: Platelets, ANC come in this format
+    "10^12/l": "x10^12/L",
 }
 
 _REFERENCE_UNIT_FAMILIES = {
