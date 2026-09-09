@@ -14,6 +14,7 @@ import httpx
 from pypdf import PdfReader
 from PIL import Image
 from pdf2image import convert_from_path
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 try:
     from markitdown import MarkItDown
@@ -24,6 +25,17 @@ from app.config import settings
 from app.services.knowledge.integration import build_biomarker_extraction_knowledge_context
 
 logger = logging.getLogger("uvicorn.error")
+
+
+def _is_retryable_api_error(exc: BaseException) -> bool:
+    """Check if error is retryable: network issues, rate limits (429), or 5xx server errors"""
+    if isinstance(exc, (httpx.TimeoutException, httpx.ConnectError, httpx.ReadError)):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        status = exc.response.status_code
+        return status == 429 or status >= 500
+    return False
+
 
 _EXTRACTION_STATUS_VALUES = "OPTIMAL, BORDERLINE, DEFICIENT, ELEVATED"
 _EXTRACTION_CATEGORIES = (
@@ -124,7 +136,17 @@ class OpenAIFileAnalyzer(ABC):
         return text
 
     async def _send_text_completion(self, prompt: str, model: Optional[str] = None) -> str:
-        """Send text prompt to OpenAI API and get completion"""
+        """Send text prompt to OpenAI API and get completion with retry on 429/5xx"""
+        return await self._send_text_completion_with_retry(prompt, model)
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception(_is_retryable_api_error),
+        reraise=True,
+    )
+    async def _send_text_completion_with_retry(self, prompt: str, model: Optional[str] = None) -> str:
+        """Internal implementation with retry logic for 429/5xx errors"""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -151,7 +173,7 @@ class OpenAIFileAnalyzer(ABC):
         except httpx.ConnectError:
             raise ConnectionError("Unable to reach OpenAI API")
         except httpx.HTTPStatusError as e:
-            logger.error(f"OpenAI API error: {e.response.status_code} {e.response.text}")
+            logger.error(f"OpenAI API error: {e.response.status_code} {e.response.text[:200]}")
             raise
 
         choices = data.get("choices") or []
@@ -165,7 +187,17 @@ class OpenAIFileAnalyzer(ABC):
         return content
 
     async def _send_vision_completion(self, image_base64: str, prompt: str) -> str:
-        """Send image with text prompt to OpenAI Vision API"""
+        """Send image with text prompt to OpenAI Vision API with retry on 429/5xx"""
+        return await self._send_vision_completion_with_retry(image_base64, prompt)
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception(_is_retryable_api_error),
+        reraise=True,
+    )
+    async def _send_vision_completion_with_retry(self, image_base64: str, prompt: str) -> str:
+        """Internal implementation with retry logic for 429/5xx errors"""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -204,7 +236,7 @@ class OpenAIFileAnalyzer(ABC):
         except httpx.ConnectError:
             raise ConnectionError("Unable to reach OpenAI API")
         except httpx.HTTPStatusError as e:
-            logger.error(f"OpenAI Vision API error: {e.response.status_code} {e.response.text}")
+            logger.error(f"OpenAI Vision API error: {e.response.status_code} {e.response.text[:200]}")
             raise
 
         choices = data.get("choices") or []
