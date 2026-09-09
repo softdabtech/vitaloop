@@ -11,10 +11,15 @@ from app.services.supabase_service import (
     assert_upload_belongs_to_user,
     get_biomarkers_by_upload,
     get_protocol_by_upload,
+    get_user_profile,
     save_protocol,
     write_audit_log,
 )
 from app.services.affiliate import build_iherb_url
+from app.services.safety_state_resolver import (
+    resolve_biomarker_safety_state,
+    format_safety_state_for_response,
+)
 from app.constants import PROTOCOL_GENERATION_TIMEOUT_SECONDS
 from app.utils.validation import normalize_symptoms as _normalize_symptoms
 
@@ -32,6 +37,7 @@ class ProtocolResponse(BaseModel):
     user_id: str
     upload_id: str
     recommendations: list[dict]
+    unified_safety_state: dict | None = None  # P2 FIX: Single source of truth for urgency
 
 
 @router.get("")
@@ -67,9 +73,22 @@ async def create_protocol(
             entity_id=str(existing_protocol.get("id") or upload_id),
             new_value={"source": "cache"},
         )
-        return existing_protocol
+        # P2 FIX: Get user profile and biomarkers to add unified_safety_state even to cached protocol
+        biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
+        user_profile = await get_user_profile(user_id) or {}
+        unified_safety_state = None
+        if biomarkers:
+            try:
+                safety_state = await resolve_biomarker_safety_state(biomarkers, user_profile)
+                unified_safety_state = format_safety_state_for_response(safety_state)
+            except Exception as exc:
+                logger.warning("resolve_safety_state_failed protocol_cached upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
+        response_dict = dict(existing_protocol)
+        response_dict["unified_safety_state"] = unified_safety_state
+        return response_dict
 
     biomarkers = await get_biomarkers_by_upload(upload_id, user_id)
+    user_profile = await get_user_profile(user_id) or {}
     await write_audit_log(
         user_id=user_id,
         action="read",
@@ -134,6 +153,14 @@ async def create_protocol(
             detail={"detail": "Could not store protocol recommendations", "code": "PROTOCOL_SAVE_FAILED"},
         ) from exc
 
+    # P2 FIX: Resolve unified safety state across all views
+    unified_safety_state = None
+    try:
+        safety_state = await resolve_biomarker_safety_state(biomarkers, user_profile)
+        unified_safety_state = format_safety_state_for_response(safety_state)
+    except Exception as exc:
+        logger.warning("resolve_safety_state_failed protocol upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
+
     await write_audit_log(
         user_id=user_id,
         action="create",
@@ -142,7 +169,10 @@ async def create_protocol(
         new_value={"recommendation_count": len(recommendations)},
     )
 
-    return protocol
+    # Add unified_safety_state to response
+    response_dict = dict(protocol)
+    response_dict["unified_safety_state"] = unified_safety_state
+    return response_dict
 
 
 @router.get("/{upload_id}", response_model=ProtocolResponse)
