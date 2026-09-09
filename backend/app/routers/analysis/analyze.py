@@ -1673,6 +1673,15 @@ async def regenerate_results(
         generate_ai_protocol=not bool(protocol_recommendations),
     )
 
+    # P2 FIX: Resolve unified safety state across all views
+    unified_safety_state = None
+    if biomarkers:
+        try:
+            safety_state = await resolve_biomarker_safety_state(biomarkers, user_profile)
+            unified_safety_state = format_safety_state_for_response(safety_state)
+        except Exception as exc:
+            logger.warning("resolve_safety_state_failed regenerate upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
+
     await write_audit_log(
         user_id=user_id,
         action="regenerate",
@@ -1689,6 +1698,7 @@ async def regenerate_results(
         "upload_id": upload_id,
         "analysis_status": pipeline_result.get("analysis_status", "completed"),
         "biomarkers": biomarkers,
+        "unified_safety_state": unified_safety_state,  # P2 FIX: Single source of truth for urgency
         "protocol": protocol_recommendations or pipeline_result.get("recommendations") or [],
         "knowledge_evaluation": pipeline_result.get("knowledge_evaluation"),
         "knowledge_report": pipeline_result.get("knowledge_report"),
