@@ -122,9 +122,19 @@ def _validate_email(value: Optional[str]) -> Optional[str]:
 
 def _recommend_labs(symptoms: List[str]) -> List[Dict[str, str]]:
     by_key: Dict[str, Dict[str, str]] = {}
+    # P4 FIX: Improved ferritin deduplication - choose best reason from multiple symptoms
+    by_key_reasons: Dict[str, List[str]] = {}
+
     for symptom in symptoms:
         for lab in SYMPTOM_LAB_MAP.get(_normalize_symptom(symptom), []):
-            by_key.setdefault(lab["key"], lab)
+            key = lab["key"]
+            if key not in by_key:
+                by_key[key] = lab
+                by_key_reasons[key] = [lab["reason"]]
+            else:
+                # Collect all reasons for dedup logic
+                if lab["reason"] not in by_key_reasons[key]:
+                    by_key_reasons[key].append(lab["reason"])
 
     if not by_key:
         for lab in DEFAULT_LABS:
