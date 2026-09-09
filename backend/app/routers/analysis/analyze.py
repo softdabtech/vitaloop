@@ -54,6 +54,10 @@ from app.services.knowledge.integration import evaluate_biomarkers_with_knowledg
 from app.services.knowledge.report import build_knowledge_report
 from app.services.lab_analysis_pipeline import run_lab_analysis_pipeline
 from app.services.safety import sanitize_protocol_for_safety
+from app.services.safety_state_resolver import (
+    resolve_biomarker_safety_state,
+    format_safety_state_for_response,
+)
 from app.services.report_history import (
     REPORT_SOURCE_FROZEN,
     REPORT_SOURCE_LEGACY_FALLBACK,
@@ -1419,11 +1423,21 @@ async def confirm_upload_candidates(
         except Exception as exc:
             logger.warning("confirm_candidates_save_protocol_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
 
+    # P2 FIX: Resolve unified safety state across all views
+    unified_safety_state = None
+    if saved:
+        try:
+            safety_state = await resolve_biomarker_safety_state(saved, user_profile)
+            unified_safety_state = format_safety_state_for_response(safety_state)
+        except Exception as exc:
+            logger.warning("resolve_safety_state_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
+
     return {
         "upload_id": upload_id,
         "analysis_status": analysis_status,
         "biomarkers": saved,
         "candidates": updated,
+        "unified_safety_state": unified_safety_state,  # P2 FIX: Single source of truth for urgency
         "knowledge_report": pipeline_result.get("knowledge_report"),
         "interpreted_report": pipeline_result.get("interpreted_report"),
         "protocol": protocol,
@@ -1494,6 +1508,16 @@ async def get_results(
             user_profile=user_profile,
             locale=locale,
         )
+        # P2 FIX: Add unified safety state to frozen response as well
+        unified_safety_state = None
+        if biomarkers:
+            try:
+                safety_state = await resolve_biomarker_safety_state(biomarkers, user_profile)
+                unified_safety_state = format_safety_state_for_response(safety_state)
+            except Exception as exc:
+                logger.warning("resolve_safety_state_failed frozen upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
+        response["unified_safety_state"] = unified_safety_state
+
         await write_audit_log(
             user_id=user_id,
             action="read",
@@ -1574,6 +1598,15 @@ async def get_results(
     else:
         report_source = REPORT_SOURCE_LEGACY_FALLBACK if biomarkers else None
 
+    # P2 FIX: Resolve unified safety state across all views
+    unified_safety_state = None
+    if biomarkers:
+        try:
+            safety_state = await resolve_biomarker_safety_state(biomarkers, user_profile)
+            unified_safety_state = format_safety_state_for_response(safety_state)
+        except Exception as exc:
+            logger.warning("resolve_safety_state_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
+
     await write_audit_log(
         user_id=user_id,
         action="read",
@@ -1591,6 +1624,7 @@ async def get_results(
         # that governs write time governs this read).
         "analysis_status": pipeline_result.get("analysis_status", "completed"),
         "biomarkers": biomarkers,
+        "unified_safety_state": unified_safety_state,  # P2 FIX: Single source of truth for urgency
         "protocol": protocol_recommendations,
         "knowledge_evaluation": knowledge_evaluation,
         "knowledge_report": knowledge_report,
