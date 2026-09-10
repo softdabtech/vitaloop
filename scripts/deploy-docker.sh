@@ -140,5 +140,34 @@ else
     exit 1
 fi
 
+log_info "Checking landing page images actually resolve (not just index.html)..."
+# 2026-09-10 incident: index.html and the health check both looked fine while
+# two <img> paths on the landing page 404'd for days — the bundle referenced
+# filenames that don't exist under public/mockups/. Catch that class of bug
+# here instead of relying on someone eyeballing the homepage.
+LANDING_JS_URL=$(curl -sf https://vitaloop.today/ | grep -oE '/assets/index-[A-Za-z0-9]+\.js' | head -1)
+if [ -z "$LANDING_JS_URL" ]; then
+    log_error "Could not find main JS bundle in homepage HTML"
+    exit 1
+fi
+LANDING_CHUNK=$(curl -sf "https://vitaloop.today$LANDING_JS_URL" | grep -oE 'Landing-[A-Za-z0-9]+\.js' | head -1)
+if [ -n "$LANDING_CHUNK" ]; then
+    IMG_PATHS=$(curl -sf "https://vitaloop.today/assets/$LANDING_CHUNK" | grep -oE '/mockups/[A-Za-z0-9_-]+/[A-Za-z0-9._-]+\.webp' | sort -u)
+    IMG_FAIL=0
+    for p in $IMG_PATHS; do
+        code=$(curl -s -o /dev/null -w "%{http_code}" "https://vitaloop.today$p")
+        if [ "$code" != "200" ]; then
+            log_error "Landing image $p returned HTTP $code"
+            IMG_FAIL=1
+        fi
+    done
+    if [ "$IMG_FAIL" = "1" ]; then
+        exit 1
+    fi
+    log_success "Landing page images resolve (checked: $(echo "$IMG_PATHS" | wc -l | tr -d ' '))"
+else
+    log_warn "Could not locate Landing bundle chunk — skipping image check"
+fi
+
 echo ""
 log_success "🎉 Docker deployment successful! All services healthy."

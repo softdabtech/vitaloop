@@ -41,6 +41,19 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod
+      # Optional CI/CD path: populated from shell env or a .env file next to
+      # this compose file. Left unset (empty), Dockerfile.prod's build falls
+      # back to frontend/.env.production in the build context — today's
+      # actual deploy path on this server. Either way works; neither
+      # silently overrides the other (see Dockerfile.prod for why that
+      # matters).
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+        VITE_CRM_BASE_URL: ${VITE_CRM_BASE_URL:-}
+        VITE_EMAIL_CONFIRMATION_PATH: ${VITE_EMAIL_CONFIRMATION_PATH:-}
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
     container_name: vitaloop-frontend
     depends_on:
       backend:
@@ -60,9 +73,14 @@ services:
     ports:
     - 8080:80
     restart: unless-stopped
-    volumes:
-    - ./frontend/dist:/usr/share/nginx/html:ro
-version: '3.9'
+    # NOTE: do NOT add a `./frontend/dist:/usr/share/nginx/html` volume mount
+    # here. Dockerfile.prod already builds and COPYs dist/ into the image
+    # (stage "builder" -> nginx stage). A host-dist volume mount silently
+    # shadows that COPY, so every `docker build` on this service becomes a
+    # no-op for what's actually served, and the only way to ship a frontend
+    # change is `npm run build` on the host — which is exactly the trap that
+    # cost hours debugging on 2026-09-10 (see git log). The image is the
+    # source of truth; keep it that way.
 volumes:
   backend-data:
     driver: local

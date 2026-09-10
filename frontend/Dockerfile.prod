@@ -1,8 +1,27 @@
 # Multi-stage production build for frontend
+#
+# Vite bakes VITE_* vars into the JS bundle at build time. Provide them either
+# way: (a) --build-arg on `docker build` / docker-compose `build.args` (wins,
+# takes precedence as a real env var), or (b) a frontend/.env.production file
+# in the build context (picked up by Vite's own dotenv loading). Missing
+# required vars fail fast in `npm run build` via validate-env.mjs — that's
+# intentional, don't silence it.
+#
+# IMPORTANT: whatever this stage produces IS what ships. There must be no
+# `./frontend/dist:...` volume mount in docker-compose.prod.yml shadowing the
+# COPY below — see the comment there for why.
+#
 # Stage 1: Build
 FROM node:20-alpine AS builder
 
 WORKDIR /app
+
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_API_BASE_URL
+ARG VITE_CRM_BASE_URL
+ARG VITE_EMAIL_CONFIRMATION_PATH
+ARG VITE_SENTRY_DSN
 
 # Copy package files
 COPY package*.json ./
@@ -12,6 +31,26 @@ RUN npm ci --prefer-offline --no-audit --legacy-peer-deps
 
 # Copy source
 COPY . .
+
+# If build-args were passed (CI/CD path), write them into .env.production so
+# validate-env.mjs and Vite both pick them up. Deliberately NOT using plain
+# `ENV VITE_X=$VITE_X`: an unset ARG becomes an empty-string env var, and
+# validate-env.mjs does `{...envFile, ...process.env}` — that empty string
+# would win and silently blank out a working frontend/.env.production
+# committed on the host (the actual deploy path today). Only touch the file
+# when an ARG was actually supplied, so the two provisioning paths coexist
+# instead of one clobbering the other.
+RUN if [ -n "$VITE_SUPABASE_URL" ]; then \
+      { \
+        echo "VITE_SUPABASE_URL=$VITE_SUPABASE_URL"; \
+        echo "VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY"; \
+        echo "VITE_API_BASE_URL=$VITE_API_BASE_URL"; \
+        [ -n "$VITE_CRM_BASE_URL" ] && echo "VITE_CRM_BASE_URL=$VITE_CRM_BASE_URL"; \
+        [ -n "$VITE_EMAIL_CONFIRMATION_PATH" ] && echo "VITE_EMAIL_CONFIRMATION_PATH=$VITE_EMAIL_CONFIRMATION_PATH"; \
+        [ -n "$VITE_SENTRY_DSN" ] && echo "VITE_SENTRY_DSN=$VITE_SENTRY_DSN"; \
+        true; \
+      } > .env.production; \
+    fi
 
 # Build for production
 RUN NODE_OPTIONS='--max-old-space-size=2048' npm run build
