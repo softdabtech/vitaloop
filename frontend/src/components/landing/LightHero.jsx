@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { CLIENT_PREMIUM_PLAN } from '../../lib/pricing.js'
 
 const HERO_SCREEN = {
-  src: '/mockups/cabinet-real/dashboard-today.webp',
+  src: '/mockups/cabinet-live/results-clean.webp',
   alt: 'VITALOOP cabinet dashboard with Health Signal Score, score breakdown, and health journey progress',
   label: 'Today',
 }

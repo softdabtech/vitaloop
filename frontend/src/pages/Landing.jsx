@@ -930,7 +930,7 @@ export default function Landing() {
                 </button>
               </div>
               <img
-                src="/mockups/example-report/results-report.webp?v=20260901"
+                src="/mockups/example-report/lab-results.webp?v=20260901"
                 alt="VITALOOP health report with priority findings, why-it-matters context, and top biomarker results"
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 object-cover shadow-xl"
                 loading="eager"
