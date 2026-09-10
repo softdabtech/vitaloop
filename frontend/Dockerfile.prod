@@ -33,13 +33,20 @@ RUN npm ci --prefer-offline --no-audit --legacy-peer-deps
 COPY . .
 
 # If build-args were passed (CI/CD path), write them into .env.production so
-# validate-env.mjs and Vite both pick them up. Deliberately NOT using plain
-# `ENV VITE_X=$VITE_X`: an unset ARG becomes an empty-string env var, and
-# validate-env.mjs does `{...envFile, ...process.env}` — that empty string
-# would win and silently blank out a working frontend/.env.production
-# committed on the host (the actual deploy path today). Only touch the file
-# when an ARG was actually supplied, so the two provisioning paths coexist
-# instead of one clobbering the other.
+# validate-env.mjs and Vite both pick them up; otherwise leave the file (from
+# COPY . . above) untouched so a working frontend/.env.production committed
+# on the host — the actual deploy path today — still works.
+#
+# This MUST be one RUN together with the build itself, and MUST end with
+# `unset`. Docker re-injects every declared ARG as a real (env var) into the
+# environment of *every* RUN in this stage, even when its value is an empty
+# string (docker-compose's `args: {KEY: ${KEY:-}}` always sends an explicit
+# --build-arg, never omits it). A bare env var, even empty, still shows up in
+# `process.env`, and validate-env.mjs does `{...envFile, ...process.env}` —
+# so an unset-but-declared ARG would silently beat a real .env.production
+# value on every subsequent RUN, no matter what the previous RUN did. The
+# only fix is unsetting it in the SAME shell invocation that then calls
+# `npm run build`, right before it runs.
 RUN if [ -n "$VITE_SUPABASE_URL" ]; then \
       { \
         echo "VITE_SUPABASE_URL=$VITE_SUPABASE_URL"; \
@@ -50,10 +57,10 @@ RUN if [ -n "$VITE_SUPABASE_URL" ]; then \
         [ -n "$VITE_SENTRY_DSN" ] && echo "VITE_SENTRY_DSN=$VITE_SENTRY_DSN"; \
         true; \
       } > .env.production; \
-    fi
-
-# Build for production
-RUN NODE_OPTIONS='--max-old-space-size=2048' npm run build
+    fi && \
+    unset VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY VITE_API_BASE_URL \
+          VITE_CRM_BASE_URL VITE_EMAIL_CONFIRMATION_PATH VITE_SENTRY_DSN && \
+    NODE_OPTIONS='--max-old-space-size=2048' npm run build
 
 # Stage 2: Runtime (nginx)
 FROM nginx:alpine
