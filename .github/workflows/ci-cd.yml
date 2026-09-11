@@ -96,18 +96,25 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      # Split restore from test: on a clean checkout, `dotnet test` restoring
-      # and building the referenced Vitaloop.Crm.Web project AND the test
-      # project in parallel races two MSBuild processes to create the same
-      # obj/Debug/net8.0/staticwebassets/ directory — the StaticWebAssets
-      # SDK target treats that race as a hard error, not a benign
-      # already-exists. Restoring first (serialized) avoids the race; -m:1
-      # on the actual test build removes any residual parallelism risk.
       - name: Restore
         run: dotnet restore tests/Vitaloop.Crm.Web.Tests/
 
+      # GenerateStaticWebAssetsManifest=false: `dotnet test` here hit
+      # "error : Creating directory obj/Debug/net8.0/staticwebassets/" from
+      # Microsoft.NET.Sdk.StaticWebAssets.targets on the Linux GH-hosted
+      # runner specifically — reproduced with the exact pinned SDK
+      # (8.0.425) both as part of a parallel `dotnet test` build and after
+      # splitting restore from test (-m:1), ruling out the race-condition
+      # theory. Same SDK version building the same project graph passed
+      # clean on macOS, pointing at a Linux-runner-specific StaticWebAssets
+      # SDK quirk rather than anything in this repo's code. Since static
+      # web assets only matter for `dotnet publish` (the real CRM deploy
+      # path — see RUNBOOK.md — which is unaffected, already live and
+      # healthy in production) and not for running xUnit tests, disabling
+      # manifest generation for this test invocation sidesteps the bug
+      # without touching how the app actually gets published.
       - name: Run xUnit tests
-        run: dotnet test tests/Vitaloop.Crm.Web.Tests/ --no-restore -m:1 -q
+        run: dotnet test tests/Vitaloop.Crm.Web.Tests/ --no-restore -m:1 -p:GenerateStaticWebAssetsManifest=false -q
 
   # ─────────────────────────────────────────────────────────
   # JOB 3: Frontend build + Playwright smoke
