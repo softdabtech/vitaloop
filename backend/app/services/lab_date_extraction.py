@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace as _dc_replace
 from datetime import date, datetime, timezone
 from typing import Any, Iterable
 
@@ -222,6 +222,50 @@ def extract_date_bearing_snippets(text: str | None, *, max_lines: int = 24) -> l
 
 
 def extract_lab_dates(
+    text: str | None = None,
+    *,
+    document_metadata: dict[str, Any] | None = None,
+    user_provided_test_date: date | str | None = None,
+) -> LabDateExtraction:
+    """Extract test_date (+ source metadata) plus, independently, reported_at.
+
+    QA 2026-09-11: a PDF with BOTH a "Collected" and a "Reported" date only
+    ever got reported_at persisted when nothing higher in the priority
+    chain matched (test/collected date beat it to an early return in
+    _extract_primary_date below) — collected_at was saved correctly,
+    reported_at silently stayed null. reported_at isn't a fallback choice
+    among competing "which date is THE date" candidates the way test_date
+    is; it is a distinct field that should be populated whenever the
+    document states one, regardless of which candidate won test_date. This
+    wrapper runs the original priority-chain logic unchanged for test_date,
+    then separately backfills reported_at if the chain didn't already set
+    it to the same value.
+    """
+    result = _extract_primary_date(
+        text,
+        document_metadata=document_metadata,
+        user_provided_test_date=user_provided_test_date,
+    )
+    if result.reported_at is not None:
+        return result
+
+    metadata = document_metadata or {}
+    reported_from_metadata = _metadata_date(
+        metadata, "report_date", "reported_at", "date_reported", "result_date", "date_of_result"
+    )
+    reported_matches = _line_candidates(str(text or ""), _REPORTED_LABELS)
+    reported_iso: str | None = None
+    if reported_matches:
+        reported_iso = reported_matches[0][0].isoformat()
+    elif reported_from_metadata:
+        reported_iso = reported_from_metadata[0].isoformat()
+
+    if reported_iso is None:
+        return result
+    return _dc_replace(result, reported_at=reported_iso)
+
+
+def _extract_primary_date(
     text: str | None = None,
     *,
     document_metadata: dict[str, Any] | None = None,
