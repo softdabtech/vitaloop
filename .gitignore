@@ -28,6 +28,20 @@ backend/.env.local
 backend/.env.staging.local
 backend/.env.production
 backend/app/.env*
+backend/.env.bak*
+
+# Frontend environment files (NEVER COMMIT)
+# .env.example is intentionally NOT matched here — it's the committed
+# template. Everything else under frontend/.env* holds real build-time
+# secrets (VITE_SUPABASE_ANON_KEY etc.) baked into the shipped JS bundle —
+# found missing from this file entirely on 2026-09-11 (frontend/.env.production
+# on the server, the file the real prod build depends on, was one `git add -A`
+# away from landing in a commit).
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+frontend/.env.staging
+frontend/.env.bak*
 
 # API keys and secrets (NEVER COMMIT)
 *.key
@@ -43,3 +57,6 @@ config/api-keys.json
 crm-mvc/tests/**/bin/
 crm-mvc/tests/**/obj/
 deploy.log
+
+# Claude Code session/worktree state — never project source
+.claude/

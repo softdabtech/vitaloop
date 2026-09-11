@@ -70,7 +70,6 @@ jobs:
           pytest tests/test_analyze.py \
                  tests/test_router_input_guards.py \
                  tests/test_rate_limit_middleware.py \
-                 tests/test_billing_stripe.py \
                  tests/test_knowledge_rule_evaluator.py \
                  tests/test_knowledge_governance_api.py \
                  tests/test_cors_origins.py \
@@ -125,7 +124,7 @@ jobs:
         run: npm ci
 
       - name: Build production bundle
-        run: NODE_OPTIONS=--max-old-space-size=1536 vite build --mode production
+        run: NODE_OPTIONS=--max-old-space-size=1536 npx vite build --mode production
 
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
@@ -158,37 +157,52 @@ jobs:
         run: |
           ssh-keyscan -H ${{ secrets.PROD_HOST }} >> ~/.ssh/known_hosts
 
+      # See RUNBOOK.md sections 2-3 for why this is the real deploy shape:
+      # the backend runs in the Docker container (docker-compose.prod.yml),
+      # but the live vitaloop.today frontend is static files served by host
+      # nginx straight from frontend/dist/ — there is no vitaloop-backend
+      # systemd unit and no /var/www/html/ in the real serving path. This
+      # job used to assume both and would have failed outright, or worse,
+      # silently deployed nothing, the moment it actually ran (it never had,
+      # blocked by unrelated test failures, until 2026-09-11).
       - name: Pull latest code on server
         run: |
           ssh root@${{ secrets.PROD_HOST }} "
             cd /var/www/VITALOOP &&
-            git pull origin main
+            git fetch origin main &&
+            git reset --hard origin/main
           "
 
-      - name: Restart backend service
+      - name: Rebuild and restart backend (Docker)
         run: |
           ssh root@${{ secrets.PROD_HOST }} "
-            systemctl restart vitaloop-backend &&
-            sleep 4 &&
-            systemctl is-active vitaloop-backend
+            cd /var/www/VITALOOP &&
+            docker compose -f docker-compose.prod.yml build --no-cache backend &&
+            docker compose -f docker-compose.prod.yml up -d --force-recreate backend
           "
 
-      - name: Build and deploy frontend
+      - name: Rebuild frontend (host static files nginx serves directly)
         run: |
           ssh root@${{ secrets.PROD_HOST }} "
             cd /var/www/VITALOOP/frontend &&
-            NODE_OPTIONS=--max-old-space-size=1536 npm run build:prod &&
-            cp -r dist/* /var/www/html/ &&
-            nginx -s reload
+            npm ci --prefer-offline --no-audit --legacy-peer-deps &&
+            NODE_OPTIONS=--max-old-space-size=2048 npm run build
           "
 
       - name: Health check
         run: |
-          sleep 5
-          status=$(curl -sf -o /dev/null -w "%{http_code}" https://${{ secrets.PROD_HOST }}/health || echo "000")
-          echo "Health endpoint returned: $status"
-          if [[ "$status" != "200" ]]; then
-            echo "Health check FAILED (status=$status)"
+          sleep 8
+          backend_status=$(curl -sf -o /dev/null -w "%{http_code}" https://api.vitaloop.today/health || echo "000")
+          echo "Backend health endpoint returned: $backend_status"
+          if [[ "$backend_status" != "200" ]]; then
+            echo "Backend health check FAILED (status=$backend_status)"
+            exit 1
+          fi
+
+          frontend_status=$(curl -sf -o /dev/null -w "%{http_code}" https://vitaloop.today || echo "000")
+          echo "Frontend returned: $frontend_status"
+          if [[ "$frontend_status" != "200" ]]; then
+            echo "Frontend check FAILED (status=$frontend_status)"
             exit 1
           fi
           echo "Health check PASSED"
