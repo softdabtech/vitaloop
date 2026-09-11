@@ -18,6 +18,7 @@ from app.services.ai.openai_service import extract_biomarkers, EXTRACT_PROMPT_VE
 from app.services.ai.openai_pdf_analyzer import OpenAIPDFAnalyzer, create_file_analyzer
 from app.services.supabase_service import (
     assert_upload_belongs_to_user,
+    get_active_symptom_context,
     get_biomarker_extraction_candidates,
     get_biomarkers_by_upload,
     get_latest_report_version,
@@ -1388,6 +1389,16 @@ async def confirm_upload_candidates(
 
     user_profile = await get_user_profile(user_id) or {}
     locale = _resolve_response_locale(request)
+    # Merge symptoms explicitly passed in the request body with whatever the
+    # user already filled in the questionnaire flow. Found 2026-09-11 QA:
+    # this endpoint only ever saw body.symptoms (which the frontend never
+    # actually sends here), so the clinical analyzer ran with
+    # has_symptoms=false/has_questionnaire=false even when the user had just
+    # completed a detailed intake describing e.g. fatigue and hair loss —
+    # get_active_symptom_context() is fail-open and returns ([], {}) if
+    # nothing is on file, so this is safe to always call.
+    questionnaire_symptoms, questionnaire_context = await get_active_symptom_context(user_id)
+    combined_symptoms = _normalize_symptoms(list(body.symptoms) + questionnaire_symptoms)
     # Stage 2B: do NOT persist biomarkers here. Pass the confirmed/corrected
     # candidates (status="confirmed"/"corrected") into the gate re-evaluation via
     # source_metadata — analysis_quality_gate.py's _candidate_scores() boosts
@@ -1399,7 +1410,8 @@ async def confirm_upload_candidates(
     # before — the upload simply stays pending, exactly as required.
     pipeline_result = await run_lab_analysis_pipeline(
         biomarkers=biomarkers,
-        symptoms=_normalize_symptoms(body.symptoms),
+        symptoms=combined_symptoms,
+        questionnaire=questionnaire_context,
         user_profile=user_profile,
         user_id=user_id,
         analysis_id=str(upload_id),

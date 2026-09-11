@@ -900,6 +900,82 @@ async def get_recent_biomarker_history(user_id: str, *, limit: int = 250) -> Lis
     return rows
 
 
+def _split_concern_into_symptoms(active_concern: str) -> List[str]:
+    """Split a free-text concern string into normalized symptom tags.
+
+    active_concern is user free text (e.g. "fatigue, hair shedding, reduced
+    exercise recovery"), not a fixed vocabulary — this is a best-effort split
+    on common separators, not a taxonomy lookup. normalize_symptoms() at the
+    call site handles length/count limits and dedup.
+    """
+    import re
+    parts = re.split(r"[,;/]|\band\b", active_concern, flags=re.IGNORECASE)
+    return [p.strip().lower() for p in parts if p.strip()]
+
+
+async def get_active_symptom_context(user_id: str) -> tuple[List[str], Dict[str, Any]]:
+    """Return (symptoms, questionnaire) for the user's most relevant questionnaire
+    session, for feeding into run_lab_analysis_pipeline().
+
+    Fail-open by design: analysis correctness matters more than symptom
+    context, so any error (including questionnaire tables not existing yet)
+    returns ([], {}) rather than raising. Found 2026-09-11 QA: every
+    run_lab_analysis_pipeline() call site was passing symptoms=[] and
+    questionnaire=None regardless of what the user had actually filled in —
+    this is the shared helper all of them should call instead.
+    """
+    try:
+        supabase = _get_supabase()
+        resp = await _run(
+            lambda: supabase.table("questionnaire_sessions")
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("status", "completed")
+            .order("completed_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        session = (resp.data or [None])[0]
+
+        if not session:
+            # No completed session — fall back to whatever concern text is on
+            # the active (in-progress) session, if any. Partial context beats
+            # none: a user who typed their concern but hasn't finished the
+            # numeric intensity questions yet still gets that concern seen.
+            active_resp = await _run(
+                lambda: supabase.table("questionnaire_sessions")
+                .select("*")
+                .eq("user_id", user_id)
+                .neq("status", "completed")
+                .order("updated_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            session = (active_resp.data or [None])[0]
+
+        if not session:
+            return [], {}
+
+        metadata = session.get("session_metadata") or {}
+        active_concern = str(metadata.get("active_concern") or "").strip()
+        symptoms = _split_concern_into_symptoms(active_concern) if active_concern else []
+
+        questionnaire: Dict[str, Any] = {}
+        if active_concern:
+            questionnaire["active_concern"] = active_concern
+        if session.get("completion_score") is not None:
+            questionnaire["completion_score"] = session.get("completion_score")
+        if session.get("dimension_scores"):
+            questionnaire["dimension_scores"] = session.get("dimension_scores")
+        if session.get("llm_summary"):
+            questionnaire["llm_summary"] = session.get("llm_summary")
+
+        return symptoms, questionnaire
+    except Exception as exc:
+        _logger.warning("get_active_symptom_context_failed user_id=%s error=%s", user_id, exc)
+        return [], {}
+
+
 async def get_protocol_by_upload(user_id: str, upload_id: str) -> Optional[Dict]:
     _logger.debug("get_protocol_by_upload called")
     supabase = _get_supabase()
