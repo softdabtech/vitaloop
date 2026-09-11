@@ -214,17 +214,50 @@ systemctl restart vitaloop-crm-mvc.service
 curl -s https://crm.vitaloop.today/version
 ```
 
-### CI/CD status: not actually deploying anything
+### CI/CD status: fixed and live as of 2026-09-11
 
-`.github/workflows/ci-cd.yml` has a `deploy` job gated on
-`backend-test`, `crm-test`, and `frontend-build` all passing. **As of
-2026-09-10/11, all three of those consistently fail** (missing
-`tests/test_billing_stripe.py`, a `.NET` static-web-assets build error, and a
-frontend build step exiting 127), so `deploy` never runs. Every deploy done
-during this audit was manual, via SSH, as documented above. Don't assume
-pushing to `main` ships anything — it doesn't, right now. Fixing the CI
-tests so `deploy` actually fires again is real, undone work; it's not in
-scope here beyond flagging it.
+`.github/workflows/ci-cd.yml` has a `deploy` job gated on `backend-test`,
+`crm-test`, and `frontend-build` all passing. **It had never run once in
+this project's history** until 2026-09-11 — all three test jobs had
+independent bugs blocking them, and the `deploy` job itself, on top of
+that, had drifted completely from how the server actually works (assumed a
+`vitaloop-backend` systemd unit and a `/var/www/html/` frontend path,
+neither of which exist — see below). Every deploy before this date was
+manual SSH, exactly as this file used to say.
+
+What was actually wrong, and the fix for each:
+- `backend-test`: referenced `tests/test_billing_stripe.py`, which doesn't
+  exist — this project has no payment provider integration. Removed the
+  reference.
+- `crm-test`: two independent bugs stacked. First, `dotnet` picked the
+  runner's ambient .NET 10 SDK over the .NET 8 SDK the workflow explicitly
+  installs (no `global.json` to pin it) — fixed by adding
+  `crm-mvc/global.json` pinning `8.0.425`. Second, and the one that
+  actually mattered: `dotnet test ... -q` (quiet verbosity) on this SDK
+  misclassifies ordinary build chatter as `error :`-prefixed lines and
+  fails the whole run — confirmed by local repro where the identical
+  command passed clean (39/39 tests) with `-q` removed and failed
+  (differently, at different messages) every time it was present. Two
+  plausible-but-wrong theories (a restore/build race, a StaticWebAssets SDK
+  quirk) were tried and discarded in `git log` before landing on this.
+- `frontend-build`: called `vite build` directly in a plain `run:` step —
+  `node_modules/.bin` is only on `PATH` for `npm run <script>`, not
+  arbitrary `run:` commands (`command not found`, exit 127). Fixed by
+  prefixing with `npx`.
+- `deploy` itself: rewritten to match reality (Section 2/3 above) —
+  `docker compose build --no-cache backend` + `up -d --force-recreate`,
+  then `npm ci && npm run build` on the host for the frontend, then a
+  health check against the real domains instead of the bare host IP.
+- `PROD_HOST` and `PROD_SSH_KEY` didn't exist as repo secrets at all — even
+  with every test job fixed, `deploy` would have failed instantly on "Set
+  up SSH agent". Added both.
+
+**Verified working**: the fix-chain's final push (commit `88e70086`) is the
+first `deploy` run in this project's history, and it succeeded —
+backend rebuilt via Docker, frontend rebuilt on the host, both health
+checks passed. Pushing to `main` now actually ships to production. Treat
+that as a meaningful change in how careful `main` needs to be treated —
+there's no review gate, so a push is a deploy.
 
 ---
 
@@ -417,8 +450,12 @@ not fixed, pending an owner decision:
 - **`docker-compose.prod.yml` frontend service**: builds correctly, runs
   healthy, serves zero real traffic. Either finish cutting the real site
   over to it, or stop maintaining it as if it matters.
-- **CI/CD deploy job never runs** — three failing test/build steps block it
-  (see [CI/CD status](#cicd-status-not-actually-deploying-anything)).
+- **~~CI/CD deploy job never runs~~ [Resolved 2026-09-11]**: fixed and
+  verified working — see [CI/CD status](#cicd-status-fixed-and-live-as-of-2026-09-11).
+  Note the consequence: `main` now has no review gate and a push deploys.
+  If that's not the desired workflow going forward, add branch protection
+  (require a PR + at least one check before merge) — not done here since
+  it changes how everyone works, not just infrastructure plumbing.
 - **Disk usage**: after clearing 3.5GB of build cache plus the two items
   above, down to ~70% from 89% at the start of this audit. Still worth a
   recurring `docker builder prune` in the deploy script so it doesn't creep
