@@ -99,22 +99,23 @@ jobs:
       - name: Restore
         run: dotnet restore tests/Vitaloop.Crm.Web.Tests/
 
-      # GenerateStaticWebAssetsManifest=false: `dotnet test` here hit
-      # "error : Creating directory obj/Debug/net8.0/staticwebassets/" from
-      # Microsoft.NET.Sdk.StaticWebAssets.targets on the Linux GH-hosted
-      # runner specifically — reproduced with the exact pinned SDK
-      # (8.0.425) both as part of a parallel `dotnet test` build and after
-      # splitting restore from test (-m:1), ruling out the race-condition
-      # theory. Same SDK version building the same project graph passed
-      # clean on macOS, pointing at a Linux-runner-specific StaticWebAssets
-      # SDK quirk rather than anything in this repo's code. Since static
-      # web assets only matter for `dotnet publish` (the real CRM deploy
-      # path — see RUNBOOK.md — which is unaffected, already live and
-      # healthy in production) and not for running xUnit tests, disabling
-      # manifest generation for this test invocation sidesteps the bug
-      # without touching how the app actually gets published.
+      # `dotnet test ... -q` on this SDK misclassifies benign diagnostic
+      # messages (e.g. "Creating directory obj/Debug/net8.0/staticwebassets/",
+      # "Building target X completely" — normal detailed-verbosity build
+      # chatter, not errors) as "error :" and fails the whole run with exit
+      # code 1, even though nothing actually went wrong. Reproduced locally
+      # with the exact pinned SDK (8.0.425): identical command WITH -q
+      # failed on a rotating cast of unrelated "error :"-prefixed messages
+      # (first StaticWebAssets' MakeDir step, then — after trying to route
+      # around that with -p:StaticWebAssetsEnabled=false —
+      # "Building target GenerateTargetFrameworkMonikerAttribute completely"
+      # instead); the identical command WITHOUT -q passed clean both times,
+      # 39/39 tests green. Dropping -q is the actual, minimal fix — no
+      # property overrides needed. (This also means CI logs are more
+      # verbose now, which is a feature, not a cost: -q was hiding useful
+      # build output the whole time.)
       - name: Run xUnit tests
-        run: dotnet test tests/Vitaloop.Crm.Web.Tests/ --no-restore -m:1 -p:GenerateStaticWebAssetsManifest=false -q
+        run: dotnet test tests/Vitaloop.Crm.Web.Tests/ --no-restore -m:1
 
   # ─────────────────────────────────────────────────────────
   # JOB 3: Frontend build + Playwright smoke
