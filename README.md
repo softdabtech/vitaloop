@@ -1,5 +1,10 @@
 # VITALOOP
 
+> **Production access, real architecture, and deployment: see [`RUNBOOK.md`](./RUNBOOK.md).**
+> It documents the actually-verified production setup (as of 2026-09-11),
+> including where this README's Deployment section below has drifted from
+> reality. Read `RUNBOOK.md` first if you're touching production.
+
 Production URLs:
 
 - Frontend: https://vitaloop.today
@@ -238,6 +243,15 @@ CRM:
 `build-info.json` is intentionally excluded from service-worker precache and served with `no-cache` headers so deploy verification always reads the current frontend artifact.
 
 ## Deployment
+
+> ⚠️ **See [`RUNBOOK.md`](./RUNBOOK.md#3-deploying) for the verified,
+> current deployment steps.** The section below is kept for reference but
+> was not the process actually used in the most recent production
+> deployments — in particular, the real `vitaloop.today` frontend is
+> host-served static files rebuilt with a plain `npm run build` on the
+> server, not a Docker container, and CI/CD's `deploy` job does not
+> currently run (its test/build gates fail). `RUNBOOK.md` explains why and
+> what to do instead.
 
 Deploy from `main` and run deployment commands from the repository root.
 

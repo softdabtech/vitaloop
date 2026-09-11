@@ -1,5 +1,10 @@
 # VITALOOP Operational Manual
 
+> ⚠️ **DEPRECATED (2026-09-11): this file references the wrong production
+> domain (`vitaloop.softdab.tech` instead of `vitaloop.today`) and predates
+> the current backend Docker container.** See [`RUNBOOK.md`](./RUNBOOK.md)
+> for the current, verified setup. Kept for historical reference only.
+
 Technical owner handoff document for Production operations.
 
 > RU comment: Этот документ рассчитан на передачу следующему инженеру без устных пояснений.

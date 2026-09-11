@@ -1,5 +1,10 @@
 <!-- DEPLOYMENT_RUNBOOK.md -->
 
+> ⚠️ **DEPRECATED (2026-09-11): this file describes a pre-Docker,
+> fully-`systemctl`-based deployment model that no longer matches
+> production.** See [`RUNBOOK.md`](./RUNBOOK.md) for the current, verified
+> setup and deployment steps. Kept for historical reference only.
+
 # 🚀 Deployment Runbook
 
 Comprehensive guide for deploying Vitaloop to production.
