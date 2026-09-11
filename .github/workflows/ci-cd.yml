@@ -96,8 +96,18 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
+      # Split restore from test: on a clean checkout, `dotnet test` restoring
+      # and building the referenced Vitaloop.Crm.Web project AND the test
+      # project in parallel races two MSBuild processes to create the same
+      # obj/Debug/net8.0/staticwebassets/ directory — the StaticWebAssets
+      # SDK target treats that race as a hard error, not a benign
+      # already-exists. Restoring first (serialized) avoids the race; -m:1
+      # on the actual test build removes any residual parallelism risk.
+      - name: Restore
+        run: dotnet restore tests/Vitaloop.Crm.Web.Tests/
+
       - name: Run xUnit tests
-        run: dotnet test tests/Vitaloop.Crm.Web.Tests/ -q
+        run: dotnet test tests/Vitaloop.Crm.Web.Tests/ --no-restore -m:1 -q
 
   # ─────────────────────────────────────────────────────────
   # JOB 3: Frontend build + Playwright smoke
