@@ -18,6 +18,7 @@ from app.services.ai.openai_service import extract_biomarkers, EXTRACT_PROMPT_VE
 from app.services.ai.openai_pdf_analyzer import OpenAIPDFAnalyzer, create_file_analyzer
 from app.services.supabase_service import (
     assert_upload_belongs_to_user,
+    calculate_health_score,
     get_active_symptom_context,
     get_biomarker_extraction_candidates,
     get_biomarkers_by_upload,
@@ -1434,6 +1435,23 @@ async def confirm_upload_candidates(
             )
         except Exception as exc:
             logger.warning("confirm_candidates_save_protocol_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
+
+    # QA 2026-09-11: dashboard/summary only recalculates health_scores when no
+    # row exists yet (see dashboard.py) — the upload-delete path already
+    # refreshes it (uploads.py), but confirm-candidates, the path that
+    # actually persists new canonical biomarkers on every normal upload,
+    # never did. Same fail-open pattern as the delete path: a stale score is
+    # a UX annoyance, not a reason to fail an otherwise-successful analysis.
+    if analysis_status == "completed" and saved:
+        try:
+            await calculate_health_score(user_id)
+        except Exception as exc:
+            logger.warning("confirm_candidates_health_score_refresh_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
+        try:
+            from app.routers.analysis.dashboard import invalidate_summary_cache
+            invalidate_summary_cache(user_id)
+        except Exception as exc:
+            logger.warning("confirm_candidates_cache_invalidate_failed upload_id=%s user_id=%s error=%s", upload_id, user_id, repr(exc))
 
     # P2 FIX: Resolve unified safety state across all views
     unified_safety_state = None

@@ -862,12 +862,13 @@ async def assert_upload_belongs_to_user(upload_id: str, user_id: str) -> Dict:
 async def get_biomarkers_by_upload(upload_id: str, user_id: str) -> List[Dict]:
     _logger.debug("get_biomarkers_by_upload called")
     supabase = _get_supabase()
-    resp = await _run(
+    resp = await _run_supabase_read(
         lambda: supabase.table("biomarkers")
         .select("*")
         .eq("upload_id", upload_id)
         .eq("user_id", user_id)
-        .execute()
+        .execute(),
+        label="get_biomarkers_by_upload",
     )
     _logger.debug("get_biomarkers_by_upload completed")
     return resp.data
@@ -977,15 +978,22 @@ async def get_active_symptom_context(user_id: str) -> tuple[List[str], Dict[str,
 
 
 async def get_protocol_by_upload(user_id: str, upload_id: str) -> Optional[Dict]:
+    # QA 2026-09-11: GET /protocol/{id} 500'd with a bare ConnectionTerminated
+    # on a plain _run() call — not reproducible on retry a minute later, so a
+    # transient Supabase HTTP/2 blip, not a logic bug (the cache-hit path
+    # here was already correct). Switched to _run_supabase_read(), same
+    # retry-on-transient-network-error wrapper already used elsewhere in
+    # this file, instead of adding bespoke retry logic just for this call.
     _logger.debug("get_protocol_by_upload called")
     supabase = _get_supabase()
-    resp = await _run(
+    resp = await _run_supabase_read(
         lambda: supabase.table("protocols")
         .select("*")
         .eq("user_id", user_id)
         .eq("upload_id", upload_id)
         .limit(1)
-        .execute()
+        .execute(),
+        label="get_protocol_by_upload",
     )
     _logger.debug("get_protocol_by_upload completed")
     return resp.data[0] if resp.data else None

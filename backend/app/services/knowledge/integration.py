@@ -125,20 +125,41 @@ def build_deidentified_person_avatar(profile: Dict[str, Any] | None) -> Dict[str
     return {key: value for key, value in avatar.items() if value not in (None, [], "")}
 
 
+# Explicit-negation phrases a user types to say "I have none of this" —
+# found 2026-09-11 QA: a profile with "None" / "None known" for medications,
+# supplements, allergies, and diagnoses still reported has_current_medications
+# =true etc. downstream, because a non-empty string is a non-empty string
+# regardless of what it says. Matched against the whole trimmed/lowercased
+# field, not as a substring, so real values like "none, except vitamin D" or
+# a condition that happens to contain "none" as a substring aren't dropped.
+_NEGATION_PHRASES = {
+    "none", "none known", "no", "n/a", "na", "nil", "not applicable",
+    "no known allergies", "no allergies", "no medications", "no supplements",
+    "no diagnoses", "no known conditions", "nka", "nkda",
+    # Ukrainian equivalents — this product ships a uk locale.
+    "немає", "відсутні", "не приймаю", "не маю", "невідомо",
+}
+
+
+def _is_negation_text(text: str) -> bool:
+    normalized = str(text or "").strip().lower().rstrip(".!")
+    return normalized in _NEGATION_PHRASES
+
+
 def _profile_text_present(value: Any) -> bool:
     if isinstance(value, list):
-        return any(str(item).strip() for item in value)
+        return any(str(item).strip() and not _is_negation_text(item) for item in value)
     if isinstance(value, dict):
-        return any(str(item).strip() for item in value.values())
-    return bool(str(value or "").strip())
+        return any(str(item).strip() and not _is_negation_text(item) for item in value.values())
+    return bool(str(value or "").strip()) and not _is_negation_text(value)
 
 
 def _profile_item_count(value: Any) -> int:
     if isinstance(value, list):
-        return len([item for item in value if str(item).strip()])
+        return len([item for item in value if str(item).strip() and not _is_negation_text(item)])
     if isinstance(value, dict):
-        return len([item for item in value.values() if str(item).strip()])
-    return 1 if str(value or "").strip() else 0
+        return len([item for item in value.values() if str(item).strip() and not _is_negation_text(item)])
+    return 1 if (str(value or "").strip() and not _is_negation_text(value)) else 0
 
 
 def _normalized_pregnancy_status(value: Any) -> str | None:

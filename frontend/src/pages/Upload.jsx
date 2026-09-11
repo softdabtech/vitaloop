@@ -76,6 +76,7 @@ const UPLOAD_COPY = {
     reviewKeep: 'Use',
     reviewLow: 'low confidence',
     reviewMedium: 'medium confidence',
+    reviewHigh: 'high confidence',
     reviewName: 'Marker',
     reviewValue: 'Value',
     reviewUnit: 'Unit',
@@ -117,6 +118,7 @@ const UPLOAD_COPY = {
     reviewKeep: 'Використати',
     reviewLow: 'низька впевненість',
     reviewMedium: 'середня впевненість',
+    reviewHigh: 'висока впевненість',
     reviewName: 'Показник',
     reviewValue: 'Значення',
     reviewUnit: 'Одиниця',
@@ -613,7 +615,11 @@ export default function Upload() {
                     <div key={candidate.id} className="rounded-xl border border-amber-200 bg-white p-3">
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
-                          {candidate.confidence_label === 'medium' ? copy.reviewMedium : copy.reviewLow}
+                          {candidate.confidence_label === 'high'
+                            ? copy.reviewHigh
+                            : candidate.confidence_label === 'medium'
+                              ? copy.reviewMedium
+                              : copy.reviewLow}
                         </span>
                         <div className="flex gap-2">
                           <button

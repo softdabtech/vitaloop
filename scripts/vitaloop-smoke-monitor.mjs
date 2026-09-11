@@ -95,11 +95,22 @@ export function isTransientFetchError(error) {
 }
 
 export function hasMeaningfulResultsPayload(data) {
+  if (!data || typeof data !== 'object' || !data.upload_id) {
+    return false
+  }
+  // QA 2026-09-11: a freshly-uploaded lab report that's still awaiting
+  // candidate confirmation legitimately has an empty biomarkers array —
+  // get_biomarkers_by_upload() returns [] until the user confirms
+  // candidates, by design (see analyze.py). The smoke monitor doesn't pick
+  // uploadId — it takes whatever /uploads/recent returns first, so it can
+  // land on a real in-review upload mid-flow and page on a state that
+  // isn't broken, just pending. Treat needs_confirmation as its own valid
+  // shape instead of requiring a populated biomarkers array for it.
+  if (data.analysis_status === 'needs_confirmation') {
+    return true
+  }
   return Boolean(
-    data
-    && typeof data === 'object'
-    && data.upload_id
-    && Array.isArray(data.biomarkers)
+    Array.isArray(data.biomarkers)
     && data.biomarkers.length > 0
     && (
       data.final_analysis
