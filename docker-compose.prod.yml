@@ -53,7 +53,6 @@ services:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
         VITE_CRM_BASE_URL: ${VITE_CRM_BASE_URL:-}
         VITE_EMAIL_CONFIRMATION_PATH: ${VITE_EMAIL_CONFIRMATION_PATH:-}
-        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
     container_name: vitaloop-frontend
     depends_on:
       backend:

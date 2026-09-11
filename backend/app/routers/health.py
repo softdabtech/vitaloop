@@ -191,10 +191,6 @@ async def detailed_health_check():
     email_configured = bool(settings.resend_api_key or settings.sendgrid_api_key)
     checks["services"]["email"] = {"status": "ok" if email_configured else "unconfigured"}
 
-    # Check Sentry
-    sentry_ok = bool(settings.sentry_dsn)
-    checks["services"]["sentry"] = {"status": "ok" if sentry_ok else "unconfigured"}
-
     # Overall status logic
     if checks["status"] == "ok":
         # All checks passed

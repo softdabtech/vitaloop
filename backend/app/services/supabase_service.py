@@ -17,19 +17,6 @@ from app.utils.retry import (
 )
 from typing import List, Dict, Any, Optional
 
-try:
-    import sentry_sdk
-except ImportError:
-    sentry_sdk = None
-
-
-def _sentry_scope():
-    if sentry_sdk is None:
-        return None
-    if hasattr(sentry_sdk, "new_scope"):
-        return sentry_sdk.new_scope()
-    return sentry_sdk.push_scope()
-
 _supabase: Optional[Client] = None
 _use_rest_auth_context = False
 _logger = logging.getLogger(__name__)
@@ -172,24 +159,9 @@ def _rest_select_first_by_id(table: str, columns: str, user_id: str) -> Dict[str
                 "response_body": e.response.text[:500] if e.response.text else None,
             }
         )
-        if sentry_sdk and e.response.status_code >= 500:
-            with _sentry_scope() as scope:
-                scope.set_context("supabase_api", {
-                    "table": table,
-                    "status": e.response.status_code,
-                    "url": str(e.request.url),
-                })
-                sentry_sdk.capture_exception(e)
         return {}
     except httpx.TimeoutException as e:
         _logger.error(f"Supabase REST API timeout for {table}: {str(e)}")
-        if sentry_sdk:
-            with _sentry_scope() as scope:
-                scope.set_context("supabase_timeout", {
-                    "table": table,
-                    "timeout": "20.0s",
-                })
-                sentry_sdk.capture_exception(e)
         return {}
     except Exception as e:
         _logger.error(
@@ -197,13 +169,6 @@ def _rest_select_first_by_id(table: str, columns: str, user_id: str) -> Dict[str
             exc_info=True,
             extra={"user_id": user_id}
         )
-        if sentry_sdk:
-            with _sentry_scope() as scope:
-                scope.set_context("supabase_query", {
-                    "table": table,
-                    "operation": "select_first_by_id",
-                })
-                sentry_sdk.capture_exception(e)
         return {}
 
 

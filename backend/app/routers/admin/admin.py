@@ -116,9 +116,7 @@ async def _build_runtime_readiness_payload() -> dict:
         "rate_limit_redis_url": (not requires_redis_url) or redis_url_configured,
     }
     # Optional: desirable but not blocking
-    optional_checks = {
-        "sentry_dsn": _is_set(settings.sentry_dsn),
-    }
+    optional_checks = {}
     all_checks = {**required_checks, **optional_checks}
     missing = [name for name, ok in required_checks.items() if not ok]
     warnings = [name for name, ok in optional_checks.items() if not ok]

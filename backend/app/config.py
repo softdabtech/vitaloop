@@ -59,8 +59,6 @@ class Settings(BaseSettings):
     ops_alerts_enabled: bool = True
     ops_alerts_max_emails_per_day: int = 2
     ops_alert_state_file: str = "/tmp/vitaloop_ops_alerts.json"
-    sentry_dsn: str = ""
-    sentry_traces_sample_rate: float = 0.1
     frontend_base_url: str = "https://vitaloop.today"
     crm_base_url: str = "https://crm.vitaloop.today"
     webpush_vapid_public_key: str = ""

@@ -186,7 +186,6 @@ class HealthCheck:
             "database": "unknown",
             "email": "unknown",
             "llm": "unknown",
-            "sentry": "unknown",
             "cache": "unknown",
         }
         self.last_updated = None

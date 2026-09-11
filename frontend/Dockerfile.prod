@@ -21,7 +21,6 @@ ARG VITE_SUPABASE_ANON_KEY
 ARG VITE_API_BASE_URL
 ARG VITE_CRM_BASE_URL
 ARG VITE_EMAIL_CONFIRMATION_PATH
-ARG VITE_SENTRY_DSN
 
 # Copy package files
 COPY package*.json ./
@@ -54,12 +53,11 @@ RUN if [ -n "$VITE_SUPABASE_URL" ]; then \
         echo "VITE_API_BASE_URL=$VITE_API_BASE_URL"; \
         [ -n "$VITE_CRM_BASE_URL" ] && echo "VITE_CRM_BASE_URL=$VITE_CRM_BASE_URL"; \
         [ -n "$VITE_EMAIL_CONFIRMATION_PATH" ] && echo "VITE_EMAIL_CONFIRMATION_PATH=$VITE_EMAIL_CONFIRMATION_PATH"; \
-        [ -n "$VITE_SENTRY_DSN" ] && echo "VITE_SENTRY_DSN=$VITE_SENTRY_DSN"; \
         true; \
       } > .env.production; \
     fi && \
     unset VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY VITE_API_BASE_URL \
-          VITE_CRM_BASE_URL VITE_EMAIL_CONFIRMATION_PATH VITE_SENTRY_DSN && \
+          VITE_CRM_BASE_URL VITE_EMAIL_CONFIRMATION_PATH && \
     NODE_OPTIONS='--max-old-space-size=2048' npm run build
 
 # Stage 2: Runtime (nginx)

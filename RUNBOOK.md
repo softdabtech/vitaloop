@@ -70,20 +70,19 @@ vitaloop.today      api.vitaloop      crm.vitaloop   ua.vitaloop      staging-ap
       │                   │                  │              │                  │
       ▼                   ▼                  ▼              ▼                  ▼
  root = static      proxy_pass to      proxy_pass to   proxy_pass to    proxy_pass to
- files served       127.0.0.1:8004     127.0.0.1:9099  127.0.0.1:8006   127.0.0.1:8011
- DIRECTLY BY        = Docker           /5090 = CRM     = /opt/analysis- = systemd
- NGINX FROM         container          (.NET, systemd  service, an     vitaloop-staging-
- /var/www/VITALOOP  "vitaloop-         unit             OLD standalone  api.service
- /frontend/dist     backend"                            backend NOT     (separate .venv,
-                                                         used by the     separate backend/
- + /api/v1/  →      THIS is the                         deployed        not this repo's
-   127.0.0.1:8006   real, current                       frontend at    backend/)
-   (dead path —     backend — the                       all — see
-   frontend never   P0–P5 work in                       below)
-   calls it)        this repo's
-                    backend/ landed
- + /api/stripe/     here
-   webhook →
+ files served       127.0.0.1:8004     127.0.0.1:9099  api.vitaloop     127.0.0.1:8011
+ DIRECTLY BY        = Docker           /5090 = CRM     .today directly  = systemd
+ NGINX FROM         container          (.NET, systemd  (absolute URL    vitaloop-staging-
+ /var/www/VITALOOP  "vitaloop-         unit             baked into the  api.service
+ /frontend/dist     backend"                            built bundle)   (separate .venv,
+                                                                         separate backend/
+ + /api/v1/  →      THIS is the        + /api/v1/ →                    not this repo's
+   dead path,       real, current        dead path,                    backend/)
+   404s only        backend — the        404s only
+   (see below)      P0–P5 work in        (see below)
+                    this repo's
+ + /api/stripe/     backend/ landed
+   webhook →        here
    127.0.0.1:8004
    (Docker backend)
 ```
@@ -106,15 +105,18 @@ confirmed by grepping the built JS) proxies straight to the Docker
 `vitaloop-backend` container on :8004. **All the P0–P5 backend work in this
 repo's `backend/` is live and does matter.**
 
-There is also `/opt/analysis-service` — a different, older FastAPI codebase
-(confirmed: its `main.py` is structurally different from `backend/app/main.py`),
-running as a bare process (PID persists, no systemd unit) on :8006, still
-alive since 2026-09-08. `ua.vitaloop.today` and `vitaloop.today`'s dead
-`/api/v1/` path point at it, but the real frontend never calls `/api/v1/`, so
-it's effectively unused by real traffic while still consuming a slice of the
-droplet's 957MB of RAM. **Don't kill it without checking with whoever set it
-up** — it's flagged as a cleanup candidate in [Known Tech Debt](#known-tech-debt),
-not touched during this audit.
+There **was** also `/opt/analysis-service` — a different, older FastAPI
+codebase (its `main.py` was structurally different from
+`backend/app/main.py`) — running as a bare process on :8006 that
+`ua.vitaloop.today` and `vitaloop.today`'s `/api/v1/` nginx `location`
+pointed at. **Removed 2026-09-11** after confirming via nginx access logs
+that every hit to `/api/v1/*` across 3+ weeks was a vulnerability scanner
+probing for `.env`/`credentials`/`config` — zero legitimate traffic, ever
+(the real frontend calls `api.vitaloop.today` directly, never the relative
+`/api/v1/` path). The nginx `location /api/v1/` blocks on both vhosts still
+exist and now proxy to nothing — harmless (scanners get connection-refused
+instead of a 404) but worth deleting from the nginx configs next time
+someone's editing them.
 
 ### Components at a glance
 
@@ -126,7 +128,6 @@ not touched during this audit.
 | CRM | `.NET 8`, `/var/www/VITALOOP/crm-mvc/publish` | `systemd`: `vitaloop-crm-mvc.service` | Practitioner/admin app |
 | Staging backend | `/opt/vitaloop-staging/backend`, own `.venv`, :8011 | `systemd`: `vitaloop-staging-api.service` | Staging environment |
 | Stability monitor | `/opt/vitaloop-monitor/monitor.py`, bare system `python3` | `systemd`: `vitaloop-monitor.service` | Some kind of internal health polling (see [Monitoring](#4-monitoring--alerting)) |
-| Legacy analysis-service | `/opt/analysis-service`, own `.venv`, :8006 | Bare process, no systemd unit found | Old backend, effectively dead code path today |
 
 ---
 
@@ -229,10 +230,24 @@ scope here beyond flagging it.
 
 ## 4. Monitoring & Alerting
 
-**Sentry is not configured.** `SENTRY_DSN` is empty in `backend/.env` and
-absent from `frontend/.env.production`. There is no error-tracking service
-watching this app. Whatever hasn't crash-looped hard enough to trip the
-mechanisms below is invisible.
+**There is no error-tracking service (Sentry or otherwise) watching this
+app — deliberately, not as an oversight.** The `sentry_sdk` integration was
+tried on 2026-09-11 (backend and frontend both had it wired up already) and
+removed the same day at the owner's explicit call: Sentry's paid tiers are a
+real cost this pre-revenue product shouldn't be carrying yet, and the
+attempt itself surfaced a live bug — `backend/app/main.py`'s
+`StarletteIntegration(failed_request_status_codes=...)` call is incompatible
+with the pinned `sentry-sdk==1.44.1` (`TypeError: unexpected keyword
+argument`), which took the backend down in a crash loop the moment a real
+DSN was set. That code, the `sentry-sdk` dependency, `@sentry/react` on the
+frontend, and every `settings.sentry_dsn` reference were all removed
+afterward — there is no dormant/half-wired Sentry code left to trip over.
+If this gets revisited later (Sentry's free tier is genuinely free — 5K
+errors/month, no card required — or a self-hosted alternative like
+GlitchTip), start from a clean re-add rather than assuming the old
+integration still works; the version-compatibility bug above was never
+fixed, only removed. Until then, whatever hasn't crash-looped hard enough to
+trip the mechanisms below is invisible.
 
 **What actually exists:**
 
@@ -275,11 +290,12 @@ mechanisms below is invisible.
    scaled (in-memory state wouldn't be shared across instances).
 
 **Bottom line:** if you're debugging "why didn't we know about this
-sooner," the answer is almost always "no Sentry, and the failure didn't
-happen to be a 5xx on a critical path within the daily email cap." That's a
-real gap, not a misconfiguration to shrug off — setting up Sentry (or
-equivalent) is the single highest-leverage monitoring improvement available
-here.
+sooner," the answer is almost always "no error tracking, and the failure
+didn't happen to be a 5xx on a critical path within the daily email cap."
+That's a known, accepted tradeoff right now (see above), not a
+misconfiguration — but it's still the single biggest blind spot in this
+system, so don't assume something would have been caught just because it
+looks like it should have been.
 
 ---
 
@@ -379,31 +395,41 @@ Both `systemctl reset-failed` and re-verified clean — `systemctl list-units
 
 ## Known Tech Debt
 
-Found during this audit, deliberately **not** acted on without a decision
-from whoever owns this box — flagging instead of guessing:
+Found during this audit. Items marked **[Resolved 2026-09-11]** were acted on
+the same day, after confirming (real nginx access logs, not just config
+reads) that nothing legitimate depended on them; the rest are still flagged,
+not fixed, pending an owner decision:
 
-- **`/opt/analysis-service`** (~1.5GB, port 8006): old backend codebase,
-  running unmanaged (no systemd unit) since at least 2026-09-08, effectively
-  dead code path for real traffic (see [Section 2](#2-real-architecture-verified-not-assumed)).
-  Candidate for shutdown, but confirm nothing depends on `/api/v1/` or
-  `ua.vitaloop.today` routing to it first.
-- **Accumulated deploy backups**: `/root/vitaloop-release-backups` (1.3GB,
-  dozens of dated directories back to August), `/var/backups/vitaloop-*`
-  (2GB across `vitaloop-frontend`, `vitaloop-ua-frontend`, `vitaloop-backend`,
-  `vitaloop-cleanup`, `vitaloop-targeted`). Nothing here was touched — decide
-  a retention policy (e.g. keep last N) before pruning.
+- **~~`/opt/analysis-service`~~ [Resolved 2026-09-11]**: confirmed dead via
+  nginx access logs — every `/api/v1/*` hit across 3+ weeks of logs was a
+  vulnerability scanner probing for `.env`/`credentials`/`config` (all
+  404s), zero legitimate traffic. Process killed, directory removed
+  (~1.5GB). `vitaloop.today` and `ua.vitaloop.today` still have a dead
+  `/api/v1/` nginx `location` block proxying to a now-nothing port 8006 —
+  harmless (scanners get a clean connection-refused instead of a 404) but
+  could be deleted from the nginx configs too, next time someone's in there.
+- **~~Accumulated deploy backups~~ [Resolved 2026-09-11]**: `/root/vitaloop-release-backups`
+  pruned from 52 dated directories to the last 5; `/var/backups/vitaloop-*`
+  pruned from years of accumulation to the last 3 files per category (or
+  removed outright for single-file/one-off dirs). Freed ~3GB. No retention
+  automation was added — this was a one-time manual prune, it will
+  re-accumulate the same way if nothing changes upstream.
 - **`docker-compose.prod.yml` frontend service**: builds correctly, runs
   healthy, serves zero real traffic. Either finish cutting the real site
   over to it, or stop maintaining it as if it matters.
 - **CI/CD deploy job never runs** — three failing test/build steps block it
   (see [CI/CD status](#cicd-status-not-actually-deploying-anything)).
-- **Disk at ~80-83%** even after clearing 3.5GB of build cache — worth a
-  recurring `docker builder prune` in the deploy script, plus a real look at
-  what's in `/opt`, `/root/.cache`, `/root/.vscode-server` (2.3GB) before it
-  creeps back up.
-- **No Sentry / error tracking** — see [Section 4](#4-monitoring--alerting).
-  This is the biggest single gap; everything else here was found by manual
-  SSH archaeology, not by anything alerting on its own.
+- **Disk usage**: after clearing 3.5GB of build cache plus the two items
+  above, down to ~70% from 89% at the start of this audit. Still worth a
+  recurring `docker builder prune` in the deploy script so it doesn't creep
+  back — every rebuild during this audit added another gigabyte-plus of
+  cache.
+- **No error tracking (Sentry or otherwise)** — a deliberate call, not an
+  oversight; see [Section 4](#4-monitoring--alerting) for the full story
+  including the version-incompatibility bug that surfaced when it was
+  briefly tried. Still the single biggest monitoring blind spot: everything
+  else in this list was found by manual SSH archaeology, not by anything
+  alerting on its own.
 
 ---
 

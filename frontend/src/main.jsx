@@ -6,19 +6,7 @@ import { Toaster } from 'react-hot-toast'
 import { HelmetProvider } from 'react-helmet-async'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
-import * as Sentry from '@sentry/react'
 import { supabase, hasSupabaseConfig } from './lib/supabase.js'
-
-const sentryDsn = import.meta.env.VITE_SENTRY_DSN
-if (sentryDsn) {
-  Sentry.init({
-    dsn: sentryDsn,
-    environment: import.meta.env.MODE,
-    tracesSampleRate: 0.1,
-    replaysOnErrorSampleRate: 0,
-    integrations: [],
-  })
-}
 
 const queryClient = new QueryClient({
   defaultOptions: {
