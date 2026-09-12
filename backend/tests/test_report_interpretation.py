@@ -231,3 +231,89 @@ def test_reticulocyte_markers_map_to_knowledge_and_match_rule():
 
     assert evaluation["matched_rules"][0]["rule_key"] == "rule_low_reticulocyte_volume_indices_context"
     assert evaluation["recommendation_keys"] == ["anemia_workup", "serum_iron_tibc_recheck"]
+
+
+def test_iron_deficiency_anemia_pattern_detected():
+    biomarkers = [
+        {"name": "Ferritin", "canonical_name": "ferritin", "value": 8, "unit": "ng/mL", "status": "DEFICIENT"},
+        {"name": "Hemoglobin", "canonical_name": "hemoglobin", "value": 10.2, "unit": "g/dL", "status": "DEFICIENT"},
+        {"name": "MCV", "canonical_name": "mcv", "value": 78, "unit": "fL", "status": "OPTIMAL"},
+    ]
+    report = build_interpreted_report(
+        biomarkers=biomarkers,
+        profile={"age": 34, "sex": "female", "height_cm": 165, "weight_kg": 60},
+        locale="en",
+    )
+    keys = {item["key"] for item in report["patterns"]}
+    assert "iron_deficiency_anemia" in keys
+
+
+def test_cardiovascular_risk_pattern_is_high_priority_when_ldl_and_hdl_both_flagged():
+    biomarkers = [
+        {"name": "LDL", "canonical_name": "ldl", "value": 210, "unit": "mg/dL", "status": "ELEVATED"},
+        {"name": "HDL", "canonical_name": "hdl", "value": 32, "unit": "mg/dL", "status": "DEFICIENT"},
+    ]
+    report = build_interpreted_report(biomarkers=biomarkers, profile={}, locale="en")
+    cardio = next(item for item in report["patterns"] if item["key"] == "cardiovascular_risk")
+    assert cardio["priority"] == "high"
+
+
+def test_electrolyte_kidney_safety_pattern_outranks_lower_priority_patterns():
+    """A high-priority safety pattern must sort ahead of medium-priority ones
+    and drive the report headline, since it needs prompter attention.
+    """
+    biomarkers = [
+        {"name": "Potassium", "canonical_name": "potassium", "value": 6.8, "unit": "mmol/L", "status": "ELEVATED"},
+        {"name": "Creatinine", "canonical_name": "creatinine", "value": 2.4, "unit": "mg/dL", "status": "ELEVATED"},
+        {"name": "Glucose", "canonical_name": "glucose", "value": 210, "unit": "mg/dL", "status": "ELEVATED"},
+    ]
+    report = build_interpreted_report(biomarkers=biomarkers, profile={}, locale="en")
+    assert report["patterns"][0]["key"] == "electrolyte_kidney_safety"
+    assert report["patterns"][0]["priority"] == "high"
+    assert report["summary"]["priority"] == "high"
+
+
+def test_micronutrient_cluster_needs_at_least_two_low_markers():
+    single_low = [
+        {"name": "Vitamin D", "canonical_name": "vitamin_d", "value": 15, "unit": "ng/mL", "status": "DEFICIENT"},
+    ]
+    report = build_interpreted_report(biomarkers=single_low, profile={}, locale="en")
+    keys = {item["key"] for item in report["patterns"]}
+    assert "micronutrient_deficiency_cluster" not in keys
+
+    two_low = [
+        {"name": "Vitamin D", "canonical_name": "vitamin_d", "value": 15, "unit": "ng/mL", "status": "DEFICIENT"},
+        {"name": "Vitamin B12", "canonical_name": "b12", "value": 150, "unit": "pg/mL", "status": "DEFICIENT"},
+    ]
+    report = build_interpreted_report(biomarkers=two_low, profile={}, locale="en")
+    keys = {item["key"] for item in report["patterns"]}
+    assert "micronutrient_deficiency_cluster" in keys
+
+
+def test_multiple_patterns_can_appear_together():
+    biomarkers = [
+        {"name": "Ferritin", "canonical_name": "ferritin", "value": 8, "unit": "ng/mL", "status": "DEFICIENT"},
+        {"name": "Hemoglobin", "canonical_name": "hemoglobin", "value": 10.2, "unit": "g/dL", "status": "DEFICIENT"},
+        {"name": "TSH", "canonical_name": "tsh", "value": 9.1, "unit": "mIU/L", "status": "ELEVATED"},
+    ]
+    report = build_interpreted_report(biomarkers=biomarkers, profile={}, locale="en")
+    keys = {item["key"] for item in report["patterns"]}
+    assert {"iron_deficiency_anemia", "thyroid_dysfunction"} <= keys
+
+
+def test_uk_locale_pattern_copy_is_translated():
+    biomarkers = [
+        {"name": "ALT", "canonical_name": "alt", "value": 180, "unit": "U/L", "status": "ELEVATED"},
+    ]
+    report = build_interpreted_report(biomarkers=biomarkers, profile={}, locale="uk")
+    liver = next(item for item in report["patterns"] if item["key"] == "liver_stress")
+    assert "печінк" in liver["title"].lower()
+
+
+def test_no_specific_pattern_falls_back_to_generic():
+    biomarkers = [
+        {"name": "Zinc", "canonical_name": "zinc", "value": 50, "unit": "umol/L", "status": "ELEVATED"},
+    ]
+    report = build_interpreted_report(biomarkers=biomarkers, profile={}, locale="en")
+    assert len(report["patterns"]) == 1
+    assert report["patterns"][0]["key"] == "generic_abnormal_markers_context_required"
