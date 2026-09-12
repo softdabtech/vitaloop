@@ -1030,6 +1030,7 @@ async def run_lab_analysis_pipeline(
         safety_result=safety_result,
         health_context=health_context,
         profile=user_profile,
+        symptoms=normalized_symptoms,
         locale=locale,
     )
     evidence_gaps = build_evidence_gaps(

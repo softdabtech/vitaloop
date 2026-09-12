@@ -14,10 +14,12 @@ planner buckets what already exists into a stable, UI-ready shape instead of
 leaving callers to re-derive "what should I look at first" from five
 separate objects each with their own priority vocabulary.
 
-symptom_drivers stays empty for now — it needs symptom-to-marker linking
-that report_interpretation.py's pattern engine does not do yet (patterns are
-detected purely from biomarker values); documented as deferred, not silently
-dropped.
+symptom_drivers is populated from each pattern's symptom_signal (see
+report_interpretation.py::_attach_symptom_links), which matches reported
+symptoms against domain_registry.py's existing symptom_aliases per domain —
+set-membership against data that already exists, not new diagnostic
+reasoning. It stays empty when no symptoms were reported or none matched a
+detected pattern's domain.
 """
 
 from __future__ import annotations
@@ -71,6 +73,22 @@ def build_clinical_priority_planner(
             buckets["lifestyle_opportunities"].append(item)
         else:
             buckets["review_soon"].append(item)
+
+        # Symptom-lab linking (2026-09-12 audit follow-up): report_interpretation.py
+        # now attaches symptom_signal to every pattern by matching reported
+        # symptoms against domain_registry.py's existing symptom_aliases. A
+        # pattern with a matched symptom is ALSO a symptom driver — it stays
+        # in its priority bucket above too, since urgency and "this explains
+        # a symptom" are different axes.
+        symptom_signal = pattern.get("symptom_signal") or []
+        if symptom_signal:
+            buckets["symptom_drivers"].append(
+                {
+                    **item,
+                    "reason": f"Reported symptom(s) {', '.join(symptom_signal)} align with this domain.",
+                    "symptoms": list(symptom_signal),
+                }
+            )
 
     safety_risk_level = str((safety_result or {}).get("risk_level") or "").strip().lower()
     safety_status = str((safety_result or {}).get("status") or "").strip().lower()

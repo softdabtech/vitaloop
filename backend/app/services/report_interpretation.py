@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from app.services.knowledge.domain_registry import list_domain_definitions
+
 
 REPORT_INTERPRETATION_VERSION = "interpreted_report_v1"
 
@@ -772,6 +774,58 @@ def _electrolyte_kidney_safety_pattern(
 _PATTERN_PRIORITY_RANK = {"high": 0, "medium": 1, "low": 2}
 
 
+def _domain_symptom_aliases() -> Dict[str, List[str]]:
+    """Static domain->symptom_aliases map (domain_registry.py's built-in
+    registry — the managed/Supabase override is intentionally not consulted
+    here: this is a lightweight, synchronous lookup used inside a pattern's
+    construction, and list_domain_definitions() already reflects any
+    override at the layer that resolves domains, e.g. health_state_engine).
+    """
+    return {
+        item["key"]: [str(alias).strip().lower() for alias in item.get("symptom_aliases") or []]
+        for item in list_domain_definitions()
+    }
+
+
+def _symptoms_for_domain(domain: str, symptoms: List[str], alias_map: Dict[str, List[str]]) -> List[str]:
+    aliases = alias_map.get(domain) or []
+    if not aliases or not symptoms:
+        return []
+    matched = []
+    for symptom in symptoms:
+        symptom_lower = str(symptom).strip().lower()
+        if not symptom_lower:
+            continue
+        if any(alias in symptom_lower or symptom_lower in alias for alias in aliases):
+            matched.append(symptom_lower)
+    return matched
+
+
+def _attach_symptom_links(patterns: List[Dict[str, Any]], symptoms: List[str]) -> List[Dict[str, Any]]:
+    """Symptom-lab cluster linking (2026-09-12 audit, deferred item under
+    'not implemented yet' #1 / clinical_priority_planner's symptom_drivers
+    bucket): each detected pattern already carries a domain
+    (iron_status/cardiovascular/thyroid/...) that matches a key in
+    domain_registry.py's static registry, which already maintains a
+    symptom_aliases list per domain for exactly this kind of matching
+    (health_state_engine.py already consumes it the same way). Wiring
+    reported symptoms against that existing list — instead of inventing a
+    second, separate symptom taxonomy — lets a pattern say "the user also
+    reported fatigue, which is a recognized symptom for this domain" without
+    any new clinical judgment: it's set membership against data that already
+    exists, not diagnostic reasoning.
+    """
+    if not symptoms:
+        return [{**pattern, "symptom_signal": []} for pattern in patterns]
+    alias_map = _domain_symptom_aliases()
+    linked = []
+    for pattern in patterns:
+        domain = str(pattern.get("domain") or "").strip().lower()
+        matched_symptoms = _symptoms_for_domain(domain, symptoms, alias_map)
+        linked.append({**pattern, "symptom_signal": matched_symptoms})
+    return linked
+
+
 def _generic_pattern(
     biomarkers: List[Dict[str, Any]],
     *,
@@ -855,6 +909,7 @@ def build_interpreted_report(
     safety_result: Dict[str, Any] | None = None,
     health_context: Dict[str, Any] | None = None,
     profile: Dict[str, Any] | None = None,
+    symptoms: List[str] | None = None,
     locale: str = "en",
 ) -> Dict[str, Any]:
     locale = _locale(locale)
@@ -890,6 +945,9 @@ def build_interpreted_report(
     else:
         generic = _generic_pattern(biomarkers or [], profile=profile, locale=locale)
         patterns = [generic] if generic else []
+
+    normalized_symptoms = [str(item).strip().lower() for item in (symptoms or []) if str(item).strip()]
+    patterns = _attach_symptom_links(patterns, normalized_symptoms)
 
     flagged = [item for item in biomarkers or [] if _status(item) in {"DEFICIENT", "ELEVATED", "BORDERLINE"}]
     stable = [item for item in biomarkers or [] if _is_in_range(item)]

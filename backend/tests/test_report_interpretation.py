@@ -317,3 +317,28 @@ def test_no_specific_pattern_falls_back_to_generic():
     report = build_interpreted_report(biomarkers=biomarkers, profile={}, locale="en")
     assert len(report["patterns"]) == 1
     assert report["patterns"][0]["key"] == "generic_abnormal_markers_context_required"
+
+
+def test_symptom_signal_attached_when_reported_symptom_matches_pattern_domain():
+    biomarkers = [
+        {"name": "Ferritin", "canonical_name": "ferritin", "value": 8, "unit": "ng/mL", "status": "DEFICIENT"},
+        {"name": "Hemoglobin", "canonical_name": "hemoglobin", "value": 10.2, "unit": "g/dL", "status": "DEFICIENT"},
+    ]
+    report = build_interpreted_report(
+        biomarkers=biomarkers,
+        profile={},
+        symptoms=["fatigue", "unrelated symptom"],
+        locale="en",
+    )
+    iron_pattern = next(item for item in report["patterns"] if item["key"] == "iron_deficiency_anemia")
+    assert "fatigue" in iron_pattern["symptom_signal"]
+    assert "unrelated symptom" not in iron_pattern["symptom_signal"]
+
+
+def test_no_symptom_signal_when_no_symptoms_reported():
+    biomarkers = [
+        {"name": "LDL", "canonical_name": "ldl", "value": 210, "unit": "mg/dL", "status": "ELEVATED"},
+    ]
+    report = build_interpreted_report(biomarkers=biomarkers, profile={}, locale="en")
+    cardio = next(item for item in report["patterns"] if item["key"] == "cardiovascular_risk")
+    assert cardio["symptom_signal"] == []
