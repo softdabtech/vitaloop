@@ -169,29 +169,65 @@ export function endpointFailureMessage(path, status, data, body) {
   return `${path} returned HTTP ${status}${snippet}`
 }
 
+// 2026-09-12: a normal deploy (docker compose up -d --force-recreate
+// backend, see .github/workflows/ci-cd.yml) stops the single backend
+// container and starts a fresh one — a real, expected ~15-30s gap while
+// uvicorn/onnxruntime cold-start, not an outage. This monitor used to alert
+// on the FIRST failed sample it saw, so a run landing inside that window
+// (or several runs in a row, given how often this project deploys) fired a
+// production CRITICAL email per sample — dozens of alerts for one benign
+// deploy, observed directly (2026-09-12, ~09:45-11:45 UTC). Retrying a few
+// times with a short delay before treating a JSON-endpoint check as a real
+// failure absorbs a routine recreate window without weakening detection of
+// an actual outage, which will still exceed the retry budget and alert.
+const RETRY_ATTEMPTS = Number(process.env.VITALOOP_SMOKE_RETRY_ATTEMPTS || 3)
+const RETRY_DELAY_MS = Number(process.env.VITALOOP_SMOKE_RETRY_DELAY_MS || 5000)
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 async function checkJsonEndpoint(path, predicate = (data) => data) {
   const endpoint = `${CONFIG.apiBaseUrl.replace(/\/$/, '')}${path}`
-  try {
-    const res = await fetch(endpoint, { signal: AbortSignal.timeout(CONFIG.timeoutMs) })
-    const text = await res.text()
-    let data = null
-    try { data = JSON.parse(text) } catch {}
-    assertOk(res.ok && predicate(data), {
-      code: `SMOKE_API_${path.replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '').toUpperCase()}`,
-      message: endpointFailureMessage(path, res.status, data, text),
-      endpoint,
-      status: res.status,
-      body: text.slice(0, 500),
-    })
-    if (res.ok && predicate(data)) {
-      completeCheck({ code: `SMOKE_API_${path.replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '').toUpperCase()}`, endpoint, status: res.status })
+  const codeBase = `SMOKE_API_${path.replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '').toUpperCase()}`
+  let lastFailure = null
+  let lastException = null
+
+  for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt += 1) {
+    lastFailure = null
+    lastException = null
+    try {
+      const res = await fetch(endpoint, { signal: AbortSignal.timeout(CONFIG.timeoutMs) })
+      const text = await res.text()
+      let data = null
+      try { data = JSON.parse(text) } catch {}
+      if (res.ok && predicate(data)) {
+        completeCheck({ code: codeBase, endpoint, status: res.status })
+        return
+      }
+      lastFailure = {
+        code: codeBase,
+        message: endpointFailureMessage(path, res.status, data, text),
+        endpoint,
+        status: res.status,
+        body: text.slice(0, 500),
+      }
+    } catch (error) {
+      lastException = {
+        code: `${codeBase}_EXCEPTION`,
+        message: error.message,
+        endpoint,
+      }
     }
-  } catch (error) {
-    failures.push({
-      code: `SMOKE_API_${path.replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '').toUpperCase()}_EXCEPTION`,
-      message: error.message,
-      endpoint,
-    })
+    if (attempt < RETRY_ATTEMPTS) {
+      await sleep(RETRY_DELAY_MS)
+    }
+  }
+
+  if (lastFailure) {
+    assertOk(false, lastFailure)
+  } else if (lastException) {
+    failures.push(lastException)
   }
 }
 
