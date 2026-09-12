@@ -29,7 +29,7 @@ from app.services.clinical_engine.normalizer import normalize_biomarkers as _eng
 from app.services.clinical_engine import prioritize_biomarkers as _engine_prioritize_biomarkers
 from app.services.clinical_engine import build_risk_flags as _engine_build_risk_flags
 from app.services.protocol_enrichment import enrich_protocol
-from app.services.report_interpretation import REPORT_INTERPRETATION_VERSION, build_interpreted_report
+from app.services.report_interpretation import REPORT_INTERPRETATION_VERSION, build_interpreted_report, detect_patterns
 from app.services.safety import (
     sanitize_knowledge_evaluation_for_safety,
     sanitize_knowledge_report_for_safety,
@@ -918,6 +918,49 @@ async def run_lab_analysis_pipeline(
             if isinstance(item, dict)
         ],
     }
+    # Coverage-aware LLM prompt contract, part 2 (2026-09-12 audit item #4):
+    # part 1 above only covered marker_coverage detail. The pattern engine
+    # and evidence_gaps are both pure functions of biomarkers/profile/
+    # symptoms/health_states/clinical_integrity/marker_coverage — all
+    # already available at this point — so they can run once, HERE, before
+    # the LLM call, instead of only after it (their real, final computation
+    # for the response still happens later via build_interpreted_report/
+    # build_evidence_gaps, which call the same deterministic detect_patterns()
+    # logic against the same inputs — so the LLM sees exactly what the final
+    # response will contain, not an approximation, at the cost of computing
+    # the (cheap, pure, no I/O) pattern detection twice rather than adding a
+    # cache-or-pass-through parameter for a single extra call. The full
+    # per-atom rule evidence tree is deliberately
+    # left out of the prompt — it's raw evaluator internals (thresholds,
+    # unit-conversion bookkeeping) with no bearing on the patient-facing text
+    # the LLM writes; matched_rules above already gives it the rule-level
+    # summary that matters.
+    _early_patterns = detect_patterns(normalized_biomarkers, profile=user_profile, symptoms=normalized_symptoms, locale=locale)
+    _early_evidence_gaps = build_evidence_gaps(
+        biomarkers=normalized_biomarkers,
+        health_states=health_states,
+        interpreted_report={"patterns": _early_patterns},
+        clinical_integrity=clinical_integrity,
+        marker_coverage=_enriched_mc,
+    )
+    clinical_context["detected_patterns"] = [
+        {
+            "key": p.get("key"),
+            "domain": p.get("domain"),
+            "title": p.get("title"),
+            "priority": p.get("priority"),
+            "confidence": p.get("confidence"),
+            "summary": p.get("summary"),
+            "symptom_signal": p.get("symptom_signal") or [],
+        }
+        for p in _early_patterns
+    ]
+    clinical_context["evidence_gaps_summary"] = _early_evidence_gaps.get("summary") or {}
+    clinical_context["evidence_gaps_preview"] = [
+        {"domain": g.get("domain"), "missing_marker": g.get("missing_marker"), "priority": g.get("priority"), "reason": g.get("reason")}
+        for g in (_early_evidence_gaps.get("gaps") or [])[:15]
+    ]
+
     ai_protocol = []
     ai_orchestration = {
         "version": "ai_orchestration_v1",

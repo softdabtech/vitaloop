@@ -900,27 +900,30 @@ def _nutrition_context(knowledge_report: Dict[str, Any] | None) -> Dict[str, Any
     return {}
 
 
-def build_interpreted_report(
-    *,
+def detect_patterns(
     biomarkers: List[Dict[str, Any]],
-    knowledge_report: Dict[str, Any] | None = None,
-    health_states: Dict[str, Any] | None = None,
-    explainability: Dict[str, Any] | None = None,
-    safety_result: Dict[str, Any] | None = None,
-    health_context: Dict[str, Any] | None = None,
+    *,
     profile: Dict[str, Any] | None = None,
     symptoms: List[str] | None = None,
     locale: str = "en",
-) -> Dict[str, Any]:
+) -> List[Dict[str, Any]]:
+    """Run every pattern detector and return the matched/ranked/symptom-linked list.
+
+    Extracted out of build_interpreted_report() (2026-09-12 audit follow-up,
+    "full evidence_gaps/patterns integration into the LLM context") so the
+    pipeline can compute the SAME pattern list once, early — before the LLM
+    call — and feed it into clinical_context, instead of the LLM prompt only
+    ever seeing raw matched_rules/risk_flags and the patterns themselves
+    being computed only after the LLM already ran.
+    """
     locale = _locale(locale)
     profile = profile if isinstance(profile, dict) else {}
 
-    # Broad clinical pattern engine (2026-09-12 audit item #3): run every
-    # specific detector and keep every one that matched, ranked by priority
-    # then confidence — a panel can legitimately show more than one pattern
-    # at once (e.g. iron-deficiency anemia AND a lipid pattern together).
-    # Only fall back to the generic "some markers are abnormal" message when
-    # NOT ONE specific detector matched anything.
+    # Run every specific detector and keep every one that matched, ranked by
+    # priority then confidence — a panel can legitimately show more than one
+    # pattern at once (e.g. iron-deficiency anemia AND a lipid pattern
+    # together). Only fall back to the generic "some markers are abnormal"
+    # message when NOT ONE specific detector matched anything.
     specific_patterns = [
         item
         for item in [
@@ -947,7 +950,24 @@ def build_interpreted_report(
         patterns = [generic] if generic else []
 
     normalized_symptoms = [str(item).strip().lower() for item in (symptoms or []) if str(item).strip()]
-    patterns = _attach_symptom_links(patterns, normalized_symptoms)
+    return _attach_symptom_links(patterns, normalized_symptoms)
+
+
+def build_interpreted_report(
+    *,
+    biomarkers: List[Dict[str, Any]],
+    knowledge_report: Dict[str, Any] | None = None,
+    health_states: Dict[str, Any] | None = None,
+    explainability: Dict[str, Any] | None = None,
+    safety_result: Dict[str, Any] | None = None,
+    health_context: Dict[str, Any] | None = None,
+    profile: Dict[str, Any] | None = None,
+    symptoms: List[str] | None = None,
+    locale: str = "en",
+) -> Dict[str, Any]:
+    locale = _locale(locale)
+    profile = profile if isinstance(profile, dict) else {}
+    patterns = detect_patterns(biomarkers or [], profile=profile, symptoms=symptoms, locale=locale)
 
     flagged = [item for item in biomarkers or [] if _status(item) in {"DEFICIENT", "ELEVATED", "BORDERLINE"}]
     stable = [item for item in biomarkers or [] if _is_in_range(item)]
