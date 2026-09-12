@@ -169,6 +169,13 @@ def assemble_frozen_response(
         "analysis_input_quality_gate": input_snapshot.get("analysis_input_quality_gate"),
         "clinical_data_integrity": input_snapshot.get("clinical_data_integrity"),
         "evidence_gaps": input_snapshot.get("evidence_gaps"),
+        # Follow-up on 2026-09-12 audit items #2/#3/#6: same frozen-verbatim
+        # treatment as evidence_gaps directly above — persisted into
+        # input_snapshot at generation time by lab_analysis_pipeline.py, not
+        # recomputed here.
+        "clinical_priority_planner": input_snapshot.get("clinical_priority_planner"),
+        "next_best_tests": input_snapshot.get("next_best_tests"),
+        "clinical_story": input_snapshot.get("clinical_story"),
         "safety_result": safety_result,
         # Pure locale-template boilerplate derived from the frozen status —
         # no AI/knowledge-rule recomputation involved (see

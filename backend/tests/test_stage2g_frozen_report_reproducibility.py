@@ -689,3 +689,33 @@ def test_report_history_module_importable_and_constants_stable():
     assert report_history.REPORT_SOURCE_FROZEN == "frozen"
     assert report_history.REPORT_SOURCE_REGENERATED == "regenerated"
     assert report_history.REPORT_SOURCE_LEGACY_FALLBACK == "legacy_fallback"
+
+
+def test_frozen_response_serves_persisted_clinical_story_and_priority_planner():
+    """Follow-up on 2026-09-12 audit items #2/#3/#6: clinical_story,
+    clinical_priority_planner, and next_best_tests are persisted into
+    input_snapshot at generation time (same treatment as evidence_gaps) and
+    must be served verbatim on a frozen read, not silently dropped.
+    """
+    frozen = _frozen_row(
+        input_snapshot={
+            "analysis_input_quality_gate": {"decision": "auto_continue"},
+            "clinical_data_integrity": {"status": "ok"},
+            "evidence_gaps": {"summary": {"gap_count": 1}},
+            "clinical_priority_planner": {"buckets": {"urgent_review": [{"key": "electrolyte_kidney_safety"}]}},
+            "next_best_tests": {"recommended_tests": [{"marker": "ferritin"}]},
+            "clinical_story": {"headline": "FROZEN clinical story headline"},
+        }
+    )
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["clinical_priority_planner"]["buckets"]["urgent_review"][0]["key"] == "electrolyte_kidney_safety"
+    assert response["next_best_tests"]["recommended_tests"][0]["marker"] == "ferritin"
+    assert response["clinical_story"]["headline"] == "FROZEN clinical story headline"

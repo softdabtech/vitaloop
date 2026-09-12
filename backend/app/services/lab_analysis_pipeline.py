@@ -1259,6 +1259,16 @@ async def run_lab_analysis_pipeline(
                     "health_states": health_states,
                     "trend_analysis": trend_analysis,
                     "evidence_gaps": evidence_gaps,
+                    # Follow-up on 2026-09-12 audit items #2/#3/#6: persisted
+                    # verbatim the same way evidence_gaps already is above —
+                    # describes the analysis AT GENERATION TIME, not
+                    # recomputed on a later frozen read (see
+                    # report_history.py::assemble_frozen_response, which now
+                    # reads these back out of input_snapshot the same way it
+                    # already does for evidence_gaps).
+                    "clinical_priority_planner": clinical_priority_planner,
+                    "next_best_tests": next_best_tests,
+                    "clinical_story": clinical_story,
                     "version_provenance": version_provenance,
                     "ai_orchestration": ai_orchestration,
                     "quality_snapshot": quality_snapshot,
