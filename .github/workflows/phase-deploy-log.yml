@@ -119,13 +119,13 @@ jobs:
           git add DEPLOYMENTS.log
           git commit -m "🚀 log: ${{ steps.deploy-info.outputs.phase }} deployed to production
 
-- Commit: ${{ steps.deploy-info.outputs.commit_sha }}
-- Author: ${{ steps.deploy-info.outputs.commit_author }}
-- Status: ✅ All checks passed + health check OK
-- Environment: https://vitaloop.today
+          - Commit: ${{ steps.deploy-info.outputs.commit_sha }}
+          - Author: ${{ steps.deploy-info.outputs.commit_author }}
+          - Status: ✅ All checks passed + health check OK
+          - Environment: https://vitaloop.today
 
-This commit documents the successful deployment of ${{ steps.deploy-info.outputs.phase }}.
-All changes are now live in production." || echo "No changes to commit"
+          This commit documents the successful deployment of ${{ steps.deploy-info.outputs.phase }}.
+          All changes are now live in production." || echo "No changes to commit"
 
           git push origin main || echo "Push skipped (no new commits)"
 
