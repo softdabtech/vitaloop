@@ -195,8 +195,18 @@ def build_clinical_story(
         "safety_constraints": {
             "status": (safety_result or {}).get("status"),
             "risk_level": (safety_result or {}).get("risk_level"),
+            # P1 fix (Codex recheck, 2026-09-12): safety_engine.py's real
+            # field is doctor_discussion_required — requires_doctor doesn't
+            # exist on safety_result's actual shape (see
+            # safety/safety_engine.py::validate_report, ~line 897/931/972),
+            # so this always evaluated to False from urgent_review_required
+            # alone, silently understating the need for clinician discussion
+            # even when the safety engine had already flagged it (caught
+            # live: a 55-marker run had doctor_discussion_required=true but
+            # clinical_story.safety_constraints.requires_doctor=false).
             "requires_doctor": bool(
-                (safety_result or {}).get("requires_doctor") or (safety_result or {}).get("urgent_review_required")
+                (safety_result or {}).get("doctor_discussion_required")
+                or (safety_result or {}).get("urgent_review_required")
             ),
         },
         "prioritized_actions": (priority_planner or {}).get("buckets") or {key: [] for key in _BUCKET_ORDER},

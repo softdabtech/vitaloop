@@ -514,7 +514,18 @@ async def _persist_usage_event(
         }
         await svc._run(lambda: sb.table("llm_usage_events").insert(row).execute())
     except Exception as ex:
-        logger.warning("llm_usage_event_failed task=%s reason=%s", task_name, ex)
+        # P2 fix (Codex recheck, 2026-09-12): a no-persist direct-service
+        # probe (e.g. QA/diagnostic scripts calling run_lab_analysis_pipeline
+        # with a synthetic, never-persisted upload_id) is the ONLY way this
+        # hits llm_usage_events.upload_id's foreign-key constraint — every
+        # real production caller already has a genuine lab_uploads row for
+        # upload_id before the LLM ever runs. That's an expected, harmless
+        # side effect of that testing methodology, not a real usage-logging
+        # failure worth a warning-level alert; anything else here still is.
+        if "foreign key" in str(ex).lower() or "fkey" in str(ex).lower():
+            logger.debug("llm_usage_event_skipped_unknown_upload task=%s upload_id=%s reason=%s", task_name, upload_id, ex)
+        else:
+            logger.warning("llm_usage_event_failed task=%s reason=%s", task_name, ex)
 
 
 def _is_retryable_llm_error(exc: BaseException) -> bool:

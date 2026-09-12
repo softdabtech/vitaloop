@@ -98,3 +98,26 @@ def test_clinical_story_composes_all_pieces():
     assert story["uncertainty"]["gap_count"] == 3
     assert story["uncertainty"]["high_priority_gap_count"] == 1
     assert story["disclaimer"] == "Educational only."
+
+
+def test_clinical_story_reads_doctor_discussion_required_not_requires_doctor():
+    """P1 fix (Codex recheck, 2026-09-12): safety_engine.py's real field is
+    doctor_discussion_required — requires_doctor does not exist on
+    safety_result's actual shape. This reproduces the exact real-world shape
+    (doctor_discussion_required=True, urgent_review_required=False) that
+    previously fell through to False, silently understating the need for
+    clinician discussion even though the safety engine had already flagged
+    it.
+    """
+    safety_result = {
+        "status": "approved_with_warnings",
+        "risk_level": "medical_review",
+        "urgent_review_required": False,
+        "doctor_discussion_required": True,
+    }
+    story = build_clinical_story(
+        interpreted_report={"summary": {}, "patterns": []},
+        safety_result=safety_result,
+        priority_planner=build_clinical_priority_planner(safety_result=safety_result),
+    )
+    assert story["safety_constraints"]["requires_doctor"] is True
