@@ -49,9 +49,22 @@ jobs:
           echo "phase=$PHASE" >> $GITHUB_OUTPUT
           echo "phase_num=$PHASE_NUM" >> $GITHUB_OUTPUT
           echo "commit_sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
-          echo "commit_msg=$COMMIT_MSG" >> $GITHUB_OUTPUT
           echo "commit_author=$COMMIT_AUTHOR" >> $GITHUB_OUTPUT
           echo "commit_time=$COMMIT_TIME" >> $GITHUB_OUTPUT
+
+          # 2026-09-12: COMMIT_MSG is the full commit body (git log %B) and
+          # is very often multi-line (every commit in this session's fix
+          # batch has one) — a plain "key=$value" line breaks
+          # GITHUB_OUTPUT's parser the moment the value contains a newline
+          # ("Unable to process file command 'output' successfully" /
+          # "Invalid format"), which is exactly what failed here once the
+          # workflow's earlier YAML parse error (fixed separately) stopped
+          # masking it. Use the documented multiline delimiter form instead.
+          {
+            echo "commit_msg<<COMMIT_MSG_EOF"
+            echo "$COMMIT_MSG"
+            echo "COMMIT_MSG_EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create deployment log entry
         if: steps.deploy-info.outputs.phase_num != '0'
