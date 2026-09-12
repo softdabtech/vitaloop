@@ -745,6 +745,22 @@ async def generate_protocol(
             "\n\n## Clinical Engine Analysis (deterministic, already computed)\n"
             "Use this as the authoritative analysis of the biomarkers above. "
             "Do NOT contradict the matched rules or safety alerts below.\n\n"
+            # Coverage-aware LLM prompt contract (2026-09-12 clinical analyzer
+            # audit item #4): clinical_context now names the specific markers
+            # in no_matching_rule_markers/unit_blocked_markers instead of only
+            # counting them — this instruction is what actually makes that
+            # data useful, telling the model it must not fill the gap with an
+            # unsupported inference just because the marker happened to be in
+            # the panel.
+            "IMPORTANT: 'no_matching_rule_markers' lists markers present in the "
+            "panel that no active clinical rule evaluates yet, and "
+            "'unit_blocked_markers' lists markers whose unit could not be "
+            "reconciled with the rule that would otherwise apply. For markers "
+            "in either list, do NOT state or imply a clinical interpretation, "
+            "risk level, or recommendation based on that marker's value alone — "
+            "note it as measured-but-not-yet-interpreted context if relevant, "
+            "and only use the matched_rules/safety_alerts already provided as "
+            "the basis for any conclusion.\n\n"
             f"{clinical_context_str}"
         )
     try:

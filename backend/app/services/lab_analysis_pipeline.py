@@ -12,6 +12,7 @@ from app.services.ai_orchestrator import generate_ai_protocol_orchestrated
 from app.services.analysis_quality_gate import build_analysis_input_quality_gate
 from app.services.analysis_quality_snapshot import build_analysis_quality_snapshot
 from app.services.clinical_data_integrity import validate_clinical_data_integrity
+from app.services.clinical_priority_planner import build_clinical_priority_planner, build_clinical_story
 from app.services.cost_analytics import record_analysis_cost
 from app.services.evidence_gaps import build_evidence_gaps
 from app.services.explainability import build_recommendation_explanations
@@ -897,6 +898,24 @@ async def run_lab_analysis_pipeline(
             "unit_blocked": len(_enriched_mc.get("unit_blocked", [])),
             "unknown_status": len(_enriched_mc.get("unknown_status", [])),
         },
+        # Coverage-aware LLM prompt contract, part 1 (2026-09-12 audit item
+        # #4 of "not implemented yet"): the summary above only ever told the
+        # LLM HOW MANY markers had no rule/were unit-blocked, never WHICH
+        # ones — so the model had no way to know it must not silently infer
+        # an interpretation for, say, LDL just because the marker was
+        # present in the panel. Naming them explicitly lets the prompt tell
+        # the model which markers are unsupported/unsafe to interpret
+        # without a rule backing it up.
+        "no_matching_rule_markers": sorted(_enriched_mc.get("no_matching_rule") or [])[:30],
+        "unit_blocked_markers": [
+            {
+                "marker": item.get("marker"),
+                "reported_unit": item.get("reported_unit"),
+                "expected_unit": item.get("expected_unit"),
+            }
+            for item in (knowledge_evaluation.get("unevaluated_markers") or [])[:20]
+            if isinstance(item, dict)
+        ],
     }
     ai_protocol = []
     ai_orchestration = {
@@ -1019,6 +1038,24 @@ async def run_lab_analysis_pipeline(
         clinical_integrity=clinical_integrity,
         marker_coverage=_enriched_mc,
     )
+    # Clinical priority planner + clinical_story (2026-09-12 audit, "not
+    # implemented yet" items #2 and #6): pure composition over the pieces
+    # already computed above — no new clinical logic, just a stable,
+    # UI-ready "what should I look at first" shape instead of every caller
+    # re-deriving it from five separate objects.
+    clinical_priority_planner = build_clinical_priority_planner(
+        patterns=interpreted_report.get("patterns"),
+        health_states=health_states,
+        safety_result=safety_result,
+        evidence_gaps=evidence_gaps,
+    )
+    clinical_story = build_clinical_story(
+        interpreted_report=interpreted_report,
+        safety_result=safety_result,
+        priority_planner=clinical_priority_planner,
+        evidence_gaps=evidence_gaps,
+        retest_suggestions=retest_suggestions,
+    )
     output_knowledge_evaluation = _localized_knowledge_evaluation_for_response(
         knowledge_evaluation,
         knowledge_report,
@@ -1121,6 +1158,8 @@ async def run_lab_analysis_pipeline(
         "analysis_input_quality_gate": analysis_input_quality_gate,
         "clinical_data_integrity": clinical_integrity,
         "evidence_gaps": evidence_gaps,
+        "clinical_priority_planner": clinical_priority_planner,
+        "clinical_story": clinical_story,
         "safety_result": safety_result,
         "safety_notice": safety_notice,
         "explainability": explainability,
