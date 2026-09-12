@@ -451,6 +451,13 @@ def _marker_identity(item: Dict[str, Any]) -> tuple[str, str, str]:
     )
 
 
+# Sources whose biomarkers were already persisted as canonical data by an
+# earlier, separate pass through this same gate (see _is_safe_subset_eligible
+# below) — re-reading/regenerating a report for an existing upload, not a
+# fresh, never-reviewed submission.
+_CANONICAL_REPROCESSING_SOURCES = {"results_read", "report_regeneration", "results_compatibility"}
+
+
 def _is_candidate_confirmation(source_metadata: Dict[str, Any] | None) -> bool:
     if not isinstance(source_metadata, dict):
         return False
@@ -463,6 +470,32 @@ def _is_candidate_confirmation(source_metadata: Dict[str, Any] | None) -> bool:
     return bool(statuses) and statuses <= {"confirmed", "corrected"}
 
 
+def _is_safe_subset_eligible(source_metadata: Dict[str, Any] | None) -> bool:
+    """Whether it's safe to drop individually-conflicted markers and continue.
+
+    P1 fix (2026-09-12 clinical analyzer audit): originally this was true only
+    for source=="candidate_confirmation" with an all-confirmed/corrected
+    candidate batch. That left every OTHER call site
+    (results_read/report_regeneration/results_compatibility — regenerating a
+    report for an upload whose biomarkers were already persisted as canonical
+    data by a PRIOR confirm-candidates call) with no safe-subset path at all:
+    a single marker with, say, an unrecognized unit would force the entire
+    already-analyzed upload back into "needs_confirmation" on every read,
+    even though the marker had already passed this same gate once. Those
+    reprocessing sources reference biomarkers that only exist in canonical
+    storage because they cleared this gate before, so the same
+    exclude-the-conflicted-marker-and-continue logic is safe to apply there
+    unconditionally (no candidates array to check — there may not be one).
+    "candidate_confirmation" keeps its stricter, existing statuses check
+    because that is the live confirm flow, still deciding for the first time.
+    """
+    if not isinstance(source_metadata, dict):
+        return False
+    if _is_candidate_confirmation(source_metadata):
+        return True
+    return str(source_metadata.get("source") or "").strip().lower() in _CANONICAL_REPROCESSING_SOURCES
+
+
 def _continue_confirmed_safe_subset(
     *,
     normalized_biomarkers: List[Dict[str, Any]],
@@ -470,15 +503,17 @@ def _continue_confirmed_safe_subset(
     source_metadata: Dict[str, Any] | None,
     user_profile: Dict[str, Any] | None,
 ) -> tuple[List[Dict[str, Any]], Dict[str, Any], Dict[str, Any] | None]:
-    """Continue confirmed batches with the usable subset only.
+    """Continue confirmed/already-canonical batches with the usable subset only.
 
     Before confirmation, any unresolved marker-level integrity conflict still
-    blocks the upload. After explicit confirmation, one conflicted marker should
-    not keep all other confirmed markers out of canonical persistence forever;
+    blocks the upload. After explicit confirmation (or when re-reading data
+    that was already confirmed in an earlier pass — see
+    _is_safe_subset_eligible), one conflicted marker should not keep all other
+    confirmed markers out of canonical persistence/interpretation forever;
     the conflicted marker is excluded instead of being trusted downstream.
     """
 
-    if not normalized_biomarkers or not _is_candidate_confirmation(source_metadata):
+    if not normalized_biomarkers or not _is_safe_subset_eligible(source_metadata):
         return normalized_biomarkers, clinical_integrity, source_metadata
 
     conflicted = {

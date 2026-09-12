@@ -233,6 +233,41 @@ async def test_unconfirmed_conflicted_batch_stays_pending_and_does_not_trigger_u
     assert result.get("safety_result") is None
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("source", ["results_read", "report_regeneration", "results_compatibility"])
+async def test_canonical_reprocessing_sources_get_safe_subset_too(source, save_biomarkers_spy):
+    """P1 fix (2026-09-12 clinical analyzer audit).
+
+    Before this fix, _is_candidate_confirmation() only recognized
+    source=="candidate_confirmation" — every OTHER read/regenerate path that
+    re-runs the pipeline against ALREADY-persisted canonical biomarkers (they
+    only exist in storage because they cleared this same gate once already)
+    had no safe-subset path, so one marker with e.g. an unrecognized unit
+    forced the whole upload back into "needs_confirmation" on every single
+    read. These sources must now get the same drop-the-conflicted-marker
+    treatment as candidate_confirmation, with no candidates array required.
+    """
+
+    biomarkers = [
+        {"name": "Hemoglobin", "value": 8.4, "unit": "g/dL", "ref_low": 12, "ref_high": 15.5, "status": "DEFICIENT"},
+        {"name": "Potassium", "value": 2.5, "unit": "mmol/L", "ref_low": 3.5, "ref_high": 5.1, "status": "DEFICIENT"},
+        {"name": "Coagulation Marker", "value": 1.8, "unit": "mg/L FEU", "ref_low": 0, "ref_high": 0.5, "status": "ELEVATED"},
+    ]
+    result = await lab_analysis_pipeline.run_lab_analysis_pipeline(
+        biomarkers=biomarkers,
+        symptoms=["severe fatigue"],
+        user_profile=PROFILE_52F,
+        user_id="user-reprocessing",
+        analysis_id="upload-reprocessing",
+        source_metadata={"source": source},
+        generate_ai_protocol=False,
+    )
+
+    assert result["analysis_status"] == "completed", result["analysis_input_quality_gate"]
+    assert result["metadata"]["source"]["confirmation_safe_subset"]["excluded_marker_count"] == 1
+    assert result["metadata"]["source"]["confirmation_safe_subset"]["excluded_markers"][0]["name"] == "Coagulation Marker"
+
+
 def test_progress_overview_counts_confirmed_lab_date_markers_not_created_at():
     overview = build_progress_overview(
         [
