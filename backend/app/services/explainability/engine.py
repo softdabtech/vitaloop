@@ -9,6 +9,31 @@ def _missing_profile_context(profile: Dict[str, Any] | None) -> List[str]:
     return [field for field in required if profile.get(field) in (None, "", [])]
 
 
+def _marker_key(marker: Dict[str, Any]) -> str:
+    return str(marker.get("canonical_name") or marker.get("name") or marker.get("source_name") or "").strip().lower()
+
+
+def _rule_for_marker(marker_key: str, matched_rules: List[Dict[str, Any]]) -> Dict[str, Any] | None:
+    """Find the matched rule that actually evaluates this marker.
+
+    P2 fix (2026-09-12 clinical analyzer audit): this used to be
+    `matched_rules[0] if matched_rules else None` for every single marker —
+    with more than one matched rule in the whole evaluation, every marker's
+    explanation (rule_key/confidence/evidence_level) pointed at whichever
+    rule happened to fire first, regardless of whether that rule had
+    anything to do with the marker being explained. Each matched_rule already
+    carries its own `input_entities` (the lab_marker/symptom keys its
+    conditions reference — see evaluator.py), so match on that instead.
+    """
+    if not marker_key:
+        return None
+    for rule in matched_rules:
+        entities = {str(entity).strip().lower() for entity in (rule.get("input_entities") or [])}
+        if marker_key in entities:
+            return rule
+    return None
+
+
 def build_marker_explanation(
     marker: Dict[str, Any],
     *,
@@ -62,12 +87,19 @@ def build_recommendation_explanations(
             marker,
             symptoms=symptoms,
             profile=profile,
-            matched_rule=matched_rules[0] if matched_rules else None,
+            matched_rule=_rule_for_marker(_marker_key(marker), matched_rules),
             safety_notes=safety_notes,
         )
         for marker in biomarkers
         if str(marker.get("status") or "").upper() != "OPTIMAL"
     ]
+    marker_explanations_by_key = {
+        _marker_key(marker): explanation
+        for marker, explanation in zip(
+            (m for m in biomarkers if str(m.get("status") or "").upper() != "OPTIMAL"),
+            marker_explanations,
+        )
+    }
 
     recommendation_explanations = []
     for rec in recommendations:
@@ -79,10 +111,23 @@ def build_recommendation_explanations(
             if rec_key in (rule.get("recommendation_keys") or []):
                 related_rule = rule
                 break
+
+        # Find the specific marker explanation this recommendation's rule
+        # actually evaluated, instead of always falling back to whichever
+        # marker happened to be explained first (same bug class as above).
+        triggered_biomarker = None
+        for entity in (related_rule or {}).get("input_entities") or []:
+            candidate = marker_explanations_by_key.get(str(entity).strip().lower())
+            if candidate:
+                triggered_biomarker = candidate["triggered_biomarker"]
+                break
+        if triggered_biomarker is None and marker_explanations:
+            triggered_biomarker = marker_explanations[0]["triggered_biomarker"]
+
         recommendation_explanations.append(
             {
                 "recommendation_key": rec_key or rec.get("title") or rec.get("supplement"),
-                "triggered_biomarker": marker_explanations[0]["triggered_biomarker"] if marker_explanations else None,
+                "triggered_biomarker": triggered_biomarker,
                 "symptom_signal": symptoms or [],
                 "profile_signal": {
                     "age": (profile or {}).get("age"),
