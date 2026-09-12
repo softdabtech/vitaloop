@@ -28,12 +28,24 @@ async def resolve_biomarker_safety_state(
 
     Returns:
         SafetyState with consistent urgency level for all views
+
+    P1 fix (2026-09-12 clinical analyzer audit): this used to filter
+    `b.get("status") in ("confirmed", "corrected")` before scoring. Those two
+    values are candidate-REVIEW statuses (pending/confirmed/corrected/rejected)
+    from the pre-persistence extraction-candidate stage; every caller here
+    (analyze.py, protocol.py) instead passes already-persisted canonical
+    biomarkers, whose `status` field holds the clinical classification set by
+    the normalizer — ELEVATED/DEFICIENT/BORDERLINE/OPTIMAL/etc. Those never
+    match "confirmed"/"corrected", so the filter silently emptied the list on
+    every real call, and resolve_safety_state([]) always fell through to
+    ROUTINE regardless of how abnormal the actual result was — while the
+    separate safety_engine.py::validate_report() correctly flagged the same
+    data as urgent. "Confirmed" here means "this is canonical, already-saved
+    data" (a stage guarantee from the caller), not a per-marker status string
+    to re-check — so this function now scores every biomarker it's given.
     """
 
-    # Filter to confirmed biomarkers only
-    confirmed = [b for b in (biomarkers or []) if b.get("status") in ("confirmed", "corrected")]
-
-    return resolve_safety_state(confirmed, user_profile)
+    return resolve_safety_state(biomarkers or [], user_profile)
 
 
 async def augment_biomarkers_with_safety(
