@@ -13,6 +13,7 @@ from app.services.analysis_quality_gate import build_analysis_input_quality_gate
 from app.services.analysis_quality_snapshot import build_analysis_quality_snapshot
 from app.services.clinical_data_integrity import validate_clinical_data_integrity
 from app.services.clinical_priority_planner import build_clinical_priority_planner, build_clinical_story
+from app.services.next_best_test_engine import build_next_best_tests
 from app.services.cost_analytics import record_analysis_cost
 from app.services.evidence_gaps import build_evidence_gaps
 from app.services.explainability import build_recommendation_explanations
@@ -1049,6 +1050,13 @@ async def run_lab_analysis_pipeline(
         safety_result=safety_result,
         evidence_gaps=evidence_gaps,
     )
+    # Next-best-test engine (2026-09-12 audit, "not implemented yet" item
+    # #3): reuses evidence_gaps + each pattern's own retest_plan rather than
+    # inventing a second, separate notion of what's missing.
+    next_best_tests = build_next_best_tests(
+        evidence_gaps=evidence_gaps,
+        patterns=interpreted_report.get("patterns"),
+    )
     clinical_story = build_clinical_story(
         interpreted_report=interpreted_report,
         safety_result=safety_result,
@@ -1056,6 +1064,7 @@ async def run_lab_analysis_pipeline(
         evidence_gaps=evidence_gaps,
         retest_suggestions=retest_suggestions,
     )
+    clinical_story["next_best_tests"] = next_best_tests.get("recommended_tests") or []
     output_knowledge_evaluation = _localized_knowledge_evaluation_for_response(
         knowledge_evaluation,
         knowledge_report,
@@ -1159,6 +1168,7 @@ async def run_lab_analysis_pipeline(
         "clinical_data_integrity": clinical_integrity,
         "evidence_gaps": evidence_gaps,
         "clinical_priority_planner": clinical_priority_planner,
+        "next_best_tests": next_best_tests,
         "clinical_story": clinical_story,
         "safety_result": safety_result,
         "safety_notice": safety_notice,
