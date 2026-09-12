@@ -1017,6 +1017,7 @@ async def run_lab_analysis_pipeline(
         health_states=health_states,
         interpreted_report=interpreted_report,
         clinical_integrity=clinical_integrity,
+        marker_coverage=_enriched_mc,
     )
     output_knowledge_evaluation = _localized_knowledge_evaluation_for_response(
         knowledge_evaluation,

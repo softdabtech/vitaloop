@@ -53,12 +53,26 @@ def _domain_from_state(state: Dict[str, Any]) -> str:
     return str(state.get("domain") or state.get("key") or "").strip().lower()
 
 
+# Markers where "no active knowledge rule evaluated this" is itself a
+# meaningful, high-priority gap — these are common, clinically load-bearing
+# markers a user would expect an interpretation for (see the 2026-09-12
+# clinical analyzer audit: LDL, CRP, glucose, HDL, hemoglobin, triglycerides
+# and others were silently uninterpreted with no gap surfaced anywhere).
+# Anything else that falls into marker_coverage.no_matching_rule is still
+# reported, just at medium priority.
+_HIGH_PRIORITY_UNCOVERED_MARKERS = {
+    "ldl", "hdl", "crp", "glucose", "hba1c", "hba1c_ifcc", "triglycerides",
+    "hemoglobin", "hematocrit", "iron", "transferrin_saturation",
+}
+
+
 def build_evidence_gaps(
     *,
     biomarkers: List[Dict[str, Any]],
     health_states: Dict[str, Any] | None = None,
     interpreted_report: Dict[str, Any] | None = None,
     clinical_integrity: Dict[str, Any] | None = None,
+    marker_coverage: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     keys = _marker_keys(biomarkers or [])
     gaps: List[Dict[str, Any]] = []
@@ -109,6 +123,44 @@ def build_evidence_gaps(
                         "source": "domain_expected_marker",
                     }
                 )
+
+    # P2 fix (2026-09-12 clinical analyzer audit): marker_coverage (present on
+    # every knowledge_evaluation, see knowledge/evaluator.py) was never passed
+    # in here — a biomarker present in the panel but with no active rule
+    # evaluating it (e.g. LDL/CRP/glucose while their rules sit unapproved)
+    # produced zero evidence gaps, so evidence_gaps.summary.gap_count read 0
+    # even when 26 markers had no matching rule and 6 were unit-blocked.
+    coverage = marker_coverage or {}
+    for marker in coverage.get("no_matching_rule") or []:
+        marker_key = str(marker).strip().lower()
+        if not marker_key:
+            continue
+        gaps.append(
+            {
+                "domain": "knowledge_coverage",
+                "missing_marker": marker_key,
+                "reason": "no_active_rule_for_marker",
+                "impact_on_confidence": "marker_not_interpreted",
+                "priority": "high" if marker_key in _HIGH_PRIORITY_UNCOVERED_MARKERS else "medium",
+                "suggested_next_step": "This value was measured but no active knowledge rule interprets it yet.",
+                "source": "marker_coverage",
+            }
+        )
+    for marker in coverage.get("unit_blocked") or []:
+        marker_key = str(marker).strip().lower()
+        if not marker_key:
+            continue
+        gaps.append(
+            {
+                "domain": "data_quality",
+                "missing_marker": marker_key,
+                "reason": "unit_not_reconcilable",
+                "impact_on_confidence": "marker_not_interpreted",
+                "priority": "high" if marker_key in _HIGH_PRIORITY_UNCOVERED_MARKERS else "medium",
+                "suggested_next_step": "The reported unit could not be converted to what the rule expects; confirm the unit on this result.",
+                "source": "marker_coverage",
+            }
+        )
 
     for issue in (clinical_integrity or {}).get("issues") or []:
         if not isinstance(issue, dict):

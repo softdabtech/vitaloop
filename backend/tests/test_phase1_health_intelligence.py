@@ -271,6 +271,39 @@ def test_evidence_gaps_identifies_missing_domain_markers():
     assert result["summary"]["gap_count"] >= 1
 
 
+def test_evidence_gaps_surfaces_marker_coverage_no_matching_rule_and_unit_blocked():
+    """P2 fix (2026-09-12 clinical analyzer audit): a biomarker present in the
+    panel but with no active knowledge rule interpreting it (LDL, CRP,
+    glucose, etc. — all sitting at governance_status="reviewed", not "active")
+    used to produce zero evidence gaps, because build_evidence_gaps() never
+    looked at knowledge_evaluation.marker_coverage at all. The audit's direct
+    run had 26 no_matching_rule + 6 unit_blocked markers but gap_count==0.
+    """
+    result = build_evidence_gaps(
+        biomarkers=[
+            {"name": "LDL", "canonical_name": "ldl", "value": 210, "unit": "mg/dL"},
+            {"name": "Zinc", "canonical_name": "zinc", "value": 50, "unit": "umol/L"},
+        ],
+        health_states={"states": []},
+        interpreted_report={},
+        clinical_integrity={"issues": []},
+        marker_coverage={
+            "evaluated": [],
+            "fired": [],
+            "no_matching_rule": ["ldl", "zinc"],
+            "unit_blocked": ["homocysteine"],
+        },
+    )
+
+    gaps_by_marker = {item["missing_marker"]: item for item in result["gaps"]}
+    assert gaps_by_marker["ldl"]["priority"] == "high"
+    assert gaps_by_marker["ldl"]["source"] == "marker_coverage"
+    assert gaps_by_marker["zinc"]["priority"] == "medium"
+    assert gaps_by_marker["homocysteine"]["domain"] == "data_quality"
+    assert gaps_by_marker["homocysteine"]["reason"] == "unit_not_reconcilable"
+    assert result["summary"]["gap_count"] >= 3
+
+
 def test_safety_engine_flags_dangerous_values_and_sensitive_supplements():
     result = validate_report(
         biomarkers=[
