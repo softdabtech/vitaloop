@@ -1302,18 +1302,36 @@ def _inflammation_pattern(
     )
 
 
+_NEURO_B12_SYMPTOM_ALIASES = (
+    "numbness", "tingling", "balance problems", "memory issues", "confusion",
+    "difficulty walking",
+)
+
+
 def _micronutrient_deficiency_cluster_pattern(
-    biomarkers: List[Dict[str, Any]], *, profile: Dict[str, Any] | None, locale: str
+    biomarkers: List[Dict[str, Any]],
+    *,
+    profile: Dict[str, Any] | None,
+    locale: str,
+    symptoms: List[str] | None = None,
 ) -> Dict[str, Any] | None:
+    """Nutrient deficiency pattern pack (P1.8) — eighth domain on the
+    reference template. Adds ferritin to the cluster group (co-occurs with,
+    but does not replace, the dedicated iron/anemia pack) and homocysteine/
+    MMA as functional-confirmation markers for B12/folate deficiency.
+    """
     vitamin_d = _find_markers(biomarkers, ["vitamin d", "25-oh", "25(oh)"])
     b12 = _find_markers(biomarkers, ["b12", "vitamin b12", "cobalamin"])
     folate = _find_markers(biomarkers, ["folate", "folic acid"])
     magnesium = _find_markers(biomarkers, ["magnesium"])
     zinc = _find_markers(biomarkers, ["zinc"])
+    ferritin = _find_markers(biomarkers, ["ferritin"])
+    homocysteine = _find_markers(biomarkers, ["homocysteine"])
+    mma = _find_markers(biomarkers, ["methylmalonic", "mma"])
 
     low_by_group = [
         [item for item in group if _is_low(item)]
-        for group in (vitamin_d, b12, folate, magnesium, zinc)
+        for group in (vitamin_d, b12, folate, magnesium, zinc, ferritin)
     ]
     low_groups_hit = [group for group in low_by_group if group]
     # Cluster pattern needs >=2 distinct low micronutrients — a single low
@@ -1322,18 +1340,66 @@ def _micronutrient_deficiency_cluster_pattern(
         return None
 
     triggered = [item for group in low_groups_hit for item in group]
+    low_b12_or_folate = bool([item for item in [*b12, *folate] if _is_low(item)])
+    high_homocysteine_mma = [item for item in [*homocysteine, *mma] if _is_high(item)]
+    normal_homocysteine_mma = [item for item in [*homocysteine, *mma] if _is_in_range(item)]
+
+    supportive = high_homocysteine_mma
+    # Normal homocysteine/MMA despite a low B12/folate reading argues the
+    # deficiency may not yet be functionally significant — surfaced
+    # explicitly rather than treating every low B12/folate as equally urgent.
+    contradicting = normal_homocysteine_mma if low_b12_or_folate else []
+
+    confidence_reasons: List[str] = []
+    base_confidence = 0.6
+    if high_homocysteine_mma and low_b12_or_folate:
+        confidence_reasons.append("homocysteine_or_mma_confirms_functional_b12_folate_deficiency")
+        base_confidence += 0.08
+    if contradicting:
+        confidence_reasons.append("normal_homocysteine_mma_despite_low_b12_folate_suggests_not_yet_functionally_significant")
+        base_confidence -= 0.05
+    base_confidence = max(0.35, min(base_confidence, 0.85))
+
+    if len(low_groups_hit) >= 3:
+        severity = "high"
+        confidence_reasons.append("three_or_more_low_micronutrients_present")
+    else:
+        severity = "moderate"
+
+    reported_symptoms = [str(s).strip().lower() for s in (symptoms or [])]
+    neuro_symptoms = [
+        s for s in reported_symptoms
+        if any(alias in s or s in alias for alias in _NEURO_B12_SYMPTOM_ALIASES)
+    ]
+    escalation_reasons: List[str] = []
+    if neuro_symptoms and low_b12_or_folate:
+        escalation_reasons.append(
+            f"Reported neurological symptom(s) ({', '.join(neuro_symptoms)}) alongside low B12/folate should be discussed promptly — B12 deficiency neuropathy can progress if uncorrected."
+        )
+    doctor_escalation = {"triggered": bool(escalation_reasons), "reasons": escalation_reasons}
+    priority = "high" if doctor_escalation["triggered"] else "medium"
+
+    extra_missing = ["Diet pattern and supplement history", "GI/absorption conditions or medications affecting absorption"]
+    if low_b12_or_folate and not (homocysteine or mma):
+        extra_missing.append("Homocysteine or MMA to functionally confirm B12/folate deficiency")
+
     return _build_pattern(
         pattern_key="micronutrient_deficiency_cluster",
         domain="micronutrients",
-        priority="medium",
-        base_confidence=0.6,
+        priority=priority,
+        base_confidence=base_confidence,
         triggered=triggered,
         normal_context=[],
+        supportive_markers=supportive,
+        contradicting_markers=contradicting,
+        severity=severity,
+        doctor_escalation=doctor_escalation,
+        extra_confidence_reasons=confidence_reasons,
         profile=profile,
         locale=locale,
-        retest_marker="Vitamin D, B12, folate, magnesium, zinc (whichever are low)",
+        retest_marker="Vitamin D, B12, folate, magnesium, zinc, ferritin (whichever are low)",
         matched_rule_key="pattern_micronutrient_deficiency_cluster",
-        extra_missing_context=["Diet pattern and supplement history", "GI/absorption conditions or medications affecting absorption"],
+        extra_missing_context=extra_missing,
     )
 
 
@@ -1624,7 +1690,9 @@ def detect_patterns(
             _inflammation_pattern(
                 biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
             ),
-            _micronutrient_deficiency_cluster_pattern(biomarkers or [], profile=profile, locale=locale),
+            _micronutrient_deficiency_cluster_pattern(
+                biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
+            ),
         ]
         if item
     ]
