@@ -1089,26 +1089,107 @@ def _thyroid_dysfunction_pattern(
     )
 
 
+_LIVER_ALARM_SYMPTOM_ALIASES = (
+    "jaundice", "yellowing of skin", "yellowing of eyes", "dark urine", "abdominal pain",
+    "easy bruising", "swelling", "confusion",
+)
+
+
 def _liver_stress_pattern(
-    biomarkers: List[Dict[str, Any]], *, profile: Dict[str, Any] | None, locale: str
+    biomarkers: List[Dict[str, Any]],
+    *,
+    profile: Dict[str, Any] | None,
+    locale: str,
+    symptoms: List[str] | None = None,
 ) -> Dict[str, Any] | None:
+    """Liver pattern pack (P1.6) — sixth domain on the reference template.
+    Adds ALP/albumin/platelets to distinguish a cholestatic component and a
+    synthetic-function/portal-hypertension signal from isolated
+    hepatocellular enzyme elevation, plus severity/escalation thresholds for
+    marked transaminitis or bilirubin elevation.
+    """
     alt = _find_markers(biomarkers, ["alt", "alanine aminotransferase"])
     ast = _find_markers(biomarkers, ["ast", "aspartate aminotransferase"])
     ggt = _find_markers(biomarkers, ["ggt", "gamma-glutamyl"])
+    alp = _find_markers(biomarkers, ["alp", "alkaline phosphatase"])
     bilirubin = _find_markers(biomarkers, ["bilirubin"])
+    albumin = _find_markers(biomarkers, ["albumin"])
+    platelets = _find_markers(biomarkers, ["platelet"])
 
     high_alt_ast = [item for item in [*alt, *ast] if _is_high(item)]
     if not high_alt_ast:
         return None
 
-    high_ggt_bili = [item for item in [*ggt, *bilirubin] if _is_high(item)]
+    high_ggt_alp_bili = [item for item in [*ggt, *alp, *bilirubin] if _is_high(item)]
+    low_albumin = [item for item in albumin if _is_low(item)]
+    low_platelets = [item for item in platelets if _is_low(item)]
+    normal_albumin = [item for item in albumin if _is_in_range(item)]
+    normal_platelets = [item for item in platelets if _is_in_range(item)]
+
+    supportive = [*high_ggt_alp_bili, *low_albumin, *low_platelets]
+    # Normal albumin/platelets alongside elevated transaminases argue
+    # against advanced/synthetic liver dysfunction (cirrhosis, portal
+    # hypertension) — a reassuring signal worth surfacing explicitly rather
+    # than leaving the reader to assume the worst from ALT/AST alone.
+    contradicting = [*normal_albumin, *normal_platelets]
+
+    high_alp_or_bili = [item for item in [*alp, *bilirubin] if _is_high(item)]
+    cholestatic_component = bool(high_alp_or_bili)
+
+    confidence_reasons: List[str] = []
+    base_confidence = 0.63
+    if cholestatic_component:
+        confidence_reasons.append("cholestatic_component_present_alongside_hepatocellular_enzymes")
+        base_confidence += 0.03
+    else:
+        confidence_reasons.append("hepatocellular_pattern_without_cholestatic_component")
+    if low_albumin or low_platelets:
+        confidence_reasons.append("synthetic_function_or_portal_hypertension_signal_present")
+        base_confidence += 0.05
+    if normal_albumin and normal_platelets:
+        confidence_reasons.append("normal_albumin_platelets_argue_against_advanced_liver_disease")
+    base_confidence = max(0.35, min(base_confidence, 0.85))
+
+    alt_ast_values = [v for v in (_to_float_marker(item) for item in high_alt_ast) if v is not None]
+    bilirubin_values = [v for v in (_to_float_marker(item) for item in bilirubin if _is_high(item)) if v is not None]
+    marked_transaminitis = bool(alt_ast_values and max(alt_ast_values) >= 500)
+    high_bilirubin = bool(bilirubin_values and max(bilirubin_values) >= 3)
+    if marked_transaminitis or high_bilirubin:
+        severity = "high"
+    elif alt_ast_values and max(alt_ast_values) >= 200:
+        severity = "moderate"
+    else:
+        severity = "mild"
+
+    reported_symptoms = [str(s).strip().lower() for s in (symptoms or [])]
+    liver_alarm_symptoms = [
+        s for s in reported_symptoms
+        if any(alias in s or s in alias for alias in _LIVER_ALARM_SYMPTOM_ALIASES)
+    ]
+    escalation_reasons: List[str] = []
+    if marked_transaminitis:
+        escalation_reasons.append("ALT/AST is markedly elevated (≥500 U/L) — prompt medical review rather than routine follow-up.")
+    if high_bilirubin:
+        escalation_reasons.append("Bilirubin is elevated enough to suggest jaundice risk — prompt medical review rather than routine follow-up.")
+    if liver_alarm_symptoms:
+        escalation_reasons.append(
+            f"Reported symptom(s) ({', '.join(liver_alarm_symptoms)}) alongside elevated liver enzymes should be discussed promptly, not deferred to a routine retest."
+        )
+    doctor_escalation = {"triggered": bool(escalation_reasons), "reasons": escalation_reasons}
+    priority = "high" if severity == "high" or doctor_escalation["triggered"] else "medium"
+
     return _build_pattern(
         pattern_key="liver_stress",
         domain="liver",
-        priority="medium",
-        base_confidence=0.63,
-        triggered=[*high_alt_ast, *high_ggt_bili],
+        priority=priority,
+        base_confidence=base_confidence,
+        triggered=[*high_alt_ast, *high_ggt_alp_bili],
         normal_context=[],
+        supportive_markers=supportive,
+        contradicting_markers=contradicting,
+        severity=severity,
+        doctor_escalation=doctor_escalation,
+        extra_confidence_reasons=confidence_reasons,
         profile=profile,
         locale=locale,
         retest_marker="ALT, AST, GGT, bilirubin",
@@ -1455,7 +1536,9 @@ def detect_patterns(
             _thyroid_dysfunction_pattern(
                 biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
             ),
-            _liver_stress_pattern(biomarkers or [], profile=profile, locale=locale),
+            _liver_stress_pattern(
+                biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
+            ),
             _inflammation_pattern(
                 biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
             ),
