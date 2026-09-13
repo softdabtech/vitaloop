@@ -14,7 +14,7 @@ const PRODUCT_LINKS = [
 const COMPANY_LINKS = [
   { label: 'About', href: '/about/' },
   { label: 'For practitioners', href: '/for-nutritionists/' },
-  { label: 'For laboratories', href: '/for-nutritionists/' },
+  { label: 'For teams', href: '/for-nutritionists/' },
   { label: 'For investors', href: '/for-investors/' },
 ]
 
@@ -93,18 +93,12 @@ export default function Footer() {
               </a>
             ))}
             <a
-              href="https://www.producthunt.com/products/softdab-custom-data-encryption-solution?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-vitaloop-ai-health-protocol-platform"
+              href="https://www.producthunt.com/products/softdab-custom-data-encryption-solution"
               target="_blank"
               rel="noopener noreferrer"
-              className="pt-1"
+              className="inline-flex rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-bold text-orange-700 transition hover:border-orange-300 hover:bg-orange-100"
             >
-              <img
-                alt="VITALOOP - AI Health Protocol Platform - Turn lab results into personalized health action | Product Hunt"
-                width="250"
-                height="54"
-                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1154180&theme=light&t=1779636101269"
-                loading="lazy"
-              />
+              Featured on Product Hunt
             </a>
           </div>
         </div>

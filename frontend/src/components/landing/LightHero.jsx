@@ -9,7 +9,7 @@ const HERO_SCREEN = {
 }
 
 const TRUST_CHIPS = [
-  { icon: FileText, label: 'PDF/image lab upload' },
+  { icon: FileText, label: 'PDF, image, CSV/XLSX upload' },
   { icon: Sparkles, label: 'Explainable Knowledge Base' },
   { icon: ListChecks, label: 'Priority report and retest plan' },
   { icon: ShieldCheck, label: 'Privacy-first flow' },
@@ -27,7 +27,7 @@ export function LightHero() {
           <div className="min-w-0 space-y-8">
             {/* Eyebrow badge */}
             <div className="inline-flex max-w-full items-center gap-2 rounded-2xl border border-teal-200 bg-teal-50 px-3 py-2 sm:rounded-full sm:px-4">
-              <span className="min-w-0 whitespace-normal text-center text-[11px] font-semibold leading-4 text-teal-600 sm:text-sm">AI BLOOD TEST ANALYSIS + SYMPTOM CONTEXT</span>
+              <span className="min-w-0 whitespace-normal text-center text-[11px] font-semibold leading-4 text-teal-600 sm:text-sm">CLINICAL REASONING FOR SYMPTOMS + LABS</span>
             </div>
 
             {/* Headline */}
@@ -43,9 +43,9 @@ export function LightHero() {
             {/* Subheadline */}
             <p className="text-lg text-slate-600 leading-relaxed max-w-xl space-y-3">
               <span className="block">Start with symptoms. Upload labs when you have them.</span>
-              <span className="block font-semibold text-slate-900">From scattered signals to an explainable health report.</span>
+              <span className="block font-semibold text-slate-900">From scattered signals to a clinical reasoning map.</span>
               <span className="block text-base text-slate-500">
-                VITALOOP explains biomarker results in plain language and organizes priority findings, clinician discussion points, retest timing, and weekly follow-through.
+                VITALOOP connects biomarker results, symptom context, priority findings, evidence gaps, clinician discussion points, retest timing, and weekly follow-through.
               </span>
             </p>
 

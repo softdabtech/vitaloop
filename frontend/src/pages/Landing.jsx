@@ -654,8 +654,8 @@ export default function Landing() {
   return (
     <div className={rootClasses}>
       <Seo
-        title="AI Blood Test Analysis & Symptom Checker | VITALOOP"
-        description="Start with symptoms or upload blood test results. Get clear biomarker explanations, lab discussion guidance, and a health action plan you can track."
+        title="Clinical Reasoning for Blood Tests & Symptoms | VITALOOP"
+        description="Start with symptoms or upload blood test results. Get an explainable clinical reasoning map, biomarker context, lab discussion guidance, and next steps you can track."
         path="/"
         schemas={[SCHEMA_HOWTO, SCHEMA_FAQ]}
       />

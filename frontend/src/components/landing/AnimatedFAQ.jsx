@@ -9,7 +9,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Which lab report formats does VITALOOP support?',
-    answer: 'VITALOOP currently supports PDF uploads from major laboratories. The analysis engine normalizes units and reference ranges across 85+ biomarkers.',
+    answer: 'VITALOOP supports PDF, image, CSV, and XLS/XLSX lab uploads. The analysis engine normalizes units and reference ranges across 85+ biomarkers.',
   },
   {
     question: 'Does VITALOOP diagnose conditions?',
