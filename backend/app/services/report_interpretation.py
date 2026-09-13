@@ -737,32 +737,126 @@ def _iron_deficiency_anemia_pattern(
     )
 
 
+_HYPERGLYCEMIA_SYMPTOM_ALIASES = (
+    "excessive thirst", "frequent urination", "blurred vision", "unexplained weight loss",
+    "increased hunger", "slow healing",
+)
+
+
 def _metabolic_risk_pattern(
-    biomarkers: List[Dict[str, Any]], *, profile: Dict[str, Any] | None, locale: str
+    biomarkers: List[Dict[str, Any]],
+    *,
+    profile: Dict[str, Any] | None,
+    locale: str,
+    symptoms: List[str] | None = None,
 ) -> Dict[str, Any] | None:
+    """Glucose/insulin resistance pattern pack (P1.3) — third domain on the
+    reference template. Required-marker gate loosened to also trigger on
+    fasting insulin ALONE (the discordant case: normal glucose/HbA1c but
+    high insulin is itself an early insulin-resistance signal that the old
+    detector, gated on glucose/HbA1c only, silently missed).
+    """
     glucose = _find_markers(biomarkers, ["glucose"])
     hba1c = _find_markers(biomarkers, ["hba1c", "glycated hemoglobin", "a1c"])
     insulin = _find_markers(biomarkers, ["insulin"])
+    triglycerides = _find_markers(biomarkers, ["triglyceride"])
+    hdl = _find_markers(biomarkers, ["hdl"])
+    alt = _find_markers(biomarkers, ["alt", "alanine aminotransferase"])
 
     high_glucose = [item for item in glucose if _is_high(item)]
     high_hba1c = [item for item in hba1c if _is_high(item)]
-    triggered = [*high_glucose, *high_hba1c]
-    if not triggered:
+    high_insulin = [item for item in insulin if _is_high(item)]
+    glucose_hba1c_triggered = [*high_glucose, *high_hba1c]
+    if not glucose_hba1c_triggered and not high_insulin:
         return None
 
-    normal_context = [item for item in insulin if _is_in_range(item)]
+    # Supportive: metabolic-syndrome-adjacent markers moving the same
+    # direction (high triglycerides, low HDL) or a metabolic-liver modifier
+    # (elevated ALT can accompany insulin resistance / fatty liver).
+    supportive = [
+        *[item for item in triglycerides if _is_high(item)],
+        *[item for item in hdl if _is_low(item)],
+        *[item for item in alt if _is_high(item)],
+        *([item for item in high_insulin if glucose_hba1c_triggered] if glucose_hba1c_triggered else []),
+    ]
+    # Contradicting: normal/low insulin alongside elevated glucose/HbA1c
+    # argues against insulin resistance specifically being the driver (could
+    # be a different mechanism, e.g. beta-cell insufficiency) — surfaced,
+    # not silently folded into "normal".
+    contradicting = (
+        [item for item in insulin if _is_in_range(item) or _is_low(item)]
+        if glucose_hba1c_triggered
+        else []
+    )
+
+    confidence_reasons: List[str] = []
+    discordant_insulin_only = bool(high_insulin and not glucose_hba1c_triggered)
+    if discordant_insulin_only:
+        base_confidence = 0.55
+        confidence_reasons.append("elevated_insulin_with_normal_glucose_and_hba1c_early_signal")
+    elif high_insulin and glucose_hba1c_triggered:
+        base_confidence = 0.72
+        confidence_reasons.append("insulin_corroborates_glucose_hba1c")
+    else:
+        base_confidence = 0.62
+    if contradicting:
+        confidence_reasons.append("insulin_not_elevated_argues_against_insulin_resistance_as_driver")
+        base_confidence -= 0.08
+    if supportive and not discordant_insulin_only:
+        confidence_reasons.append("metabolic_syndrome_adjacent_markers_present")
+
+    # Severity from glucose/HbA1c values against widely-used clinical
+    # thresholds (ADA prediabetes/diabetes ranges) — approximate, since the
+    # panel does not distinguish fasting vs random glucose; flagged as a gap.
+    glucose_values = [v for v in (_to_float_marker(item) for item in high_glucose) if v is not None]
+    hba1c_values = [v for v in (_to_float_marker(item) for item in high_hba1c) if v is not None]
+    diabetic_range = (glucose_values and max(glucose_values) >= 126) or (hba1c_values and max(hba1c_values) >= 6.5)
+    prediabetic_range = (glucose_values and max(glucose_values) >= 100) or (hba1c_values and max(hba1c_values) >= 5.7)
+    if diabetic_range:
+        severity = "high"
+    elif prediabetic_range or high_insulin:
+        severity = "moderate"
+    else:
+        severity = "mild"
+
+    reported_symptoms = [str(s).strip().lower() for s in (symptoms or [])]
+    hyperglycemia_symptoms = [
+        s for s in reported_symptoms
+        if any(alias in s or s in alias for alias in _HYPERGLYCEMIA_SYMPTOM_ALIASES)
+    ]
+    escalation_reasons: List[str] = []
+    if diabetic_range:
+        escalation_reasons.append("Glucose/HbA1c is in the diabetes-range threshold — prompt medical review rather than routine follow-up.")
+    if hyperglycemia_symptoms:
+        escalation_reasons.append(
+            f"Reported symptom(s) ({', '.join(hyperglycemia_symptoms)}) alongside elevated glucose/HbA1c can indicate uncontrolled hyperglycemia — discuss promptly."
+        )
+    doctor_escalation = {"triggered": bool(escalation_reasons), "reasons": escalation_reasons}
+
+    priority = "high" if severity == "high" or doctor_escalation["triggered"] else "medium"
+
+    extra_missing = ["Weight trend and activity pattern"]
+    if not insulin:
+        extra_missing.insert(0, "Fasting insulin or HOMA-IR")
+    extra_missing.append("Fasting vs random glucose timing was not distinguished — confirm testing conditions before acting on severity.")
+
     return _build_pattern(
         pattern_key="metabolic_risk",
         domain="metabolic_health",
-        priority="medium",
-        base_confidence=0.65,
-        triggered=triggered,
-        normal_context=normal_context,
+        priority=priority,
+        base_confidence=base_confidence,
+        triggered=[*glucose_hba1c_triggered, *high_insulin],
+        normal_context=[],
+        supportive_markers=supportive,
+        contradicting_markers=contradicting,
+        severity=severity,
+        doctor_escalation=doctor_escalation,
+        extra_confidence_reasons=confidence_reasons,
         profile=profile,
         locale=locale,
         retest_marker="Fasting glucose, HbA1c",
         matched_rule_key="pattern_metabolic_risk",
-        extra_missing_context=["Fasting insulin or HOMA-IR", "Weight trend and activity pattern"],
+        extra_missing_context=extra_missing,
     )
 
 
@@ -1193,7 +1287,9 @@ def detect_patterns(
                 biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
             ),
             _cardiovascular_risk_pattern(biomarkers or [], profile=profile, locale=locale),
-            _metabolic_risk_pattern(biomarkers or [], profile=profile, locale=locale),
+            _metabolic_risk_pattern(
+                biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
+            ),
             _thyroid_dysfunction_pattern(
                 biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
             ),
