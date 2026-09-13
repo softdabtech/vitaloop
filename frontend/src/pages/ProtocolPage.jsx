@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, FileText, MessageCircle, RefreshCw, ShieldAlert, Sparkles } from 'lucide-react'
+import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, FileText, GitBranch, HelpCircle, MessageCircle, RefreshCw, ShieldAlert, Sparkles } from 'lucide-react'
 import api from '../lib/api.js'
 import { useFeature } from '../hooks/useFeature.js'
 import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
@@ -101,6 +101,21 @@ const PROTOCOL_COPY = {
     pdfRetest: '4. Retest Plan',
     pdfDisclaimer: '5. Disclaimer',
     disclaimer: 'VITALOOP provides educational information only. It does not diagnose, treat, prescribe, or replace professional medical advice.',
+    reasoningTitle: 'Clinical Reasoning',
+    reasoningIntro: 'How each finding behind this plan was reached — the markers and symptoms behind it, how confident we are, and what would change the picture.',
+    reasoningBasedOn: 'Based on',
+    reasoningSupporting: 'Supporting',
+    reasoningContradicting: 'Argues against',
+    reasoningGaps: "What we still don't know",
+    reasoningNextTests: 'Suggested next tests',
+    reasoningDoctorFlag: 'Discuss with a doctor',
+    reasoningSafety: {
+      high_confidence_urgent: 'Needs prompt attention',
+      moderate_confidence: 'Worth reviewing',
+      low_confidence: 'Early signal, limited certainty',
+      blocked_by_missing_data: 'Not enough data for a confident read',
+      doctor_only: 'Discuss with a doctor',
+    },
   },
   uk: {
     errorTitle: 'План дій недоступний',
@@ -160,6 +175,21 @@ const PROTOCOL_COPY = {
     pdfRetest: '4. Повторна перевірка',
     pdfDisclaimer: '5. Дисклеймер',
     disclaimer: 'VITALOOP надає лише освітню інформацію. Він не ставить діагноз, не лікує, не призначає терапію і не замінює професійну медичну консультацію.',
+    reasoningTitle: 'Клінічне обґрунтування',
+    reasoningIntro: 'Як зроблено кожен висновок, на якому базується план, — які показники й симптоми його підтверджують, наскільки ми впевнені і що може змінити картину.',
+    reasoningBasedOn: 'На основі',
+    reasoningSupporting: 'Підтверджують',
+    reasoningContradicting: 'Проти цього свідчить',
+    reasoningGaps: 'Чого ще не вистачає для впевненості',
+    reasoningNextTests: 'Рекомендовані наступні аналізи',
+    reasoningDoctorFlag: 'Обговорити з лікарем',
+    reasoningSafety: {
+      high_confidence_urgent: 'Потребує швидкої уваги',
+      moderate_confidence: 'Варто переглянути',
+      low_confidence: 'Ранній сигнал, обмежена впевненість',
+      blocked_by_missing_data: 'Недостатньо даних для впевненого висновку',
+      doctor_only: 'Обговорити з лікарем',
+    },
   },
 }
 
@@ -225,6 +255,11 @@ async function loadProtocolData(uploadId) {
     : Array.isArray(data?.final_analysis?.shopping_links)
       ? data.final_analysis.shopping_links
       : []
+  const clinicalReasoningTraces = Array.isArray(data?.clinical_reasoning_traces)
+    ? data.clinical_reasoning_traces
+    : Array.isArray(data?.final_analysis?.clinical_reasoning_traces)
+      ? data.final_analysis.clinical_reasoning_traces
+      : []
   return {
     biomarkers,
     protocol: coreProtocol.length ? coreProtocol : storedProtocol.length ? storedProtocol : actionPlan,
@@ -233,6 +268,7 @@ async function loadProtocolData(uploadId) {
     safetyAlerts,
     shoppingLinks,
     knowledgeReport: data?.knowledge_report ?? null,
+    clinicalReasoningTraces,
   }
 }
 
@@ -350,6 +386,90 @@ function priorityTone(priority) {
   if (p === 'HIGH') return 'critical'
   if (p === 'MEDIUM') return 'warning'
   return 'neutral'
+}
+
+function formatPercent(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return null
+  return `${Math.round(number * (number <= 1 ? 100 : 1))}%`
+}
+
+// Same clinical_reasoning_trace object Results.jsx surfaces (see
+// backend/app/services/clinical_reasoning_trace.py) — mirrored here so the
+// plan on this page is backed by the same visible reasoning as the report
+// it came from, instead of the two pages telling a different story.
+function ReasoningTraceCard({ trace, copy, isUk }) {
+  const confidence = formatPercent(trace?.confidence)
+  const safetyKey = String(trace?.safety_level || '').trim()
+  const safetyLabel = copy.reasoningSafety?.[safetyKey]
+  const supporting = asTextList(trace?.supporting_markers).slice(0, 5)
+  const contradicting = asTextList(trace?.contradicting_markers).slice(0, 4)
+  const gaps = asTextList(trace?.evidence_gaps).slice(0, 4)
+  const nextTests = asTextList(trace?.next_best_tests).slice(0, 4)
+  const matchedBiomarkers = asTextList(trace?.matched_biomarkers).slice(0, 5)
+
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h3 className="font-extrabold text-slate-950">
+          {trace?.user_explanation?.headline || trace?.pattern_name || trace?.pattern_id}
+        </h3>
+        <div className="flex flex-wrap items-center gap-2">
+          {confidence && (
+            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+              {confidence}
+            </span>
+          )}
+          {(trace?.doctor_flag || safetyLabel) && (
+            <CoachBadge
+              tone={
+                trace?.doctor_flag || safetyKey === 'high_confidence_urgent'
+                  ? 'critical'
+                  : safetyKey === 'moderate_confidence'
+                    ? 'warning'
+                    : 'neutral'
+              }
+            >
+              {trace?.doctor_flag ? copy.reasoningDoctorFlag : safetyLabel}
+            </CoachBadge>
+          )}
+        </div>
+      </div>
+      {!!trace?.user_explanation?.summary && (
+        <p className="mt-2 text-sm leading-6 text-slate-600">{trace.user_explanation.summary}</p>
+      )}
+      {!!matchedBiomarkers.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.reasoningBasedOn}:</span> {matchedBiomarkers.map((v) => displayBiomarker(v, isUk)).join(', ')}
+        </p>
+      )}
+      {!!supporting.length && (
+        <p className="mt-2 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.reasoningSupporting}:</span> {supporting.map((v) => displayBiomarker(v, isUk)).join(', ')}
+        </p>
+      )}
+      {!!contradicting.length && (
+        <p className="mt-2 text-sm leading-5 text-amber-800">
+          <span className="font-semibold">{copy.reasoningContradicting}:</span> {contradicting.map((v) => displayBiomarker(v, isUk)).join(', ')}
+        </p>
+      )}
+      {!!gaps.length && (
+        <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <HelpCircle className="h-3.5 w-3.5" /> {copy.reasoningGaps}
+          </p>
+          <ul className="mt-1 space-y-1 text-sm leading-5 text-slate-600">
+            {gaps.map((item, index) => <li key={index}>{item}</li>)}
+          </ul>
+        </div>
+      )}
+      {!!nextTests.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.reasoningNextTests}:</span> {nextTests.map((v) => displayBiomarker(v, isUk)).join(', ')}
+        </p>
+      )}
+    </div>
+  )
 }
 
 function ActionCard({ item, copy, isUk }) {
@@ -473,6 +593,7 @@ export default function ProtocolPage() {
   const [retestPlan, setRetestPlan] = useState([])
   const [safetyAlerts, setSafetyAlerts] = useState([])
   const [shoppingLinks, setShoppingLinks] = useState([])
+  const [clinicalReasoningTraces, setClinicalReasoningTraces] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [exporting, setExporting] = useState(false)
@@ -491,6 +612,7 @@ export default function ProtocolPage() {
         setRetestPlan(data.retestPlan)
         setSafetyAlerts(data.safetyAlerts)
         setShoppingLinks(data.shoppingLinks)
+        setClinicalReasoningTraces(data.clinicalReasoningTraces)
         gaProtocolView(uploadId)
       } catch (err) {
         if (!active) return
@@ -674,6 +796,21 @@ export default function ProtocolPage() {
           ) : <p className="text-sm leading-6 text-slate-600">{copy.discussionFallback}</p>}
         </CoachCard>
       </div>
+
+      {!!clinicalReasoningTraces.length && (
+        <CoachCard className="p-5 sm:p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <GitBranch className="h-5 w-5 text-teal-600" />
+            <h2 className="text-lg font-extrabold text-slate-950">{copy.reasoningTitle}</h2>
+          </div>
+          <p className="mb-4 text-sm leading-6 text-slate-500">{copy.reasoningIntro}</p>
+          <div className="space-y-3">
+            {clinicalReasoningTraces.slice(0, 6).map((trace, index) => (
+              <ReasoningTraceCard key={trace?.pattern_id || index} trace={trace} copy={copy} isUk={isUk} />
+            ))}
+          </div>
+        </CoachCard>
+      )}
 
       <InsightCard
         icon={Sparkles}
