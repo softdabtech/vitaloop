@@ -17,31 +17,31 @@ public class CrmNavigationCatalogTests
         // super_admin's ShouldShow short-circuit makes every item visible —
         // including org-console items — matching the pre-refactor behavior
         // (isSuperAdmin bypassed the whole role check in the old inline Razor logic too).
-        Assert.Contains(visible, item => item.Href == "/admin");
+        Assert.Contains(visible, item => item.Href == "/org");
     }
 
     [Fact]
-    public void Org_Admin_Sees_Admin_Console_But_Not_Ops()
+    public void Org_Admin_Sees_Org_Console_But_Not_Ops()
     {
         var orgId = Guid.NewGuid();
         var orgAdmin = TestUsers.OrgAdmin(orgId);
         var visible = CrmNavigationCatalog.GetVisibleGroups(orgAdmin).SelectMany(g => g).ToList();
 
-        Assert.Contains(visible, item => item.Href == "/admin");
-        Assert.Contains(visible, item => item.Href == "/admin/members");
+        Assert.Contains(visible, item => item.Href == "/org");
+        Assert.Contains(visible, item => item.Href == "/org/members");
         Assert.DoesNotContain(visible, item => item.Href == "/ops");
         Assert.DoesNotContain(visible, item => item.Href == "/ops/knowledge-rules");
     }
 
     [Fact]
-    public void Practitioner_Sees_My_Clients_Not_Admin_Console()
+    public void Practitioner_Sees_My_Clients_Not_Org_Console()
     {
         var orgId = Guid.NewGuid();
         var practitioner = TestUsers.Practitioner(orgId, Guid.NewGuid());
         var visible = CrmNavigationCatalog.GetVisibleGroups(practitioner).SelectMany(g => g).ToList();
 
         Assert.Contains(visible, item => item.Href == "/practitioner/clients");
-        Assert.DoesNotContain(visible, item => item.Href == "/admin");
+        Assert.DoesNotContain(visible, item => item.Href == "/org");
         Assert.DoesNotContain(visible, item => item.Href == "/ops");
     }
 
@@ -51,7 +51,7 @@ public class CrmNavigationCatalogTests
         var visible = CrmNavigationCatalog.GetVisibleGroups(null).SelectMany(g => g).ToList();
 
         Assert.Contains(visible, item => item.Href == "/settings");
-        Assert.DoesNotContain(visible, item => item.Href == "/admin");
+        Assert.DoesNotContain(visible, item => item.Href == "/org");
         Assert.DoesNotContain(visible, item => item.Href == "/ops");
     }
 
@@ -59,9 +59,9 @@ public class CrmNavigationCatalogTests
     public void ResolveActiveHref_Prefers_Longest_Matching_Prefix()
     {
         var items = CrmNavigationCatalog.AllItems;
-        var active = CrmNavigationCatalog.ResolveActiveHref(items, "/admin/members/invite");
+        var active = CrmNavigationCatalog.ResolveActiveHref(items, "/org/members/invite");
 
-        Assert.Equal("/admin/members/invite", active);
+        Assert.Equal("/org/members/invite", active);
     }
 
     [Fact]

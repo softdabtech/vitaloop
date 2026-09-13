@@ -75,7 +75,7 @@ public class AdminDependencyTests
 
         var path = redirect.ResolvePostLoginRedirect(user);
 
-        Assert.Equal("/admin", path);
+        Assert.Equal("/org", path);
     }
 
     [Fact]

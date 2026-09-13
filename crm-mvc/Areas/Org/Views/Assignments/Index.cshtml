@@ -43,14 +43,14 @@
             },
             PrimaryAction = new EditableTableActionViewModel
             {
-                ActionUrl = $"/admin/assignments/{assignment.Id}/update",
+                ActionUrl = $"/org/assignments/{assignment.Id}/update",
                 SubmitLabel = "Save"
             },
             SecondaryActions = new List<EditableTableActionViewModel>
             {
                 new()
                 {
-                    ActionUrl = $"/admin/assignments/{assignment.Id}/reassign",
+                    ActionUrl = $"/org/assignments/{assignment.Id}/reassign",
                     SubmitLabel = "Reassign",
                     Fields = new List<EditableTableFieldViewModel>
                     {

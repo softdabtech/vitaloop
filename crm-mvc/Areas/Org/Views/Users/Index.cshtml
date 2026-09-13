@@ -129,12 +129,12 @@
               <td><span class="tag @tariffCls">@(string.IsNullOrEmpty(m.SubscriptionStatus)?"free":m.SubscriptionStatus)</span></td>
               <td>
                 <div class="act-row">
-                  <form method="post" action="/admin/members/@m.UserId/profile" style="display:contents">
+                  <form method="post" action="/org/members/@m.UserId/profile" style="display:contents">
                     @Html.AntiForgeryToken()
                     <input type="text" name="fullName" value="@m.FullName" placeholder="Full name" style="width:100px">
                     <button type="submit" class="btn-xs btn-save">Save</button>
                   </form>
-                  <form method="post" action="/admin/members/@m.UserId/role" style="display:contents">
+                  <form method="post" action="/org/members/@m.UserId/role" style="display:contents">
                     @Html.AntiForgeryToken()
                     <select name="newRole">
                       @foreach (var r in new[]{"org_owner","client_admin","manager","practitioner","support","member"})
@@ -145,8 +145,8 @@
                     </select>
                     <button type="submit" class="btn-xs btn-ghost">Role</button>
                   </form>
-                  <a href="/admin/members/@m.UserId/profile" class="btn-xs btn-ghost">Profile</a>
-                  <form method="post" action="/admin/members/@m.UserId/remove" style="display:contents"
+                  <a href="/org/members/@m.UserId/profile" class="btn-xs btn-ghost">Profile</a>
+                  <form method="post" action="/org/members/@m.UserId/remove" style="display:contents"
                         onsubmit="return confirm('Remove @(m.DisplayName.Replace("'","\'")) from organization?')">
                     @Html.AntiForgeryToken()
                     <button type="submit" class="btn-xs btn-danger">Remove</button>
@@ -227,7 +227,7 @@ function mFilter() {
             },
             PrimaryAction = new EditableTableActionViewModel
             {
-                ActionUrl = $"/admin/members/{member.UserId}/profile",
+                ActionUrl = $"/org/members/{member.UserId}/profile",
                 SubmitLabel = "Save Profile",
                 Fields = new List<EditableTableFieldViewModel>
                 {
@@ -251,7 +251,7 @@ function mFilter() {
             {
                 new()
                 {
-                    ActionUrl = $"/admin/members/{member.UserId}/role",
+                    ActionUrl = $"/org/members/{member.UserId}/role",
                     SubmitLabel = "Change Role",
                     Fields = new List<EditableTableFieldViewModel>
                     {
@@ -274,7 +274,7 @@ function mFilter() {
                 },
                 new()
                 {
-                    ActionUrl = $"/admin/members/{member.UserId}/remove",
+                    ActionUrl = $"/org/members/{member.UserId}/remove",
                     SubmitLabel = "Remove",
                     SubmitButtonClass = "btn btn-xs btn-danger",
                     ConfirmMessage = "Remove this member from organization?"

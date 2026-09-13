@@ -75,7 +75,7 @@ public class OrganizationsController : Controller
         catch (UnauthorizedAccessException)
         {
             TempData["ErrorMessage"] = "Select an organization first to open settings.";
-            return Redirect("/admin/organizations");
+            return Redirect("/org/organizations");
         }
     }
 
@@ -97,7 +97,7 @@ public class OrganizationsController : Controller
         catch (UnauthorizedAccessException)
         {
             TempData["ErrorMessage"] = "Select an organization first to update settings.";
-            return Redirect("/admin/organizations");
+            return Redirect("/org/organizations");
         }
     }
 

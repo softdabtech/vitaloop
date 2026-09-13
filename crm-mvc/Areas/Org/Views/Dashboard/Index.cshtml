@@ -1,22 +1,22 @@
 @model AdminDashboardViewModel
 @{
-  ViewData["Title"] = "Admin Dashboard";
+  ViewData["Title"] = "Organization Console";
 }
 
 @await Html.PartialAsync("~/Views/Shared/Partials/_Breadcrumbs.cshtml")
-@await Html.PartialAsync("~/Views/Shared/Partials/_PageHeader.cshtml", new PageHeaderViewModel { Title = "Admin Dashboard", Subtitle = "Organization and member management overview", Eyebrow = "Admin" })
+@await Html.PartialAsync("~/Views/Shared/Partials/_PageHeader.cshtml", new PageHeaderViewModel { Title = "Organization Console", Subtitle = "Organization and member management overview", Eyebrow = "Org" })
 
 <nav class="vo-quick-actions" aria-label="Quick actions">
-  <a class="vo-quick-action" href="/admin/members">
+  <a class="vo-quick-action" href="/org/members">
     <span class="vo-quick-action-icon">👥</span> Members
   </a>
-  <a class="vo-quick-action" href="/admin/members/invite">
+  <a class="vo-quick-action" href="/org/members/invite">
     <span class="vo-quick-action-icon">✉️</span> Invitations
   </a>
-  <a class="vo-quick-action" href="/admin/assignments">
+  <a class="vo-quick-action" href="/org/assignments">
     <span class="vo-quick-action-icon">🔗</span> Assignments
   </a>
-  <a class="vo-quick-action" href="/admin/organizations">
+  <a class="vo-quick-action" href="/org/organizations">
     <span class="vo-quick-action-icon">🏢</span> Organizations
   </a>
   <a class="vo-quick-action" href="/organizations/settings?org_id=@Model.ActiveOrganizationId">

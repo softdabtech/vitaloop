@@ -1,6 +1,6 @@
 @model OpsDashboardViewModel
 @{
-  ViewData["Title"] = "Ops Dashboard";
+  ViewData["Title"] = "Platform Ops";
   var globalRoleOptions = new[] { "end_user","support","practitioner","client_admin","super_admin" };
   var tariffOptions     = new[] { "free","active","trialing","past_due","canceled","incomplete","unpaid" };
   var practitioners = Model.GlobalUsers.Where(u => string.Equals(u.GlobalRole,"practitioner",StringComparison.OrdinalIgnoreCase)).ToList();
@@ -396,9 +396,9 @@
                     </td>
                     <td>
                       <div class="act-row">
-                        <a href="/admin/members/@p.UserId/profile" class="btn-xs btn-ghost">Profile</a>
+                        <a href="/org/members/@p.UserId/profile" class="btn-xs btn-ghost">Profile</a>
                         <a href="/ops/users/@p.UserId/profile" class="btn-xs btn-ghost">Activity</a>
-                        <a href="/admin/assignments?userId=@p.UserId" class="btn-xs btn-ghost">Clients</a>
+                        <a href="/org/assignments?userId=@p.UserId" class="btn-xs btn-ghost">Clients</a>
                       </div>
                     </td>
                   </tr>
@@ -615,10 +615,10 @@
       <div class="widget">
         <div class="widget-head"><p class="widget-title">🔗 Quick Links</p></div>
         <div class="qlink-list">
-          <a class="qlink" href="/admin/organizations">🏢 Organizations</a>
-          <a class="qlink" href="/admin/members">👥 All Members</a>
-          <a class="qlink" href="/admin/members/invite">✉️ Invite Member</a>
-          <a class="qlink" href="/admin/assignments">🔗 Assignments</a>
+          <a class="qlink" href="/org/organizations">🏢 Organizations</a>
+          <a class="qlink" href="/org/members">👥 All Members</a>
+          <a class="qlink" href="/org/members/invite">✉️ Invite Member</a>
+          <a class="qlink" href="/org/assignments">🔗 Assignments</a>
           <a class="qlink" href="/ops/activity">📋 Activity Log</a>
           <a class="qlink" href="/ops/knowledge-rules">🧬 Knowledge Rules</a>
           <a class="qlink" href="/billing">💳 Billing</a>

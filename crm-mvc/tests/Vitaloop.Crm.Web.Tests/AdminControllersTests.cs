@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging.Abstractions;
-using Vitaloop.Crm.Web.Areas.Admin.Controllers;
+using Vitaloop.Crm.Web.Areas.Org.Controllers;
 using Xunit;
 using Vitaloop.Crm.Web.Models.Auth;
 using Vitaloop.Crm.Web.Models.Crm;
@@ -67,7 +67,7 @@ public class AdminControllersTests
         var model = Assert.IsType<OrganizationsPageViewModel>(view.Model);
         Assert.True(model.IsSuperAdmin);
         Assert.Equal(1, model.TotalOrganizations);
-        Assert.Equal("/admin/organizations/create", model.CreateOrgUrl);
+        Assert.Equal("/org/organizations/create", model.CreateOrgUrl);
     }
 
     [Fact]
@@ -129,10 +129,10 @@ public class AdminControllersTests
         var gateway = new FakeCrmDataGateway();
         var controller = CreateOrganizationsController(userCtx, gateway, canAccessOrg: true, hasGlobalSuperAdmin: true, hasOrgAdmin: true);
 
-        var action = await controller.Switch(orgId, "/admin/members", CancellationToken.None);
+        var action = await controller.Switch(orgId, "/org/members", CancellationToken.None);
 
         var redirect = Assert.IsType<RedirectResult>(action);
-        Assert.Equal("/admin/members", redirect.Url);
+        Assert.Equal("/org/members", redirect.Url);
     }
 
     [Fact]
@@ -599,14 +599,14 @@ public class OrganizationsControllerRouteGuardTests
     [Fact]
     public void Is_Gated_By_Org_Role_Not_An_Impossible_Global_Role()
     {
-        var attribute = typeof(Vitaloop.Crm.Web.Areas.Admin.Controllers.OrganizationsController)
+        var attribute = typeof(Vitaloop.Crm.Web.Areas.Org.Controllers.OrganizationsController)
             .GetCustomAttributes(inherit: false)
             .OfType<Vitaloop.Crm.Web.Attributes.RequireOrgRoleAttribute>()
             .SingleOrDefault();
 
         Assert.NotNull(attribute);
         Assert.Empty(
-            typeof(Vitaloop.Crm.Web.Areas.Admin.Controllers.OrganizationsController)
+            typeof(Vitaloop.Crm.Web.Areas.Org.Controllers.OrganizationsController)
                 .GetCustomAttributes(inherit: false)
                 .OfType<Vitaloop.Crm.Web.Attributes.RequireGlobalRoleAttribute>());
     }

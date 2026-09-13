@@ -6,10 +6,10 @@ using Vitaloop.Crm.Web.Services.Memberships;
 using Vitaloop.Crm.Web.Services.Organizations;
 using Vitaloop.Crm.Web.ViewModels;
 
-namespace Vitaloop.Crm.Web.Areas.Admin.Controllers;
+namespace Vitaloop.Crm.Web.Areas.Org.Controllers;
 
-[Area("Admin")]
-[Route("admin/members")]
+[Area("Org")]
+[Route("org/members")]
 [RequireOrgRole("org_owner", "client_admin", "manager")]
 public class UsersController : Controller
 {

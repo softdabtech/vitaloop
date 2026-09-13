@@ -5,10 +5,10 @@ using Vitaloop.Crm.Web.Services.Memberships;
 using Vitaloop.Crm.Web.Services.Organizations;
 using Vitaloop.Crm.Web.ViewModels;
 
-namespace Vitaloop.Crm.Web.Areas.Admin.Controllers;
+namespace Vitaloop.Crm.Web.Areas.Org.Controllers;
 
-[Area("Admin")]
-[Route("admin/organizations")]
+[Area("Org")]
+[Route("org/organizations")]
 // 2026-09-13 CRM audit fix: this was [RequireGlobalRole("super_admin",
 // "client_admin")] — but "client_admin" is never a value of GlobalRole in
 // this system (it only takes "end_user"/"super_admin"; "client_admin" is an
@@ -67,7 +67,7 @@ public class OrganizationsController : Controller
                     })
                     .ToList(),
                 IsSuperAdmin = _accessPolicyService.HasGlobalRole(userCtx, "super_admin"),
-                CreateOrgUrl = "/admin/organizations/create"
+                CreateOrgUrl = "/org/organizations/create"
             };
 
             return View(model);
@@ -230,7 +230,7 @@ public class OrganizationsController : Controller
         }
     }
 
-    [HttpGet("/admin/orgs/{orgId}/switch")]
+    [HttpGet("/org/orgs/{orgId}/switch")]
     public async Task<IActionResult> Switch(Guid orgId, [FromQuery] string? returnUrl = null, CancellationToken ct = default)
     {
         var userCtx = await _userContextAccessor.GetOrThrow(ct);
@@ -247,6 +247,6 @@ public class OrganizationsController : Controller
             return Redirect(returnUrl);
         }
 
-        return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
+        return RedirectToAction("Index", "Dashboard", new { area = "Org" });
     }
 }

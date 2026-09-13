@@ -17,17 +17,17 @@ public static class CrmNavigationCatalog
     public static readonly IReadOnlyList<CrmNavItem> AllItems = new[]
     {
         // Overview
-        new CrmNavItem("/admin", "Dashboard", "Overview", "&#127968;", new[] { "org_admin", "manager" }),
+        new CrmNavItem("/org", "Organization Console", "Overview", "&#127968;", new[] { "org_admin", "manager" }),
         new CrmNavItem("/practitioner/clients", "My Clients", "Overview", "&#129658;", new[] { "practitioner" }),
-        new CrmNavItem("/ops", "Ops", "Overview", "&#128202;", new[] { "super_admin" }),
+        new CrmNavItem("/ops", "Platform Ops", "Overview", "&#128202;", new[] { "super_admin" }),
         new CrmNavItem("/ops/activity", "Activity Log", "Overview", "&#129534;", new[] { "super_admin" }),
         new CrmNavItem("/ops/knowledge-rules", "Knowledge Rules", "Overview", "&#129516;", new[] { "super_admin" }),
 
         // CRM
-        new CrmNavItem("/admin/organizations", "Organizations", "CRM", "&#127962;", new[] { "super_admin", "org_admin" }),
-        new CrmNavItem("/admin/members", "Team Members", "CRM", "&#128101;", new[] { "org_admin", "manager" }),
-        new CrmNavItem("/admin/members/invite", "Invitations", "CRM", "&#9993;", new[] { "org_admin" }),
-        new CrmNavItem("/admin/assignments", "Assignments", "CRM", "&#128279;", new[] { "org_admin", "manager", "practitioner" }),
+        new CrmNavItem("/org/organizations", "Organizations", "CRM", "&#127962;", new[] { "super_admin", "org_admin" }),
+        new CrmNavItem("/org/members", "Team Members", "CRM", "&#128101;", new[] { "org_admin", "manager" }),
+        new CrmNavItem("/org/members/invite", "Invitations", "CRM", "&#9993;", new[] { "org_admin" }),
+        new CrmNavItem("/org/assignments", "Assignments", "CRM", "&#128279;", new[] { "org_admin", "manager", "practitioner" }),
 
         // Account
         new CrmNavItem("/billing", "Billing", "Account", "&#128179;", new[] { "org_admin" }),

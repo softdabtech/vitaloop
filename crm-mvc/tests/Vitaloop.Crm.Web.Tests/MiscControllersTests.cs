@@ -147,6 +147,58 @@ public class InvitationsControllerTests
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// LegacyAdminRedirectController
+//
+// 2026-09-13 Admin -> Org rename: old /admin/* bookmarks/links must keep
+// working, permanently redirected to the new /org/* prefix.
+// ────────────────────────────────────────────────────────────────────────────
+
+public class LegacyAdminRedirectControllerTests
+{
+    private static LegacyAdminRedirectController CreateController(string? queryString = null)
+    {
+        var http = new DefaultHttpContext();
+        if (queryString is not null)
+        {
+            http.Request.QueryString = new QueryString(queryString);
+        }
+
+        var controller = new LegacyAdminRedirectController();
+        controller.ControllerContext = new ControllerContext { HttpContext = http };
+        return controller;
+    }
+
+    [Fact]
+    public void Bare_Admin_Redirects_To_Org()
+    {
+        var result = CreateController().RedirectToOrg(rest: null);
+
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.True(redirect.Permanent);
+        Assert.Equal("/org", redirect.Url);
+    }
+
+    [Fact]
+    public void Admin_Subpath_Redirects_To_Same_Subpath_Under_Org()
+    {
+        var result = CreateController().RedirectToOrg(rest: "members/invite");
+
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.True(redirect.Permanent);
+        Assert.Equal("/org/members/invite", redirect.Url);
+    }
+
+    [Fact]
+    public void Query_String_Is_Preserved_Across_The_Redirect()
+    {
+        var result = CreateController(queryString: "?foo=bar").RedirectToOrg(rest: "assignments");
+
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.Equal("/org/assignments?foo=bar", redirect.Url);
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ────────────────────────────────────────────────────────────────────────────
 

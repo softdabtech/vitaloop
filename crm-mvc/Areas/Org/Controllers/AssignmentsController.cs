@@ -6,10 +6,10 @@ using Vitaloop.Crm.Web.Services.Memberships;
 using Vitaloop.Crm.Web.Services.Organizations;
 using Vitaloop.Crm.Web.ViewModels;
 
-namespace Vitaloop.Crm.Web.Areas.Admin.Controllers;
+namespace Vitaloop.Crm.Web.Areas.Org.Controllers;
 
-[Area("Admin")]
-[Route("admin/assignments")]
+[Area("Org")]
+[Route("org/assignments")]
 [RequireOrgRole("org_owner", "client_admin", "manager", "practitioner")]
 public class AssignmentsController : Controller
 {
@@ -48,7 +48,7 @@ public class AssignmentsController : Controller
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
             TempData["ErrorMessage"] = "Select an active organization to view assignments.";
-            return RedirectToAction("Index", "Organizations", new { area = "Admin" });
+            return RedirectToAction("Index", "Organizations", new { area = "Org" });
         }
 
         try
@@ -124,7 +124,7 @@ public class AssignmentsController : Controller
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
             TempData["ErrorMessage"] = "Select an active organization before creating assignments.";
-            return RedirectToAction("Index", "Organizations", new { area = "Admin" });
+            return RedirectToAction("Index", "Organizations", new { area = "Org" });
         }
 
         // TODO: Load practitioners and clients from backend
@@ -146,7 +146,7 @@ public class AssignmentsController : Controller
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
             TempData["ErrorMessage"] = "Select an active organization before creating assignments.";
-            return RedirectToAction("Index", "Organizations", new { area = "Admin" });
+            return RedirectToAction("Index", "Organizations", new { area = "Org" });
         }
 
         if (model.ClientId == Guid.Empty || model.PractitionerId == Guid.Empty)

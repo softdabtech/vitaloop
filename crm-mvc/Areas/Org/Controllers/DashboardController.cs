@@ -7,10 +7,10 @@ using Vitaloop.Crm.Web.Services.Memberships;
 using Vitaloop.Crm.Web.Services.Organizations;
 using Vitaloop.Crm.Web.ViewModels;
 
-namespace Vitaloop.Crm.Web.Areas.Admin.Controllers;
+namespace Vitaloop.Crm.Web.Areas.Org.Controllers;
 
-[Area("Admin")]
-[Route("admin")]
+[Area("Org")]
+[Route("org")]
 [RequireOrgRole("org_owner", "client_admin")]
 public class DashboardController : Controller
 {
@@ -59,7 +59,7 @@ public class DashboardController : Controller
         if (!userCtx.ActiveOrganizationId.HasValue)
         {
             TempData["ErrorMessage"] = "No active organization selected.";
-            return RedirectToAction("Index", "Organizations", new { area = "Admin" });
+            return RedirectToAction("Index", "Organizations", new { area = "Org" });
         }
 
         var orgId = userCtx.ActiveOrganizationId.Value;

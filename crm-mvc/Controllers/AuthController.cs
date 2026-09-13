@@ -184,7 +184,7 @@ public class AuthController : Controller
         if (!isMember)
         {
             TempData["ErrorMessage"] = "You are not a member of that organization.";
-            return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
+            return RedirectToAction("Index", "Dashboard", new { area = "Org" });
         }
 
         // Persist the selection in the same cookie the ActiveOrganizationResolver reads.
@@ -207,6 +207,6 @@ public class AuthController : Controller
             return Redirect(returnUrl);
         }
 
-        return RedirectToAction("Index", "Dashboard", new { area = "Admin" });
+        return RedirectToAction("Index", "Dashboard", new { area = "Org" });
     }
 }

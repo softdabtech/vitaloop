@@ -57,7 +57,7 @@
       <h1 class="profile-title">Member Profile</h1>
       <p class="profile-sub">Review and update the member context used by CRM workflows.</p>
     </div>
-    <a href="/admin/members" class="btn btn-secondary">Back to members</a>
+    <a href="/org/members" class="btn btn-secondary">Back to members</a>
   </div>
 
   <div class="profile-grid">
@@ -96,7 +96,7 @@
 
     <section class="profile-card">
       <h2 style="margin:0 0 14px;color:#0f172a;font-size:18px;font-weight:900;">Editable profile</h2>
-      <form method="post" action="/admin/members/@Model.UserId/profile">
+      <form method="post" action="/org/members/@Model.UserId/profile">
         @Html.AntiForgeryToken()
         <div class="form-grid">
           <div class="field" style="grid-column:1 / -1">
@@ -129,7 +129,7 @@
         </div>
         <div class="actions">
           <button type="submit" class="btn btn-primary">Save profile</button>
-          <a href="/admin/members" class="btn btn-secondary">Cancel</a>
+          <a href="/org/members" class="btn btn-secondary">Cancel</a>
         </div>
       </form>
     </section>

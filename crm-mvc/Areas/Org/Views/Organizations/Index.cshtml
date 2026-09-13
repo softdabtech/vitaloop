@@ -108,7 +108,7 @@
               <td><span class="tag @statusCls">@(org.Status ?? "unknown")</span></td>
               <td style="color:#64748b;font-size:13px">—</td>
               <td>
-                <form method="post" action="/admin/organizations/@org.Id/status" style="display:inline">
+                <form method="post" action="/org/organizations/@org.Id/status" style="display:inline">
                   @Html.AntiForgeryToken()
                   <div class="act-row">
                     <select name="status">
@@ -119,9 +119,9 @@
                       }
                     </select>
                     <button type="submit" class="btn-xs btn-save">Save</button>
-                    <a href="/admin/organizations/@org.Id" class="btn-xs btn-ghost">Details</a>
-                    <a href="/admin/orgs/@org.Id/switch?returnUrl=%2Fadmin%2Fmembers" class="btn-xs btn-ghost">Team</a>
-                    <a href="/admin/orgs/@org.Id/switch?returnUrl=%2Forganizations%2Fsettings" class="btn-xs btn-ghost">Settings</a>
+                    <a href="/org/organizations/@org.Id" class="btn-xs btn-ghost">Details</a>
+                    <a href="/org/orgs/@org.Id/switch?returnUrl=%2Fadmin%2Fmembers" class="btn-xs btn-ghost">Team</a>
+                    <a href="/org/orgs/@org.Id/switch?returnUrl=%2Forganizations%2Fsettings" class="btn-xs btn-ghost">Settings</a>
                   </div>
                 </form>
               </td>

@@ -21,7 +21,7 @@
 
 <aside class="vo-sidebar" id="vo-sidebar" aria-label="Main navigation">
   <div class="vo-brand">
-    <a href="/admin" class="vo-brand-link" aria-label="VITALOOP CRM home">
+    <a href="/org" class="vo-brand-link" aria-label="VITALOOP CRM home">
       <span class="vo-brand-mark">VL</span>
       <span class="vo-brand-text">Vitaloop</span>
     </a>
@@ -54,13 +54,13 @@
               var selected = membership.OrganizationId == Model.ActiveOrganizationId;
               if (selected)
               {
-                <option value="/admin/orgs/@membership.OrganizationId/switch" selected>
+                <option value="/org/orgs/@membership.OrganizationId/switch" selected>
                   @membership.OrganizationName
                 </option>
               }
               else
               {
-                <option value="/admin/orgs/@membership.OrganizationId/switch">
+                <option value="/org/orgs/@membership.OrganizationId/switch">
                   @membership.OrganizationName
                 </option>
               }

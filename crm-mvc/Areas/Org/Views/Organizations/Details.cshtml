@@ -24,12 +24,12 @@
                 <h2>Quick Actions</h2>
             </div>
             <div class="action-buttons">
-                <a class="btn btn-primary" href="/admin/orgs/@Model?.Id/switch?returnUrl=%2Fadmin%2Forganizations%2F@Model?.Id">Use As Active Org</a>
-                <a class="btn btn-outline" href="/admin/orgs/@Model?.Id/switch?returnUrl=%2Forganizations%2Fsettings%3Forg_id%3D@Model?.Id">Open Organization Settings</a>
-                <a class="btn btn-outline" href="/admin/members">Manage Members</a>
-                <a class="btn btn-outline" href="/admin/assignments">Manage Assignments</a>
+                <a class="btn btn-primary" href="/org/orgs/@Model?.Id/switch?returnUrl=%2Fadmin%2Forganizations%2F@Model?.Id">Use As Active Org</a>
+                <a class="btn btn-outline" href="/org/orgs/@Model?.Id/switch?returnUrl=%2Forganizations%2Fsettings%3Forg_id%3D@Model?.Id">Open Organization Settings</a>
+                <a class="btn btn-outline" href="/org/members">Manage Members</a>
+                <a class="btn btn-outline" href="/org/assignments">Manage Assignments</a>
             </div>
-            <form method="post" action="/admin/organizations/@Model?.Id/status" style="margin-top:16px;">
+            <form method="post" action="/org/organizations/@Model?.Id/status" style="margin-top:16px;">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="status" value="@(string.Equals(Model?.Status, "active", StringComparison.OrdinalIgnoreCase) ? "inactive" : "active")" />
                 <button type="submit" class="btn btn-danger">
@@ -74,7 +74,7 @@
         <div class="tab-panel">
             <div class="section-header">
                 <h2>Team Members (@Model?.Members.Count)</h2>
-                <a href="/admin/members" class="btn btn-sm btn-primary">
+                <a href="/org/members" class="btn btn-sm btn-primary">
                     Manage Team
                 </a>
             </div>
@@ -96,7 +96,7 @@
                         {
                             new()
                             {
-                                ActionUrl = "/admin/members",
+                                ActionUrl = "/org/members",
                                 Method = "get",
                                 SubmitLabel = "Manage",
                             },
@@ -116,7 +116,7 @@
             @if ((Model?.Members.Count ?? 0) == 0)
             {
                 <div class="empty-state" style="padding-top:0;">
-                    <a href="/admin/members/invite" class="btn btn-primary">
+                    <a href="/org/members/invite" class="btn btn-primary">
                         Invite First Member
                     </a>
                 </div>

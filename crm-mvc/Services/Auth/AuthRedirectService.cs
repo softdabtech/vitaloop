@@ -27,7 +27,7 @@ public sealed class AuthRedirectService
 
         if (hasAdminRole)
         {
-            return "/admin";
+            return "/org";
         }
 
         var hasPractitionerRole = activeMembers.Any(m =>
@@ -39,7 +39,7 @@ public sealed class AuthRedirectService
         }
 
         // FIX: End-users or users with no CRM role should not be in CRM
-        // Return error or redirect to frontend instead of defaulting to /admin
+        // Return error or redirect to frontend instead of defaulting to /org
         if (!activeMembers.Any())
         {
             throw new InvalidOperationException(
@@ -47,6 +47,6 @@ public sealed class AuthRedirectService
                 "End-users should not access CRM - verify frontend post-login logic.");
         }
 
-        return "/admin";
+        return "/org";
     }
 }
