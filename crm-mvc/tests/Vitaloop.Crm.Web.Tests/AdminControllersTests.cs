@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
@@ -577,5 +578,36 @@ internal sealed class FakeCrmDataGateway : Vitaloop.Crm.Web.Services.Data.ICrmDa
         LastApprovedRuleId = ruleId;
         LastApprovePayload = payload;
         return Task.FromResult(OneKnowledgeRule);
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// 2026-09-13 CRM audit fix regression guard: Areas/Admin/Controllers/
+// OrganizationsController used to be gated with
+// [RequireGlobalRole("super_admin", "client_admin")] — but "client_admin" is
+// never a valid GlobalRole value in this system (only "end_user"/
+// "super_admin"; client_admin is an ORG-level Membership.Role), so every
+// real org owner/client_admin was unconditionally 403'd here even though
+// OrganizationService.GetOrganizations() already scopes results correctly
+// for them. A unit test that calls the action method directly (as the tests
+// above do) never exercises attribute-level filters, so this bug was
+// invisible to them; this test asserts on the attribute itself instead.
+// ────────────────────────────────────────────────────────────────────────────
+
+public class OrganizationsControllerRouteGuardTests
+{
+    [Fact]
+    public void Is_Gated_By_Org_Role_Not_An_Impossible_Global_Role()
+    {
+        var attribute = typeof(Vitaloop.Crm.Web.Areas.Admin.Controllers.OrganizationsController)
+            .GetCustomAttributes(inherit: false)
+            .OfType<Vitaloop.Crm.Web.Attributes.RequireOrgRoleAttribute>()
+            .SingleOrDefault();
+
+        Assert.NotNull(attribute);
+        Assert.Empty(
+            typeof(Vitaloop.Crm.Web.Areas.Admin.Controllers.OrganizationsController)
+                .GetCustomAttributes(inherit: false)
+                .OfType<Vitaloop.Crm.Web.Attributes.RequireGlobalRoleAttribute>());
     }
 }

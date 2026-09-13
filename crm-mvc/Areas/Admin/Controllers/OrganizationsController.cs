@@ -9,7 +9,16 @@ namespace Vitaloop.Crm.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
 [Route("admin/organizations")]
-[RequireGlobalRole("super_admin", "client_admin")]
+// 2026-09-13 CRM audit fix: this was [RequireGlobalRole("super_admin",
+// "client_admin")] — but "client_admin" is never a value of GlobalRole in
+// this system (it only takes "end_user"/"super_admin"; "client_admin" is an
+// ORG-level Membership.Role). That meant every real client_admin/org_owner
+// was unconditionally 403'd here, even though OrganizationService.
+// GetOrganizations() below already scopes the result set correctly for
+// them (CanAccessOrg filtering) — the backing logic supported them, the
+// route guard didn't. RequireOrgRole both auto-passes super_admin (see
+// RequireOrgRoleAttribute) and correctly checks the real org-level role.
+[RequireOrgRole("org_owner", "client_admin")]
 public class OrganizationsController : Controller
 {
     private readonly IUserContextAccessor _userContextAccessor;

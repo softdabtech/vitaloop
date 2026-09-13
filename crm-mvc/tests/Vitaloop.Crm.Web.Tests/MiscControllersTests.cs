@@ -112,58 +112,14 @@ public class AuthControllerTests
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// MembersController
-// ────────────────────────────────────────────────────────────────────────────
-
-public class MembersControllerTests
-{
-    private static MembersController CreateController(UserContext? userCtx = null)
-    {
-        var ctx = userCtx ?? TestUsers.OrgAdmin(Guid.NewGuid());
-        var gw = new FakeCrmDataGateway();
-        var policy = new FakeAccessPolicyService { CanAccessOrgResult = true, HasOrgRoleResult = true };
-        var membership = new MembershipService(gw, policy);
-        var controller = new MembersController(
-            new FakeUserContextAccessor(ctx),
-            new FakeActiveOrganizationResolver(),
-            membership);
-        MvcHelpers.AttachContext(controller);
-        return controller;
-    }
-
-    [Fact]
-    public async Task Index_With_ActiveOrg_Returns_View()
-    {
-        var result = await CreateController().Index(q: null, CancellationToken.None);
-        Assert.IsType<ViewResult>(result);
-    }
-
-    [Fact]
-    public async Task Index_Without_ActiveOrg_Throws_Unauthorized()
-    {
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => CreateController(TestUsers.OrgAdmin(null)).Index(null, CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task ChangeRole_Without_ActiveOrg_Throws_Unauthorized()
-    {
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => CreateController(TestUsers.OrgAdmin(null))
-                .ChangeRole(Guid.NewGuid(), "practitioner", CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task Remove_Without_ActiveOrg_Throws_Unauthorized()
-    {
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => CreateController(TestUsers.OrgAdmin(null))
-                .Remove(Guid.NewGuid(), CancellationToken.None));
-    }
-}
-
-// ────────────────────────────────────────────────────────────────────────────
 // InvitationsController
+//
+// 2026-09-13 CRM IA cleanup: MembersControllerTests (for the root, dead
+// Controllers/MembersController) and the Index/Create/Revoke cases here (for
+// the root InvitationsController's now-removed dead actions) were deleted
+// alongside the controllers themselves — see InvitationsController.cs's
+// docstring. Only Accept survives; it's the one live, [AllowAnonymous]
+// action a real invite email links to.
 // ────────────────────────────────────────────────────────────────────────────
 
 public class InvitationsControllerTests
@@ -176,40 +132,9 @@ public class InvitationsControllerTests
         var invitations = new InvitationService(gw, policy);
         var controller = new InvitationsController(
             new FakeUserContextAccessor(ctx),
-            new FakeActiveOrganizationResolver(),
             invitations);
         MvcHelpers.AttachContext(controller);
         return controller;
-    }
-
-    [Fact]
-    public async Task Index_With_ActiveOrg_Returns_View()
-    {
-        var result = await CreateController().Index(q: null, CancellationToken.None);
-        Assert.IsType<ViewResult>(result);
-    }
-
-    [Fact]
-    public async Task Index_Without_ActiveOrg_Throws_Unauthorized()
-    {
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => CreateController(TestUsers.OrgAdmin(null)).Index(null, CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task Create_Without_ActiveOrg_Throws_Unauthorized()
-    {
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => CreateController(TestUsers.OrgAdmin(null))
-                .Create("x@example.com", "practitioner", CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task Revoke_Without_ActiveOrg_Throws_Unauthorized()
-    {
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => CreateController(TestUsers.OrgAdmin(null))
-                .Revoke(Guid.NewGuid(), CancellationToken.None));
     }
 
     [Fact]
