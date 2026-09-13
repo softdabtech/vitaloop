@@ -472,6 +472,11 @@ def _build_pattern(
     retest_marker: str,
     matched_rule_key: str,
     extra_missing_context: List[str] | None = None,
+    supportive_markers: List[Dict[str, Any]] | None = None,
+    contradicting_markers: List[Dict[str, Any]] | None = None,
+    severity: str | None = None,
+    doctor_escalation: Dict[str, Any] | None = None,
+    extra_confidence_reasons: List[str] | None = None,
 ) -> Dict[str, Any]:
     """Shared assembly for every pattern in PATTERN_COPY.
 
@@ -480,16 +485,38 @@ def _build_pattern(
     pattern detector only needs to decide WHICH markers triggered it, not
     reinvent the response shape, confidence adjustment, or missing-context
     logic each time.
+
+    2026-09-13 clinical_reasoning_trace groundwork (P1.1 iron/anemia pack,
+    the reference template every later domain pack copies): confidence used
+    to be a single number with the *reasons* for its adjustments only ever
+    applied silently, never surfaced — `confidence_reason` is one of the
+    fields the reasoning-trace contract needs and there was nowhere to read
+    it from. `supportive_markers` (corroborating but not pattern-defining)
+    and `contradicting_markers` (available data that argues against the
+    pattern, e.g. normal transferrin saturation) also didn't exist as a
+    concept — every pattern only ever had triggered_biomarkers/normal_context,
+    which conflates "in range" with "actually argues against this pattern".
+    `severity` and `doctor_escalation` are new, optional, additive fields —
+    every existing pattern detector's call site is unaffected by their
+    absence (all default to None so `.get()` on old snapshots stays safe).
     """
     copy = PATTERN_COPY[pattern_key][_locale(locale)]
     missing_context = list(extra_missing_context or [])
     missing_profile = _missing_profile_context(profile)
+    confidence_reasons = list(extra_confidence_reasons or [])
     if missing_profile:
         missing_context.append(_t(locale, "profile_gap"))
+        confidence_reasons.append("profile_context_incomplete")
 
     age = _age(profile)
     if age is not None and age < 18:
         missing_context.append(_t(locale, "pediatric_gap"))
+        confidence_reasons.append("pediatric_context_requires_review")
+
+    if normal_context:
+        confidence_reasons.append("corroborating_markers_in_range")
+    if supportive_markers:
+        confidence_reasons.append("supportive_markers_present")
 
     confidence = base_confidence + (0.06 if normal_context else 0.0)
     if missing_profile:
@@ -498,18 +525,24 @@ def _build_pattern(
         confidence -= 0.03
     confidence = max(0.35, min(confidence, 0.85))
 
-    return {
+    pattern: Dict[str, Any] = {
         "key": pattern_key,
+        "pattern_id": pattern_key,
+        "pattern_name": copy["title"],
         "domain": domain,
         "status": "context_required" if priority != "high" else "review_recommended",
         "priority": priority,
         "confidence": round(confidence, 2),
+        "confidence_reason": confidence_reasons,
+        "severity": severity,
         "title": copy["title"],
         "summary": copy["summary"],
         "what_this_means": [copy["meaning"]],
         "what_this_does_not_confirm": [copy["not_confirm"]],
         "triggered_biomarkers": [_format_marker(item) for item in triggered],
         "normal_context": [_format_marker(item) for item in normal_context[:6]],
+        "supportive_markers": [_format_marker(item) for item in (supportive_markers or [])[:8]],
+        "contradicting_markers": [_format_marker(item) for item in (contradicting_markers or [])[:8]],
         "missing_context": missing_context,
         "nutrition_context": None,
         "next_best_steps": [
@@ -517,6 +550,7 @@ def _build_pattern(
             {"key": "review_context", "timeframe": "next", "text": _t(locale, "next_review"), "priority": "high" if priority == "high" else "medium"},
         ],
         "doctor_questions": copy["doctor_q"],
+        "doctor_escalation": doctor_escalation or {"triggered": False, "reasons": []},
         "retest_plan": [
             {
                 "marker": retest_marker,
@@ -531,6 +565,15 @@ def _build_pattern(
             "evidence_level": "contextual_lab_pattern",
         },
     }
+    if (doctor_escalation or {}).get("triggered"):
+        # An escalation rule (e.g. very low hemoglobin, male/postmenopausal
+        # iron deficiency, symptoms of active blood loss) overrides the
+        # detector's own priority bucket — it must land in urgent_review via
+        # clinical_priority_planner.py regardless of what the marker-only
+        # priority calculation above produced.
+        pattern["priority"] = "high"
+        pattern["status"] = "review_recommended"
+    return pattern
 
 
 def _iron_deficiency_anemia_pattern(
