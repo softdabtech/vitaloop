@@ -14,6 +14,7 @@ from app.services.analysis_quality_snapshot import build_analysis_quality_snapsh
 from app.services.clinical_data_integrity import validate_clinical_data_integrity
 from app.services.clinical_priority_planner import build_clinical_priority_planner, build_clinical_story
 from app.services.next_best_test_engine import build_next_best_tests
+from app.services.clinical_reasoning_trace import build_clinical_reasoning_traces
 from app.services.cost_analytics import record_analysis_cost
 from app.services.evidence_gaps import build_evidence_gaps
 from app.services.explainability import build_recommendation_explanations
@@ -1109,6 +1110,18 @@ async def run_lab_analysis_pipeline(
         retest_suggestions=retest_suggestions,
     )
     clinical_story["next_best_tests"] = next_best_tests.get("recommended_tests") or []
+    # Clinical Reasoning Trace (P2 endpoint wiring, following P1.0-P1.8's
+    # pattern-corpus expansion): one trace per detected pattern, linking
+    # evidence_gaps/next_best_tests by domain and normalizing
+    # pattern-priority + safety_result into a single safety_level/
+    # doctor_flag — pure assembly over data already computed above, see
+    # clinical_reasoning_trace.py's module docstring.
+    clinical_reasoning_traces = build_clinical_reasoning_traces(
+        interpreted_report.get("patterns"),
+        evidence_gaps=evidence_gaps,
+        next_best_tests=next_best_tests,
+        safety_result=safety_result,
+    )
     output_knowledge_evaluation = _localized_knowledge_evaluation_for_response(
         knowledge_evaluation,
         knowledge_report,
@@ -1214,6 +1227,7 @@ async def run_lab_analysis_pipeline(
         "clinical_priority_planner": clinical_priority_planner,
         "next_best_tests": next_best_tests,
         "clinical_story": clinical_story,
+        "clinical_reasoning_traces": clinical_reasoning_traces,
         "safety_result": safety_result,
         "safety_notice": safety_notice,
         "explainability": explainability,
@@ -1269,6 +1283,7 @@ async def run_lab_analysis_pipeline(
                     "clinical_priority_planner": clinical_priority_planner,
                     "next_best_tests": next_best_tests,
                     "clinical_story": clinical_story,
+                    "clinical_reasoning_traces": clinical_reasoning_traces,
                     "version_provenance": version_provenance,
                     "ai_orchestration": ai_orchestration,
                     "quality_snapshot": quality_snapshot,

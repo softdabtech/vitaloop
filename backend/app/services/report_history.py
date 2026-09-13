@@ -176,6 +176,11 @@ def assemble_frozen_response(
         "clinical_priority_planner": input_snapshot.get("clinical_priority_planner"),
         "next_best_tests": input_snapshot.get("next_best_tests"),
         "clinical_story": input_snapshot.get("clinical_story"),
+        # Same frozen-verbatim treatment: a report generated before this
+        # field existed will read back None here — callers must handle a
+        # missing clinical_reasoning_traces the same way they already
+        # handle a missing clinical_story on an old snapshot.
+        "clinical_reasoning_traces": input_snapshot.get("clinical_reasoning_traces"),
         "safety_result": safety_result,
         # Pure locale-template boilerplate derived from the frozen status —
         # no AI/knowledge-rule recomputation involved (see

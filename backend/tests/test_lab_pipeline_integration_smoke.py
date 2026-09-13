@@ -56,3 +56,16 @@ async def test_child_reticulocyte_panel_runs_core_pipeline_without_external_ai()
 
     gap_markers = {str(item.get("missing_marker") or "").lower() for item in result["evidence_gaps"]["gaps"]}
     assert {"hemoglobin", "ferritin"} & gap_markers
+
+    # P2 endpoint wiring: clinical_reasoning_traces is now part of the live
+    # pipeline result, one trace per detected pattern (see
+    # clinical_reasoning_trace.py), not just an internal object computed and
+    # discarded.
+    traces = result.get("clinical_reasoning_traces")
+    assert isinstance(traces, list)
+    patterns = (result.get("interpreted_report") or {}).get("patterns") or []
+    assert len(traces) == len(patterns)
+    if traces:
+        assert traces[0]["pattern_id"] == patterns[0]["key"]
+        assert "safety_level" in traces[0]
+        assert "doctor_flag" in traces[0]

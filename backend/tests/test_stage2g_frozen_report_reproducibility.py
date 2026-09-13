@@ -719,3 +719,44 @@ def test_frozen_response_serves_persisted_clinical_story_and_priority_planner():
     assert response["clinical_priority_planner"]["buckets"]["urgent_review"][0]["key"] == "electrolyte_kidney_safety"
     assert response["next_best_tests"]["recommended_tests"][0]["marker"] == "ferritin"
     assert response["clinical_story"]["headline"] == "FROZEN clinical story headline"
+
+
+def test_frozen_response_serves_persisted_clinical_reasoning_traces():
+    """P2 endpoint wiring follow-up: clinical_reasoning_traces gets the same
+    frozen-verbatim treatment as clinical_story/clinical_priority_planner
+    directly above — persisted into input_snapshot at generation time, must
+    be served verbatim on a frozen read, not recomputed or dropped.
+    """
+    frozen = _frozen_row(
+        input_snapshot={
+            "clinical_reasoning_traces": [
+                {"pattern_id": "iron_deficiency_anemia", "domain": "iron_status", "doctor_flag": False},
+            ],
+        }
+    )
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["clinical_reasoning_traces"][0]["pattern_id"] == "iron_deficiency_anemia"
+
+
+def test_frozen_response_handles_missing_clinical_reasoning_traces_gracefully():
+    """A report generated before this field existed must read back None,
+    not raise — the same guard every other frozen-verbatim field gets."""
+    frozen = _frozen_row(input_snapshot={"evidence_gaps": {"summary": {"gap_count": 0}}})
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["clinical_reasoning_traces"] is None
