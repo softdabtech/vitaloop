@@ -1,67 +1,22 @@
 @using System.Linq
+@using Vitaloop.Crm.Web.Services.Navigation
 @model UserContext?
 @{
+  // 2026-09-13 CRM information-architecture audit, item #4: this partial
+  // used to hardcode the full nav item list AND re-implement the
+  // role-visibility rule inline in Razor (see CrmNavItem.cs's docstring for
+  // why that was a real problem, not just style). It is now a thin renderer
+  // over CrmNavigationCatalog — adding a page still means adding one line,
+  // but now in one reviewable C# file with a unit test, not silently inside
+  // a view.
   var currentPath = Context.Request.Path.Value?.ToLowerInvariant() ?? string.Empty;
+  var visibleGroups = CrmNavigationCatalog.GetVisibleGroups(Model).ToList();
+  var allVisibleItems = visibleGroups.SelectMany(g => g).ToList();
+  var activeItemHref = CrmNavigationCatalog.ResolveActiveHref(allVisibleItems, currentPath) ?? string.Empty;
+  var isSuperAdmin = string.Equals(Model?.GlobalRole, "super_admin", StringComparison.OrdinalIgnoreCase);
   var activeMembership = Model?.ActiveOrganizationId.HasValue == true
     ? Model.Memberships.FirstOrDefault(m => m.OrganizationId == Model.ActiveOrganizationId.Value)
     : null;
-
-  var isSuperAdmin = string.Equals(Model?.GlobalRole, "super_admin", StringComparison.OrdinalIgnoreCase);
-  var isOrgAdmin = activeMembership != null && 
-    (string.Equals(activeMembership.Role, "org_owner", StringComparison.OrdinalIgnoreCase) ||
-     string.Equals(activeMembership.Role, "client_admin", StringComparison.OrdinalIgnoreCase));
-  var isManager = activeMembership != null &&
-    string.Equals(activeMembership.Role, "manager", StringComparison.OrdinalIgnoreCase);
-  var isPractitioner = activeMembership != null && 
-    string.Equals(activeMembership.Role, "practitioner", StringComparison.OrdinalIgnoreCase);
-
-  var navItemsOverview = new[]
-  {
-    new { Href = "/admin",         Label = "Dashboard",     Group = "Overview",  Icon = "&#127968;", RequireRole = new[] { "org_admin", "manager" } },
-    new { Href = "/practitioner/clients", Label = "My Clients", Group = "Overview", Icon = "&#129658;", RequireRole = new[] { "practitioner" } },
-    new { Href = "/ops",           Label = "Ops",           Group = "Overview",  Icon = "&#128202;", RequireRole = new[] { "super_admin" } },
-    new { Href = "/ops/activity",  Label = "Activity Log",  Group = "Overview",  Icon = "&#129534;", RequireRole = new[] { "super_admin" } },
-    new { Href = "/ops/knowledge-rules", Label = "Knowledge Rules", Group = "Overview", Icon = "&#129516;", RequireRole = new[] { "super_admin" } }
-  };
-
-  var navItemsCrm = new[]
-  {
-    new { Href = "/admin/organizations", Label = "Organizations", Group = "CRM", Icon = "&#127962;", RequireRole = new[] { "super_admin", "org_admin" } },
-    new { Href = "/admin/members",       Label = "Team Members",   Group = "CRM", Icon = "&#128101;", RequireRole = new[] { "org_admin", "manager" } },
-    new { Href = "/admin/members/invite", Label = "Invitations",   Group = "CRM", Icon = "&#9993;",  RequireRole = new[] { "org_admin" } },
-    new { Href = "/admin/assignments",   Label = "Assignments",    Group = "CRM", Icon = "&#128279;", RequireRole = new[] { "org_admin", "manager", "practitioner" } }
-  };
-
-  var navItemsAccount = new[]
-  {
-    new { Href = "/billing",       Label = "Billing",        Group = "Account", Icon = "&#128179;", RequireRole = new[] { "org_admin" } },
-    new { Href = "/settings",      Label = "Settings",       Group = "Account", Icon = "&#9881;",  RequireRole = new string[0] }
-  };
-
-  bool ShouldShowItem(string[] requiredRoles)
-  {
-    if (requiredRoles.Length == 0) return true;
-    if (isSuperAdmin) return true;
-    return requiredRoles.Any(role => role switch
-    {
-      "super_admin" => isSuperAdmin,
-      "org_admin" => isOrgAdmin,
-      "manager" => isOrgAdmin || isManager,
-      "practitioner" => isOrgAdmin || isManager || isPractitioner,
-      _ => false,
-    });
-  }
-
-  var allItems = new[] { navItemsOverview, navItemsCrm, navItemsAccount }.SelectMany(x => x).ToArray();
-  var visibleItems = allItems.Where(item => ShouldShowItem(item.RequireRole)).ToArray();
-
-  var activeItemHref = visibleItems
-    .Where(item =>
-      currentPath == item.Href ||
-      (item.Href.Length > 1 && currentPath.StartsWith(item.Href + "/", StringComparison.OrdinalIgnoreCase)))
-    .OrderByDescending(item => item.Href.Length)
-    .Select(item => item.Href)
-    .FirstOrDefault() ?? string.Empty;
 }
 
 <aside class="vo-sidebar" id="vo-sidebar" aria-label="Main navigation">
@@ -116,7 +71,7 @@
     }
   </div>
 
-  @foreach (var group in visibleItems.GroupBy(x => x.Group).OrderBy(g => g.Key == "Overview" ? 0 : (g.Key == "CRM" ? 1 : 2)))
+  @foreach (var group in visibleGroups)
   {
     <div class="vo-nav-group">
       <p class="vo-nav-group-title">@group.Key</p>
@@ -128,7 +83,7 @@
             <a class="vo-nav-link @(active ? "is-active" : string.Empty)"
                href="@item.Href"
                aria-current="@(active ? "page" : null)">
-              <span class="vo-nav-icon" aria-hidden="true">@Html.Raw(item.Icon)</span>
+              <span class="vo-nav-icon" aria-hidden="true">@Html.Raw(item.IconHtmlEntity)</span>
               @item.Label
             </a>
           </li>
