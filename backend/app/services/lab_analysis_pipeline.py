@@ -15,6 +15,7 @@ from app.services.clinical_data_integrity import validate_clinical_data_integrit
 from app.services.clinical_priority_planner import build_clinical_priority_planner, build_clinical_story
 from app.services.next_best_test_engine import build_next_best_tests
 from app.services.clinical_reasoning_trace import build_clinical_reasoning_traces
+from app.services.progress_intelligence import build_progress_intelligence
 from app.services.cost_analytics import record_analysis_cost
 from app.services.evidence_gaps import build_evidence_gaps
 from app.services.explainability import build_recommendation_explanations
@@ -564,6 +565,38 @@ async def _load_historical_biomarkers(user_id: Optional[str]) -> List[Dict[str, 
     except Exception as exc:
         logger.warning("trend_history_unavailable user_id=%s error=%s", user_id, exc)
         return []
+
+
+async def _load_previous_clinical_reasoning_traces(
+    user_id: Optional[str], exclude_upload_id: Optional[str]
+) -> tuple[List[Dict[str, Any]], Optional[str], Optional[str]]:
+    """The pattern-level counterpart to _load_historical_biomarkers above —
+    fetches the user's previous report_versions row (a different upload)
+    so build_progress_intelligence() can diff this run's
+    clinical_reasoning_traces against last time's. Same fail-open posture:
+    any lookup problem yields "no previous data" rather than failing the
+    whole analysis.
+    """
+    if not user_id:
+        return [], None, None
+    try:
+        from app.services import supabase_service as supabase
+
+        previous_row = await supabase.get_previous_report_version_for_user(
+            user_id, exclude_upload_id=exclude_upload_id
+        )
+        if not previous_row:
+            return [], None, None
+        previous_snapshot = previous_row.get("input_snapshot") or {}
+        previous_traces = previous_snapshot.get("clinical_reasoning_traces") or []
+        return (
+            previous_traces if isinstance(previous_traces, list) else [],
+            previous_row.get("upload_id"),
+            previous_row.get("created_at"),
+        )
+    except Exception as exc:
+        logger.warning("progress_intelligence_history_unavailable user_id=%s error=%s", user_id, exc)
+        return [], None, None
 
 
 def _protocol_sections_from_ai_and_rules(
@@ -1122,6 +1155,21 @@ async def run_lab_analysis_pipeline(
         next_best_tests=next_best_tests,
         safety_result=safety_result,
     )
+    # Progress Intelligence (P5): diff this run's traces against the user's
+    # previous upload, same "fetch history, diff, degrade gracefully to
+    # unavailable" shape trend_engine.py already established for
+    # marker-level trends above — this is the pattern-level counterpart.
+    (
+        _previous_traces,
+        _previous_upload_id,
+        _previous_measured_at,
+    ) = await _load_previous_clinical_reasoning_traces(user_id, analysis_id)
+    progress_intelligence = build_progress_intelligence(
+        current_traces=clinical_reasoning_traces,
+        previous_traces=_previous_traces,
+        previous_upload_id=_previous_upload_id,
+        previous_measured_at=_previous_measured_at,
+    )
     output_knowledge_evaluation = _localized_knowledge_evaluation_for_response(
         knowledge_evaluation,
         knowledge_report,
@@ -1228,6 +1276,7 @@ async def run_lab_analysis_pipeline(
         "next_best_tests": next_best_tests,
         "clinical_story": clinical_story,
         "clinical_reasoning_traces": clinical_reasoning_traces,
+        "progress_intelligence": progress_intelligence,
         "safety_result": safety_result,
         "safety_notice": safety_notice,
         "explainability": explainability,
@@ -1284,6 +1333,7 @@ async def run_lab_analysis_pipeline(
                     "next_best_tests": next_best_tests,
                     "clinical_story": clinical_story,
                     "clinical_reasoning_traces": clinical_reasoning_traces,
+                    "progress_intelligence": progress_intelligence,
                     "version_provenance": version_provenance,
                     "ai_orchestration": ai_orchestration,
                     "quality_snapshot": quality_snapshot,

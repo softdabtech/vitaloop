@@ -515,6 +515,38 @@ async def get_latest_report_version(upload_id: str, user_id: str, locale: str) -
     return (resp.data or [None])[0]
 
 
+async def get_previous_report_version_for_user(
+    user_id: str, *, exclude_upload_id: str | None = None
+) -> Optional[Dict[str, Any]]:
+    """The user's most recent report_versions row from a DIFFERENT upload
+    than the one currently being processed — the input P5 Progress
+    Intelligence (progress_intelligence.py) needs to diff "this report" vs
+    "the last one".
+
+    Deliberately locale-unfiltered (unlike get_latest_report_version): a
+    trajectory comparison reads pattern_id/confidence/severity out of
+    input_snapshot's clinical_reasoning_traces, which are locale-independent
+    structured data, not the localized prose get_latest_report_version's
+    locale filter exists to protect (see that function's own docstring for
+    the cross-locale prose leak it fixes). Restricting to one locale here
+    would just make progress intelligence silently unavailable for a user
+    who switched locale between uploads, for no correctness benefit.
+    """
+    supabase = _get_supabase()
+    query = (
+        supabase.table("report_versions")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(5)
+    )
+    resp = await _run(lambda: query.execute())
+    rows = resp.data or []
+    if exclude_upload_id:
+        rows = [row for row in rows if str(row.get("upload_id") or "") != str(exclude_upload_id)]
+    return rows[0] if rows else None
+
+
 async def has_any_report_version(upload_id: str, user_id: str) -> bool:
     """Existence check only, deliberately locale-unfiltered and deliberately
     NOT used to serve report content (that would reintroduce the exact

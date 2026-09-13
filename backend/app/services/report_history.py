@@ -181,6 +181,13 @@ def assemble_frozen_response(
         # missing clinical_reasoning_traces the same way they already
         # handle a missing clinical_story on an old snapshot.
         "clinical_reasoning_traces": input_snapshot.get("clinical_reasoning_traces"),
+        # Frozen-verbatim, same posture: a report generated before P5
+        # existed reads back None; progress_intelligence is itself a diff
+        # against an even-earlier snapshot, so re-running it here on read
+        # would need a second historical fetch this frozen-read path has no
+        # reason to make — the diff was already computed once at generation
+        # time and is immutable history, exactly like clinical_story.
+        "progress_intelligence": input_snapshot.get("progress_intelligence"),
         "safety_result": safety_result,
         # Pure locale-template boilerplate derived from the frozen status —
         # no AI/knowledge-rule recomputation involved (see

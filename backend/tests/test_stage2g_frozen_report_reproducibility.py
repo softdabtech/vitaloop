@@ -760,3 +760,41 @@ def test_frozen_response_handles_missing_clinical_reasoning_traces_gracefully():
     )
 
     assert response["clinical_reasoning_traces"] is None
+
+
+def test_frozen_response_serves_persisted_progress_intelligence():
+    """P5 follow-up: progress_intelligence gets the same frozen-verbatim
+    treatment as clinical_reasoning_traces directly above."""
+    frozen = _frozen_row(
+        input_snapshot={
+            "progress_intelligence": {
+                "available": True,
+                "changes": [{"pattern_id": "iron_deficiency_anemia", "status": "strengthened"}],
+            },
+        }
+    )
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["progress_intelligence"]["available"] is True
+    assert response["progress_intelligence"]["changes"][0]["status"] == "strengthened"
+
+
+def test_frozen_response_handles_missing_progress_intelligence_gracefully():
+    frozen = _frozen_row(input_snapshot={"evidence_gaps": {"summary": {"gap_count": 0}}})
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["progress_intelligence"] is None

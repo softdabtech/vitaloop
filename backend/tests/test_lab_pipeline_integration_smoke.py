@@ -69,3 +69,11 @@ async def test_child_reticulocyte_panel_runs_core_pipeline_without_external_ai()
         assert traces[0]["pattern_id"] == patterns[0]["key"]
         assert "safety_level" in traces[0]
         assert "doctor_flag" in traces[0]
+
+    # P5 endpoint wiring: with user_id=None (this fixture's case), Progress
+    # Intelligence has no history to diff against and must degrade to
+    # "unavailable" gracefully rather than erroring or being absent.
+    progress = result.get("progress_intelligence")
+    assert isinstance(progress, dict)
+    assert progress["available"] is False
+    assert progress["changes"] == []
