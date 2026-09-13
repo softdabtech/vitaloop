@@ -1,0 +1,135 @@
+@model OpsKnowledgeRulesPageViewModel
+@{
+  ViewData["Title"] = "Knowledge Rules";
+  string StatusColor(string status) => status switch
+  {
+    "active" => "tag-teal",
+    "reviewed" => "tag-amber",
+    "draft" => "tag-gray",
+    "deprecated" => "tag-red",
+    _ => "tag-gray",
+  };
+}
+<style>
+.kr-wrap { padding:24px; max-width:1400px; }
+.kr-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.kr-title { font-size:20px; font-weight:800; color:#0f172a; margin:0; }
+.kr-sub   { font-size:13px; color:#64748b; margin:4px 0 0; }
+.kr-card  { background:#fff; border:1px solid #e8ecf2; border-radius:12px; overflow:hidden; }
+.kr-filter {
+  display:flex; gap:10px; padding:14px 20px; border-bottom:1px solid #e8ecf2;
+  background:#fafbfc; flex-wrap:wrap; align-items:flex-end;
+}
+.kr-filter label { display:flex; flex-direction:column; gap:4px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#64748b; }
+.kr-filter input, .kr-filter select {
+  border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px;
+  font-size:13px; color:#0f172a; outline:none; min-width:140px;
+}
+.kr-filter-btn {
+  padding:7px 16px; border-radius:8px; background:#1D9E75; color:#fff;
+  border:none; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; align-self:flex-end;
+}
+.kr-filter-btn:hover { background:#0F6E56; }
+
+.kr-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+.kr-tbl th { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; padding:9px 16px; border-bottom:1px solid #e8ecf2; text-align:left; background:#fafbfc; }
+.kr-tbl td { padding:10px 16px; border-bottom:1px solid #f8fafc; vertical-align:middle; }
+.kr-tbl tbody tr:last-child td { border-bottom:none; }
+.kr-tbl tbody tr:hover td { background:#f8fafc; }
+
+.tag { display:inline-flex; align-items:center; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; }
+.tag-teal   { background:#d1fae5; color:#065f46; }
+.tag-amber  { background:#fef3c7; color:#92400e; }
+.tag-red    { background:#fee2e2; color:#991b1b; }
+.tag-gray   { background:#f1f5f9; color:#475569; }
+
+.kr-btn { padding:5px 12px; border-radius:6px; background:#1D9E75; color:#fff; border:none; font-size:12px; font-weight:600; cursor:pointer; text-decoration:none; display:inline-block; }
+.kr-btn:hover { background:#0F6E56; color:#fff; }
+.kr-alert { margin:0 0 16px; padding:10px 16px; border-radius:8px; font-size:13px; }
+.kr-alert-error { background:#fee2e2; color:#991b1b; }
+.kr-alert-success { background:#d1fae5; color:#065f46; }
+@@media (max-width:720px) {
+  .kr-wrap { padding:16px; }
+  .kr-filter { align-items:stretch; }
+  .kr-filter label, .kr-filter input, .kr-filter select, .kr-filter-btn { width:100% !important; }
+}
+</style>
+
+<div class="kr-wrap">
+  <div class="kr-head">
+    <div>
+      <h1 class="kr-title">🧬 Knowledge Rules</h1>
+      <p class="kr-sub">Clinical rule governance — super_admin only. Approving a rule is a real medical sign-off: read its conditions/outputs on the Review page before approving.</p>
+    </div>
+    <a href="/ops" style="font-size:13px;color:#1D9E75;text-decoration:none;">← Ops Dashboard</a>
+  </div>
+
+  @if (TempData["SuccessMessage"] is string successMsg)
+  {
+    <div class="kr-alert kr-alert-success">✅ @successMsg</div>
+  }
+  @if (TempData["ErrorMessage"] is string errorMsg)
+  {
+    <div class="kr-alert kr-alert-error">⚠️ @errorMsg</div>
+  }
+  @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+  {
+    <div class="kr-alert kr-alert-error">⚠️ @Model.ErrorMessage</div>
+  }
+
+  <div class="kr-card">
+    <form method="get" class="kr-filter">
+      <label>
+        Governance status
+        <select name="governanceStatus">
+          @foreach (var status in new[] { "reviewed", "active", "draft", "deprecated", "all" })
+          {
+            if (status == Model.GovernanceStatus) { <option value="@status" selected="selected">@status</option> }
+            else { <option value="@status">@status</option> }
+          }
+        </select>
+      </label>
+      <label>
+        Key contains
+        <input type="text" name="key" value="@Model.Key" placeholder="e.g. ldl">
+      </label>
+      <button type="submit" class="kr-filter-btn">Apply filter</button>
+    </form>
+
+    <div style="overflow-x:auto">
+      <table class="kr-tbl">
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Severity</th>
+            <th>Confidence</th>
+            <th>Requires doctor</th>
+            <th>Source</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (!Model.Rules.Any())
+          {
+            <tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8">No rules match this filter</td></tr>
+          }
+          @foreach (var rule in Model.Rules)
+          {
+            <tr>
+              <td style="font-family:ui-monospace,monospace;font-size:12px;color:#475569">@rule.Key</td>
+              <td>@rule.Name</td>
+              <td><span class="tag @StatusColor(rule.GovernanceStatus)">@rule.GovernanceStatus</span></td>
+              <td>@(rule.Severity ?? "—")</td>
+              <td>@rule.Confidence.ToString("0.00")</td>
+              <td>@(rule.RequiresDoctor ? "Yes" : "No")</td>
+              <td style="font-size:12px;color:#64748b">@(rule.Source ?? "—")</td>
+              <td><a class="kr-btn" href="/ops/knowledge-rules/@rule.Id">Review</a></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

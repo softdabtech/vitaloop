@@ -558,4 +558,24 @@ internal sealed class FakeCrmDataGateway : Vitaloop.Crm.Web.Services.Data.ICrmDa
 
     public Task<System.Text.Json.JsonDocument?> GetUserActivityDetail(Guid userId, int days = 90, CancellationToken ct = default)
         => Task.FromResult<System.Text.Json.JsonDocument?>(null);
+
+    public IReadOnlyList<KnowledgeRuleListItem> KnowledgeRules { get; set; } = Array.Empty<KnowledgeRuleListItem>();
+    public KnowledgeRuleDetail? OneKnowledgeRule { get; set; }
+    public KnowledgeRuleApprovePayload? LastApprovePayload { get; private set; }
+    public string? LastApprovedRuleId { get; private set; }
+    public Exception? ApproveThrows { get; set; }
+
+    public Task<IReadOnlyList<KnowledgeRuleListItem>> GetKnowledgeRules(string? governanceStatus = null, string? key = null, CancellationToken ct = default)
+        => Task.FromResult(KnowledgeRules);
+
+    public Task<KnowledgeRuleDetail?> GetKnowledgeRule(string ruleId, CancellationToken ct = default)
+        => Task.FromResult(OneKnowledgeRule);
+
+    public Task<KnowledgeRuleDetail?> ApproveKnowledgeRule(string ruleId, KnowledgeRuleApprovePayload payload, CancellationToken ct = default)
+    {
+        if (ApproveThrows is not null) throw ApproveThrows;
+        LastApprovedRuleId = ruleId;
+        LastApprovePayload = payload;
+        return Task.FromResult(OneKnowledgeRule);
+    }
 }

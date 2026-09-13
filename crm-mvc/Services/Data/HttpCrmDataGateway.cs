@@ -289,4 +289,75 @@ public sealed class HttpCrmDataGateway : ICrmDataGateway
         var separator = path.Contains('?') ? '&' : '?';
         return $"{path}{separator}org_id={orgId}";
     }
+
+    public Task<IReadOnlyList<KnowledgeRuleListItem>> GetKnowledgeRules(string? governanceStatus = null, string? key = null, CancellationToken ct = default)
+    {
+        var path = _options.KnowledgeRulesPath;
+        var query = new List<string>();
+        if (!string.IsNullOrWhiteSpace(governanceStatus)) query.Add($"governance_status={Uri.EscapeDataString(governanceStatus)}");
+        if (!string.IsNullOrWhiteSpace(key)) query.Add($"key={Uri.EscapeDataString(key)}");
+        if (query.Count > 0) path += "?" + string.Join('&', query);
+
+        return GetList<KnowledgeRuleListItem>(path, ct);
+    }
+
+    public Task<KnowledgeRuleDetail?> GetKnowledgeRule(string ruleId, CancellationToken ct = default)
+        => GetSingle<KnowledgeRuleDetail>($"{_options.KnowledgeRulesPath}/{ruleId}", ct);
+
+    public async Task<KnowledgeRuleDetail?> ApproveKnowledgeRule(string ruleId, KnowledgeRuleApprovePayload payload, CancellationToken ct = default)
+    {
+        var response = await Send(
+            HttpMethod.Post,
+            $"{_options.KnowledgeRulesPath}/{ruleId}/approve",
+            new
+            {
+                medical_reviewed_by = payload.MedicalReviewedBy,
+                medical_reviewed_at = payload.MedicalReviewedAt,
+                last_modified_by = payload.LastModifiedBy,
+                change_note = payload.ChangeNote,
+            },
+            ct);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            // Surface the backend's actual detail (e.g. "Only reviewed rules
+            // can be approved") rather than a generic HttpRequestException —
+            // this is a clinical governance action, the reviewer needs to
+            // know exactly why an approval was refused.
+            var body = await response.Content.ReadAsStringAsync(ct);
+            string? detail = null;
+            try
+            {
+                using var doc = JsonDocument.Parse(body);
+                if (doc.RootElement.TryGetProperty("detail", out var detailEl))
+                {
+                    detail = detailEl.ValueKind == JsonValueKind.String ? detailEl.GetString() : detailEl.ToString();
+                }
+            }
+            catch (JsonException)
+            {
+                // Non-JSON error body — fall through with the raw text below.
+            }
+
+            throw new KnowledgeRuleApprovalException(detail ?? body);
+        }
+
+        if (response.Content.Headers.ContentLength == 0)
+        {
+            return null;
+        }
+
+        return await response.Content.ReadFromJsonAsync<KnowledgeRuleDetail>(JsonOptions, ct);
+    }
+}
+
+/// <summary>Thrown when POST /knowledge/rules/{id}/approve is refused by the
+/// backend, carrying its actual detail message (e.g. "Only reviewed rules
+/// can be approved", "medical_reviewed_by must be a valid UUID") instead of
+/// a generic HTTP failure.</summary>
+public sealed class KnowledgeRuleApprovalException : Exception
+{
+    public KnowledgeRuleApprovalException(string message) : base(message)
+    {
+    }
 }

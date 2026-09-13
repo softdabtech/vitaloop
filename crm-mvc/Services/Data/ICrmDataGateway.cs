@@ -35,4 +35,8 @@ public interface ICrmDataGateway
     Task<System.Text.Json.JsonDocument?> GetClaudeUsage(int days = 30, CancellationToken ct = default);
     Task<System.Text.Json.JsonDocument?> GetClientActivity(int days = 30, int limit = 200, CancellationToken ct = default);
     Task<System.Text.Json.JsonDocument?> GetUserActivityDetail(Guid userId, int days = 90, CancellationToken ct = default);
+
+    Task<IReadOnlyList<KnowledgeRuleListItem>> GetKnowledgeRules(string? governanceStatus = null, string? key = null, CancellationToken ct = default);
+    Task<KnowledgeRuleDetail?> GetKnowledgeRule(string ruleId, CancellationToken ct = default);
+    Task<KnowledgeRuleDetail?> ApproveKnowledgeRule(string ruleId, KnowledgeRuleApprovePayload payload, CancellationToken ct = default);
 }
