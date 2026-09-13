@@ -798,9 +798,26 @@ def _cardiovascular_risk_pattern(
     )
 
 
+_THYROID_STORM_MYXEDEMA_SYMPTOM_ALIASES = (
+    "palpitations", "rapid heartbeat", "racing heart", "high fever",
+    "confusion", "severe fatigue", "hypothermia", "feeling very cold",
+)
+
+
 def _thyroid_dysfunction_pattern(
-    biomarkers: List[Dict[str, Any]], *, profile: Dict[str, Any] | None, locale: str
+    biomarkers: List[Dict[str, Any]],
+    *,
+    profile: Dict[str, Any] | None,
+    locale: str,
+    symptoms: List[str] | None = None,
 ) -> Dict[str, Any] | None:
+    """Thyroid pattern pack (P1.2) — second domain built on the iron/anemia
+    reference template: required TSH, supportive/contradicting free T4/T3
+    depending on whether they move WITH or AGAINST TSH's direction,
+    biotin/medication exclusion, severity from how far TSH is out of range,
+    and doctor escalation for suppressed/very high TSH or thyroid-storm /
+    myxedema symptoms.
+    """
     tsh = _find_markers(biomarkers, ["tsh", "thyroid stimulating hormone"])
     free_t3 = _find_markers(biomarkers, ["free t3", "ft3"])
     free_t4 = _find_markers(biomarkers, ["free t4", "ft4"])
@@ -809,20 +826,91 @@ def _thyroid_dysfunction_pattern(
     if not abnormal_tsh:
         return None
 
-    abnormal_t3_t4 = [item for item in [*free_t3, *free_t4] if _is_abnormal(item)]
-    normal_context = [item for item in [*free_t3, *free_t4] if _is_in_range(item)]
+    tsh_direction = "high" if any(_is_high(item) for item in abnormal_tsh) else "low"
+    t3_t4_items = [*free_t3, *free_t4]
+
+    # Supportive: free T4/T3 abnormal in the SAME direction TSH implies
+    # thyroid failure (low TSH + high fT4/fT3 = hyperthyroid picture; high
+    # TSH + low fT4/fT3 = hypothyroid picture) — this corroborates an overt
+    # disorder, not just an isolated TSH shift.
+    if tsh_direction == "high":
+        supportive = [item for item in t3_t4_items if _is_low(item)]
+        contradicting = [item for item in t3_t4_items if _is_high(item)]
+    else:
+        supportive = [item for item in t3_t4_items if _is_high(item)]
+        contradicting = [item for item in t3_t4_items if _is_low(item)]
+    # Free T4/T3 IN RANGE while TSH is abnormal is the classic subclinical
+    # picture — informative, but it argues against an OVERT disorder, so it
+    # belongs in contradicting_markers rather than "normal_context" being
+    # silently neutral about it.
+    normal_t3_t4 = [item for item in t3_t4_items if _is_in_range(item)]
+    contradicting = [*contradicting, *normal_t3_t4]
+
+    confidence_reasons: List[str] = []
+    base_confidence = 0.62
+    if supportive:
+        base_confidence = 0.72
+        confidence_reasons.append("free_t3_t4_confirms_tsh_direction")
+    elif normal_t3_t4:
+        base_confidence = 0.55
+        confidence_reasons.append("free_t3_t4_in_range_suggests_subclinical_picture")
+
+    # Exclusion/modifier: biotin (a common supplement) is a well-known
+    # immunoassay interferent that can produce falsely abnormal thyroid
+    # results — flagged as missing context to confirm, not assumed away.
+    extra_missing = ["Thyroid antibodies (anti-TPO, anti-Tg)", "Medication history affecting thyroid results"]
+    extra_missing.append("Biotin/supplement use in the last 48 hours can falsely skew thyroid immunoassays — confirm before acting on this result.")
+    confidence_reasons.append("biotin_supplement_interference_not_ruled_out")
+
+    # Severity by how far TSH is out of range — informs escalation.
+    tsh_values = [v for v in (_to_float_marker(item) for item in abnormal_tsh) if v is not None]
+    extreme_tsh = tsh_direction == "high" and tsh_values and max(tsh_values) >= 10
+    suppressed_tsh = tsh_direction == "low" and tsh_values and min(tsh_values) <= 0.1
+    if extreme_tsh or suppressed_tsh:
+        severity = "high"
+    elif supportive:
+        severity = "moderate"
+    else:
+        severity = "mild"
+
+    reported_symptoms = [str(s).strip().lower() for s in (symptoms or [])]
+    storm_symptoms = [
+        s for s in reported_symptoms
+        if any(alias in s or s in alias for alias in _THYROID_STORM_MYXEDEMA_SYMPTOM_ALIASES)
+    ]
+    escalation_reasons: List[str] = []
+    if extreme_tsh:
+        escalation_reasons.append("TSH is markedly elevated (≥10) — prompt medical review rather than routine follow-up.")
+    if suppressed_tsh:
+        escalation_reasons.append("TSH is fully suppressed (≤0.1) — prompt medical review rather than routine follow-up.")
+    if storm_symptoms and supportive:
+        escalation_reasons.append(
+            f"Reported symptom(s) ({', '.join(storm_symptoms)}) alongside an overt thyroid picture can indicate thyroid storm or myxedema — discuss promptly."
+        )
+    age = _age(profile)
+    if age is not None and age >= 60 and supportive:
+        escalation_reasons.append("Age 60+ with an overt thyroid picture carries added cardiac risk — discuss sooner rather than monitoring only.")
+    doctor_escalation = {"triggered": bool(escalation_reasons), "reasons": escalation_reasons}
+
+    priority = "high" if severity == "high" or doctor_escalation["triggered"] else "medium"
+
     return _build_pattern(
         pattern_key="thyroid_dysfunction",
         domain="thyroid",
-        priority="medium",
-        base_confidence=0.62,
-        triggered=[*abnormal_tsh, *abnormal_t3_t4],
-        normal_context=normal_context,
+        priority=priority,
+        base_confidence=base_confidence,
+        triggered=[*abnormal_tsh, *supportive],
+        normal_context=[],
+        supportive_markers=supportive,
+        contradicting_markers=contradicting,
+        severity=severity,
+        doctor_escalation=doctor_escalation,
+        extra_confidence_reasons=confidence_reasons,
         profile=profile,
         locale=locale,
         retest_marker="TSH, free T4, free T3",
         matched_rule_key="pattern_thyroid_dysfunction",
-        extra_missing_context=["Thyroid antibodies (anti-TPO, anti-Tg)", "Medication history affecting thyroid results"],
+        extra_missing_context=extra_missing,
     )
 
 
@@ -1106,7 +1194,9 @@ def detect_patterns(
             ),
             _cardiovascular_risk_pattern(biomarkers or [], profile=profile, locale=locale),
             _metabolic_risk_pattern(biomarkers or [], profile=profile, locale=locale),
-            _thyroid_dysfunction_pattern(biomarkers or [], profile=profile, locale=locale),
+            _thyroid_dysfunction_pattern(
+                biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
+            ),
             _liver_stress_pattern(biomarkers or [], profile=profile, locale=locale),
             _inflammation_pattern(biomarkers or [], profile=profile, locale=locale),
             _micronutrient_deficiency_cluster_pattern(biomarkers or [], profile=profile, locale=locale),
