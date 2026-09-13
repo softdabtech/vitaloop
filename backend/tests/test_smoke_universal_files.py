@@ -233,7 +233,7 @@ class TestVisionAPIConfiguration:
     def test_vision_model_configured(self):
         """Test Vision API model is configured"""
         from app.config import settings
-        assert settings.openai_vision_model == "gpt-4o"
+        assert settings.openai_vision_model == "gpt-4o-mini"
 
     def test_vision_api_enabled(self):
         """Test Vision API is enabled by default"""

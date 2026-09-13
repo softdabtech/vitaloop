@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-4o-mini"
-    openai_vision_model: str = "gpt-4o"  # Vision API model for images
+    openai_vision_model: str = "gpt-4o-mini"  # Cheapest Vision API model for images
     enable_vision_api: bool = True  # Feature flag for Vision API
     image_max_size_mb: int = 20  # Vision API supports up to 20MB
     tiff_max_pages: int = 10  # Max pages in multi-page TIFF
