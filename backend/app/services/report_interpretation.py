@@ -1036,23 +1036,102 @@ def _liver_stress_pattern(
     )
 
 
+_SEPSIS_LIKE_SYMPTOM_ALIASES = (
+    "high fever", "confusion", "rapid heartbeat", "racing heart", "severe pain",
+    "difficulty breathing", "shortness of breath",
+)
+
+
 def _inflammation_pattern(
-    biomarkers: List[Dict[str, Any]], *, profile: Dict[str, Any] | None, locale: str
+    biomarkers: List[Dict[str, Any]],
+    *,
+    profile: Dict[str, Any] | None,
+    locale: str,
+    symptoms: List[str] | None = None,
 ) -> Dict[str, Any] | None:
+    """Inflammation pattern pack (P1.4) — fourth domain on the reference
+    template. Distinguishes an acute-pattern (CRP/ESR + high WBC/neutrophils)
+    from an isolated/chronic-pattern (CRP/ESR elevated with WBC/neutrophils
+    in range), and adds platelets as a reactive-thrombocytosis modifier.
+    """
     crp = _find_markers(biomarkers, ["crp", "c-reactive protein", "c reactive protein"])
     esr = _find_markers(biomarkers, ["esr", "sed rate", "erythrocyte sedimentation"])
+    wbc = _find_markers(biomarkers, ["wbc", "white blood cell", "leukocyte"])
+    neutrophils = _find_markers(biomarkers, ["neutrophil"])
+    lymphocytes = _find_markers(biomarkers, ["lymphocyte"])
+    ferritin = _find_markers(biomarkers, ["ferritin"])
+    platelets = _find_markers(biomarkers, ["platelet"])
 
-    triggered = [item for item in [*crp, *esr] if _is_high(item)]
-    if not triggered:
+    high_crp_esr = [item for item in [*crp, *esr] if _is_high(item)]
+    if not high_crp_esr:
         return None
+
+    high_wbc_neutrophils = [item for item in [*wbc, *neutrophils] if _is_high(item)]
+    normal_wbc_neutrophils = [item for item in [*wbc, *neutrophils] if _is_in_range(item)]
+    high_platelets = [item for item in platelets if _is_high(item)]
+    high_ferritin = [item for item in ferritin if _is_high(item)]
+    low_lymphocytes = [item for item in lymphocytes if _is_low(item)]
+
+    supportive = [*high_wbc_neutrophils, *high_platelets, *low_lymphocytes]
+    # Isolated CRP/ESR elevation WITH a normal WBC/neutrophil count argues
+    # against an acute infectious process specifically (chronic/low-grade
+    # inflammation, or a non-infectious driver, is more likely) — this does
+    # not contradict "inflammation is present", only the acute-infection
+    # framing, so it is flagged in confidence_reason, not treated as
+    # disproving the pattern.
+    contradicting = normal_wbc_neutrophils if not high_wbc_neutrophils else []
+
+    confidence_reasons: List[str] = []
+    if high_wbc_neutrophils:
+        base_confidence = 0.68
+        confidence_reasons.append("wbc_neutrophils_support_acute_pattern")
+    elif normal_wbc_neutrophils:
+        base_confidence = 0.5
+        confidence_reasons.append("normal_wbc_suggests_chronic_or_nonacute_process_not_acute_infection")
+    else:
+        base_confidence = 0.55
+    if high_ferritin:
+        confidence_reasons.append("ferritin_elevated_as_acute_phase_reactant_not_necessarily_iron_overload")
+    if high_platelets:
+        confidence_reasons.append("reactive_thrombocytosis_consistent_with_inflammation")
+
+    crp_values = [v for v in (_to_float_marker(item) for item in crp if _is_high(item)) if v is not None]
+    wbc_values = [v for v in (_to_float_marker(item) for item in wbc if _is_high(item)) if v is not None]
+    marked_elevation = (crp_values and max(crp_values) >= 100) or (wbc_values and max(wbc_values) >= 15)
+    if marked_elevation:
+        severity = "high"
+    elif high_wbc_neutrophils:
+        severity = "moderate"
+    else:
+        severity = "mild"
+
+    reported_symptoms = [str(s).strip().lower() for s in (symptoms or [])]
+    sepsis_like_symptoms = [
+        s for s in reported_symptoms
+        if any(alias in s or s in alias for alias in _SEPSIS_LIKE_SYMPTOM_ALIASES)
+    ]
+    escalation_reasons: List[str] = []
+    if marked_elevation:
+        escalation_reasons.append("CRP/WBC is markedly elevated — prompt medical review rather than routine follow-up.")
+    if sepsis_like_symptoms and high_wbc_neutrophils:
+        escalation_reasons.append(
+            f"Reported symptom(s) ({', '.join(sepsis_like_symptoms)}) alongside an acute inflammatory pattern can indicate a serious infection — discuss promptly, do not wait for a routine retest."
+        )
+    doctor_escalation = {"triggered": bool(escalation_reasons), "reasons": escalation_reasons}
+    priority = "high" if severity == "high" or doctor_escalation["triggered"] else "medium"
 
     return _build_pattern(
         pattern_key="inflammation",
         domain="inflammation",
-        priority="medium",
-        base_confidence=0.58,
-        triggered=triggered,
+        priority=priority,
+        base_confidence=base_confidence,
+        triggered=[*high_crp_esr, *high_wbc_neutrophils],
         normal_context=[],
+        supportive_markers=supportive,
+        contradicting_markers=contradicting,
+        severity=severity,
+        doctor_escalation=doctor_escalation,
+        extra_confidence_reasons=confidence_reasons,
         profile=profile,
         locale=locale,
         retest_marker="CRP, ESR",
@@ -1294,7 +1373,9 @@ def detect_patterns(
                 biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
             ),
             _liver_stress_pattern(biomarkers or [], profile=profile, locale=locale),
-            _inflammation_pattern(biomarkers or [], profile=profile, locale=locale),
+            _inflammation_pattern(
+                biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
+            ),
             _micronutrient_deficiency_cluster_pattern(biomarkers or [], profile=profile, locale=locale),
         ]
         if item
