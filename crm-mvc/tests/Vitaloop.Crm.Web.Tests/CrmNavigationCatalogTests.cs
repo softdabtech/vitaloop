@@ -7,7 +7,7 @@ namespace Vitaloop.Crm.Web.Tests;
 public class CrmNavigationCatalogTests
 {
     [Fact]
-    public void Super_Admin_Sees_Ops_Items_But_Not_Org_Only_Items()
+    public void Super_Admin_Sees_Ops_Items_And_Every_Other_Item_Too()
     {
         var superAdmin = TestUsers.SuperAdmin(null);
         var visible = CrmNavigationCatalog.GetVisibleGroups(superAdmin).SelectMany(g => g).ToList();
