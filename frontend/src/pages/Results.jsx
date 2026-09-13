@@ -15,7 +15,9 @@ import {
   Download,
   ExternalLink,
   FileText,
+  GitBranch,
   HeartPulse,
+  HelpCircle,
   Info,
   MessageCircle,
   RefreshCw,
@@ -182,6 +184,22 @@ const RESULTS_COPY = {
     missingData: 'Missing data',
     score: 'score',
     confidence: 'confidence',
+    reasoningTitle: 'Clinical Reasoning',
+    reasoningIntro: 'How each finding was reached — the markers and symptoms behind it, how confident we are, and what would change the picture.',
+    reasoningBasedOn: 'Based on',
+    reasoningSupporting: 'Supporting',
+    reasoningContradicting: 'Argues against',
+    reasoningGaps: "What we still don't know",
+    reasoningNextTests: 'Suggested next tests',
+    reasoningDoctorFlag: 'Discuss with a doctor',
+    reasoningSafety: {
+      high_confidence_urgent: 'Needs prompt attention',
+      moderate_confidence: 'Worth reviewing',
+      low_confidence: 'Early signal, limited certainty',
+      blocked_by_missing_data: 'Not enough data for a confident read',
+      doctor_only: 'Discuss with a doctor',
+    },
+    reasoningEmpty: 'No detailed reasoning trace is available for this report yet.',
   },
   uk: {
     hints: [
@@ -267,6 +285,22 @@ const RESULTS_COPY = {
     missingData: 'Бракує даних',
     score: 'оцінка',
     confidence: 'впевненість',
+    reasoningTitle: 'Клінічне обґрунтування',
+    reasoningIntro: 'Як зроблено кожен висновок — які показники й симптоми його підтверджують, наскільки ми впевнені і що може змінити картину.',
+    reasoningBasedOn: 'На основі',
+    reasoningSupporting: 'Підтверджують',
+    reasoningContradicting: 'Проти цього свідчить',
+    reasoningGaps: 'Чого ще не вистачає для впевненості',
+    reasoningNextTests: 'Рекомендовані наступні аналізи',
+    reasoningDoctorFlag: 'Обговорити з лікарем',
+    reasoningSafety: {
+      high_confidence_urgent: 'Потребує швидкої уваги',
+      moderate_confidence: 'Варто переглянути',
+      low_confidence: 'Ранній сигнал, обмежена впевненість',
+      blocked_by_missing_data: 'Недостатньо даних для впевненого висновку',
+      doctor_only: 'Обговорити з лікарем',
+    },
+    reasoningEmpty: 'Детальне обґрунтування для цього звіту поки недоступне.',
   },
 }
 
@@ -438,6 +472,107 @@ function HealthDomainCard({ state, copy }) {
   )
 }
 
+const REASONING_SAFETY_BADGE = {
+  high_confidence_urgent: 'border-rose-200 bg-rose-50 text-rose-700',
+  doctor_only: 'border-rose-200 bg-rose-50 text-rose-700',
+  moderate_confidence: 'border-amber-200 bg-amber-50 text-amber-800',
+  low_confidence: 'border-slate-200 bg-slate-100 text-slate-600',
+  blocked_by_missing_data: 'border-slate-200 bg-slate-100 text-slate-600',
+}
+
+// Surfaces the clinical_reasoning_trace object the backend now assembles
+// per detected pattern (see backend/app/services/clinical_reasoning_trace.py):
+// what matched, how confident, what still argues against it, what's
+// missing, and what to test next — a transparent chain instead of a single
+// opaque recommendation. Reads from the same data every other card on this
+// page already gets via the /results response (final_analysis fallback).
+function ReasoningTraceCard({ trace, copy }) {
+  const confidence = formatPercent(trace?.confidence)
+  const safetyKey = String(trace?.safety_level || '').trim()
+  const safetyLabel = copy.reasoningSafety?.[safetyKey]
+  const badgeClass = REASONING_SAFETY_BADGE[safetyKey] || 'border-slate-200 bg-slate-100 text-slate-600'
+  const supporting = asTextList(trace?.supporting_markers).slice(0, 5)
+  const contradicting = asTextList(trace?.contradicting_markers).slice(0, 4)
+  const gaps = asTextList(trace?.evidence_gaps).slice(0, 4)
+  const nextTests = asTextList(trace?.next_best_tests).slice(0, 4)
+  const matchedBiomarkers = asTextList(trace?.matched_biomarkers).slice(0, 5)
+
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h3 className="font-semibold text-slate-950">
+          {trace?.user_explanation?.headline || trace?.pattern_name || trace?.pattern_id}
+        </h3>
+        <div className="flex flex-wrap items-center gap-2">
+          {confidence && (
+            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+              {confidence} {copy.confidence}
+            </span>
+          )}
+          {(trace?.doctor_flag || safetyLabel) && (
+            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${badgeClass}`}>
+              {trace?.doctor_flag ? copy.reasoningDoctorFlag : safetyLabel}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {!!trace?.user_explanation?.summary && (
+        <p className="mt-2 text-sm leading-6 text-slate-600">{trace.user_explanation.summary}</p>
+      )}
+
+      {!!matchedBiomarkers.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.reasoningBasedOn}:</span> {matchedBiomarkers.join(', ')}
+        </p>
+      )}
+      {!!supporting.length && (
+        <p className="mt-2 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.reasoningSupporting}:</span> {supporting.join(', ')}
+        </p>
+      )}
+      {!!contradicting.length && (
+        <p className="mt-2 text-sm leading-5 text-amber-800">
+          <span className="font-semibold">{copy.reasoningContradicting}:</span> {contradicting.join(', ')}
+        </p>
+      )}
+      {!!gaps.length && (
+        <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <HelpCircle className="h-3.5 w-3.5" /> {copy.reasoningGaps}
+          </p>
+          <ul className="mt-1 space-y-1 text-sm leading-5 text-slate-600">
+            {gaps.map((item, index) => <li key={index}>{item}</li>)}
+          </ul>
+        </div>
+      )}
+      {!!nextTests.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.reasoningNextTests}:</span> {nextTests.join(', ')}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function ReasoningTraceSection({ traces, copy }) {
+  const list = Array.isArray(traces) ? traces.filter(Boolean) : []
+  return (
+    <SectionCard icon={GitBranch} title={copy.reasoningTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.reasoningIntro}</p>
+      {list.length ? (
+        <div className="space-y-3">
+          {list.slice(0, 6).map((trace, index) => (
+            <ReasoningTraceCard key={trace?.pattern_id || index} trace={trace} copy={copy} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm leading-6 text-slate-600">{copy.reasoningEmpty}</p>
+      )}
+    </SectionCard>
+  )
+}
+
 function AnalysisCoreV2Panel({ finalAnalysis, copy }) {
   if (!finalAnalysis) return null
   const healthStates = finalAnalysis.health_states || {}
@@ -499,6 +634,7 @@ export default function Results() {
   const [finalAnalysis, setFinalAnalysis] = useState(null)
   const [explainability, setExplainability] = useState(null)
   const [safetyResult, setSafetyResult] = useState(null)
+  const [reasoningTraces, setReasoningTraces] = useState([])
   const [loading, setLoading] = useState(true)
   const isUk = isUkrainianLocale()
   const copy = isUk ? RESULTS_COPY.uk : RESULTS_COPY.en
@@ -531,6 +667,13 @@ export default function Results() {
         setFinalAnalysis(data.final_analysis ?? null)
         setExplainability(data.explainability ?? data.final_analysis?.explainability ?? null)
         setSafetyResult(data.safety_result ?? data.final_analysis?.safety_result ?? null)
+        setReasoningTraces(
+          Array.isArray(data.clinical_reasoning_traces)
+            ? data.clinical_reasoning_traces
+            : Array.isArray(data.final_analysis?.clinical_reasoning_traces)
+              ? data.final_analysis.clinical_reasoning_traces
+              : []
+        )
         gaResultsView(uploadId)
       } catch (_e) {
         if (!active) return
@@ -541,6 +684,7 @@ export default function Results() {
         setFinalAnalysis(null)
         setExplainability(null)
         setSafetyResult(null)
+        setReasoningTraces([])
       } finally {
         if (active) setLoading(false)
       }
@@ -835,6 +979,8 @@ export default function Results() {
             )}
           </SectionCard>
         </div>
+
+        <ReasoningTraceSection traces={reasoningTraces} copy={copy} />
 
         {/* Full biomarker table moved up here (right after Top Findings / Why
             This Matters) per explicit request — it used to sit near the
