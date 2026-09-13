@@ -119,7 +119,7 @@ const routes = [
   },
   {
     path: '/for-investors',
-    title: 'Investor Overview | VITALOOP AI Health Platform',
+    title: 'Investor Overview | VITALOOP Clinical Reasoning Platform',
     description: 'Learn about VITALOOP as a HealthTech platform connecting symptom intake, lab interpretation, the VITALOOP Health Intelligence Engine, evidence gaps, safety-aware plans, and recurring health loops.',
     priority: '0.6',
     changefreq: 'monthly',
