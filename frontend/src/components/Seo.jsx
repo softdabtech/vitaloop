@@ -2,7 +2,7 @@ import { Helmet } from 'react-helmet-async'
 import { useEffect } from 'react'
 
 const BASE_URL = 'https://vitaloop.today'
-const DEFAULT_TITLE = 'AI Blood Test Analysis & Symptom Checker | VITALOOP'
+const DEFAULT_TITLE = 'Clinical Reasoning for Blood Tests & Symptoms | VITALOOP'
 const DEFAULT_DESCRIPTION = 'Start with symptoms or upload blood test results. Get clear biomarker explanations, lab discussion guidance, and a health action plan you can track.'
 
 function canonicalizePath(path) {

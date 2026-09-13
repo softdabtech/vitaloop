@@ -72,7 +72,7 @@ export default function HowItWorks() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
-        title="How AI Blood Test Analysis Works | VITALOOP"
+        title="How Clinical Reasoning Works | VITALOOP"
         description="See how VITALOOP connects symptom intake, lab discussion guidance, AI blood test analysis, biomarker explanations, and weekly progress tracking."
         path="/how-it-works"
         schemas={[

@@ -57,13 +57,13 @@ const WORKFLOW_STEPS = [
     icon: Upload,
     step: '02',
     title: 'Symptoms and labs are structured together',
-    body: 'Patients start with symptom context and upload a PDF. VITALOOP analyzes 85+ biomarkers, normalizes units, and highlights priorities.',
+    body: 'Patients start with symptom context and upload lab data in PDF, image, CSV, or XLS/XLSX format. VITALOOP normalizes 85+ biomarkers, units, and priorities.',
     accent: '#0ea5e9',
   },
   {
     icon: BrainCircuit,
     step: '03',
-    title: 'AI drafts your protocol',
+    title: 'Reasoning-backed protocol draft',
     body: 'Based on biomarkers, symptoms, and history, the system proposes a nutrition protocol that you finalize as the practitioner.',
     accent: '#8b5cf6',
   },
@@ -107,11 +107,11 @@ const FEATURES = [
   {
     icon: ShieldCheck,
     title: 'Privacy-first data protection',
-    body: 'Medical data is never sold or shared with third parties. VITALOOP is built with strict privacy principles.',
+    body: 'Medical data is not sold to advertisers or data marketplaces. VITALOOP uses trusted service providers only where needed to operate the platform.',
   },
   {
     icon: Sparkles,
-    title: 'AI as a second opinion, not a replacement',
+    title: 'Decision support, not a replacement',
     body: 'The platform provides drafts and signals. Final decisions remain in your hands as the expert.',
   },
 ]
@@ -271,7 +271,7 @@ export default function ForNutritionists() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
-        title="AI Blood Test Analysis for Nutritionists | VITALOOP"
+        title="Clinical Reasoning for Nutritionists | VITALOOP"
         description="Organize client symptoms, review blood test results, prepare nutrition protocols, and track follow-up progress in one practitioner workspace."
         path="/for-nutritionists"
         schemas={[
@@ -363,7 +363,7 @@ export default function ForNutritionists() {
               animate="visible"
               className="mt-6 flex flex-wrap gap-4"
             >
-              {['Free starter plan', 'No EMR integration required', 'Symptoms + lab PDF workflow'].map((t) => (
+              {['Free starter plan', 'No EMR integration required', 'Symptoms + multi-format lab workflow'].map((t) => (
                 <span key={t} className="inline-flex items-center gap-1.5 text-xs text-slate-400">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                   {t}
@@ -805,7 +805,7 @@ export default function ForNutritionists() {
               </button>
             </div>
             <p className="mt-5 text-xs text-slate-600">
-                No EMR integration required · Works with any lab PDF · Data is never sold
+                No EMR integration required · Works with PDF, image, CSV, and XLS/XLSX labs · Data is never sold
             </p>
           </motion.div>
         </div>

@@ -54,7 +54,7 @@ const SCREENSHOTS = [
   },
   {
     title: 'Practitioner workspace',
-    description: 'For labs, nutritionists, and practitioners managing client context and review queues.',
+    description: 'For practitioners and teams managing client context and review queues.',
     image: '/mockups/example-report/crm.webp',
     alt: 'VITALOOP practitioner CRM dashboard with client panels',
     icon: BarChart3,
@@ -109,7 +109,7 @@ export default function ExampleReport() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
-        title="AI Blood Test Analysis Example Report | VITALOOP"
+        title="Clinical Reasoning Example Report | VITALOOP"
         description="Preview an AI blood test analysis with normalized biomarkers, plain-English explanations, priority findings, discussion points, and progress tracking."
         path="/example-report"
       />
@@ -123,7 +123,7 @@ export default function ExampleReport() {
               Example report
             </motion.p>
             <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 text-4xl font-black tracking-[-0.035em] text-slate-950 sm:text-5xl md:text-6xl">
-              From lab PDF to a working health dashboard.
+              From lab data to a working health dashboard.
             </motion.h1>
             <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
               This page shows the real VITALOOP workflow: upload results, review structured biomarkers, understand priorities, and keep progress moving through weekly check-ins.
@@ -282,7 +282,7 @@ export default function ExampleReport() {
                 onClick={() => navigate('/for-nutritionists')}
                 className="inline-flex items-center rounded-2xl border border-white/35 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
               >
-                For labs and practitioners
+                For teams and practitioners
               </button>
             </div>
           </div>

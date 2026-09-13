@@ -1185,7 +1185,7 @@ export default function Landing() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">For professionals</p>
                 <h2 className="mt-2 text-[26px] font-bold tracking-tight md:text-[34px]">
-                  Practitioners and laboratories can build on the same intelligence layer.
+                  Practitioners and teams can build on the same intelligence layer.
                 </h2>
                 <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-200 md:text-base">
                   Use VITALOOP for client workflows, lab-result interpretation, embedded insights, and follow-up loops.
@@ -1204,7 +1204,7 @@ export default function Landing() {
                   onClick={() => navigate('/for-nutritionists')}
                   className="inline-flex items-center justify-center rounded-2xl border border-white/30 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10"
                 >
-                  For laboratories
+                  For teams
                 </button>
               </div>
             </div>

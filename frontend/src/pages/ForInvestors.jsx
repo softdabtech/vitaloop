@@ -425,7 +425,7 @@ export default function ForInvestors() {
 
           <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-5 md:p-6">
             <p className="text-sm leading-relaxed text-slate-700">
-              VITALOOP turns scattered lab PDFs into a structured health operating system: upload, prioritize biomarkers, run a protocol, and adapt weekly.
+              VITALOOP turns scattered symptoms and lab data into a structured health operating system: upload, prioritize biomarkers, run a protocol, and adapt weekly.
               {' '}
               <a
                 href="https://www.linkedin.com/in/aleksey-bombela/"

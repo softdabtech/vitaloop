@@ -14,7 +14,7 @@ const FAQ_ITEMS = [
       },
       {
         q: 'How do I upload my first lab report?',
-        a: 'After signing up, click "Upload" in your dashboard and select your lab PDF. VITALOOP then normalizes biomarkers and maps findings into a structured plan.',
+        a: 'After signing up, click "Upload" in your dashboard and add lab data as a PDF, image, CSV, or XLS/XLSX file. VITALOOP then normalizes biomarkers and maps findings into a structured plan.',
       },
       {
         q: 'Do I need a credit card to start?',

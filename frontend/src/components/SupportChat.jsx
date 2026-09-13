@@ -17,7 +17,7 @@ const AUTO_ANSWERS = {
   'How does the AI analysis work?':
     'You upload a PDF or photo of your blood test. Our AI analyzes all biomarkers, then generates a personalized supplement protocol with contextual recommendations.',
   'Which labs are supported?':
-    'Any lab worldwide - Quest, LabCorp, SonoHealth in the US, Synlab and Eurofins in Europe, and any private lab PDF in any language.',
+    'Any lab worldwide - Quest, LabCorp, SonoHealth in the US, Synlab and Eurofins in Europe, and private lab files in supported formats.',
   'Is my data secure?':
     'Your PDF is processed through a privacy-first analysis pipeline. Only required analysis values are stored, encrypted in our database. You can delete your data anytime.',
   'How much does it cost?':

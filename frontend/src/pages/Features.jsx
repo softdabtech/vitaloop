@@ -99,7 +99,7 @@ export default function Features() {
   return (
     <>
       <Seo
-        title="AI Blood Test Analysis Features | VITALOOP"
+        title="Clinical Reasoning Features | VITALOOP"
         description="Explore symptom intake, AI blood test analysis, biomarker explanations, personalized action plans, weekly check-ins, and progress tracking."
         path="/features"
       />

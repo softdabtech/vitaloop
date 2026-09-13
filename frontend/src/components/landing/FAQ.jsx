@@ -25,7 +25,7 @@ const ITEMS = [
   },
   {
     q: 'Is my data secure?',
-    a: 'Yes. Your data is processed securely and never sold. Privacy is a core part of the system design.',
+    a: 'Yes. Your data is processed securely and is not sold to advertisers or data marketplaces. Privacy is a core part of the system design.',
   },
   {
     q: 'Do I need to take supplements?',

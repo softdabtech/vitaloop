@@ -116,7 +116,7 @@ export const HELP_ARTICLES = {
       {
         type: 'feature-grid',
         items: [
-          { icon: '📤', title: 'Upload or enter lab data', desc: 'Use PDF/image uploads, manual biomarker entry, and structured lab inputs supported by the product flow.' },
+          { icon: '📤', title: 'Upload or enter lab data', desc: 'Use PDF, image, CSV/XLSX uploads, manual biomarker entry, and structured lab inputs supported by the product flow.' },
           { icon: '🧠', title: 'VITALOOP Health Intelligence Engine', desc: 'Names, values, units, ranges, extraction confidence, symptoms, safety context, evidence gaps, and trends are processed through one structured path.' },
           { icon: '⚠️', title: 'Prioritized and safety-aware', desc: 'Important findings, safety notes, and clinician discussion points are surfaced clearly.' },
           { icon: '💊', title: 'Structured protocol sections', desc: 'Nutrition, supplements, lifestyle, training/recovery, adherence, and retest suggestions are organized for review.' },
@@ -155,11 +155,11 @@ export const HELP_ARTICLES = {
         items: [
           {
             title: 'Go to the Upload page',
-            body: 'After signing in, click **"Upload Lab PDF"** from your dashboard or open the Upload page from the sidebar. You can also drag a file directly onto the dashboard.',
+            body: 'After signing in, click **"Upload"** from your dashboard or open the Upload page from the sidebar. You can also drag a file directly onto the dashboard.',
           },
           {
             title: 'Select your file',
-            body: 'Drag and drop your lab PDF into the upload area, or click **"Choose File"** to browse. Supported formats: **PDF, JPG, PNG**.\n\nFor best results, use the PDF downloaded directly from your lab\'s patient portal (Quest MyQuest, LabCorp Patient, etc.).',
+            body: 'Drag and drop your lab file into the upload area, or click **"Choose File"** to browse. Supported formats: **PDF, JPG, PNG, CSV, XLS, and XLSX**.\n\nFor best results, use the original file downloaded directly from your lab portal when available.',
           },
           {
             title: 'Wait for analysis',
@@ -585,7 +585,7 @@ export const HELP_ARTICLES = {
       },
       {
         type: 'paragraph',
-        text: 'Your Health Profile is private by default and is only used to improve AI analysis. It is never shared with third parties. See Privacy & Data Security for full details.',
+        text: 'Your Health Profile is private by default and is used to personalize your VITALOOP experience. It is not sold to advertisers or data marketplaces. See Privacy & Data Security for full details.',
       },
     ],
   },
@@ -688,7 +688,7 @@ export const HELP_ARTICLES = {
           '**Encryption at rest** — all data stored in Supabase (SOC 2 Type II certified infrastructure)',
           '**Encryption in transit** — all connections use HTTPS/TLS',
           '**Row-Level Security** — database-level policy ensures you can only access your own records',
-          '**No third-party sharing** — your health data is never sold or shared with advertisers',
+          '**No advertiser data sharing** — your health data is never sold or shared with advertisers',
         ],
       },
       {
@@ -763,7 +763,7 @@ export const HELP_ARTICLES = {
             features: [
               'Unlimited uploads & retests',
               'Structured supplement guidance',
-              'Weekly AI check-ins',
+              'Weekly check-ins',
               'Progress timeline tracking',
               'Protocol adaptation',
               'Priority support',
@@ -1276,7 +1276,7 @@ export const HELP_ARTICLES = {
           'All data stored on **Supabase** — SOC 2 Type II certified infrastructure.',
           '**Row-level security** — database queries are isolated per user. Even if someone had database access, they couldn\'t read your records.',
           '**HTTPS everywhere** — all data in transit is encrypted.',
-          '**No advertising** — your health data is never used for advertising or sold to third parties.',
+          '**No advertising** — your health data is never used for advertising or sold to data marketplaces.',
           'Read the full **Privacy Policy** at vitaloop.today/privacy-policy.',
         ],
       },

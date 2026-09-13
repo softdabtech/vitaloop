@@ -47,7 +47,7 @@ export const LANDING_PRICING_PLANS = [
       { text: 'Full analysis of blood tests', ok: true },
       { text: 'Prioritized problem list', ok: true },
       { text: 'Personalized action protocol', ok: true },
-      { text: 'Weekly AI check-ins', ok: true },
+      { text: 'Weekly check-ins', ok: true },
       { text: 'Progress tracking', ok: true },
     ],
   },
