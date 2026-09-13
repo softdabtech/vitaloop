@@ -352,6 +352,14 @@ def _has_profile_field(profile: Dict[str, Any] | None, *keys: str) -> bool:
     return any(payload.get(key) not in (None, "", [], {}) for key in keys)
 
 
+def _to_float_marker(item: Dict[str, Any]) -> float | None:
+    try:
+        value = item.get("value")
+        return float(value) if value not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
 def _age(profile: Dict[str, Any] | None) -> float | None:
     payload = profile if isinstance(profile, dict) else {}
     for key in ("age", "age_years"):
@@ -576,36 +584,156 @@ def _build_pattern(
     return pattern
 
 
+_IRON_BLOOD_LOSS_SYMPTOM_ALIASES = (
+    "dizziness", "shortness of breath", "chest pain", "fainting", "black stool",
+    "blood in stool", "heavy periods", "heavy menstrual bleeding",
+)
+
+
 def _iron_deficiency_anemia_pattern(
-    biomarkers: List[Dict[str, Any]], *, profile: Dict[str, Any] | None, locale: str
+    biomarkers: List[Dict[str, Any]],
+    *,
+    profile: Dict[str, Any] | None,
+    locale: str,
+    symptoms: List[str] | None = None,
 ) -> Dict[str, Any] | None:
+    """Iron/anemia pattern pack — the reference template for every later
+    domain pack (P1.1, 2026-09-13). Structure per the agreed spec:
+    required_markers (loosened to ferritin OR hemoglobin/hematocrit+MCV, not
+    an AND-only gate), supportive_markers, exclusions/modifiers (CRP
+    confound, B12/folate mixed-anemia flag), confidence tiers, severity, and
+    a doctor_escalation rule independent of the marker-only priority.
+    """
     ferritin = _find_markers(biomarkers, ["ferritin"])
     hemoglobin = _find_markers(biomarkers, ["hemoglobin", "hgb"])
     hematocrit = _find_markers(biomarkers, ["hematocrit", "hct"])
     mcv = _find_markers(biomarkers, ["mcv", "mean corpuscular volume"])
+    mch = _find_markers(biomarkers, ["mch", "mean corpuscular hemoglobin"])
+    rdw = _find_markers(biomarkers, ["rdw", "red cell distribution width"])
+    serum_iron = _find_markers(biomarkers, ["serum iron", "iron,"]) or _find_markers(biomarkers, [" iron "])
+    transferrin_sat = _find_markers(biomarkers, ["transferrin saturation", "tsat", "% saturation"])
+    crp = _find_markers(biomarkers, ["crp", "c-reactive protein", "c reactive protein"])
+    b12 = _find_markers(biomarkers, ["b12", "vitamin b12", "cobalamin"])
+    folate = _find_markers(biomarkers, ["folate", "folic acid"])
 
     low_ferritin = [item for item in ferritin if _is_low(item)]
     low_red_cell = [item for item in [*hemoglobin, *hematocrit] if _is_low(item)]
-    if not low_ferritin or not low_red_cell:
+    low_mcv = [item for item in mcv if _is_low(item)]
+
+    # Required markers: ferritin low, OR the CBC combo (low Hb/Hct + low MCV)
+    # on its own — a panel without ferritin should still surface this
+    # pattern from CBC alone rather than staying silent (the old detector
+    # required BOTH low ferritin AND low Hb/Hct, missing this case entirely).
+    if not low_ferritin and not (low_red_cell and low_mcv):
         return None
 
-    normal_context = [item for item in mcv if _is_in_range(item)]
+    supportive = [
+        *[item for item in mcv if _is_low(item)],
+        *[item for item in mch if _is_low(item)],
+        *[item for item in serum_iron if _is_low(item)],
+        *[item for item in transferrin_sat if _is_low(item)],
+        *[item for item in rdw if _is_high(item)],
+    ]
+
+    # Exclusion/modifier #1: ferritin is an acute-phase reactant — a high CRP
+    # alongside low-looking ferritin can mean ferritin is falsely elevated by
+    # inflammation, not that iron stores are fine; conversely a NORMAL/HIGH
+    # transferrin saturation alongside low ferritin argues against true iron
+    # deficiency and belongs in contradicting_markers, not supportive.
+    contradicting = [item for item in transferrin_sat if _is_in_range(item) or _is_high(item)]
+    inflammation_confound = [item for item in crp if _is_high(item)]
+
+    # Exclusion/modifier #2: low B12/folate alongside low ferritin/Hb points
+    # to a possible MIXED anemia (iron + B12/folate), not pure iron
+    # deficiency — surfaced as missing/confound context, not a separate
+    # pattern, since this detector's job is iron-deficiency specifically.
+    low_b12_or_folate = [item for item in [*b12, *folate] if _is_low(item)]
+
+    extra_missing = [
+        "Transferrin saturation + serum iron",
+        "CRP or inflammation context (ferritin rises with inflammation)",
+        "Recent or ongoing blood loss history",
+    ]
+    confidence_reasons: List[str] = []
+    if inflammation_confound:
+        extra_missing.append(
+            "Ferritin may be falsely elevated by inflammation (CRP is high) — repeat once inflammation resolves."
+        )
+        confidence_reasons.append("inflammation_may_confound_ferritin")
+    if low_b12_or_folate:
+        extra_missing.append("Low B12/folate alongside this pattern raises possible mixed anemia — review together.")
+        confidence_reasons.append("possible_mixed_anemia_b12_folate")
+    if contradicting:
+        confidence_reasons.append("transferrin_saturation_not_low_argues_against_pure_iron_deficiency")
+
+    # Confidence tiers per the agreed spec: high (ferritin low + CBC/TSAT
+    # corroboration), moderate (ferritin low alone, no CBC confirmation),
+    # low (CBC combo without ferritin — indirect signal only).
+    if low_ferritin and (low_red_cell or supportive):
+        base_confidence = 0.72
+    elif low_ferritin:
+        base_confidence = 0.58
+    else:
+        base_confidence = 0.5
+    if contradicting:
+        base_confidence -= 0.1
+
+    # Severity by hemoglobin depth — informs both display and escalation.
+    hemoglobin_values = [_to_float_marker(item) for item in hemoglobin]
+    hemoglobin_values = [v for v in hemoglobin_values if v is not None]
+    lowest_hemoglobin = min(hemoglobin_values) if hemoglobin_values else None
+    if lowest_hemoglobin is not None and lowest_hemoglobin < 8:
+        severity = "high"
+    elif lowest_hemoglobin is not None and lowest_hemoglobin < 10:
+        severity = "moderate"
+    elif low_ferritin or low_red_cell:
+        severity = "mild"
+    else:
+        severity = None
+
+    # Doctor escalation rule — independent of the marker-only priority:
+    # very low hemoglobin, male sex (iron deficiency in men is not
+    # explained by menstruation and needs a cause), postmenopausal-age
+    # female, or symptoms suggesting active blood loss.
+    sex = str((profile or {}).get("sex") or "").strip().lower()
+    age = _age(profile)
+    reported_symptoms = [str(s).strip().lower() for s in (symptoms or [])]
+    blood_loss_symptoms = [
+        s for s in reported_symptoms
+        if any(alias in s or s in alias for alias in _IRON_BLOOD_LOSS_SYMPTOM_ALIASES)
+    ]
+    escalation_reasons: List[str] = []
+    if lowest_hemoglobin is not None and lowest_hemoglobin < 8:
+        escalation_reasons.append("Hemoglobin is very low (<8 g/dL) — prompt medical review, not routine follow-up.")
+    if sex == "male" and (low_ferritin or low_red_cell):
+        escalation_reasons.append("Iron deficiency in a male is not explained by menstruation and needs a cause investigated.")
+    if sex == "female" and age is not None and age >= 55 and (low_ferritin or low_red_cell):
+        escalation_reasons.append("Iron deficiency in a postmenopausal woman needs a cause investigated (e.g. GI source).")
+    if blood_loss_symptoms:
+        escalation_reasons.append(
+            f"Reported symptom(s) ({', '.join(blood_loss_symptoms)}) can indicate active blood loss — discuss promptly."
+        )
+    doctor_escalation = {"triggered": bool(escalation_reasons), "reasons": escalation_reasons}
+
+    priority = "high" if severity == "high" or doctor_escalation["triggered"] else "medium"
+
     return _build_pattern(
         pattern_key="iron_deficiency_anemia",
         domain="iron_status",
-        priority="medium",
-        base_confidence=0.68,
-        triggered=[*low_ferritin, *low_red_cell],
-        normal_context=normal_context,
+        priority=priority,
+        base_confidence=base_confidence,
+        triggered=[*low_ferritin, *low_red_cell, *low_mcv],
+        normal_context=[item for item in mcv if _is_in_range(item)],
+        supportive_markers=supportive,
+        contradicting_markers=contradicting,
+        severity=severity,
+        doctor_escalation=doctor_escalation,
+        extra_confidence_reasons=confidence_reasons,
         profile=profile,
         locale=locale,
         retest_marker="Ferritin, hemoglobin/hematocrit, transferrin saturation",
         matched_rule_key="pattern_iron_deficiency_anemia",
-        extra_missing_context=[
-            "Transferrin saturation + serum iron",
-            "CRP or inflammation context (ferritin rises with inflammation)",
-            "Recent or ongoing blood loss history",
-        ],
+        extra_missing_context=extra_missing,
     )
 
 
@@ -961,6 +1089,7 @@ def detect_patterns(
     """
     locale = _locale(locale)
     profile = profile if isinstance(profile, dict) else {}
+    normalized_symptoms = [str(item).strip().lower() for item in (symptoms or []) if str(item).strip()]
 
     # Run every specific detector and keep every one that matched, ranked by
     # priority then confidence — a panel can legitimately show more than one
@@ -972,7 +1101,9 @@ def detect_patterns(
         for item in [
             _electrolyte_kidney_safety_pattern(biomarkers or [], profile=profile, locale=locale),
             _reticulocyte_pattern(biomarkers or [], profile=profile, locale=locale),
-            _iron_deficiency_anemia_pattern(biomarkers or [], profile=profile, locale=locale),
+            _iron_deficiency_anemia_pattern(
+                biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
+            ),
             _cardiovascular_risk_pattern(biomarkers or [], profile=profile, locale=locale),
             _metabolic_risk_pattern(biomarkers or [], profile=profile, locale=locale),
             _thyroid_dysfunction_pattern(biomarkers or [], profile=profile, locale=locale),
@@ -992,7 +1123,6 @@ def detect_patterns(
         generic = _generic_pattern(biomarkers or [], profile=profile, locale=locale)
         patterns = [generic] if generic else []
 
-    normalized_symptoms = [str(item).strip().lower() for item in (symptoms or []) if str(item).strip()]
     return _attach_symptom_links(patterns, normalized_symptoms)
 
 
