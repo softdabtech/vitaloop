@@ -23,6 +23,8 @@ import {
   RefreshCw,
   ShieldAlert,
   Stethoscope,
+  TrendingDown,
+  TrendingUp,
 } from 'lucide-react'
 import { isUkrainianLocale } from '../lib/locale.js'
 import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
@@ -200,6 +202,15 @@ const RESULTS_COPY = {
       doctor_only: 'Discuss with a doctor',
     },
     reasoningEmpty: 'No detailed reasoning trace is available for this report yet.',
+    progressTitle: 'Progress Since Last Time',
+    progressIntro: 'How your patterns changed compared with your previous upload.',
+    progressStrengthened: 'Stronger signal than last time',
+    progressWeakened: 'Weaker signal than last time',
+    progressNew: 'New since last time',
+    progressResolved: 'No longer detected — improved or resolved',
+    progressStable: 'Unchanged since last time',
+    progressNoPrevious: 'Upload another report in the future to see how this changes over time.',
+    progressConfidenceWas: (from, to) => `${from} → ${to}`,
   },
   uk: {
     hints: [
@@ -301,6 +312,15 @@ const RESULTS_COPY = {
       doctor_only: 'Обговорити з лікарем',
     },
     reasoningEmpty: 'Детальне обґрунтування для цього звіту поки недоступне.',
+    progressTitle: 'Прогрес з минулого разу',
+    progressIntro: 'Як змінилися ваші патерни порівняно з попереднім завантаженням.',
+    progressStrengthened: 'Сигнал сильніший, ніж минулого разу',
+    progressWeakened: 'Сигнал слабший, ніж минулого разу',
+    progressNew: 'Нове з минулого разу',
+    progressResolved: 'Більше не виявлено — покращення або вирішення',
+    progressStable: 'Без змін з минулого разу',
+    progressNoPrevious: 'Завантажте ще один звіт у майбутньому, щоб побачити динаміку з часом.',
+    progressConfidenceWas: (from, to) => `${from} → ${to}`,
   },
 }
 
@@ -555,6 +575,59 @@ function ReasoningTraceCard({ trace, copy }) {
   )
 }
 
+const PROGRESS_STATUS_META = {
+  strengthened: { icon: TrendingUp, badge: 'border-amber-200 bg-amber-50 text-amber-800', labelKey: 'progressStrengthened' },
+  weakened: { icon: TrendingDown, badge: 'border-emerald-200 bg-emerald-50 text-emerald-700', labelKey: 'progressWeakened' },
+  new_signal: { icon: TrendingUp, badge: 'border-rose-200 bg-rose-50 text-rose-700', labelKey: 'progressNew' },
+  resolved_or_improved: { icon: CheckCircle2, badge: 'border-emerald-200 bg-emerald-50 text-emerald-700', labelKey: 'progressResolved' },
+  stable: { icon: RefreshCw, badge: 'border-slate-200 bg-slate-100 text-slate-600', labelKey: 'progressStable' },
+}
+
+// Surfaces progress_intelligence (see backend/app/services/progress_intelligence.py):
+// a per-pattern diff of THIS upload's clinical_reasoning_traces against the
+// user's previous upload — the pattern-level counterpart to the
+// biomarker-level trend cards already shown elsewhere on this page.
+function ProgressIntelligenceSection({ progress, copy }) {
+  if (!progress) return null
+  const changes = Array.isArray(progress.changes) ? progress.changes : []
+
+  return (
+    <SectionCard icon={TrendingUp} title={copy.progressTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.progressIntro}</p>
+      {!progress.available || !changes.length ? (
+        <p className="text-sm leading-6 text-slate-600">{copy.progressNoPrevious}</p>
+      ) : (
+        <div className="space-y-3">
+          {changes.slice(0, 8).map((change, index) => {
+            const meta = PROGRESS_STATUS_META[change.status] || PROGRESS_STATUS_META.stable
+            const Icon = meta.icon
+            const currentPct = formatPercent(change.current_confidence)
+            const previousPct = formatPercent(change.previous_confidence)
+            return (
+              <div key={change.pattern_id || index} className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${meta.badge}`}>
+                  <Icon className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-semibold text-slate-950">{change.pattern_name || change.pattern_id}</h3>
+                    <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{copy[meta.labelKey]}</span>
+                  </div>
+                  {(currentPct || previousPct) && (
+                    <p className="mt-1 text-sm text-slate-500">
+                      {copy.confidence}: {copy.progressConfidenceWas(previousPct || '—', currentPct || '—')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </SectionCard>
+  )
+}
+
 function ReasoningTraceSection({ traces, copy }) {
   const list = Array.isArray(traces) ? traces.filter(Boolean) : []
   return (
@@ -635,6 +708,7 @@ export default function Results() {
   const [explainability, setExplainability] = useState(null)
   const [safetyResult, setSafetyResult] = useState(null)
   const [reasoningTraces, setReasoningTraces] = useState([])
+  const [progressIntelligence, setProgressIntelligence] = useState(null)
   const [loading, setLoading] = useState(true)
   const isUk = isUkrainianLocale()
   const copy = isUk ? RESULTS_COPY.uk : RESULTS_COPY.en
@@ -674,6 +748,7 @@ export default function Results() {
               ? data.final_analysis.clinical_reasoning_traces
               : []
         )
+        setProgressIntelligence(data.progress_intelligence ?? data.final_analysis?.progress_intelligence ?? null)
         gaResultsView(uploadId)
       } catch (_e) {
         if (!active) return
@@ -685,6 +760,7 @@ export default function Results() {
         setExplainability(null)
         setSafetyResult(null)
         setReasoningTraces([])
+        setProgressIntelligence(null)
       } finally {
         if (active) setLoading(false)
       }
@@ -981,6 +1057,8 @@ export default function Results() {
         </div>
 
         <ReasoningTraceSection traces={reasoningTraces} copy={copy} />
+
+        {progressIntelligence?.available && <ProgressIntelligenceSection progress={progressIntelligence} copy={copy} />}
 
         {/* Full biomarker table moved up here (right after Top Findings / Why
             This Matters) per explicit request — it used to sit near the
