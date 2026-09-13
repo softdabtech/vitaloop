@@ -1337,31 +1337,111 @@ def _micronutrient_deficiency_cluster_pattern(
     )
 
 
+_RENAL_ALARM_SYMPTOM_ALIASES = (
+    "muscle weakness", "confusion", "decreased urination", "palpitations",
+    "swelling", "shortness of breath",
+)
+
+
 def _electrolyte_kidney_safety_pattern(
-    biomarkers: List[Dict[str, Any]], *, profile: Dict[str, Any] | None, locale: str
+    biomarkers: List[Dict[str, Any]],
+    *,
+    profile: Dict[str, Any] | None,
+    locale: str,
+    symptoms: List[str] | None = None,
 ) -> Dict[str, Any] | None:
+    """Kidney/electrolyte pattern pack (P1.7) — seventh domain on the
+    reference template, expanding the existing safety pattern. Adds BUN and
+    chloride/CO2 as supportive corroboration or an acute-vs-established
+    contradicting signal, and severity/escalation thresholds anchored to
+    well-established clinical cutoffs (critical potassium, eGFR kidney-
+    failure range) rather than only the generic abnormal/normal status.
+    """
     potassium = _find_markers(biomarkers, ["potassium"])
     sodium = _find_markers(biomarkers, ["sodium"])
     creatinine = _find_markers(biomarkers, ["creatinine"])
     egfr = _find_markers(biomarkers, ["egfr", "gfr"])
+    bun = _find_markers(biomarkers, ["bun", "blood urea nitrogen", "urea"])
+    chloride = _find_markers(biomarkers, ["chloride"])
+    co2 = _find_markers(biomarkers, ["co2", "bicarbonate"])
 
     abnormal_electrolyte = [item for item in [*potassium, *sodium] if _is_abnormal(item)]
     abnormal_kidney = [item for item in [*creatinine, *egfr] if _is_abnormal(item)]
     if not abnormal_electrolyte or not abnormal_kidney:
         return None
 
+    abnormal_bun = [item for item in bun if _is_abnormal(item)]
+    abnormal_acid_base = [item for item in [*chloride, *co2] if _is_abnormal(item)]
+    normal_bun = [item for item in bun if _is_in_range(item)]
+
+    supportive = [*abnormal_bun, *abnormal_acid_base]
+    # A normal BUN despite abnormal creatinine/eGFR can point to a more
+    # acute or isolated change rather than established, longer-standing
+    # kidney dysfunction (BUN and creatinine can rise at different rates) —
+    # surfaced explicitly rather than assumed away.
+    contradicting = normal_bun
+
+    confidence_reasons: List[str] = []
+    base_confidence = 0.7
+    if abnormal_bun:
+        confidence_reasons.append("bun_corroborates_kidney_involvement")
+        base_confidence += 0.05
+    if abnormal_acid_base:
+        confidence_reasons.append("acid_base_markers_add_context")
+    if normal_bun:
+        confidence_reasons.append("normal_bun_suggests_acute_or_isolated_change_rather_than_established_ckd")
+    base_confidence = min(base_confidence, 0.9)
+
+    potassium_values = [v for v in (_to_float_marker(item) for item in potassium) if v is not None]
+    egfr_values = [v for v in (_to_float_marker(item) for item in egfr) if v is not None]
+    critical_potassium = bool(potassium_values and (min(potassium_values) < 2.5 or max(potassium_values) > 6.5))
+    kidney_failure_range = bool(egfr_values and min(egfr_values) < 15)
+    severe_egfr = bool(egfr_values and min(egfr_values) < 30)
+    if critical_potassium or kidney_failure_range:
+        severity = "high"
+    elif severe_egfr:
+        severity = "moderate"
+    else:
+        severity = "mild"
+
+    reported_symptoms = [str(s).strip().lower() for s in (symptoms or [])]
+    renal_alarm_symptoms = [
+        s for s in reported_symptoms
+        if any(alias in s or s in alias for alias in _RENAL_ALARM_SYMPTOM_ALIASES)
+    ]
+    # This is already a safety-tier pattern by design (abnormal electrolyte
+    # AND abnormal kidney marker together) — doctor_escalation is triggered
+    # by default here, with reasons specific to what makes it urgent.
+    escalation_reasons: List[str] = ["Abnormal electrolyte and kidney markers together need prompt review, not a routine retest cycle."]
+    if critical_potassium:
+        escalation_reasons.append("Potassium is in the critical range (<2.5 or >6.5 mmol/L) — urgent, not routine.")
+    if kidney_failure_range:
+        escalation_reasons.append("eGFR is in the kidney-failure range (<15) — urgent, not routine.")
+    if renal_alarm_symptoms:
+        escalation_reasons.append(f"Reported symptom(s) ({', '.join(renal_alarm_symptoms)}) reinforce the need for prompt review.")
+    doctor_escalation = {"triggered": True, "reasons": escalation_reasons}
+
     return _build_pattern(
         pattern_key="electrolyte_kidney_safety",
         domain="kidney",
         priority="high",
-        base_confidence=0.7,
+        base_confidence=base_confidence,
         triggered=[*abnormal_electrolyte, *abnormal_kidney],
         normal_context=[],
+        supportive_markers=supportive,
+        contradicting_markers=contradicting,
+        severity=severity,
+        doctor_escalation=doctor_escalation,
+        extra_confidence_reasons=confidence_reasons,
         profile=profile,
         locale=locale,
         retest_marker="Potassium, sodium, creatinine, eGFR",
         matched_rule_key="pattern_electrolyte_kidney_safety",
-        extra_missing_context=["Current medications affecting electrolytes or kidney function", "Hydration status"],
+        extra_missing_context=[
+            "Current medications affecting electrolytes or kidney function",
+            "Hydration status",
+            "Urine albumin/creatinine ratio or urinalysis, if not already drawn",
+        ],
     )
 
 
@@ -1522,7 +1602,9 @@ def detect_patterns(
     specific_patterns = [
         item
         for item in [
-            _electrolyte_kidney_safety_pattern(biomarkers or [], profile=profile, locale=locale),
+            _electrolyte_kidney_safety_pattern(
+                biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
+            ),
             _reticulocyte_pattern(biomarkers or [], profile=profile, locale=locale),
             _iron_deficiency_anemia_pattern(
                 biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
