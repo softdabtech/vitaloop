@@ -263,7 +263,7 @@
 
   var L = isUk() ? {
     title: 'Ми використовуємо cookie',
-    text: 'Відповідно до ЗУ «Про захист персональних даних», ми використовуємо необхідні cookie для роботи сервісу та, за вашою згодою, аналітичні й маркетингові cookie.',
+    text: 'Необхідні cookie підтримують роботу VITALOOP. Додаткові аналітичні й маркетингові cookie допомагають покращувати продукт і вимірювати кампанії.',
     acceptAll: 'Прийняти всі',
     rejectOpt: 'Відхилити необов’язкові',
     manage: 'Налаштування',
@@ -278,7 +278,7 @@
     back: '← Назад'
   } : {
     title: 'We use cookies',
-    text: 'We use essential cookies for authentication and core functionality, and optional cookies for analytics and marketing.',
+    text: 'Essential cookies keep VITALOOP running. Optional analytics and marketing cookies help us improve the product and measure campaigns.',
     acceptAll: 'Accept All',
     rejectOpt: 'Reject Non-Essential',
     manage: 'Manage Settings',
@@ -419,20 +419,17 @@
   function buildBanner(container) {
     container.innerHTML = '';
     var inner = document.createElement('div');
-    inner.style.cssText = 'pointer-events:auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;box-shadow:0 -4px 6px rgba(0,0,0,.04),0 20px 60px rgba(15,23,42,.18);padding:20px 24px;width:100%;max-width:740px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box;';
+    inner.style.cssText = 'pointer-events:auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 18px 45px rgba(15,23,42,.18);padding:14px 16px;width:min(100%,560px);max-width:calc(100vw - 24px);display:flex;flex-direction:column;gap:12px;box-sizing:border-box;';
 
     var top = document.createElement('div');
-    top.style.cssText = 'display:flex;align-items:flex-start;gap:14px;';
-    var emoji = document.createElement('span');
-    emoji.textContent = '🍪';
-    emoji.style.cssText = 'font-size:28px;line-height:1;flex-shrink:0;margin-top:2px;';
+    top.style.cssText = 'display:flex;align-items:flex-start;gap:10px;';
     var textBlock = document.createElement('div');
     textBlock.style.flex = '1';
     var h2 = document.createElement('h2');
     h2.textContent = L.title;
-    h2.style.cssText = 'margin:0;font-size:16px;font-weight:800;color:#0f172a;letter-spacing:-.01em;';
+    h2.style.cssText = 'margin:0;font-size:14.5px;font-weight:800;color:#0f172a;letter-spacing:-.01em;';
     var p = document.createElement('p');
-    p.style.cssText = 'margin:6px 0 0;font-size:13.5px;color:#475569;line-height:1.55;max-width:520px;';
+    p.style.cssText = 'margin:4px 0 0;font-size:12.5px;color:#475569;line-height:1.45;max-width:420px;';
     p.textContent = L.text + ' ';
     var privA = document.createElement('a');
     privA.href = '/privacy-policy/'; privA.target = '_blank'; privA.rel = 'noreferrer';
@@ -445,7 +442,7 @@
     cookA.style.cssText = 'color:#0d9488;text-decoration:underline;text-underline-offset:2px;';
     p.appendChild(privA); p.appendChild(sep); p.appendChild(cookA);
     textBlock.appendChild(h2); textBlock.appendChild(p);
-    top.appendChild(emoji); top.appendChild(textBlock);
+    top.appendChild(textBlock);
 
     var btns = document.createElement('div');
     btns.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;align-items:center;';
@@ -462,17 +459,17 @@
     container.appendChild(inner);
   }
 
-  var PRIMARY_BTN = 'padding:10px 22px;border-radius:100px;border:none;cursor:pointer;background:linear-gradient(135deg,#0f766e 0%,#14b8a6 100%);color:#fff;font-weight:700;font-size:13.5px;box-shadow:0 4px 14px rgba(15,118,110,.30);transition:opacity .15s;white-space:nowrap;font-family:inherit;';
-  var SECONDARY_BTN = 'padding:10px 22px;border-radius:100px;border:none;cursor:pointer;background:#0f172a;color:#fff;font-weight:700;font-size:13.5px;box-shadow:0 4px 14px rgba(15,23,42,.20);white-space:nowrap;font-family:inherit;';
-  var OUTLINE_BTN = 'padding:10px 22px;border-radius:100px;cursor:pointer;background:transparent;border:1.5px solid #cbd5e1;color:#475569;font-weight:700;font-size:13.5px;white-space:nowrap;font-family:inherit;';
-  var GHOST_BTN = 'padding:10px 16px;border-radius:100px;border:none;cursor:pointer;background:transparent;color:#94a3b8;font-weight:600;font-size:13px;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;font-family:inherit;';
+  var PRIMARY_BTN = 'padding:8px 16px;border-radius:100px;border:none;cursor:pointer;background:linear-gradient(135deg,#0f766e 0%,#14b8a6 100%);color:#fff;font-weight:700;font-size:12.5px;box-shadow:0 4px 14px rgba(15,118,110,.30);transition:opacity .15s;white-space:nowrap;font-family:inherit;';
+  var SECONDARY_BTN = 'padding:8px 16px;border-radius:100px;border:none;cursor:pointer;background:#0f172a;color:#fff;font-weight:700;font-size:12.5px;box-shadow:0 4px 14px rgba(15,23,42,.20);white-space:nowrap;font-family:inherit;';
+  var OUTLINE_BTN = 'padding:8px 16px;border-radius:100px;cursor:pointer;background:transparent;border:1.5px solid #cbd5e1;color:#475569;font-weight:700;font-size:12.5px;white-space:nowrap;font-family:inherit;';
+  var GHOST_BTN = 'padding:8px 10px;border-radius:100px;border:none;cursor:pointer;background:transparent;color:#64748b;font-weight:600;font-size:12.5px;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;font-family:inherit;';
 
   if (stored()) return; // Already decided — don't show
 
   function init() {
     var wrap = document.createElement('div');
     wrap.id = 'vl-cookie-banner';
-    wrap.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:10000;padding:0 16px 20px;display:flex;justify-content:center;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
+    wrap.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:10000;padding:0 12px 12px;display:flex;justify-content:flex-end;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
     buildBanner(wrap);
     document.body.appendChild(wrap);
   }

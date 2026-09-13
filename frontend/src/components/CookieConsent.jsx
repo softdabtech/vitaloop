@@ -8,7 +8,7 @@ const T = {
   en: {
     bannerTitle: 'We use cookies',
     bannerText:
-      'We use essential cookies to keep the service running, and optional analytics and marketing cookies to improve your experience and measure campaign performance. You can change your preferences at any time in Settings.',
+      'Essential cookies keep VITALOOP running. Optional analytics and marketing cookies help us improve the product and measure campaigns.',
     acceptAll: 'Accept All',
     rejectOptional: 'Reject Non-Essential',
     manageSettings: 'Manage Settings',
@@ -41,7 +41,7 @@ const T = {
   uk: {
     bannerTitle: 'Ми використовуємо cookie',
     bannerText:
-      'Ми використовуємо необхідні файли cookie для роботи сервісу та додаткові — для аналітики та маркетингу. Ви можете змінити налаштування будь-коли у розділі Налаштування.',
+      'Необхідні cookie підтримують роботу VITALOOP. Додаткові аналітичні та маркетингові cookie допомагають покращувати продукт і вимірювати кампанії.',
     acceptAll: 'Прийняти всі',
     rejectOptional: 'Відхилити необов\'язкові',
     manageSettings: 'Налаштування',
@@ -249,14 +249,12 @@ export default function CookieConsent() {
   return (
     <div style={bannerWrapStyle} role="dialog" aria-modal="true" aria-label={t.bannerTitle}>
       <div style={bannerInnerStyle}>
-        {/* Icon + title */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-          <span style={{ fontSize: 28, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>🍪</span>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
+            <h2 style={{ margin: 0, fontSize: 14.5, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
               {t.bannerTitle}
             </h2>
-            <p style={{ margin: '6px 0 0', fontSize: 13.5, color: '#475569', lineHeight: 1.55, maxWidth: 520 }}>
+            <p style={{ margin: '4px 0 0', fontSize: 12.5, color: '#475569', lineHeight: 1.45, maxWidth: 420 }}>
               {t.bannerText}{' '}
               <a href={privacyHref} style={linkStyle} target="_blank" rel="noreferrer">{t.privacyLink}</a>
               {' · '}
@@ -287,8 +285,8 @@ const backdropStyle = {
 
 const bannerWrapStyle = {
   position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10000,
-  padding: '0 16px 20px',
-  display: 'flex', justifyContent: 'center',
+  padding: '0 12px 12px',
+  display: 'flex', justifyContent: 'flex-end',
   pointerEvents: 'none',
 }
 
@@ -296,14 +294,14 @@ const bannerInnerStyle = {
   pointerEvents: 'auto',
   background: '#ffffff',
   border: '1px solid #e2e8f0',
-  borderRadius: 20,
-  boxShadow: '0 -4px 6px rgba(0,0,0,0.04), 0 20px 60px rgba(15,23,42,0.18)',
-  padding: '20px 24px',
-  width: '100%',
-  maxWidth: 740,
+  borderRadius: 16,
+  boxShadow: '0 18px 45px rgba(15,23,42,0.18)',
+  padding: '14px 16px',
+  width: 'min(100%, 560px)',
+  maxWidth: 'calc(100vw - 24px)',
   display: 'flex',
   flexDirection: 'column',
-  gap: 16,
+  gap: 12,
 }
 
 const panelStyle = {
@@ -338,9 +336,9 @@ const btnGroupStyle = {
 }
 
 const primaryBtnStyle = {
-  padding: '10px 22px', borderRadius: 100, border: 'none', cursor: 'pointer',
+  padding: '8px 16px', borderRadius: 100, border: 'none', cursor: 'pointer',
   background: 'linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)',
-  color: '#fff', fontWeight: 700, fontSize: 13.5,
+  color: '#fff', fontWeight: 700, fontSize: 12.5,
   boxShadow: '0 4px 14px rgba(15,118,110,0.30)',
   transition: 'opacity 0.15s',
   whiteSpace: 'nowrap',
@@ -353,17 +351,17 @@ const secondaryBtnStyle = {
 }
 
 const outlineBtnStyle = {
-  padding: '10px 22px', borderRadius: 100, cursor: 'pointer',
+  padding: '8px 16px', borderRadius: 100, cursor: 'pointer',
   background: 'transparent',
   border: '1.5px solid #cbd5e1',
-  color: '#475569', fontWeight: 700, fontSize: 13.5,
+  color: '#475569', fontWeight: 700, fontSize: 12.5,
   transition: 'border-color 0.15s',
   whiteSpace: 'nowrap',
 }
 
 const ghostBtnStyle = {
-  padding: '10px 16px', borderRadius: 100, border: 'none', cursor: 'pointer',
-  background: 'transparent', color: '#94a3b8', fontWeight: 600, fontSize: 13,
+  padding: '8px 10px', borderRadius: 100, border: 'none', cursor: 'pointer',
+  background: 'transparent', color: '#64748b', fontWeight: 600, fontSize: 12.5,
   textDecoration: 'underline', textUnderlineOffset: 3, whiteSpace: 'nowrap',
 }
 

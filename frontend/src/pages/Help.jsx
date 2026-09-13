@@ -556,9 +556,15 @@ export default function Help({ embedded = false, basePath = '/help' }) {
                   </svg>
                   Help Center
                 </div>
-                <h1 className="mb-3 text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl">
-                  How can we help you?
-                </h1>
+                {articleId || sectionId ? (
+                  <div className="mb-3 text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl">
+                    How can we help you?
+                  </div>
+                ) : (
+                  <h1 className="mb-3 text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl">
+                    How can we help you?
+                  </h1>
+                )}
                 <p className="text-base text-slate-500 sm:text-lg">
                   Find answers to common questions about VITALOOP.
                 </p>

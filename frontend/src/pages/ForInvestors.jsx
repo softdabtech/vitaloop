@@ -106,8 +106,8 @@ export default function ForInvestors() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <Seo
-        title="Investor Overview | VITALOOP AI Health Platform"
-        description="Investor overview of VITALOOP: symptom-first health workflow, lab intelligence platform, and practitioner operations roadmap."
+        title="Investor Overview | VITALOOP Clinical Reasoning Platform"
+        description="Investor overview of VITALOOP: clinical reasoning for symptom-first health workflows, lab intelligence, and practitioner operations."
         path="/for-investors"
         schemas={[
           {
@@ -117,7 +117,7 @@ export default function ForInvestors() {
             url: 'https://vitaloop.today',
             logo: 'https://vitaloop.today/og-cover-2026-05.jpg',
             description:
-              'VITALOOP is an AI-powered health workflow platform that connects symptom intake, lab interpretation, and longitudinal protocol execution.',
+              'VITALOOP is a clinical reasoning platform that connects symptom intake, lab interpretation, and longitudinal protocol execution.',
             sameAs: [
               'https://twitter.com/vitaloop',
             ],
@@ -143,7 +143,7 @@ export default function ForInvestors() {
             For Investors
           </motion.p>
           <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 text-5xl font-bold tracking-[-0.03em] text-slate-900 md:text-6xl">
-            AI infrastructure for symptom-first health workflows
+            Clinical reasoning infrastructure for symptom-first health workflows
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
             VITALOOP is building the execution layer between symptom context, lab data, and repeated health outcomes. The product blends consumer habit loops with practitioner operations into one longitudinal system.
