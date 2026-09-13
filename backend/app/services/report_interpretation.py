@@ -860,13 +860,33 @@ def _metabolic_risk_pattern(
     )
 
 
+_CARDIAC_SYMPTOM_ALIASES = (
+    "chest pain", "shortness of breath", "palpitations", "leg swelling", "calf pain",
+)
+
+
 def _cardiovascular_risk_pattern(
-    biomarkers: List[Dict[str, Any]], *, profile: Dict[str, Any] | None, locale: str
+    biomarkers: List[Dict[str, Any]],
+    *,
+    profile: Dict[str, Any] | None,
+    locale: str,
+    symptoms: List[str] | None = None,
 ) -> Dict[str, Any] | None:
+    """Lipid/cardiometabolic pattern pack (P1.5) — fifth domain on the
+    reference template. Adds non-HDL/ApoB/Lp(a) as supportive corroboration
+    (or, for ApoB, a discordance check against LDL) and CRP/glucose as
+    cardiometabolic modifiers, plus severity/escalation thresholds for
+    severe hypercholesterolemia and pancreatitis-risk triglycerides.
+    """
     ldl = _find_markers(biomarkers, ["ldl"])
     hdl = _find_markers(biomarkers, ["hdl"])
     triglycerides = _find_markers(biomarkers, ["triglyceride"])
     total_cholesterol = _find_markers(biomarkers, ["total cholesterol", "cholesterol total"])
+    non_hdl = _find_markers(biomarkers, ["non-hdl", "non hdl"])
+    apob = _find_markers(biomarkers, ["apob", "apo b"])
+    lp_a = _find_markers(biomarkers, ["lp(a)", "lipoprotein(a)", "lpa"])
+    crp = _find_markers(biomarkers, ["crp", "hs-crp", "hs crp", "c-reactive protein"])
+    glucose_hba1c = _find_markers(biomarkers, ["glucose", "hba1c", "a1c"])
 
     high_ldl = [item for item in ldl if _is_high(item)]
     low_hdl = [item for item in hdl if _is_low(item)]
@@ -876,14 +896,75 @@ def _cardiovascular_risk_pattern(
     if not triggered:
         return None
 
-    priority = "high" if (high_ldl and low_hdl) or (high_ldl and high_trig) else "medium"
+    high_non_hdl = [item for item in non_hdl if _is_high(item)]
+    high_apob = [item for item in apob if _is_high(item)]
+    high_lp_a = [item for item in lp_a if _is_high(item)]
+    high_crp = [item for item in crp if _is_high(item)]
+    high_metabolic_modifier = [item for item in glucose_hba1c if _is_high(item)]
+
+    supportive = [*high_non_hdl, *high_apob, *high_lp_a, *high_crp, *high_metabolic_modifier]
+    # Discordance check: a NORMAL/LOW ApoB despite high LDL-C argues that
+    # the actual atherogenic particle burden may be lower than the LDL-C
+    # number alone implies (LDL-C and ApoB can disagree, especially with
+    # high triglycerides) — surfaced as contradicting, not silently ignored.
+    contradicting = [item for item in apob if (_is_in_range(item) or _is_low(item)) and high_ldl]
+
+    confidence_reasons: List[str] = []
+    base_confidence = 0.68 if (high_ldl and low_hdl) or (high_ldl and high_trig) else 0.6
+    if high_apob or high_non_hdl:
+        base_confidence += 0.05
+        confidence_reasons.append("apob_or_non_hdl_corroborates_atherogenic_burden")
+    if high_lp_a:
+        confidence_reasons.append("lp_a_adds_independent_genetic_risk_signal")
+    if high_crp:
+        confidence_reasons.append("hs_crp_adds_cardiometabolic_inflammatory_context")
+    if high_metabolic_modifier:
+        confidence_reasons.append("glucose_hba1c_elevation_compounds_cardiometabolic_risk")
+    if contradicting:
+        confidence_reasons.append("apob_not_elevated_despite_high_ldl_suggests_lower_particle_burden_than_ldl_c_implies")
+        base_confidence -= 0.08
+    base_confidence = max(0.35, min(base_confidence, 0.85))
+
+    ldl_values = [v for v in (_to_float_marker(item) for item in high_ldl) if v is not None]
+    trig_values = [v for v in (_to_float_marker(item) for item in high_trig) if v is not None]
+    severe_ldl = bool(ldl_values and max(ldl_values) >= 190)
+    pancreatitis_risk_trig = bool(trig_values and max(trig_values) >= 500)
+    if severe_ldl or pancreatitis_risk_trig:
+        severity = "high"
+    elif (high_ldl and low_hdl) or (high_ldl and high_trig) or high_apob:
+        severity = "moderate"
+    else:
+        severity = "mild"
+
+    reported_symptoms = [str(s).strip().lower() for s in (symptoms or [])]
+    cardiac_symptoms = [
+        s for s in reported_symptoms
+        if any(alias in s or s in alias for alias in _CARDIAC_SYMPTOM_ALIASES)
+    ]
+    escalation_reasons: List[str] = []
+    if severe_ldl:
+        escalation_reasons.append("LDL is in the severe hypercholesterolemia range (≥190 mg/dL) — discuss promptly, including possible familial hypercholesterolemia.")
+    if pancreatitis_risk_trig:
+        escalation_reasons.append("Triglycerides are in the pancreatitis-risk range (≥500 mg/dL) — prompt medical review rather than routine follow-up.")
+    if cardiac_symptoms:
+        escalation_reasons.append(
+            f"Reported symptom(s) ({', '.join(cardiac_symptoms)}) alongside an atherogenic lipid pattern should be discussed promptly, not deferred to a routine retest."
+        )
+    doctor_escalation = {"triggered": bool(escalation_reasons), "reasons": escalation_reasons}
+    priority = "high" if severity == "high" or doctor_escalation["triggered"] else ("high" if (high_ldl and low_hdl) or (high_ldl and high_trig) else "medium")
+
     return _build_pattern(
         pattern_key="cardiovascular_risk",
         domain="cardiovascular",
         priority=priority,
-        base_confidence=0.68 if priority == "high" else 0.6,
+        base_confidence=base_confidence,
         triggered=triggered,
         normal_context=[],
+        supportive_markers=supportive,
+        contradicting_markers=contradicting,
+        severity=severity,
+        doctor_escalation=doctor_escalation,
+        extra_confidence_reasons=confidence_reasons,
         profile=profile,
         locale=locale,
         retest_marker="Lipid panel (LDL, HDL, triglycerides)",
@@ -1365,7 +1446,9 @@ def detect_patterns(
             _iron_deficiency_anemia_pattern(
                 biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
             ),
-            _cardiovascular_risk_pattern(biomarkers or [], profile=profile, locale=locale),
+            _cardiovascular_risk_pattern(
+                biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
+            ),
             _metabolic_risk_pattern(
                 biomarkers or [], profile=profile, locale=locale, symptoms=normalized_symptoms
             ),
