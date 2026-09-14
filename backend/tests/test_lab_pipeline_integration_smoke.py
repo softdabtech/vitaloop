@@ -77,3 +77,10 @@ async def test_child_reticulocyte_panel_runs_core_pipeline_without_external_ai()
     assert isinstance(progress, dict)
     assert progress["available"] is False
     assert progress["changes"] == []
+
+    # P6: with no history (user_id=None), personal_baseline degrades to
+    # unavailable gracefully rather than erroring.
+    baseline = result.get("personal_baseline")
+    assert isinstance(baseline, dict)
+    assert baseline["available"] is False
+    assert baseline["markers"] == []

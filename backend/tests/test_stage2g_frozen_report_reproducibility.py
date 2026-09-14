@@ -798,3 +798,41 @@ def test_frozen_response_handles_missing_progress_intelligence_gracefully():
     )
 
     assert response["progress_intelligence"] is None
+
+
+def test_frozen_response_serves_persisted_personal_baseline():
+    """P6 follow-up: personal_baseline gets the same frozen-verbatim
+    treatment as progress_intelligence/clinical_reasoning_traces above."""
+    frozen = _frozen_row(
+        input_snapshot={
+            "personal_baseline": {
+                "available": True,
+                "markers": [{"canonical_name": "canonical_tsh", "silent_signal": True}],
+            },
+        }
+    )
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["personal_baseline"]["available"] is True
+    assert response["personal_baseline"]["markers"][0]["silent_signal"] is True
+
+
+def test_frozen_response_handles_missing_personal_baseline_gracefully():
+    frozen = _frozen_row(input_snapshot={"evidence_gaps": {"summary": {"gap_count": 0}}})
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["personal_baseline"] is None

@@ -188,6 +188,7 @@ def assemble_frozen_response(
         # reason to make — the diff was already computed once at generation
         # time and is immutable history, exactly like clinical_story.
         "progress_intelligence": input_snapshot.get("progress_intelligence"),
+        "personal_baseline": input_snapshot.get("personal_baseline"),
         "safety_result": safety_result,
         # Pure locale-template boilerplate derived from the frozen status —
         # no AI/knowledge-rule recomputation involved (see
