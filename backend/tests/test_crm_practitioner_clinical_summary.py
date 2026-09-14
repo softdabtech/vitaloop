@@ -92,6 +92,9 @@ async def test_practitioner_with_assignment_sees_summary(monkeypatch):
                 "progress_intelligence": {"available": True, "changes": []},
                 "evidence_gaps": {"summary": {"gap_count": 2}},
                 "next_best_tests": {"recommended_tests": [{"marker": "ferritin"}]},
+                "action_plan_by_role": {
+                    "buckets": {"urgent": [{"title": "Electrolyte / Kidney Safety"}], "doctor": [], "practitioner": [], "self": []},
+                },
             },
         }
 
@@ -110,6 +113,9 @@ async def test_practitioner_with_assignment_sees_summary(monkeypatch):
     assert result["evidence_gaps_summary"]["gap_count"] == 2
     assert result["next_best_tests"][0]["marker"] == "ferritin"
     assert result["requires_doctor_discussion"] is True
+    # P9 follow-up: same buckets the b2c report computed, passed through
+    # verbatim for the practitioner.
+    assert result["action_plan_by_role"]["urgent"][0]["title"] == "Electrolyte / Kidney Safety"
 
 
 @pytest.mark.asyncio

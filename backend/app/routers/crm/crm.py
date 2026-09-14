@@ -1072,6 +1072,7 @@ async def get_client_clinical_summary(
     progress = snapshot.get("progress_intelligence") or {}
     evidence_gaps = snapshot.get("evidence_gaps") or {}
     next_best_tests = snapshot.get("next_best_tests") or {}
+    action_plan_by_role = snapshot.get("action_plan_by_role") or {}
     safety_result = report_row.get("safety_result") or {}
 
     # Sort so a practitioner opening this page sees the highest-signal
@@ -1101,6 +1102,12 @@ async def get_client_clinical_summary(
         "progress_since_last": progress,
         "safety_status": safety_result.get("status"),
         "requires_doctor_discussion": bool(safety_result.get("doctor_discussion_required")),
+        # P9 follow-up: the same self/practitioner/doctor/urgent buckets the
+        # b2c report already computed (action_plan_by_role.py) — a
+        # practitioner sees exactly what the client sees, in the same
+        # structure, so a conversation about "what's in your plan" isn't
+        # working from two different classifications of the same findings.
+        "action_plan_by_role": action_plan_by_role.get("buckets") or {},
     }
 
 
