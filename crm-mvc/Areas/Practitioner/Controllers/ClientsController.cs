@@ -1,7 +1,9 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Vitaloop.Crm.Web.Attributes;
 using Vitaloop.Crm.Web.Services.Assignments;
 using Vitaloop.Crm.Web.Services.Contracts;
+using Vitaloop.Crm.Web.Services.Data;
 using Vitaloop.Crm.Web.Services.Organizations;
 using Vitaloop.Crm.Web.ViewModels;
 
@@ -17,6 +19,7 @@ public class ClientsController : Controller
     private readonly AssignmentService _assignmentService;
     private readonly IAccessPolicyService _accessPolicyService;
     private readonly OrganizationService _organizationService;
+    private readonly ICrmDataGateway _crmDataGateway;
     private readonly ILogger<ClientsController> _logger;
 
     public ClientsController(
@@ -25,6 +28,7 @@ public class ClientsController : Controller
         AssignmentService assignmentService,
         IAccessPolicyService accessPolicyService,
         OrganizationService organizationService,
+        ICrmDataGateway crmDataGateway,
         ILogger<ClientsController> logger)
     {
         _userContextAccessor = userContextAccessor;
@@ -32,6 +36,7 @@ public class ClientsController : Controller
         _assignmentService = assignmentService;
         _accessPolicyService = accessPolicyService;
         _organizationService = organizationService;
+        _crmDataGateway = crmDataGateway;
         _logger = logger;
     }
 
@@ -106,6 +111,24 @@ public class ClientsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        ClinicalSummaryViewModel? clinicalSummary = null;
+        if (selected.ClientId.HasValue)
+        {
+            try
+            {
+                var doc = await _crmDataGateway.GetClientClinicalSummary(orgId, selected.ClientId.Value, ct);
+                clinicalSummary = ParseClinicalSummary(doc);
+            }
+            catch (Exception ex)
+            {
+                // Fail-open, matching the same posture the backend endpoint
+                // itself uses for its own history lookups: a practitioner
+                // should still see the client's profile/assignment details
+                // even if the clinical-summary call fails.
+                _logger.LogWarning(ex, "Failed to load clinical summary for client {ClientId}", selected.ClientId);
+            }
+        }
+
         return View(new PractitionerClientProfileViewModel
         {
             ActiveOrganizationId = orgId,
@@ -120,8 +143,97 @@ public class ClientsController : Controller
                 Status = selected.Status,
                 Notes = selected.Notes,
                 UpdatedAt = selected.UpdatedAt,
-            }
+            },
+            ClinicalSummary = clinicalSummary,
         });
+    }
+
+    private static ClinicalSummaryViewModel? ParseClinicalSummary(JsonDocument? doc)
+    {
+        if (doc is null) return null;
+        var root = doc.RootElement;
+        var available = root.TryGetProperty("available", out var availableEl) && availableEl.GetBoolean();
+        if (!available)
+        {
+            return new ClinicalSummaryViewModel
+            {
+                Available = false,
+                Reason = root.TryGetProperty("reason", out var reasonEl) ? reasonEl.GetString() : null,
+            };
+        }
+
+        var progress = root.TryGetProperty("progress_since_last", out var progressEl) ? progressEl : default;
+        var progressAvailable = progress.ValueKind == JsonValueKind.Object
+            && progress.TryGetProperty("available", out var progAvailEl) && progAvailEl.GetBoolean();
+        var progressChanges = new List<ProgressChangeViewModel>();
+        if (progressAvailable && progress.TryGetProperty("changes", out var changesEl) && changesEl.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var change in changesEl.EnumerateArray())
+            {
+                progressChanges.Add(new ProgressChangeViewModel
+                {
+                    PatternName = change.TryGetProperty("pattern_name", out var pn) ? pn.GetString() ?? "" : "",
+                    Status = change.TryGetProperty("status", out var st) ? st.GetString() ?? "" : "",
+                });
+            }
+        }
+
+        var evidenceGaps = root.TryGetProperty("evidence_gaps_summary", out var gapsEl) ? gapsEl : default;
+        var nextTests = new List<string>();
+        if (root.TryGetProperty("next_best_tests", out var testsEl) && testsEl.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var test in testsEl.EnumerateArray())
+            {
+                var marker = test.TryGetProperty("marker", out var m) ? m.GetString() : null;
+                if (!string.IsNullOrWhiteSpace(marker)) nextTests.Add(marker!);
+            }
+        }
+
+        return new ClinicalSummaryViewModel
+        {
+            Available = true,
+            UploadId = root.TryGetProperty("upload_id", out var uploadEl) ? uploadEl.GetString() : null,
+            GeneratedAt = root.TryGetProperty("generated_at", out var genEl) && genEl.ValueKind == JsonValueKind.String
+                && DateTimeOffset.TryParse(genEl.GetString(), out var parsed) ? parsed : null,
+            TopPatterns = ParsePatterns(root, "top_patterns"),
+            RedFlags = ParsePatterns(root, "red_flags"),
+            EvidenceGapCount = evidenceGaps.ValueKind == JsonValueKind.Object && evidenceGaps.TryGetProperty("gap_count", out var gc) ? gc.GetInt32() : 0,
+            HighPriorityGapCount = evidenceGaps.ValueKind == JsonValueKind.Object && evidenceGaps.TryGetProperty("high_priority_count", out var hpc) ? hpc.GetInt32() : 0,
+            NextBestTests = nextTests,
+            ProgressAvailable = progressAvailable,
+            ProgressChanges = progressChanges,
+            RequiresDoctorDiscussion = root.TryGetProperty("requires_doctor_discussion", out var rdd) && rdd.GetBoolean(),
+        };
+    }
+
+    private static IReadOnlyList<ClinicalPatternViewModel> ParsePatterns(JsonElement root, string propertyName)
+    {
+        var result = new List<ClinicalPatternViewModel>();
+        if (!root.TryGetProperty(propertyName, out var arrayEl) || arrayEl.ValueKind != JsonValueKind.Array)
+        {
+            return result;
+        }
+
+        foreach (var item in arrayEl.EnumerateArray())
+        {
+            double? confidence = item.TryGetProperty("confidence", out var confEl) && confEl.ValueKind == JsonValueKind.Number
+                ? confEl.GetDouble() : null;
+            var userExplanation = item.TryGetProperty("user_explanation", out var ueEl) ? ueEl : default;
+            result.Add(new ClinicalPatternViewModel
+            {
+                PatternId = item.TryGetProperty("pattern_id", out var pid) ? pid.GetString() ?? "" : "",
+                PatternName = item.TryGetProperty("pattern_name", out var pn) ? pn.GetString() ?? "" : "",
+                Domain = item.TryGetProperty("domain", out var dm) ? dm.GetString() ?? "" : "",
+                Confidence = confidence,
+                Severity = item.TryGetProperty("severity", out var sev) && sev.ValueKind == JsonValueKind.String ? sev.GetString() : null,
+                DoctorFlag = item.TryGetProperty("doctor_flag", out var df) && df.ValueKind == JsonValueKind.True,
+                SafetyLevel = item.TryGetProperty("safety_level", out var sl) && sl.ValueKind == JsonValueKind.String ? sl.GetString() : null,
+                Summary = userExplanation.ValueKind == JsonValueKind.Object && userExplanation.TryGetProperty("summary", out var sum) ? sum.GetString() : null,
+                PractitionerExplanation = item.TryGetProperty("practitioner_explanation", out var pe) && pe.ValueKind == JsonValueKind.String ? pe.GetString() : null,
+            });
+        }
+
+        return result;
     }
 
     [HttpPost("{assignmentId:guid}/update")]

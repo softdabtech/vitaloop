@@ -161,6 +161,7 @@ public class KnowledgeRulesControllerTests
         public Task Assign(Guid orgId, Guid clientId, Guid practitionerId, CancellationToken ct = default) => throw new NotImplementedException();
         public Task Reassign(Guid orgId, Guid assignmentId, Guid practitionerId, CancellationToken ct = default) => throw new NotImplementedException();
         public Task UpdateAssignment(Guid orgId, Guid assignmentId, string? status, string? notes, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<System.Text.Json.JsonDocument?> GetClientClinicalSummary(Guid orgId, Guid clientId, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<IReadOnlyList<GlobalUser>> GetGlobalUsers(CancellationToken ct = default) => throw new NotImplementedException();
         public Task UpdateGlobalUser(Guid userId, string? fullName, string? globalRole, string? subscriptionStatus, CancellationToken ct = default) => throw new NotImplementedException();
         public Task UpdateGlobalUserSubscription(Guid userId, string subscriptionStatus, CancellationToken ct = default) => throw new NotImplementedException();

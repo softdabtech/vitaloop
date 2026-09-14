@@ -487,6 +487,7 @@ internal sealed class FakeCrmDataGateway : Vitaloop.Crm.Web.Services.Data.ICrmDa
     public IReadOnlyList<Member> Members { get; set; } = Array.Empty<Member>();
     public IReadOnlyList<Assignment> Assignments { get; set; } = Array.Empty<Assignment>();
     public string? LastInviteEmail { get; private set; }
+    public System.Text.Json.JsonDocument? ClinicalSummaryDocument { get; set; }
 
     public Task<Organization?> CreateOrganization(Guid ownerId, string name, string slug, string status, string? description, string? logoUrl, CancellationToken ct = default)
         => Task.FromResult<Organization?>(new Organization { Id = Guid.NewGuid(), Name = name, Slug = slug, Status = status, OwnerName = ownerId.ToString() });
@@ -526,6 +527,9 @@ internal sealed class FakeCrmDataGateway : Vitaloop.Crm.Web.Services.Data.ICrmDa
     public Task Reassign(Guid orgId, Guid assignmentId, Guid practitionerId, CancellationToken ct = default) => Task.CompletedTask;
 
     public Task UpdateAssignment(Guid orgId, Guid assignmentId, string? status, string? notes, CancellationToken ct = default) => Task.CompletedTask;
+
+    public Task<System.Text.Json.JsonDocument?> GetClientClinicalSummary(Guid orgId, Guid clientId, CancellationToken ct = default)
+        => Task.FromResult(ClinicalSummaryDocument);
 
     public Task<IReadOnlyList<GlobalUser>> GetGlobalUsers(CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<GlobalUser>>(new[]

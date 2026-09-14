@@ -24,6 +24,7 @@ public interface ICrmDataGateway
     Task Assign(Guid orgId, Guid clientId, Guid practitionerId, CancellationToken ct = default);
     Task Reassign(Guid orgId, Guid assignmentId, Guid practitionerId, CancellationToken ct = default);
     Task UpdateAssignment(Guid orgId, Guid assignmentId, string? status, string? notes, CancellationToken ct = default);
+    Task<System.Text.Json.JsonDocument?> GetClientClinicalSummary(Guid orgId, Guid clientId, CancellationToken ct = default);
 
     Task<IReadOnlyList<GlobalUser>> GetGlobalUsers(CancellationToken ct = default);
     Task UpdateGlobalUser(Guid userId, string? fullName, string? globalRole, string? subscriptionStatus, CancellationToken ct = default);

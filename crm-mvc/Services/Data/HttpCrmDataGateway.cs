@@ -125,6 +125,20 @@ public sealed class HttpCrmDataGateway : ICrmDataGateway
             new { org_id = orgId, status, notes },
             ct);
 
+    public async Task<System.Text.Json.JsonDocument?> GetClientClinicalSummary(Guid orgId, Guid clientId, CancellationToken ct = default)
+    {
+        // AssignmentsPath is "/admin/assignments" by default (CrmDataOptions) —
+        // the clinical-summary endpoint lives alongside it under the same
+        // "/admin" router (app/routers/crm/crm.py), so derive the base path
+        // from it instead of hardcoding "/admin" a second time.
+        var basePath = _options.AssignmentsPath.EndsWith("/assignments", StringComparison.Ordinal)
+            ? _options.AssignmentsPath[..^"/assignments".Length]
+            : "/admin";
+        var response = await Send(HttpMethod.Get, $"{basePath}/clients/{clientId}/clinical-summary?org_id={orgId}", null, ct);
+        if (!response.IsSuccessStatusCode) return null;
+        return await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+    }
+
     public Task<IReadOnlyList<GlobalUser>> GetGlobalUsers(CancellationToken ct = default)
         => GetList<GlobalUser>(_options.GlobalUsersPath, ct);
 

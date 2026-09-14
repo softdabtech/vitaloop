@@ -17,6 +17,134 @@
 }
 else
 {
+  // P8 Practitioner Mode: converts the client's clinical_reasoning_traces
+  // / progress_intelligence (already built for the b2c pipeline, see
+  // backend/app/services/clinical_reasoning_trace.py and
+  // progress_intelligence.py) into a practitioner-facing summary — the
+  // whole point of this card is to save the practitioner from re-deriving
+  // "what matters here" from the raw report themselves.
+  string SeverityTone(string? severity) => severity?.ToLowerInvariant() switch
+  {
+    "high" => "tone-danger",
+    "moderate" => "tone-warning",
+    _ => "tone-gray",
+  };
+  string ProgressTone(string status) => status switch
+  {
+    "strengthened" => "tone-warning",
+    "new_signal" => "tone-danger",
+    "weakened" or "resolved_or_improved" => "tone-success",
+    _ => "tone-gray",
+  };
+  <section class="vo-card" style="padding:20px;display:grid;gap:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <h2 style="margin:0;font-size:1.05rem;">Clinical Reasoning Summary</h2>
+      @if (Model.ClinicalSummary?.RequiresDoctorDiscussion == true)
+      {
+        <span class="vo-pill tone-danger">Requires doctor discussion</span>
+      }
+    </div>
+
+    @if (Model.ClinicalSummary is null || !Model.ClinicalSummary.Available)
+    {
+      <div class="vo-empty-state">
+        @(Model.ClinicalSummary?.Reason == "no_completed_report_for_client"
+          ? "This client has no completed lab report yet."
+          : "Clinical summary is not available right now.")
+      </div>
+    }
+    else
+    {
+      var summary = Model.ClinicalSummary;
+      @if (summary.RedFlags.Any())
+      {
+        <div style="display:grid;gap:8px;">
+          <strong>Red flags</strong>
+          @foreach (var flag in summary.RedFlags)
+          {
+            <div class="vo-card" style="padding:12px;border-left:3px solid var(--vo-danger-text);">
+              <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                <strong>@flag.PatternName</strong>
+                <span class="vo-pill @SeverityTone(flag.Severity)">@(flag.Severity ?? "n/a")</span>
+              </div>
+              @if (!string.IsNullOrWhiteSpace(flag.PractitionerExplanation ?? flag.Summary))
+              {
+                <p style="margin:6px 0 0;color:var(--vo-gray-700);">@(flag.PractitionerExplanation ?? flag.Summary)</p>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <div style="display:grid;gap:8px;">
+        <strong>Top patterns</strong>
+        @if (!summary.TopPatterns.Any())
+        {
+          <div class="vo-empty-state">No specific pattern detected in the latest report.</div>
+        }
+        else
+        {
+          @foreach (var pattern in summary.TopPatterns)
+          {
+            <div class="vo-card" style="padding:12px;">
+              <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                <strong>@pattern.PatternName</strong>
+                <span>
+                  @if (pattern.Confidence.HasValue)
+                  {
+                    <span class="vo-pill tone-gray">@Math.Round(pattern.Confidence.Value * 100)% confidence</span>
+                  }
+                  @if (!string.IsNullOrWhiteSpace(pattern.Severity))
+                  {
+                    <span class="vo-pill @SeverityTone(pattern.Severity)">@pattern.Severity</span>
+                  }
+                </span>
+              </div>
+              @if (!string.IsNullOrWhiteSpace(pattern.PractitionerExplanation ?? pattern.Summary))
+              {
+                <p style="margin:6px 0 0;color:var(--vo-gray-700);">@(pattern.PractitionerExplanation ?? pattern.Summary)</p>
+              }
+            </div>
+          }
+        }
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+        <div>
+          <strong>What we still don't know</strong>
+          <p style="margin:4px 0 0;color:var(--vo-gray-700);">
+            @summary.EvidenceGapCount gap@(summary.EvidenceGapCount == 1 ? "" : "s")
+            (@summary.HighPriorityGapCount high-priority)
+          </p>
+        </div>
+        <div>
+          <strong>Suggested next tests</strong>
+          @if (summary.NextBestTests.Any())
+          {
+            <p style="margin:4px 0 0;color:var(--vo-gray-700);">@string.Join(", ", summary.NextBestTests)</p>
+          }
+          else
+          {
+            <p style="margin:4px 0 0;color:var(--vo-gray-700);">None suggested.</p>
+          }
+        </div>
+      </div>
+
+      @if (summary.ProgressAvailable && summary.ProgressChanges.Any())
+      {
+        <div style="display:grid;gap:8px;">
+          <strong>Progress since last report</strong>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            @foreach (var change in summary.ProgressChanges)
+            {
+              <span class="vo-pill @ProgressTone(change.Status)">@change.PatternName — @change.Status.Replace('_', ' ')</span>
+            }
+          </div>
+        </div>
+      }
+    }
+  </section>
+
   <section class="vo-card" style="padding:20px;display:grid;gap:14px;">
     <div><strong>Client:</strong> @Model.Assignment.ClientName</div>
     <div><strong>Practitioner:</strong> @Model.Assignment.PractitionerName</div>
