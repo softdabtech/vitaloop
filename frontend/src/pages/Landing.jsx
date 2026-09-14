@@ -946,7 +946,7 @@ export default function Landing() {
                 },
                 {
                   title: 'Why it matters',
-                  body: 'Matched Knowledge Base rules explain possible patterns without claiming a diagnosis.',
+                  body: 'Matched Knowledge Base rules explain possible patterns, how confident we are, and what data would still be needed for a stronger read — without claiming a diagnosis.',
                   icon: Sparkles,
                 },
                 {
