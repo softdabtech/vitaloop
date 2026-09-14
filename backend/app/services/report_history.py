@@ -184,6 +184,9 @@ def assemble_frozen_response(
         # P14, same frozen-verbatim posture: a report generated before the
         # Hypothesis Engine existed reads back None — never recomputed here.
         "clinical_hypotheses": input_snapshot.get("clinical_hypotheses"),
+        # P15, same frozen-verbatim posture: a report generated before the
+        # Contradiction Detector existed reads back None — never recomputed.
+        "clinical_contradictions": input_snapshot.get("clinical_contradictions"),
         # Frozen-verbatim, same posture: a report generated before P5
         # existed reads back None; progress_intelligence is itself a diff
         # against an even-earlier snapshot, so re-running it here on read

@@ -16,6 +16,7 @@ from app.services.clinical_priority_planner import build_clinical_priority_plann
 from app.services.next_best_test_engine import build_next_best_tests
 from app.services.clinical_reasoning_trace import build_clinical_reasoning_traces
 from app.services.hypothesis_engine import build_clinical_hypotheses
+from app.services.clinical_contradictions import build_clinical_contradictions
 from app.services.progress_intelligence import build_progress_intelligence
 from app.services.personal_baseline import build_personal_baseline
 from app.services.action_plan_by_role import build_action_plan_by_role
@@ -1212,6 +1213,22 @@ async def run_lab_analysis_pipeline(
         next_best_tests=next_best_tests,
         safety_result=safety_result,
     )
+    # Clinical Contradiction Detector (P15, backend-only v1): deterministic
+    # marker-vs-marker / marker-vs-symptom rules (ferritin+CRP masking,
+    # TSH+FT4 subclinical signal, glucose+insulin, LDL+ApoB, etc.) — reads
+    # biomarkers/symptoms directly and cross-references patterns/hypotheses
+    # by domain for `related_patterns`/`related_hypotheses`, but does not
+    # feed back into hypothesis confidence yet (TODO P16 Confidence
+    # Calibration Engine wires this in). supplement_context is not tracked
+    # by this pipeline yet (that's P20 Intervention Memory), so that one
+    # rule simply never fires here today — see clinical_contradictions.py.
+    clinical_contradictions = build_clinical_contradictions(
+        normalized_biomarkers,
+        symptoms=normalized_symptoms,
+        patterns=interpreted_report.get("patterns"),
+        hypotheses=clinical_hypotheses.get("hypotheses"),
+        supplement_context=None,
+    )
     # Progress Intelligence (P5): diff this run's traces against the user's
     # previous upload, same "fetch history, diff, degrade gracefully to
     # unavailable" shape trend_engine.py already established for
@@ -1328,6 +1345,7 @@ async def run_lab_analysis_pipeline(
         "clinical_data_integrity_version": clinical_integrity.get("version"),
         "evidence_gaps_version": evidence_gaps.get("version"),
         "hypothesis_engine_version": clinical_hypotheses.get("version"),
+        "clinical_contradictions_version": clinical_contradictions.get("version"),
     }
 
     result = {
@@ -1357,6 +1375,7 @@ async def run_lab_analysis_pipeline(
         "clinical_story": clinical_story,
         "clinical_reasoning_traces": clinical_reasoning_traces,
         "clinical_hypotheses": clinical_hypotheses,
+        "clinical_contradictions": clinical_contradictions,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
         "action_plan_by_role": action_plan_by_role,
@@ -1418,6 +1437,7 @@ async def run_lab_analysis_pipeline(
                     "clinical_story": clinical_story,
                     "clinical_reasoning_traces": clinical_reasoning_traces,
                     "clinical_hypotheses": clinical_hypotheses,
+                    "clinical_contradictions": clinical_contradictions,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
                     "action_plan_by_role": action_plan_by_role,
