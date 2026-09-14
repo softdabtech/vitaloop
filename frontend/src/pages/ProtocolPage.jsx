@@ -116,6 +116,16 @@ const PROTOCOL_COPY = {
       blocked_by_missing_data: 'Not enough data for a confident read',
       doctor_only: 'Discuss with a doctor',
     },
+    progressTitle: 'What to Change in Your Plan',
+    progressIntro: 'Based on how your patterns changed since your last report.',
+    progressNoPrevious: null,
+    progressAction: {
+      strengthened: 'Re-check soon — this needs closer attention now, not less.',
+      weakened: 'Good progress — keep doing what you’re doing.',
+      new_signal: 'New — consider adding this to your plan.',
+      resolved_or_improved: 'Resolved — you can likely stop related actions for this.',
+      stable: 'No change — continue your current plan.',
+    },
   },
   uk: {
     errorTitle: 'План дій недоступний',
@@ -190,6 +200,16 @@ const PROTOCOL_COPY = {
       blocked_by_missing_data: 'Недостатньо даних для впевненого висновку',
       doctor_only: 'Обговорити з лікарем',
     },
+    progressTitle: 'Що змінити у вашому плані',
+    progressIntro: 'На основі того, як змінилися ваші патерни з попереднього звіту.',
+    progressNoPrevious: null,
+    progressAction: {
+      strengthened: 'Перевірте найближчим часом — це потребує більшої уваги, а не меншої.',
+      weakened: 'Хороший прогрес — продовжуйте те, що робите.',
+      new_signal: 'Нове — варто додати до плану.',
+      resolved_or_improved: 'Вирішено — можна припинити повʼязані дії.',
+      stable: 'Без змін — продовжуйте поточний план.',
+    },
   },
 }
 
@@ -260,6 +280,7 @@ async function loadProtocolData(uploadId) {
     : Array.isArray(data?.final_analysis?.clinical_reasoning_traces)
       ? data.final_analysis.clinical_reasoning_traces
       : []
+  const progressIntelligence = data?.progress_intelligence ?? data?.final_analysis?.progress_intelligence ?? null
   return {
     biomarkers,
     protocol: coreProtocol.length ? coreProtocol : storedProtocol.length ? storedProtocol : actionPlan,
@@ -269,6 +290,7 @@ async function loadProtocolData(uploadId) {
     shoppingLinks,
     knowledgeReport: data?.knowledge_report ?? null,
     clinicalReasoningTraces,
+    progressIntelligence,
   }
 }
 
@@ -472,6 +494,47 @@ function ReasoningTraceCard({ trace, copy, isUk }) {
   )
 }
 
+const PROGRESS_STATUS_TONE = {
+  strengthened: 'warning',
+  weakened: 'success',
+  new_signal: 'critical',
+  resolved_or_improved: 'success',
+  stable: 'neutral',
+}
+
+// Action-oriented counterpart to Results.jsx's "Progress Since Last Time"
+// card: instead of just naming the status, tells the user what to DO with
+// it in the context of their action plan — the whole point of putting
+// this on ProtocolPage rather than duplicating the Results.jsx version.
+function ProgressActionSection({ progress, copy }) {
+  if (!progress?.available) return null
+  const changes = Array.isArray(progress.changes) ? progress.changes : []
+  if (!changes.length) return null
+
+  return (
+    <CoachCard className="p-5 sm:p-6">
+      <div className="mb-4 flex items-center gap-2">
+        <RefreshCw className="h-5 w-5 text-teal-600" />
+        <h2 className="text-lg font-extrabold text-slate-950">{copy.progressTitle}</h2>
+      </div>
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.progressIntro}</p>
+      <div className="space-y-3">
+        {changes.slice(0, 8).map((change, index) => (
+          <div key={change.pattern_id || index} className="rounded-2xl bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <strong className="text-slate-950">{change.pattern_name || change.pattern_id}</strong>
+              <CoachBadge tone={PROGRESS_STATUS_TONE[change.status] || 'neutral'}>
+                {change.status?.replaceAll('_', ' ')}
+              </CoachBadge>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{copy.progressAction[change.status] || ''}</p>
+          </div>
+        ))}
+      </div>
+    </CoachCard>
+  )
+}
+
 function ActionCard({ item, copy, isUk }) {
   const title = protocolTitle(item)
   const body = protocolBody(item)
@@ -594,6 +657,7 @@ export default function ProtocolPage() {
   const [safetyAlerts, setSafetyAlerts] = useState([])
   const [shoppingLinks, setShoppingLinks] = useState([])
   const [clinicalReasoningTraces, setClinicalReasoningTraces] = useState([])
+  const [progressIntelligence, setProgressIntelligence] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [exporting, setExporting] = useState(false)
@@ -613,6 +677,7 @@ export default function ProtocolPage() {
         setSafetyAlerts(data.safetyAlerts)
         setShoppingLinks(data.shoppingLinks)
         setClinicalReasoningTraces(data.clinicalReasoningTraces)
+        setProgressIntelligence(data.progressIntelligence)
         gaProtocolView(uploadId)
       } catch (err) {
         if (!active) return
@@ -796,6 +861,8 @@ export default function ProtocolPage() {
           ) : <p className="text-sm leading-6 text-slate-600">{copy.discussionFallback}</p>}
         </CoachCard>
       </div>
+
+      <ProgressActionSection progress={progressIntelligence} copy={copy} />
 
       {!!clinicalReasoningTraces.length && (
         <CoachCard className="p-5 sm:p-6">
