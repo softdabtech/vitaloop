@@ -286,3 +286,41 @@ async def test_create_rejects_confirmed_diagnosis_wording():
 
     assert resp.status_code == 400
     assert "confirmed diagnosis" in str(resp.json()).lower()
+
+
+@pytest.mark.asyncio
+async def test_governance_coverage_endpoint_does_not_collide_with_rule_id_route(monkeypatch):
+    """P10: /knowledge/rules/governance-coverage must resolve to the
+    coverage endpoint, not be swallowed by /rules/{rule_id} as a literal
+    rule_id lookup — this only works if the coverage route is registered
+    before the parameterized one."""
+    app.dependency_overrides[knowledge.require_super_admin] = lambda: _FakeAdminContext()
+
+    async def fake_list_rules(**_kwargs):
+        return [
+            {
+                "id": "r1",
+                "key": "rule_high_ldl",
+                "name": "High LDL",
+                "input_entities": ["ldl"],
+                "governance_status": "active",
+                "confidence": 0.7,
+                "severity": "medium",
+                "version": 1,
+                "source": "manual",
+            }
+        ]
+
+    monkeypatch.setattr(knowledge, "list_rules", fake_list_rules)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.get("/knowledge/rules/governance-coverage")
+
+    app.dependency_overrides.clear()
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["domains"]["cardiovascular"]["active"] == 1
+    assert "iron_status" in body["domains"]
+    assert body["summary"]["total_domains"] > 0

@@ -35,6 +35,7 @@ from app.services.knowledge import (
     submit_rule_review,
     update_rule,
 )
+from app.services.knowledge.governance_coverage import build_governance_coverage
 
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 
@@ -66,6 +67,20 @@ async def list_knowledge_rules(
         requires_doctor=requires_doctor,
     )
     return [KnowledgeRuleListItem.model_validate(row) for row in rows]
+
+
+@router.get("/rules/governance-coverage")
+async def get_governance_coverage(
+    _: UserContext = Depends(require_super_admin),
+) -> dict:
+    """P10 Governance Expansion: which pattern-engine domains (see
+    domain_registry.py — the same registry health_state_engine.py matches
+    biomarkers against) have active/draft/reviewed knowledge_rules backing
+    them, and which have none at all. Pure composition over list_rules();
+    no new rule data, just a domain-coverage view of what already exists.
+    """
+    rows = await list_rules()
+    return build_governance_coverage(rows)
 
 
 @router.get("/rules/{rule_id}", response_model=KnowledgeRuleDetail)
