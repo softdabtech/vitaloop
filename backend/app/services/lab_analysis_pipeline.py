@@ -18,6 +18,7 @@ from app.services.clinical_reasoning_trace import build_clinical_reasoning_trace
 from app.services.progress_intelligence import build_progress_intelligence
 from app.services.personal_baseline import build_personal_baseline
 from app.services.action_plan_by_role import build_action_plan_by_role
+from app.services.next_test_funnel import build_next_test_funnel
 from app.services.cost_analytics import record_analysis_cost
 from app.services.evidence_gaps import build_evidence_gaps
 from app.services.explainability import build_recommendation_explanations
@@ -599,6 +600,37 @@ async def _load_previous_clinical_reasoning_traces(
     except Exception as exc:
         logger.warning("progress_intelligence_history_unavailable user_id=%s error=%s", user_id, exc)
         return [], None, None
+
+
+async def _load_previous_next_best_tests(
+    user_id: Optional[str], exclude_upload_id: Optional[str]
+) -> Dict[str, Any]:
+    """The next-best-tests counterpart to _load_previous_clinical_reasoning_traces
+    above (P12 Next-Test Funnel) — fetches the user's previous upload's
+    next_best_tests so build_next_test_funnel() can show which
+    previously-suggested tests have since been completed. A second,
+    separate get_previous_report_version_for_user() call rather than
+    threading a 4th return value through the already-tested 3-tuple
+    contract of _load_previous_clinical_reasoning_traces — the extra
+    Supabase round-trip is a deliberately small price for not touching
+    that function's tested signature. Same fail-open posture.
+    """
+    if not user_id:
+        return {}
+    try:
+        from app.services import supabase_service as supabase
+
+        previous_row = await supabase.get_previous_report_version_for_user(
+            user_id, exclude_upload_id=exclude_upload_id
+        )
+        if not previous_row:
+            return {}
+        previous_snapshot = previous_row.get("input_snapshot") or {}
+        previous_next_best_tests = previous_snapshot.get("next_best_tests") or {}
+        return previous_next_best_tests if isinstance(previous_next_best_tests, dict) else {}
+    except Exception as exc:
+        logger.warning("next_test_funnel_history_unavailable user_id=%s error=%s", user_id, exc)
+        return {}
 
 
 def _protocol_sections_from_ai_and_rules(
@@ -1194,6 +1226,16 @@ async def run_lab_analysis_pipeline(
         next_best_tests=next_best_tests,
         evidence_gaps=evidence_gaps,
     )
+    # Next-Test Funnel (P12): groups next_best_tests into a domain panel and
+    # tracks which previously-suggested tests have since been fulfilled —
+    # reuses the same previous-upload lookup pattern as progress_intelligence
+    # above, scoped to next_best_tests specifically.
+    _previous_next_best_tests = await _load_previous_next_best_tests(user_id, analysis_id)
+    next_test_funnel = build_next_test_funnel(
+        next_best_tests=next_best_tests,
+        previous_next_best_tests=_previous_next_best_tests,
+        current_biomarkers=normalized_biomarkers,
+    )
     output_knowledge_evaluation = _localized_knowledge_evaluation_for_response(
         knowledge_evaluation,
         knowledge_report,
@@ -1303,6 +1345,7 @@ async def run_lab_analysis_pipeline(
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
         "action_plan_by_role": action_plan_by_role,
+        "next_test_funnel": next_test_funnel,
         "safety_result": safety_result,
         "safety_notice": safety_notice,
         "explainability": explainability,
@@ -1362,6 +1405,7 @@ async def run_lab_analysis_pipeline(
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
                     "action_plan_by_role": action_plan_by_role,
+                    "next_test_funnel": next_test_funnel,
                     "version_provenance": version_provenance,
                     "ai_orchestration": ai_orchestration,
                     "quality_snapshot": quality_snapshot,

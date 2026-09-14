@@ -89,3 +89,10 @@ async def test_child_reticulocyte_panel_runs_core_pipeline_without_external_ai()
     action_plan = result.get("action_plan_by_role")
     assert isinstance(action_plan, dict)
     assert set(action_plan["buckets"].keys()) == {"urgent", "doctor", "practitioner", "self"}
+
+    # P12: with no history (user_id=None), the funnel still reflects this
+    # run's own pending tests (available) but has no completed-since-last
+    # data to show.
+    funnel = result.get("next_test_funnel")
+    assert isinstance(funnel, dict)
+    assert funnel["completed_since_last_upload"] == []

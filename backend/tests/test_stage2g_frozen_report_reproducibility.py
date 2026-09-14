@@ -872,3 +872,37 @@ def test_frozen_response_handles_missing_action_plan_by_role_gracefully():
     )
 
     assert response["action_plan_by_role"] is None
+
+
+def test_frozen_response_serves_persisted_next_test_funnel():
+    """P12 follow-up: next_test_funnel gets the same frozen-verbatim
+    treatment as action_plan_by_role/personal_baseline above."""
+    frozen = _frozen_row(
+        input_snapshot={
+            "next_test_funnel": {"available": True, "panel": {"iron_status": [{"marker": "ferritin"}]}},
+        }
+    )
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["next_test_funnel"]["panel"]["iron_status"][0]["marker"] == "ferritin"
+
+
+def test_frozen_response_handles_missing_next_test_funnel_gracefully():
+    frozen = _frozen_row(input_snapshot={"evidence_gaps": {"summary": {"gap_count": 0}}})
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["next_test_funnel"] is None

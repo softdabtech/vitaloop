@@ -190,6 +190,7 @@ def assemble_frozen_response(
         "progress_intelligence": input_snapshot.get("progress_intelligence"),
         "personal_baseline": input_snapshot.get("personal_baseline"),
         "action_plan_by_role": input_snapshot.get("action_plan_by_role"),
+        "next_test_funnel": input_snapshot.get("next_test_funnel"),
         "safety_result": safety_result,
         # Pure locale-template boilerplate derived from the frozen status —
         # no AI/knowledge-rule recomputation involved (see
