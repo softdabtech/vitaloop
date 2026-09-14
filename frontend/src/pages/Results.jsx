@@ -226,6 +226,14 @@ const RESULTS_COPY = {
     testingPlanEmpty: 'No specific next tests suggested from this report.',
     testingPlanPriority: { high: 'High priority', medium: 'Medium priority', low: 'Low priority' },
     testingPlanTiming: 'Suggested timing',
+    baselineTitle: 'Your Personal Baseline',
+    baselineIntro: 'Not just in-range or out-of-range — is this normal for YOU, based on your own history.',
+    baselineEmpty: 'Not enough repeat history yet to establish a personal baseline. This builds up as you upload more reports.',
+    baselineSilentSignalLabel: 'In range, but a real shift for you',
+    baselineSilentSignalIntro: 'These markers are reported as normal by the lab, but have moved meaningfully away from your own typical range — worth a second look.',
+    baselineOtherLabel: 'Other tracked markers',
+    baselineWas: (value) => `Your typical: ${value}`,
+    baselineHistoryPoints: (n) => `based on ${n} prior result${n === 1 ? '' : 's'}`,
   },
   uk: {
     hints: [
@@ -351,6 +359,14 @@ const RESULTS_COPY = {
     testingPlanEmpty: 'Конкретних наступних аналізів зі звіту не запропоновано.',
     testingPlanPriority: { high: 'Високий пріоритет', medium: 'Середній пріоритет', low: 'Низький пріоритет' },
     testingPlanTiming: 'Рекомендований термін',
+    baselineTitle: 'Ваша особиста базова лінія',
+    baselineIntro: 'Не просто в межах чи поза межами референсу — чи це нормально саме для вас, на основі вашої історії.',
+    baselineEmpty: 'Поки що недостатньо повторної історії для особистої базової лінії. Вона формується з новими завантаженими звітами.',
+    baselineSilentSignalLabel: 'У межах референсу, але реальна зміна для вас',
+    baselineSilentSignalIntro: 'Ці показники лабораторія вважає нормальними, але вони суттєво відхилились від вашого типового рівня — варто звернути увагу.',
+    baselineOtherLabel: 'Інші відстежені показники',
+    baselineWas: (value) => `Ваш типовий рівень: ${value}`,
+    baselineHistoryPoints: (n) => `на основі ${n} попередн${n === 1 ? 'ього результату' : 'іх результатів'}`,
   },
 }
 
@@ -758,6 +774,62 @@ function buildTestingPlan(nextBestTests, retestPlan) {
   )
 }
 
+function formatBaselineValue(value, unit) {
+  const num = Number(value)
+  if (!Number.isFinite(num)) return '—'
+  const rounded = Math.abs(num) >= 100 ? Math.round(num) : Math.round(num * 100) / 100
+  return `${rounded}${unit ? ` ${unit}` : ''}`
+}
+
+// Surfaces personal_baseline (backend/app/services/personal_baseline.py):
+// a personal historical mean per marker, and — the actual differentiator —
+// a "silent_signal" flag for a marker the lab calls normal but that has
+// drifted meaningfully from the user's own typical range. Only rendered
+// once there's enough repeat history to say anything (personal_baseline
+// itself is unavailable until then).
+function PersonalBaselineSection({ personalBaseline, copy, isUk }) {
+  if (!personalBaseline?.available) return null
+  const markers = Array.isArray(personalBaseline.markers) ? personalBaseline.markers : []
+  if (!markers.length) return null
+  const silentSignals = markers.filter((m) => m?.silent_signal)
+  const others = markers.filter((m) => !m?.silent_signal)
+
+  const renderRow = (marker, index) => (
+    <div key={marker.canonical_name || index} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm font-semibold text-slate-950">{displayBiomarkerName({ name: marker.name }, isUk)}</span>
+        <span className="text-sm font-semibold text-slate-700">{formatBaselineValue(marker.current_value, marker.unit)}</span>
+      </div>
+      <p className="mt-1 text-xs text-slate-500">
+        {copy.baselineWas(formatBaselineValue(marker.personal_baseline_value, marker.unit))} · {copy.baselineHistoryPoints(marker.history_points)}
+      </p>
+    </div>
+  )
+
+  return (
+    <SectionCard icon={TrendingUp} title={copy.baselineTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.baselineIntro}</p>
+      {!!silentSignals.length && (
+        <div className="mb-4">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+              {copy.baselineSilentSignalLabel}
+            </span>
+          </div>
+          <p className="mb-2 text-sm leading-6 text-slate-500">{copy.baselineSilentSignalIntro}</p>
+          <div className="space-y-2">{silentSignals.map(renderRow)}</div>
+        </div>
+      )}
+      {!!others.length && (
+        <div>
+          {!!silentSignals.length && <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.baselineOtherLabel}</p>}
+          <div className="space-y-2">{others.slice(0, 8).map(renderRow)}</div>
+        </div>
+      )}
+    </SectionCard>
+  )
+}
+
 function TestingPlanSection({ nextBestTests, retestPlan, copy, isUk }) {
   const plan = buildTestingPlan(nextBestTests, retestPlan)
   return (
@@ -872,6 +944,7 @@ export default function Results() {
   const [progressIntelligence, setProgressIntelligence] = useState(null)
   const [evidenceGaps, setEvidenceGaps] = useState(null)
   const [nextBestTests, setNextBestTests] = useState(null)
+  const [personalBaseline, setPersonalBaseline] = useState(null)
   const [loading, setLoading] = useState(true)
   const isUk = isUkrainianLocale()
   const copy = isUk ? RESULTS_COPY.uk : RESULTS_COPY.en
@@ -914,6 +987,7 @@ export default function Results() {
         setProgressIntelligence(data.progress_intelligence ?? data.final_analysis?.progress_intelligence ?? null)
         setEvidenceGaps(data.evidence_gaps ?? data.final_analysis?.evidence_gaps ?? null)
         setNextBestTests(data.next_best_tests ?? data.final_analysis?.next_best_tests ?? null)
+        setPersonalBaseline(data.personal_baseline ?? data.final_analysis?.personal_baseline ?? null)
         gaResultsView(uploadId)
       } catch (_e) {
         if (!active) return
@@ -928,6 +1002,7 @@ export default function Results() {
         setProgressIntelligence(null)
         setEvidenceGaps(null)
         setNextBestTests(null)
+        setPersonalBaseline(null)
       } finally {
         if (active) setLoading(false)
       }
@@ -1228,6 +1303,8 @@ export default function Results() {
         <ReasoningTraceSection traces={reasoningTraces} copy={copy} />
 
         <TestingPlanSection nextBestTests={nextBestTests} retestPlan={reportRetest} copy={copy} isUk={isUk} />
+
+        <PersonalBaselineSection personalBaseline={personalBaseline} copy={copy} isUk={isUk} />
 
         {progressIntelligence?.available && <ProgressIntelligenceSection progress={progressIntelligence} copy={copy} />}
 
