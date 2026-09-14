@@ -178,6 +178,7 @@ public class KnowledgeRulesControllerTests
 
         public Task<KnowledgeRuleDetail?> GetKnowledgeRule(string ruleId, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<System.Text.Json.JsonDocument?> GetGovernanceCoverage(CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<System.Text.Json.JsonDocument?> GetRulePacks(CancellationToken ct = default) => throw new NotImplementedException();
         public Task<KnowledgeRuleDetail?> ApproveKnowledgeRule(string ruleId, KnowledgeRuleApprovePayload payload, CancellationToken ct = default) => throw new NotImplementedException();
     }
 }

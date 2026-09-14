@@ -83,6 +83,12 @@
     <div id="kr-coverage" style="font-size:13px;color:#94a3b8;">Loading…</div>
   </div>
 
+  <div class="kr-card" style="margin-bottom:16px;padding:16px 20px;">
+    <p style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 4px;">Expert rule packs (P11 v1)</p>
+    <p style="font-size:12px;color:#64748b;margin:0 0 10px;">Rules grouped by source, with reviewer provenance. Visibility only — every active rule still applies globally regardless of pack.</p>
+    <div id="kr-packs" style="font-size:13px;color:#94a3b8;">Loading…</div>
+  </div>
+
   <div class="kr-card">
     <form method="get" class="kr-filter">
       <label>
@@ -171,5 +177,35 @@ fetch('/ops/knowledge-rules/governance-coverage-data')
   })
   .catch(() => {
     document.getElementById('kr-coverage').innerHTML = '<span style="color:#94a3b8">Coverage data unavailable</span>'
+  })
+
+// P11 v1 Expert Rule Packs widget — same client-side-fetch posture as the
+// coverage widget above.
+fetch('/ops/knowledge-rules/rule-packs-data')
+  .then(r => r.json())
+  .then(data => {
+    const el = document.getElementById('kr-packs')
+    if (data.available === false || !data.packs || !Object.keys(data.packs).length) {
+      el.innerHTML = '<span style="color:#94a3b8">No rule packs yet</span>'
+      return
+    }
+    const rows = Object.values(data.packs).map(pack => {
+      const isCore = pack.pack_id === 'core_vitaloop'
+      const reviewerText = pack.reviewers && pack.reviewers.length
+        ? `${pack.reviewers.length} reviewer${pack.reviewers.length === 1 ? '' : 's'}`
+        : 'no reviewer on record'
+      const domainsText = pack.domains && pack.domains.length ? pack.domains.join(', ') : '—'
+      return `<div style="padding:10px 0;border-bottom:1px solid #f1f5f9;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <strong style="font-size:13px;color:#0f172a;">${isCore ? '🧩 VITALOOP Core' : '👤 ' + pack.pack_id}</strong>
+          <span style="font-size:12px;color:#64748b;">${pack.rule_count} rule${pack.rule_count === 1 ? '' : 's'} · ${reviewerText}</span>
+        </div>
+        <div style="margin-top:2px;font-size:12px;color:#94a3b8;">Domains: ${domainsText}</div>
+      </div>`
+    }).join('')
+    el.innerHTML = `<div>${rows}</div>`
+  })
+  .catch(() => {
+    document.getElementById('kr-packs').innerHTML = '<span style="color:#94a3b8">Pack data unavailable</span>'
   })
 </script>

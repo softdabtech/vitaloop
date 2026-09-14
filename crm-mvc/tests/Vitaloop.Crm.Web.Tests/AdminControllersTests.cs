@@ -582,6 +582,9 @@ internal sealed class FakeCrmDataGateway : Vitaloop.Crm.Web.Services.Data.ICrmDa
     public Task<System.Text.Json.JsonDocument?> GetGovernanceCoverage(CancellationToken ct = default)
         => Task.FromResult<System.Text.Json.JsonDocument?>(null);
 
+    public Task<System.Text.Json.JsonDocument?> GetRulePacks(CancellationToken ct = default)
+        => Task.FromResult<System.Text.Json.JsonDocument?>(null);
+
     public Task<KnowledgeRuleDetail?> ApproveKnowledgeRule(string ruleId, KnowledgeRuleApprovePayload payload, CancellationToken ct = default)
     {
         if (ApproveThrows is not null) throw ApproveThrows;

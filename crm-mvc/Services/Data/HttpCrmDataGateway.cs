@@ -333,6 +333,13 @@ public sealed class HttpCrmDataGateway : ICrmDataGateway
         return await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
     }
 
+    public async Task<System.Text.Json.JsonDocument?> GetRulePacks(CancellationToken ct = default)
+    {
+        var response = await Send(HttpMethod.Get, $"{_options.KnowledgeRulesPath}/packs", null, ct);
+        if (!response.IsSuccessStatusCode) return null;
+        return await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+    }
+
     public async Task<KnowledgeRuleDetail?> ApproveKnowledgeRule(string ruleId, KnowledgeRuleApprovePayload payload, CancellationToken ct = default)
     {
         var response = await Send(

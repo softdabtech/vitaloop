@@ -87,6 +87,26 @@ public class KnowledgeRulesController : Controller
         }
     }
 
+    [HttpGet("rule-packs-data")]
+    public async Task<IActionResult> RulePacksData(CancellationToken ct)
+    {
+        // P11 v1 (Expert Rule Packs): same separate-endpoint, client-side-
+        // fetch posture as CoverageData above, for the same reason — a
+        // packs lookup failure must never block the rule-review work
+        // queue this page exists for.
+        try
+        {
+            var doc = await _gateway.GetRulePacks(ct);
+            if (doc is null) return Json(new { available = false });
+            return Content(doc.RootElement.GetRawText(), "application/json");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load rule packs");
+            return Json(new { available = false });
+        }
+    }
+
     [HttpGet("{ruleId}")]
     public async Task<IActionResult> Details(string ruleId, CancellationToken ct)
     {
