@@ -211,6 +211,16 @@ const RESULTS_COPY = {
     progressStable: 'Unchanged since last time',
     progressNoPrevious: 'Upload another report in the future to see how this changes over time.',
     progressConfidenceWas: (from, to) => `${from} → ${to}`,
+    evidenceGapsTitle: "What We Can't Say Yet",
+    evidenceGapsIntro: 'Gaps in this report that limit how confident the interpretation can be — not missing effort, missing data.',
+    evidenceGapsEmpty: "No significant gaps identified — this report's interpretation is well-supported by the available data.",
+    evidenceGapsHighPriority: 'high priority',
+    evidenceGapsNextStep: 'Suggested next step',
+    evidenceGapDomainLabels: {
+      knowledge_coverage: 'Not yet interpreted',
+      data_quality: 'Data quality',
+      general: 'General context',
+    },
   },
   uk: {
     hints: [
@@ -321,6 +331,16 @@ const RESULTS_COPY = {
     progressStable: 'Без змін з минулого разу',
     progressNoPrevious: 'Завантажте ще один звіт у майбутньому, щоб побачити динаміку з часом.',
     progressConfidenceWas: (from, to) => `${from} → ${to}`,
+    evidenceGapsTitle: 'Чого ми ще не можемо сказати',
+    evidenceGapsIntro: 'Прогалини в цьому звіті, які обмежують впевненість інтерпретації — не брак зусиль, а брак даних.',
+    evidenceGapsEmpty: 'Суттєвих прогалин не виявлено — інтерпретація цього звіту добре підкріплена наявними даними.',
+    evidenceGapsHighPriority: 'високий пріоритет',
+    evidenceGapsNextStep: 'Рекомендований наступний крок',
+    evidenceGapDomainLabels: {
+      knowledge_coverage: 'Ще не інтерпретовано',
+      data_quality: 'Якість даних',
+      general: 'Загальний контекст',
+    },
   },
 }
 
@@ -628,6 +648,56 @@ function ProgressIntelligenceSection({ progress, copy }) {
   )
 }
 
+// Standalone "What We Can't Say Yet" block, sourced from the report-level
+// evidence_gaps object (backend/app/services/evidence_gaps.py) rather than
+// the per-pattern subset already shown inside each Reasoning Trace card.
+// Report-level gaps include entries with no detected pattern at all yet —
+// knowledge_coverage (measured but no active rule interprets it),
+// data_quality (unit/profile issues), and domain-expected markers that
+// were never drawn — none of which live inside any single trace card.
+function EvidenceGapsSection({ evidenceGaps, copy }) {
+  const gaps = Array.isArray(evidenceGaps?.gaps) ? evidenceGaps.gaps : []
+  if (!gaps.length) {
+    return (
+      <SectionCard icon={HelpCircle} title={copy.evidenceGapsTitle} className="mb-6">
+        <p className="text-sm leading-6 text-slate-600">{copy.evidenceGapsEmpty}</p>
+      </SectionCard>
+    )
+  }
+
+  return (
+    <SectionCard icon={HelpCircle} title={copy.evidenceGapsTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.evidenceGapsIntro}</p>
+      <div className="space-y-2">
+        {gaps.slice(0, 12).map((gap, index) => {
+          const domainLabel = copy.evidenceGapDomainLabels?.[gap?.domain] || gap?.domain
+          const isHighPriority = gap?.priority === 'high'
+          return (
+            <div key={index} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-slate-950">
+                  {gap?.missing_marker ? gap.missing_marker : domainLabel}
+                </span>
+                {isHighPriority && (
+                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                    {copy.evidenceGapsHighPriority}
+                  </span>
+                )}
+              </div>
+              {!!gap?.reason && <p className="mt-1 text-sm leading-5 text-slate-600">{String(gap.reason).replaceAll('_', ' ')}</p>}
+              {!!gap?.suggested_next_step && (
+                <p className="mt-1 text-xs text-slate-500">
+                  <span className="font-semibold">{copy.evidenceGapsNextStep}:</span> {gap.suggested_next_step}
+                </p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </SectionCard>
+  )
+}
+
 function ReasoningTraceSection({ traces, copy }) {
   const list = Array.isArray(traces) ? traces.filter(Boolean) : []
   return (
@@ -709,6 +779,7 @@ export default function Results() {
   const [safetyResult, setSafetyResult] = useState(null)
   const [reasoningTraces, setReasoningTraces] = useState([])
   const [progressIntelligence, setProgressIntelligence] = useState(null)
+  const [evidenceGaps, setEvidenceGaps] = useState(null)
   const [loading, setLoading] = useState(true)
   const isUk = isUkrainianLocale()
   const copy = isUk ? RESULTS_COPY.uk : RESULTS_COPY.en
@@ -749,6 +820,7 @@ export default function Results() {
               : []
         )
         setProgressIntelligence(data.progress_intelligence ?? data.final_analysis?.progress_intelligence ?? null)
+        setEvidenceGaps(data.evidence_gaps ?? data.final_analysis?.evidence_gaps ?? null)
         gaResultsView(uploadId)
       } catch (_e) {
         if (!active) return
@@ -761,6 +833,7 @@ export default function Results() {
         setSafetyResult(null)
         setReasoningTraces([])
         setProgressIntelligence(null)
+        setEvidenceGaps(null)
       } finally {
         if (active) setLoading(false)
       }
@@ -1055,6 +1128,8 @@ export default function Results() {
             )}
           </SectionCard>
         </div>
+
+        <EvidenceGapsSection evidenceGaps={evidenceGaps} copy={copy} />
 
         <ReasoningTraceSection traces={reasoningTraces} copy={copy} />
 
