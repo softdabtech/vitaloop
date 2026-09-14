@@ -226,6 +226,7 @@ const RESULTS_COPY = {
     testingPlanEmpty: 'No specific next tests suggested from this report.',
     testingPlanPriority: { high: 'High priority', medium: 'Medium priority', low: 'Low priority' },
     testingPlanTiming: 'Suggested timing',
+    testingPlanCompletedTitle: '✓ Completed since your last report',
     baselineTitle: 'Your Personal Baseline',
     baselineIntro: 'Not just in-range or out-of-range — is this normal for YOU, based on your own history.',
     baselineEmpty: 'Not enough repeat history yet to establish a personal baseline. This builds up as you upload more reports.',
@@ -372,6 +373,7 @@ const RESULTS_COPY = {
     testingPlanEmpty: 'Конкретних наступних аналізів зі звіту не запропоновано.',
     testingPlanPriority: { high: 'Високий пріоритет', medium: 'Середній пріоритет', low: 'Низький пріоритет' },
     testingPlanTiming: 'Рекомендований термін',
+    testingPlanCompletedTitle: '✓ Виконано з попереднього звіту',
     baselineTitle: 'Ваша особиста базова лінія',
     baselineIntro: 'Не просто в межах чи поза межами референсу — чи це нормально саме для вас, на основі вашої історії.',
     baselineEmpty: 'Поки що недостатньо повторної історії для особистої базової лінії. Вона формується з новими завантаженими звітами.',
@@ -965,11 +967,26 @@ function PersonalBaselineSection({ personalBaseline, copy, isUk }) {
   )
 }
 
-function TestingPlanSection({ nextBestTests, retestPlan, copy, isUk }) {
+function TestingPlanSection({ nextBestTests, retestPlan, nextTestFunnel, copy, isUk }) {
   const plan = buildTestingPlan(nextBestTests, retestPlan)
+  // P12 Next-Test Funnel: the only genuinely new signal vs the P4 plan
+  // above — which previously-suggested tests have since been completed.
+  // Shown as a banner on the SAME section rather than a separate card, to
+  // avoid duplicating the testing-plan surface P4 already built.
+  const completed = Array.isArray(nextTestFunnel?.completed_since_last_upload)
+    ? nextTestFunnel.completed_since_last_upload
+    : []
   return (
     <SectionCard icon={RefreshCw} title={copy.testingPlanTitle} className="mb-6">
       <p className="mb-4 text-sm leading-6 text-slate-500">{copy.testingPlanIntro}</p>
+      {!!completed.length && (
+        <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+          <p className="text-sm font-semibold text-emerald-800">{copy.testingPlanCompletedTitle}</p>
+          <p className="mt-1 text-sm leading-5 text-emerald-700">
+            {completed.map((item) => displayBiomarkerName({ name: item.marker }, isUk)).join(', ')}
+          </p>
+        </div>
+      )}
       {plan.length ? (
         <div className="space-y-2">
           {plan.slice(0, 10).map((item, index) => (
@@ -1081,6 +1098,7 @@ export default function Results() {
   const [nextBestTests, setNextBestTests] = useState(null)
   const [personalBaseline, setPersonalBaseline] = useState(null)
   const [actionPlanByRole, setActionPlanByRole] = useState(null)
+  const [nextTestFunnel, setNextTestFunnel] = useState(null)
   const [loading, setLoading] = useState(true)
   const isUk = isUkrainianLocale()
   const copy = isUk ? RESULTS_COPY.uk : RESULTS_COPY.en
@@ -1125,6 +1143,7 @@ export default function Results() {
         setNextBestTests(data.next_best_tests ?? data.final_analysis?.next_best_tests ?? null)
         setPersonalBaseline(data.personal_baseline ?? data.final_analysis?.personal_baseline ?? null)
         setActionPlanByRole(data.action_plan_by_role ?? data.final_analysis?.action_plan_by_role ?? null)
+        setNextTestFunnel(data.next_test_funnel ?? data.final_analysis?.next_test_funnel ?? null)
         gaResultsView(uploadId)
       } catch (_e) {
         if (!active) return
@@ -1141,6 +1160,7 @@ export default function Results() {
         setNextBestTests(null)
         setPersonalBaseline(null)
         setActionPlanByRole(null)
+        setNextTestFunnel(null)
       } finally {
         if (active) setLoading(false)
       }
@@ -1442,7 +1462,7 @@ export default function Results() {
 
         <ReasoningTraceSection traces={reasoningTraces} copy={copy} />
 
-        <TestingPlanSection nextBestTests={nextBestTests} retestPlan={reportRetest} copy={copy} isUk={isUk} />
+        <TestingPlanSection nextBestTests={nextBestTests} retestPlan={reportRetest} nextTestFunnel={nextTestFunnel} copy={copy} isUk={isUk} />
 
         <SystemMapSection healthStates={finalAnalysis?.health_states} personalBaseline={personalBaseline} copy={copy} />
 
