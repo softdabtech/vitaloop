@@ -221,6 +221,11 @@ const RESULTS_COPY = {
       data_quality: 'Data quality',
       general: 'General context',
     },
+    testingPlanTitle: 'Testing & Retest Plan',
+    testingPlanIntro: 'What to test next and when — ranked by how much it would clarify this report, in one place instead of scattered across findings.',
+    testingPlanEmpty: 'No specific next tests suggested from this report.',
+    testingPlanPriority: { high: 'High priority', medium: 'Medium priority', low: 'Low priority' },
+    testingPlanTiming: 'Suggested timing',
   },
   uk: {
     hints: [
@@ -341,6 +346,11 @@ const RESULTS_COPY = {
       data_quality: 'Якість даних',
       general: 'Загальний контекст',
     },
+    testingPlanTitle: 'План тестування та повторної перевірки',
+    testingPlanIntro: 'Що перевірити далі і коли — впорядковано за тим, наскільки це прояснить звіт, в одному місці замість розкиданих знахідок.',
+    testingPlanEmpty: 'Конкретних наступних аналізів зі звіту не запропоновано.',
+    testingPlanPriority: { high: 'Високий пріоритет', medium: 'Середній пріоритет', low: 'Низький пріоритет' },
+    testingPlanTiming: 'Рекомендований термін',
   },
 }
 
@@ -698,6 +708,87 @@ function EvidenceGapsSection({ evidenceGaps, copy }) {
   )
 }
 
+const TESTING_PRIORITY_BADGE = {
+  high: 'border-rose-200 bg-rose-50 text-rose-700',
+  medium: 'border-amber-200 bg-amber-50 text-amber-800',
+  low: 'border-slate-200 bg-slate-100 text-slate-600',
+}
+const TESTING_PRIORITY_RANK = { high: 0, medium: 1, low: 2 }
+
+// Merges the report-level next_best_tests (globally ranked across every
+// domain — previously only ever shown as a per-pattern, unranked subset
+// inside trace cards) with the existing knowledge-report retest_plan
+// (which has timing, next_best_tests does not) into one deduplicated,
+// priority-sorted plan — a single canonical "what to test and when"
+// instead of the same marker potentially appearing in several places
+// with no consistent priority ordering.
+function buildTestingPlan(nextBestTests, retestPlan) {
+  const byMarker = new Map()
+  for (const item of Array.isArray(nextBestTests?.recommended_tests) ? nextBestTests.recommended_tests : []) {
+    const marker = String(item?.marker || '').trim()
+    if (!marker) continue
+    byMarker.set(marker.toLowerCase(), {
+      marker,
+      domain: item?.domain,
+      priority: String(item?.priority || 'medium').toLowerCase(),
+      reason: item?.reason,
+      timing: null,
+    })
+  }
+  for (const item of Array.isArray(retestPlan) ? retestPlan : []) {
+    const marker = String(item?.marker || '').trim()
+    if (!marker) continue
+    const key = marker.toLowerCase()
+    const existing = byMarker.get(key)
+    if (existing) {
+      existing.timing = item?.timing || existing.timing
+      existing.reason = existing.reason || item?.reason
+    } else {
+      byMarker.set(key, {
+        marker,
+        domain: null,
+        priority: String(item?.priority || 'medium').toLowerCase(),
+        reason: item?.reason,
+        timing: item?.timing,
+      })
+    }
+  }
+  return [...byMarker.values()].sort(
+    (a, b) => (TESTING_PRIORITY_RANK[a.priority] ?? 1) - (TESTING_PRIORITY_RANK[b.priority] ?? 1)
+  )
+}
+
+function TestingPlanSection({ nextBestTests, retestPlan, copy, isUk }) {
+  const plan = buildTestingPlan(nextBestTests, retestPlan)
+  return (
+    <SectionCard icon={RefreshCw} title={copy.testingPlanTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.testingPlanIntro}</p>
+      {plan.length ? (
+        <div className="space-y-2">
+          {plan.slice(0, 10).map((item, index) => (
+            <div key={`${item.marker}-${index}`} className="flex flex-wrap items-start justify-between gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
+              <div className="min-w-0">
+                <span className="text-sm font-semibold text-slate-950">{displayBiomarkerName({ name: item.marker }, isUk)}</span>
+                {!!item.reason && <p className="mt-1 text-sm leading-5 text-slate-600">{item.reason}</p>}
+                {!!item.timing && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    <span className="font-semibold">{copy.testingPlanTiming}:</span> {item.timing}
+                  </p>
+                )}
+              </div>
+              <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${TESTING_PRIORITY_BADGE[item.priority] || TESTING_PRIORITY_BADGE.medium}`}>
+                {copy.testingPlanPriority[item.priority] || copy.testingPlanPriority.medium}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm leading-6 text-slate-600">{copy.testingPlanEmpty}</p>
+      )}
+    </SectionCard>
+  )
+}
+
 function ReasoningTraceSection({ traces, copy }) {
   const list = Array.isArray(traces) ? traces.filter(Boolean) : []
   return (
@@ -780,6 +871,7 @@ export default function Results() {
   const [reasoningTraces, setReasoningTraces] = useState([])
   const [progressIntelligence, setProgressIntelligence] = useState(null)
   const [evidenceGaps, setEvidenceGaps] = useState(null)
+  const [nextBestTests, setNextBestTests] = useState(null)
   const [loading, setLoading] = useState(true)
   const isUk = isUkrainianLocale()
   const copy = isUk ? RESULTS_COPY.uk : RESULTS_COPY.en
@@ -821,6 +913,7 @@ export default function Results() {
         )
         setProgressIntelligence(data.progress_intelligence ?? data.final_analysis?.progress_intelligence ?? null)
         setEvidenceGaps(data.evidence_gaps ?? data.final_analysis?.evidence_gaps ?? null)
+        setNextBestTests(data.next_best_tests ?? data.final_analysis?.next_best_tests ?? null)
         gaResultsView(uploadId)
       } catch (_e) {
         if (!active) return
@@ -834,6 +927,7 @@ export default function Results() {
         setReasoningTraces([])
         setProgressIntelligence(null)
         setEvidenceGaps(null)
+        setNextBestTests(null)
       } finally {
         if (active) setLoading(false)
       }
@@ -1132,6 +1226,8 @@ export default function Results() {
         <EvidenceGapsSection evidenceGaps={evidenceGaps} copy={copy} />
 
         <ReasoningTraceSection traces={reasoningTraces} copy={copy} />
+
+        <TestingPlanSection nextBestTests={nextBestTests} retestPlan={reportRetest} copy={copy} isUk={isUk} />
 
         {progressIntelligence?.available && <ProgressIntelligenceSection progress={progressIntelligence} copy={copy} />}
 
