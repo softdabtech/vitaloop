@@ -238,6 +238,15 @@ const RESULTS_COPY = {
     systemMapIntro: 'Every system we checked — not just the ones flagged. Stable systems are reassurance, not an absence of data.',
     systemMapPersonalDrift: 'Personal baseline shift detected here',
     systemMapNoData: 'No markers for this system yet',
+    actionPlanTitle: 'Your Action Plan, By Who',
+    actionPlanIntro: 'The simplest version of this report: what you can do yourself, what to bring to a specialist, what needs a doctor, and what’s urgent.',
+    actionPlanBuckets: {
+      urgent: { label: 'Urgent — discuss promptly', tone: 'critical' },
+      doctor: { label: 'Discuss with a doctor', tone: 'warning' },
+      practitioner: { label: 'Bring to a specialist / nutritionist', tone: 'info' },
+      self: { label: 'You can do yourself', tone: 'success' },
+    },
+    actionPlanEmptyBucket: 'Nothing in this category right now.',
   },
   uk: {
     hints: [
@@ -375,6 +384,15 @@ const RESULTS_COPY = {
     systemMapIntro: 'Кожна система, яку ми перевірили — не тільки позначені. Стабільні системи — це підтвердження, а не брак даних.',
     systemMapPersonalDrift: 'Тут виявлено зміну відносно вашої базової лінії',
     systemMapNoData: 'Поки немає показників для цієї системи',
+    actionPlanTitle: 'Ваш план дій, за виконавцем',
+    actionPlanIntro: 'Найпростіша версія цього звіту: що можна зробити самостійно, що обговорити з фахівцем, що потребує лікаря, і що термінове.',
+    actionPlanBuckets: {
+      urgent: { label: 'Терміново — обговоріть якнайшвидше', tone: 'critical' },
+      doctor: { label: 'Обговорити з лікарем', tone: 'warning' },
+      practitioner: { label: 'Обговорити з фахівцем / нутриціологом', tone: 'info' },
+      self: { label: 'Можна зробити самостійно', tone: 'success' },
+    },
+    actionPlanEmptyBucket: 'У цій категорії поки нічого немає.',
   },
 }
 
@@ -600,6 +618,53 @@ function SystemMapSection({ healthStates, personalBaseline, copy }) {
               {hasDrift && (
                 <p className="mt-2 text-xs font-semibold text-amber-700">{copy.systemMapPersonalDrift}</p>
               )}
+            </div>
+          )
+        })}
+      </div>
+    </SectionCard>
+  )
+}
+
+const ACTION_PLAN_BUCKET_STYLE = {
+  critical: { icon: ShieldAlert, badge: 'border-rose-200 bg-rose-50 text-rose-700' },
+  warning: { icon: Stethoscope, badge: 'border-amber-200 bg-amber-50 text-amber-800' },
+  info: { icon: MessageCircle, badge: 'border-sky-200 bg-sky-50 text-sky-700' },
+  success: { icon: CheckCircle2, badge: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
+}
+const ACTION_PLAN_BUCKET_ORDER = ['urgent', 'doctor', 'practitioner', 'self']
+
+// P9 Action Plan by Role: renders action_plan_by_role
+// (backend/app/services/action_plan_by_role.py) as four always-visible
+// buckets — the simplest possible answer after everything else on this
+// page: what to do yourself, what to bring to a specialist, what needs a
+// doctor, what's urgent. Pure display over data already bucketed
+// server-side; this component does no classification of its own.
+function ActionPlanByRoleSection({ actionPlan, copy }) {
+  if (!actionPlan?.buckets) return null
+  return (
+    <SectionCard icon={CheckCircle2} title={copy.actionPlanTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.actionPlanIntro}</p>
+      <div className="space-y-4">
+        {ACTION_PLAN_BUCKET_ORDER.map((bucketKey) => {
+          const meta = copy.actionPlanBuckets[bucketKey]
+          const style = ACTION_PLAN_BUCKET_STYLE[meta.tone] || ACTION_PLAN_BUCKET_STYLE.info
+          const Icon = style.icon
+          const items = Array.isArray(actionPlan.buckets[bucketKey]) ? actionPlan.buckets[bucketKey] : []
+          if (!items.length) return null
+          return (
+            <div key={bucketKey}>
+              <div className={`mb-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${style.badge}`}>
+                <Icon className="h-3.5 w-3.5" /> {meta.label}
+              </div>
+              <div className="space-y-2">
+                {items.slice(0, 8).map((item, index) => (
+                  <div key={`${item.source_id || item.title}-${index}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                    <p className="text-sm font-semibold text-slate-950">{item.title}</p>
+                    {!!item.reason && <p className="mt-1 text-sm leading-5 text-slate-600">{item.reason}</p>}
+                  </div>
+                ))}
+              </div>
             </div>
           )
         })}
@@ -1015,6 +1080,7 @@ export default function Results() {
   const [evidenceGaps, setEvidenceGaps] = useState(null)
   const [nextBestTests, setNextBestTests] = useState(null)
   const [personalBaseline, setPersonalBaseline] = useState(null)
+  const [actionPlanByRole, setActionPlanByRole] = useState(null)
   const [loading, setLoading] = useState(true)
   const isUk = isUkrainianLocale()
   const copy = isUk ? RESULTS_COPY.uk : RESULTS_COPY.en
@@ -1058,6 +1124,7 @@ export default function Results() {
         setEvidenceGaps(data.evidence_gaps ?? data.final_analysis?.evidence_gaps ?? null)
         setNextBestTests(data.next_best_tests ?? data.final_analysis?.next_best_tests ?? null)
         setPersonalBaseline(data.personal_baseline ?? data.final_analysis?.personal_baseline ?? null)
+        setActionPlanByRole(data.action_plan_by_role ?? data.final_analysis?.action_plan_by_role ?? null)
         gaResultsView(uploadId)
       } catch (_e) {
         if (!active) return
@@ -1073,6 +1140,7 @@ export default function Results() {
         setEvidenceGaps(null)
         setNextBestTests(null)
         setPersonalBaseline(null)
+        setActionPlanByRole(null)
       } finally {
         if (active) setLoading(false)
       }
@@ -1367,6 +1435,8 @@ export default function Results() {
             )}
           </SectionCard>
         </div>
+
+        <ActionPlanByRoleSection actionPlan={actionPlanByRole} copy={copy} />
 
         <EvidenceGapsSection evidenceGaps={evidenceGaps} copy={copy} />
 
