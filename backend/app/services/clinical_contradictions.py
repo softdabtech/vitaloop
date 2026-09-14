@@ -182,7 +182,7 @@ def _rule_ferritin_masked_by_inflammation(index, patterns, hypotheses) -> Dict[s
         return None
     return _record(
         rule_id="ferritin_inflammation_context",
-        domain="iron_anemia",
+        domain="iron_status",
         severity="moderate",
         markers=["ferritin", "crp"],
         message=(
@@ -206,7 +206,7 @@ def _rule_low_ferritin_normal_hemoglobin(index, patterns, hypotheses) -> Dict[st
         return None
     return _record(
         rule_id="low_ferritin_normal_hemoglobin",
-        domain="iron_anemia",
+        domain="iron_status",
         severity="low",
         markers=["ferritin", "hemoglobin"],
         message=(
@@ -316,7 +316,7 @@ def _rule_normal_glucose_high_insulin(index, patterns, hypotheses) -> Dict[str, 
     markers = ["glucose"] + (["insulin"] if insulin is not None else []) + (["homa_ir"] if homa_ir is not None else [])
     return _record(
         rule_id="normal_glucose_high_insulin",
-        domain="metabolic",
+        domain="metabolic_health",
         severity="moderate",
         markers=markers,
         message=(
@@ -343,7 +343,7 @@ def _rule_hba1c_glucose_mismatch(index, patterns, hypotheses) -> Dict[str, Any] 
         return None
     return _record(
         rule_id="hba1c_glucose_mismatch",
-        domain="metabolic",
+        domain="metabolic_health",
         severity="low",
         markers=["glucose", "hba1c"],
         message=(
@@ -397,7 +397,7 @@ def _rule_normal_liver_high_ggt(index, patterns, hypotheses) -> Dict[str, Any] |
         return None
     return _record(
         rule_id="normal_alt_ast_high_ggt",
-        domain="liver_metabolic",
+        domain="liver",
         severity="moderate",
         markers=["alt", "ast", "ggt"],
         message=(
@@ -422,7 +422,7 @@ def _rule_liver_markers_supplement_context(index, supplements, patterns, hypothe
         return None
     return _record(
         rule_id="elevated_liver_markers_supplement_context",
-        domain="liver_metabolic",
+        domain="liver",
         severity="high",
         markers=[name for name, item in (("alt", alt), ("ast", ast)) if _is_high(item)],
         message=(
@@ -448,7 +448,7 @@ def _rule_ldl_apob_mismatch(index, patterns, hypotheses) -> Dict[str, Any] | Non
         return None
     return _record(
         rule_id="ldl_apob_mismatch",
-        domain="lipids",
+        domain="cardiovascular",
         severity="moderate",
         markers=["ldl", "apob"],
         message=(
@@ -476,7 +476,7 @@ def _rule_triglycerides_low_hdl(index, patterns, hypotheses) -> Dict[str, Any] |
         return None
     return _record(
         rule_id="high_triglycerides_low_hdl",
-        domain="lipids",
+        domain="cardiovascular",
         severity="moderate",
         markers=["triglycerides", "hdl"],
         message=(

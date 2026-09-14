@@ -35,7 +35,7 @@ def test_ferritin_masked_by_inflammation():
     ids = [c["id"] for c in result["contradictions"]]
     assert "ferritin_inflammation_context" in ids
     rule = next(c for c in result["contradictions"] if c["id"] == "ferritin_inflammation_context")
-    assert rule["domain"] == "iron_anemia"
+    assert rule["domain"] == "iron_status"
     assert rule["effect_on_confidence"] == "downgrade"
     assert "transferrin saturation" in rule["recommended_next_tests"]
     assert "you have" not in rule["message"].lower()
@@ -181,8 +181,8 @@ def test_related_patterns_and_hypotheses_are_cross_referenced_by_domain():
         _marker("Ferritin", 120, "OPTIMAL"),
         _marker("CRP", 8.0, "ELEVATED"),
     ]
-    patterns = [{"pattern_id": "iron_availability_pattern", "domain": "iron_anemia"}]
-    hypotheses = [{"hypothesis_id": "possible_functional_iron_deficiency", "domain": "iron_anemia"}]
+    patterns = [{"pattern_id": "iron_availability_pattern", "domain": "iron_status"}]
+    hypotheses = [{"hypothesis_id": "possible_functional_iron_deficiency", "domain": "iron_status"}]
 
     result = build_clinical_contradictions(biomarkers, patterns=patterns, hypotheses=hypotheses)
 

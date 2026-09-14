@@ -18,6 +18,7 @@ from app.services.clinical_reasoning_trace import build_clinical_reasoning_trace
 from app.services.hypothesis_engine import build_clinical_hypotheses
 from app.services.clinical_contradictions import build_clinical_contradictions
 from app.services.confidence_calibration import build_confidence_calibration, apply_calibration_to_hypotheses
+from app.services.negative_evidence import build_negative_evidence
 from app.services.progress_intelligence import build_progress_intelligence
 from app.services.personal_baseline import build_personal_baseline
 from app.services.action_plan_by_role import build_action_plan_by_role
@@ -1274,6 +1275,19 @@ async def run_lab_analysis_pipeline(
             clinical_hypotheses.get("hypotheses"), confidence_calibration
         ),
     }
+    # Negative Evidence Layer (P17, backend-only v1): runs after P14/P15/P16
+    # so it can see which domains already have a strong signal reported
+    # elsewhere (active pattern/hypothesis/safety flag) and exclude those —
+    # this layer only surfaces domains that were actively checked and did
+    # NOT produce a strong signal, never "no disease"/"ruled out". See
+    # negative_evidence.py's module docstring for the full domain logic.
+    negative_evidence = build_negative_evidence(
+        normalized_biomarkers,
+        patterns=interpreted_report.get("patterns"),
+        hypotheses=clinical_hypotheses.get("hypotheses"),
+        contradictions=clinical_contradictions.get("contradictions"),
+        evidence_gaps=evidence_gaps,
+    )
     # Action Plan by Role (P9): routes already-classified signals
     # (doctor_flag/safety_level from clinical_reasoning_traces, the
     # finalized protocol's self-guided actions, next_best_tests,
@@ -1377,6 +1391,7 @@ async def run_lab_analysis_pipeline(
         "hypothesis_engine_version": clinical_hypotheses.get("version"),
         "clinical_contradictions_version": clinical_contradictions.get("version"),
         "confidence_calibration_version": confidence_calibration.get("version"),
+        "negative_evidence_version": negative_evidence.get("version"),
     }
 
     result = {
@@ -1408,6 +1423,7 @@ async def run_lab_analysis_pipeline(
         "clinical_hypotheses": clinical_hypotheses,
         "clinical_contradictions": clinical_contradictions,
         "confidence_calibration": confidence_calibration,
+        "negative_evidence": negative_evidence,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
         "action_plan_by_role": action_plan_by_role,
@@ -1471,6 +1487,7 @@ async def run_lab_analysis_pipeline(
                     "clinical_hypotheses": clinical_hypotheses,
                     "clinical_contradictions": clinical_contradictions,
                     "confidence_calibration": confidence_calibration,
+                    "negative_evidence": negative_evidence,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
                     "action_plan_by_role": action_plan_by_role,

@@ -193,6 +193,9 @@ def assemble_frozen_response(
         # merged calibrated_confidence/calibrated_score/
         # calibration_reason_codes fields as persisted at generation time.
         "confidence_calibration": input_snapshot.get("confidence_calibration"),
+        # P17, same frozen-verbatim posture: a report generated before the
+        # Negative Evidence Layer existed reads back None — never recomputed.
+        "negative_evidence": input_snapshot.get("negative_evidence"),
         # Frozen-verbatim, same posture: a report generated before P5
         # existed reads back None; progress_intelligence is itself a diff
         # against an even-earlier snapshot, so re-running it here on read
