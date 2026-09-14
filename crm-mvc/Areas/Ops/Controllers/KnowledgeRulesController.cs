@@ -67,6 +67,26 @@ public class KnowledgeRulesController : Controller
         }
     }
 
+    [HttpGet("governance-coverage-data")]
+    public async Task<IActionResult> CoverageData(CancellationToken ct)
+    {
+        // P10 Governance Expansion: fetched client-side (same pattern as
+        // the Ops Dashboard's claude/openai-usage widgets) so a coverage
+        // lookup failure never blocks the actual rule-review work queue
+        // this page exists for.
+        try
+        {
+            var doc = await _gateway.GetGovernanceCoverage(ct);
+            if (doc is null) return Json(new { available = false });
+            return Content(doc.RootElement.GetRawText(), "application/json");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load governance coverage");
+            return Json(new { available = false });
+        }
+    }
+
     [HttpGet("{ruleId}")]
     public async Task<IActionResult> Details(string ruleId, CancellationToken ct)
     {

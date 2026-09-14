@@ -77,6 +77,12 @@
     <div class="kr-alert kr-alert-error">⚠️ @Model.ErrorMessage</div>
   }
 
+  <div class="kr-card" style="margin-bottom:16px;padding:16px 20px;">
+    <p style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 4px;">Governance coverage by domain</p>
+    <p style="font-size:12px;color:#64748b;margin:0 0 10px;">Which pattern-engine domains have active rule backing, and which don't.</p>
+    <div id="kr-coverage" style="font-size:13px;color:#94a3b8;">Loading…</div>
+  </div>
+
   <div class="kr-card">
     <form method="get" class="kr-filter">
       <label>
@@ -133,3 +139,37 @@
     </div>
   </div>
 </div>
+
+<script>
+// P10 Governance Coverage widget — fetched client-side so a coverage
+// lookup failure never blocks the rule-review table above it.
+fetch('/ops/knowledge-rules/governance-coverage-data')
+  .then(r => r.json())
+  .then(data => {
+    const el = document.getElementById('kr-coverage')
+    if (data.available === false || !data.domains) {
+      el.innerHTML = '<span style="color:#94a3b8">Coverage data unavailable</span>'
+      return
+    }
+    const gaps = new Set(data.summary?.domains_without_active_coverage || [])
+    const domainKeys = Object.keys(data.domains).filter(k => k !== 'unmapped').sort()
+    const pill = (key) => {
+      const bucket = data.domains[key]
+      const isGap = gaps.has(key)
+      const bg = isGap ? '#fef2f2' : '#f0fdf4'
+      const fg = isGap ? '#b91c1c' : '#15803d'
+      const label = key.replaceAll('_', ' ')
+      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;background:${bg};color:${fg};font-size:12px;font-weight:600;">
+        ${label} — ${bucket.active} active${bucket.draft ? `, ${bucket.draft} draft` : ''}
+      </span>`
+    }
+    const unmapped = data.domains.unmapped
+    const unmappedHtml = unmapped && unmapped.rules && unmapped.rules.length
+      ? `<div style="margin-top:8px;font-size:12px;color:#92400e;">⚠ ${unmapped.rules.length} rule(s) don't map to any known domain — worth a second look.</div>`
+      : ''
+    el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;">${domainKeys.map(pill).join('')}</div>${unmappedHtml}`
+  })
+  .catch(() => {
+    document.getElementById('kr-coverage').innerHTML = '<span style="color:#94a3b8">Coverage data unavailable</span>'
+  })
+</script>

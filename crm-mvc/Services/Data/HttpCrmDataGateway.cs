@@ -326,6 +326,13 @@ public sealed class HttpCrmDataGateway : ICrmDataGateway
     public Task<KnowledgeRuleDetail?> GetKnowledgeRule(string ruleId, CancellationToken ct = default)
         => GetSingle<KnowledgeRuleDetail>($"{_options.KnowledgeRulesPath}/{ruleId}", ct);
 
+    public async Task<System.Text.Json.JsonDocument?> GetGovernanceCoverage(CancellationToken ct = default)
+    {
+        var response = await Send(HttpMethod.Get, $"{_options.KnowledgeRulesPath}/governance-coverage", null, ct);
+        if (!response.IsSuccessStatusCode) return null;
+        return await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+    }
+
     public async Task<KnowledgeRuleDetail?> ApproveKnowledgeRule(string ruleId, KnowledgeRuleApprovePayload payload, CancellationToken ct = default)
     {
         var response = await Send(

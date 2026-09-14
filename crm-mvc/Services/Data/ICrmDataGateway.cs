@@ -41,4 +41,5 @@ public interface ICrmDataGateway
     Task<IReadOnlyList<KnowledgeRuleListItem>> GetKnowledgeRules(string? governanceStatus = null, string? key = null, CancellationToken ct = default);
     Task<KnowledgeRuleDetail?> GetKnowledgeRule(string ruleId, CancellationToken ct = default);
     Task<KnowledgeRuleDetail?> ApproveKnowledgeRule(string ruleId, KnowledgeRuleApprovePayload payload, CancellationToken ct = default);
+    Task<System.Text.Json.JsonDocument?> GetGovernanceCoverage(CancellationToken ct = default);
 }
