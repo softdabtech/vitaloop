@@ -1020,6 +1020,90 @@ async def list_assignments(org_id: UUID = Query(...), current_user: dict = Depen
     return [_serialize_assignment(row, users_by_id) for row in rows]
 
 
+@router.get("/clients/{client_id}/clinical-summary", summary="Practitioner-facing clinical reasoning summary for one client")
+async def get_client_clinical_summary(
+    client_id: UUID,
+    org_id: UUID = Query(...),
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, Any]:
+    """P8 Practitioner Mode: converts the clinical_reasoning_traces/
+    progress_intelligence already built for the b2c pipeline (see
+    lab_analysis_pipeline.py, clinical_reasoning_trace.py,
+    progress_intelligence.py) into a practitioner-facing summary for one
+    assigned client — top patterns, red flags, evidence gaps, next best
+    tests, and progress since last time. Pure read/reshape, no new
+    clinical logic and no re-running the pipeline.
+
+    Access: org_owner/client_admin/manager/super_admin see any client in
+    the org (same as list_assignments above); a practitioner must have an
+    active assignment to THIS specific client, not just org membership —
+    unlike list_assignments (which only filters the assignment LIST by
+    practitioner), fetching another practitioner's client's clinical data
+    is exactly the cross-client data exposure this check exists to block.
+    """
+    sb = await _get_supabase()
+    membership = await _require_org_access(sb, org_id, current_user)
+    role = str((membership or {}).get("role") or "").lower()
+
+    if membership and role == "practitioner":
+        assignment_resp = await svc._run(
+            lambda: sb.table("practitioner_assignments")
+            .select("id")
+            .eq("organization_id", str(org_id))
+            .eq("practitioner_id", str(current_user["sub"]))
+            .eq("client_id", str(client_id))
+            .limit(1)
+            .execute()
+        )
+        if not assignment_resp.data:
+            raise HTTPException(status_code=403, detail=_ACCESS_DENIED)
+
+    report_row = await svc.get_previous_report_version_for_user(str(client_id), exclude_upload_id=None)
+    if not report_row:
+        return {
+            "client_id": str(client_id),
+            "available": False,
+            "reason": "no_completed_report_for_client",
+        }
+
+    snapshot = report_row.get("input_snapshot") or {}
+    traces = snapshot.get("clinical_reasoning_traces") or []
+    traces = traces if isinstance(traces, list) else []
+    progress = snapshot.get("progress_intelligence") or {}
+    evidence_gaps = snapshot.get("evidence_gaps") or {}
+    next_best_tests = snapshot.get("next_best_tests") or {}
+    safety_result = report_row.get("safety_result") or {}
+
+    # Sort so a practitioner opening this page sees the highest-signal
+    # patterns first: doctor_flag true, then descending confidence — same
+    # ordering principle clinical_priority_planner.py uses for
+    # urgent_review, applied here to the trace list directly.
+    def _sort_key(trace: dict) -> tuple:
+        confidence = trace.get("confidence")
+        try:
+            confidence_value = float(confidence) if confidence is not None else 0.0
+        except (TypeError, ValueError):
+            confidence_value = 0.0
+        return (0 if trace.get("doctor_flag") else 1, -confidence_value)
+
+    top_patterns = sorted((t for t in traces if isinstance(t, dict)), key=_sort_key)[:8]
+    red_flags = [t for t in top_patterns if t.get("doctor_flag")]
+
+    return {
+        "client_id": str(client_id),
+        "available": True,
+        "upload_id": report_row.get("upload_id"),
+        "generated_at": report_row.get("created_at"),
+        "top_patterns": top_patterns,
+        "red_flags": red_flags,
+        "evidence_gaps_summary": evidence_gaps.get("summary") or {},
+        "next_best_tests": (next_best_tests.get("recommended_tests") or [])[:8],
+        "progress_since_last": progress,
+        "safety_status": safety_result.get("status"),
+        "requires_doctor_discussion": bool(safety_result.get("doctor_discussion_required")),
+    }
+
+
 @router.post("/assignments")
 async def create_assignment(body: dict[str, Any] = Body(...), current_user: dict = Depends(get_current_user)):
     org_id_raw = body.get("org_id") or body.get("organization_id")
