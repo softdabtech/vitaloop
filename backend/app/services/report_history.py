@@ -181,6 +181,9 @@ def assemble_frozen_response(
         # missing clinical_reasoning_traces the same way they already
         # handle a missing clinical_story on an old snapshot.
         "clinical_reasoning_traces": input_snapshot.get("clinical_reasoning_traces"),
+        # P14, same frozen-verbatim posture: a report generated before the
+        # Hypothesis Engine existed reads back None — never recomputed here.
+        "clinical_hypotheses": input_snapshot.get("clinical_hypotheses"),
         # Frozen-verbatim, same posture: a report generated before P5
         # existed reads back None; progress_intelligence is itself a diff
         # against an even-earlier snapshot, so re-running it here on read

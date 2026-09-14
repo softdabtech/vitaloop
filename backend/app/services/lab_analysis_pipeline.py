@@ -15,6 +15,7 @@ from app.services.clinical_data_integrity import validate_clinical_data_integrit
 from app.services.clinical_priority_planner import build_clinical_priority_planner, build_clinical_story
 from app.services.next_best_test_engine import build_next_best_tests
 from app.services.clinical_reasoning_trace import build_clinical_reasoning_traces
+from app.services.hypothesis_engine import build_clinical_hypotheses
 from app.services.progress_intelligence import build_progress_intelligence
 from app.services.personal_baseline import build_personal_baseline
 from app.services.action_plan_by_role import build_action_plan_by_role
@@ -1199,6 +1200,18 @@ async def run_lab_analysis_pipeline(
         next_best_tests=next_best_tests,
         safety_result=safety_result,
     )
+    # Clinical Hypothesis Engine (P14, backend-only v1): ranks the same
+    # detected patterns by adjusted confidence into likely/possible/
+    # unlikely_but_flagged, using evidence_gaps + next_best_tests for the
+    # same domain — pure deterministic composition over data already
+    # computed above, no new clinical detection. See
+    # hypothesis_engine.py's module docstring.
+    clinical_hypotheses = build_clinical_hypotheses(
+        interpreted_report.get("patterns"),
+        evidence_gaps=evidence_gaps,
+        next_best_tests=next_best_tests,
+        safety_result=safety_result,
+    )
     # Progress Intelligence (P5): diff this run's traces against the user's
     # previous upload, same "fetch history, diff, degrade gracefully to
     # unavailable" shape trend_engine.py already established for
@@ -1314,6 +1327,7 @@ async def run_lab_analysis_pipeline(
         "analysis_input_quality_gate_version": analysis_input_quality_gate.get("version"),
         "clinical_data_integrity_version": clinical_integrity.get("version"),
         "evidence_gaps_version": evidence_gaps.get("version"),
+        "hypothesis_engine_version": clinical_hypotheses.get("version"),
     }
 
     result = {
@@ -1342,6 +1356,7 @@ async def run_lab_analysis_pipeline(
         "next_best_tests": next_best_tests,
         "clinical_story": clinical_story,
         "clinical_reasoning_traces": clinical_reasoning_traces,
+        "clinical_hypotheses": clinical_hypotheses,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
         "action_plan_by_role": action_plan_by_role,
@@ -1402,6 +1417,7 @@ async def run_lab_analysis_pipeline(
                     "next_best_tests": next_best_tests,
                     "clinical_story": clinical_story,
                     "clinical_reasoning_traces": clinical_reasoning_traces,
+                    "clinical_hypotheses": clinical_hypotheses,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
                     "action_plan_by_role": action_plan_by_role,
