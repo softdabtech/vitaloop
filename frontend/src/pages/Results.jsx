@@ -234,6 +234,10 @@ const RESULTS_COPY = {
     baselineOtherLabel: 'Other tracked markers',
     baselineWas: (value) => `Your typical: ${value}`,
     baselineHistoryPoints: (n) => `based on ${n} prior result${n === 1 ? '' : 's'}`,
+    systemMapTitle: 'Your System Map',
+    systemMapIntro: 'Every system we checked — not just the ones flagged. Stable systems are reassurance, not an absence of data.',
+    systemMapPersonalDrift: 'Personal baseline shift detected here',
+    systemMapNoData: 'No markers for this system yet',
   },
   uk: {
     hints: [
@@ -367,6 +371,10 @@ const RESULTS_COPY = {
     baselineOtherLabel: 'Інші відстежені показники',
     baselineWas: (value) => `Ваш типовий рівень: ${value}`,
     baselineHistoryPoints: (n) => `на основі ${n} попередн${n === 1 ? 'ього результату' : 'іх результатів'}`,
+    systemMapTitle: 'Карта ваших систем',
+    systemMapIntro: 'Кожна система, яку ми перевірили — не тільки позначені. Стабільні системи — це підтвердження, а не брак даних.',
+    systemMapPersonalDrift: 'Тут виявлено зміну відносно вашої базової лінії',
+    systemMapNoData: 'Поки немає показників для цієї системи',
   },
 }
 
@@ -535,6 +543,68 @@ function HealthDomainCard({ state, copy }) {
         </p>
       )}
     </div>
+  )
+}
+
+const SYSTEM_MAP_RISK_META = {
+  high_attention: 'border-rose-200 bg-rose-50 text-rose-700',
+  needs_attention: 'border-amber-200 bg-amber-50 text-amber-800',
+  watch: 'border-amber-200 bg-amber-50 text-amber-700',
+  stable: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  unknown: 'border-slate-200 bg-slate-100 text-slate-500',
+}
+
+// P7 System Map: shows EVERY domain health_state_engine.py evaluated, not
+// just the filtered top_priorities subset AnalysisCoreV2Panel below
+// falls back to hiding when even one domain is flagged — the whole point
+// of a system map is that stable systems are visible reassurance, not
+// omitted because they're not the problem. Cross-references
+// personal_baseline's silent_signal markers (P6) by canonical_name against
+// each domain's contributing_biomarkers, per the product plan's own
+// suggestion that the system map should get smarter once a personal
+// baseline exists, not just report current status.
+function SystemMapSection({ healthStates, personalBaseline, copy }) {
+  const states = Array.isArray(healthStates?.states) ? healthStates.states : []
+  if (!states.length) return null
+
+  const silentSignalNames = new Set(
+    (Array.isArray(personalBaseline?.markers) ? personalBaseline.markers : [])
+      .filter((m) => m?.silent_signal)
+      .map((m) => String(m?.canonical_name || '').toLowerCase())
+  )
+
+  return (
+    <SectionCard icon={HeartPulse} title={copy.systemMapTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.systemMapIntro}</p>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {states.map((state, index) => {
+          const badgeClass = SYSTEM_MAP_RISK_META[state?.risk_level] || SYSTEM_MAP_RISK_META.unknown
+          const riskLabel = riskDisplayLabel(state?.risk_level, copy === RESULTS_COPY.uk)
+          const label = localizeDomainLabel(state?.label || state?.domain, copy)
+          const hasDrift = (state?.contributing_biomarkers || []).some((b) =>
+            silentSignalNames.has(String(b?.canonical_name || '').toLowerCase())
+          )
+          return (
+            <div key={state?.domain || index} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="font-semibold text-slate-950">{label}</h3>
+                <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${badgeClass}`}>{riskLabel}</span>
+              </div>
+              {state?.risk_level === 'unknown' ? (
+                <p className="mt-2 text-xs text-slate-500">{copy.systemMapNoData}</p>
+              ) : (
+                Number.isFinite(Number(state?.score)) && (
+                  <p className="mt-2 text-xs text-slate-500">{copy.score}: {Math.round(Number(state.score))}</p>
+                )
+              )}
+              {hasDrift && (
+                <p className="mt-2 text-xs font-semibold text-amber-700">{copy.systemMapPersonalDrift}</p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </SectionCard>
   )
 }
 
@@ -1303,6 +1373,8 @@ export default function Results() {
         <ReasoningTraceSection traces={reasoningTraces} copy={copy} />
 
         <TestingPlanSection nextBestTests={nextBestTests} retestPlan={reportRetest} copy={copy} isUk={isUk} />
+
+        <SystemMapSection healthStates={finalAnalysis?.health_states} personalBaseline={personalBaseline} copy={copy} />
 
         <PersonalBaselineSection personalBaseline={personalBaseline} copy={copy} isUk={isUk} />
 
