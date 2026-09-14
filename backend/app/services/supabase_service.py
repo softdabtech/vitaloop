@@ -515,6 +515,46 @@ async def get_latest_report_version(upload_id: str, user_id: str, locale: str) -
     return (resp.data or [None])[0]
 
 
+async def get_organization_rule_pack_settings(org_id: str) -> list[dict]:
+    """P11 follow-up (stage-29 migration): the org's saved enable/disable
+    overrides for expert rule packs. Absence of a row for a pack means
+    "enabled" (opt-out, not opt-in) — callers must apply that default
+    themselves; this returns only the rows that exist (explicit
+    overrides), never a synthesized "enabled" row for every known pack.
+    """
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("organization_rule_packs")
+        .select("*")
+        .eq("organization_id", str(org_id))
+        .execute()
+    )
+    return resp.data or []
+
+
+async def set_organization_rule_pack_enabled(
+    org_id: str, pack_id: str, enabled: bool, *, actor_user_id: str
+) -> dict:
+    """Upsert (org_id, pack_id) -> enabled — one row per pack per org, per
+    stage-29's UNIQUE(organization_id, pack_id) constraint. Toggling again
+    updates the existing row rather than accumulating history rows.
+    """
+    supabase = _get_supabase()
+    payload = {
+        "organization_id": str(org_id),
+        "pack_id": pack_id,
+        "enabled": enabled,
+        "enabled_by": str(actor_user_id),
+        "enabled_at": datetime.now(timezone.utc).isoformat(),
+    }
+    resp = await _run(
+        lambda: supabase.table("organization_rule_packs")
+        .upsert(payload, on_conflict="organization_id,pack_id")
+        .execute()
+    )
+    return (resp.data or [{}])[0]
+
+
 async def get_previous_report_version_for_user(
     user_id: str, *, exclude_upload_id: str | None = None
 ) -> Optional[Dict[str, Any]]:

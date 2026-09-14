@@ -1020,6 +1020,70 @@ async def list_assignments(org_id: UUID = Query(...), current_user: dict = Depen
     return [_serialize_assignment(row, users_by_id) for row in rows]
 
 
+@router.get("/organizations/{org_id}/rule-packs", summary="P11 follow-up: org's expert rule pack settings")
+async def get_organization_rule_packs(
+    org_id: UUID,
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Combines the global pack list (rule_packs.py, computed from
+    knowledge_rules.source) with this org's saved enable/disable overrides
+    (stage-29's organization_rule_packs table). A pack with no saved row
+    for this org defaults to enabled=true (opt-out, not opt-in) — matches
+    stage-29's own documented default so an org that has never touched
+    pack settings sees the same "every active rule applies" behavior it
+    always had.
+    """
+    sb = await _get_supabase()
+    await _require_org_access(sb, org_id, current_user)
+
+    from app.services.knowledge import list_rules
+    from app.services.knowledge.rule_packs import build_rule_packs
+
+    rows = await list_rules()
+    packs = build_rule_packs(rows)["packs"]
+    overrides = {
+        row["pack_id"]: bool(row.get("enabled", True))
+        for row in await svc.get_organization_rule_pack_settings(str(org_id))
+    }
+
+    return {
+        "organization_id": str(org_id),
+        "packs": [
+            {
+                "pack_id": pack_id,
+                "rule_count": pack.get("rule_count", 0),
+                "domains": pack.get("domains", []),
+                "reviewers": pack.get("reviewers", []),
+                "enabled": overrides.get(pack_id, True),
+            }
+            for pack_id, pack in packs.items()
+        ],
+    }
+
+
+@router.patch("/organizations/{org_id}/rule-packs/{pack_id}", summary="P11 follow-up: toggle one expert rule pack for an org")
+async def update_organization_rule_pack(
+    org_id: UUID,
+    pack_id: str,
+    body: dict[str, Any] = Body(...),
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, Any]:
+    if "enabled" not in body or not isinstance(body.get("enabled"), bool):
+        raise HTTPException(status_code=400, detail="enabled (boolean) is required")
+
+    sb = await _get_supabase()
+    # Toggling which expert content applies to an org's clients is an
+    # org-admin action, not something any member should be able to flip —
+    # same role gate as changing organization settings elsewhere in this
+    # file (e.g. update_organization above uses the same allowed set).
+    await _require_org_role(sb, org_id, current_user, {"org_owner", "client_admin"})
+
+    row = await svc.set_organization_rule_pack_enabled(
+        str(org_id), pack_id, bool(body["enabled"]), actor_user_id=str(current_user["sub"])
+    )
+    return {"organization_id": str(org_id), "pack_id": pack_id, "enabled": row.get("enabled", body["enabled"])}
+
+
 @router.get("/clients/{client_id}/clinical-summary", summary="Practitioner-facing clinical reasoning summary for one client")
 async def get_client_clinical_summary(
     client_id: UUID,
