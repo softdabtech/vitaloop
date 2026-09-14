@@ -17,6 +17,7 @@ from app.services.next_best_test_engine import build_next_best_tests
 from app.services.clinical_reasoning_trace import build_clinical_reasoning_traces
 from app.services.hypothesis_engine import build_clinical_hypotheses
 from app.services.clinical_contradictions import build_clinical_contradictions
+from app.services.confidence_calibration import build_confidence_calibration, apply_calibration_to_hypotheses
 from app.services.progress_intelligence import build_progress_intelligence
 from app.services.personal_baseline import build_personal_baseline
 from app.services.action_plan_by_role import build_action_plan_by_role
@@ -1244,6 +1245,35 @@ async def run_lab_analysis_pipeline(
         previous_upload_id=_previous_upload_id,
         previous_measured_at=_previous_measured_at,
     )
+    # Confidence Calibration Engine (P16, backend-only v1): the intended
+    # consumer of P15's clinical_contradictions flagged in that stage's
+    # TODO — calibrates each P14 hypothesis's confidence using
+    # contradictions, evidence_gaps, symptom alignment,
+    # progress_intelligence, and personal_baseline, none of which P14 or
+    # P15 see on their own. Pure calibration, not a new reasoning engine:
+    # never re-detects a pattern, never changes medical wording. See
+    # confidence_calibration.py's module docstring for the full formula.
+    confidence_calibration = build_confidence_calibration(
+        clinical_hypotheses.get("hypotheses"),
+        contradictions=clinical_contradictions.get("contradictions"),
+        evidence_gaps=evidence_gaps,
+        patterns=interpreted_report.get("patterns"),
+        symptoms=normalized_symptoms,
+        progress_intelligence=progress_intelligence,
+        personal_baseline=personal_baseline,
+    )
+    # Merge calibrated_confidence/calibrated_score/calibration_reason_codes
+    # onto each hypothesis, preserving every original P14 field — this is
+    # the single, pipeline-wide clinical_hypotheses value from here on
+    # (used in the response, version_provenance already refers to the
+    # dict-level version below, and input_snapshot persists this merged
+    # form so a frozen replay never needs to re-run calibration).
+    clinical_hypotheses = {
+        **clinical_hypotheses,
+        "hypotheses": apply_calibration_to_hypotheses(
+            clinical_hypotheses.get("hypotheses"), confidence_calibration
+        ),
+    }
     # Action Plan by Role (P9): routes already-classified signals
     # (doctor_flag/safety_level from clinical_reasoning_traces, the
     # finalized protocol's self-guided actions, next_best_tests,
@@ -1346,6 +1376,7 @@ async def run_lab_analysis_pipeline(
         "evidence_gaps_version": evidence_gaps.get("version"),
         "hypothesis_engine_version": clinical_hypotheses.get("version"),
         "clinical_contradictions_version": clinical_contradictions.get("version"),
+        "confidence_calibration_version": confidence_calibration.get("version"),
     }
 
     result = {
@@ -1376,6 +1407,7 @@ async def run_lab_analysis_pipeline(
         "clinical_reasoning_traces": clinical_reasoning_traces,
         "clinical_hypotheses": clinical_hypotheses,
         "clinical_contradictions": clinical_contradictions,
+        "confidence_calibration": confidence_calibration,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
         "action_plan_by_role": action_plan_by_role,
@@ -1438,6 +1470,7 @@ async def run_lab_analysis_pipeline(
                     "clinical_reasoning_traces": clinical_reasoning_traces,
                     "clinical_hypotheses": clinical_hypotheses,
                     "clinical_contradictions": clinical_contradictions,
+                    "confidence_calibration": confidence_calibration,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
                     "action_plan_by_role": action_plan_by_role,

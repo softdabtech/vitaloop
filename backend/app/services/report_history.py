@@ -187,6 +187,12 @@ def assemble_frozen_response(
         # P15, same frozen-verbatim posture: a report generated before the
         # Contradiction Detector existed reads back None — never recomputed.
         "clinical_contradictions": input_snapshot.get("clinical_contradictions"),
+        # P16, same frozen-verbatim posture: a report generated before the
+        # Confidence Calibration Engine existed reads back None — never
+        # recomputed. Note clinical_hypotheses above already carries the
+        # merged calibrated_confidence/calibrated_score/
+        # calibration_reason_codes fields as persisted at generation time.
+        "confidence_calibration": input_snapshot.get("confidence_calibration"),
         # Frozen-verbatim, same posture: a report generated before P5
         # existed reads back None; progress_intelligence is itself a diff
         # against an even-earlier snapshot, so re-running it here on read
