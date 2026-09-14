@@ -203,7 +203,38 @@ public class ClientsController : Controller
             ProgressAvailable = progressAvailable,
             ProgressChanges = progressChanges,
             RequiresDoctorDiscussion = root.TryGetProperty("requires_doctor_discussion", out var rdd) && rdd.GetBoolean(),
+            ActionPlan = root.TryGetProperty("action_plan_by_role", out var apEl) && apEl.ValueKind == JsonValueKind.Object
+                ? ParseActionPlan(apEl)
+                : null,
         };
+    }
+
+    private static ActionPlanByRoleViewModel ParseActionPlan(JsonElement root) => new()
+    {
+        Urgent = ParseActionPlanBucket(root, "urgent"),
+        Doctor = ParseActionPlanBucket(root, "doctor"),
+        Practitioner = ParseActionPlanBucket(root, "practitioner"),
+        Self = ParseActionPlanBucket(root, "self"),
+    };
+
+    private static IReadOnlyList<ActionPlanItemViewModel> ParseActionPlanBucket(JsonElement root, string bucketName)
+    {
+        var result = new List<ActionPlanItemViewModel>();
+        if (!root.TryGetProperty(bucketName, out var arrayEl) || arrayEl.ValueKind != JsonValueKind.Array)
+        {
+            return result;
+        }
+
+        foreach (var item in arrayEl.EnumerateArray())
+        {
+            result.Add(new ActionPlanItemViewModel
+            {
+                Title = item.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "",
+                Reason = item.TryGetProperty("reason", out var r) && r.ValueKind == JsonValueKind.String ? r.GetString() : null,
+            });
+        }
+
+        return result;
     }
 
     private static IReadOnlyList<ClinicalPatternViewModel> ParsePatterns(JsonElement root, string propertyName)

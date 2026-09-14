@@ -34,6 +34,24 @@ public sealed class ClinicalSummaryViewModel
     public bool ProgressAvailable { get; init; }
     public IReadOnlyList<ProgressChangeViewModel> ProgressChanges { get; init; } = Array.Empty<ProgressChangeViewModel>();
     public bool RequiresDoctorDiscussion { get; init; }
+    public ActionPlanByRoleViewModel? ActionPlan { get; init; }
+}
+
+/// <summary>P9 follow-up: the same self/practitioner/doctor/urgent buckets
+/// the b2c report shows the client, passed through for the practitioner —
+/// see backend/app/services/action_plan_by_role.py.</summary>
+public sealed class ActionPlanByRoleViewModel
+{
+    public IReadOnlyList<ActionPlanItemViewModel> Urgent { get; init; } = Array.Empty<ActionPlanItemViewModel>();
+    public IReadOnlyList<ActionPlanItemViewModel> Doctor { get; init; } = Array.Empty<ActionPlanItemViewModel>();
+    public IReadOnlyList<ActionPlanItemViewModel> Practitioner { get; init; } = Array.Empty<ActionPlanItemViewModel>();
+    public IReadOnlyList<ActionPlanItemViewModel> Self { get; init; } = Array.Empty<ActionPlanItemViewModel>();
+}
+
+public sealed class ActionPlanItemViewModel
+{
+    public string Title { get; init; } = "";
+    public string? Reason { get; init; }
 }
 
 public sealed class ClinicalPatternViewModel

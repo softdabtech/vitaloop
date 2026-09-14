@@ -142,6 +142,40 @@ else
           </div>
         </div>
       }
+
+      var plan = summary.ActionPlan;
+      (string Label, string Tone, IReadOnlyList<ActionPlanItemViewModel> Items)[] planBuckets = plan is null
+        ? Array.Empty<(string Label, string Tone, IReadOnlyList<ActionPlanItemViewModel> Items)>()
+        : new (string Label, string Tone, IReadOnlyList<ActionPlanItemViewModel> Items)[]
+        {
+          ("Urgent — discuss promptly", "tone-danger", plan.Urgent),
+          ("Discuss with a doctor", "tone-warning", plan.Doctor),
+          ("Bring to a specialist", "tone-info", plan.Practitioner),
+          ("Client can do themselves", "tone-success", plan.Self),
+        };
+      @if (planBuckets.Any(b => b.Items.Any()))
+      {
+        <div style="display:grid;gap:12px;">
+          <strong>Action plan, by who</strong>
+          @foreach (var bucket in planBuckets)
+          {
+            if (!bucket.Items.Any()) { continue; }
+            <div style="display:grid;gap:6px;">
+              <span class="vo-pill @bucket.Tone" style="width:fit-content;">@bucket.Label</span>
+              @foreach (var item in bucket.Items)
+              {
+                <div class="vo-card" style="padding:10px 12px;">
+                  <strong>@item.Title</strong>
+                  @if (!string.IsNullOrWhiteSpace(item.Reason))
+                  {
+                    <p style="margin:4px 0 0;color:var(--vo-gray-700);">@item.Reason</p>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
     }
   </section>
 
