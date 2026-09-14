@@ -572,7 +572,7 @@
           <p class="widget-title">🤖 OpenAI API Spend</p>
           <span style="font-size:11px;color:var(--c-muted)">30d</span>
         </div>
-        <div id="claude-spend" style="padding:16px;font-size:13px;color:var(--c-muted)">Loading…</div>
+        <div id="openai-spend" style="padding:16px;font-size:13px;color:var(--c-muted)">Loading…</div>
       </div>
 
       <!-- Activity Feed -->
@@ -740,23 +740,38 @@ fetch('/ops/client-activity-data?days=30&limit=100')
   })
 
 // ── OpenAI API spend ──────────────────────────────
-fetch('/ops/claude-usage-data?days=30')
+// P0 cost-aware architecture (post Sept 2026 OpenAI cost-leak incident):
+// this widget was previously wired to /ops/claude-usage-data — a
+// different endpoint with a different response shape (top-level
+// total_cost_usd/total_tokens fields that don't exist there), so despite
+// the "OpenAI API Spend" title it silently showed nothing useful. Now
+// points at the real /ops/openai-usage-data endpoint and its actual
+// {cost: {...}, totals: {...}} shape, plus the daily-spend threshold
+// flag added alongside it.
+fetch('/ops/openai-usage-data?days=30')
   .then(r => r.json())
   .then(data => {
-    const el = document.getElementById('claude-spend')
+    const el = document.getElementById('openai-spend')
     if (!data.tracked) {
       el.innerHTML = '<span style="color:#94a3b8">Not tracked</span>'; return
     }
-    const cost = data.total_cost_usd || data.cost || 0
-    const tokens = data.total_tokens || data.tokens || 0
+    const cost = data.cost || {}
+    const totals = data.totals || {}
+    const overThreshold = !!cost.over_daily_threshold
+    const alertHtml = overThreshold
+      ? `<div style="margin-top:8px;padding:6px 10px;border-radius:8px;background:#fef2f2;color:#b91c1c;font-size:11px;font-weight:700">
+           ⚠ Avg daily spend ($${Number(cost.avg_daily_cost_usd || 0).toFixed(2)}) exceeds the $${Number(cost.daily_spend_alert_threshold_usd || 0).toFixed(2)} threshold
+         </div>`
+      : ''
     el.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-size:22px;font-weight:800;color:#0f172a">$${Number(cost).toFixed(2)}</span>
-        <span class="tag tag-gray">${Number(tokens).toLocaleString()} tokens</span>
+        <span style="font-size:22px;font-weight:800;color:#0f172a">$${Number(cost.total_cost_usd || 0).toFixed(2)}</span>
+        <span class="tag tag-gray">${Number(totals.total_tokens || 0).toLocaleString()} tokens</span>
       </div>
-      <div style="font-size:11px;color:#94a3b8">Last 30 days</div>`
+      <div style="font-size:11px;color:#94a3b8">Last 30 days · avg $${Number(cost.avg_daily_cost_usd || 0).toFixed(2)}/day</div>
+      ${alertHtml}`
   })
   .catch(() => {
-    document.getElementById('claude-spend').innerHTML = '<span style="color:#94a3b8">Unavailable</span>'
+    document.getElementById('openai-spend').innerHTML = '<span style="color:#94a3b8">Unavailable</span>'
   })
 </script>

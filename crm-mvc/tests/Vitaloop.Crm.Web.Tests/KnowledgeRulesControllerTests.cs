@@ -169,6 +169,7 @@ public class KnowledgeRulesControllerTests
         public Task<IReadOnlyList<AuditLogEntry>> GetAuditLogs(Guid? organizationId = null, int limit = 200, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<RuntimeReadinessSnapshot?> GetRuntimeReadiness(CancellationToken ct = default) => throw new NotImplementedException();
         public Task<System.Text.Json.JsonDocument?> GetClaudeUsage(int days = 30, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<System.Text.Json.JsonDocument?> GetOpenAiUsage(int days = 30, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<System.Text.Json.JsonDocument?> GetClientActivity(int days = 30, int limit = 200, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<System.Text.Json.JsonDocument?> GetUserActivityDetail(Guid userId, int days = 90, CancellationToken ct = default) => throw new NotImplementedException();
 

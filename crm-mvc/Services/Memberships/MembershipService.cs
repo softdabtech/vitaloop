@@ -145,6 +145,9 @@ public sealed class MembershipService
     public async Task<System.Text.Json.JsonDocument?> GetClaudeUsage(int days = 30, CancellationToken ct = default)
         => await _gateway.GetClaudeUsage(days, ct);
 
+    public async Task<System.Text.Json.JsonDocument?> GetOpenAiUsage(int days = 30, CancellationToken ct = default)
+        => await _gateway.GetOpenAiUsage(days, ct);
+
     public async Task<System.Text.Json.JsonDocument?> GetClientActivity(int days = 30, int limit = 200, CancellationToken ct = default)
         => await _gateway.GetClientActivity(days, limit, ct);
 

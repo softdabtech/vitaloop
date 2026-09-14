@@ -104,6 +104,25 @@ public class DashboardController : Controller
         }
     }
 
+    [HttpGet("openai-usage-data")]
+    public async Task<IActionResult> OpenAiUsageData([FromQuery] int days = 30, CancellationToken ct = default)
+    {
+        await _userContextAccessor.GetOrThrow(ct);
+        try
+        {
+            var doc = await _membershipService.GetOpenAiUsage(days, ct);
+            if (doc is null)
+                return Json(new { tracked = false, note = "Backend returned no data." });
+            var raw = doc.RootElement.GetRawText();
+            return Content(raw, "application/json");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch OpenAI usage");
+            return Json(new { tracked = false, note = "Failed to load OpenAI usage metrics." });
+        }
+    }
+
     [HttpGet("client-activity-data")]
     public async Task<IActionResult> ClientActivityData([FromQuery] int days = 30, [FromQuery] int limit = 200, CancellationToken ct = default)
     {

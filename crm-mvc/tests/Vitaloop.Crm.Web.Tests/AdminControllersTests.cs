@@ -558,6 +558,9 @@ internal sealed class FakeCrmDataGateway : Vitaloop.Crm.Web.Services.Data.ICrmDa
     public Task<System.Text.Json.JsonDocument?> GetClaudeUsage(int days = 30, CancellationToken ct = default)
         => Task.FromResult<System.Text.Json.JsonDocument?>(null);
 
+    public Task<System.Text.Json.JsonDocument?> GetOpenAiUsage(int days = 30, CancellationToken ct = default)
+        => Task.FromResult<System.Text.Json.JsonDocument?>(null);
+
     public Task<System.Text.Json.JsonDocument?> GetClientActivity(int days = 30, int limit = 200, CancellationToken ct = default)
         => Task.FromResult<System.Text.Json.JsonDocument?>(null);
 

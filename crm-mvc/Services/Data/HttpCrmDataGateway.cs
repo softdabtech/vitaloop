@@ -170,6 +170,14 @@ public sealed class HttpCrmDataGateway : ICrmDataGateway
         return await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
     }
 
+    public async Task<System.Text.Json.JsonDocument?> GetOpenAiUsage(int days = 30, CancellationToken ct = default)
+    {
+        var safeDays = Math.Clamp(days, 1, 365);
+        var response = await Send(HttpMethod.Get, $"/crm/ops/openai-usage?days={safeDays}", null, ct);
+        if (!response.IsSuccessStatusCode) return null;
+        return await System.Text.Json.JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+    }
+
     public async Task<System.Text.Json.JsonDocument?> GetClientActivity(int days = 30, int limit = 200, CancellationToken ct = default)
     {
         var safeDays = Math.Clamp(days, 1, 365);
