@@ -84,3 +84,8 @@ async def test_child_reticulocyte_panel_runs_core_pipeline_without_external_ai()
     assert isinstance(baseline, dict)
     assert baseline["available"] is False
     assert baseline["markers"] == []
+
+    # P9: routes this run's traces/protocol/gaps/tests into role buckets.
+    action_plan = result.get("action_plan_by_role")
+    assert isinstance(action_plan, dict)
+    assert set(action_plan["buckets"].keys()) == {"urgent", "doctor", "practitioner", "self"}

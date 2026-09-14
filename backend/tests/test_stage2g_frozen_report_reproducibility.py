@@ -836,3 +836,39 @@ def test_frozen_response_handles_missing_personal_baseline_gracefully():
     )
 
     assert response["personal_baseline"] is None
+
+
+def test_frozen_response_serves_persisted_action_plan_by_role():
+    """P9 follow-up: action_plan_by_role gets the same frozen-verbatim
+    treatment as personal_baseline/progress_intelligence above."""
+    frozen = _frozen_row(
+        input_snapshot={
+            "action_plan_by_role": {
+                "buckets": {"urgent": [{"title": "Electrolyte / Kidney Safety"}], "doctor": [], "practitioner": [], "self": []},
+            },
+        }
+    )
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["action_plan_by_role"]["buckets"]["urgent"][0]["title"] == "Electrolyte / Kidney Safety"
+
+
+def test_frozen_response_handles_missing_action_plan_by_role_gracefully():
+    frozen = _frozen_row(input_snapshot={"evidence_gaps": {"summary": {"gap_count": 0}}})
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["action_plan_by_role"] is None

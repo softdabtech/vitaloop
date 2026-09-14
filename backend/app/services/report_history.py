@@ -189,6 +189,7 @@ def assemble_frozen_response(
         # time and is immutable history, exactly like clinical_story.
         "progress_intelligence": input_snapshot.get("progress_intelligence"),
         "personal_baseline": input_snapshot.get("personal_baseline"),
+        "action_plan_by_role": input_snapshot.get("action_plan_by_role"),
         "safety_result": safety_result,
         # Pure locale-template boilerplate derived from the frozen status —
         # no AI/knowledge-rule recomputation involved (see

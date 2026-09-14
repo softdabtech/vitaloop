@@ -17,6 +17,7 @@ from app.services.next_best_test_engine import build_next_best_tests
 from app.services.clinical_reasoning_trace import build_clinical_reasoning_traces
 from app.services.progress_intelligence import build_progress_intelligence
 from app.services.personal_baseline import build_personal_baseline
+from app.services.action_plan_by_role import build_action_plan_by_role
 from app.services.cost_analytics import record_analysis_cost
 from app.services.evidence_gaps import build_evidence_gaps
 from app.services.explainability import build_recommendation_explanations
@@ -1181,6 +1182,18 @@ async def run_lab_analysis_pipeline(
         previous_upload_id=_previous_upload_id,
         previous_measured_at=_previous_measured_at,
     )
+    # Action Plan by Role (P9): routes already-classified signals
+    # (doctor_flag/safety_level from clinical_reasoning_traces, the
+    # finalized protocol's self-guided actions, next_best_tests,
+    # evidence_gaps) into self/practitioner/doctor/urgent buckets — no new
+    # clinical judgment, pure composition over what this run already
+    # computed above.
+    action_plan_by_role = build_action_plan_by_role(
+        clinical_reasoning_traces=clinical_reasoning_traces,
+        protocol=protocol,
+        next_best_tests=next_best_tests,
+        evidence_gaps=evidence_gaps,
+    )
     output_knowledge_evaluation = _localized_knowledge_evaluation_for_response(
         knowledge_evaluation,
         knowledge_report,
@@ -1289,6 +1302,7 @@ async def run_lab_analysis_pipeline(
         "clinical_reasoning_traces": clinical_reasoning_traces,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
+        "action_plan_by_role": action_plan_by_role,
         "safety_result": safety_result,
         "safety_notice": safety_notice,
         "explainability": explainability,
@@ -1347,6 +1361,7 @@ async def run_lab_analysis_pipeline(
                     "clinical_reasoning_traces": clinical_reasoning_traces,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
+                    "action_plan_by_role": action_plan_by_role,
                     "version_provenance": version_provenance,
                     "ai_orchestration": ai_orchestration,
                     "quality_snapshot": quality_snapshot,
