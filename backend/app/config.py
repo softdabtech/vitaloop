@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     openai_vision_model: str = "gpt-4o-mini"  # Cheapest Vision API model for images
     enable_vision_api: bool = True  # Feature flag for Vision API
+    # P0 cost-aware architecture (post Sept 2026 OpenAI cost-leak incident,
+    # see qa_2026-09-11_fixes memory / openai-cost-audit-20260913.md): a
+    # simple, always-on daily-spend guard surfaced in the Ops cost
+    # dashboard rather than only discovered after the fact via a manual
+    # llm_usage_events query.
+    openai_daily_spend_alert_threshold_usd: float = 5.0
     image_max_size_mb: int = 20  # Vision API supports up to 20MB
     tiff_max_pages: int = 10  # Max pages in multi-page TIFF
     table_analysis_max_rows: int = 1000  # Max rows when parsing tables

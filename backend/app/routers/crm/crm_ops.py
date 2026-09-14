@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any, List
 from uuid import UUID
 import logging
 
+from app.config import settings
 from app.dependencies_crm import UserContext, require_super_admin, get_user_context
 from app.services import supabase_service as svc
 
@@ -487,6 +488,14 @@ async def get_openai_usage_metrics(
                 output_cost += (output_tokens / 1_000_000) * 15.0
 
         total_cost = input_cost + output_cost
+        # P0 cost-aware architecture: a simple daily-average spend guard —
+        # not a real per-day time series (llm_usage_events has no cheap
+        # day-bucketing query here yet), just total_cost_usd averaged over
+        # the requested window, flagged against a configurable threshold.
+        # Good enough to catch a sustained leak (like the Sept 2026
+        # incident) without inventing a whole time-series endpoint for it.
+        avg_daily_cost = total_cost / safe_days if safe_days else total_cost
+        threshold = float(settings.openai_daily_spend_alert_threshold_usd)
 
         return {
             "tracked": True,
@@ -496,6 +505,9 @@ async def get_openai_usage_metrics(
                 "input_cost_usd": round(input_cost, 4),
                 "output_cost_usd": round(output_cost, 4),
                 "total_cost_usd": round(total_cost, 4),
+                "avg_daily_cost_usd": round(avg_daily_cost, 4),
+                "daily_spend_alert_threshold_usd": threshold,
+                "over_daily_threshold": avg_daily_cost > threshold,
             },
             "by_model": by_model_sorted,
             "by_task": by_task_sorted,
