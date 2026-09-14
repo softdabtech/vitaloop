@@ -36,6 +36,7 @@ from app.services.knowledge import (
     update_rule,
 )
 from app.services.knowledge.governance_coverage import build_governance_coverage
+from app.services.knowledge.rule_packs import build_rule_packs
 
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 
@@ -81,6 +82,20 @@ async def get_governance_coverage(
     """
     rows = await list_rules()
     return build_governance_coverage(rows)
+
+
+@router.get("/rules/packs")
+async def get_rule_packs(
+    _: UserContext = Depends(require_super_admin),
+) -> dict:
+    """P11 v1 (Expert Rule Packs): groups existing knowledge_rules by their
+    `source` field into named packs with provenance (reviewers, versions,
+    domain coverage, governance-status breakdown). Visibility/attribution
+    only — see rule_packs.py's module docstring for why per-org enable/
+    disable isn't in this version.
+    """
+    rows = await list_rules()
+    return build_rule_packs(rows)
 
 
 @router.get("/rules/{rule_id}", response_model=KnowledgeRuleDetail)

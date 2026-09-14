@@ -45,6 +45,13 @@ class KnowledgeMatchedRule(BaseModel):
     source: Optional[str] = None
     source_url: Optional[str] = None
     evidence: List[Dict[str, Any]] = Field(default_factory=list)
+    # P11 v1 (Expert Rule Packs) provenance — without these declared here,
+    # FastAPI's response_model would silently strip them from the wire JSON
+    # even though evaluator.py now selects and attaches them (same field-
+    # stripping bug class documented in AnalyzeResponse's own history).
+    medical_reviewed_by: Optional[str] = None
+    medical_reviewed_at: Optional[str] = None
+    version: Optional[int] = None
 
 
 class KnowledgeRecommendation(BaseModel):

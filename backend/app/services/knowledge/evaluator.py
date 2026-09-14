@@ -445,6 +445,15 @@ def evaluate_input_with_rules(input_data: Dict[str, Any], rules: List[Dict[str, 
                 "source_url": rule.get("source_url"),
                 "evidence": evidence,
                 "input_entities": rule.get("input_entities") if isinstance(rule.get("input_entities"), list) else [],
+                # P11 v1 (Expert Rule Packs): provenance fields already
+                # required by governance.py::approve_rule (a real reviewer +
+                # version bump on every approval) but never selected/passed
+                # through here before — without this, "this recommendation
+                # was reviewed by Dr. X, v3" had no way to reach any
+                # downstream report even though the data existed.
+                "medical_reviewed_by": rule.get("medical_reviewed_by"),
+                "medical_reviewed_at": rule.get("medical_reviewed_at"),
+                "version": rule.get("version"),
             }
         )
 
@@ -501,7 +510,7 @@ async def _load_active_rules() -> List[Dict[str, Any]]:
     response = await supabase._run(
         lambda: client.table("knowledge_rules")
         .select(
-            "id,key,name,description,input_entities,conditions,outputs,confidence,severity,requires_doctor,explanation_template,source,source_url,active,governance_status"
+            "id,key,name,description,input_entities,conditions,outputs,confidence,severity,requires_doctor,explanation_template,source,source_url,active,governance_status,medical_reviewed_by,medical_reviewed_at,version"
         )
         .eq("active", True)
         .eq("governance_status", "active")
