@@ -20,6 +20,7 @@ import {
   HelpCircle,
   Info,
   MessageCircle,
+  Network,
   RefreshCw,
   ShieldAlert,
   Stethoscope,
@@ -27,6 +28,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { isUkrainianLocale } from '../lib/locale.js'
+import { buildClinicalReasoningMap } from '../lib/clinicalReasoningMap.js'
 import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
 import { CoachBadge, CoachCard } from '../components/coach/CoachUI.jsx'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
@@ -202,6 +204,34 @@ const RESULTS_COPY = {
       doctor_only: 'Discuss with a doctor',
     },
     reasoningEmpty: 'No detailed reasoning trace is available for this report yet.',
+    mapTitle: 'How VITALOOP connected the dots',
+    mapIntro: 'The top possibilities this upload points to, what supports and limits each one, and who should act on it.',
+    mapWhatSupports: 'What supports this',
+    mapWhatLimits: 'What limits confidence',
+    mapNextTests: 'What could reduce uncertainty',
+    mapContext: 'Reported context',
+    mapConfidence: 'Confidence',
+    mapActionBucket: {
+      self: 'You can act on this yourself',
+      practitioner: 'Worth bringing to a practitioner',
+      doctor: 'Discuss with a doctor',
+      urgent: 'Needs prompt attention',
+    },
+    mapConfidenceLabel: {
+      high: 'High',
+      moderate: 'Moderate',
+      low: 'Low',
+      blocked: 'Not enough data',
+      doctor_only: 'Discuss with a doctor',
+      likely: 'Likely',
+      possible: 'Possible',
+      unlikely_but_flagged: 'Unlikely, still noted',
+    },
+    mapEmptyWithDomains: (stable, underTested) =>
+      `No strong hypothesis was generated from this upload. VITALOOP still checked available domains and found ${stable} stable area${stable === 1 ? '' : 's'} and ${underTested} under-tested area${underTested === 1 ? '' : 's'}.`,
+    mapEmptyNoDomains: 'No strong hypothesis was generated from this upload, and no domain summary is available yet for this report.',
+    mapStableDomains: 'No strong signal detected in this upload',
+    mapUnderTestedDomains: 'Not enough data to assess confidently',
     progressTitle: 'Progress Since Last Time',
     progressIntro: 'How your patterns changed compared with your previous upload.',
     progressStrengthened: 'Stronger signal than last time',
@@ -349,6 +379,34 @@ const RESULTS_COPY = {
       doctor_only: 'Обговорити з лікарем',
     },
     reasoningEmpty: 'Детальне обґрунтування для цього звіту поки недоступне.',
+    mapTitle: 'Як VITALOOP з’єднав дані',
+    mapIntro: 'Найімовірніші пояснення цього завантаження, що їх підтримує й обмежує, та хто має діяти далі.',
+    mapWhatSupports: 'Що це підтримує',
+    mapWhatLimits: 'Що обмежує впевненість',
+    mapNextTests: 'Що могло б зменшити невизначеність',
+    mapContext: 'Зазначений контекст',
+    mapConfidence: 'Впевненість',
+    mapActionBucket: {
+      self: 'Можна діяти самостійно',
+      practitioner: 'Варто обговорити зі спеціалістом',
+      doctor: 'Обговоріть з лікарем',
+      urgent: 'Потребує невідкладної уваги',
+    },
+    mapConfidenceLabel: {
+      high: 'Висока',
+      moderate: 'Помірна',
+      low: 'Низька',
+      blocked: 'Недостатньо даних',
+      doctor_only: 'Обговоріть з лікарем',
+      likely: 'Ймовірно',
+      possible: 'Можливо',
+      unlikely_but_flagged: 'Малоймовірно, але відмічено',
+    },
+    mapEmptyWithDomains: (stable, underTested) =>
+      `Із цього завантаження не сформувалась виражена гіпотеза. VITALOOP усе ж перевірив доступні напрямки: стабільних — ${stable}, недостатньо перевірених — ${underTested}.`,
+    mapEmptyNoDomains: 'Із цього завантаження не сформувалась виражена гіпотеза, а огляд напрямків для цього звіту поки недоступний.',
+    mapStableDomains: 'У цьому завантаженні не виявлено вираженого сигналу',
+    mapUnderTestedDomains: 'Недостатньо даних для впевненої оцінки',
     progressTitle: 'Прогрес з минулого разу',
     progressIntro: 'Як змінилися ваші патерни порівняно з попереднім завантаженням.',
     progressStrengthened: 'Сигнал сильніший, ніж минулого разу',
@@ -1013,6 +1071,134 @@ function TestingPlanSection({ nextBestTests, retestPlan, nextTestFunnel, copy, i
   )
 }
 
+const MAP_ACTION_BUCKET_STYLE = {
+  urgent: 'border-rose-200 bg-rose-50 text-rose-700',
+  doctor: 'border-amber-200 bg-amber-50 text-amber-800',
+  practitioner: 'border-sky-200 bg-sky-50 text-sky-700',
+  self: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+}
+
+// P18 Clinical Reasoning Map: a compact "how VITALOOP connected the dots"
+// card per top hypothesis (backend/app/services/hypothesis_engine.py,
+// calibrated by confidence_calibration.py), showing supporting evidence,
+// what limits confidence (contradictions + evidence gaps), what could
+// reduce uncertainty next, and who should act — a summary of P14-P17,
+// not a duplicate of the detailed Clinical Reasoning / Evidence Gaps
+// sections already below it on this page.
+function ClinicalReasoningMapCard({ card, copy }) {
+  const bucketLabel = copy.mapActionBucket?.[card.actionBucket]
+  const bucketBadge = MAP_ACTION_BUCKET_STYLE[card.actionBucket] || 'border-slate-200 bg-slate-100 text-slate-600'
+  const confidenceLabel = card.confidenceLabel ? copy.mapConfidenceLabel?.[card.confidenceLabel] || card.confidenceLabel : null
+  const scorePct = formatPercent(card.confidenceScore)
+
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h3 className="font-semibold text-slate-950">{card.title}</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          {confidenceLabel && (
+            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+              {copy.mapConfidence}: {confidenceLabel}{scorePct ? ` (${scorePct})` : ''}
+            </span>
+          )}
+          {bucketLabel && (
+            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${bucketBadge}`}>{bucketLabel}</span>
+          )}
+        </div>
+      </div>
+
+      {!!card.hypothesis && <p className="mt-2 text-sm leading-6 text-slate-600">{card.hypothesis}</p>}
+
+      {!!card.symptoms.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.mapContext}:</span> {card.symptoms.join(', ')}
+        </p>
+      )}
+      {!!card.supportingMarkers.length && (
+        <p className="mt-2 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.mapWhatSupports}:</span> {card.supportingMarkers.join(', ')}
+        </p>
+      )}
+      {!!(card.contradictions.length || card.evidenceGaps.length) && (
+        <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50/60 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">{copy.mapWhatLimits}</p>
+          <ul className="mt-1 space-y-1 text-sm leading-5 text-amber-900">
+            {[...card.contradictions, ...card.evidenceGaps].slice(0, 5).map((item, index) => (
+              <li key={index}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {!!card.nextTests.length && (
+        <p className="mt-3 text-sm leading-5 text-slate-600">
+          <span className="font-semibold text-slate-800">{copy.mapNextTests}:</span> {card.nextTests.join(', ')}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function ClinicalReasoningMapSection({
+  clinicalHypotheses,
+  clinicalContradictions,
+  reasoningTraces,
+  evidenceGaps,
+  actionPlanByRole,
+  negativeEvidence,
+  copy,
+}) {
+  const map = useMemo(
+    () =>
+      buildClinicalReasoningMap({
+        clinicalHypotheses,
+        clinicalContradictions,
+        reasoningTraces,
+        evidenceGaps,
+        actionPlanByRole,
+        negativeEvidence,
+      }),
+    [clinicalHypotheses, clinicalContradictions, reasoningTraces, evidenceGaps, actionPlanByRole, negativeEvidence]
+  )
+
+  // Nothing to show at all — no hypotheses AND no negative-evidence domain
+  // summary either (e.g. an old report from before P14-P17 existed).
+  // Hide the whole section rather than render an empty shell.
+  if (!map.cards.length && !map.stableDomains.length && !map.underTestedDomains.length) return null
+
+  return (
+    <SectionCard icon={Network} title={copy.mapTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.mapIntro}</p>
+      {map.cards.length ? (
+        <div className="space-y-3">
+          {map.cards.map((card) => (
+            <ClinicalReasoningMapCard key={card.id} card={card} copy={copy} />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+          <p>
+            {map.stableDomains.length || map.underTestedDomains.length
+              ? copy.mapEmptyWithDomains(map.stableDomains.length, map.underTestedDomains.length)
+              : copy.mapEmptyNoDomains}
+          </p>
+          {!!map.stableDomains.length && (
+            <p className="mt-2 text-xs text-slate-500">
+              <span className="font-semibold">{copy.mapStableDomains}:</span>{' '}
+              {map.stableDomains.map((d) => localizeDomainLabel(d.domain, copy)).join(', ')}
+            </p>
+          )}
+          {!!map.underTestedDomains.length && (
+            <p className="mt-1 text-xs text-slate-500">
+              <span className="font-semibold">{copy.mapUnderTestedDomains}:</span>{' '}
+              {map.underTestedDomains.map((d) => localizeDomainLabel(d.domain, copy)).join(', ')}
+            </p>
+          )}
+        </div>
+      )}
+    </SectionCard>
+  )
+}
+
 function ReasoningTraceSection({ traces, copy }) {
   const list = Array.isArray(traces) ? traces.filter(Boolean) : []
   return (
@@ -1099,6 +1285,9 @@ export default function Results() {
   const [personalBaseline, setPersonalBaseline] = useState(null)
   const [actionPlanByRole, setActionPlanByRole] = useState(null)
   const [nextTestFunnel, setNextTestFunnel] = useState(null)
+  const [clinicalHypotheses, setClinicalHypotheses] = useState(null)
+  const [clinicalContradictions, setClinicalContradictions] = useState(null)
+  const [negativeEvidence, setNegativeEvidence] = useState(null)
   const [loading, setLoading] = useState(true)
   const isUk = isUkrainianLocale()
   const copy = isUk ? RESULTS_COPY.uk : RESULTS_COPY.en
@@ -1144,6 +1333,9 @@ export default function Results() {
         setPersonalBaseline(data.personal_baseline ?? data.final_analysis?.personal_baseline ?? null)
         setActionPlanByRole(data.action_plan_by_role ?? data.final_analysis?.action_plan_by_role ?? null)
         setNextTestFunnel(data.next_test_funnel ?? data.final_analysis?.next_test_funnel ?? null)
+        setClinicalHypotheses(data.clinical_hypotheses ?? data.final_analysis?.clinical_hypotheses ?? null)
+        setClinicalContradictions(data.clinical_contradictions ?? data.final_analysis?.clinical_contradictions ?? null)
+        setNegativeEvidence(data.negative_evidence ?? data.final_analysis?.negative_evidence ?? null)
         gaResultsView(uploadId)
       } catch (_e) {
         if (!active) return
@@ -1161,6 +1353,9 @@ export default function Results() {
         setPersonalBaseline(null)
         setActionPlanByRole(null)
         setNextTestFunnel(null)
+        setClinicalHypotheses(null)
+        setClinicalContradictions(null)
+        setNegativeEvidence(null)
       } finally {
         if (active) setLoading(false)
       }
@@ -1457,6 +1652,16 @@ export default function Results() {
         </div>
 
         <ActionPlanByRoleSection actionPlan={actionPlanByRole} copy={copy} />
+
+        <ClinicalReasoningMapSection
+          clinicalHypotheses={clinicalHypotheses}
+          clinicalContradictions={clinicalContradictions}
+          reasoningTraces={reasoningTraces}
+          evidenceGaps={evidenceGaps}
+          actionPlanByRole={actionPlanByRole}
+          negativeEvidence={negativeEvidence}
+          copy={copy}
+        />
 
         <EvidenceGapsSection evidenceGaps={evidenceGaps} copy={copy} />
 
