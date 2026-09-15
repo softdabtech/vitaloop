@@ -20,6 +20,7 @@ from app.services.clinical_contradictions import build_clinical_contradictions
 from app.services.confidence_calibration import build_confidence_calibration, apply_calibration_to_hypotheses
 from app.services.negative_evidence import build_negative_evidence
 from app.services.outcome_attribution import build_outcome_attribution
+from app.services.evidence_debt import build_evidence_debt
 from app.services.progress_intelligence import build_progress_intelligence
 from app.services.personal_baseline import build_personal_baseline, build_personal_baseline_velocity
 from app.services.action_plan_by_role import build_action_plan_by_role
@@ -1367,6 +1368,22 @@ async def run_lab_analysis_pipeline(
         previous_next_best_tests=_previous_next_best_tests,
         current_biomarkers=normalized_biomarkers,
     )
+    # Evidence Debt Score (P22, backend-first v1): aggregates P3/P12/
+    # P14-P17/P19-P21's own outputs into one explainable completeness/
+    # uncertainty summary — how completely the system can reason about
+    # this upload's data, NOT a health score. Runs last among the
+    # reasoning-core stages since it needs every one of them. See
+    # evidence_debt.py's module docstring.
+    evidence_debt = build_evidence_debt(
+        evidence_gaps=evidence_gaps,
+        clinical_contradictions=clinical_contradictions.get("contradictions"),
+        clinical_hypotheses=clinical_hypotheses.get("hypotheses"),
+        negative_evidence=negative_evidence,
+        velocity_signals=(personal_baseline.get("velocity") or {}).get("signals"),
+        intervention_memory=intervention_memory,
+        outcome_attribution=outcome_attribution,
+        next_test_funnel=next_test_funnel,
+    )
     output_knowledge_evaluation = _localized_knowledge_evaluation_for_response(
         knowledge_evaluation,
         knowledge_report,
@@ -1452,6 +1469,7 @@ async def run_lab_analysis_pipeline(
         "personal_baseline_velocity_version": (personal_baseline.get("velocity") or {}).get("version"),
         "intervention_memory_version": intervention_memory.get("version"),
         "outcome_attribution_version": outcome_attribution.get("version"),
+        "evidence_debt_version": evidence_debt.get("version"),
     }
 
     result = {
@@ -1486,6 +1504,7 @@ async def run_lab_analysis_pipeline(
         "negative_evidence": negative_evidence,
         "intervention_memory": intervention_memory,
         "outcome_attribution": outcome_attribution,
+        "evidence_debt": evidence_debt,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
         "action_plan_by_role": action_plan_by_role,
@@ -1552,6 +1571,7 @@ async def run_lab_analysis_pipeline(
                     "negative_evidence": negative_evidence,
                     "intervention_memory": intervention_memory,
                     "outcome_attribution": outcome_attribution,
+                    "evidence_debt": evidence_debt,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
                     "action_plan_by_role": action_plan_by_role,

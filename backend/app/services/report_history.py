@@ -207,6 +207,9 @@ def assemble_frozen_response(
         # (recomputing would use the wrong window/events relative to when
         # this report was originally generated).
         "outcome_attribution": input_snapshot.get("outcome_attribution"),
+        # P22, same frozen-verbatim posture: a report generated before
+        # Evidence Debt Score existed reads back None — never recomputed.
+        "evidence_debt": input_snapshot.get("evidence_debt"),
         # Frozen-verbatim, same posture: a report generated before P5
         # existed reads back None; progress_intelligence is itself a diff
         # against an even-earlier snapshot, so re-running it here on read
