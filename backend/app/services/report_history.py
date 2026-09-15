@@ -202,6 +202,11 @@ def assemble_frozen_response(
         # report" only makes sense relative to when this report was
         # originally generated, not whenever it's later viewed).
         "intervention_memory": input_snapshot.get("intervention_memory"),
+        # P21, same frozen-verbatim posture: a report generated before
+        # Outcome Attribution existed reads back None — never recomputed
+        # (recomputing would use the wrong window/events relative to when
+        # this report was originally generated).
+        "outcome_attribution": input_snapshot.get("outcome_attribution"),
         # Frozen-verbatim, same posture: a report generated before P5
         # existed reads back None; progress_intelligence is itself a diff
         # against an even-earlier snapshot, so re-running it here on read

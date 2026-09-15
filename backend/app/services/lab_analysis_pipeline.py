@@ -19,6 +19,7 @@ from app.services.hypothesis_engine import build_clinical_hypotheses
 from app.services.clinical_contradictions import build_clinical_contradictions
 from app.services.confidence_calibration import build_confidence_calibration, apply_calibration_to_hypotheses
 from app.services.negative_evidence import build_negative_evidence
+from app.services.outcome_attribution import build_outcome_attribution
 from app.services.progress_intelligence import build_progress_intelligence
 from app.services.personal_baseline import build_personal_baseline, build_personal_baseline_velocity
 from app.services.action_plan_by_role import build_action_plan_by_role
@@ -1327,6 +1328,23 @@ async def run_lab_analysis_pipeline(
         contradictions=clinical_contradictions.get("contradictions"),
         evidence_gaps=evidence_gaps,
     )
+    # Outcome Attribution Engine (P21, backend-first v1): cautiously
+    # connects a P19 velocity signal (a marker's meaningful change) to a
+    # P20 intervention event that plausibly precedes it and shares its
+    # domain — never causation, always "possible_contributor". Runs after
+    # P19 (personal_baseline.velocity), P20 (intervention_memory), P15
+    # (clinical_contradictions), and P16/negative_evidence's doctor-flag
+    # exclusion posture are all available. Fails open to an empty
+    # attributions list if intervention_memory has no events (e.g.
+    # stage-30's migration not yet applied on this environment) — see
+    # outcome_attribution.py's module docstring.
+    outcome_attribution = build_outcome_attribution(
+        velocity_signals=(personal_baseline.get("velocity") or {}).get("signals"),
+        intervention_memory=intervention_memory,
+        clinical_contradictions=clinical_contradictions.get("contradictions"),
+        evidence_gaps=evidence_gaps,
+        clinical_hypotheses=clinical_hypotheses.get("hypotheses"),
+    )
     # Action Plan by Role (P9): routes already-classified signals
     # (doctor_flag/safety_level from clinical_reasoning_traces, the
     # finalized protocol's self-guided actions, next_best_tests,
@@ -1433,6 +1451,7 @@ async def run_lab_analysis_pipeline(
         "negative_evidence_version": negative_evidence.get("version"),
         "personal_baseline_velocity_version": (personal_baseline.get("velocity") or {}).get("version"),
         "intervention_memory_version": intervention_memory.get("version"),
+        "outcome_attribution_version": outcome_attribution.get("version"),
     }
 
     result = {
@@ -1466,6 +1485,7 @@ async def run_lab_analysis_pipeline(
         "confidence_calibration": confidence_calibration,
         "negative_evidence": negative_evidence,
         "intervention_memory": intervention_memory,
+        "outcome_attribution": outcome_attribution,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
         "action_plan_by_role": action_plan_by_role,
@@ -1531,6 +1551,7 @@ async def run_lab_analysis_pipeline(
                     "confidence_calibration": confidence_calibration,
                     "negative_evidence": negative_evidence,
                     "intervention_memory": intervention_memory,
+                    "outcome_attribution": outcome_attribution,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
                     "action_plan_by_role": action_plan_by_role,
