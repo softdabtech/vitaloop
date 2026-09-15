@@ -196,6 +196,12 @@ def assemble_frozen_response(
         # P17, same frozen-verbatim posture: a report generated before the
         # Negative Evidence Layer existed reads back None — never recomputed.
         "negative_evidence": input_snapshot.get("negative_evidence"),
+        # P20, same frozen-verbatim posture: a report generated before
+        # Intervention Memory existed reads back None — never recomputed
+        # (recomputing here would use the WRONG window: "since previous
+        # report" only makes sense relative to when this report was
+        # originally generated, not whenever it's later viewed).
+        "intervention_memory": input_snapshot.get("intervention_memory"),
         # Frozen-verbatim, same posture: a report generated before P5
         # existed reads back None; progress_intelligence is itself a diff
         # against an even-earlier snapshot, so re-running it here on read

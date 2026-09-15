@@ -41,6 +41,7 @@ from app.routers.partners import (
 )
 from app.routers.b2b import analyze_labs as b2b_analyze_labs
 from app.routers import knowledge
+from app.routers import interventions
 
 
 def _check_runtime_readiness() -> None:
@@ -184,3 +185,4 @@ app.include_router(partners_events_router)
 app.include_router(partners_insights_router)
 app.include_router(b2b_analyze_labs.router)
 app.include_router(knowledge.router)
+app.include_router(interventions.router, prefix="/interventions", tags=["interventions"])

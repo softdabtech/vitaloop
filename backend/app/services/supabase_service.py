@@ -2164,6 +2164,99 @@ async def delete_complaint(user_id: str, complaint_id: str) -> None:
 
 
 # ──────────────────────────────────────────────
+# INTERVENTION MEMORY (P20) — stage-30-intervention-events.sql
+# ──────────────────────────────────────────────
+
+async def get_intervention_events(user_id: str) -> List[Dict]:
+    """Fail-open: if stage-30's migration has not been applied yet (table
+    missing), returns [] rather than raising — the same posture as every
+    other historical-data fetch feeding the pipeline (e.g.
+    _load_historical_biomarkers), so a report can still generate before
+    this migration is applied.
+    """
+    supabase = _get_supabase()
+    try:
+        resp = await _run(
+            lambda: supabase.table("intervention_events")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("started_at", desc=False)
+            .execute()
+        )
+    except Exception:
+        _logger.warning("intervention_events_fetch_failed user_id=%s (migration not applied?)", user_id)
+        return []
+    events = resp.data or []
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="intervention_events",
+        details={"count": len(events)},
+    )
+    return events
+
+
+async def create_intervention_event(user_id: str, data: Dict[str, Any]) -> Dict:
+    supabase = _get_supabase()
+    payload = {**data, "user_id": user_id}
+    resp = await _run(lambda: supabase.table("intervention_events").insert(payload).execute())
+    result = resp.data[0]
+    await _audit_medical_write(
+        user_id=user_id,
+        action="create",
+        entity_type="intervention_events",
+        entity_id=str(result.get("id") or ""),
+        details={"event_type": data.get("event_type")},
+    )
+    return result
+
+
+async def update_intervention_event(user_id: str, event_id: str, data: Dict[str, Any]) -> Optional[Dict]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("intervention_events")
+        .update(data)
+        .eq("id", event_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    if not resp.data:
+        return None
+    result = resp.data[0]
+    await _audit_medical_write(
+        user_id=user_id,
+        action="update",
+        entity_type="intervention_events",
+        entity_id=event_id,
+        details={"fields": list(data.keys())},
+    )
+    return result
+
+
+async def delete_intervention_event(user_id: str, event_id: str) -> bool:
+    """Hard delete, scoped to (id, user_id) so a user can never delete
+    another user's row even if they guess a valid uuid. No soft-delete
+    convention exists elsewhere in this codebase for user-owned records
+    (see delete_complaint above) — matched here for consistency."""
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("intervention_events")
+        .delete()
+        .eq("id", event_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    deleted = bool(resp.data)
+    if deleted:
+        await _audit_medical_write(
+            user_id=user_id,
+            action="delete",
+            entity_type="intervention_events",
+            entity_id=event_id,
+        )
+    return deleted
+
+
+# ──────────────────────────────────────────────
 # WEEKLY CHECK-INS
 # ──────────────────────────────────────────────
 

@@ -1260,6 +1260,31 @@ async def run_lab_analysis_pipeline(
         previous_upload_id=_previous_upload_id,
         previous_measured_at=_previous_measured_at,
     )
+    # Intervention Memory (P20, backend-first v1): what the user reported
+    # doing between the previous upload and this one — supplements,
+    # nutrition, training, sleep, stress, illness, medication, alcohol,
+    # weight change. Context only, never causation (that's P21). Reuses
+    # the same _previous_measured_at this run already fetched for
+    # progress_intelligence above as the window's lower bound; fails open
+    # to an empty event list (and build_intervention_memory's own
+    # conservative-window fallback) if the user has none or the stage-30
+    # migration/table isn't available yet.
+    intervention_memory = None
+    if user_id:
+        try:
+            from app.services import supabase_service as _svc
+            from app.services.intervention_memory import build_intervention_memory
+
+            _intervention_events = await _svc.get_intervention_events(user_id)
+            intervention_memory = build_intervention_memory(
+                _intervention_events, window_from=_previous_measured_at
+            )
+        except Exception:
+            intervention_memory = None
+    if intervention_memory is None:
+        from app.services.intervention_memory import build_intervention_memory as _build_empty
+
+        intervention_memory = _build_empty([], window_from=_previous_measured_at)
     # Confidence Calibration Engine (P16, backend-only v1): the intended
     # consumer of P15's clinical_contradictions flagged in that stage's
     # TODO — calibrates each P14 hypothesis's confidence using
@@ -1407,6 +1432,7 @@ async def run_lab_analysis_pipeline(
         "confidence_calibration_version": confidence_calibration.get("version"),
         "negative_evidence_version": negative_evidence.get("version"),
         "personal_baseline_velocity_version": (personal_baseline.get("velocity") or {}).get("version"),
+        "intervention_memory_version": intervention_memory.get("version"),
     }
 
     result = {
@@ -1439,6 +1465,7 @@ async def run_lab_analysis_pipeline(
         "clinical_contradictions": clinical_contradictions,
         "confidence_calibration": confidence_calibration,
         "negative_evidence": negative_evidence,
+        "intervention_memory": intervention_memory,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
         "action_plan_by_role": action_plan_by_role,
@@ -1503,6 +1530,7 @@ async def run_lab_analysis_pipeline(
                     "clinical_contradictions": clinical_contradictions,
                     "confidence_calibration": confidence_calibration,
                     "negative_evidence": negative_evidence,
+                    "intervention_memory": intervention_memory,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
                     "action_plan_by_role": action_plan_by_role,
