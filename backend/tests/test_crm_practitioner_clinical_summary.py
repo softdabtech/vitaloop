@@ -166,3 +166,89 @@ async def test_no_report_yet_returns_unavailable_shape(monkeypatch):
 
     assert result["available"] is False
     assert result["reason"] == "no_completed_report_for_client"
+
+
+@pytest.mark.asyncio
+async def test_p18b_reasoning_map_fields_pass_through_verbatim(monkeypatch):
+    """P18b: the CRM Clinical Reasoning Map consumes clinical_hypotheses/
+    clinical_contradictions/confidence_calibration/negative_evidence/
+    personal_baseline/intervention_memory/outcome_attribution/
+    evidence_debt/report_quality_audit/next_test_funnel — this endpoint
+    must pass them through verbatim (capped for hypotheses/
+    contradictions), never recompute."""
+    org_id = uuid4()
+    client_id = uuid4()
+
+    async def fake_membership(_sb, _org_id, _user_id):
+        return {"role": "org_owner"}
+
+    async def fake_get_previous_report(_user_id, exclude_upload_id=None):
+        return {
+            "upload_id": "upload-1",
+            "created_at": "2026-09-14T00:00:00Z",
+            "safety_result": {},
+            "input_snapshot": {
+                "clinical_reasoning_traces": [],
+                "clinical_hypotheses": {
+                    "version": "hypothesis_engine_v1",
+                    "hypotheses": [{"hypothesis_id": f"h{i}", "domain": "iron_status"} for i in range(8)],
+                },
+                "clinical_contradictions": {
+                    "version": "clinical_contradictions_v1",
+                    "contradictions": [{"id": f"c{i}", "domain": "iron_status"} for i in range(12)],
+                },
+                "confidence_calibration": {"version": "confidence_calibration_v1", "overall_confidence": "moderate"},
+                "negative_evidence": {"version": "negative_evidence_v1", "stable_domains": []},
+                "personal_baseline": {"version": "personal_baseline_v1", "markers": []},
+                "intervention_memory": {"version": "p20_v1", "active_interventions": []},
+                "outcome_attribution": {"version": "p21_v1", "attributions": []},
+                "evidence_debt": {"version": "p22_v1", "overall_debt": "low"},
+                "report_quality_audit": {"version": "p23_v1", "audit_status": "complete"},
+                "next_test_funnel": {"version": "next_test_funnel_v1", "panel": {}},
+            },
+        }
+
+    monkeypatch.setattr(crm_router, "_get_membership", fake_membership)
+    monkeypatch.setattr(crm_router, "_get_supabase", lambda: _make_async(_FakeClient([])))
+    monkeypatch.setattr(svc, "_run", _fake_run)
+    monkeypatch.setattr(svc, "get_previous_report_version_for_user", fake_get_previous_report)
+
+    result = await crm_router.get_client_clinical_summary(client_id, org_id, _current_user(sub="owner-1"))
+
+    assert len(result["clinical_hypotheses"]["hypotheses"]) == 5
+    assert len(result["clinical_contradictions"]["contradictions"]) == 10
+    assert result["confidence_calibration"]["overall_confidence"] == "moderate"
+    assert result["evidence_debt"]["overall_debt"] == "low"
+    assert result["report_quality_audit"]["audit_status"] == "complete"
+    assert result["next_test_funnel"]["version"] == "next_test_funnel_v1"
+
+
+@pytest.mark.asyncio
+async def test_p18b_reasoning_map_fields_default_to_empty_for_old_report(monkeypatch):
+    """A report generated before P14-P23 existed has none of these keys —
+    must degrade to empty dicts, never crash."""
+    org_id = uuid4()
+    client_id = uuid4()
+
+    async def fake_membership(_sb, _org_id, _user_id):
+        return {"role": "org_owner"}
+
+    async def fake_get_previous_report(_user_id, exclude_upload_id=None):
+        return {
+            "upload_id": "upload-1",
+            "created_at": "2026-09-14T00:00:00Z",
+            "safety_result": {},
+            "input_snapshot": {"clinical_reasoning_traces": []},
+        }
+
+    monkeypatch.setattr(crm_router, "_get_membership", fake_membership)
+    monkeypatch.setattr(crm_router, "_get_supabase", lambda: _make_async(_FakeClient([])))
+    monkeypatch.setattr(svc, "_run", _fake_run)
+    monkeypatch.setattr(svc, "get_previous_report_version_for_user", fake_get_previous_report)
+
+    result = await crm_router.get_client_clinical_summary(client_id, org_id, _current_user(sub="owner-1"))
+
+    assert result["clinical_hypotheses"] == {}
+    assert result["clinical_contradictions"] == {}
+    assert result["evidence_debt"] == {}
+    assert result["report_quality_audit"] == {}

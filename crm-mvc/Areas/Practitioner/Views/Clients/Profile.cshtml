@@ -36,6 +36,36 @@ else
     "weakened" or "resolved_or_improved" => "tone-success",
     _ => "tone-gray",
   };
+  // P18b: shared tone helpers for the Clinical Reasoning Map section below.
+  string ConfidenceTone(string? confidence) => confidence switch
+  {
+    "high" or "likely" => "tone-success",
+    "moderate" or "possible" => "tone-warning",
+    "low" or "blocked" or "unlikely_but_flagged" => "tone-danger",
+    "doctor_only" => "tone-danger",
+    _ => "tone-gray",
+  };
+  string DebtTone(string? debt) => debt switch
+  {
+    "low" => "tone-success",
+    "moderate" => "tone-warning",
+    "high" or "blocked" => "tone-danger",
+    _ => "tone-gray",
+  };
+  string ActionBucketTone(string bucket) => bucket switch
+  {
+    "urgent" => "tone-danger",
+    "doctor" => "tone-warning",
+    "practitioner" => "tone-info",
+    _ => "tone-success",
+  };
+  string ActionBucketLabel(string bucket) => bucket switch
+  {
+    "urgent" => "Urgent — discuss promptly",
+    "doctor" => "Discuss with a doctor",
+    "practitioner" => "Bring to a specialist",
+    _ => "Client can act on this themselves",
+  };
   <section class="vo-card" style="padding:20px;display:grid;gap:16px;">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
       <h2 style="margin:0;font-size:1.05rem;">Clinical Reasoning Summary</h2>
@@ -178,6 +208,113 @@ else
       }
     }
   </section>
+
+  // P18b: practitioner-facing Clinical Reasoning Map, reusing the same
+  // "How VITALOOP connected the dots" framing P18 already shipped on the
+  // client-facing Results page — top hypotheses (P14, calibrated by
+  // P16), what supports/limits each one (P15 contradictions, P21
+  // outcome-attribution confounders), evidence debt (P22), and a small
+  // report-quality strip (P23). Presentation only — see
+  // ClientsController.ParseReasoningMap for the pass-through parsing.
+  var reasoningMap = Model.ClinicalSummary?.ReasoningMap ?? Array.Empty<ReasoningMapCardViewModel>();
+  var evidenceDebtSummary = Model.ClinicalSummary?.EvidenceDebt;
+  var auditSummary = Model.ClinicalSummary?.ReportQualityAudit;
+  @if (Model.ClinicalSummary?.Available == true)
+  {
+    <section class="vo-card" style="padding:20px;display:grid;gap:16px;">
+      <h2 style="margin:0;font-size:1.05rem;">Clinical Reasoning Map</h2>
+
+      @if (!reasoningMap.Any())
+      {
+        <div class="vo-empty-state">No structured reasoning map is available for this report.</div>
+      }
+      else
+      {
+        <div style="display:grid;gap:12px;">
+          @foreach (var card in reasoningMap)
+          {
+            <div class="vo-card" style="padding:14px;">
+              <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                <div>
+                  <span class="vo-pill tone-gray" style="margin-right:6px;">@card.Domain.Replace('_', ' ')</span>
+                  <strong>@card.Label</strong>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                  @if (!string.IsNullOrWhiteSpace(card.CalibratedConfidence))
+                  {
+                    <span class="vo-pill @ConfidenceTone(card.CalibratedConfidence)">
+                      @card.CalibratedConfidence.Replace('_', ' ') confidence
+                    </span>
+                  }
+                  @if (!string.IsNullOrWhiteSpace(card.DebtLevel))
+                  {
+                    <span class="vo-pill @DebtTone(card.DebtLevel)">@card.DebtLevel data completeness</span>
+                  }
+                  <span class="vo-pill @ActionBucketTone(card.ActionBucket)">@ActionBucketLabel(card.ActionBucket)</span>
+                </div>
+              </div>
+
+              @if (card.SupportingEvidence.Any())
+              {
+                <p style="margin:8px 0 0;color:var(--vo-gray-700);">
+                  <strong>Supports this interpretation:</strong> @string.Join(", ", card.SupportingEvidence)
+                </p>
+              }
+              @if (card.Limitations.Any())
+              {
+                <div style="margin-top:8px;">
+                  <strong>Limits confidence:</strong>
+                  <ul style="margin:4px 0 0;padding-left:18px;color:var(--vo-gray-700);">
+                    @foreach (var limitation in card.Limitations)
+                    {
+                      <li>@limitation</li>
+                    }
+                  </ul>
+                </div>
+              }
+              @if (card.NextTests.Any())
+              {
+                <p style="margin:8px 0 0;color:var(--vo-gray-700);">
+                  <strong>Missing tests that could reduce uncertainty:</strong> @string.Join(", ", card.NextTests)
+                </p>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (evidenceDebtSummary is not null || auditSummary is not null)
+      {
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding-top:8px;border-top:1px solid var(--vo-gray-200);">
+          @if (evidenceDebtSummary is not null)
+          {
+            <div>
+              <strong>Data completeness</strong>
+              <p style="margin:4px 0 0;color:var(--vo-gray-700);">
+                <span class="vo-pill @DebtTone(evidenceDebtSummary.OverallDebt)">@(evidenceDebtSummary.OverallDebt ?? "unknown") evidence debt</span>
+              </p>
+            </div>
+          }
+          @if (auditSummary is not null)
+          {
+            <div>
+              <strong>Report quality audit</strong>
+              <p style="margin:4px 0 0;color:var(--vo-gray-700);">
+                @auditSummary.MarkersReviewed marker(s) reviewed, @auditSummary.DomainsAssessed domain(s) assessed
+              </p>
+              <p style="margin:2px 0 0;color:var(--vo-gray-700);">
+                @auditSummary.HighConfidenceItems high-confidence item(s), @auditSummary.BlockedOrLowConfidenceItems low/blocked item(s)
+                @if (!string.IsNullOrWhiteSpace(auditSummary.AuditStatus))
+                {
+                  <span> — @auditSummary.AuditStatus.Replace('_', ' ')</span>
+                }
+              </p>
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
 
   <section class="vo-card" style="padding:20px;display:grid;gap:14px;">
     <div><strong>Client:</strong> @Model.Assignment.ClientName</div>

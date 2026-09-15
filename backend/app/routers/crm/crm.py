@@ -1138,6 +1138,22 @@ async def get_client_clinical_summary(
     next_best_tests = snapshot.get("next_best_tests") or {}
     action_plan_by_role = snapshot.get("action_plan_by_role") or {}
     safety_result = report_row.get("safety_result") or {}
+    # P18b: pass-through only, verbatim from the frozen input_snapshot —
+    # no recomputation, same fail-open-to-empty-dict posture as every
+    # other snapshot field above. A report generated before P14-P23
+    # existed simply has none of these keys and every .get() below
+    # degrades to {} / None, which the CRM view already renders as an
+    # empty state.
+    clinical_hypotheses = snapshot.get("clinical_hypotheses") or {}
+    clinical_contradictions = snapshot.get("clinical_contradictions") or {}
+    confidence_calibration = snapshot.get("confidence_calibration") or {}
+    negative_evidence = snapshot.get("negative_evidence") or {}
+    personal_baseline = snapshot.get("personal_baseline") or {}
+    intervention_memory = snapshot.get("intervention_memory") or {}
+    outcome_attribution = snapshot.get("outcome_attribution") or {}
+    evidence_debt = snapshot.get("evidence_debt") or {}
+    report_quality_audit = snapshot.get("report_quality_audit") or {}
+    next_test_funnel = snapshot.get("next_test_funnel") or {}
 
     # Sort so a practitioner opening this page sees the highest-signal
     # patterns first: doctor_flag true, then descending confidence — same
@@ -1172,6 +1188,27 @@ async def get_client_clinical_summary(
         # structure, so a conversation about "what's in your plan" isn't
         # working from two different classifications of the same findings.
         "action_plan_by_role": action_plan_by_role.get("buckets") or {},
+        # P18b Clinical Reasoning Map (practitioner-facing) — same fields
+        # P18's Results-page reasoning map adapter already consumes,
+        # capped so this endpoint doesn't balloon in size; verbatim
+        # pass-through of what the pipeline already computed, never
+        # recomputed here (see this function's own docstring above).
+        "clinical_hypotheses": {
+            **clinical_hypotheses,
+            "hypotheses": (clinical_hypotheses.get("hypotheses") or [])[:5],
+        } if clinical_hypotheses else {},
+        "clinical_contradictions": {
+            **clinical_contradictions,
+            "contradictions": (clinical_contradictions.get("contradictions") or [])[:10],
+        } if clinical_contradictions else {},
+        "confidence_calibration": confidence_calibration,
+        "negative_evidence": negative_evidence,
+        "personal_baseline": personal_baseline,
+        "intervention_memory": intervention_memory,
+        "outcome_attribution": outcome_attribution,
+        "evidence_debt": evidence_debt,
+        "report_quality_audit": report_quality_audit,
+        "next_test_funnel": next_test_funnel,
     }
 
 

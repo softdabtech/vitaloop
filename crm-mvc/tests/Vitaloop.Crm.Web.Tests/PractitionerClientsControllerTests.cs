@@ -162,6 +162,146 @@ public class PractitionerClientsControllerTests
     }
 
     [Fact]
+    public async Task Profile_Parses_Reasoning_Map_Cards_With_Limitations_And_Debt()
+    {
+        var orgId = Guid.NewGuid();
+        var clientId = Guid.NewGuid();
+        var practitionerId = Guid.NewGuid();
+        var assignment = MakeAssignment(orgId, clientId, practitionerId);
+        var gateway = new FakeCrmDataGateway
+        {
+            ClinicalSummaryDocument = JsonDocument.Parse("""
+            {
+              "client_id": "abc",
+              "available": true,
+              "clinical_hypotheses": {
+                "hypotheses": [
+                  {
+                    "hypothesis_id": "h1",
+                    "domain": "iron_status",
+                    "label": "Possible iron availability pattern",
+                    "calibrated_confidence": "moderate",
+                    "calibrated_score": 0.6,
+                    "supporting_evidence": [{ "name": "ferritin" }],
+                    "what_would_confirm_or_rule_out": [{ "marker": "transferrin saturation" }]
+                  }
+                ]
+              },
+              "clinical_contradictions": {
+                "contradictions": [
+                  { "id": "c1", "domain": "iron_status", "message": "Inflammation may limit ferritin interpretation.", "related_hypotheses": [] }
+                ]
+              },
+              "outcome_attribution": {
+                "attributions": [
+                  { "domain": "iron_status", "confounders": ["More than one self-reported event overlaps this domain."] }
+                ]
+              },
+              "evidence_debt": {
+                "overall_debt": "moderate",
+                "overall_score": 0.42,
+                "domain_debt": [ { "domain": "iron_status", "debt_level": "high" } ]
+              },
+              "report_quality_audit": {
+                "audit_status": "complete_with_limitations",
+                "summary": {
+                  "markers_reviewed": 12,
+                  "domains_assessed": 4,
+                  "high_confidence_items": 1,
+                  "blocked_or_low_confidence_items": 2
+                }
+              },
+              "action_plan_by_role": { "urgent": [], "doctor": [], "practitioner": [], "self": [] }
+            }
+            """),
+        };
+
+        var controller = CreateController(gateway, assignment, orgId);
+        var result = await controller.Profile(assignment.Id, CancellationToken.None);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<PractitionerClientProfileViewModel>(view.Model);
+        var summary = model.ClinicalSummary;
+        Assert.NotNull(summary);
+        Assert.Single(summary!.ReasoningMap);
+        var card = summary.ReasoningMap[0];
+        Assert.Equal("iron_status", card.Domain);
+        Assert.Equal("Possible iron availability pattern", card.Label);
+        Assert.Equal("moderate", card.CalibratedConfidence);
+        Assert.Equal("high", card.DebtLevel);
+        Assert.Contains("ferritin", card.SupportingEvidence);
+        Assert.Contains("transferrin saturation", card.NextTests);
+        Assert.Contains(card.Limitations, l => l.Contains("Inflammation may limit"));
+        Assert.Contains(card.Limitations, l => l.Contains("More than one self-reported event"));
+        Assert.Equal("practitioner", card.ActionBucket); // moderate confidence, no matching action-plan entry -> fallback
+
+        Assert.NotNull(summary.EvidenceDebt);
+        Assert.Equal("moderate", summary.EvidenceDebt!.OverallDebt);
+        Assert.Equal(0.42, summary.EvidenceDebt.OverallScore);
+
+        Assert.NotNull(summary.ReportQualityAudit);
+        Assert.Equal("complete_with_limitations", summary.ReportQualityAudit!.AuditStatus);
+        Assert.Equal(12, summary.ReportQualityAudit.MarkersReviewed);
+        Assert.Equal(2, summary.ReportQualityAudit.BlockedOrLowConfidenceItems);
+    }
+
+    [Fact]
+    public async Task Profile_Reasoning_Map_Is_Empty_For_Old_Report_Without_P14_Fields()
+    {
+        var orgId = Guid.NewGuid();
+        var clientId = Guid.NewGuid();
+        var practitionerId = Guid.NewGuid();
+        var assignment = MakeAssignment(orgId, clientId, practitionerId);
+        var gateway = new FakeCrmDataGateway
+        {
+            ClinicalSummaryDocument = JsonDocument.Parse("""
+            { "client_id": "abc", "available": true, "top_patterns": [] }
+            """),
+        };
+
+        var controller = CreateController(gateway, assignment, orgId);
+        var result = await controller.Profile(assignment.Id, CancellationToken.None);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<PractitionerClientProfileViewModel>(view.Model);
+        var summary = model.ClinicalSummary;
+        Assert.NotNull(summary);
+        Assert.Empty(summary!.ReasoningMap);
+        Assert.Null(summary.EvidenceDebt);
+        Assert.Null(summary.ReportQualityAudit);
+    }
+
+    [Fact]
+    public async Task Profile_Reasoning_Map_Does_Not_Throw_On_Malformed_Nested_Fields()
+    {
+        var orgId = Guid.NewGuid();
+        var clientId = Guid.NewGuid();
+        var practitionerId = Guid.NewGuid();
+        var assignment = MakeAssignment(orgId, clientId, practitionerId);
+        var gateway = new FakeCrmDataGateway
+        {
+            ClinicalSummaryDocument = JsonDocument.Parse("""
+            {
+              "client_id": "abc",
+              "available": true,
+              "clinical_hypotheses": { "hypotheses": "not_an_array" },
+              "clinical_contradictions": "not_an_object",
+              "evidence_debt": { "domain_debt": null },
+              "report_quality_audit": { "summary": "not_an_object" }
+            }
+            """),
+        };
+
+        var controller = CreateController(gateway, assignment, orgId);
+        var result = await controller.Profile(assignment.Id, CancellationToken.None);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<PractitionerClientProfileViewModel>(view.Model);
+        Assert.NotNull(model.ClinicalSummary);
+        Assert.Empty(model.ClinicalSummary!.ReasoningMap);
+    }
+
+    [Fact]
     public async Task Profile_Handles_Null_Document_Without_Throwing()
     {
         var orgId = Guid.NewGuid();

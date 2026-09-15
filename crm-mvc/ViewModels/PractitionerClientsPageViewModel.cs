@@ -35,6 +35,44 @@ public sealed class ClinicalSummaryViewModel
     public IReadOnlyList<ProgressChangeViewModel> ProgressChanges { get; init; } = Array.Empty<ProgressChangeViewModel>();
     public bool RequiresDoctorDiscussion { get; init; }
     public ActionPlanByRoleViewModel? ActionPlan { get; init; }
+
+    /// <summary>P18b: practitioner-facing Clinical Reasoning Map — top
+    /// hypotheses (P14, calibrated by P16) cross-referenced with P15
+    /// contradictions, P21 outcome-attribution confounders, and P22
+    /// evidence debt, capped to 3 cards. Presentation-only reshape of
+    /// backend/app/routers/crm/crm.py::get_client_clinical_summary's
+    /// pass-through fields — no new clinical logic.</summary>
+    public IReadOnlyList<ReasoningMapCardViewModel> ReasoningMap { get; init; } = Array.Empty<ReasoningMapCardViewModel>();
+    public EvidenceDebtSummaryViewModel? EvidenceDebt { get; init; }
+    public ReportQualityAuditSummaryViewModel? ReportQualityAudit { get; init; }
+}
+
+public sealed class ReasoningMapCardViewModel
+{
+    public string Domain { get; init; } = "";
+    public string Label { get; init; } = "";
+    public string? CalibratedConfidence { get; init; }
+    public double? CalibratedScore { get; init; }
+    public string? DebtLevel { get; init; }
+    public IReadOnlyList<string> SupportingEvidence { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> Limitations { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> NextTests { get; init; } = Array.Empty<string>();
+    public string ActionBucket { get; init; } = "self";
+}
+
+public sealed class EvidenceDebtSummaryViewModel
+{
+    public string? OverallDebt { get; init; }
+    public double? OverallScore { get; init; }
+}
+
+public sealed class ReportQualityAuditSummaryViewModel
+{
+    public string? AuditStatus { get; init; }
+    public int MarkersReviewed { get; init; }
+    public int DomainsAssessed { get; init; }
+    public int HighConfidenceItems { get; init; }
+    public int BlockedOrLowConfidenceItems { get; init; }
 }
 
 /// <summary>P9 follow-up: the same self/practitioner/doctor/urgent buckets

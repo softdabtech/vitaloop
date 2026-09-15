@@ -206,6 +206,190 @@ public class ClientsController : Controller
             ActionPlan = root.TryGetProperty("action_plan_by_role", out var apEl) && apEl.ValueKind == JsonValueKind.Object
                 ? ParseActionPlan(apEl)
                 : null,
+            ReasoningMap = ParseReasoningMap(root),
+            EvidenceDebt = ParseEvidenceDebtSummary(root),
+            ReportQualityAudit = ParseReportQualityAuditSummary(root),
+        };
+    }
+
+    // P18b: builds the practitioner-facing Clinical Reasoning Map cards —
+    // the same cross-referencing P18's frontend adapter does
+    // (frontend/src/lib/clinicalReasoningMap.js), reimplemented here over
+    // the raw JSON since the CRM is a separate .NET app with no shared
+    // JS runtime. Presentation-only: every field read here was already
+    // computed by the backend pipeline (P14-P22), nothing is recomputed.
+    private static IReadOnlyList<ReasoningMapCardViewModel> ParseReasoningMap(JsonElement root)
+    {
+        var cards = new List<ReasoningMapCardViewModel>();
+
+        if (!root.TryGetProperty("clinical_hypotheses", out var chEl) || chEl.ValueKind != JsonValueKind.Object
+            || !chEl.TryGetProperty("hypotheses", out var hypEl) || hypEl.ValueKind != JsonValueKind.Array)
+        {
+            return cards;
+        }
+
+        var contradictions = root.TryGetProperty("clinical_contradictions", out var ccEl) && ccEl.ValueKind == JsonValueKind.Object
+            && ccEl.TryGetProperty("contradictions", out var contArrEl) && contArrEl.ValueKind == JsonValueKind.Array
+            ? contArrEl.EnumerateArray().ToList()
+            : new List<JsonElement>();
+
+        var attributions = root.TryGetProperty("outcome_attribution", out var oaEl) && oaEl.ValueKind == JsonValueKind.Object
+            && oaEl.TryGetProperty("attributions", out var attrArrEl) && attrArrEl.ValueKind == JsonValueKind.Array
+            ? attrArrEl.EnumerateArray().ToList()
+            : new List<JsonElement>();
+
+        var domainDebt = root.TryGetProperty("evidence_debt", out var edEl) && edEl.ValueKind == JsonValueKind.Object
+            && edEl.TryGetProperty("domain_debt", out var ddArrEl) && ddArrEl.ValueKind == JsonValueKind.Array
+            ? ddArrEl.EnumerateArray().ToList()
+            : new List<JsonElement>();
+
+        Dictionary<string, List<ActionPlanItemViewModel>>? actionBuckets = null;
+        if (root.TryGetProperty("action_plan_by_role", out var abEl) && abEl.ValueKind == JsonValueKind.Object)
+        {
+            actionBuckets = new Dictionary<string, List<ActionPlanItemViewModel>>();
+            foreach (var bucket in new[] { "urgent", "doctor", "practitioner", "self" })
+            {
+                actionBuckets[bucket] = ParseActionPlanBucket(abEl, bucket).ToList();
+            }
+        }
+
+        static string? GetString(JsonElement el, string prop) =>
+            el.TryGetProperty(prop, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+
+        foreach (var hypothesis in hypEl.EnumerateArray().Take(3))
+        {
+            var domain = GetString(hypothesis, "domain") ?? "";
+            var hypothesisId = GetString(hypothesis, "hypothesis_id") ?? "";
+            var calibratedConfidence = GetString(hypothesis, "calibrated_confidence") ?? GetString(hypothesis, "likelihood_bucket");
+            double? calibratedScore = hypothesis.TryGetProperty("calibrated_score", out var scoreEl) && scoreEl.ValueKind == JsonValueKind.Number
+                ? scoreEl.GetDouble()
+                : hypothesis.TryGetProperty("confidence_score", out var rawScoreEl) && rawScoreEl.ValueKind == JsonValueKind.Number
+                    ? rawScoreEl.GetDouble()
+                    : null;
+            var doctorOnly = (hypothesis.TryGetProperty("doctor_only", out var doEl) && doEl.ValueKind == JsonValueKind.True)
+                || (hypothesis.TryGetProperty("doctor_flag", out var dfEl) && dfEl.ValueKind == JsonValueKind.True);
+
+            var supportingEvidence = new List<string>();
+            if (hypothesis.TryGetProperty("supporting_evidence", out var seEl) && seEl.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var marker in seEl.EnumerateArray())
+                {
+                    var name = marker.ValueKind == JsonValueKind.String
+                        ? marker.GetString()
+                        : GetString(marker, "name") ?? GetString(marker, "canonical_name");
+                    if (!string.IsNullOrWhiteSpace(name)) supportingEvidence.Add(name!);
+                }
+            }
+
+            var nextTests = new List<string>();
+            if (hypothesis.TryGetProperty("what_would_confirm_or_rule_out", out var wtEl) && wtEl.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var test in wtEl.EnumerateArray())
+                {
+                    var marker = test.ValueKind == JsonValueKind.String
+                        ? test.GetString()
+                        : GetString(test, "marker") ?? GetString(test, "name");
+                    if (!string.IsNullOrWhiteSpace(marker)) nextTests.Add(marker!);
+                }
+            }
+
+            var limitations = new List<string>();
+            foreach (var contradiction in contradictions)
+            {
+                var contDomain = GetString(contradiction, "domain") ?? "";
+                var related = contradiction.TryGetProperty("related_hypotheses", out var relEl) && relEl.ValueKind == JsonValueKind.Array
+                    && relEl.EnumerateArray().Any(r => r.ValueKind == JsonValueKind.String && r.GetString() == hypothesisId);
+                if (contDomain == domain || related)
+                {
+                    var message = GetString(contradiction, "message");
+                    if (!string.IsNullOrWhiteSpace(message)) limitations.Add(message!);
+                }
+            }
+            foreach (var attribution in attributions)
+            {
+                if (GetString(attribution, "domain") != domain) continue;
+                if (attribution.TryGetProperty("confounders", out var confEl) && confEl.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var confounder in confEl.EnumerateArray())
+                    {
+                        if (confounder.ValueKind == JsonValueKind.String) limitations.Add(confounder.GetString()!);
+                    }
+                }
+            }
+
+            var debtEntry = domainDebt.FirstOrDefault(d => GetString(d, "domain") == domain);
+            var debtLevel = debtEntry.ValueKind == JsonValueKind.Object ? GetString(debtEntry, "debt_level") : null;
+
+            var actionBucket = "self";
+            if (actionBuckets is not null)
+            {
+                var matched = actionBuckets.FirstOrDefault(kv => kv.Value.Any(i => i.Title == GetString(hypothesis, "label")));
+                if (matched.Key is not null) actionBucket = matched.Key;
+                else actionBucket = FallbackActionBucket(doctorOnly, calibratedConfidence);
+            }
+            else
+            {
+                actionBucket = FallbackActionBucket(doctorOnly, calibratedConfidence);
+            }
+
+            cards.Add(new ReasoningMapCardViewModel
+            {
+                Domain = domain,
+                Label = GetString(hypothesis, "label") ?? hypothesisId,
+                CalibratedConfidence = calibratedConfidence,
+                CalibratedScore = calibratedScore,
+                DebtLevel = debtLevel,
+                SupportingEvidence = supportingEvidence,
+                Limitations = limitations,
+                NextTests = nextTests,
+                ActionBucket = actionBucket,
+            });
+        }
+
+        return cards;
+    }
+
+    // Mirrors action_plan_by_role.py's own priority order (urgent > doctor
+    // > practitioner > self) using only the calibration fields every
+    // hypothesis already carries — same fallback logic as P18's frontend
+    // adapter (frontend/src/lib/clinicalReasoningMap.js::fallbackActionBucket).
+    private static string FallbackActionBucket(bool doctorOnly, string? calibratedConfidence)
+    {
+        if (doctorOnly || calibratedConfidence == "doctor_only") return "doctor";
+        if (calibratedConfidence is "blocked" or "moderate" or "possible") return "practitioner";
+        return "self";
+    }
+
+    private static EvidenceDebtSummaryViewModel? ParseEvidenceDebtSummary(JsonElement root)
+    {
+        if (!root.TryGetProperty("evidence_debt", out var edEl) || edEl.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+        return new EvidenceDebtSummaryViewModel
+        {
+            OverallDebt = edEl.TryGetProperty("overall_debt", out var od) && od.ValueKind == JsonValueKind.String ? od.GetString() : null,
+            OverallScore = edEl.TryGetProperty("overall_score", out var os) && os.ValueKind == JsonValueKind.Number ? os.GetDouble() : null,
+        };
+    }
+
+    private static ReportQualityAuditSummaryViewModel? ParseReportQualityAuditSummary(JsonElement root)
+    {
+        if (!root.TryGetProperty("report_quality_audit", out var rqaEl) || rqaEl.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+        var summary = rqaEl.TryGetProperty("summary", out var sEl) && sEl.ValueKind == JsonValueKind.Object ? sEl : default;
+        int GetInt(string prop) => summary.ValueKind == JsonValueKind.Object
+            && summary.TryGetProperty(prop, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt32() : 0;
+
+        return new ReportQualityAuditSummaryViewModel
+        {
+            AuditStatus = rqaEl.TryGetProperty("audit_status", out var asEl) && asEl.ValueKind == JsonValueKind.String ? asEl.GetString() : null,
+            MarkersReviewed = GetInt("markers_reviewed"),
+            DomainsAssessed = GetInt("domains_assessed"),
+            HighConfidenceItems = GetInt("high_confidence_items"),
+            BlockedOrLowConfidenceItems = GetInt("blocked_or_low_confidence_items"),
         };
     }
 
