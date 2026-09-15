@@ -20,7 +20,7 @@ from app.services.clinical_contradictions import build_clinical_contradictions
 from app.services.confidence_calibration import build_confidence_calibration, apply_calibration_to_hypotheses
 from app.services.negative_evidence import build_negative_evidence
 from app.services.progress_intelligence import build_progress_intelligence
-from app.services.personal_baseline import build_personal_baseline
+from app.services.personal_baseline import build_personal_baseline, build_personal_baseline_velocity
 from app.services.action_plan_by_role import build_action_plan_by_role
 from app.services.next_test_funnel import build_next_test_funnel
 from app.services.cost_analytics import record_analysis_cost
@@ -932,6 +932,20 @@ async def run_lab_analysis_pipeline(
         historical_biomarkers=historical_biomarkers,
         current_upload_id=analysis_id,
     )
+    # P19 Personal Baseline 2.0: velocity/direction extension, nested under
+    # personal_baseline["velocity"] — build_personal_baseline()'s own
+    # contract above is untouched (still version/available/markers/summary)
+    # so no existing caller (frozen replay, P18's reasoning map adapter,
+    # etc.) needs to change. See personal_baseline.py's P19 section
+    # docstring for the full formula.
+    personal_baseline = {
+        **personal_baseline,
+        "velocity": build_personal_baseline_velocity(
+            current_biomarkers=normalized_biomarkers,
+            historical_biomarkers=historical_biomarkers,
+            current_upload_id=analysis_id,
+        ),
+    }
     domain_definitions = await resolve_domain_definitions()
     health_states = evaluate_health_states(
         biomarkers=normalized_biomarkers,
@@ -1392,6 +1406,7 @@ async def run_lab_analysis_pipeline(
         "clinical_contradictions_version": clinical_contradictions.get("version"),
         "confidence_calibration_version": confidence_calibration.get("version"),
         "negative_evidence_version": negative_evidence.get("version"),
+        "personal_baseline_velocity_version": (personal_baseline.get("velocity") or {}).get("version"),
     }
 
     result = {
