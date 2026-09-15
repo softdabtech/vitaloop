@@ -210,6 +210,10 @@ def assemble_frozen_response(
         # P22, same frozen-verbatim posture: a report generated before
         # Evidence Debt Score existed reads back None — never recomputed.
         "evidence_debt": input_snapshot.get("evidence_debt"),
+        # P23, same frozen-verbatim posture: an audit of what happened
+        # AT GENERATION TIME — recomputing it on a later read would
+        # describe the wrong event entirely, not just be inconsistent.
+        "report_quality_audit": input_snapshot.get("report_quality_audit"),
         # Frozen-verbatim, same posture: a report generated before P5
         # existed reads back None; progress_intelligence is itself a diff
         # against an even-earlier snapshot, so re-running it here on read

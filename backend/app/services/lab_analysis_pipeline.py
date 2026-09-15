@@ -21,6 +21,7 @@ from app.services.confidence_calibration import build_confidence_calibration, ap
 from app.services.negative_evidence import build_negative_evidence
 from app.services.outcome_attribution import build_outcome_attribution
 from app.services.evidence_debt import build_evidence_debt
+from app.services.report_quality_audit import build_report_quality_audit
 from app.services.progress_intelligence import build_progress_intelligence
 from app.services.personal_baseline import build_personal_baseline, build_personal_baseline_velocity
 from app.services.action_plan_by_role import build_action_plan_by_role
@@ -1472,6 +1473,36 @@ async def run_lab_analysis_pipeline(
         "evidence_debt_version": evidence_debt.get("version"),
     }
 
+    # Report Quality Audit (P23, backend-first v1): a technical/product
+    # audit of THIS report's generation — what ran, domain coverage,
+    # safety/cost signals, reproducibility — never a health score or
+    # clinical conclusion. Built last, after version_provenance, since it
+    # reports on version_provenance itself. See
+    # report_quality_audit.py's module docstring.
+    report_quality_audit = build_report_quality_audit(
+        biomarkers=normalized_biomarkers,
+        symptoms=normalized_symptoms,
+        source_metadata=source_metadata,
+        patterns=interpreted_report.get("patterns"),
+        clinical_hypotheses=clinical_hypotheses,
+        clinical_contradictions=clinical_contradictions,
+        confidence_calibration=confidence_calibration,
+        negative_evidence=negative_evidence,
+        progress_intelligence=progress_intelligence,
+        personal_baseline=personal_baseline,
+        intervention_memory=intervention_memory,
+        outcome_attribution=outcome_attribution,
+        evidence_debt=evidence_debt,
+        action_plan_by_role=action_plan_by_role,
+        next_test_funnel=next_test_funnel,
+        evidence_gaps=evidence_gaps,
+        safety_result=safety_result,
+        version_provenance=version_provenance,
+        cost_metadata=cost_metadata,
+        snapshot_will_persist=bool(persist_report_version and user_id and analysis_id),
+    )
+    version_provenance["report_quality_audit_version"] = report_quality_audit.get("version")
+
     result = {
         "analysis_id": analysis_id or "",
         "status": "completed",
@@ -1505,6 +1536,7 @@ async def run_lab_analysis_pipeline(
         "intervention_memory": intervention_memory,
         "outcome_attribution": outcome_attribution,
         "evidence_debt": evidence_debt,
+        "report_quality_audit": report_quality_audit,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
         "action_plan_by_role": action_plan_by_role,
@@ -1572,6 +1604,7 @@ async def run_lab_analysis_pipeline(
                     "intervention_memory": intervention_memory,
                     "outcome_attribution": outcome_attribution,
                     "evidence_debt": evidence_debt,
+                    "report_quality_audit": report_quality_audit,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
                     "action_plan_by_role": action_plan_by_role,
