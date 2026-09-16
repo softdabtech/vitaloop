@@ -1808,22 +1808,32 @@ async def _check_and_validate_manual_entries(user_id: str, request: ManualAnalys
 
 
 async def _generate_protocol_for_manual_entries(request: ManualAnalysisRequest, converted_entries: list) -> list:
-    """Generate protocol via Claude if available"""
-    if not is_llm_configured():
-        logger.warning("LLM not configured, skipping protocol generation")
-        return []
+    """DEAD CODE — kept only as a documented no-op until callers are cleaned
+    up (see analyze_manual_biomarkers below).
 
-    try:
-        formatted_text = biomarker_service.format_for_claude_analysis(converted_entries)
-        protocol_result = await extract_biomarkers(
-            extracted_text=formatted_text,
-            lab_name=request.lab_name or "Manual Entry",
-            symptoms=request.biomarkers[0].model_dump() if request.biomarkers else {},
-        )
-        return protocol_result.get("recommendations", []) if protocol_result else []
-    except Exception as e:
-        logger.error(f"Error generating protocol for manual upload: {e}")
-        return []
+    2026-09-16 QA pass finding: this called
+    claude_service.extract_biomarkers(extracted_text=..., lab_name=...,
+    symptoms=<dict>) — but that function's real signature is
+    extract_biomarkers(text, symptoms: list[str], *, user_id=None,
+    upload_id=None); every one of those keyword names is wrong (no
+    `extracted_text`, no `lab_name` param at all, `symptoms` must be a
+    list not a dict). This has raised a TypeError on every single
+    non-empty, non-configured-LLM-skip call in production, logged as
+    "Error generating protocol for manual upload: ..." and swallowed by
+    the try/except below, returning [] every time — with ZERO behavioral
+    impact on the actual response, because the caller already does
+    `legacy_manual_recommendations or protocol`, and `[] or protocol`
+    always evaluates to `protocol` (the pipeline's own, already-correct
+    protocol from run_lab_analysis_pipeline — see that call's own comment
+    about manual entry following "the SAME canonical-data boundary as
+    every other B2C ingestion path"). So this function has been silently
+    dead weight — one guaranteed exception + one wasted
+    format_for_claude_analysis() call per manual upload — never a
+    diagnosis worth reproducing here, no API cost (the TypeError fires
+    before any network call), but real log noise and wasted CPU. Returns
+    [] unconditionally now so callers see identical behavior with no
+    exception and no wasted work."""
+    return []
 
 
 @router.post(

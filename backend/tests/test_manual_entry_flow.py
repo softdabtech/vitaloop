@@ -65,20 +65,20 @@ async def test_manual_entry_then_results_flow(monkeypatch):
             "biomarkers": state["saved_biomarkers"],
         }
 
+    # 2026-09-16 QA finding: _generate_protocol_for_manual_entries used to
+    # call extract_biomarkers(extracted_text=..., lab_name=..., symptoms=<a
+    # dict>) expecting a {"recommendations": [...]} return — but the real
+    # claude_service.extract_biomarkers(text, symptoms: list[str], ...) has
+    # neither that signature nor that return shape (it extracts biomarkers
+    # from lab text, it does not generate a supplement protocol). That
+    # mismatch raised a TypeError on every real call in production,
+    # silently swallowed, always yielding [] and falling back to the
+    # pipeline's own protocol — i.e. this "legacy" path never actually won
+    # in production. Fixed to a documented no-op; this fake now simply
+    # shouldn't be reachable via that path, so it's kept only in case some
+    # other call site still depends on the monkeypatch target existing.
     async def fake_extract_biomarkers(**kwargs):
-        assert kwargs.get("lab_name") == "Home Test"
-        return {
-            "recommendations": [
-                {
-                    "supplement": "Vitamin D3",
-                    "dosage": "5000 IU",
-                    "timing": "morning_with_food",
-                    "priority": "HIGH",
-                    "rationale": "Vitamin D is below reference range.",
-                    "iherb_search": "Vitamin D3 5000 IU",
-                }
-            ]
-        }
+        raise AssertionError("extract_biomarkers should not be called from the manual-entry protocol path")
 
     async def fake_save_protocol_for_upload(user_id, upload_id, recommendations):
         state["saved_protocol"] = {
@@ -195,6 +195,9 @@ async def test_manual_entry_then_results_flow(monkeypatch):
             results_json = results_resp.json()
             assert len(results_json["biomarkers"]) == 2
             assert len(results_json["protocol"]) == 1
-            assert results_json["protocol"][0]["supplement"] == "Vitamin D3"
+            # The legacy extract_biomarkers-based path is dead (see fake_extract_biomarkers
+            # above) — the saved/returned protocol is always the pipeline's own
+            # recommendations now, not a supplement-shaped legacy recommendation.
+            assert results_json["protocol"][0]["title"] == "Review nutrition basics"
     finally:
         app.dependency_overrides.clear()

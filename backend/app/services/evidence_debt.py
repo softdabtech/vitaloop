@@ -26,6 +26,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from app.services.negative_evidence import _human_name
+from app.services.negative_evidence import _DOMAIN_MARKERS as _CLINICAL_DOMAINS
 
 
 EVIDENCE_DEBT_VERSION = "p22_v1"
@@ -44,6 +45,18 @@ _MEANINGFUL_VELOCITY_STATUSES = {
 }
 
 _LOW_CONFIDENCE_LABELS = {"low", "blocked"}
+
+# Domain vocabulary this module will ever report on — matches
+# negative_evidence.py / report_quality_audit.py exactly, plus "recovery"
+# (P20's sleep/stress/training/illness cluster). Deliberately excludes
+# evidence_gaps.py's non-clinical pseudo-domains ("knowledge_coverage" for
+# a marker with no matching rule, "data_quality" for profile/unit issues)
+# — a real bug found during the 2026-09-16 QA pass: those two values were
+# leaking straight through into domain_debt because _collect_domains()
+# originally unioned every domain string it saw with no filter, producing
+# a "knowledge_coverage" entry that isn't a real clinical domain and that
+# no UI or vocabulary list anywhere else in the app recognizes.
+_KNOWN_DOMAINS = set(_CLINICAL_DOMAINS) | {"recovery"}
 
 
 def _label_from_score(score: float) -> str:
@@ -94,7 +107,11 @@ def _collect_domains(
             d = _domain_of(s)
             if d:
                 domains.add(d)
-    return sorted(domains)
+    # Filter to the real clinical domain vocabulary — see _KNOWN_DOMAINS'
+    # docstring for why this exists (evidence_gaps.py's "knowledge_coverage"
+    # / "data_quality" pseudo-domains are not clinical domains and must
+    # never surface here).
+    return sorted(domains & _KNOWN_DOMAINS)
 
 
 def _negative_evidence_entry(negative_evidence: Dict[str, Any] | None, domain: str) -> tuple[str | None, Dict[str, Any] | None]:

@@ -163,6 +163,30 @@ def test_domain_names_match_current_vocabulary():
     assert domains == {"kidney", "thyroid", "micronutrients"}
 
 
+def test_pseudo_domains_from_evidence_gaps_are_excluded():
+    """Regression (found in 2026-09-16 QA pass against production): a real
+    upload's evidence_gaps included marker_coverage entries tagged with
+    evidence_gaps.py's "knowledge_coverage" domain (a marker with no
+    matching active rule) — that string leaked into domain_debt as if it
+    were a real clinical domain, failing the "domain names match current
+    vocabulary" requirement. "data_quality" is the same kind of
+    pseudo-domain from clinical_data_integrity issues."""
+    evidence_gaps = {
+        "gaps": [
+            _gap("kidney", "creatinine"),
+            _gap("knowledge_coverage", "some_uninterpreted_marker", priority="medium"),
+            {"domain": "data_quality", "missing_marker": None, "priority": "medium"},
+        ]
+    }
+
+    result = build_evidence_debt(evidence_gaps=evidence_gaps)
+
+    domains = {d["domain"] for d in result["domain_debt"]}
+    assert domains == {"kidney"}
+    assert "knowledge_coverage" not in domains
+    assert "data_quality" not in domains
+
+
 def test_malformed_input_does_not_crash():
     result = build_evidence_debt(
         evidence_gaps={"gaps": ["bad", None, 42, {}]},
