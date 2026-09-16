@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field
 
 from app.services import supabase_service as svc
 from app.services.ua_wellbeing_openai import generate_ua_wellbeing_assessment
+from app.services.negative_evidence import _DOMAIN_MARKERS as _CLINICAL_DOMAIN_MARKERS
+from app.services.negative_evidence import _HUMAN_MARKER_NAMES as _CLINICAL_MARKER_NAMES
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -30,33 +32,38 @@ EVENT_NAMES = {
     "ua_wellbeing_result_viewed",
 }
 
-SYMPTOM_LAB_MAP: Dict[str, List[Dict[str, str]]] = {
-    "fatigue": [
-        {"key": "ferritin", "name": "Ferritin", "reason": "Iron storage is often discussed when fatigue or low energy persists."},
-        {"key": "b12", "name": "Vitamin B12", "reason": "B12 is commonly reviewed for energy, nerve symptoms, and brain fog."},
-        {"key": "tsh", "name": "TSH", "reason": "Thyroid screening is often part of a fatigue workup."},
-        {"key": "vitamin_d", "name": "Vitamin D", "reason": "Low vitamin D can overlap with low energy and mood concerns."},
-    ],
-    "hair_loss": [
-        {"key": "ferritin", "name": "Ferritin", "reason": "Iron storage is often reviewed in hair shedding discussions."},
-        {"key": "zinc", "name": "Zinc", "reason": "Zinc status can be relevant to hair and skin health conversations."},
-        {"key": "tsh", "name": "TSH", "reason": "Thyroid markers are commonly checked when hair loss is persistent."},
-    ],
-    "sleep_issues": [
-        {"key": "magnesium", "name": "Magnesium", "reason": "Magnesium status is often discussed around sleep quality and muscle tension."},
-        {"key": "vitamin_d", "name": "Vitamin D", "reason": "Vitamin D is commonly reviewed alongside sleep and mood patterns."},
-        {"key": "cortisol_discussion", "name": "Cortisol discussion", "reason": "Stress rhythm may be worth discussing with a qualified clinician."},
-    ],
-    "brain_fog": [
-        {"key": "b12", "name": "Vitamin B12", "reason": "B12 is often reviewed for cognitive and nerve-related symptoms."},
-        {"key": "ferritin", "name": "Ferritin", "reason": "Iron storage can be relevant when brain fog overlaps with fatigue."},
-        {"key": "tsh", "name": "TSH", "reason": "Thyroid status can be part of a brain fog workup."},
-    ],
-    "digestive_issues": [
-        {"key": "crp", "name": "CRP", "reason": "Inflammation markers may be discussed when symptoms persist."},
-        {"key": "b12", "name": "Vitamin B12", "reason": "B12 status can be relevant when digestion and absorption are concerns."},
-        {"key": "ferritin", "name": "Ferritin", "reason": "Iron storage may be reviewed if digestive symptoms overlap with fatigue."},
-    ],
+
+# Which clinical domains (from the same domain vocabulary the deterministic
+# reasoning engine uses in negative_evidence.py / evidence_gaps.py /
+# evidence_debt.py / report_quality_audit.py) each pre-signup symptom maps
+# to. There is no biomarker data at this point in the funnel, so this cannot
+# run hypothesis_engine.py or clinical_contradictions.py (those require
+# actual lab values) — but the *set of markers worth discussing* is derived
+# from the engine's own canonical domain->marker map (_DOMAIN_MARKERS) below,
+# instead of a separate, hand-maintained symptom->lab list that could drift
+# out of sync with it. Only covers the domains negative_evidence.py already
+# defines (iron_status, thyroid, micronutrients, inflammation,
+# metabolic_health) — kidney/liver/cardiovascular are deliberately left out
+# here since none of the ten intake symptoms map to them without lab data.
+SYMPTOM_DOMAIN_MAP: Dict[str, List[str]] = {
+    "fatigue": ["iron_status", "thyroid", "micronutrients"],
+    "sleep_issues": ["micronutrients", "thyroid"],
+    "hair_loss": ["iron_status", "thyroid"],
+    "brain_fog": ["iron_status", "thyroid", "micronutrients"],
+    "digestive_issues": ["inflammation", "iron_status", "micronutrients"],
+    "joint_pain": ["inflammation"],
+    "anxiety": ["thyroid", "micronutrients"],
+    "cold_intolerance": ["thyroid"],
+    "weight_change": ["thyroid", "metabolic_health"],
+    "poor_immunity": ["micronutrients", "inflammation"],
+}
+
+_DOMAIN_DISCUSSION_REASONS = {
+    "iron_status": "Iron storage and red-cell context are commonly part of this discussion.",
+    "thyroid": "Thyroid screening is commonly discussed for these symptoms.",
+    "micronutrients": "Key vitamin and mineral levels are often reviewed alongside these symptoms.",
+    "metabolic_health": "Glucose and metabolic markers are often part of this discussion.",
+    "inflammation": "Inflammation markers may be relevant when these symptoms persist.",
 }
 
 DEFAULT_LABS = [
@@ -121,20 +128,26 @@ def _validate_email(value: Optional[str]) -> Optional[str]:
 
 
 def _recommend_labs(symptoms: List[str]) -> List[Dict[str, str]]:
-    by_key: Dict[str, Dict[str, str]] = {}
-    # P4 FIX: Improved ferritin deduplication - choose best reason from multiple symptoms
-    by_key_reasons: Dict[str, List[str]] = {}
-
+    domains: List[str] = []
     for symptom in symptoms:
-        for lab in SYMPTOM_LAB_MAP.get(_normalize_symptom(symptom), []):
-            key = lab["key"]
-            if key not in by_key:
-                by_key[key] = lab
-                by_key_reasons[key] = [lab["reason"]]
-            else:
-                # Collect all reasons for dedup logic
-                if lab["reason"] not in by_key_reasons[key]:
-                    by_key_reasons[key].append(lab["reason"])
+        for domain in SYMPTOM_DOMAIN_MAP.get(_normalize_symptom(symptom), []):
+            if domain not in domains:
+                domains.append(domain)
+
+    by_key: Dict[str, Dict[str, str]] = {}
+    for domain in domains:
+        spec = _CLINICAL_DOMAIN_MARKERS.get(domain)
+        if not spec:
+            continue
+        reason = _DOMAIN_DISCUSSION_REASONS.get(domain, "Often part of this discussion.")
+        for marker in spec.get("required") or []:
+            if marker in by_key:
+                continue
+            by_key[marker] = {
+                "key": marker,
+                "name": _CLINICAL_MARKER_NAMES.get(marker, marker.replace("_", " ")),
+                "reason": reason,
+            }
 
     if not by_key:
         for lab in DEFAULT_LABS:
