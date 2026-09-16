@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
+import { X, ListChecks, ShieldCheck, Clock3, ArrowRight, Stethoscope } from 'lucide-react'
 // Landing is lazy — it's heavy (framer-motion) and never renders on ua.vitaloop.today
 const Landing = lazy(() => import('./pages/Landing.jsx'))
 // NotFound is rare — no reason to eager-load
@@ -677,6 +678,16 @@ function PublicSymptomPrompt({ disabled = false }) {
     return () => window.clearTimeout(timerId)
   }, [disabled, loading, user, isExcludedRoute, location.pathname])
 
+  const [entered, setEntered] = useState(false)
+  useEffect(() => {
+    if (!visible) {
+      setEntered(false)
+      return undefined
+    }
+    const raf = window.requestAnimationFrame(() => setEntered(true))
+    return () => window.cancelAnimationFrame(raf)
+  }, [visible])
+
   if (!visible) return null
 
   const closePrompt = () => setVisible(false)
@@ -685,38 +696,77 @@ function PublicSymptomPrompt({ disabled = false }) {
     navigate('/symptom-intake')
   }
 
+  const steps = [
+    { icon: ListChecks, label: 'Pick what you feel' },
+    { icon: Stethoscope, label: 'Get a discussion list' },
+    { icon: ArrowRight, label: 'Bring it to your next lab' },
+  ]
+
   return (
-    <div className="fixed inset-0 z-[3200] flex items-end justify-center bg-slate-950/35 px-4 pb-4 pt-10 backdrop-blur-[2px] sm:items-center sm:pb-10">
-      <div className="w-full max-w-[520px] overflow-hidden rounded-[28px] border border-emerald-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.26)]">
-        <div className="relative bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.20),transparent_38%),linear-gradient(135deg,#ffffff,#f0fdfa)] px-5 py-5 sm:px-6">
+    <div
+      className={`fixed inset-0 z-[3200] flex items-end justify-center bg-slate-950/50 px-4 pb-4 pt-10 backdrop-blur-sm transition-opacity duration-300 sm:items-center sm:pb-10 ${entered ? 'opacity-100' : 'opacity-0'}`}
+      onClick={closePrompt}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="symptom-prompt-heading"
+        onClick={(event) => event.stopPropagation()}
+        className={`w-full max-w-[540px] overflow-hidden rounded-[28px] border border-emerald-100 bg-white shadow-[0_32px_90px_rgba(15,23,42,0.32)] transition-all duration-300 ${entered ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-3 scale-[0.97] opacity-0'}`}
+      >
+        <div className="relative overflow-hidden bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.28),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(45,212,191,0.16),transparent_50%),linear-gradient(135deg,#f8fffb,#ecfdf5)] px-6 pb-6 pt-6 sm:px-8 sm:pt-8">
           <button
             type="button"
             onClick={closePrompt}
             aria-label="Close symptom check prompt"
-            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-xl leading-none text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
           >
-            x
+            <X className="h-4 w-4" strokeWidth={2.5} />
           </button>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Quick symptom check</p>
-          <h2 className="mt-3 max-w-[390px] text-2xl font-bold tracking-tight text-slate-950 sm:text-[28px]">
+
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
+            <Stethoscope className="h-3.5 w-3.5" strokeWidth={2.5} />
+            Quick symptom check
+          </div>
+          <h2 id="symptom-prompt-heading" className="mt-4 max-w-[420px] text-[26px] font-bold leading-tight tracking-tight text-slate-950 sm:text-[30px]">
             Feel off, but not sure what to check?
           </h2>
-          <p className="mt-3 max-w-[420px] text-sm leading-6 text-slate-600">
-            Answer a few questions and get a safe lab discussion list before creating an account.
+          <p className="mt-3 max-w-[430px] text-[15px] leading-6 text-slate-600">
+            Answer a few questions and get a safe lab discussion list before creating an account — something concrete to bring to your doctor, not a diagnosis.
           </p>
         </div>
-        <div className="px-5 py-5 sm:px-6">
-          <div className="grid gap-2 text-sm text-slate-700">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold">No login required</div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold">Takes about one minute</div>
+
+        <div className="px-6 py-6 sm:px-8">
+          <ol className="grid grid-cols-3 gap-2 text-center">
+            {steps.map(({ icon: Icon, label }) => (
+              <li key={label} className="flex flex-col items-center gap-2">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-100">
+                  <Icon className="h-4.5 w-4.5" strokeWidth={2.25} />
+                </span>
+                <span className="text-[11px] font-semibold leading-tight text-slate-600">{label}</span>
+              </li>
+            ))}
+          </ol>
+
+          <div className="mt-6 grid grid-cols-2 gap-2.5 text-[13px] text-slate-700">
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 font-semibold">
+              <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2.25} />
+              No login required
+            </div>
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-3 font-semibold">
+              <Clock3 className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2.25} />
+              About one minute
+            </div>
           </div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
             <button
               type="button"
               onClick={startIntake}
-              className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
+              className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-[0_10px_24px_rgba(5,150,105,0.28)] transition hover:bg-emerald-700"
             >
               Start symptom check
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.5} />
             </button>
             <button
               type="button"
