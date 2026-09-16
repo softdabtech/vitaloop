@@ -32,6 +32,21 @@ def _priority_rank(priority: Any) -> int:
     return {"high": 0, "medium": 1, "low": 2}.get(str(priority or "medium").strip().lower(), 1)
 
 
+def _dedup_key(marker: str) -> str:
+    """Normalize a marker label for dedup comparison only (not for display).
+
+    2026-09-16 QA follow-up: some patterns' retest_plan entries carry a single
+    comma-joined string (e.g. "TSH, free T4, free T3") while evidence_gaps
+    carries individual snake_case ids (e.g. "free_t4"). Comparing raw
+    lowercased strings let both survive into recommended_tests side by side
+    ("free_t4" and "tsh, free t4, free t3"), which the Results page then
+    rendered as a near-duplicate, inconsistently-cased list. Collapsing
+    underscores/spaces before comparing catches the id-vs-label duplicates;
+    splitting on commas (done by the caller) catches the joined-string case.
+    """
+    return marker.replace("_", " ").strip().lower()
+
+
 def build_next_best_tests(
     *,
     evidence_gaps: Dict[str, Any] | None = None,
@@ -45,9 +60,10 @@ def build_next_best_tests(
         if not isinstance(gap, dict):
             continue
         marker = str(gap.get("missing_marker") or "").strip().lower()
-        if not marker or marker in seen_markers:
+        key = _dedup_key(marker)
+        if not marker or key in seen_markers:
             continue
-        seen_markers.add(marker)
+        seen_markers.add(key)
         reason_key = str(gap.get("reason") or "")
         candidates.append(
             {
@@ -65,19 +81,26 @@ def build_next_best_tests(
         for retest in pattern.get("retest_plan") or []:
             if not isinstance(retest, dict):
                 continue
-            marker = str(retest.get("marker") or "").strip().lower()
-            if not marker or marker in seen_markers:
-                continue
-            seen_markers.add(marker)
-            candidates.append(
-                {
-                    "marker": marker,
-                    "domain": pattern.get("domain"),
-                    "priority": retest.get("priority") or pattern.get("priority") or "medium",
-                    "reason": retest.get("reason") or f"Follow-up for the {pattern.get('title') or pattern.get('key')} pattern.",
-                    "source": "pattern_retest_plan",
-                }
-            )
+            raw_marker = str(retest.get("marker") or "").strip()
+            # A retest_plan marker can be a single comma-joined string (e.g.
+            # "TSH, free T4, free T3") rather than one marker per entry —
+            # split it so each marker gets its own dedup check and doesn't
+            # survive as one lumped, inconsistently-formatted item.
+            for part in raw_marker.split(","):
+                marker = part.strip().lower()
+                key = _dedup_key(marker)
+                if not marker or key in seen_markers:
+                    continue
+                seen_markers.add(key)
+                candidates.append(
+                    {
+                        "marker": marker,
+                        "domain": pattern.get("domain"),
+                        "priority": retest.get("priority") or pattern.get("priority") or "medium",
+                        "reason": retest.get("reason") or f"Follow-up for the {pattern.get('title') or pattern.get('key')} pattern.",
+                        "source": "pattern_retest_plan",
+                    }
+                )
 
     candidates.sort(key=lambda item: _priority_rank(item.get("priority")))
     ranked = candidates[:limit]

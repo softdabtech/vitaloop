@@ -42,3 +42,38 @@ def test_empty_inputs_produce_empty_result():
     result = build_next_best_tests()
     assert result["recommended_tests"] == []
     assert result["summary"]["count"] == 0
+
+
+def test_comma_joined_retest_marker_split_and_deduped_against_ids():
+    """Regression (2026-09-16 QA follow-up): the thyroid pattern's retest_plan
+    used a single comma-joined marker string ("TSH, free T4, free T3")
+    instead of one entry per marker. Combined with evidence_gaps' individual
+    snake_case ids (e.g. "free_t4"), this produced a near-duplicate,
+    inconsistently-cased "What could reduce uncertainty" list on the Results
+    page reasoning map (e.g. "free_t4, free_t3, tsh, free t4, free t3")."""
+    evidence_gaps = {
+        "gaps": [
+            {"missing_marker": "free_t4", "domain": "thyroid", "priority": "high", "reason": "domain_expected_marker"},
+        ]
+    }
+    patterns = [
+        {
+            "key": "thyroid_function_pattern",
+            "domain": "thyroid",
+            "title": "Thyroid function pattern",
+            "priority": "medium",
+            "retest_plan": [
+                {"marker": "TSH, free T4, free T3", "priority": "medium", "reason": "Follow-up."},
+            ],
+        }
+    ]
+
+    result = build_next_best_tests(evidence_gaps=evidence_gaps, patterns=patterns)
+
+    markers = [item["marker"] for item in result["recommended_tests"]]
+    # free_t4 came from evidence_gaps first, so the joined "free t4" part
+    # (same marker, different casing/spelling) must be dropped, not duplicated.
+    assert markers.count("free_t4") == 1
+    assert not any("," in m for m in markers), f"a comma-joined marker string leaked through: {markers}"
+    assert "tsh" in markers
+    assert "free t3" in markers

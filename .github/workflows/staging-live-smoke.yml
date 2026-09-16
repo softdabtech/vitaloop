@@ -22,12 +22,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check required secrets are configured
+        id: check_secrets
+        env:
+          E2E_API_BASE_URL: ${{ secrets.E2E_API_BASE_URL }}
+          E2E_BEARER_TOKEN: ${{ secrets.E2E_BEARER_TOKEN }}
+          E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
+          E2E_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+        run: |
+          # This workflow runs on a daily schedule against a staging
+          # environment that may not have its E2E_* secrets configured yet
+          # (e.g. a fresh fork, or staging credentials not yet provisioned).
+          # That is a configuration gap, not an application bug — so this
+          # step turns it into a neutral skip of the actual smoke run
+          # instead of a hard, red schedule failure every night.
+          missing=""
+          for name in E2E_API_BASE_URL E2E_BEARER_TOKEN E2E_SUPABASE_URL E2E_SUPABASE_SERVICE_ROLE_KEY E2E_SUPABASE_ANON_KEY; do
+            if [ -z "${!name}" ]; then
+              missing="${missing} ${name}"
+            fi
+          done
+          if [ -n "${missing}" ]; then
+            echo "Skipping live smoke run — required secrets not configured:${missing}"
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Python
+        if: steps.check_secrets.outputs.configured == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install backend dependencies
+        if: steps.check_secrets.outputs.configured == 'true'
         working-directory: ./backend
         run: |
           python -m pip install --upgrade pip
@@ -35,6 +65,7 @@ jobs:
 
       - name: Run live staging smoke tests
         id: run_smoke
+        if: steps.check_secrets.outputs.configured == 'true'
         working-directory: ./backend
         env:
           E2E_RUN_LIVE: "1"
@@ -46,26 +77,6 @@ jobs:
           E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets['E2E_SUPABASE_SERVICE_ROLE_KEY'] }}
           E2E_SUPABASE_ANON_KEY: ${{ secrets['E2E_SUPABASE_ANON_KEY'] }}
         run: |
-          if [ -z "${E2E_API_BASE_URL}" ]; then
-            echo "Missing required secret: E2E_API_BASE_URL"
-            exit 1
-          fi
-          if [ -z "${E2E_BEARER_TOKEN}" ]; then
-            echo "Missing required secret: E2E_BEARER_TOKEN"
-            exit 1
-          fi
-          if [ -z "${E2E_SUPABASE_URL}" ]; then
-            echo "Missing required secret: E2E_SUPABASE_URL"
-            exit 1
-          fi
-          if [ -z "${E2E_SUPABASE_SERVICE_ROLE_KEY}" ]; then
-            echo "Missing required secret: E2E_SUPABASE_SERVICE_ROLE_KEY"
-            exit 1
-          fi
-          if [ -z "${E2E_SUPABASE_ANON_KEY}" ]; then
-            echo "Missing required secret: E2E_SUPABASE_ANON_KEY"
-            exit 1
-          fi
           set +e
           pytest -q tests/test_staging_live_supabase_smoke.py tests/test_health_profile_live_smoke.py 2>&1 | tee smoke-output.txt
           test_exit_code=${PIPESTATUS[0]}
@@ -78,6 +89,15 @@ jobs:
         env:
           E2E_API_BASE_URL: ${{ secrets.E2E_API_BASE_URL }}
         run: |
+          if [ "${{ steps.check_secrets.outputs.configured }}" != "true" ]; then
+            {
+              echo "## Staging Live Supabase Smoke"
+              echo ""
+              echo "Skipped: required E2E_* secrets are not configured for this repo/environment."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
           exit_code="${{ steps.run_smoke.outputs.exit_code }}"
           if [ -z "${exit_code}" ]; then
             exit_code="unknown"
