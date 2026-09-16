@@ -1,7 +1,55 @@
 # VITALOOP Clinical Reasoning Engine — Uniqueness Roadmap
 
-**Status:** strategy draft, 2026-09-14.  
+**Status:** implemented core roadmap + next-phase checkpoint, 2026-09-16.  
 **Scope:** next layer of product differentiation after P0–P13. This document does not replace the implemented roadmap. It describes how to make the VITALOOP Clinical Reasoning Engine feel more precise, more clinically useful, more explainable, and harder to copy.
+
+
+## Current checkpoint — 2026-09-16
+
+**Repository state:** `main` is at `44d3aa7f` after the end-to-end QA/stress pass and two follow-up polish fixes. Production health was verified after that commit: backend `/health/ready` = 200, frontend `/` = 200, CRM `/health` = 200.
+
+**Roadmap status:** the core Clinical Reasoning Engine uniqueness roadmap described in this document has been implemented and verified in production. The shipped sequence is:
+
+- **P14 Hypothesis Engine** — deterministic ranked hypotheses, persisted in `input_snapshot`, frozen-replay safe.
+- **P15 Clinical Contradiction Detector** — deterministic contradiction rules across the main domains.
+- **P16 Confidence Calibration Engine** — canonical confidence labels and contradiction/evidence-gap downgrades.
+- **P17 Negative Evidence Layer** — stable/under-tested/conflicting domain assessment without diagnostic claims.
+- **P18 Clinical Reasoning Map UI** — Results page chain cards over P14–P17.
+- **P18b CRM Clinical Reasoning Map UI** — practitioner-facing CRM map over the frozen reasoning contract.
+- **P19 Personal Baseline 2.0** — velocity/direction signals added to the existing personal baseline contract.
+- **P20 Intervention Memory** — user-scoped intervention events and snapshot context. `stage-30-intervention-events.sql` has been applied and the live API path was verified locally on the production host.
+- **P21 Outcome Attribution Engine** — possible-contributor attribution only, no causation claims.
+- **P22 Evidence Debt Score** — data-completeness/uncertainty score, explicitly not a health score.
+- **P23 Report Quality Audit** — product/QA audit over the full reasoning chain, no new clinical logic.
+
+**End-to-end QA status:** a full QA/stress pass was run after P18b. It used the synthetic test user `zzz@z.com`, real `/interventions` API calls, manual-entry lab reports with >10 biomarkers, frozen replay checks, Results UI checks, CRM contract checks, security checks, and OpenAI/LLM usage checks. It confirmed that P14–P23 fields are present in fresh snapshots, old reports degrade gracefully, frozen replay returns persisted values, and deterministic P14–P23 modules do not create LLM usage.
+
+**Bugs found by QA and fixed:**
+
+- `evidence_debt.py` leaked non-clinical pseudo-domains from `evidence_gaps.py` (`knowledge_coverage`, `data_quality`) into clinical `domain_debt`. Fixed by filtering to the canonical clinical domain vocabulary.
+- `analyze.py::_generate_protocol_for_manual_entries` called `extract_biomarkers()` with a fictional/stale contract, logging a swallowed TypeError on every manual upload. Fixed to a documented no-op because the pipeline already generates the correct protocol.
+- Reasoning-map next-test lists showed near-duplicate marker names due to comma-joined strings and snake_case marker ids being deduped differently. Fixed by splitting comma-joined marker strings and normalizing underscores/spaces before dedupe.
+- Scheduled staging smoke no longer fails red when optional `E2E_*` secrets are absent; it now skips with a neutral summary until those secrets are configured.
+
+**Known remaining non-blockers:**
+
+- The QA pass verified the CRM practitioner view through the shared backend contract, not a full interactive practitioner login walkthrough. A live CRM walkthrough can still be done later if needed.
+- `cost_metadata` / `ai_orchestration` are intentionally kept out of frozen clinical replay. If cost visibility is needed, build a separate non-frozen Ops endpoint/dashboard rather than expanding the clinical snapshot contract.
+- Scheduled staging smoke will only run real live Supabase checks once the repo has `E2E_SUPABASE_URL`, `E2E_SUPABASE_SERVICE_ROLE_KEY`, and `E2E_SUPABASE_ANON_KEY` configured.
+
+**Recommended next product direction:** do not add more generic reasoning layers immediately. The next high-leverage phase is **P24 Population Profiles**: profile-aware interpretation overlays that modify priority, evidence gaps, next tests, explanation copy, and practitioner prompts without forking the core engine. Start with:
+
+1. **Longevity / Metabolic Optimization** — stricter optimization lens for insulin resistance, lipids, inflammation, liver/metabolic strain, vitamin D, ApoB/triglycerides/HDL, and personal-baseline drift.
+2. **Athlete / Recovery** — recovery/performance lens for ferritin, vitamin D/B12, CRP, liver enzymes, sleep/stress/training interventions, and overreaching/recovery context.
+
+Defer **Female Health** to a later, more carefully reviewed phase because it needs richer cycle, pregnancy/postpartum, contraception, iron, thyroid, and symptom context.
+
+**Suggested later phases after P24:**
+
+- **P25 Doctor Escalation Precision 2.0** — structured reason codes and recommended timing for doctor/urgent buckets.
+- **P26 Rule Pack Quality Scoring** — internal quality/maturity scoring for rule packs.
+- **P27 Clinical Disagreement Mode** — compare Core vs profile/rule-pack interpretations once multiple packs are mature.
+- **P28 No-LLM / Cost-Aware Reasoning Audit** — audit remaining LLM calls, cache candidates, model choices, per-report cost attribution, and smoke-job cost guards.
 
 ## Why this document exists
 
