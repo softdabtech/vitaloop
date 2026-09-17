@@ -228,6 +228,13 @@ def assemble_frozen_response(
         # generated, and re-selecting now could silently disagree with the
         # population_profile_overlays already frozen above.
         "population_profile_selection": input_snapshot.get("population_profile_selection"),
+        # P25, same frozen-verbatim posture: a report generated before
+        # Doctor Escalation Precision existed reads back None — never
+        # recomputed. Recomputing here would also be wrong on principle:
+        # escalations are translated from the safety/reasoning signals as
+        # they stood AT GENERATION TIME, and those are themselves
+        # frozen-verbatim above.
+        "doctor_escalation_precision": input_snapshot.get("doctor_escalation_precision"),
         # Frozen-verbatim, same posture: a report generated before P5
         # existed reads back None; progress_intelligence is itself a diff
         # against an even-earlier snapshot, so re-running it here on read

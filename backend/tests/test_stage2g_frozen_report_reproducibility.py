@@ -996,3 +996,46 @@ def test_frozen_response_handles_missing_population_profile_selection_gracefully
     )
 
     assert response["population_profile_selection"] is None
+
+
+def test_frozen_response_serves_persisted_doctor_escalation_precision():
+    """P25: doctor_escalation_precision gets the same frozen-verbatim
+    treatment as every other P14-P24 field above."""
+    frozen = _frozen_row(
+        input_snapshot={
+            "doctor_escalation_precision": {
+                "version": "p25_v1",
+                "overall_level": "doctor",
+                "recommended_timing": "soon",
+                "escalations": [{"id": "liver_doctor_review", "level": "doctor", "domain": "liver"}],
+                "summary": {"urgent_count": 0, "doctor_count": 1, "practitioner_count": 0, "self_count": 0},
+            },
+        }
+    )
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["doctor_escalation_precision"]["overall_level"] == "doctor"
+    assert response["doctor_escalation_precision"]["escalations"][0]["id"] == "liver_doctor_review"
+
+
+def test_frozen_response_handles_missing_doctor_escalation_precision_gracefully():
+    """A report generated before P25 existed must read back None, not
+    crash and not be recomputed from today's data."""
+    frozen = _frozen_row(input_snapshot={"population_profile_overlays": {"version": "p24_v1", "profiles": []}})
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["doctor_escalation_precision"] is None

@@ -24,6 +24,7 @@ from app.services.evidence_debt import build_evidence_debt
 from app.services.report_quality_audit import build_report_quality_audit
 from app.services.population_profiles import build_population_profile_overlays
 from app.services.population_profile_selection import select_population_profiles
+from app.services.doctor_escalation_precision import build_doctor_escalation_precision
 from app.services.progress_intelligence import build_progress_intelligence
 from app.services.personal_baseline import build_personal_baseline, build_personal_baseline_velocity
 from app.services.action_plan_by_role import build_action_plan_by_role
@@ -1538,6 +1539,29 @@ async def run_lab_analysis_pipeline(
     )
     version_provenance["report_quality_audit_version"] = report_quality_audit.get("version")
 
+    # Doctor Escalation Precision 2.0 (P25, backend-first v1): translates
+    # the already-existing doctor/urgent signals (clinical_reasoning_traces'
+    # safety_level/doctor_flag, safety_result) into structured, per-domain
+    # escalation objects with fixed reason codes -- no new marker
+    # thresholds, no new detection, and a population profile can only add
+    # context (related_profiles), never change the level. See
+    # doctor_escalation_precision.py's module docstring.
+    doctor_escalation_precision = build_doctor_escalation_precision(
+        action_plan_by_role=action_plan_by_role,
+        safety_result=safety_result,
+        clinical_hypotheses=clinical_hypotheses,
+        clinical_contradictions=clinical_contradictions,
+        evidence_gaps=evidence_gaps,
+        negative_evidence=negative_evidence,
+        evidence_debt=evidence_debt,
+        population_profile_selection=population_profile_selection,
+        population_profile_overlays=population_profile_overlays,
+        report_quality_audit=report_quality_audit,
+        clinical_reasoning_traces=clinical_reasoning_traces,
+        detected_patterns=interpreted_report.get("patterns"),
+    )
+    version_provenance["doctor_escalation_precision_version"] = doctor_escalation_precision.get("version")
+
     result = {
         "analysis_id": analysis_id or "",
         "status": "completed",
@@ -1574,6 +1598,7 @@ async def run_lab_analysis_pipeline(
         "report_quality_audit": report_quality_audit,
         "population_profile_overlays": population_profile_overlays,
         "population_profile_selection": population_profile_selection,
+        "doctor_escalation_precision": doctor_escalation_precision,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
         "action_plan_by_role": action_plan_by_role,
@@ -1644,6 +1669,7 @@ async def run_lab_analysis_pipeline(
                     "report_quality_audit": report_quality_audit,
                     "population_profile_overlays": population_profile_overlays,
                     "population_profile_selection": population_profile_selection,
+                    "doctor_escalation_precision": doctor_escalation_precision,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
                     "action_plan_by_role": action_plan_by_role,
