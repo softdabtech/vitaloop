@@ -214,6 +214,12 @@ def assemble_frozen_response(
         # AT GENERATION TIME — recomputing it on a later read would
         # describe the wrong event entirely, not just be inconsistent.
         "report_quality_audit": input_snapshot.get("report_quality_audit"),
+        # P24, same frozen-verbatim posture: a report generated before
+        # Population Profiles existed reads back None — never recomputed.
+        # Recomputing here would also be wrong on principle: this overlay
+        # reflects the OTHER P14-P23 outputs as they stood at generation
+        # time, and those are themselves frozen-verbatim above.
+        "population_profile_overlays": input_snapshot.get("population_profile_overlays"),
         # Frozen-verbatim, same posture: a report generated before P5
         # existed reads back None; progress_intelligence is itself a diff
         # against an even-earlier snapshot, so re-running it here on read

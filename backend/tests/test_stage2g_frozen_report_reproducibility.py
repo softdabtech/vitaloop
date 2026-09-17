@@ -906,3 +906,45 @@ def test_frozen_response_handles_missing_next_test_funnel_gracefully():
     )
 
     assert response["next_test_funnel"] is None
+
+
+def test_frozen_response_serves_persisted_population_profile_overlays():
+    """P24: population_profile_overlays gets the same frozen-verbatim
+    treatment as every other P14-P23 field above -- persisted at
+    generation time, never recomputed on read."""
+    frozen = _frozen_row(
+        input_snapshot={
+            "population_profile_overlays": {
+                "version": "p24_v1",
+                "active_profile_ids": ["longevity_metabolic_optimization"],
+                "profiles": [{"profile_id": "longevity_metabolic_optimization", "practitioner_prompts": ["test prompt"]}],
+            },
+        }
+    )
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["population_profile_overlays"]["active_profile_ids"] == ["longevity_metabolic_optimization"]
+    assert response["population_profile_overlays"]["profiles"][0]["practitioner_prompts"] == ["test prompt"]
+
+
+def test_frozen_response_handles_missing_population_profile_overlays_gracefully():
+    """A report generated before P24 existed must read back None, not
+    crash and not be recomputed from today's data."""
+    frozen = _frozen_row(input_snapshot={"evidence_gaps": {"summary": {"gap_count": 0}}})
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["population_profile_overlays"] is None
