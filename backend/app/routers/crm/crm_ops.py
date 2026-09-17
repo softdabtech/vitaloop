@@ -12,6 +12,7 @@ import logging
 from app.config import settings
 from app.dependencies_crm import UserContext, require_super_admin, get_user_context
 from app.services import supabase_service as svc
+from app.services.llm_cost_audit import build_llm_cost_audit
 
 logger = logging.getLogger("crm.ops")
 
@@ -519,6 +520,23 @@ async def get_openai_usage_metrics(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve OpenAI usage metrics: {str(e)}"
         )
+
+
+@router.get("/llm-cost-audit", summary="Get the static no-LLM/cost-aware reasoning audit (P28)")
+async def get_llm_cost_audit(
+    user_context: UserContext = Depends(require_super_admin),
+) -> Dict[str, Any]:
+    """Read-only, deterministic. Returns app/services/llm_cost_audit.py's
+    static registry of every known LLM/OpenAI call site, which usage
+    category it falls into, whether it's already logged to
+    llm_usage_events, and a recommended next action for each. This is a
+    hand-maintained code audit, not a live scan -- see
+    docs/LLM_COST_AUDIT_2026-09-17.md and the module's own docstring.
+    Deliberately makes no database call and touches no clinical reasoning
+    state: this is ops visibility only, separate from the
+    /crm/ops/openai-usage and /crm/ops/claude-usage live-usage endpoints
+    above, which read actual logged spend."""
+    return build_llm_cost_audit()
 
 
 @router.get("/active-client-activity", summary="Get active client activity metrics")
