@@ -220,6 +220,14 @@ def assemble_frozen_response(
         # reflects the OTHER P14-P23 outputs as they stood at generation
         # time, and those are themselves frozen-verbatim above.
         "population_profile_overlays": input_snapshot.get("population_profile_overlays"),
+        # P24.3, same frozen-verbatim posture: which profile(s) were
+        # selected (default/explicit/inferred) AT GENERATION TIME — a
+        # report generated before Profile Selection existed reads back
+        # None. Never recomputed: intervention_memory context available
+        # today could differ from what was true when this report was
+        # generated, and re-selecting now could silently disagree with the
+        # population_profile_overlays already frozen above.
+        "population_profile_selection": input_snapshot.get("population_profile_selection"),
         # Frozen-verbatim, same posture: a report generated before P5
         # existed reads back None; progress_intelligence is itself a diff
         # against an even-earlier snapshot, so re-running it here on read

@@ -23,6 +23,7 @@ from app.services.outcome_attribution import build_outcome_attribution
 from app.services.evidence_debt import build_evidence_debt
 from app.services.report_quality_audit import build_report_quality_audit
 from app.services.population_profiles import build_population_profile_overlays
+from app.services.population_profile_selection import select_population_profiles
 from app.services.progress_intelligence import build_progress_intelligence
 from app.services.personal_baseline import build_personal_baseline, build_personal_baseline_velocity
 from app.services.action_plan_by_role import build_action_plan_by_role
@@ -1386,9 +1387,21 @@ async def run_lab_analysis_pipeline(
         outcome_attribution=outcome_attribution,
         next_test_funnel=next_test_funnel,
     )
+    # Population Profile Selection (P24.3, backend-first v1): decides WHICH
+    # profile(s) below should run for this report -- longevity_metabolic_
+    # optimization stays the always-on default; athlete_recovery activates
+    # only via an explicit source_metadata["population_profile_ids"]
+    # override or a strong structured intervention_memory signal (a
+    # "training" event, or a sleep/stress/illness event whose own text
+    # names athletic context). Never reads lab markers to decide this. See
+    # population_profile_selection.py's module docstring.
+    population_profile_selection = select_population_profiles(
+        intervention_memory=intervention_memory,
+        source_metadata=source_metadata,
+    )
     # Population Profiles (P24, backend-first v1): an overlay layer over
     # every reasoning-core stage above -- re-reads their already-computed,
-    # already-calibrated output through one named population profile's
+    # already-calibrated output through the selected population profile(s)'
     # focus domains, and adjusts emphasis/next-test priority/practitioner
     # prompts only. No new detection logic, no change to
     # clinical_hypotheses/evidence_debt/etc. themselves. See
@@ -1403,6 +1416,7 @@ async def run_lab_analysis_pipeline(
         evidence_debt=evidence_debt,
         next_test_funnel=next_test_funnel,
         action_plan_by_role=action_plan_by_role,
+        profile_ids=population_profile_selection.get("active_profile_ids"),
     )
     output_knowledge_evaluation = _localized_knowledge_evaluation_for_response(
         knowledge_evaluation,
@@ -1491,6 +1505,7 @@ async def run_lab_analysis_pipeline(
         "outcome_attribution_version": outcome_attribution.get("version"),
         "evidence_debt_version": evidence_debt.get("version"),
         "population_profile_overlays_version": population_profile_overlays.get("version"),
+        "population_profile_selection_version": population_profile_selection.get("version"),
     }
 
     # Report Quality Audit (P23, backend-first v1): a technical/product
@@ -1558,6 +1573,7 @@ async def run_lab_analysis_pipeline(
         "evidence_debt": evidence_debt,
         "report_quality_audit": report_quality_audit,
         "population_profile_overlays": population_profile_overlays,
+        "population_profile_selection": population_profile_selection,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
         "action_plan_by_role": action_plan_by_role,
@@ -1627,6 +1643,7 @@ async def run_lab_analysis_pipeline(
                     "evidence_debt": evidence_debt,
                     "report_quality_audit": report_quality_audit,
                     "population_profile_overlays": population_profile_overlays,
+                    "population_profile_selection": population_profile_selection,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
                     "action_plan_by_role": action_plan_by_role,

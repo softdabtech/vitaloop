@@ -948,3 +948,51 @@ def test_frozen_response_handles_missing_population_profile_overlays_gracefully(
     )
 
     assert response["population_profile_overlays"] is None
+
+
+def test_frozen_response_serves_persisted_population_profile_selection():
+    """P24.3: population_profile_selection gets the same frozen-verbatim
+    treatment as population_profile_overlays -- persisted at generation
+    time, never recomputed on read (intervention_memory context available
+    today could differ from what was true at generation time)."""
+    frozen = _frozen_row(
+        input_snapshot={
+            "population_profile_selection": {
+                "version": "p24_3_v1",
+                "active_profile_ids": ["longevity_metabolic_optimization", "athlete_recovery"],
+                "selection_source": "mixed",
+                "selection_reasons": [{"profile_id": "athlete_recovery", "reason_code": "training_context_present", "source": "intervention_memory"}],
+                "ignored_profile_ids": [],
+            },
+        }
+    )
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["population_profile_selection"]["selection_source"] == "mixed"
+    assert response["population_profile_selection"]["active_profile_ids"] == [
+        "longevity_metabolic_optimization", "athlete_recovery",
+    ]
+
+
+def test_frozen_response_handles_missing_population_profile_selection_gracefully():
+    """A report generated before P24.3 existed (including P24.1/P24.2-era
+    reports, which had overlays but no explicit selection record) must
+    read back None, not crash and not be recomputed."""
+    frozen = _frozen_row(input_snapshot={"population_profile_overlays": {"version": "p24_v1", "profiles": []}})
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=frozen,
+        user_profile={},
+        locale="en",
+    )
+
+    assert response["population_profile_selection"] is None
