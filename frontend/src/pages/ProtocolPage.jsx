@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, FileText, GitBranch, HelpCircle, MessageCircle, RefreshCw, ShieldAlert, Sparkles } from 'lucide-react'
+import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, FileText, GitBranch, HelpCircle, MessageCircle, RefreshCw, ShieldAlert, Sparkles, Stethoscope } from 'lucide-react'
 import api from '../lib/api.js'
 import { useFeature } from '../hooks/useFeature.js'
 import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
@@ -78,6 +78,20 @@ const PROTOCOL_COPY = {
     retestFallback: 'Retest timing depends on the marker, symptoms, and clinician guidance.',
     safetyDiscussion: 'Safety and Clinician Discussion',
     discussionFallback: 'Ask whether the plan fits your symptoms, medications, history, and current lab context.',
+    doctorEscalationTitle: 'Doctor discussion',
+    doctorEscalationIntro: 'Based on this report, these points may be worth a conversation with a doctor.',
+    doctorEscalationLevelLabels: {
+      urgent: 'Needs prompt medical attention',
+      doctor: 'Worth discussing with a doctor',
+    },
+    doctorEscalationTimingLabels: {
+      urgent: 'As soon as possible',
+      prompt: 'Within the next few days',
+      soon: 'In the near term',
+      routine: 'At your next routine check-in',
+    },
+    doctorEscalationMarkersLabel: 'Related markers',
+    doctorEscalationDisclaimer: 'This is educational information, not a diagnosis, and does not replace a doctor.',
     evidenceTitle: 'Evidence / Why this appears',
     evidenceBody: 'When available, each action shows timing, priority, category, evidence, effort, safety notes, and intended outcome from the existing report data. Empty fields are hidden instead of fabricated.',
     effort: 'Effort',
@@ -162,6 +176,20 @@ const PROTOCOL_COPY = {
     retestFallback: 'Терміни повторної перевірки залежать від показника, симптомів і рекомендацій фахівця.',
     safetyDiscussion: 'Безпека та питання до фахівця',
     discussionFallback: 'Запитайте, чи відповідає план вашим симптомам, лікам, історії та поточному контексту аналізів.',
+    doctorEscalationTitle: 'Обговорення з лікарем',
+    doctorEscalationIntro: 'На основі цього звіту ці моменти може варто обговорити з лікарем.',
+    doctorEscalationLevelLabels: {
+      urgent: 'Потребує швидкої медичної уваги',
+      doctor: 'Варто обговорити з лікарем',
+    },
+    doctorEscalationTimingLabels: {
+      urgent: 'Якнайшвидше',
+      prompt: 'Протягом кількох днів',
+      soon: 'Найближчим часом',
+      routine: 'У плановому порядку',
+    },
+    doctorEscalationMarkersLabel: 'Пов’язані показники',
+    doctorEscalationDisclaimer: 'VITALOOP не ставить діагноз і не замінює лікаря.',
     evidenceTitle: 'Доказовість / Чому це показано',
     evidenceBody: 'Коли дані доступні, кожна дія показує час, пріоритет, категорію, доказовість, зусилля, примітки безпеки й очікуваний результат. Порожні поля приховані, а не вигадані.',
     effort: 'Зусилля',
@@ -281,6 +309,10 @@ async function loadProtocolData(uploadId) {
       ? data.final_analysis.clinical_reasoning_traces
       : []
   const progressIntelligence = data?.progress_intelligence ?? data?.final_analysis?.progress_intelligence ?? null
+  // P29: doctor_escalation_precision (backend/app/services/doctor_escalation_precision.py)
+  // -- see P29a exposure review (docs/P29A_DOCTOR_ESCALATION_FRONTEND_EXPOSURE_REVIEW_2026-09-18.md)
+  // for why both the top-level and final_analysis fallbacks are checked.
+  const doctorEscalationPrecision = data?.doctor_escalation_precision ?? data?.final_analysis?.doctor_escalation_precision ?? null
   return {
     biomarkers,
     protocol: coreProtocol.length ? coreProtocol : storedProtocol.length ? storedProtocol : actionPlan,
@@ -291,6 +323,7 @@ async function loadProtocolData(uploadId) {
     knowledgeReport: data?.knowledge_report ?? null,
     clinicalReasoningTraces,
     progressIntelligence,
+    doctorEscalationPrecision,
   }
 }
 
@@ -494,6 +527,67 @@ function ReasoningTraceCard({ trace, copy, isUk }) {
   )
 }
 
+const DOCTOR_ESCALATION_LEVEL_ORDER = { urgent: 0, doctor: 1 }
+const DOCTOR_ESCALATION_MAX_ITEMS = 3
+const DOCTOR_ESCALATION_LEVEL_TONE = { urgent: 'critical', doctor: 'warning' }
+
+// P29: renders doctor_escalation_precision (backend/app/services/
+// doctor_escalation_precision.py) as a small, restrained "doctor
+// discussion" card near the existing safety/reasoning area -- never a
+// full-width panic banner, even for an "urgent" entry. Renders nothing
+// when there is no doctor/urgent level escalation: a practitioner/self-
+// only report is already covered by the protocol/action-plan sections
+// above. Deliberately does not display reason_codes, internal ids,
+// related_profiles, related_hypotheses, raw contradictions, or
+// pattern_escalation_reasons -- see P29's scope (docs/
+// P29A_DOCTOR_ESCALATION_FRONTEND_EXPOSURE_REVIEW_2026-09-18.md).
+function DoctorEscalationCard({ doctorEscalationPrecision, copy }) {
+  const escalations = Array.isArray(doctorEscalationPrecision?.escalations)
+    ? doctorEscalationPrecision.escalations
+    : []
+  const relevant = escalations
+    .filter((item) => item?.level === 'urgent' || item?.level === 'doctor')
+    .sort((a, b) => DOCTOR_ESCALATION_LEVEL_ORDER[a.level] - DOCTOR_ESCALATION_LEVEL_ORDER[b.level])
+    .slice(0, DOCTOR_ESCALATION_MAX_ITEMS)
+
+  if (!relevant.length) return null
+
+  return (
+    <CoachCard className="p-5 sm:p-6">
+      <div className="mb-4 flex items-center gap-2">
+        <Stethoscope className="h-5 w-5 text-teal-600" />
+        <h2 className="text-lg font-extrabold text-slate-950">{copy.doctorEscalationTitle}</h2>
+      </div>
+      <p className="mb-4 text-sm leading-6 text-slate-600">{copy.doctorEscalationIntro}</p>
+      <div className="space-y-3">
+        {relevant.map((item, index) => {
+          const markers = asTextList(item.related_markers).slice(0, 6)
+          const timingLabel = copy.doctorEscalationTimingLabels?.[item.recommended_timing]
+          return (
+            <div key={item.id || index} className="rounded-2xl bg-slate-50 p-3">
+              <CoachBadge tone={DOCTOR_ESCALATION_LEVEL_TONE[item.level]} className="mb-2">
+                {copy.doctorEscalationLevelLabels?.[item.level]}
+              </CoachBadge>
+              {!!item.human_readable_reason && (
+                <p className="text-sm leading-6 text-slate-700">{item.human_readable_reason}</p>
+              )}
+              {!!markers.length && (
+                <p className="mt-2 text-sm leading-5 text-slate-600">
+                  <span className="font-semibold text-slate-800">{copy.doctorEscalationMarkersLabel}:</span> {markers.join(', ')}
+                </p>
+              )}
+              {!!timingLabel && (
+                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{timingLabel}</p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <p className="mt-4 text-xs leading-5 text-slate-400">{copy.doctorEscalationDisclaimer}</p>
+    </CoachCard>
+  )
+}
+
 const PROGRESS_STATUS_TONE = {
   strengthened: 'warning',
   weakened: 'success',
@@ -658,6 +752,7 @@ export default function ProtocolPage() {
   const [shoppingLinks, setShoppingLinks] = useState([])
   const [clinicalReasoningTraces, setClinicalReasoningTraces] = useState([])
   const [progressIntelligence, setProgressIntelligence] = useState(null)
+  const [doctorEscalationPrecision, setDoctorEscalationPrecision] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [exporting, setExporting] = useState(false)
@@ -678,6 +773,7 @@ export default function ProtocolPage() {
         setShoppingLinks(data.shoppingLinks)
         setClinicalReasoningTraces(data.clinicalReasoningTraces)
         setProgressIntelligence(data.progressIntelligence)
+        setDoctorEscalationPrecision(data.doctorEscalationPrecision)
         gaProtocolView(uploadId)
       } catch (err) {
         if (!active) return
@@ -861,6 +957,8 @@ export default function ProtocolPage() {
           ) : <p className="text-sm leading-6 text-slate-600">{copy.discussionFallback}</p>}
         </CoachCard>
       </div>
+
+      <DoctorEscalationCard doctorEscalationPrecision={doctorEscalationPrecision} copy={copy} />
 
       <ProgressActionSection progress={progressIntelligence} copy={copy} />
 

@@ -278,6 +278,20 @@ const RESULTS_COPY = {
       self: { label: 'You can do yourself', tone: 'success' },
     },
     actionPlanEmptyBucket: 'Nothing in this category right now.',
+    doctorEscalationTitle: 'Doctor discussion',
+    doctorEscalationIntro: 'Based on this report, these points may be worth a conversation with a doctor.',
+    doctorEscalationLevelLabels: {
+      urgent: 'Needs prompt medical attention',
+      doctor: 'Worth discussing with a doctor',
+    },
+    doctorEscalationTimingLabels: {
+      urgent: 'As soon as possible',
+      prompt: 'Within the next few days',
+      soon: 'In the near term',
+      routine: 'At your next routine check-in',
+    },
+    doctorEscalationMarkersLabel: 'Related markers',
+    doctorEscalationDisclaimer: 'This is educational information, not a diagnosis, and does not replace a doctor.',
   },
   uk: {
     hints: [
@@ -453,6 +467,20 @@ const RESULTS_COPY = {
       self: { label: 'Можна зробити самостійно', tone: 'success' },
     },
     actionPlanEmptyBucket: 'У цій категорії поки нічого немає.',
+    doctorEscalationTitle: 'Обговорення з лікарем',
+    doctorEscalationIntro: 'На основі цього звіту ці моменти може варто обговорити з лікарем.',
+    doctorEscalationLevelLabels: {
+      urgent: 'Потребує швидкої медичної уваги',
+      doctor: 'Варто обговорити з лікарем',
+    },
+    doctorEscalationTimingLabels: {
+      urgent: 'Якнайшвидше',
+      prompt: 'Протягом кількох днів',
+      soon: 'Найближчим часом',
+      routine: 'У плановому порядку',
+    },
+    doctorEscalationMarkersLabel: 'Пов’язані показники',
+    doctorEscalationDisclaimer: 'VITALOOP не ставить діагноз і не замінює лікаря.',
   },
 }
 
@@ -729,6 +757,66 @@ function ActionPlanByRoleSection({ actionPlan, copy }) {
           )
         })}
       </div>
+    </SectionCard>
+  )
+}
+
+// P29: renders doctor_escalation_precision (backend/app/services/
+// doctor_escalation_precision.py) as a small, restrained "doctor
+// discussion" card — never a full-width panic banner, even for an
+// "urgent" entry. Renders nothing at all when there is no doctor/urgent
+// level escalation: a practitioner/self-only report already has its
+// own place in ActionPlanByRoleSection above, so this section would
+// otherwise duplicate it. Deliberately does not display reason_codes,
+// internal ids, related_profiles, related_hypotheses, raw
+// contradictions, or pattern_escalation_reasons — see P29's scope: the
+// first UI pass only shows fields already vetted as consumer-safe
+// (docs/P29A_DOCTOR_ESCALATION_FRONTEND_EXPOSURE_REVIEW_2026-09-18.md).
+const DOCTOR_ESCALATION_LEVEL_ORDER = { urgent: 0, doctor: 1 }
+const DOCTOR_ESCALATION_MAX_ITEMS = 3
+
+function DoctorEscalationSection({ doctorEscalationPrecision, copy }) {
+  const escalations = Array.isArray(doctorEscalationPrecision?.escalations)
+    ? doctorEscalationPrecision.escalations
+    : []
+  const relevant = escalations
+    .filter((item) => item?.level === 'urgent' || item?.level === 'doctor')
+    .sort((a, b) => DOCTOR_ESCALATION_LEVEL_ORDER[a.level] - DOCTOR_ESCALATION_LEVEL_ORDER[b.level])
+    .slice(0, DOCTOR_ESCALATION_MAX_ITEMS)
+
+  if (!relevant.length) return null
+
+  return (
+    <SectionCard icon={Stethoscope} title={copy.doctorEscalationTitle} className="mb-6">
+      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.doctorEscalationIntro}</p>
+      <div className="space-y-3">
+        {relevant.map((item, index) => {
+          const style = item.level === 'urgent' ? ACTION_PLAN_BUCKET_STYLE.critical : ACTION_PLAN_BUCKET_STYLE.warning
+          const Icon = style.icon
+          const levelLabel = copy.doctorEscalationLevelLabels?.[item.level]
+          const timingLabel = copy.doctorEscalationTimingLabels?.[item.recommended_timing]
+          const markers = asTextList(item.related_markers).slice(0, 6)
+          return (
+            <div key={item.id || index} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <div className={`mb-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${style.badge}`}>
+                <Icon className="h-3.5 w-3.5" /> {levelLabel}
+              </div>
+              {!!item.human_readable_reason && (
+                <p className="text-sm leading-6 text-slate-700">{item.human_readable_reason}</p>
+              )}
+              {!!markers.length && (
+                <p className="mt-2 text-sm leading-5 text-slate-600">
+                  <span className="font-semibold text-slate-800">{copy.doctorEscalationMarkersLabel}:</span> {markers.join(', ')}
+                </p>
+              )}
+              {!!timingLabel && (
+                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{timingLabel}</p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <p className="mt-4 text-xs leading-5 text-slate-400">{copy.doctorEscalationDisclaimer}</p>
     </SectionCard>
   )
 }
@@ -1284,6 +1372,7 @@ export default function Results() {
   const [nextBestTests, setNextBestTests] = useState(null)
   const [personalBaseline, setPersonalBaseline] = useState(null)
   const [actionPlanByRole, setActionPlanByRole] = useState(null)
+  const [doctorEscalationPrecision, setDoctorEscalationPrecision] = useState(null)
   const [nextTestFunnel, setNextTestFunnel] = useState(null)
   const [clinicalHypotheses, setClinicalHypotheses] = useState(null)
   const [clinicalContradictions, setClinicalContradictions] = useState(null)
@@ -1332,6 +1421,7 @@ export default function Results() {
         setNextBestTests(data.next_best_tests ?? data.final_analysis?.next_best_tests ?? null)
         setPersonalBaseline(data.personal_baseline ?? data.final_analysis?.personal_baseline ?? null)
         setActionPlanByRole(data.action_plan_by_role ?? data.final_analysis?.action_plan_by_role ?? null)
+        setDoctorEscalationPrecision(data.doctor_escalation_precision ?? data.final_analysis?.doctor_escalation_precision ?? null)
         setNextTestFunnel(data.next_test_funnel ?? data.final_analysis?.next_test_funnel ?? null)
         setClinicalHypotheses(data.clinical_hypotheses ?? data.final_analysis?.clinical_hypotheses ?? null)
         setClinicalContradictions(data.clinical_contradictions ?? data.final_analysis?.clinical_contradictions ?? null)
@@ -1352,6 +1442,7 @@ export default function Results() {
         setNextBestTests(null)
         setPersonalBaseline(null)
         setActionPlanByRole(null)
+        setDoctorEscalationPrecision(null)
         setNextTestFunnel(null)
         setClinicalHypotheses(null)
         setClinicalContradictions(null)
@@ -1650,6 +1741,8 @@ export default function Results() {
             )}
           </SectionCard>
         </div>
+
+        <DoctorEscalationSection doctorEscalationPrecision={doctorEscalationPrecision} copy={copy} />
 
         <ActionPlanByRoleSection actionPlan={actionPlanByRole} copy={copy} />
 
