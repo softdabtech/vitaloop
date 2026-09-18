@@ -47,7 +47,21 @@ _EXTRACTION_CATEGORIES = (
 class OpenAIFileAnalyzer(ABC):
     """Base class for file analysis using OpenAI APIs"""
 
-    def __init__(self, api_key: str, model: Optional[str] = None):
+    # P28.1: overridden per leaf subclass so usage logging (see
+    # _persist_analyzer_usage below) reports the same category ids as
+    # app/services/llm_cost_audit.py's registry (pdf_text_extraction,
+    # pdf_vision_extraction, table_extraction) -- never left as this
+    # generic default in practice, since only leaf classes are instantiated.
+    USAGE_TASK_NAME: str = "file_extraction"
+
+    def __init__(
+        self,
+        api_key: str,
+        model: Optional[str] = None,
+        *,
+        user_id: Optional[str] = None,
+        upload_id: Optional[str] = None,
+    ):
         self.api_key = api_key
         self.base_url = (settings.active_llm_base_url or "https://api.openai.com/v1").rstrip("/")
         self.text_model = model or settings.active_llm_model
@@ -58,6 +72,15 @@ class OpenAIFileAnalyzer(ABC):
         self.max_image_size_bytes = settings.image_max_size_mb * 1024 * 1024
         self.tiff_max_pages = settings.tiff_max_pages
         self.table_max_rows = settings.table_analysis_max_rows
+        # P28.1 (LLM Usage Logging Coverage Fix): optional identity context
+        # so _persist_analyzer_usage can attribute a logged event to a real
+        # user/upload the same way claude_service.py's text-extraction and
+        # protocol-generation call sites already do. Both default to None
+        # (backward compatible with every pre-existing construction site
+        # that doesn't pass them) -- a logged event with null user_id/
+        # upload_id is still far more useful than no logged event at all.
+        self.user_id = user_id
+        self.upload_id = upload_id
 
     @abstractmethod
     async def analyze(self, file_path: str, symptoms: Optional[List[str]] = None) -> dict[str, Any]:
@@ -135,6 +158,35 @@ class OpenAIFileAnalyzer(ABC):
         text, _parser = cls._extract_pdf_content(pdf_path, max_length=max_length)
         return text
 
+    async def _persist_analyzer_usage(self, payload: dict[str, Any], *, provider: str) -> None:
+        """P28.1: log this call to llm_usage_events the same way
+        claude_service.py's text-extraction/protocol-generation call sites
+        already do, reusing that module's own persistence helper rather
+        than writing a second implementation. `payload` is the raw
+        chat/completions JSON response -- same shape claude_service.py's
+        _persist_usage_event already expects, so no translation needed.
+
+        Fail-open by construction, on top of _persist_usage_event's own
+        internal fail-open handling: this must NEVER be able to turn a
+        successful extraction into a failed one, so any exception here
+        (including a bad import) is caught and only logged, never raised.
+        """
+        try:
+            from app.services.claude_service import _persist_usage_event
+
+            await _persist_usage_event(
+                task_name=self.USAGE_TASK_NAME,
+                payload=payload,
+                user_id=self.user_id,
+                upload_id=self.upload_id,
+                provider=provider,
+            )
+        except Exception as exc:  # pragma: no cover - defensive, see docstring
+            logger.warning(
+                "file_analyzer_usage_log_failed task=%s provider=%s reason=%s",
+                self.USAGE_TASK_NAME, provider, exc,
+            )
+
     async def _send_text_completion(self, prompt: str, model: Optional[str] = None) -> str:
         """Send text prompt to OpenAI API and get completion with retry on 429/5xx"""
         return await self._send_text_completion_with_retry(prompt, model)
@@ -175,6 +227,10 @@ class OpenAIFileAnalyzer(ABC):
         except httpx.HTTPStatusError as e:
             logger.error(f"OpenAI API error: {e.response.status_code} {e.response.text[:200]}")
             raise
+
+        # P28.1: log usage regardless of what happens to `content` below --
+        # tokens were spent the moment the API call above succeeded.
+        await self._persist_analyzer_usage(data, provider="openai")
 
         choices = data.get("choices") or []
         if not choices:
@@ -238,6 +294,11 @@ class OpenAIFileAnalyzer(ABC):
         except httpx.HTTPStatusError as e:
             logger.error(f"OpenAI Vision API error: {e.response.status_code} {e.response.text[:200]}")
             raise
+
+        # P28.1: log usage regardless of what happens to `content` below --
+        # tokens (including the more expensive image tokens) were spent the
+        # moment the API call above succeeded.
+        await self._persist_analyzer_usage(data, provider="openai-vision")
 
         choices = data.get("choices") or []
         if not choices:
@@ -353,6 +414,8 @@ JSON schema:
 
 class PDFTextAnalyzer(OpenAIFileAnalyzer):
     """Analyze text-based PDF files"""
+
+    USAGE_TASK_NAME = "pdf_text_extraction"
 
     @staticmethod
     def _chunk_document_text(document_text: str, max_chars: int = 6000) -> list[str]:
@@ -515,6 +578,11 @@ class PDFTextAnalyzer(OpenAIFileAnalyzer):
 
 class ImageAnalyzer(OpenAIFileAnalyzer):
     """Analyze image files (PNG, JPG, GIF, BMP, WEBP) using Vision API"""
+
+    # Inherited unchanged by PDFVisionAnalyzer/TIFFAnalyzer below -- all
+    # three are vision-model paths and app/services/llm_cost_audit.py's
+    # registry tracks them as a single "pdf_vision_extraction" category.
+    USAGE_TASK_NAME = "pdf_vision_extraction"
 
     async def analyze(self, image_path: str, symptoms: Optional[List[str]] = None) -> dict[str, Any]:
         start_time = time.time()
@@ -780,24 +848,37 @@ class TIFFAnalyzer(PDFVisionAnalyzer):
 
 
 # Factory function to create appropriate analyzer
-async def create_file_analyzer(file_path: str) -> OpenAIFileAnalyzer:
-    """Create appropriate analyzer based on file type"""
+async def create_file_analyzer(
+    file_path: str,
+    *,
+    user_id: Optional[str] = None,
+    upload_id: Optional[str] = None,
+) -> OpenAIFileAnalyzer:
+    """Create appropriate analyzer based on file type.
+
+    `user_id`/`upload_id` (P28.1) are optional and purely for usage-event
+    attribution (see OpenAIFileAnalyzer.__init__ and
+    _persist_analyzer_usage) -- they change no extraction/analysis
+    behavior. Omitting them (as every pre-existing caller does) is fully
+    backward compatible; a caller that already has these values (e.g.
+    app/routers/analysis/analyze.py, right after saving the upload row)
+    should pass them so logged events aren't attributed to no one."""
     file_type = OpenAIFileAnalyzer._detect_file_type(file_path)
 
     if file_type == "pdf":
         # Determine if text-based or scanned
         text = OpenAIFileAnalyzer._extract_pdf_text_with_pypdf(file_path)
         if len(text.strip()) > 100:
-            return PDFTextAnalyzer(api_key=settings.active_llm_api_key)
+            return PDFTextAnalyzer(api_key=settings.active_llm_api_key, user_id=user_id, upload_id=upload_id)
         else:
-            return PDFVisionAnalyzer(api_key=settings.active_llm_api_key)
+            return PDFVisionAnalyzer(api_key=settings.active_llm_api_key, user_id=user_id, upload_id=upload_id)
     elif file_type == "image":
-        return ImageAnalyzer(api_key=settings.active_llm_api_key)
+        return ImageAnalyzer(api_key=settings.active_llm_api_key, user_id=user_id, upload_id=upload_id)
     elif file_type == "tiff":
-        return TIFFAnalyzer(api_key=settings.active_llm_api_key)
+        return TIFFAnalyzer(api_key=settings.active_llm_api_key, user_id=user_id, upload_id=upload_id)
     elif file_type == "table":
         from app.services.table_analyzer import TableAnalyzer
-        return TableAnalyzer(api_key=settings.active_llm_api_key)
+        return TableAnalyzer(api_key=settings.active_llm_api_key, user_id=user_id, upload_id=upload_id)
     else:
         raise ValueError(f"Unsupported file type: {file_type}")
 

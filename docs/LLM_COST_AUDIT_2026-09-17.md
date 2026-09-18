@@ -1,4 +1,46 @@
-# LLM Cost Audit — 2026-09-17 (P28)
+# LLM Cost Audit — 2026-09-17 (P28, updated for P28.1)
+
+## P28.1 update (2026-09-17): the highest-priority gap is fixed
+
+PDF text extraction, PDF/image vision extraction, and CSV/XLSX table
+extraction now all log to `llm_usage_events`, reusing
+`claude_service._persist_usage_event` (extended with a `provider` param
+so vision calls log `provider="openai-vision"`, matching
+`/crm/ops/openai-usage`'s existing `["openai","openai-vision"]` filter,
+which previously had nothing to find for that provider value).
+
+- `app/services/claude_pdf_analyzer.py`'s `OpenAIFileAnalyzer` now accepts
+  optional `user_id`/`upload_id` (for attribution) and a `USAGE_TASK_NAME`
+  class attribute (`pdf_text_extraction` / `pdf_vision_extraction`,
+  inherited by `PDFVisionAnalyzer`/`TIFFAnalyzer`); both completion
+  methods log immediately after a successful API response, before any
+  content parsing.
+- `app/services/table_analyzer.py`'s `TableAnalyzer` sets
+  `USAGE_TASK_NAME = "table_extraction"` and gets logging for free via the
+  shared base-class methods.
+- `app/routers/analysis/analyze.py`'s one call site now passes
+  `user_id`/`upload_id` into `create_file_analyzer(...)`.
+- `_persist_usage_event` no longer silently skips logging when a response
+  carries no `usage` block — it now always writes a row, with
+  `prompt_tokens`/`completion_tokens`/`total_tokens` at the schema's own
+  `NOT NULL DEFAULT 0` and an explicit `meta.usage_reported: false` flag,
+  rather than guessing a token count or dropping the event. Every
+  pre-existing caller (extraction, protocol, questionnaire) always
+  receives a real `usage` block in practice, so this changes nothing
+  about their behavior — it only matters for the newly-instrumented paths.
+- Logging is fail-open: a broken/raising usage logger cannot fail
+  extraction (see `test_usage_logging_failure_does_not_fail_extraction` in
+  `backend/tests/test_file_analyzer_usage_logging.py`); a real provider
+  failure (429/5xx/timeout) still raises/retries exactly as before.
+- **No changes** to extraction logic, prompts, model selection, or retry
+  policy — only logging was added, at the point right after each
+  successful HTTP response.
+- The audit registry (`llm_cost_audit.py`) now reflects
+  `already_logged=True` / `risk_level="low"` for all three previously-gap
+  categories; `known_gaps` is now empty.
+
+The rest of this document is the original 2026-09-17 P28 audit, left
+otherwise intact for history.
 
 Backend/ops stage of the Clinical Reasoning Engine uniqueness roadmap. This
 is a **deterministic code audit**, not a live cost report — for live
@@ -20,9 +62,9 @@ name is legacy for the same reason.
 | Questionnaire follow-up | `claude_service.py:854` | Questionnaire flow | clinical_production | ✅ | low |
 | Questionnaire summary | `claude_service.py:907` | Questionnaire flow | clinical_production | ✅ | low |
 | UA wellbeing assessment | `ua_wellbeing_openai.py:108` | `POST /assessment/ua-wellbeing` (public, no auth) | clinical_production | ✅ (duplicate impl.) | medium |
-| PDF text extraction | `claude_pdf_analyzer.py` (`PDFTextAnalyzer`) | `POST /analyze/pdf`, `/analyze/upload` | ocr_vision | ❌ | **high** |
-| PDF/image vision extraction | `claude_pdf_analyzer.py` (`ImageAnalyzer`/`PDFVisionAnalyzer`) | `POST /analyze/pdf`, `/analyze/upload` | ocr_vision | ❌ | **high** |
-| CSV/XLSX table extraction | `table_analyzer.py` | `POST /analyze/pdf`, `/analyze/upload` | ocr_vision | ❌ | medium |
+| PDF text extraction | `claude_pdf_analyzer.py` (`PDFTextAnalyzer`) | `POST /analyze/pdf`, `/analyze/upload` | ocr_vision | ✅ (P28.1) | low |
+| PDF/image vision extraction | `claude_pdf_analyzer.py` (`ImageAnalyzer`/`PDFVisionAnalyzer`) | `POST /analyze/pdf`, `/analyze/upload` | ocr_vision | ✅ (P28.1) | low |
+| CSV/XLSX table extraction | `table_analyzer.py` | `POST /analyze/pdf`, `/analyze/upload` | ocr_vision | ✅ (P28.1) | low |
 | Protocol generation | `claude_service.py:717` | Every pipeline run, `POST /protocol` | protocol_generation | ✅ | low |
 | Premium health tips | `llm_consult.py:166` | `POST /llm/health-tips` (gated, background job) | protocol_generation | ✅ | low |
 | Staging live smoke workflows | `test_staging_live_supabase_smoke.py`, `test_health_profile_live_smoke.py` | Scheduled/dispatch CI (`E2E_RUN_LIVE`) | smoke_test | n/a | low |
@@ -55,11 +97,8 @@ Full detail (exact reasoning, model/env config, cacheability) lives in
 
 ## Remaining risks
 
-1. **PDF/vision/table extraction paths are not logged to `llm_usage_events`
-   at all.** These are real, cost-incurring OpenAI calls (vision models are
-   the most expensive per-call path in the system) that are completely
-   invisible to `/crm/ops/openai-usage` today. This is the single biggest
-   gap this audit found.
+1. ~~PDF/vision/table extraction paths are not logged to `llm_usage_events`
+   at all.~~ **Fixed in P28.1** (2026-09-17) — see the update note above.
 2. **`_persist_usage_event` (claude_service.py) and `_persist_openai_usage`
    (ua_wellbeing_openai.py) are near-duplicate implementations** of the
    same insert logic — not incorrect today, but a drift risk over time.
@@ -74,12 +113,10 @@ Full detail (exact reasoning, model/env config, cacheability) lives in
 5. **`/crm/ops/claude-usage` naming is legacy/confusing** given no real
    Claude/Anthropic usage exists anywhere — low priority, cosmetic.
 
-## Proposed next actions (not implemented in this stage — audit only)
+## Proposed next actions
 
-1. Add usage logging to `claude_pdf_analyzer.py`'s completion call sites
-   (text and vision) and `table_analyzer.py`, reusing
-   `claude_service._persist_usage_event` rather than writing a third
-   implementation.
+1. ~~Add usage logging to `claude_pdf_analyzer.py`'s completion call sites
+   (text and vision) and `table_analyzer.py`.~~ **Done in P28.1.**
 2. Consolidate `ua_wellbeing_openai.py`'s `_persist_openai_usage` into the
    shared `claude_service._persist_usage_event` helper.
 3. Confirm/add rate limiting on `POST /assessment/ua-wellbeing` given its
@@ -90,10 +127,12 @@ Full detail (exact reasoning, model/env config, cacheability) lives in
    accurate, or merge it into `/crm/ops/openai-usage` since they cover the
    same provider.
 
-None of the above were implemented in this stage — P28's scope was audit
-and read-only ops visibility only, per the roadmap instruction not to
-change model choices or disable production LLM paths without a clearly
-broken/smoke-only path being found (none was).
+None of the above were implemented in the original P28 audit stage — its
+scope was audit and read-only ops visibility only. Action #1 (the
+highest-priority, real cost-visibility gap) was implemented as a
+follow-up, P28.1, per the roadmap instruction that a confirmed
+instrumentation gap could be fixed once documented — see the P28.1 update
+note above. Actions #2-#5 remain proposed, not implemented.
 
 ## Frozen replay boundary (explicit rule)
 

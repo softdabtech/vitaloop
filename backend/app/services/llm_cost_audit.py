@@ -161,11 +161,12 @@ _CATEGORIES: List[Dict[str, Any]] = [
         model_env="settings.active_llm_model / settings.active_llm_api_key",
         cacheable=False,
         disable_in_smoke=True,
-        already_logged=False,
-        risk_level="high",
+        already_logged=True,
+        risk_level="low",
         recommended_action=(
-            "Add usage logging (a call to claude_service._persist_usage_event or an equivalent) at this completion "
-            "call site -- currently invisible to /crm/ops/openai-usage, so real spend here is unmeasured."
+            "P28.1 fix (2026-09-17): now logs via claude_service._persist_usage_event (provider=openai, "
+            "task_name=pdf_text_extraction), attributed to user_id/upload_id when the caller provides them. "
+            "No action needed."
         ),
     ),
     _category(
@@ -177,11 +178,12 @@ _CATEGORIES: List[Dict[str, Any]] = [
         model_env="settings.active_llm_model / settings.active_llm_api_key",
         cacheable=False,
         disable_in_smoke=True,
-        already_logged=False,
-        risk_level="high",
+        already_logged=True,
+        risk_level="low",
         recommended_action=(
-            "Same instrumentation gap as pdf_text_extraction, and vision models are the most expensive per-call "
-            "path in the whole system -- highest-priority candidate for adding usage logging."
+            "P28.1 fix (2026-09-17): now logs via claude_service._persist_usage_event with provider=openai-vision "
+            "(task_name=pdf_vision_extraction), so /crm/ops/openai-usage's existing provider filter "
+            "(['openai','openai-vision']) now actually receives rows for this path. No action needed."
         ),
     ),
     _category(
@@ -193,9 +195,12 @@ _CATEGORIES: List[Dict[str, Any]] = [
         model_env="settings.active_llm_model / settings.active_llm_api_key",
         cacheable=False,
         disable_in_smoke=True,
-        already_logged=False,
-        risk_level="medium",
-        recommended_action="Same missing-usage-logging gap as the PDF paths; likely lower volume but should be fixed alongside them.",
+        already_logged=True,
+        risk_level="low",
+        recommended_action=(
+            "P28.1 fix (2026-09-17): now logs via claude_service._persist_usage_event (provider=openai, "
+            "task_name=table_extraction). No action needed."
+        ),
     ),
     _category(
         id="protocol_generation",

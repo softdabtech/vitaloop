@@ -500,7 +500,7 @@ async def analyze_lab_file(
 
         # Create appropriate analyzer based on file type
         try:
-            file_analyzer = await create_file_analyzer(temp_path)
+            file_analyzer = await create_file_analyzer(temp_path, user_id=user_id, upload_id=upload_id)
         except Exception as e:
             logger.error(f"Failed to create analyzer for file {file.filename}: {e}", exc_info=True)
             raise HTTPException(

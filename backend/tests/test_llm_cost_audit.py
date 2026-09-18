@@ -95,10 +95,19 @@ def test_every_production_call_site_is_flagged_disable_in_smoke():
             assert category["disable_in_smoke"] is True, category["id"]
 
 
-def test_known_gaps_only_lists_unlogged_real_call_sites():
+def test_known_gaps_is_empty_after_p28_1_fix():
+    """P28.1 (2026-09-17): pdf_text_extraction, pdf_vision_extraction, and
+    table_extraction were the only real-call-site gaps this audit ever
+    found, and all three are now logged (see
+    test_file_analyzer_usage_logging.py) -- known_gaps must be empty."""
     result = build_llm_cost_audit()
+    by_id = {c["id"]: c for c in result["categories"]}
 
-    assert set(result["known_gaps"]) == {"pdf_text_extraction", "pdf_vision_extraction", "table_extraction"}
+    assert result["known_gaps"] == []
+    for gap_id in ("pdf_text_extraction", "pdf_vision_extraction", "table_extraction"):
+        assert by_id[gap_id]["already_logged"] is True
+        assert by_id[gap_id]["risk_level"] == "low"
+
     # ops/smoke entries must never appear in known_gaps even though some
     # are also already_logged=False -- that field means something
     # different for a non-call-site category (nothing to log).
@@ -111,9 +120,11 @@ def test_recommendations_reference_logging_cache_or_disable_concerns():
     result = build_llm_cost_audit()
     by_id = {c["id"]: c for c in result["categories"]}
 
-    # A category flagged as a known gap must say so in its own recommendation.
-    for gap_id in result["known_gaps"]:
-        assert "log" in by_id[gap_id]["recommended_action"].lower()
+    # known_gaps is empty post-P28.1, but the three fixed categories must
+    # still document what changed (mentioning logging) in their own
+    # recommendation text, so the audit stays self-explanatory.
+    for fixed_id in ("pdf_text_extraction", "pdf_vision_extraction", "table_extraction"):
+        assert "log" in by_id[fixed_id]["recommended_action"].lower()
 
     # The one cacheable category must actually mention caching.
     cacheable = [c for c in result["categories"] if c["cacheable"]]

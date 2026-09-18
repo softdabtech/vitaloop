@@ -484,16 +484,33 @@ async def _persist_usage_event(
     payload: Dict[str, Any],
     user_id: str | None,
     upload_id: str | None,
+    provider: str = "openai",
 ) -> None:
+    """P28.1 note: this used to silently skip logging entirely whenever a
+    response carried no usable `usage` block (prompt_tokens ==
+    completion_tokens == total_tokens == 0). Every pre-existing caller of
+    this function (extract_biomarkers, generate_protocol, the
+    questionnaire follow-up/summary calls) always gets a real `usage`
+    block from OpenAI's chat/completions endpoint in practice, so that
+    guard never actually fired for them and removing it changes nothing
+    about their behavior. It DID matter for P28.1's new callers
+    (claude_pdf_analyzer.py, table_analyzer.py): a genuinely-missing usage
+    block should still produce a logged row with explicit
+    meta.usage_reported=False, not silent non-logging -- "log the best
+    available fields, never guess" per docs/LLM_COST_AUDIT_2026-09-17.md.
+    The llm_usage_events schema's prompt_tokens/completion_tokens/
+    total_tokens columns are NOT NULL integers (sql/stage-13-llm-usage-
+    events.sql), so "unknown" is represented as 0 + meta.usage_reported
+    False, not a SQL NULL -- the closest honest representation the schema
+    allows without a migration.
+    """
     try:
-        usage = payload.get("usage") or {}
-        prompt_tokens = int(usage.get("prompt_tokens") or usage.get("input_tokens") or 0)
-        completion_tokens = int(usage.get("completion_tokens") or usage.get("output_tokens") or 0)
-        total_tokens = int(usage.get("total_tokens") or (prompt_tokens + completion_tokens))
-        if prompt_tokens <= 0 and completion_tokens <= 0 and total_tokens <= 0:
-            return
+        usage = payload.get("usage") if isinstance(payload.get("usage"), dict) else None
+        usage_reported = usage is not None
+        prompt_tokens = int((usage or {}).get("prompt_tokens") or (usage or {}).get("input_tokens") or 0)
+        completion_tokens = int((usage or {}).get("completion_tokens") or (usage or {}).get("output_tokens") or 0)
+        total_tokens = int((usage or {}).get("total_tokens") or (prompt_tokens + completion_tokens))
 
-        provider = "openai"
         model = str(payload.get("model") or settings.active_llm_model or "unknown")
 
         from app.services import supabase_service as svc
@@ -510,6 +527,7 @@ async def _persist_usage_event(
             "total_tokens": total_tokens,
             "meta": {
                 "response_id": payload.get("id"),
+                "usage_reported": usage_reported,
             },
         }
         await svc._run(lambda: sb.table("llm_usage_events").insert(row).execute())

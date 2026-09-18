@@ -14,6 +14,8 @@ logger = logging.getLogger("uvicorn.error")
 class TableAnalyzer(OpenAIFileAnalyzer):
     """Analyze spreadsheet files (XLSX, CSV)"""
 
+    USAGE_TASK_NAME = "table_extraction"
+
     async def analyze(self, table_path: str, symptoms: Optional[List[str]] = None) -> dict[str, Any]:
         start_time = time.time()
 
