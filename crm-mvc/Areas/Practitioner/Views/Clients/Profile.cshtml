@@ -438,7 +438,15 @@ else
             <div class="vo-card" style="padding:12px;">
               <div><strong>@profile.Label</strong></div>
 
-              @{ var topAdjustments = profile.PriorityAdjustments.Take(5).ToList(); }
+              @{
+                var topAdjustments = profile.PriorityAdjustments.Take(5).ToList();
+                var topNextTestsPreview = profile.NextTestEmphasis.Take(5).ToList();
+                var topPromptsPreview = profile.PractitionerPrompts.Take(5).ToList();
+              }
+              @if (!topAdjustments.Any() && !topNextTestsPreview.Any() && !topPromptsPreview.Any())
+              {
+                <p style="margin:6px 0 0;color:var(--vo-gray-700);">No adjustments from this profile apply to this report.</p>
+              }
               @if (topAdjustments.Any())
               {
                 <div style="display:grid;gap:6px;margin-top:8px;">

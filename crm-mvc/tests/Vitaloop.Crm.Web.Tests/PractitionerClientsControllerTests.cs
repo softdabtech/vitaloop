@@ -319,7 +319,9 @@ public class PractitionerClientsControllerTests
               "population_profile_selection": {
                 "active_profile_ids": ["longevity_metabolic_optimization"],
                 "selection_source": "default",
-                "selection_reasons": ["No explicit override or strong athletic signal found."],
+                "selection_reasons": [
+                  { "profile_id": "longevity_metabolic_optimization", "reason_code": "default_profile", "source": "default" }
+                ],
                 "ignored_profile_ids": ["athlete_recovery"]
               },
               "population_profile_overlays": {
@@ -380,7 +382,11 @@ public class PractitionerClientsControllerTests
         Assert.NotNull(summary!.PopulationProfileSelection);
         Assert.Equal(new[] { "longevity_metabolic_optimization" }, summary.PopulationProfileSelection!.ActiveProfileIds);
         Assert.Equal("default", summary.PopulationProfileSelection.SelectionSource);
+        // P30 QA fix: selection_reasons is a list of {profile_id,
+        // reason_code, source} objects, not strings -- must render as a
+        // readable string, not be silently dropped.
         Assert.Single(summary.PopulationProfileSelection.SelectionReasons);
+        Assert.Equal("default profile: longevity metabolic optimization", summary.PopulationProfileSelection.SelectionReasons[0]);
         Assert.Equal(new[] { "athlete_recovery" }, summary.PopulationProfileSelection.IgnoredProfileIds);
 
         Assert.NotNull(summary.PopulationProfileOverlays);

@@ -226,7 +226,7 @@ public class ClientsController : Controller
         }
         var activeIds = ReadStringArray(ppsEl, "active_profile_ids");
         var ignoredIds = ReadStringArray(ppsEl, "ignored_profile_ids");
-        var reasons = ReadStringArray(ppsEl, "selection_reasons");
+        var reasons = ParseSelectionReasons(ppsEl);
         if (activeIds.Count == 0 && ignoredIds.Count == 0 && reasons.Count == 0
             && !ppsEl.TryGetProperty("selection_source", out _))
         {
@@ -343,6 +343,30 @@ public class ClientsController : Controller
             RecommendedTiming = depEl.TryGetProperty("recommended_timing", out var rtEl2) && rtEl2.ValueKind == JsonValueKind.String ? rtEl2.GetString() : null,
             Escalations = escalations,
         };
+    }
+
+    // P30 QA fix: selection_reasons is a list of {profile_id, reason_code,
+    // source} objects (backend/app/services/population_profile_
+    // selection.py), NOT a list of strings -- ReadStringArray would
+    // silently drop every entry here. Renders each as a short readable
+    // line, e.g. "default profile: longevity metabolic optimization".
+    private static IReadOnlyList<string> ParseSelectionReasons(JsonElement ppsEl)
+    {
+        var result = new List<string>();
+        if (!ppsEl.TryGetProperty("selection_reasons", out var arrEl) || arrEl.ValueKind != JsonValueKind.Array)
+        {
+            return result;
+        }
+        foreach (var entry in arrEl.EnumerateArray())
+        {
+            if (entry.ValueKind != JsonValueKind.Object) continue;
+            var reasonCode = entry.TryGetProperty("reason_code", out var rc) && rc.ValueKind == JsonValueKind.String ? rc.GetString() : null;
+            var profileId = entry.TryGetProperty("profile_id", out var pid) && pid.ValueKind == JsonValueKind.String ? pid.GetString() : null;
+            if (string.IsNullOrWhiteSpace(reasonCode)) continue;
+            var label = reasonCode.Replace('_', ' ');
+            result.Add(string.IsNullOrWhiteSpace(profileId) ? label : $"{label}: {profileId.Replace('_', ' ')}");
+        }
+        return result;
     }
 
     // Shared helper: reads a JSON array property into a list of strings,
