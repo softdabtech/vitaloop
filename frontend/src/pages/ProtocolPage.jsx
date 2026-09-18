@@ -381,6 +381,22 @@ function asTextList(value) {
   return [String(value)]
 }
 
+// P31d: asTextList()'s object fallback chain (label/name/.../domain) can
+// map two distinct gap entries onto the same display string (e.g. two
+// gaps in the same domain with no more specific label) -- this collapses
+// those into one, preserving first-seen order, before the list is
+// rendered. Presentation-only: never touches the source trace data.
+function dedupeTextList(list) {
+  const seen = new Set()
+  const result = []
+  for (const item of list) {
+    if (seen.has(item)) continue
+    seen.add(item)
+    result.push(item)
+  }
+  return result
+}
+
 function basedOnList(item) {
   const basedOn = item?.based_on || {}
   return [
@@ -463,7 +479,7 @@ function ReasoningTraceCard({ trace, copy, isUk }) {
   const safetyLabel = copy.reasoningSafety?.[safetyKey]
   const supporting = asTextList(trace?.supporting_markers).slice(0, 5)
   const contradicting = asTextList(trace?.contradicting_markers).slice(0, 4)
-  const gaps = asTextList(trace?.evidence_gaps).slice(0, 4)
+  const gaps = dedupeTextList(asTextList(trace?.evidence_gaps)).slice(0, 4)
   const nextTests = asTextList(trace?.next_best_tests).slice(0, 4)
   const matchedBiomarkers = asTextList(trace?.matched_biomarkers).slice(0, 5)
 
@@ -1021,6 +1037,13 @@ export default function ProtocolPage() {
           <CoachButton icon={ArrowRight} onClick={() => navigate('/check-ins')}>{copy.continueTracking}</CoachButton>
         </div>
       </div>
+
+      {/* P31d: reserved space so the fixed floating support-chat button
+          (App.jsx's FloatingSupportChat, bottom-right) never sits on top
+          of the closing CTA above once the user scrolls all the way
+          down -- see P31c QA finding. Purely a page-bottom spacer; does
+          not touch the widget itself. */}
+      <div aria-hidden="true" className="h-28" />
     </div>
   )
 }
