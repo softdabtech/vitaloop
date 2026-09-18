@@ -228,6 +228,25 @@ def test_h7_h13_both_get_endpoints_still_share_the_frozen_response_assembler():
         assert "assemble_frozen_response(" in source
 
 
+def test_p29a_doctor_escalation_precision_exposed_top_level_on_both_get_endpoints():
+    """P29a exposure review fix: the frozen branch of both GET endpoints
+    already puts doctor_escalation_precision at the top level (it's part
+    of assemble_frozen_response's own return dict, asserted above). The
+    live/legacy-fallback branch of each -- a hand-built dict, not
+    assemble_frozen_response's -- previously only had it nested inside
+    final_analysis. Both must now alias it at the top level too, so a
+    caller never sees a different response SHAPE depending on whether the
+    report happens to be frozen yet."""
+    from app.routers.analysis import analyze as analyze_router
+    from app.routers.protocol import compatibility as compatibility_router
+
+    for source in (
+        inspect.getsource(analyze_router.get_results),
+        inspect.getsource(compatibility_router.get_results_by_upload),
+    ):
+        assert '"doctor_escalation_precision": pipeline_result.get("doctor_escalation_precision")' in source
+
+
 # --- H10: /progress/overview remains canonical for longitudinal UX --------------
 
 

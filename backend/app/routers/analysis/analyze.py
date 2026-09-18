@@ -1667,6 +1667,12 @@ async def get_results(
         "explainability": pipeline_result.get("explainability"),
         "report_version": report_version,
         "report_source": report_source,
+        # P29a exposure-review fix: mirrors the frozen branch above (line ~1556,
+        # via assemble_frozen_response), which already surfaces
+        # doctor_escalation_precision at the top level. This live/legacy-
+        # fallback branch previously only had it nested inside final_analysis.
+        # Purely additive -- same value already present in final_analysis.
+        "doctor_escalation_precision": pipeline_result.get("doctor_escalation_precision"),
         "final_analysis": pipeline_result,
     }
 

@@ -87,6 +87,13 @@ async def test_results_by_upload_success(monkeypatch):
                 "retest_plan": [],
                 "safety_alerts": [],
             },
+            "doctor_escalation_precision": {
+                "version": "p25_v1",
+                "overall_level": "doctor",
+                "recommended_timing": "soon",
+                "escalations": [],
+                "summary": {"urgent_count": 0, "doctor_count": 0, "practitioner_count": 0, "self_count": 0},
+            },
         }
 
     async def fake_get_latest_report_version(_upload_id, _user_id, _locale):
@@ -126,6 +133,12 @@ async def test_results_by_upload_success(monkeypatch):
         assert payload["knowledge_report"]["why_it_matters"][0]["source_url"] is None
         assert payload["shopping_links"][0]["label"] == "Vitamin D3"
         assert payload["report_source"] == "legacy_fallback"
+        # P29a exposure-review fix: doctor_escalation_precision must be
+        # present at the TOP LEVEL for a legacy/live-fallback report too,
+        # not only nested inside final_analysis (which the frozen-report
+        # branch already exposed it at both levels for).
+        assert payload["doctor_escalation_precision"]["overall_level"] == "doctor"
+        assert payload["final_analysis"]["doctor_escalation_precision"]["overall_level"] == "doctor"
     finally:
         app.dependency_overrides.clear()
 

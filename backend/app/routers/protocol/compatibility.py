@@ -152,5 +152,13 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
         "knowledge_evaluation": knowledge_evaluation,
         "knowledge_report": knowledge_report,
         "interpreted_report": pipeline_result.get("interpreted_report"),
+        # P29a exposure-review fix: the frozen branch above (assemble_frozen_response)
+        # already surfaces doctor_escalation_precision at the top level; this
+        # live/legacy-fallback branch previously only had it nested inside
+        # final_analysis, so a caller reading the top-level key directly (as
+        # frozen-branch consumers can) silently got nothing for a
+        # non-frozen/legacy upload. Purely additive -- same value already
+        # present in final_analysis, just aliased at the top level too.
+        "doctor_escalation_precision": pipeline_result.get("doctor_escalation_precision"),
         "final_analysis": pipeline_result,
     }
