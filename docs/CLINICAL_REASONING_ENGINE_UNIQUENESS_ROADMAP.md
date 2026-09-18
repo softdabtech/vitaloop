@@ -3,6 +3,16 @@
 **Status:** implemented core roadmap + next-phase checkpoint, 2026-09-16.  
 **Scope:** next layer of product differentiation after P0–P13. This document does not replace the implemented roadmap. It describes how to make the VITALOOP Clinical Reasoning Engine feel more precise, more clinically useful, more explainable, and harder to copy.
 
+> **2026-09-18 update:** P24–P28 (Population Profiles, Doctor Escalation
+> Precision 2.0, Rule Pack Quality Scoring, Clinical Disagreement Mode,
+> and the LLM/Cost-Aware Reasoning Audit) were implemented and deployed
+> after this document's 2026-09-16 checkpoint below. This document is
+> intentionally not rewritten to describe them in full — see
+> [`POST_P23_REASONING_GOVERNANCE_COST_CHECKPOINT_2026-09-18.md`](POST_P23_REASONING_GOVERNANCE_COST_CHECKPOINT_2026-09-18.md)
+> for the current, verified state of that block (what's live in the
+> pipeline, what's frozen-replay-safe, what's internal-only, endpoints
+> added, and the current risk register).
+
 
 ## Current checkpoint — 2026-09-16
 
