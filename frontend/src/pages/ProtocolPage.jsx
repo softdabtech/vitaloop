@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, FileText, GitBranch, HelpCircle, MessageCircle, RefreshCw, ShieldAlert, Sparkles, Stethoscope } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, Download, ExternalLink, FileText, GitBranch, HelpCircle, MessageCircle, RefreshCw, ShieldAlert, Sparkles, Stethoscope } from 'lucide-react'
 import api from '../lib/api.js'
 import { useFeature } from '../hooks/useFeature.js'
 import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
@@ -78,6 +78,8 @@ const PROTOCOL_COPY = {
     retestFallback: 'Retest timing depends on the marker, symptoms, and clinician guidance.',
     safetyDiscussion: 'Safety and Clinician Discussion',
     discussionFallback: 'Ask whether the plan fits your symptoms, medications, history, and current lab context.',
+    closingBody: 'Keep tracking how you feel, and revisit your results whenever it helps.',
+    continueTracking: 'Continue tracking',
     doctorEscalationTitle: 'Doctor discussion',
     doctorEscalationIntro: 'Based on this report, these points may be worth a conversation with a doctor.',
     doctorEscalationLevelLabels: {
@@ -176,6 +178,8 @@ const PROTOCOL_COPY = {
     retestFallback: 'Терміни повторної перевірки залежать від показника, симптомів і рекомендацій фахівця.',
     safetyDiscussion: 'Безпека та питання до фахівця',
     discussionFallback: 'Запитайте, чи відповідає план вашим симптомам, лікам, історії та поточному контексту аналізів.',
+    closingBody: 'Продовжуйте відстежувати самопочуття і повертайтеся до результатів, коли це корисно.',
+    continueTracking: 'Продовжити відстеження',
     doctorEscalationTitle: 'Обговорення з лікарем',
     doctorEscalationIntro: 'На основі цього звіту ці моменти може варто обговорити з лікарем.',
     doctorEscalationLevelLabels: {
@@ -529,6 +533,18 @@ function ReasoningTraceCard({ trace, copy, isUk }) {
 
 const DOCTOR_ESCALATION_LEVEL_ORDER = { urgent: 0, doctor: 1 }
 const DOCTOR_ESCALATION_MAX_ITEMS = 3
+
+// P31b: same relevance check DoctorEscalationCard uses internally, so the
+// legacy "Safety discussion" card (below) can defer to it and only
+// render as a fallback when there is nothing to show there -- see the
+// P31a audit finding that both cards otherwise show doctor/urgent
+// discussion content side by side.
+function hasDoctorEscalationContent(doctorEscalationPrecision) {
+  const escalations = Array.isArray(doctorEscalationPrecision?.escalations)
+    ? doctorEscalationPrecision.escalations
+    : []
+  return escalations.some((item) => item?.level === 'urgent' || item?.level === 'doctor')
+}
 const DOCTOR_ESCALATION_LEVEL_TONE = { urgent: 'critical', doctor: 'warning' }
 
 // P29: renders doctor_escalation_precision (backend/app/services/
@@ -927,7 +943,7 @@ export default function ProtocolPage() {
         </CoachCard>
       )}
 
-      <div className="coach-grid coach-grid--2">
+      <div className={hasDoctorEscalationContent(doctorEscalationPrecision) ? '' : 'coach-grid coach-grid--2'}>
         <CoachCard className="p-5">
           <div className="mb-4 flex items-center gap-2">
             <RefreshCw className="h-5 w-5 text-teal-600" />
@@ -945,36 +961,48 @@ export default function ProtocolPage() {
           ) : <p className="text-sm leading-6 text-slate-600">{copy.retestFallback}</p>}
         </CoachCard>
 
-        <CoachCard className="p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <MessageCircle className="h-5 w-5 text-teal-600" />
-            <h2 className="text-lg font-extrabold text-slate-950">{copy.safetyDiscussion}</h2>
-          </div>
-          {doctorDiscussion.length ? (
-            <ul className="space-y-2 text-sm leading-6 text-slate-700">
-              {doctorDiscussion.slice(0, 6).map((item, index) => <li key={index} className="rounded-2xl bg-slate-50 p-3">{item}</li>)}
-            </ul>
-          ) : <p className="text-sm leading-6 text-slate-600">{copy.discussionFallback}</p>}
-        </CoachCard>
+        {/* P31b: the legacy "Safety discussion" bullet list duplicated
+            DoctorEscalationCard below with older, less calibrated copy
+            (see P31a audit). Kept only as a fallback for a report that
+            has no doctor/urgent doctor_escalation_precision content --
+            once that structured card has something to show, this one
+            steps aside rather than showing doctor-discussion content
+            twice. */}
+        {!hasDoctorEscalationContent(doctorEscalationPrecision) && (
+          <CoachCard className="p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-teal-600" />
+              <h2 className="text-lg font-extrabold text-slate-950">{copy.safetyDiscussion}</h2>
+            </div>
+            {doctorDiscussion.length ? (
+              <ul className="space-y-2 text-sm leading-6 text-slate-700">
+                {doctorDiscussion.slice(0, 6).map((item, index) => <li key={index} className="rounded-2xl bg-slate-50 p-3">{item}</li>)}
+              </ul>
+            ) : <p className="text-sm leading-6 text-slate-600">{copy.discussionFallback}</p>}
+          </CoachCard>
+        )}
       </div>
 
       <DoctorEscalationCard doctorEscalationPrecision={doctorEscalationPrecision} copy={copy} />
 
       <ProgressActionSection progress={progressIntelligence} copy={copy} />
 
+      {/* P31b: raw per-pattern reasoning traces are debug-level pattern-
+          engine output (see P31a audit) -- kept available, collapsed
+          behind a disclosure by default rather than shown open. */}
       {!!clinicalReasoningTraces.length && (
-        <CoachCard className="p-5 sm:p-6">
-          <div className="mb-4 flex items-center gap-2">
+        <details className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
+          <summary className="flex cursor-pointer items-center gap-2 text-lg font-extrabold text-slate-950">
             <GitBranch className="h-5 w-5 text-teal-600" />
-            <h2 className="text-lg font-extrabold text-slate-950">{copy.reasoningTitle}</h2>
-          </div>
-          <p className="mb-4 text-sm leading-6 text-slate-500">{copy.reasoningIntro}</p>
+            {copy.reasoningTitle}
+          </summary>
+          <p className="mb-4 mt-3 text-sm leading-6 text-slate-500">{copy.reasoningIntro}</p>
           <div className="space-y-3">
             {clinicalReasoningTraces.slice(0, 6).map((trace, index) => (
               <ReasoningTraceCard key={trace?.pattern_id || index} trace={trace} copy={copy} isUk={isUk} />
             ))}
           </div>
-        </CoachCard>
+        </details>
       )}
 
       <InsightCard
@@ -982,6 +1010,17 @@ export default function ProtocolPage() {
         title={copy.evidenceTitle}
         body={copy.evidenceBody}
       />
+
+      {/* P31b: Protocol previously ended with no closing next-step CTA
+          (see P31a audit) -- a modest link back to Results/check-ins,
+          reusing existing navigation, not a new marketing block. */}
+      <div className="mt-2 flex flex-col items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-5 text-center sm:flex-row sm:justify-between sm:text-left">
+        <p className="text-sm leading-6 text-slate-600">{copy.closingBody}</p>
+        <div className="flex shrink-0 gap-3">
+          <CoachButton variant="secondary" icon={ArrowLeft} onClick={() => navigate(`/results/${uploadId}`)}>{copy.backResults}</CoachButton>
+          <CoachButton icon={ArrowRight} onClick={() => navigate('/check-ins')}>{copy.continueTracking}</CoachButton>
+        </div>
+      </div>
     </div>
   )
 }

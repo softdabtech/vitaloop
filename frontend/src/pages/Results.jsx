@@ -15,7 +15,6 @@ import {
   Download,
   ExternalLink,
   FileText,
-  GitBranch,
   HeartPulse,
   HelpCircle,
   Info,
@@ -1287,21 +1286,24 @@ function ClinicalReasoningMapSection({
   )
 }
 
+// P31b: raw per-pattern trace cards are the pattern engine's own debug-
+// level output (see P31a audit) -- kept available, but collapsed behind
+// a <details> disclosure by default so it doesn't compete with the
+// already-concise ClinicalReasoningMapSection above for attention. The
+// data is never removed, only hidden until the user opts in.
 function ReasoningTraceSection({ traces, copy }) {
   const list = Array.isArray(traces) ? traces.filter(Boolean) : []
+  if (!list.length) return null
   return (
-    <SectionCard icon={GitBranch} title={copy.reasoningTitle} className="mb-6">
-      <p className="mb-4 text-sm leading-6 text-slate-500">{copy.reasoningIntro}</p>
-      {list.length ? (
-        <div className="space-y-3">
-          {list.slice(0, 6).map((trace, index) => (
-            <ReasoningTraceCard key={trace?.pattern_id || index} trace={trace} copy={copy} />
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm leading-6 text-slate-600">{copy.reasoningEmpty}</p>
-      )}
-    </SectionCard>
+    <details className="mb-6 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+      <summary className="cursor-pointer text-sm font-semibold text-slate-700">{copy.reasoningTitle}</summary>
+      <p className="mb-4 mt-3 text-sm leading-6 text-slate-500">{copy.reasoningIntro}</p>
+      <div className="space-y-3">
+        {list.slice(0, 6).map((trace, index) => (
+          <ReasoningTraceCard key={trace?.pattern_id || index} trace={trace} copy={copy} />
+        ))}
+      </div>
+    </details>
   )
 }
 
@@ -1644,21 +1646,12 @@ export default function Results() {
           </div>
         </motion.header>
 
-        <div className="mb-6 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{copy.focusNow}</p>
-            <p className="mt-1 text-sm font-semibold text-slate-900">{priorityMarkers[0] ? displayBiomarkerName(priorityMarkers[0], isUk) : copy.noImmediate}</p>
-          </div>
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">{copy.watchListLabel}</p>
-            <p className="mt-1 text-sm font-semibold text-amber-900">{copy.markersNearBorder(watchCount)}</p>
-          </div>
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{copy.stableZone}</p>
-            <p className="mt-1 text-sm font-semibold text-emerald-900">{copy.markersInRange(optimalCount)}</p>
-          </div>
-        </div>
-
+        {/* P31b: removed the "Focus now / Watch list / Stable zone" row --
+            it repeated the same counts/priority-marker name already shown
+            in the hero header above (headline + 3-stat box), one of three
+            redundant top-of-page overview widgets identified in the P31a
+            audit. AnalysisCoreV2Panel below carries the remaining
+            domain-level detail that isn't already in the hero. */}
         <AnalysisCoreV2Panel finalAnalysis={finalAnalysis} copy={copy} />
 
         {!!urgentWarning && (
@@ -1823,52 +1816,15 @@ export default function Results() {
           </div>
         </div>
 
-        {/* Stacked vertically, one full-width card per row — corrected per
-            direct feedback after the horizontal-row version shipped (was
-            `grid lg:grid-cols-4`, then briefly a horizontal-scroll flex row;
-            neither was the intended layout). Content length varies a lot
-            between these 4 cards (Today/This month are one line, Next
-            steps/Doctor questions are long lists) — stacked full-width lets
-            each size to its own content instead of forcing uneven columns
-            side by side. */}
-        <div className="mt-6 flex flex-col gap-4">
-          <SectionCard icon={CheckCircle2} title={copy.nextSteps}>
-            {reportActions.length ? (
-              <ul className="space-y-3 text-sm leading-6 text-slate-700">
-                {reportActions.slice(0, 4).map((item, idx) => (
-                  <li key={`action-${item.key || idx}`} className="rounded-xl bg-slate-50 p-3">
-                    <span className="font-semibold text-slate-950">{item.title}</span>
-                    <span className="block text-slate-600">{item.body}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm leading-6 text-slate-600">{copy.nextFallback}</p>
-            )}
-          </SectionCard>
+        {/* P31b: removed the legacy "Next steps / Today / This month /
+            Doctor questions" cards (driven by pre-P9 knowledgeReport.
+            action_plan/doctor_discussion) -- they duplicated
+            ActionPlanByRoleSection/DoctorEscalationSection above with
+            older, less calibrated copy. reportActions/reportDiscussion/
+            reportRetest are kept as variables: still used by the PDF
+            export above and (reportRetest) by TestingPlanSection below. */}
 
-          <SectionCard icon={ArrowRight} title={copy.today}>
-            <p className="text-sm leading-6 text-slate-600">{reportActions[0]?.body || reportActions[0]?.title || copy.reviewTopFinding}</p>
-          </SectionCard>
-
-          <SectionCard icon={RefreshCw} title={copy.thisMonth}>
-            <p className="text-sm leading-6 text-slate-600">{reportRetest[0]?.timing || 'Plan retesting based on symptoms, clinician guidance, and the marker involved.'}</p>
-          </SectionCard>
-
-          <SectionCard icon={MessageCircle} title={copy.doctorQuestions}>
-            {reportDiscussion.length ? (
-              <ul className="space-y-2 text-sm leading-6 text-slate-700">
-                {reportDiscussion.slice(0, 5).map((item, idx) => (
-                  <li key={`discussion-${idx}`} className="rounded-xl bg-slate-50 px-3 py-2">{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm leading-6 text-slate-600">{copy.discussFallback}</p>
-            )}
-          </SectionCard>
-        </div>
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <div className="mt-6">
           <CoachCard className="p-5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-slate-950">{copy.evidence}</h2>
@@ -1880,24 +1836,11 @@ export default function Results() {
               {explanations.length ? copy.evidenceSummary : copy.whyDefault}
             </p>
           </CoachCard>
-
-          <CoachCard className="p-5">
-            <h2 className="text-lg font-semibold text-slate-950">{copy.retest}</h2>
-            {reportRetest.length ? (
-              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                {reportRetest.slice(0, 5).map((item, idx) => (
-                  <li key={`retest-${idx}`} className="rounded-xl bg-slate-50 px-3 py-2">
-                    <span className="font-semibold text-slate-950">{item.marker}</span>
-                    <span className="block text-slate-600">{item.timing}</span>
-                    {item.reason && <span className="block text-xs text-slate-500">{item.reason}</span>}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-3 text-sm leading-6 text-slate-600">{copy.retestFallback}</p>
-            )}
-          </CoachCard>
         </div>
+        {/* P31b: removed the duplicate "Retest" CoachCard here -- it
+            repeated the same reportRetest data TestingPlanSection above
+            already renders as this page's one primary testing/retest
+            surface. */}
 
         {!!shoppingLinks.length && (
           <div className="mt-6 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
