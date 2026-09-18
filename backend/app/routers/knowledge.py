@@ -37,6 +37,7 @@ from app.services.knowledge import (
 )
 from app.services.knowledge.governance_coverage import build_governance_coverage
 from app.services.knowledge.rule_packs import build_rule_packs
+from app.services.knowledge.rule_pack_quality import build_rule_pack_quality
 
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 
@@ -96,6 +97,31 @@ async def get_rule_packs(
     """
     rows = await list_rules()
     return build_rule_packs(rows)
+
+
+@router.get("/rules/pack-quality")
+async def get_rule_pack_quality(
+    _: UserContext = Depends(require_super_admin),
+) -> dict:
+    """P26 (Rule Pack Quality Scoring): a deterministic, read-only
+    governance-health score per pack from rule_packs.py's existing
+    grouping -- active/reviewed/draft/deprecated mix, medical-reviewer
+    coverage, domain-coverage breadth, review/update freshness, and a
+    fixed-weight 0-100 score with a documented formula (see
+    rule_pack_quality.py's module docstring). Not a clinical accuracy
+    measure, not persisted anywhere, and unrelated to frozen clinical
+    reports -- ops/governance visibility only, same posture as
+    governance-coverage and llm-cost-audit elsewhere in this codebase.
+
+    Registered before /rules/{rule_id} for the same reason /rules/packs
+    and /rules/governance-coverage are: this is a single path segment
+    (/rules/pack-quality), the same shape as /rules/{rule_id}, so FastAPI/
+    Starlette's declaration-order route matching would otherwise treat
+    "pack-quality" as a rule id and swallow this request into the wrong
+    handler -- see test_rule_pack_quality_route_registered_before_rule_id_route.
+    """
+    rows = await list_rules()
+    return build_rule_pack_quality(rows)
 
 
 @router.get("/rules/{rule_id}", response_model=KnowledgeRuleDetail)
