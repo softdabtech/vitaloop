@@ -252,3 +252,160 @@ async def test_p18b_reasoning_map_fields_default_to_empty_for_old_report(monkeyp
     assert result["clinical_contradictions"] == {}
     assert result["evidence_debt"] == {}
     assert result["report_quality_audit"] == {}
+
+
+@pytest.mark.asyncio
+async def test_p30_population_profile_and_doctor_escalation_fields_pass_through(monkeypatch):
+    """P30: population_profile_selection (P24.3), population_profile_
+    overlays (P24), and doctor_escalation_precision (P25) must pass
+    through verbatim from the frozen input_snapshot, same posture as
+    evidence_debt/report_quality_audit -- never recomputed here."""
+    org_id = uuid4()
+    client_id = uuid4()
+
+    async def fake_membership(_sb, _org_id, _user_id):
+        return {"role": "org_owner"}
+
+    async def fake_get_previous_report(_user_id, exclude_upload_id=None):
+        return {
+            "upload_id": "upload-1",
+            "created_at": "2026-09-14T00:00:00Z",
+            "safety_result": {},
+            "input_snapshot": {
+                "clinical_reasoning_traces": [],
+                "population_profile_selection": {
+                    "version": "p24_3_v1",
+                    "active_profile_ids": ["longevity_metabolic_optimization"],
+                    "selection_source": "default",
+                    "selection_reasons": ["No explicit override or strong athletic signal found."],
+                    "ignored_profile_ids": ["athlete_recovery"],
+                },
+                "population_profile_overlays": {
+                    "version": "p24_v1",
+                    "active_profile_ids": ["longevity_metabolic_optimization"],
+                    "unknown_profile_ids": [],
+                    "profiles": [
+                        {
+                            "profile_id": "longevity_metabolic_optimization",
+                            "label": "Longevity & Metabolic Optimization",
+                            "focus_domains": ["cardiometabolic"],
+                            "priority_adjustments": [{"domain": "cardiometabolic", "profile_emphasis": "elevated"}] * 10,
+                            "context_notes": [],
+                            "velocity_notes": [],
+                            "next_test_emphasis": [{"domain": "cardiometabolic", "marker": "HOMA-IR"}] * 10,
+                            "practitioner_prompts": ["Consider discussing this further."] * 10,
+                        }
+                    ] * 5,
+                },
+                "doctor_escalation_precision": {
+                    "version": "p25_v1",
+                    "overall_level": "urgent",
+                    "recommended_timing": "urgent",
+                    "escalations": [
+                        {
+                            "id": "cardiometabolic_urgent_review",
+                            "level": "urgent",
+                            "recommended_timing": "urgent",
+                            "domain": "cardiometabolic",
+                            "reason_codes": ["urgent_review_flag_present"],
+                            "related_markers": ["Potassium"],
+                            "human_readable_reason": "This finding is flagged for urgent review.",
+                        }
+                    ] * 10,
+                },
+            },
+        }
+
+    monkeypatch.setattr(crm_router, "_get_membership", fake_membership)
+    monkeypatch.setattr(crm_router, "_get_supabase", lambda: _make_async(_FakeClient([])))
+    monkeypatch.setattr(svc, "_run", _fake_run)
+    monkeypatch.setattr(svc, "get_previous_report_version_for_user", fake_get_previous_report)
+
+    result = await crm_router.get_client_clinical_summary(client_id, org_id, _current_user(sub="owner-1"))
+
+    assert result["population_profile_selection"]["active_profile_ids"] == ["longevity_metabolic_optimization"]
+    assert result["population_profile_selection"]["selection_source"] == "default"
+    assert result["population_profile_selection"]["ignored_profile_ids"] == ["athlete_recovery"]
+
+    # Defensive caps: at most 4 profiles, at most 8 adjustments/prompts/
+    # next-test-emphasis entries per profile.
+    overlays = result["population_profile_overlays"]
+    assert len(overlays["profiles"]) == 4
+    profile = overlays["profiles"][0]
+    assert profile["label"] == "Longevity & Metabolic Optimization"
+    assert len(profile["priority_adjustments"]) == 8
+    assert len(profile["practitioner_prompts"]) == 8
+    assert len(profile["next_test_emphasis"]) == 8
+
+    dep = result["doctor_escalation_precision"]
+    assert dep["overall_level"] == "urgent"
+    assert len(dep["escalations"]) == 8
+
+
+@pytest.mark.asyncio
+async def test_p30_population_profile_and_doctor_escalation_fields_default_to_empty_for_old_report(monkeypatch):
+    """A report generated before P24/P25 existed has none of these keys --
+    must degrade to empty dicts, never crash (same posture proven for
+    P18b's fields in the test above)."""
+    org_id = uuid4()
+    client_id = uuid4()
+
+    async def fake_membership(_sb, _org_id, _user_id):
+        return {"role": "org_owner"}
+
+    async def fake_get_previous_report(_user_id, exclude_upload_id=None):
+        return {
+            "upload_id": "upload-1",
+            "created_at": "2026-09-14T00:00:00Z",
+            "safety_result": {},
+            "input_snapshot": {"clinical_reasoning_traces": []},
+        }
+
+    monkeypatch.setattr(crm_router, "_get_membership", fake_membership)
+    monkeypatch.setattr(crm_router, "_get_supabase", lambda: _make_async(_FakeClient([])))
+    monkeypatch.setattr(svc, "_run", _fake_run)
+    monkeypatch.setattr(svc, "get_previous_report_version_for_user", fake_get_previous_report)
+
+    result = await crm_router.get_client_clinical_summary(client_id, org_id, _current_user(sub="owner-1"))
+
+    assert result["population_profile_selection"] == {}
+    assert result["population_profile_overlays"] == {}
+    assert result["doctor_escalation_precision"] == {}
+
+
+@pytest.mark.asyncio
+async def test_p30_endpoint_never_mutates_the_snapshot_dict(monkeypatch):
+    """The capping logic must build new lists/dicts, never mutate the
+    snapshot's own nested objects in place -- a later read of the same
+    frozen report_row must still see the original, uncapped snapshot."""
+    org_id = uuid4()
+    client_id = uuid4()
+
+    original_profiles = [{"profile_id": "longevity_metabolic_optimization", "priority_adjustments": [{"domain": "x"}] * 10}]
+    original_escalations = [{"id": "e1", "level": "urgent"}] * 10
+    report_row = {
+        "upload_id": "upload-1",
+        "created_at": "2026-09-14T00:00:00Z",
+        "safety_result": {},
+        "input_snapshot": {
+            "clinical_reasoning_traces": [],
+            "population_profile_overlays": {"profiles": original_profiles},
+            "doctor_escalation_precision": {"escalations": original_escalations},
+        },
+    }
+
+    async def fake_membership(_sb, _org_id, _user_id):
+        return {"role": "org_owner"}
+
+    async def fake_get_previous_report(_user_id, exclude_upload_id=None):
+        return report_row
+
+    monkeypatch.setattr(crm_router, "_get_membership", fake_membership)
+    monkeypatch.setattr(crm_router, "_get_supabase", lambda: _make_async(_FakeClient([])))
+    monkeypatch.setattr(svc, "_run", _fake_run)
+    monkeypatch.setattr(svc, "get_previous_report_version_for_user", fake_get_previous_report)
+
+    await crm_router.get_client_clinical_summary(client_id, org_id, _current_user(sub="owner-1"))
+
+    assert len(original_profiles[0]["priority_adjustments"]) == 10
+    assert len(original_escalations) == 10

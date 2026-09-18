@@ -209,7 +209,162 @@ public class ClientsController : Controller
             ReasoningMap = ParseReasoningMap(root),
             EvidenceDebt = ParseEvidenceDebtSummary(root),
             ReportQualityAudit = ParseReportQualityAuditSummary(root),
+            PopulationProfileSelection = ParsePopulationProfileSelection(root),
+            PopulationProfileOverlays = ParsePopulationProfileOverlays(root),
+            DoctorEscalationPrecision = ParseDoctorEscalationPrecision(root),
         };
+    }
+
+    // P30: population_profile_selection (backend/app/services/
+    // population_profile_selection.py) -- pure pass-through, null when
+    // the report predates P24.3.
+    private static PopulationProfileSelectionViewModel? ParsePopulationProfileSelection(JsonElement root)
+    {
+        if (!root.TryGetProperty("population_profile_selection", out var ppsEl) || ppsEl.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+        var activeIds = ReadStringArray(ppsEl, "active_profile_ids");
+        var ignoredIds = ReadStringArray(ppsEl, "ignored_profile_ids");
+        var reasons = ReadStringArray(ppsEl, "selection_reasons");
+        if (activeIds.Count == 0 && ignoredIds.Count == 0 && reasons.Count == 0
+            && !ppsEl.TryGetProperty("selection_source", out _))
+        {
+            return null;
+        }
+        return new PopulationProfileSelectionViewModel
+        {
+            ActiveProfileIds = activeIds,
+            SelectionSource = ppsEl.TryGetProperty("selection_source", out var ssEl) && ssEl.ValueKind == JsonValueKind.String ? ssEl.GetString() : null,
+            SelectionReasons = reasons,
+            IgnoredProfileIds = ignoredIds,
+        };
+    }
+
+    // P30: population_profile_overlays (backend/app/services/
+    // population_profiles.py) -- pure pass-through, null/empty when the
+    // report predates P24.
+    private static PopulationProfileOverlaysViewModel? ParsePopulationProfileOverlays(JsonElement root)
+    {
+        if (!root.TryGetProperty("population_profile_overlays", out var ppoEl) || ppoEl.ValueKind != JsonValueKind.Object
+            || !ppoEl.TryGetProperty("profiles", out var profilesEl) || profilesEl.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var profiles = new List<ProfileOverlayViewModel>();
+        foreach (var profile in profilesEl.EnumerateArray())
+        {
+            if (profile.ValueKind != JsonValueKind.Object) continue;
+
+            var adjustments = new List<PriorityAdjustmentViewModel>();
+            if (profile.TryGetProperty("priority_adjustments", out var paEl) && paEl.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var adj in paEl.EnumerateArray())
+                {
+                    if (adj.ValueKind != JsonValueKind.Object) continue;
+                    adjustments.Add(new PriorityAdjustmentViewModel
+                    {
+                        Domain = adj.TryGetProperty("domain", out var d) ? d.GetString() ?? "" : "",
+                        Label = adj.TryGetProperty("label", out var l) && l.ValueKind == JsonValueKind.String ? l.GetString() : null,
+                        CalibratedConfidence = adj.TryGetProperty("calibrated_confidence", out var cc) && cc.ValueKind == JsonValueKind.String ? cc.GetString() : null,
+                        ProfileEmphasis = adj.TryGetProperty("profile_emphasis", out var pe) && pe.ValueKind == JsonValueKind.String ? pe.GetString() ?? "standard" : "standard",
+                        Reason = adj.TryGetProperty("reason", out var r) && r.ValueKind == JsonValueKind.String ? r.GetString() : null,
+                    });
+                }
+            }
+
+            var nextTests = new List<NextTestEmphasisViewModel>();
+            if (profile.TryGetProperty("next_test_emphasis", out var nteEl) && nteEl.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var nte in nteEl.EnumerateArray())
+                {
+                    if (nte.ValueKind != JsonValueKind.Object) continue;
+                    nextTests.Add(new NextTestEmphasisViewModel
+                    {
+                        Domain = nte.TryGetProperty("domain", out var d) ? d.GetString() ?? "" : "",
+                        Marker = nte.TryGetProperty("marker", out var m) && m.ValueKind == JsonValueKind.String ? m.GetString() : null,
+                        Priority = nte.TryGetProperty("priority", out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null,
+                        AlreadyBeingAddressed = nte.TryGetProperty("already_being_addressed", out var aba) && aba.ValueKind == JsonValueKind.True,
+                        Reason = nte.TryGetProperty("reason", out var r) && r.ValueKind == JsonValueKind.String ? r.GetString() : null,
+                    });
+                }
+            }
+
+            profiles.Add(new ProfileOverlayViewModel
+            {
+                ProfileId = profile.TryGetProperty("profile_id", out var pid) ? pid.GetString() ?? "" : "",
+                Label = profile.TryGetProperty("label", out var lbl) && lbl.ValueKind == JsonValueKind.String ? lbl.GetString() ?? "" : "",
+                PriorityAdjustments = adjustments,
+                NextTestEmphasis = nextTests,
+                PractitionerPrompts = ReadStringArray(profile, "practitioner_prompts"),
+            });
+        }
+
+        if (profiles.Count == 0) return null;
+        return new PopulationProfileOverlaysViewModel { Profiles = profiles };
+    }
+
+    // P30: doctor_escalation_precision (backend/app/services/
+    // doctor_escalation_precision.py) -- pure pass-through. Unlike P29's
+    // b2c UI, the practitioner audience is allowed to see reason_codes,
+    // related_hypotheses, and related_contradictions.
+    private static DoctorEscalationPrecisionViewModel? ParseDoctorEscalationPrecision(JsonElement root)
+    {
+        if (!root.TryGetProperty("doctor_escalation_precision", out var depEl) || depEl.ValueKind != JsonValueKind.Object
+            || !depEl.TryGetProperty("escalations", out var escEl) || escEl.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var escalations = new List<DoctorEscalationItemViewModel>();
+        foreach (var item in escEl.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object) continue;
+            escalations.Add(new DoctorEscalationItemViewModel
+            {
+                Id = item.TryGetProperty("id", out var idEl) && idEl.ValueKind == JsonValueKind.String ? idEl.GetString() : null,
+                Level = item.TryGetProperty("level", out var lvlEl) ? lvlEl.GetString() ?? "" : "",
+                RecommendedTiming = item.TryGetProperty("recommended_timing", out var rtEl) && rtEl.ValueKind == JsonValueKind.String ? rtEl.GetString() : null,
+                Domain = item.TryGetProperty("domain", out var domEl) ? domEl.GetString() ?? "" : "",
+                ReasonCodes = ReadStringArray(item, "reason_codes"),
+                RelatedMarkers = ReadStringArray(item, "related_markers"),
+                RelatedSymptoms = ReadStringArray(item, "related_symptoms"),
+                RelatedHypotheses = ReadStringArray(item, "related_hypotheses"),
+                RelatedContradictions = ReadStringArray(item, "related_contradictions"),
+                HumanReadableReason = item.TryGetProperty("human_readable_reason", out var hrrEl) && hrrEl.ValueKind == JsonValueKind.String ? hrrEl.GetString() : null,
+            });
+        }
+
+        if (escalations.Count == 0) return null;
+        return new DoctorEscalationPrecisionViewModel
+        {
+            OverallLevel = depEl.TryGetProperty("overall_level", out var olEl) && olEl.ValueKind == JsonValueKind.String ? olEl.GetString() : null,
+            RecommendedTiming = depEl.TryGetProperty("recommended_timing", out var rtEl2) && rtEl2.ValueKind == JsonValueKind.String ? rtEl2.GetString() : null,
+            Escalations = escalations,
+        };
+    }
+
+    // Shared helper: reads a JSON array property into a list of strings,
+    // tolerating non-string entries (skipped) and a missing/malformed
+    // property (empty list) -- same fail-open posture as every other
+    // parser in this file.
+    private static IReadOnlyList<string> ReadStringArray(JsonElement root, string propertyName)
+    {
+        var result = new List<string>();
+        if (!root.TryGetProperty(propertyName, out var arrEl) || arrEl.ValueKind != JsonValueKind.Array)
+        {
+            return result;
+        }
+        foreach (var entry in arrEl.EnumerateArray())
+        {
+            if (entry.ValueKind == JsonValueKind.String)
+            {
+                var value = entry.GetString();
+                if (!string.IsNullOrWhiteSpace(value)) result.Add(value!);
+            }
+        }
+        return result;
     }
 
     // P18b: builds the practitioner-facing Clinical Reasoning Map cards —

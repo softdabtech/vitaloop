@@ -1154,6 +1154,19 @@ async def get_client_clinical_summary(
     evidence_debt = snapshot.get("evidence_debt") or {}
     report_quality_audit = snapshot.get("report_quality_audit") or {}
     next_test_funnel = snapshot.get("next_test_funnel") or {}
+    # P30: pass-through only, verbatim from the frozen input_snapshot --
+    # same fail-open-to-empty-dict posture as evidence_debt/
+    # report_quality_audit above. A report generated before P24/P25
+    # existed simply has none of these keys and every .get() below
+    # degrades to {}, which the CRM view already renders as an empty
+    # state. clinical_disagreement (P27) and rule_pack_quality (P26) are
+    # deliberately NOT exposed here -- see docs/
+    # P30A_PRACTITIONER_CRM_EXPOSURE_REVIEW (clinical_disagreement is
+    # internal-only and never persisted to input_snapshot; rule_pack_
+    # quality is an org-level governance metric, not a per-client field).
+    population_profile_selection = snapshot.get("population_profile_selection") or {}
+    population_profile_overlays = snapshot.get("population_profile_overlays") or {}
+    doctor_escalation_precision = snapshot.get("doctor_escalation_precision") or {}
 
     # Sort so a practitioner opening this page sees the highest-signal
     # patterns first: doctor_flag true, then descending confidence — same
@@ -1209,6 +1222,29 @@ async def get_client_clinical_summary(
         "evidence_debt": evidence_debt,
         "report_quality_audit": report_quality_audit,
         "next_test_funnel": next_test_funnel,
+        # P30 Practitioner CRM Safety & Profile Brief: verbatim pass-through
+        # of already-computed P24/P25 snapshot fields, capped defensively
+        # (never mutating the snapshot dict itself -- new lists/dicts are
+        # built here) so this endpoint doesn't balloon in size for a
+        # report with many profiles/escalations.
+        "population_profile_selection": population_profile_selection,
+        "population_profile_overlays": {
+            **population_profile_overlays,
+            "profiles": [
+                {
+                    **profile,
+                    "priority_adjustments": (profile.get("priority_adjustments") or [])[:8],
+                    "practitioner_prompts": (profile.get("practitioner_prompts") or [])[:8],
+                    "next_test_emphasis": (profile.get("next_test_emphasis") or [])[:8],
+                }
+                for profile in (population_profile_overlays.get("profiles") or [])[:4]
+                if isinstance(profile, dict)
+            ],
+        } if population_profile_overlays else {},
+        "doctor_escalation_precision": {
+            **doctor_escalation_precision,
+            "escalations": (doctor_escalation_precision.get("escalations") or [])[:8],
+        } if doctor_escalation_precision else {},
     }
 
 

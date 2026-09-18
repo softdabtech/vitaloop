@@ -45,6 +45,85 @@ public sealed class ClinicalSummaryViewModel
     public IReadOnlyList<ReasoningMapCardViewModel> ReasoningMap { get; init; } = Array.Empty<ReasoningMapCardViewModel>();
     public EvidenceDebtSummaryViewModel? EvidenceDebt { get; init; }
     public ReportQualityAuditSummaryViewModel? ReportQualityAudit { get; init; }
+
+    /// <summary>P30: which population profile(s) (P24.3) were selected for
+    /// this report, and why — see backend/app/services/
+    /// population_profile_selection.py. Null when the report predates
+    /// P24.3 (no profile-selection field in its frozen input_snapshot).</summary>
+    public PopulationProfileSelectionViewModel? PopulationProfileSelection { get; init; }
+
+    /// <summary>P30: per-profile priority-adjustment overlays (P24) — see
+    /// backend/app/services/population_profiles.py. Null/empty when the
+    /// report predates P24.</summary>
+    public PopulationProfileOverlaysViewModel? PopulationProfileOverlays { get; init; }
+
+    /// <summary>P30: structured doctor/urgent escalation explanations
+    /// (P25) — see backend/app/services/doctor_escalation_precision.py.
+    /// Unlike the b2c-facing P29 UI, the practitioner audience is allowed
+    /// to see reason_codes/related_hypotheses/related_contradictions.
+    /// Null when the report predates P25.</summary>
+    public DoctorEscalationPrecisionViewModel? DoctorEscalationPrecision { get; init; }
+}
+
+public sealed class PopulationProfileSelectionViewModel
+{
+    public IReadOnlyList<string> ActiveProfileIds { get; init; } = Array.Empty<string>();
+    public string? SelectionSource { get; init; }
+    public IReadOnlyList<string> SelectionReasons { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> IgnoredProfileIds { get; init; } = Array.Empty<string>();
+}
+
+public sealed class PopulationProfileOverlaysViewModel
+{
+    public IReadOnlyList<ProfileOverlayViewModel> Profiles { get; init; } = Array.Empty<ProfileOverlayViewModel>();
+}
+
+public sealed class ProfileOverlayViewModel
+{
+    public string ProfileId { get; init; } = "";
+    public string Label { get; init; } = "";
+    public IReadOnlyList<PriorityAdjustmentViewModel> PriorityAdjustments { get; init; } = Array.Empty<PriorityAdjustmentViewModel>();
+    public IReadOnlyList<NextTestEmphasisViewModel> NextTestEmphasis { get; init; } = Array.Empty<NextTestEmphasisViewModel>();
+    public IReadOnlyList<string> PractitionerPrompts { get; init; } = Array.Empty<string>();
+}
+
+public sealed class PriorityAdjustmentViewModel
+{
+    public string Domain { get; init; } = "";
+    public string? Label { get; init; }
+    public string? CalibratedConfidence { get; init; }
+    public string ProfileEmphasis { get; init; } = "standard";
+    public string? Reason { get; init; }
+}
+
+public sealed class NextTestEmphasisViewModel
+{
+    public string Domain { get; init; } = "";
+    public string? Marker { get; init; }
+    public string? Priority { get; init; }
+    public bool AlreadyBeingAddressed { get; init; }
+    public string? Reason { get; init; }
+}
+
+public sealed class DoctorEscalationPrecisionViewModel
+{
+    public string? OverallLevel { get; init; }
+    public string? RecommendedTiming { get; init; }
+    public IReadOnlyList<DoctorEscalationItemViewModel> Escalations { get; init; } = Array.Empty<DoctorEscalationItemViewModel>();
+}
+
+public sealed class DoctorEscalationItemViewModel
+{
+    public string? Id { get; init; }
+    public string Level { get; init; } = "";
+    public string? RecommendedTiming { get; init; }
+    public string Domain { get; init; } = "";
+    public IReadOnlyList<string> ReasonCodes { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> RelatedMarkers { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> RelatedSymptoms { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> RelatedHypotheses { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> RelatedContradictions { get; init; } = Array.Empty<string>();
+    public string? HumanReadableReason { get; init; }
 }
 
 public sealed class ReasoningMapCardViewModel

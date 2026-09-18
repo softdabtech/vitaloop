@@ -316,6 +316,178 @@ else
     </section>
   }
 
+  // P30 Practitioner CRM Safety & Profile Brief: population_profile_
+  // selection/overlays (P24) + doctor_escalation_precision (P25),
+  // verbatim pass-through parsed by ClientsController.Parse*. Unlike
+  // P29's b2c-facing card, this practitioner audience is allowed to see
+  // reason_codes/related_hypotheses/related_contradictions. Hidden
+  // entirely when the report predates P24/P25 (all three parsers below
+  // return null for an old snapshot) rather than showing an empty card.
+  var profileSelection = Model.ClinicalSummary?.PopulationProfileSelection;
+  var profileOverlays = Model.ClinicalSummary?.PopulationProfileOverlays;
+  var doctorEscalation = Model.ClinicalSummary?.DoctorEscalationPrecision;
+  string EscalationLevelLabel(string level) => level switch
+  {
+    "urgent" => "Urgent",
+    "doctor" => "Doctor discussion",
+    _ => level,
+  };
+  @if (Model.ClinicalSummary?.Available == true && (profileSelection is not null || profileOverlays is not null || doctorEscalation is not null))
+  {
+    <section class="vo-card" style="padding:20px;display:grid;gap:16px;">
+      <h2 style="margin:0;font-size:1.05rem;">Clinical Safety Brief</h2>
+
+      @if (doctorEscalation is not null && doctorEscalation.Escalations.Any())
+      {
+        var escalationsToShow = doctorEscalation.Escalations
+          .Where(e => e.Level == "urgent" || e.Level == "doctor")
+          .OrderBy(e => e.Level == "urgent" ? 0 : 1)
+          .Take(5)
+          .ToList();
+        if (escalationsToShow.Any())
+        {
+          <div style="display:grid;gap:8px;">
+            <strong>Doctor discussion</strong>
+            @foreach (var esc in escalationsToShow)
+            {
+              <div class="vo-card" style="padding:12px;border-left:3px solid var(--vo-danger-text);">
+                <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                  <span class="vo-pill @ActionBucketTone(esc.Level)">@EscalationLevelLabel(esc.Level)</span>
+                  @if (!string.IsNullOrWhiteSpace(esc.RecommendedTiming))
+                  {
+                    <span class="vo-pill tone-gray">@esc.RecommendedTiming.Replace('_', ' ')</span>
+                  }
+                </div>
+                @if (!string.IsNullOrWhiteSpace(esc.HumanReadableReason))
+                {
+                  <p style="margin:8px 0 0;color:var(--vo-gray-700);">@esc.HumanReadableReason</p>
+                }
+                @if (esc.RelatedMarkers.Any())
+                {
+                  <p style="margin:6px 0 0;color:var(--vo-gray-700);"><strong>Related markers:</strong> @string.Join(", ", esc.RelatedMarkers)</p>
+                }
+                @if (esc.RelatedSymptoms.Any())
+                {
+                  <p style="margin:2px 0 0;color:var(--vo-gray-700);"><strong>Related symptoms:</strong> @string.Join(", ", esc.RelatedSymptoms)</p>
+                }
+                @if (esc.RelatedHypotheses.Any())
+                {
+                  <p style="margin:2px 0 0;color:var(--vo-gray-700);"><strong>Related hypotheses:</strong> @string.Join(", ", esc.RelatedHypotheses)</p>
+                }
+                @if (esc.RelatedContradictions.Any())
+                {
+                  <p style="margin:2px 0 0;color:var(--vo-gray-700);"><strong>Related contradictions:</strong> @string.Join(", ", esc.RelatedContradictions)</p>
+                }
+                @if (esc.ReasonCodes.Any())
+                {
+                  <p style="margin:6px 0 0;">
+                    @foreach (var code in esc.ReasonCodes)
+                    {
+                      <span class="vo-pill tone-gray" style="margin-right:4px;">@code.Replace('_', ' ')</span>
+                    }
+                  </p>
+                }
+              </div>
+            }
+          </div>
+        }
+      }
+
+      @if (profileSelection is not null)
+      {
+        <div style="display:grid;gap:6px;padding-top:8px;border-top:1px solid var(--vo-gray-200);">
+          <strong>Active profiles</strong>
+          @if (!profileSelection.ActiveProfileIds.Any())
+          {
+            <p style="margin:0;color:var(--vo-gray-700);">No population profile is active for this report.</p>
+          }
+          else
+          {
+            <p style="margin:0;color:var(--vo-gray-700);">
+              @string.Join(", ", profileSelection.ActiveProfileIds.Select(id => id.Replace('_', ' ')))
+              @if (!string.IsNullOrWhiteSpace(profileSelection.SelectionSource))
+              {
+                <span> (@profileSelection.SelectionSource)</span>
+              }
+            </p>
+          }
+          @if (profileSelection.SelectionReasons.Any())
+          {
+            <ul style="margin:2px 0 0;padding-left:18px;color:var(--vo-gray-700);">
+              @foreach (var reason in profileSelection.SelectionReasons)
+              {
+                <li>@reason</li>
+              }
+            </ul>
+          }
+          @if (profileSelection.IgnoredProfileIds.Any())
+          {
+            <p style="margin:2px 0 0;color:var(--vo-gray-700);">
+              <strong>Not activated:</strong> @string.Join(", ", profileSelection.IgnoredProfileIds.Select(id => id.Replace('_', ' ')))
+            </p>
+          }
+        </div>
+      }
+
+      @if (profileOverlays is not null && profileOverlays.Profiles.Any())
+      {
+        <div style="display:grid;gap:12px;padding-top:8px;border-top:1px solid var(--vo-gray-200);">
+          <strong>Profile overlays</strong>
+          @foreach (var profile in profileOverlays.Profiles)
+          {
+            <div class="vo-card" style="padding:12px;">
+              <div><strong>@profile.Label</strong></div>
+
+              @{ var topAdjustments = profile.PriorityAdjustments.Take(5).ToList(); }
+              @if (topAdjustments.Any())
+              {
+                <div style="display:grid;gap:6px;margin-top:8px;">
+                  @foreach (var adj in topAdjustments)
+                  {
+                    <div>
+                      <span class="vo-pill tone-gray" style="margin-right:6px;">@adj.Domain.Replace('_', ' ')</span>
+                      <span class="vo-pill @(adj.ProfileEmphasis == "elevated" ? "tone-warning" : adj.ProfileEmphasis == "downgraded_due_to_contradiction" ? "tone-danger" : "tone-gray")">
+                        @adj.ProfileEmphasis.Replace('_', ' ')
+                      </span>
+                      @if (!string.IsNullOrWhiteSpace(adj.Label))
+                      {
+                        <span> @adj.Label</span>
+                      }
+                      @if (!string.IsNullOrWhiteSpace(adj.Reason))
+                      {
+                        <p style="margin:2px 0 0;color:var(--vo-gray-700);">@adj.Reason</p>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
+              @{ var topNextTests = profile.NextTestEmphasis.Take(5).ToList(); }
+              @if (topNextTests.Any())
+              {
+                <p style="margin:8px 0 0;color:var(--vo-gray-700);">
+                  <strong>Next-test emphasis:</strong>
+                  @string.Join(", ", topNextTests.Select(t => t.Marker).Where(m => !string.IsNullOrWhiteSpace(m)))
+                </p>
+              }
+
+              @{ var topPrompts = profile.PractitionerPrompts.Take(5).ToList(); }
+              @if (topPrompts.Any())
+              {
+                <ul style="margin:8px 0 0;padding-left:18px;color:var(--vo-gray-700);">
+                  @foreach (var prompt in topPrompts)
+                  {
+                    <li>@prompt</li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+
   <section class="vo-card" style="padding:20px;display:grid;gap:14px;">
     <div><strong>Client:</strong> @Model.Assignment.ClientName</div>
     <div><strong>Practitioner:</strong> @Model.Assignment.PractitionerName</div>

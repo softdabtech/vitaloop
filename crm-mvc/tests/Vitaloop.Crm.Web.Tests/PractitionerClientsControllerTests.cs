@@ -301,6 +301,167 @@ public class PractitionerClientsControllerTests
         Assert.Empty(model.ClinicalSummary!.ReasoningMap);
     }
 
+    // P30 Practitioner CRM Safety & Profile Brief: population_profile_
+    // selection/overlays (P24) + doctor_escalation_precision (P25).
+    [Fact]
+    public async Task Profile_Parses_Population_Profile_And_Doctor_Escalation_Fields()
+    {
+        var orgId = Guid.NewGuid();
+        var clientId = Guid.NewGuid();
+        var practitionerId = Guid.NewGuid();
+        var assignment = MakeAssignment(orgId, clientId, practitionerId);
+        var gateway = new FakeCrmDataGateway
+        {
+            ClinicalSummaryDocument = JsonDocument.Parse("""
+            {
+              "client_id": "abc",
+              "available": true,
+              "population_profile_selection": {
+                "active_profile_ids": ["longevity_metabolic_optimization"],
+                "selection_source": "default",
+                "selection_reasons": ["No explicit override or strong athletic signal found."],
+                "ignored_profile_ids": ["athlete_recovery"]
+              },
+              "population_profile_overlays": {
+                "profiles": [
+                  {
+                    "profile_id": "longevity_metabolic_optimization",
+                    "label": "Longevity & Metabolic Optimization",
+                    "priority_adjustments": [
+                      {
+                        "domain": "cardiometabolic",
+                        "hypothesis_id": "h1",
+                        "label": "Possible insulin sensitivity pattern",
+                        "calibrated_confidence": "moderate",
+                        "profile_emphasis": "elevated",
+                        "reason": "Within the longevity focus domains and not contradicted in this report."
+                      }
+                    ],
+                    "next_test_emphasis": [
+                      { "domain": "cardiometabolic", "marker": "HOMA-IR", "priority": "medium", "already_being_addressed": false, "reason": "Relevant to longevity monitoring in this domain." }
+                    ],
+                    "practitioner_prompts": [
+                      "Consider discussing insulin sensitivity further in the context of longevity."
+                    ]
+                  }
+                ]
+              },
+              "doctor_escalation_precision": {
+                "version": "p25_v1",
+                "overall_level": "urgent",
+                "recommended_timing": "urgent",
+                "escalations": [
+                  {
+                    "id": "cardiometabolic_urgent_review",
+                    "level": "urgent",
+                    "recommended_timing": "urgent",
+                    "domain": "cardiometabolic",
+                    "reason_codes": ["urgent_review_flag_present", "doctor_flag_present"],
+                    "related_markers": ["Potassium", "eGFR"],
+                    "related_symptoms": ["palpitations"],
+                    "related_hypotheses": ["h1"],
+                    "related_contradictions": ["Inflammation may limit ferritin interpretation."],
+                    "human_readable_reason": "This finding is flagged for urgent review because the report includes an urgent safety signal in cardiometabolic."
+                  }
+                ]
+              }
+            }
+            """),
+        };
+
+        var controller = CreateController(gateway, assignment, orgId);
+        var result = await controller.Profile(assignment.Id, CancellationToken.None);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<PractitionerClientProfileViewModel>(view.Model);
+        var summary = model.ClinicalSummary;
+        Assert.NotNull(summary);
+
+        Assert.NotNull(summary!.PopulationProfileSelection);
+        Assert.Equal(new[] { "longevity_metabolic_optimization" }, summary.PopulationProfileSelection!.ActiveProfileIds);
+        Assert.Equal("default", summary.PopulationProfileSelection.SelectionSource);
+        Assert.Single(summary.PopulationProfileSelection.SelectionReasons);
+        Assert.Equal(new[] { "athlete_recovery" }, summary.PopulationProfileSelection.IgnoredProfileIds);
+
+        Assert.NotNull(summary.PopulationProfileOverlays);
+        Assert.Single(summary.PopulationProfileOverlays!.Profiles);
+        var profile = summary.PopulationProfileOverlays.Profiles[0];
+        Assert.Equal("Longevity & Metabolic Optimization", profile.Label);
+        Assert.Single(profile.PriorityAdjustments);
+        Assert.Equal("elevated", profile.PriorityAdjustments[0].ProfileEmphasis);
+        Assert.Single(profile.NextTestEmphasis);
+        Assert.Equal("HOMA-IR", profile.NextTestEmphasis[0].Marker);
+        Assert.Single(profile.PractitionerPrompts);
+
+        Assert.NotNull(summary.DoctorEscalationPrecision);
+        Assert.Equal("urgent", summary.DoctorEscalationPrecision!.OverallLevel);
+        Assert.Single(summary.DoctorEscalationPrecision.Escalations);
+        var escalation = summary.DoctorEscalationPrecision.Escalations[0];
+        Assert.Equal("urgent", escalation.Level);
+        Assert.Contains("doctor_flag_present", escalation.ReasonCodes);
+        Assert.Equal(new[] { "Potassium", "eGFR" }, escalation.RelatedMarkers);
+        Assert.Equal(new[] { "h1" }, escalation.RelatedHypotheses);
+        Assert.Equal(new[] { "Inflammation may limit ferritin interpretation." }, escalation.RelatedContradictions);
+    }
+
+    [Fact]
+    public async Task Profile_Safety_Brief_Is_Null_For_Old_Report_Without_P24_P25_Fields()
+    {
+        var orgId = Guid.NewGuid();
+        var clientId = Guid.NewGuid();
+        var practitionerId = Guid.NewGuid();
+        var assignment = MakeAssignment(orgId, clientId, practitionerId);
+        var gateway = new FakeCrmDataGateway
+        {
+            ClinicalSummaryDocument = JsonDocument.Parse("""
+            { "client_id": "abc", "available": true, "top_patterns": [] }
+            """),
+        };
+
+        var controller = CreateController(gateway, assignment, orgId);
+        var result = await controller.Profile(assignment.Id, CancellationToken.None);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<PractitionerClientProfileViewModel>(view.Model);
+        var summary = model.ClinicalSummary;
+        Assert.NotNull(summary);
+        Assert.Null(summary!.PopulationProfileSelection);
+        Assert.Null(summary.PopulationProfileOverlays);
+        Assert.Null(summary.DoctorEscalationPrecision);
+    }
+
+    [Fact]
+    public async Task Profile_Safety_Brief_Does_Not_Throw_On_Malformed_Fields()
+    {
+        var orgId = Guid.NewGuid();
+        var clientId = Guid.NewGuid();
+        var practitionerId = Guid.NewGuid();
+        var assignment = MakeAssignment(orgId, clientId, practitionerId);
+        var gateway = new FakeCrmDataGateway
+        {
+            ClinicalSummaryDocument = JsonDocument.Parse("""
+            {
+              "client_id": "abc",
+              "available": true,
+              "population_profile_selection": "not_an_object",
+              "population_profile_overlays": { "profiles": "not_an_array" },
+              "doctor_escalation_precision": { "escalations": [ "not_an_object", 42, null ] }
+            }
+            """),
+        };
+
+        var controller = CreateController(gateway, assignment, orgId);
+        var result = await controller.Profile(assignment.Id, CancellationToken.None);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<PractitionerClientProfileViewModel>(view.Model);
+        var summary = model.ClinicalSummary;
+        Assert.NotNull(summary);
+        Assert.Null(summary!.PopulationProfileSelection);
+        Assert.Null(summary.PopulationProfileOverlays);
+        Assert.Null(summary.DoctorEscalationPrecision);
+    }
+
     [Fact]
     public async Task Profile_Handles_Null_Document_Without_Throwing()
     {
