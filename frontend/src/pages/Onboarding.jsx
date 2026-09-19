@@ -437,9 +437,20 @@ export default function Onboarding() {
     return true
   }
 
+  const isLabsReady = intent === 'labs' && hasLabsNow === true
+
   const goNext = () => {
     if (!validateCurrentStep()) return
-    setStep((prev) => Math.min(prev + 1, TOTAL - 1))
+    setStep((prev) => {
+      // Labs-ready users already know why they're here — the Follow-up step only
+      // gathers symptom-specific context, so it adds no value on this path.
+      const next = prev === 1 && isLabsReady ? prev + 2 : prev + 1
+      return Math.min(next, TOTAL - 1)
+    })
+  }
+
+  const goBack = () => {
+    setStep((prev) => (prev === 3 && isLabsReady ? prev - 2 : prev - 1))
   }
 
   const buildConcernPayload = () => {
@@ -522,7 +533,7 @@ export default function Onboarding() {
       ])
 
       toast.success(t.toastSaved)
-      navigate('/dashboard', { replace: true })
+      navigate(isLabsReady ? '/upload' : '/dashboard', { replace: true })
     } catch {
       toast.error(t.toastError)
     } finally {
@@ -978,7 +989,7 @@ export default function Onboarding() {
 
               <div style={{ display: 'flex', gap: 12, marginTop: 28, alignItems: 'center' }}>
                 {step > 0 && (
-                  <button style={{ ...s.btnPrimary, flex: 0.4, background: '#e2e8f0', color: '#475569' }} onClick={() => setStep((prev) => prev - 1)}>
+                  <button style={{ ...s.btnPrimary, flex: 0.4, background: '#e2e8f0', color: '#475569' }} onClick={goBack}>
                     <ChevronLeft size={18} style={{ display: 'inline' }} /> Back
                   </button>
                 )}
@@ -988,7 +999,7 @@ export default function Onboarding() {
                   </button>
                 ) : (
                   <button style={{ ...s.btnPrimary, flex: 1, opacity: saving ? 0.6 : 1 }} onClick={saveAll} disabled={saving}>
-                    {saving ? 'Saving...' : <><CheckCircle size={18} style={{ display: 'inline', marginRight: 6 }} />Start my health loop</>}
+                    {saving ? 'Saving...' : <><CheckCircle size={18} style={{ display: 'inline', marginRight: 6 }} />{isLabsReady ? 'Continue to upload labs' : 'Start my health loop'}</>}
                   </button>
                 )}
               </div>
