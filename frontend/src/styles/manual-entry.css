@@ -88,6 +88,10 @@
   line-height: 1.5;
 }
 
+.manual-entry-bottom-spacer {
+  height: 7rem;
+}
+
 .few-markers-notice {
   margin: 0.75rem 0;
   padding: 0.625rem 0.875rem;
@@ -181,6 +185,7 @@
 .field {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .field label {
@@ -196,6 +201,9 @@
 /* Inputs and Selects */
 .field select,
 .field input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border-radius: 0.5rem;
   border: 1px solid #cbd5e1;
   background-color: #ffffff;

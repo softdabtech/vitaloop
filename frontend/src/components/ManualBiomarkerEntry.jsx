@@ -448,6 +448,11 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading, onSwitchToU
           </p>
         </div>
       )}
+
+      {/* Reserves space so the fixed floating support-chat button never sits
+          on top of the Analyze button once entries are added — same pattern
+          already used at the bottom of Results.jsx/ProtocolPage.jsx. */}
+      <div aria-hidden="true" className="manual-entry-bottom-spacer" />
     </div>
   )
 }
