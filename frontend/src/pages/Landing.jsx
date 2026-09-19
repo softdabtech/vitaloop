@@ -701,7 +701,7 @@ export default function Landing() {
               onClick={() => navigate(user ? '/dashboard' : '/login?signup=true')}
               className={`hidden sm:inline-flex ${ctaBase} border border-slate-300 bg-white text-slate-900 hover:border-emerald-300`}
             >
-              {user ? 'Cabinet' : 'Sign Up'}
+              {user ? 'Dashboard' : 'Sign Up'}
             </button>
 
             {/* Mobile hamburger */}
@@ -743,7 +743,7 @@ export default function Landing() {
                     onClick={() => { closeMobileMenu(); navigate('/dashboard') }}
                     className="mt-1 w-full rounded-xl bg-emerald-500 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-emerald-400"
                   >
-                    Cabinet
+                    Dashboard
                   </button>
                 ) : (
                   <div className="mt-1 flex flex-col gap-2">

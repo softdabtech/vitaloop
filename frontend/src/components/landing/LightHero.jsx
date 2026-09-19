@@ -105,7 +105,7 @@ export function LightHero() {
                 <div className="mb-3 flex items-center justify-between gap-4 px-1 sm:mb-4 sm:px-2">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">Live product flow</p>
-                    <p className="mt-1 text-xs font-semibold leading-5 text-slate-900 sm:text-base">Upload → Results → Weekly follow-through</p>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-slate-900 sm:text-base">Symptoms → Upload → Results → Follow-through</p>
                   </div>
                   <span className="hidden rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 sm:inline-flex">Real product screens</span>
                 </div>

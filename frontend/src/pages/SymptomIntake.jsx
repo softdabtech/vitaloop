@@ -380,9 +380,9 @@ export default function SymptomIntake() {
         <aside className="space-y-3">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <ShieldCheck className="h-5 w-5 text-emerald-700" />
-            <p className="mt-3 text-sm font-bold text-slate-950">Built for validation</p>
+            <p className="mt-3 text-sm font-bold text-slate-950">No account required</p>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              No account required. Your answers are used to measure whether this symptom-first workflow is useful.
+              Your answers help VITALOOP understand what context matters before you upload labs.
             </p>
           </div>
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">

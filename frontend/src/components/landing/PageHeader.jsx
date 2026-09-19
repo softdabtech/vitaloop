@@ -70,7 +70,7 @@ export function PageHeader() {
             onClick={() => navigate(user ? '/dashboard' : '/login?signup=true')}
             className={`${ctaBase} border border-slate-300 bg-white text-slate-900 hover:border-emerald-300`}
           >
-            {user ? 'Cabinet' : 'Sign Up'}
+            {user ? 'Dashboard' : 'Sign Up'}
           </button>
 
           {/* Mobile hamburger */}
@@ -115,7 +115,7 @@ export function PageHeader() {
                   }}
                   className="mt-1 w-full rounded-xl bg-emerald-500 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-emerald-400"
                 >
-                  Cabinet
+                  Dashboard
                 </button>
               ) : (
                 <div className="mt-1 flex flex-col gap-2">
