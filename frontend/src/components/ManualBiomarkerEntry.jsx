@@ -22,7 +22,13 @@ const COPY = {
     loading: 'Loading biomarker database...',
     emptyOptions: 'Unable to load biomarker options. Please try uploading a PDF instead.',
     title: '📊 Enter Lab Results Manually',
-    subtitle: 'Don\'t have a PDF? Enter your biomarker values below to get personalized insights.',
+    subtitle: 'Use this if your file upload didn\'t work, or you only want to enter a few key values.',
+    switchToUpload: 'Or switch to file upload instead',
+    tipsSummary: 'Tips for manual entry',
+    tipFields: 'Add the biomarker name, its value, and the unit shown on your lab report.',
+    tipRanges: 'Reference ranges are applied automatically — no need to enter them.',
+    tipMoreMarkers: 'The more markers added, the more complete the picture — but even one or two are enough to get started.',
+    fewMarkersNotice: 'With only a few markers, the analysis will be more limited than a full report. Add more when available, or switch to file upload for a complete report.',
     empty: 'Click "Add Biomarker" to start entering your lab results',
     biomarker: 'Biomarker',
     selectBiomarker: 'Select biomarker...',
@@ -56,7 +62,13 @@ const COPY = {
     loading: 'Завантажуємо базу показників...',
     emptyOptions: 'Не вдалося завантажити список показників. Спробуйте завантажити PDF.',
     title: '📊 Ввести аналізи вручну',
-    subtitle: 'Немає PDF? Внесіть значення показників вручну, щоб отримати структурований розбір.',
+    subtitle: 'Скористайтесь цим, якщо завантаження файлу не спрацювало, або хочете ввести лише кілька показників.',
+    switchToUpload: 'Або перейти до завантаження файлу',
+    tipsSummary: 'Поради щодо ручного введення',
+    tipFields: 'Вкажіть назву показника, значення та одиницю виміру з вашого бланку аналізів.',
+    tipRanges: 'Референсні межі застосовуються автоматично — вводити їх не потрібно.',
+    tipMoreMarkers: 'Що більше показників додано, то повніша картина — але для початку достатньо й одного-двох.',
+    fewMarkersNotice: 'З невеликою кількістю показників аналіз буде більш обмеженим, ніж повний звіт. Додайте ще, коли зʼявиться можливість, або перейдіть до завантаження файлу для повного звіту.',
     empty: 'Натисніть «Додати показник», щоб почати введення результатів',
     biomarker: 'Показник',
     selectBiomarker: 'Оберіть показник...',
@@ -81,7 +93,7 @@ function triggerPaywall(detail) {
   }
 }
 
-export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
+export default function ManualBiomarkerEntry({ onAnalyze, onLoading, onSwitchToUpload }) {
   const isUk = isUkrainianLocale()
   const copy = isUk ? COPY.uk : COPY.en
   const [entries, setEntries] = useState([])
@@ -274,6 +286,19 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
       <div className="manual-entry-header">
         <h3>{copy.title}</h3>
         <p className="subtitle">{copy.subtitle}</p>
+        {onSwitchToUpload && (
+          <button type="button" onClick={onSwitchToUpload} className="manual-entry-switch-link">
+            {copy.switchToUpload}
+          </button>
+        )}
+        <details className="manual-entry-tips">
+          <summary>{copy.tipsSummary}</summary>
+          <ul>
+            <li>{copy.tipFields}</li>
+            <li>{copy.tipRanges}</li>
+            <li>{copy.tipMoreMarkers}</li>
+          </ul>
+        </details>
       </div>
 
       {globalError && (
@@ -379,6 +404,10 @@ export default function ManualBiomarkerEntry({ onAnalyze, onLoading }) {
             </div>
           )
         })}
+
+        {entries.length > 0 && entries.length <= 2 && (
+          <p className="few-markers-notice">{copy.fewMarkersNotice}</p>
+        )}
 
         {entries.length > 0 && (
           <button onClick={addEntry} className="btn-add-entry">

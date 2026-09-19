@@ -779,7 +779,7 @@ export default function Upload() {
           </>
         ) : (
           // Manual Entry Mode
-          <ManualBiomarkerEntry onAnalyze={handleAnalyzeManual} onLoading={handleLoadingManual} />
+          <ManualBiomarkerEntry onAnalyze={handleAnalyzeManual} onLoading={handleLoadingManual} onSwitchToUpload={() => setUploadMode('pdf')} />
         )}
       </div>
     </div>
