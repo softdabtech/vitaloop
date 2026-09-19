@@ -18,47 +18,47 @@ import { gaPaywallImpression } from '../lib/analytics.js'
 
 const COPY = {
   en: {
-    title: 'Vitaloop Premium',
+    title: 'Go deeper than one free report',
+    subcopy: 'Premium helps you understand why something was flagged, what is still unclear, and what to do next — and lets you track it over time.',
     features: [
-      'Unlimited lab uploads and manual entries',
-      'Personal action plans after each report',
-      'Biomarker trend tracking and progress charts',
-      'Longitudinal history across uploads',
-      'Follow-up check-ins and retest planning',
-      'Exportable summaries for clinician visits',
+      'Unlimited lab uploads, so every new report gets the same full analysis',
+      'Clinical Reasoning Map — see how your symptoms and biomarkers connect',
+      'Evidence Gaps & Next Tests — know what to check next, not just what is missing',
+      'Personal Baseline & Progress — track your own trends across reports',
+      'Doctor Discussion Prep — a clear, exportable summary for your next appointment',
     ],
     reasons: {
       UPLOAD_LIMIT_REACHED: 'Free plan includes 1 analysis total (PDF upload or manual entry). Upgrade for unlimited analyses.',
       BIOMARKER_QUOTA_EXCEEDED: 'Free plan includes 1 analysis total (PDF upload or manual entry). Upgrade to continue.',
       SUBSCRIPTION_REQUIRED: 'This feature is available with Vitaloop Premium.',
     },
-    fallback: 'Unlock unlimited analyses, action plans, and longitudinal tracking.',
+    fallback: 'See the full reasoning behind your results, and track how things change over time.',
     accessError: 'Please email info@softdab.tech to activate Premium access.',
     redirecting: 'Preparing email…',
-    continue: 'Request access',
-    footer: 'Premium access is currently activated manually.',
+    continue: 'Request Premium access',
+    footer: 'Premium access is currently activated manually — requesting it opens an email to our team, and we confirm activation by email. You will not be charged automatically.',
     close: 'Close',
   },
   uk: {
-    title: 'VITALOOP Premium',
+    title: 'Дізнайтесь більше, ніж дає один безкоштовний звіт',
+    subcopy: 'Premium допомагає зрозуміти, чому щось було позначено, що ще залишається незрозумілим і що робити далі — а також відстежувати зміни з часом.',
     features: [
-      'Необмежені завантаження аналізів і ручне введення',
-      'Персональний план дій після кожного звіту',
-      'Динаміка біомаркерів і графіки прогресу',
-      'Історія результатів у часі',
-      'Чек-іни, план повторних аналізів і нагадування',
-      'Експорт підсумків для консультації з лікарем',
+      'Необмежені завантаження аналізів — кожен новий звіт отримує повний аналіз',
+      'Карта клінічних гіпотез — як пов\'язані ваші симптоми й біомаркери',
+      'Прогалини в доказах і наступні аналізи — що перевірити далі, а не лише що бракує',
+      'Особиста динаміка та прогрес — відстежуйте зміни між звітами',
+      'Підготовка до розмови з лікарем — чіткий підсумок для експорту перед візитом',
     ],
     reasons: {
       UPLOAD_LIMIT_REACHED: 'Безкоштовний план включає 1 аналіз: PDF, фото або ручне введення. Premium відкриває необмежені аналізи.',
       BIOMARKER_QUOTA_EXCEEDED: 'Безкоштовний план включає 1 аналіз. Перейдіть на Premium, щоб продовжити.',
       SUBSCRIPTION_REQUIRED: 'Ця функція доступна у VITALOOP Premium.',
     },
-    fallback: 'Відкрийте необмежені аналізи, плани дій і відстеження динаміки.',
+    fallback: 'Побачте повну логіку своїх результатів і відстежуйте зміни з часом.',
     accessError: 'Напишіть на info@softdab.tech, щоб активувати Premium.',
     redirecting: 'Готуємо лист…',
-    continue: 'Запросити доступ',
-    footer: 'Premium зараз активується вручну.',
+    continue: 'Запросити Premium доступ',
+    footer: 'Premium зараз активується вручну — запит відкриває лист до нашої команди, і ми підтверджуємо активацію також листом. Автоматичного списання коштів не буде.',
     close: 'Закрити',
   },
 }
@@ -143,6 +143,7 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
 
         {/* Features list */}
         <div className="px-6 py-5">
+          <p className="mb-4 text-sm text-slate-600">{copy.subcopy}</p>
           <ul className="space-y-2.5 mb-6">
             {copy.features.map((f) => (
               <li key={f} className="flex items-center gap-2 text-sm text-slate-700">

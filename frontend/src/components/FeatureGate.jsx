@@ -22,7 +22,7 @@ export default function FeatureGate({ children, feature, fallback, onLocked }) {
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
         <h3 className="font-semibold text-amber-900">Premium feature</h3>
         <p className="mt-2 text-sm text-amber-700">
-          {feature} is available with a Vitaloop Premium subscription.
+          This is part of VITALOOP Premium — track your baseline and progress across reports over time.
         </p>
       </div>
     )

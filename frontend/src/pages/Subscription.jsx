@@ -10,17 +10,17 @@ import { gaViewPricing } from '../lib/analytics.js'
 import '../styles/dashboard2026.css'
 
 const PREMIUM_FEATURES = [
-  'Unlimited lab uploads and manual entries',
-  'Full explainable health reports',
-  'Personal action plans and retest planning',
-  'Biomarker trend tracking and progress charts',
-  'Weekly check-ins and longitudinal history',
-  'Exportable summaries for clinician visits',
+  'Unlimited lab uploads, so every new report gets the same full analysis',
+  'Clinical Reasoning Map — see how your symptoms and biomarkers connect',
+  'Evidence Gaps & Next Tests — know what to check next, not just what is missing',
+  'Personal Baseline & Progress — track your own trends across reports',
+  'Doctor Discussion Prep — a clear, exportable summary for your next appointment',
+  'Weekly check-ins and retest planning',
 ]
 
 const FREE_FEATURES = [
   'Starter symptom intake',
-  'One lab analysis to try the workflow',
+  'One full lab analysis to try the workflow',
   'Core dashboard access',
   'Basic biomarker summary',
 ]
@@ -90,7 +90,7 @@ export default function Subscription() {
             </div>
             <h2 className="text-3xl font-bold text-slate-950">{statusLabel}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Upgrade when you are ready for unlimited lab analyses, explainable reports, action plans, progress tracking, and exportable summaries for clinician visits.
+              Your free report shows what VITALOOP found. Premium is for going further: understanding why it was flagged, closing evidence gaps, tracking your baseline over time, and preparing for your next doctor conversation.
             </p>
           </div>
           {!isPremium && (
@@ -112,7 +112,7 @@ export default function Subscription() {
                 Ask about annual access
               </button>
               <p className="text-xs leading-5 text-slate-500">
-                Premium is currently activated manually while payment processing is being configured.
+                <strong className="text-slate-600">What happens next:</strong> clicking either button opens an email to our team with your account details pre-filled. We confirm and activate Premium by email — nothing is charged automatically.
               </p>
             </div>
           )}
