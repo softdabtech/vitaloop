@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Beaker, CalendarCheck2, CheckCircle2, ClipboardList, HelpCircle, MessageCircle, Route, ShieldAlert, Sparkles, Stethoscope, UploadCloud } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth.js'
 import { useDashboardSummary, useQuestionnaireSession } from '../hooks/useQueries.js'
+import { useProfile } from '../hooks/useProfile.ts'
 import { useSubscription } from '../hooks/useSubscription.js'
 import { CoachBadge, CoachButton, CoachCard, CoachProgress, CoachSkeleton, EmptyCoachState, InsightCard, KPIBlock } from '../components/coach/CoachUI.jsx'
 import { getHealthLoopStageIndex } from '../lib/cabinetV511.js'
@@ -88,11 +89,13 @@ const DASHBOARD_COPY = {
       startSymptom: 'Start Symptom Check',
       openLabPlan: 'Open Lab Plan',
       uploadResults: 'Upload Results',
+      uploadLabs: 'Continue to upload labs',
       openActionPlan: 'Open Action Plan',
       completeCheckin: 'Complete Check-in',
       reviewProgress: 'Review Progress',
     },
     nextActions: {
+      labsReadyWhy: 'You told us you already have lab results. Upload them to get your first report.',
       symptomWhy: 'Your symptoms are the starting point. They tell VITALOOP which biomarkers and next questions matter first.',
       symptomOutcome: 'You will leave with a clearer concern and a focused lab direction.',
       labWhy: 'A focused lab plan prevents random testing and connects your symptoms to the markers worth checking.',
@@ -192,11 +195,13 @@ const DASHBOARD_COPY = {
       startSymptom: 'Почати перевірку симптомів',
       openLabPlan: 'Відкрити план аналізів',
       uploadResults: 'Завантажити результати',
+      uploadLabs: 'Перейти до завантаження аналізів',
       openActionPlan: 'Відкрити план дій',
       completeCheckin: 'Пройти чек-ін',
       reviewProgress: 'Переглянути прогрес',
     },
     nextActions: {
+      labsReadyWhy: 'Ви вказали, що вже маєте результати аналізів. Завантажте їх, щоб отримати перший звіт.',
       symptomWhy: 'Симптоми — це стартова точка. Вони підказують VITALOOP, які біомаркери й питання важливі першими.',
       symptomOutcome: 'Ви отримаєте чіткішу скаргу й сфокусований напрям аналізів.',
       labWhy: 'Сфокусований план аналізів зменшує випадкові перевірки й повʼязує симптоми з потрібними маркерами.',
@@ -376,6 +381,7 @@ export default function UserDashboard() {
   const { user } = useAuth()
   const { data, isLoading, error } = useDashboardSummary()
   const { data: questionnaireSession } = useQuestionnaireSession()
+  const { data: profileData } = useProfile()
   const { isPremium } = useSubscription()
   const isUk = isUkrainianLocale()
   const copy = isUk ? DASHBOARD_COPY.uk : DASHBOARD_COPY.en
@@ -407,6 +413,11 @@ export default function UserDashboard() {
   const hasQuestions = Boolean(concernSummary?.readiness)
   const hasLabPlan = Boolean(concernSummary?.readiness && concernSummary.readiness >= 40)
   const hasResults = Number(stats.total_uploads || 0) > 0
+  // Onboarding (P32e) tags the labs-ready path as 'intent:labs' in profile.goals —
+  // there is no separate persisted hasLabsNow flag, so this is the closest safe,
+  // no-schema-change signal that the user chose "I already have lab results".
+  const onboardingGoals = Array.isArray(profileData?.profile?.goals) ? profileData.profile.goals : []
+  const isLabsReadyIntent = onboardingGoals.includes('intent:labs')
   const hasProtocol = Boolean(stats?.active_program && String(stats.active_program).toLowerCase() !== 'not started')
   const hasCheckin = isCheckinCurrent
 
@@ -440,6 +451,14 @@ export default function UserDashboard() {
   const journeyPct = Math.round(((humanStageIndex + 1) / journeySteps.length) * 100)
 
   const nextAction = useMemo(() => {
+    if (isLabsReadyIntent && !hasResults) {
+      return {
+        label: copy.actions.uploadLabs,
+        path: '/upload',
+        why: copy.nextActions.labsReadyWhy,
+        outcome: copy.nextActions.uploadOutcome,
+      }
+    }
     if (!hasConcern) {
       return {
         label: copy.actions.startSymptom,
@@ -492,7 +511,7 @@ export default function UserDashboard() {
       why: copy.nextActions.progressWhy,
       outcome: copy.nextActions.progressOutcome,
     }
-  }, [copy, hasConcern, hasLabPlan, hasResults, hasProtocol, hasCheckin, latestUpload?.id])
+  }, [copy, isLabsReadyIntent, hasConcern, hasLabPlan, hasResults, hasProtocol, hasCheckin, latestUpload?.id])
 
   const recentItems = [
     {
