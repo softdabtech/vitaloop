@@ -17,7 +17,7 @@ export const LANDING_PRICING_PLANS = [
     dark: false,
     cta: 'Start Free',
     features: [
-      { text: '1-2 analyses per month', ok: true },
+      { text: '1 free upload to try VITALOOP', ok: true },
       { text: 'Basic flags and summary', ok: true },
       { text: 'Full protocols', ok: false },
       { text: 'Timeline tracking', ok: false },

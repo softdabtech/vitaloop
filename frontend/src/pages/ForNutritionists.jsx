@@ -668,7 +668,7 @@ export default function ForNutritionists() {
             <div className="mb-5 text-sm text-slate-600">free forever</div>
             <ul className="mb-8 space-y-3">
               {[
-                '1-2 analyses per month',
+                '1 free analysis to try it',
                 'Basic flags and summary',
                 '1 patient seat',
                 'Protocol drafts',

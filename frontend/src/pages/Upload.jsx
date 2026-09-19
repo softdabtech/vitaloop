@@ -62,7 +62,7 @@ const UPLOAD_COPY = {
     tooMany: 'Too many uploads. Please wait and try again later.',
     fallbackError: 'Analysis failed. Please try again.',
     quotaManual: 'You\'ve already entered biomarkers manually. Free plan includes 1 lab analysis (file upload or manual entry). Upgrade to Premium for unlimited analyses, advanced protocols, and health tracking.',
-    quotaUpload: 'You\'ve reached your free analysis limit (1 per month). Upgrade to Premium for unlimited lab uploads, AI-generated protocols, and personalized health insights.',
+    quotaUpload: 'You\'ve reached your free analysis limit (1 free upload). Upgrade to Premium for unlimited lab uploads, AI-generated protocols, and personalized health insights.',
     uploadLimit: 'You\'ve reached your free analysis limit. Upgrade to Premium for unlimited lab uploads and advanced health tracking.',
     premiumRequired: 'Premium required for this feature. Upgrade to unlock unlimited analyses and personalized protocols.',
     pageTitle: 'Upload Results',

@@ -37,7 +37,7 @@ const COPY = {
     addFirst: 'Add First Biomarker',
     analyzing: 'Analyzing...',
     analyze: 'Analyze Results',
-    hint: '💡 You can enter 1-3 biomarkers per month for free. Upgrade to Premium for unlimited entries.',
+    hint: '💡 One manual entry is included for free. Upgrade to Premium for unlimited entries.',
   },
   uk: {
     loadFailed: 'Не вдалося завантажити список показників. Оновіть сторінку й спробуйте ще раз.',
