@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import api from '../lib/api.js'
 import FeatureGate from '../components/FeatureGate.jsx'
+import { useUserEntitlements } from '../hooks/useQueries.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import BiomarkerContextTooltip from '../components/BiomarkerContextTooltip.jsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
@@ -154,6 +155,8 @@ const RESULTS_COPY = {
     readyTitle: 'Ready for the next step?',
     readyBody: 'Turn this report into a practical action plan with priorities, clinician discussion points, and follow-up tracking.',
     openPlan: 'Open action plan',
+    premiumTeaser: 'Want to track changes over time? Premium adds personal baseline, progress trends, and deeper follow-up across reports.',
+    premiumTeaserCta: 'See what Premium adds',
     disclaimer: 'VITALOOP provides educational information and does not diagnose, treat, or replace professional medical advice.',
     noRange: 'No reference range',
     emptyTitle: 'Results & Interpretation',
@@ -342,6 +345,8 @@ const RESULTS_COPY = {
     readyTitle: 'Готові до наступного кроку?',
     readyBody: 'Перетворіть звіт на практичний план дій із пріоритетами, питаннями до лікаря і відстеженням.',
     openPlan: 'Відкрити план дій',
+    premiumTeaser: 'Хочете відстежувати зміни з часом? Premium додає особисту динаміку, графіки прогресу та глибший супровід між звітами.',
+    premiumTeaserCta: 'Дізнатись, що дає Premium',
     disclaimer: 'VITALOOP надає освітню інформацію і не ставить діагноз, не лікує та не замінює професійну медичну консультацію.',
     noRange: 'Референс не вказано',
     emptyTitle: 'Результати й інтерпретація',
@@ -1410,6 +1415,7 @@ function AnalysisCoreV2Panel({ finalAnalysis, copy }) {
 export default function Results() {
   const { uploadId } = useParams()
   const navigate = useNavigate()
+  const { data: entitlements } = useUserEntitlements()
   const [biomarkers, setBiomarkers] = useState([])
   const [protocol, setProtocol] = useState([])
   const [shoppingLinks, setShoppingLinks] = useState([])
@@ -1948,6 +1954,19 @@ export default function Results() {
             </button>
           </div>
         </div>
+
+        {!entitlements?.is_premium && (
+          <p className="mt-4 text-center text-sm text-slate-500">
+            {copy.premiumTeaser}{' '}
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'results_progress_tracking' } }))}
+              className="font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+            >
+              {copy.premiumTeaserCta}
+            </button>
+          </p>
+        )}
 
         <p className="mt-5 text-xs leading-5 text-slate-500">
           {reportSummary?.disclaimer || copy.disclaimer}

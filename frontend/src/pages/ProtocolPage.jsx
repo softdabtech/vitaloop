@@ -81,6 +81,8 @@ const PROTOCOL_COPY = {
     discussionFallback: 'Ask whether the plan fits your symptoms, medications, history, and current lab context.',
     closingBody: 'Keep tracking how you feel, and revisit your results whenever it helps.',
     continueTracking: 'Continue tracking',
+    premiumTeaser: 'Premium helps you keep this plan moving: repeat checks, progress trends, and doctor discussion prep across reports.',
+    premiumTeaserCta: 'See what Premium adds',
     doctorEscalationTitle: 'Doctor discussion',
     doctorEscalationIntro: 'Based on this report, these points may be worth a conversation with a doctor.',
     doctorEscalationLevelLabels: {
@@ -182,6 +184,8 @@ const PROTOCOL_COPY = {
     discussionFallback: 'Запитайте, чи відповідає план вашим симптомам, лікам, історії та поточному контексту аналізів.',
     closingBody: 'Продовжуйте відстежувати самопочуття і повертайтеся до результатів, коли це корисно.',
     continueTracking: 'Продовжити відстеження',
+    premiumTeaser: 'Premium допомагає підтримувати цей план: повторні перевірки, динаміка прогресу та підготовка до розмови з лікарем між звітами.',
+    premiumTeaserCta: 'Дізнатись, що дає Premium',
     doctorEscalationTitle: 'Обговорення з лікарем',
     doctorEscalationIntro: 'На основі цього звіту ці моменти може варто обговорити з лікарем.',
     doctorEscalationLevelLabels: {
@@ -1040,6 +1044,19 @@ export default function ProtocolPage() {
           <CoachButton icon={ArrowRight} onClick={() => navigate('/check-ins')}>{copy.continueTracking}</CoachButton>
         </div>
       </div>
+
+      {!canExport && (
+        <p className="mt-4 text-center text-sm text-slate-500">
+          {copy.premiumTeaser}{' '}
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('paywall:trigger', { detail: { reason: 'protocol_follow_through' } }))}
+            className="font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+          >
+            {copy.premiumTeaserCta}
+          </button>
+        </p>
+      )}
 
       {/* P31d: reserved space so the fixed floating support-chat button
           (App.jsx's FloatingSupportChat, bottom-right) never sits on top
