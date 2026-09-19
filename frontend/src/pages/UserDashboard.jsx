@@ -399,7 +399,6 @@ export default function UserDashboard() {
     return days >= 0 && days < CHECKIN_DUE_INTERVAL_DAYS
   })()
   const latestUpload = summary?.blocks?.latest_upload || null
-  const assignments = Array.isArray(summary?.blocks?.assignments) ? summary.blocks.assignments : []
   const sessionContext = questionnaireSession?.session_context || questionnaireSession?.session?.session_metadata || {}
   const concern = sessionContext?.active_concern || ''
   const concernSummary = sessionContext?.summary || null
@@ -509,20 +508,6 @@ export default function UserDashboard() {
       done: Boolean(latestUpload),
       action: latestUpload ? copy.recent.openResults : copy.recent.upload,
       path: latestUpload?.id ? `/results/${latestUpload.id}` : '/upload',
-    },
-    {
-      // `assignments` (blocks.assignments from /dashboard/summary) is the same
-      // practitioner_assignments-backed data as the hidden /assignments page —
-      // always empty for a self-serve end_user, so this branch is currently
-      // unreachable in practice. Left as a ternary (not hardcoded to the
-      // "missing" branch) rather than restructured, since /assignments' own
-      // redirect to /dashboard makes the '/assignments' path harmless even if
-      // this ever does become reachable — see App.jsx.
-      title: assignments.length ? copy.recent.actionsReady : copy.recent.actionsMissing,
-      body: assignments.length ? copy.recent.waiting(assignments.length) : copy.recent.generate,
-      done: Boolean(assignments.length),
-      action: assignments.length ? copy.recent.openPlan : copy.recent.seeJourney,
-      path: assignments.length ? '/assignments' : '/lab-plan',
     },
   ]
 
@@ -737,7 +722,7 @@ export default function UserDashboard() {
             <h2 className="coach-title-lg">{copy.keepMoving}</h2>
           </div>
         </div>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2">
           {recentItems.map((item) => (
             <CoachCard key={item.title} className="p-4" interactive>
               <div className="mb-4 flex items-start justify-between gap-3">
