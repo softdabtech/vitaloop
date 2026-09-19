@@ -240,19 +240,18 @@ const RESULTS_COPY = {
     progressStable: 'Unchanged since last time',
     progressNoPrevious: 'Upload another report in the future to see how this changes over time.',
     progressConfidenceWas: (from, to) => `${from} → ${to}`,
-    evidenceGapsTitle: "What We Can't Say Yet",
-    evidenceGapsIntro: 'Gaps in this report that limit how confident the interpretation can be — not missing effort, missing data.',
-    evidenceGapsEmpty: "No significant gaps identified — this report's interpretation is well-supported by the available data.",
+    evidenceGapsTitle: 'What Could Make This Clearer',
+    evidenceGapsIntro: 'A few things are still unclear here — adding them could sharpen the picture. This is about missing context, not a problem with you.',
+    evidenceGapsEmpty: 'Nothing stood out as unclear in this report.',
     evidenceGapsHighPriority: 'high priority',
-    evidenceGapsNextStep: 'Suggested next step',
     evidenceGapDomainLabels: {
       knowledge_coverage: 'Not yet interpreted',
       data_quality: 'Data quality',
       general: 'General context',
     },
     testingPlanTitle: 'Testing & Retest Plan',
-    testingPlanIntro: 'What to test next and when — ranked by how much it would clarify this report, in one place instead of scattered across findings.',
-    testingPlanEmpty: 'No specific next tests suggested from this report.',
+    testingPlanIntro: 'Ranked by how much each would clarify this report. High-priority items are worth discussing sooner; the rest can wait for your next check-in.',
+    testingPlanEmpty: 'No specific tests to suggest from this report right now.',
     testingPlanPriority: { high: 'High priority', medium: 'Medium priority', low: 'Low priority' },
     testingPlanTiming: 'Suggested timing',
     testingPlanCompletedTitle: '✓ Completed since your last report',
@@ -429,19 +428,18 @@ const RESULTS_COPY = {
     progressStable: 'Без змін з минулого разу',
     progressNoPrevious: 'Завантажте ще один звіт у майбутньому, щоб побачити динаміку з часом.',
     progressConfidenceWas: (from, to) => `${from} → ${to}`,
-    evidenceGapsTitle: 'Чого ми ще не можемо сказати',
-    evidenceGapsIntro: 'Прогалини в цьому звіті, які обмежують впевненість інтерпретації — не брак зусиль, а брак даних.',
-    evidenceGapsEmpty: 'Суттєвих прогалин не виявлено — інтерпретація цього звіту добре підкріплена наявними даними.',
+    evidenceGapsTitle: 'Що може прояснити картину',
+    evidenceGapsIntro: 'Дещо тут ще не зовсім зрозуміло — доповнення могло б прояснити картину. Це про брак контексту, а не про вас.',
+    evidenceGapsEmpty: 'У цьому звіті не виявлено нічого незрозумілого.',
     evidenceGapsHighPriority: 'високий пріоритет',
-    evidenceGapsNextStep: 'Рекомендований наступний крок',
     evidenceGapDomainLabels: {
       knowledge_coverage: 'Ще не інтерпретовано',
       data_quality: 'Якість даних',
       general: 'Загальний контекст',
     },
     testingPlanTitle: 'План тестування та повторної перевірки',
-    testingPlanIntro: 'Що перевірити далі і коли — впорядковано за тим, наскільки це прояснить звіт, в одному місці замість розкиданих знахідок.',
-    testingPlanEmpty: 'Конкретних наступних аналізів зі звіту не запропоновано.',
+    testingPlanIntro: 'Впорядковано за тим, наскільки кожен аналіз прояснить звіт. Пріоритетні пункти варто обговорити скоріше; решта може почекати до наступного огляду.',
+    testingPlanEmpty: 'Наразі немає конкретних аналізів для пропозиції з цього звіту.',
     testingPlanPriority: { high: 'Високий пріоритет', medium: 'Середній пріоритет', low: 'Низький пріоритет' },
     testingPlanTiming: 'Рекомендований термін',
     testingPlanCompletedTitle: '✓ Виконано з попереднього звіту',
@@ -980,6 +978,23 @@ function ProgressIntelligenceSection({ progress, copy }) {
 // knowledge_coverage (measured but no active rule interprets it),
 // data_quality (unit/profile issues), and domain-expected markers that
 // were never drawn — none of which live inside any single trace card.
+// P31e: backend evidence-gap/testing-plan entries often reuse one of a
+// handful of generic boilerplate sentences across many items (e.g. the
+// same "add or review this context" line for ten different markers) --
+// repeating that sentence under every single card is the literal
+// repetition flagged in the P31c QA pass. When any text repeats across
+// two or more items, this drops it from the per-item cards and lists
+// each distinct message once at the end instead; a report where every
+// item's message is genuinely unique is left per-item, unchanged. Pure
+// presentation grouping over already-fetched data -- never mutates the
+// source list or re-fetches anything. Shared by EvidenceGapsSection and
+// TestingPlanSection.
+function collapseRepeatedNotes(values) {
+  const present = values.filter(Boolean)
+  const distinct = [...new Set(present)]
+  return { distinct, hasRepeats: present.length > distinct.length }
+}
+
 function EvidenceGapsSection({ evidenceGaps, copy }) {
   const gaps = Array.isArray(evidenceGaps?.gaps) ? evidenceGaps.gaps : []
   if (!gaps.length) {
@@ -990,11 +1005,14 @@ function EvidenceGapsSection({ evidenceGaps, copy }) {
     )
   }
 
+  const visibleGaps = gaps.slice(0, 12)
+  const { distinct: distinctSteps, hasRepeats } = collapseRepeatedNotes(visibleGaps.map((g) => g?.suggested_next_step))
+
   return (
     <SectionCard icon={HelpCircle} title={copy.evidenceGapsTitle} className="mb-6">
       <p className="mb-4 text-sm leading-6 text-slate-500">{copy.evidenceGapsIntro}</p>
       <div className="space-y-2">
-        {gaps.slice(0, 12).map((gap, index) => {
+        {visibleGaps.map((gap, index) => {
           const domainLabel = copy.evidenceGapDomainLabels?.[gap?.domain] || gap?.domain
           const isHighPriority = gap?.priority === 'high'
           return (
@@ -1010,15 +1028,18 @@ function EvidenceGapsSection({ evidenceGaps, copy }) {
                 )}
               </div>
               {!!gap?.reason && <p className="mt-1 text-sm leading-5 text-slate-600">{String(gap.reason).replaceAll('_', ' ')}</p>}
-              {!!gap?.suggested_next_step && (
-                <p className="mt-1 text-xs text-slate-500">
-                  <span className="font-semibold">{copy.evidenceGapsNextStep}:</span> {gap.suggested_next_step}
-                </p>
+              {!!gap?.suggested_next_step && !hasRepeats && (
+                <p className="mt-1 text-xs text-slate-500">{gap.suggested_next_step}</p>
               )}
             </div>
           )
         })}
       </div>
+      {hasRepeats && !!distinctSteps.length && (
+        <ul className="mt-3 space-y-1 text-xs leading-5 text-slate-500">
+          {distinctSteps.map((step, index) => <li key={index}>{step}</li>)}
+        </ul>
+      )}
     </SectionCard>
   )
 }
@@ -1138,6 +1159,12 @@ function TestingPlanSection({ nextBestTests, retestPlan, nextTestFunnel, copy, i
   const completed = Array.isArray(nextTestFunnel?.completed_since_last_upload)
     ? nextTestFunnel.completed_since_last_upload
     : []
+  const visiblePlan = plan.slice(0, 10)
+  // P31e: same repeated-boilerplate pattern as EvidenceGapsSection above
+  // (e.g. "Repeat timing should be based on clinician review..." reused
+  // across several markers) -- collapse into one shared list instead of
+  // repeating per card.
+  const { distinct: distinctReasons, hasRepeats: reasonsRepeat } = collapseRepeatedNotes(visiblePlan.map((item) => item.reason))
   return (
     <SectionCard icon={RefreshCw} title={copy.testingPlanTitle} className="mb-6">
       <p className="mb-4 text-sm leading-6 text-slate-500">{copy.testingPlanIntro}</p>
@@ -1149,13 +1176,13 @@ function TestingPlanSection({ nextBestTests, retestPlan, nextTestFunnel, copy, i
           </p>
         </div>
       )}
-      {plan.length ? (
+      {visiblePlan.length ? (
         <div className="space-y-2">
-          {plan.slice(0, 10).map((item, index) => (
+          {visiblePlan.map((item, index) => (
             <div key={`${item.marker}-${index}`} className="flex flex-wrap items-start justify-between gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
               <div className="min-w-0">
                 <span className="text-sm font-semibold text-slate-950">{displayBiomarkerName({ name: item.marker }, isUk)}</span>
-                {!!item.reason && <p className="mt-1 text-sm leading-5 text-slate-600">{item.reason}</p>}
+                {!!item.reason && !reasonsRepeat && <p className="mt-1 text-sm leading-5 text-slate-600">{item.reason}</p>}
                 {!!item.timing && (
                   <p className="mt-1 text-xs text-slate-500">
                     <span className="font-semibold">{copy.testingPlanTiming}:</span> {item.timing}
@@ -1170,6 +1197,11 @@ function TestingPlanSection({ nextBestTests, retestPlan, nextTestFunnel, copy, i
         </div>
       ) : (
         <p className="text-sm leading-6 text-slate-600">{copy.testingPlanEmpty}</p>
+      )}
+      {reasonsRepeat && !!distinctReasons.length && (
+        <ul className="mt-3 space-y-1 text-xs leading-5 text-slate-500">
+          {distinctReasons.map((reason, index) => <li key={index}>{reason}</li>)}
+        </ul>
       )}
     </SectionCard>
   )

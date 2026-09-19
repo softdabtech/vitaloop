@@ -73,9 +73,10 @@ const PROTOCOL_COPY = {
     shoppingBody: 'These links are educational search shortcuts, not prescriptions. Confirm supplements, dosing, and interactions with a qualified clinician before use.',
     findIherb: 'Find on iHerb',
     retestPlan: 'Retest Plan',
+    retestPlanIntro: 'Add these to your calendar, or bring the list to your next appointment.',
     marker: 'Marker',
     discussTiming: 'Discuss timing with a clinician.',
-    retestFallback: 'Retest timing depends on the marker, symptoms, and clinician guidance.',
+    retestFallback: 'No specific retest dates yet — timing depends on symptoms and clinician guidance.',
     safetyDiscussion: 'Safety and Clinician Discussion',
     discussionFallback: 'Ask whether the plan fits your symptoms, medications, history, and current lab context.',
     closingBody: 'Keep tracking how you feel, and revisit your results whenever it helps.',
@@ -173,9 +174,10 @@ const PROTOCOL_COPY = {
     shoppingBody: 'Це освітні пошукові посилання, не призначення. Підтвердьте добавки, дозування й взаємодії з фахівцем перед використанням.',
     findIherb: 'Знайти на iHerb',
     retestPlan: 'План повторної перевірки',
+    retestPlanIntro: 'Додайте це до календаря або візьміть список на наступний прийом.',
     marker: 'Показник',
     discussTiming: 'Обговоріть терміни з фахівцем.',
-    retestFallback: 'Терміни повторної перевірки залежать від показника, симптомів і рекомендацій фахівця.',
+    retestFallback: 'Конкретних дат повторної перевірки поки немає — терміни залежать від симптомів і рекомендацій фахівця.',
     safetyDiscussion: 'Безпека та питання до фахівця',
     discussionFallback: 'Запитайте, чи відповідає план вашим симптомам, лікам, історії та поточному контексту аналізів.',
     closingBody: 'Продовжуйте відстежувати самопочуття і повертайтеся до результатів, коли це корисно.',
@@ -965,6 +967,7 @@ export default function ProtocolPage() {
             <RefreshCw className="h-5 w-5 text-teal-600" />
             <h2 className="text-lg font-extrabold text-slate-950">{copy.retestPlan}</h2>
           </div>
+          {!!retestPlan.length && <p className="mb-3 text-sm leading-6 text-slate-500">{copy.retestPlanIntro}</p>}
           {retestPlan.length ? (
             <div className="space-y-3">
               {retestPlan.slice(0, 6).map((item, index) => (
