@@ -572,10 +572,12 @@ export default function Upload() {
           </div>
         )}
 
-        {uploadMode === 'pdf' && !subLoading && !isPremium && uploadsRemaining === 0 && (
+        {!subLoading && !isPremium && uploadsRemaining === 0 && (
           <div className="mb-6 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             <span>
-              {isUk ? 'Безкоштовний аналіз уже використано. Можна завантажити файл або ввести вручну, але не обидва варіанти.' : 'Your free biomarker entry was already used. You can upload a file OR enter manually, but not both.'}
+              {isUk
+                ? 'Ви вже використали свій 1 безкоштовний звіт (файл або ручне введення). Premium відкриває необмежені аналізи.'
+                : 'You\'ve already used your 1 free report (file upload or manual entry). Upgrade to Premium for unlimited analyses.'}
             </span>
             <button
               onClick={() => triggerPaywall({ reason: 'BIOMARKER_QUOTA_EXCEEDED' })}
@@ -586,7 +588,7 @@ export default function Upload() {
           </div>
         )}
 
-        {uploadMode === 'pdf' && !subLoading && !isPremium && uploadsRemaining > 0 && (
+        {!subLoading && !isPremium && uploadsRemaining > 0 && (
           <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
             {isUk ? 'Безкоштовний план: 1 аналіз показників через файл або ручне введення.' : 'Free plan: 1 biomarker entry allowed (via file upload or manual entry).'}
           </div>
@@ -690,12 +692,6 @@ export default function Upload() {
               </div>
             )}
 
-            {errorMessage && (
-              <div className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">
-                {errorMessage}
-              </div>
-            )}
-
             <div className="mt-6">
               {analyzing && (
                 <div className="mb-6">
@@ -709,7 +705,7 @@ export default function Upload() {
               )}
 
               {errorMessage && (
-                <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
+                <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4" role="alert">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
                     <div className="flex-1">
