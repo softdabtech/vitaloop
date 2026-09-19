@@ -56,6 +56,17 @@ const UPLOAD_COPY = {
     quotaUpload: 'You\'ve reached your free analysis limit (1 free upload). Upgrade to Premium for unlimited lab uploads, AI-generated protocols, and personalized health insights.',
     uploadLimit: 'You\'ve reached your free analysis limit. Upgrade to Premium for unlimited lab uploads and advanced health tracking.',
     premiumRequired: 'Premium required for this feature. Upgrade to unlock unlimited analyses and personalized protocols.',
+    errorTitleLimit: 'Free limit reached',
+    errorTitleExtraction: 'Could not read this file',
+    errorTitleFile: 'File not accepted',
+    errorTitleBusy: 'Too many attempts',
+    errorTitleGeneric: 'Analysis failed',
+    hintClearerFile: 'Try a clearer, full-page file from your lab portal with names, values, and ranges visible.',
+    hintChooseDifferent: 'Choose a different file below to continue.',
+    hintTryAgainLater: 'If this keeps happening, try again in a moment or contact support.',
+    retryAction: (count) => `Retry (${count}/3)`,
+    upgradeAction: 'Upgrade',
+    tryManualInstead: 'Or enter values manually instead',
     pageTitle: 'Upload Results',
     pageSubtitle: (concern) => concern ? `Upload results for: ${concern}` : 'Upload results in context of a symptom check and lab plan.',
     pageHelper: 'This upload helps answer your active concern and improves protocol decisions.',
@@ -91,6 +102,17 @@ const UPLOAD_COPY = {
     quotaUpload: 'Ви досягли ліміту безкоштовного аналізу. Premium відкриває необмежені завантаження, AI-плани та персональні підсумки.',
     uploadLimit: 'Ви досягли ліміту безкоштовного аналізу. Premium відкриває необмежені завантаження та динаміку.',
     premiumRequired: 'Для цієї функції потрібен Premium.',
+    errorTitleLimit: 'Безкоштовний ліміт вичерпано',
+    errorTitleExtraction: 'Не вдалося прочитати файл',
+    errorTitleFile: 'Файл не прийнято',
+    errorTitleBusy: 'Забагато спроб',
+    errorTitleGeneric: 'Аналіз не вдався',
+    hintClearerFile: 'Спробуйте чіткіший повносторінковий файл із кабінету лабораторії, де видно назви, значення та референси.',
+    hintChooseDifferent: 'Оберіть інший файл нижче, щоб продовжити.',
+    hintTryAgainLater: 'Якщо це повторюється, спробуйте пізніше або зверніться в підтримку.',
+    retryAction: (count) => `Спробувати ще раз (${count}/3)`,
+    upgradeAction: 'Оновити',
+    tryManualInstead: 'Або введіть показники вручну',
     pageTitle: 'Завантажити аналізи',
     pageSubtitle: (concern) => concern ? `Завантаження для: ${concern}` : 'Завантажте результати в контексті симптомів і плану аналізів.',
     pageHelper: 'Це допоможе повʼязати показники з вашою скаргою і пріоритетами.',
@@ -163,31 +185,63 @@ function maybeTriggerPaywall({ status, errorCode, usedBy }) {
   triggerPaywall({ reason: 'SUBSCRIPTION_REQUIRED' })
 }
 
-function resolveAnalysisErrorMessage({ status, errorCode, errorDetail, usedBy, copy = UPLOAD_COPY.en }) {
+// Error "actions" this page can offer, kept small on purpose:
+// - RETRY: the same file/request may succeed on a second try (transient
+//   failure, rate limit, format hiccup)
+// - UPGRADE: a hard, non-transient block — retrying the same file will
+//   always fail the same way, so offer the paywall action instead
+// - CHOOSE_DIFFERENT: the file itself won't work no matter how many times
+//   it's retried (wrong type, too large) — point at the dropzone instead
+const ERROR_ACTION = { RETRY: 'retry', UPGRADE: 'upgrade', CHOOSE_DIFFERENT: 'choose_different' }
+
+// Maps a raw error (or a client-side validation string) into a small,
+// human-readable display object: {title, message, hint, action}. Keeps
+// technical status/error codes out of what the user sees — they only ever
+// drive which of the three actions/hints above gets shown.
+function describeAnalysisError({ status, errorCode, errorDetail, usedBy }, copy = UPLOAD_COPY.en) {
   if (status === 402) {
-    return build402ErrorMessage({ errorCode, errorDetail, usedBy, copy })
+    return {
+      title: copy.errorTitleLimit,
+      message: build402ErrorMessage({ errorCode, errorDetail, usedBy, copy }),
+      hint: '',
+      action: ERROR_ACTION.UPGRADE,
+    }
   }
 
   if (status === 422) {
-    if (errorCode === 'BIOMARKERS_NOT_EXTRACTED') {
-      return copy.biomarkersNotExtracted
+    return {
+      title: copy.errorTitleExtraction,
+      message: errorCode === 'BIOMARKERS_NOT_EXTRACTED' ? copy.biomarkersNotExtracted : copy.formatNotRecognized,
+      hint: copy.hintClearerFile,
+      action: ERROR_ACTION.RETRY,
+      offerManualEntry: true,
     }
-    return copy.formatNotRecognized
   }
 
   if (status === 400 && errorCode === 'INVALID_FILE_TYPE') {
-    return copy.invalidFileType
+    return { title: copy.errorTitleFile, message: copy.invalidFileType, hint: copy.hintChooseDifferent, action: ERROR_ACTION.CHOOSE_DIFFERENT }
   }
 
   if (status === 413) {
-    return copy.fileTooLarge
+    return { title: copy.errorTitleFile, message: copy.fileTooLarge, hint: copy.hintChooseDifferent, action: ERROR_ACTION.CHOOSE_DIFFERENT }
   }
 
   if (status === 429) {
-    return copy.tooMany
+    return { title: copy.errorTitleBusy, message: copy.tooMany, hint: '', action: ERROR_ACTION.RETRY }
   }
 
-  return errorDetail || copy.fallbackError
+  return {
+    title: copy.errorTitleGeneric,
+    message: errorDetail || copy.fallbackError,
+    hint: copy.hintTryAgainLater,
+    action: ERROR_ACTION.RETRY,
+  }
+}
+
+// Client-side validation never reaches the server, so it always means "this
+// exact file won't work" — never worth retrying as-is.
+function describeValidationError(message, copy = UPLOAD_COPY.en) {
+  return { title: copy.errorTitleFile, message, hint: copy.hintChooseDifferent, action: ERROR_ACTION.CHOOSE_DIFFERENT }
 }
 
 function handleAnalysisError(err, copy = UPLOAD_COPY.en) {
@@ -201,7 +255,7 @@ function handleAnalysisError(err, copy = UPLOAD_COPY.en) {
   const usedBy = innerError?.used_by || errorData?.used_by
 
   maybeTriggerPaywall({ status, errorCode, usedBy })
-  return resolveAnalysisErrorMessage({ status, errorCode, errorDetail, usedBy, copy })
+  return describeAnalysisError({ status, errorCode, errorDetail, usedBy }, copy)
 }
 
 function resolveUploadId(data) {
@@ -221,7 +275,7 @@ export default function Upload() {
   // the field comes back; setLabName is intentionally unused now.
   const [labName, setLabName] = useState('') // eslint-disable-line no-unused-vars
   const [analyzing, setAnalyzing] = useState(false)
-  const [errorMessage, setErrorMessage] = useState('')
+  const [errorInfo, setErrorInfo] = useState(null)
   const [selectedFileName, setSelectedFileName] = useState('')
   const [profileIncomplete, setProfileIncomplete] = useState(false)
   const [loadingWarning, setLoadingWarning] = useState('')
@@ -279,12 +333,12 @@ export default function Upload() {
 
     const validationError = validateFileInput(file, copy)
     if (validationError) {
-      setErrorMessage(validationError)
+      setErrorInfo(describeValidationError(validationError, copy))
       toast.error(validationError)
       return
     }
 
-    setErrorMessage('')
+    setErrorInfo(null)
     setSelectedFileName(file.name)
     setSelectedFile(file)
     setRetryCount(0)
@@ -351,9 +405,9 @@ export default function Upload() {
       toast.success(copy.analysisComplete)
       navigate(`/results/${uploadId}`)
     } catch (err) {
-      const message = handleAnalysisError(err, copy)
-      setErrorMessage(message)
-      toast.error(message)
+      const info = handleAnalysisError(err, copy)
+      setErrorInfo(info)
+      toast.error(info.message)
     } finally {
       setAnalyzing(false)
     }
@@ -362,12 +416,12 @@ export default function Upload() {
   async function handleRetry() {
     if (!selectedFile || retryCount >= 3) return
     setRetryCount(prev => prev + 1)
-    setErrorMessage('')
+    setErrorInfo(null)
     await handleFile(selectedFile)
   }
 
   function handleUploadZoneError(message) {
-    setErrorMessage(message)
+    setErrorInfo(describeValidationError(message, copy))
     toast.error(message)
   }
 
@@ -439,9 +493,9 @@ export default function Upload() {
       toast.success(copy.reviewDone)
       navigate(`/results/${candidateReview.uploadId}`)
     } catch (err) {
-      const message = handleAnalysisError(err, copy)
-      setErrorMessage(message)
-      toast.error(message)
+      const info = handleAnalysisError(err, copy)
+      setErrorInfo(info)
+      toast.error(info.message)
     } finally {
       setConfirmingCandidates(false)
     }
@@ -680,22 +734,41 @@ export default function Upload() {
                 </div>
               )}
 
-              {errorMessage && (
+              {errorInfo && (
                 <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4" role="alert">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-rose-900">{errorMessage}</p>
-                      <p className="mt-1 text-xs text-rose-700">{isUk ? 'Спробуйте завантажити чіткіший повносторінковий файл із кабінету лабораторії.' : 'Try uploading a clearer full-page file from your lab portal.'}</p>
-                      {retryCount < 3 && selectedFile && (
-                        <button
-                          onClick={handleRetry}
-                          disabled={isBusy}
-                          className="mt-3 inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-60 transition"
-                        >
-                          ↻ {isUk ? 'Спробувати ще раз' : 'Retry'} ({retryCount}/3)
-                        </button>
-                      )}
+                      <p className="text-sm font-bold text-rose-900">{errorInfo.title}</p>
+                      <p className="mt-0.5 text-sm text-rose-800">{errorInfo.message}</p>
+                      {errorInfo.hint && <p className="mt-1 text-xs text-rose-700">{errorInfo.hint}</p>}
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                        {errorInfo.action === 'retry' && retryCount < 3 && selectedFile && (
+                          <button
+                            onClick={handleRetry}
+                            disabled={isBusy}
+                            className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-60 transition"
+                          >
+                            ↻ {copy.retryAction(retryCount)}
+                          </button>
+                        )}
+                        {errorInfo.action === 'upgrade' && (
+                          <button
+                            onClick={() => triggerPaywall({ reason: 'SUBSCRIPTION_REQUIRED' })}
+                            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition"
+                          >
+                            {copy.upgradeAction} {PREMIUM_PRICE_LABEL}
+                          </button>
+                        )}
+                        {errorInfo.offerManualEntry && (
+                          <button
+                            onClick={() => setUploadMode('manual')}
+                            className="text-xs font-semibold text-rose-700 underline underline-offset-2 hover:text-rose-800"
+                          >
+                            {copy.tryManualInstead}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
