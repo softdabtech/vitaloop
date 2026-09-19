@@ -1,47 +1,69 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Loader } from 'lucide-react'
+import { Loader } from 'lucide-react'
+import { isUkrainianLocale } from '../lib/locale.js'
 
 /**
- * Visual progress indicator for lab analysis
- * Shows stages: Uploading → Extracting → Analyzing → Generating → Complete
+ * Visual progress indicator for lab analysis.
+ *
+ * Only ever mounted while the real analysis request is in flight (Upload.jsx
+ * wraps it in `{analyzing && ...}`), so it must never claim completion itself
+ * — the parent unmounts it once the request actually resolves. Progress here
+ * is an honest approximation, capped well under 100%, with a calm
+ * long-running message after the threshold instead of a fake finish line.
  */
-export default function AnalysisProgressIndicator({ analyzing = false, elapsedSeconds = 0 }) {
-  const stages = [
-    { id: 'upload', label: 'Uploading', duration: 3 },
-    { id: 'extract', label: 'Extracting text', duration: 8 },
-    { id: 'analyze', label: 'Analyzing biomarkers', duration: 20 },
-    { id: 'generate', label: 'Generating protocol', duration: 5 },
-    { id: 'complete', label: 'Complete', duration: 0 },
-  ]
+const STAGE_COPY = {
+  en: {
+    stages: [
+      { id: 'prepare', label: 'Preparing your report', until: 5 },
+      { id: 'read', label: 'Reading your file', until: 15 },
+      { id: 'extract', label: 'Extracting biomarkers', until: 35 },
+      { id: 'connect', label: 'Connecting patterns', until: 55 },
+    ],
+    longRunning: 'Still working — this can take a little longer for large files.',
+    progressLabel: 'Estimated progress',
+    keepOpen: 'Keep this tab open — we\'ll take you to your results automatically.',
+    elapsed: (s) => `Elapsed: ${s}s`,
+  },
+  uk: {
+    stages: [
+      { id: 'prepare', label: 'Готуємо ваш звіт', until: 5 },
+      { id: 'read', label: 'Читаємо файл', until: 15 },
+      { id: 'extract', label: 'Витягуємо показники', until: 35 },
+      { id: 'connect', label: 'Зіставляємо закономірності', until: 55 },
+    ],
+    longRunning: 'Ще працюємо — для великих файлів це може зайняти трохи більше часу.',
+    progressLabel: 'Орієнтовний прогрес',
+    keepOpen: 'Не закривайте цю вкладку — ми автоматично перейдемо до результатів.',
+    elapsed: (s) => `Минуло: ${s}с`,
+  },
+}
 
-  const [currentStage, setCurrentStage] = useState(0)
-  const [stageProgress, setStageProgress] = useState(0)
+// Progress is capped well short of 100% — it is an estimate, never a claim
+// that the request has finished. The real completion signal is the parent
+// unmounting this component when the request actually resolves.
+const PROGRESS_CAP = 90
+const LONG_RUNNING_THRESHOLD_S = 55
+
+export default function AnalysisProgressIndicator({ analyzing = false, elapsedSeconds = 0 }) {
+  const isUk = isUkrainianLocale()
+  const copy = isUk ? STAGE_COPY.uk : STAGE_COPY.en
+  const { stages, longRunning } = copy
+
+  const [currentStageIndex, setCurrentStageIndex] = useState(0)
 
   useEffect(() => {
     if (!analyzing) {
-      setCurrentStage(0)
-      setStageProgress(0)
+      setCurrentStageIndex(0)
       return
     }
+    const index = stages.findIndex((stage) => elapsedSeconds < stage.until)
+    setCurrentStageIndex(index === -1 ? stages.length - 1 : index)
+  }, [analyzing, elapsedSeconds, stages])
 
-    let elapsed = 0
-    for (let i = 0; i < stages.length - 1; i++) {
-      if (elapsedSeconds < elapsed + stages[i].duration) {
-        setCurrentStage(i)
-        setStageProgress(((elapsedSeconds - elapsed) / stages[i].duration) * 100)
-        return
-      }
-      elapsed += stages[i].duration
-    }
-
-    setCurrentStage(stages.length - 1)
-    setStageProgress(100)
-  }, [analyzing, elapsedSeconds])
-
-  const overallProgress = analyzing
-    ? (elapsedSeconds / 36) * 100 // 36s = total time estimate
-    : 0
+  const isLongRunning = elapsedSeconds >= LONG_RUNNING_THRESHOLD_S
+  const currentLabel = isLongRunning ? longRunning : stages[currentStageIndex]?.label
+  const overallProgress = Math.min(PROGRESS_CAP, (elapsedSeconds / LONG_RUNNING_THRESHOLD_S) * PROGRESS_CAP)
 
   return (
     <motion.div
@@ -49,118 +71,43 @@ export default function AnalysisProgressIndicator({ analyzing = false, elapsedSe
       animate={{ opacity: 1, y: 0 }}
       className="w-full space-y-6 rounded-xl bg-gradient-to-br from-emerald-50 to-slate-50 p-6 ring-1 ring-emerald-200"
     >
-      {/* Overall progress bar */}
+      {/* Overall progress bar — capped, never reaches or claims 100%/complete */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-slate-700">Overall progress</p>
-          <p className="text-sm font-semibold text-emerald-600">{Math.min(100, Math.round(overallProgress))}%</p>
+          <p className="text-sm font-medium text-slate-700">{copy.progressLabel}</p>
+          <p className="text-sm font-semibold text-emerald-600">{Math.round(overallProgress)}%</p>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
           <motion.div
             className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400"
             initial={{ width: 0 }}
-            animate={{ width: `${Math.min(100, overallProgress)}%` }}
+            animate={{ width: `${overallProgress}%` }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
           />
         </div>
       </div>
 
-      {/* Stage indicators */}
-      <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Processing stages</p>
-        <div className="space-y-2">
-          {stages.map((stage, idx) => {
-            const isActive = idx === currentStage && analyzing
-            const isComplete = idx < currentStage
-            const isCurrent = idx === currentStage
-
-            return (
-              <div key={stage.id} className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  {isComplete ? (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500"
-                    >
-                      <CheckCircle2 className="h-5 w-5 text-white" />
-                    </motion.div>
-                  ) : isActive ? (
-                    <div className="flex h-6 w-6 items-center justify-center">
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                      >
-                        <Loader className="h-5 w-5 text-emerald-500" />
-                      </motion.div>
-                    </div>
-                  ) : (
-                    <div className="h-6 w-6 rounded-full border-2 border-slate-300 bg-white" />
-                  )}
-                </div>
-
-                <div className="flex-1">
-                  <p className={`text-sm font-medium ${isActive || isComplete ? 'text-slate-900' : 'text-slate-500'}`}>
-                    {stage.label}
-                  </p>
-                  {isCurrent && stage.duration > 0 && (
-                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-                      <motion.div
-                        className="h-full bg-emerald-400"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${stageProgress}%` }}
-                        transition={{ duration: 0.3, ease: 'easeOut' }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {isCurrent && stage.duration > 0 && (
-                  <p className="text-xs text-slate-500">{Math.round(stageProgress)}%</p>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Status message */}
+      {/* Current stage / status message */}
       <motion.div
-        key={currentStage}
+        key={currentLabel}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="rounded-lg bg-white px-4 py-3 text-center ring-1 ring-emerald-100"
+        className="flex items-center gap-3 rounded-lg bg-white px-4 py-3 ring-1 ring-emerald-100"
       >
-        <p className="text-sm text-slate-700">
-          {analyzing ? (
-            <>
-              <span className="font-semibold text-emerald-600">{stages[currentStage]?.label}</span>
-              {currentStage < stages.length - 1 && (
-                <span className="text-slate-500">
-                  {' '}
-                  — This usually takes {stages[currentStage]?.duration}s
-                </span>
-              )}
-            </>
-          ) : (
-            '✅ Analysis complete!'
-          )}
-        </p>
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          className="shrink-0"
+        >
+          <Loader className="h-5 w-5 text-emerald-500" />
+        </motion.div>
+        <p className="text-sm text-slate-700">{currentLabel}</p>
       </motion.div>
 
-      {/* Time estimate */}
-      {analyzing && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center text-xs text-slate-500"
-        >
-          <p>
-            Elapsed: <span className="font-mono font-semibold">{Math.floor(elapsedSeconds)}s</span> / Estimated:{' '}
-            <span className="font-mono font-semibold">36s</span>
-          </p>
-        </motion.div>
-      )}
+      <div className="flex flex-col items-center gap-1 text-center text-xs text-slate-500">
+        <p>{copy.elapsed(Math.floor(elapsedSeconds))}</p>
+        <p>{copy.keepOpen}</p>
+      </div>
     </motion.div>
   )
 }

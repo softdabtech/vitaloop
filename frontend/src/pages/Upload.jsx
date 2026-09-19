@@ -37,17 +37,8 @@ const SUPPORTED_FILE_TYPES = {
   'text/csv': ['.csv'],
 }
 
-const LOADING_MESSAGES = [
-  '📤 Uploading your lab report...',
-  '🧠 AI is analyzing your biomarkers...',
-  '📋 Generating your personalized protocol...',
-  '💊 Finalizing supplement recommendations...',
-  '✅ Almost ready...',
-]
-
 const UPLOAD_COPY = {
   en: {
-    loadingMessages: LOADING_MESSAGES,
     profileIncomplete: 'Complete profile first',
     uploading: (name, kb) => `Uploading ${name}… (${kb}KB)`,
     analysisComplete: 'Analysis complete!',
@@ -83,13 +74,6 @@ const UPLOAD_COPY = {
     reviewDone: 'Markers confirmed',
   },
   uk: {
-    loadingMessages: [
-      '📤 Завантажуємо ваш файл...',
-      '🧠 AI аналізує показники...',
-      '📋 Формуємо персональний підсумок...',
-      '💊 Уточнюємо пріоритети дій...',
-      '✅ Майже готово...',
-    ],
     profileIncomplete: 'Спочатку заповніть профіль',
     uploading: (name, kb) => `Завантажуємо ${name}… (${kb}KB)`,
     analysisComplete: 'Аналіз готовий!',
@@ -240,7 +224,6 @@ export default function Upload() {
   const [errorMessage, setErrorMessage] = useState('')
   const [selectedFileName, setSelectedFileName] = useState('')
   const [profileIncomplete, setProfileIncomplete] = useState(false)
-  const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0])
   const [loadingWarning, setLoadingWarning] = useState('')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [candidateReview, setCandidateReview] = useState(null)
@@ -276,7 +259,6 @@ export default function Upload() {
       return
     }
 
-    setLoadingMessage(copy.loadingMessages[0])
     setElapsedSeconds(0)
 
     // Timer for elapsed seconds
@@ -284,17 +266,11 @@ export default function Upload() {
       setElapsedSeconds(prev => prev + 1)
     }, 1000)
 
-    const timers = [
-      setTimeout(() => setLoadingMessage(copy.loadingMessages[1]), 3000),
-      setTimeout(() => setLoadingMessage(copy.loadingMessages[2]), 15000),
-      setTimeout(() => setLoadingMessage(copy.loadingMessages[3]), 25000),
-      setTimeout(() => setLoadingMessage(copy.loadingMessages[4]), 35000),
-      setTimeout(() => setLoadingWarning(copy.longerWarning), 60000),
-    ]
+    const longerWarningTimer = setTimeout(() => setLoadingWarning(copy.longerWarning), 60000)
 
     return () => {
       clearInterval(elapsedTimer)
-      timers.forEach(clearTimeout)
+      clearTimeout(longerWarningTimer)
     }
   }, [analyzing, copy])
 
