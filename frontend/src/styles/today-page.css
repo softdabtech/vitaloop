@@ -6,25 +6,11 @@
  * spec's own instruction is "do not rewrite shared Coach components if the
  * change is only needed by one page" (§14). This file exists so Today can
  * move to a calmer, compact layout without touching any other page's look.
- *
- * What this fixes vs. the previous coach-hero/coach-card-based layout:
- * - removes the decorative radial-gradient blobs (coach-hero::after and its
- *   own background gradients)
- * - smaller hero padding/radius/shadow -- one calm focus block, not a promo card
- * - returning-user sections (Changes/Return/Clarity) no longer use the full
- *   heavy coach-card treatment (border + 20px radius + large soft shadow)
- *   stacked one after another -- they use a light border-top divider and
- *   generous spacing instead, so the page reads as one flowing surface, not
- *   a stack of separate cards
- * - Documents section keeps a single light surface (spec §11: it is the one
- *   stable, always-present anchor) but with a smaller shadow/radius than
- *   the shared .coach-card default
  */
 
-/* P37h.1 — visual polish pass, addressing pre-release review feedback on
- * the P37h layout (see output/p37h.1-...-2026-09-20.md for the full list).
- * Every rule below is additive to the P37h file above; nothing here changes
- * data/network behavior. */
+/* P37h.1/P37h.2 — mobile overlay & safety-stack polish. See git history for
+ * the full before/after measurements; kept below, mostly superseded in
+ * presentation (not behavior) by the P37i tile system further down. */
 
 .today-header {
   margin-bottom: 4px;
@@ -44,11 +30,10 @@
 }
 
 /* Both safety banners (report-scoped + questionnaire) share one wrapper so
- * they read as one compact "safety stack" instead of two full-weight blocks
- * separated by the page's normal 24px section gap -- sources stay fully
- * separate (each keeps its own text/tone/source label), only the visual
- * weight is reduced. Compact padding/type-scale applies whenever more than
- * one banner is present; a single banner keeps the roomier P37h sizing. */
+ * they read as one compact "safety stack" -- sources stay fully separate
+ * (each keeps its own text/tone/source label), only the visual weight is
+ * reduced. Compact padding/type-scale applies whenever more than one banner
+ * is present; a single banner keeps the roomier sizing. */
 .today-safety-stack {
   display: flex;
   flex-direction: column;
@@ -74,11 +59,6 @@
   margin-top: 4px !important;
 }
 
-/* P37h.2 — mobile-only: the first viewport at 375px width is dominated by
- * two stacked warning banners more than at desktop, since there is far less
- * vertical room before the fold. Reduce visual weight further on small
- * screens only when 2+ banners are present; sources/tone/meaning stay
- * exactly as they are above, this only shrinks gap/padding/line-height. */
 @media (max-width: 640px) {
   .today-safety-stack:has(> :nth-child(2)) {
     gap: 6px;
@@ -99,58 +79,124 @@
   }
 }
 
-/* Clarity: a denser, intentional two-column item grid on wider screens
- * instead of one loose full-width column -- collapses to a single column
- * on mobile, same as every other responsive grid on this page. */
-.today-clarity-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px 20px;
-}
-
-@media (min-width: 640px) {
-  .today-clarity-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.today-clarity-item {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(248, 250, 252, 0.7);
-}
-
 /* Reserves space so the site-wide fixed-bottom cookie banner (see
  * CookieConsent.jsx: position:fixed, bottom:0) never sits on top of the
- * last content section (Clarity/Documents) before it is dismissed --
- * same established pattern already used at the bottom of Results.jsx/
- * ProtocolPage.jsx/ManualBiomarkerEntry.jsx for the floating chat widget.
- * This does not touch CookieConsent.jsx or its global behavior; it only
- * adds bottom padding to this one page's own content.
- *
- * Height verified, not guessed: measured the real rendered
- * CookieConsent.jsx banner at 375px width via getBoundingClientRect() --
- * 232px tall (its text wraps to 3 lines + 3 buttons at that width). 9rem
- * (144px) was NOT enough and still overlapped the Documents section by
- * ~18px in that measurement (see output/p37h1-overlap-check.mjs). 17rem
- * gives a real margin above the measured height, not just enough to
- * exactly clear it -- text reflow (longer translations, browser font
- * settings) could still make the real banner taller than this one
- * measurement, so this is deliberately not cut close. */
+ * last content section before it is dismissed -- same established pattern
+ * already used at the bottom of Results.jsx/ProtocolPage.jsx/
+ * ManualBiomarkerEntry.jsx for the floating chat widget. Height verified via
+ * getBoundingClientRect() at 375px width (see output/p37h1-overlap-check.mjs
+ * and output/p37h2-overlap-check.mjs) -- 232px real banner height, 17rem
+ * gives a real margin above that, not just enough to exactly clear it. */
 .today-bottom-spacer {
   height: 17rem;
 }
 
+@media (min-width: 641px) {
+  .today-bottom-spacer {
+    /* Desktop has no bottom nav and the chat bubble sits in the corner, not
+       spanning full width -- only the cookie banner needs clearance there,
+       and it's far shorter at desktop width (single line, no wrap). */
+    height: 6rem;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * P37i — Recompose Today into a finished product page ("cockpit").
+ *
+ * Context: P37h/P37h.1/P37h.2 fixed real bugs (decorative blob, card-stack
+ * shadows, raw marker IDs, mobile overlay) but the result read as too bare
+ * on a wide screen -- content stretched full-width inside the shared page
+ * shell (UserCabinetLayout's 1380px canvas) with no containment of its own,
+ * so a rich state still looked like a handful of scattered blocks rather
+ * than one finished page. This section replaces that with an explicit,
+ * contained "cockpit" composition:
+ *
+ *   .today-canvas   -- one bounded panel (not full-bleed) with its own
+ *                      background band and border, so the page reads as a
+ *                      single designed surface at any viewport width
+ *   .today-focus    -- the top band: header + safety + hero, on a distinct
+ *                      tinted background so it reads as "current focus"
+ *   .today-divider  -- a visual seam between focus and the lower grid
+ *   .today-grid-lower -- the structured lower area (Changes/Return/
+ *                      Clarity/Latest report), built from .today-tile
+ *                      surfaces with deliberate spans (not CSS auto-flow)
+ *                      so a missing section never leaves an orphaned half
+ *                      row -- see .today-pair's :only-child rule below.
+ *
+ * None of this changes what data is fetched or how state is chosen --
+ * UserDashboard.jsx's viewModel branches are unchanged; only how each
+ * already-present piece of it is composed on screen.
+ */
+
+.today-canvas {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 28px 32px 32px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 100%);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 24px 60px -32px rgba(15, 23, 42, 0.18);
+}
+
+@media (max-width: 640px) {
+  .today-canvas {
+    padding: 18px 16px 20px;
+    border-radius: 20px;
+  }
+}
+
+/* The focus band gets its own soft mint-tinted background, extending edge
+ * to edge within the canvas via negative margins + matching padding, so it
+ * reads as a distinct "current focus" zone rather than the hero floating
+ * alone on white. This is a flat, single-tone band -- no gradients/blobs. */
+.today-focus {
+  margin: -28px -32px 0;
+  padding: 24px 32px 26px;
+  border-radius: 28px 28px 0 0;
+  background: linear-gradient(180deg, #F3FBF9 0%, #F6FCFB 100%);
+  border-bottom: 1px solid rgba(42, 191, 170, 0.14);
+}
+
+@media (max-width: 640px) {
+  .today-focus {
+    margin: -18px -16px 0;
+    padding: 18px 16px 20px;
+    border-radius: 20px 20px 0 0;
+  }
+}
+
+/* When there's nothing below the focus band (first-run/labs-intent/error
+ * states -- no report yet), it IS the whole canvas, so it should own the
+ * canvas's full rounding instead of only the top corners. */
+.today-canvas:has(> .today-focus:last-child) {
+  /* The focus band already supplies its own bottom padding/radius when
+     it's the only content -- without this, the canvas's own bottom
+     padding left a large, oddly empty white gap below an otherwise
+     self-contained rounded card (visible in first-run/labs-intent/error
+     states, which never have a lower grid). */
+  padding-bottom: 0;
+}
+
+.today-canvas:has(> .today-focus:last-child) .today-focus {
+  border-radius: 28px;
+  border-bottom: none;
+}
+
+@media (max-width: 640px) {
+  .today-canvas:has(> .today-focus:last-child) .today-focus {
+    border-radius: 20px;
+  }
+}
+
 .today-hero {
-  padding: 22px 24px;
-  border-radius: 16px;
-  background: #F3FBF9;
-  border: 1px solid rgba(42, 191, 170, 0.16);
+  padding: 20px 0 0;
+  background: transparent;
+  border: none;
 }
 
 .today-hero h1 {
   margin: 0;
-  font-size: clamp(22px, 3vw, 26px);
+  font-size: clamp(22px, 3vw, 27px);
   line-height: 1.2;
   font-weight: 800;
   letter-spacing: 0;
@@ -165,14 +211,110 @@
   max-width: 60ch;
 }
 
-.today-section {
-  padding: 18px 0;
-  border-top: 1px solid rgba(15, 23, 42, 0.08);
+/* Seam between the focus band and the structured lower grid -- a plain
+ * divider, not another shadowed card edge, so the page reads as one
+ * continuous surface split into two zones, not two stacked panels. */
+.today-divider {
+  height: 1px;
+  margin: 0;
+  background: rgba(15, 23, 42, 0.07);
 }
 
-.today-section:first-of-type {
-  border-top: none;
-  padding-top: 0;
+.today-grid-lower {
+  padding: 24px 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .today-grid-lower {
+    padding: 18px 0 4px;
+    gap: 16px;
+  }
+}
+
+/* Changes + Return checkpoint pair: side by side when both exist. When only
+ * one exists, it spans the full row instead of leaving an empty half beside
+ * it -- the ":only-child" rule is what makes "sections gracefully rebalance"
+ * an actual CSS guarantee instead of a manual per-state layout choice. */
+.today-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.today-pair > :only-child {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 767px) {
+  .today-pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Base tile surface shared by Changes / Return / Clarity / Latest report,
+ * plus the loading/limitation message when returning-user data is still
+ * settling. Compact but no longer bare: a real bordered surface with a
+ * subtle background tint and its own section label, so each piece of
+ * information reads as an intentional card, not a paragraph floating in
+ * whitespace. */
+.today-tile {
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: #F8FAFC;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+.today-tile--wide {
+  grid-column: 1 / -1;
+}
+
+/* Latest report/plan keeps a slightly stronger surface than the other
+ * tiles (spec's own "stable navigational anchor" framing) -- white instead
+ * of tinted, with a touch more elevation, so it still reads as the anchor
+ * even though it's now inside the same grid rhythm as the other tiles. */
+.today-documents {
+  background: #FFFFFF;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.today-documents .today-documents__report-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 15.5px;
+  font-weight: 800;
+  color: var(--coach-text);
+}
+
+.today-documents .today-documents__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.today-documents .today-documents__link {
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 700;
+  background: var(--coach-primary-soft, #DDF8F2);
+  color: var(--coach-primary-dark, #109581);
+  transition: background 0.15s ease;
+}
+
+.today-documents .today-documents__link:hover {
+  background: #C7F1E7;
+}
+
+.today-documents .today-documents__link--locked {
+  background: rgba(15, 23, 42, 0.05);
+  color: #94A3B8;
 }
 
 .today-section-label {
@@ -187,17 +329,24 @@
   color: #64748B;
 }
 
-.today-documents {
-  padding: 16px 18px;
-  border-radius: 14px;
-  background: #FFFFFF;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+/* Clarity: a denser, intentional two-column item grid on wider screens,
+ * nested inside its own wide tile -- collapses to a single column on
+ * mobile, same as every other responsive grid on this page. */
+.today-clarity-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px 16px;
 }
 
-@media (max-width: 640px) {
-  .today-hero {
-    padding: 18px 18px;
-    border-radius: 14px;
+@media (min-width: 640px) {
+  .today-clarity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+.today-clarity-item {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #FFFFFF;
+  border: 1px solid rgba(15, 23, 42, 0.06);
 }
