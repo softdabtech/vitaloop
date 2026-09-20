@@ -800,7 +800,7 @@ export default function Progress() {
           {/* Call to Action */}
           <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 p-6 text-center">
             <p className="text-lg font-semibold text-emerald-900">Ready for a Retest?</p>
-            <p className="mt-2 text-sm text-emerald-700">Recommended every 90 days to track improvements</p>
+            <p className="mt-2 text-sm text-emerald-700">Retest timing depends on the markers and plan in your latest report.</p>
             <button onClick={() => navigate('/upload')} className="vtl-button-primary mt-4 px-8">
               Upload New Test
             </button>

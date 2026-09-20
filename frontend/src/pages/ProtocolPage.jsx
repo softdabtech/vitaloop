@@ -77,6 +77,7 @@ const PROTOCOL_COPY = {
     marker: 'Marker',
     discussTiming: 'Discuss timing with a clinician.',
     retestFallback: 'No specific retest dates yet — timing depends on symptoms and clinician guidance.',
+    uploadWhenRepeated: 'Upload your next report when you repeat these tests',
     safetyDiscussion: 'Safety and Clinician Discussion',
     discussionFallback: 'Ask whether the plan fits your symptoms, medications, history, and current lab context.',
     closingBody: 'Keep tracking how you feel, and revisit your results whenever it helps.',
@@ -180,6 +181,7 @@ const PROTOCOL_COPY = {
     marker: 'Показник',
     discussTiming: 'Обговоріть терміни з фахівцем.',
     retestFallback: 'Конкретних дат повторної перевірки поки немає — терміни залежать від симптомів і рекомендацій фахівця.',
+    uploadWhenRepeated: 'Завантажте новий звіт, коли повторите ці аналізи',
     safetyDiscussion: 'Безпека та питання до фахівця',
     discussionFallback: 'Запитайте, чи відповідає план вашим симптомам, лікам, історії та поточному контексту аналізів.',
     closingBody: 'Продовжуйте відстежувати самопочуття і повертайтеся до результатів, коли це корисно.',
@@ -982,6 +984,16 @@ export default function ProtocolPage() {
               ))}
             </div>
           ) : <p className="text-sm leading-6 text-slate-600">{copy.retestFallback}</p>}
+          {!!retestPlan.length && (
+            <button
+              type="button"
+              onClick={() => navigate('/upload')}
+              className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+            >
+              {copy.uploadWhenRepeated}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          )}
         </CoachCard>
 
         {/* P31b: the legacy "Safety discussion" bullet list duplicated
