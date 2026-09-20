@@ -1393,11 +1393,11 @@ async def confirm_upload_candidates(
     # Merge symptoms explicitly passed in the request body with whatever the
     # user already filled in the questionnaire flow. Found 2026-09-11 QA:
     # this endpoint only ever saw body.symptoms (which the frontend never
-    # actually sends here), so the clinical analyzer ran with
-    # has_symptoms=false/has_questionnaire=false even when the user had just
-    # completed a detailed intake describing e.g. fatigue and hair loss —
-    # get_active_symptom_context() is fail-open and returns ([], {}) if
-    # nothing is on file, so this is safe to always call.
+    # actually sends here), so the clinical analyzer ran with an empty
+    # symptom list and no questionnaire-readiness credit even when the user
+    # had just completed a detailed intake describing e.g. fatigue and hair
+    # loss — get_active_symptom_context() is fail-open and returns ([], {})
+    # if nothing is on file, so this is safe to always call.
     questionnaire_symptoms, questionnaire_context = await get_active_symptom_context(user_id)
     combined_symptoms = _normalize_symptoms(list(body.symptoms) + questionnaire_symptoms)
     # Stage 2B: do NOT persist biomarkers here. Pass the confirmed/corrected
@@ -1412,7 +1412,17 @@ async def confirm_upload_candidates(
     pipeline_result = await run_lab_analysis_pipeline(
         biomarkers=biomarkers,
         symptoms=combined_symptoms,
-        questionnaire=questionnaire_context,
+        # P36c: routed through the symptom_context argument, deliberately
+        # NOT the pipeline's other, similarly-named "questionnaire" kwarg --
+        # that one feeds _questionnaire_summary()'s domain_scores extraction,
+        # the one path a client-computed health interpretation (e.g.
+        # Questionnaire.jsx's own buildDomainScores()) could ever blend into
+        # provenance-sensitive output (see
+        # tests/test_stage2f2_domain_scores_provenance.py). symptom_context
+        # preserves this endpoint's intended readiness credit (see
+        # analysis_quality_gate.py's has_symptom_context handling) without
+        # going through that reader at all.
+        symptom_context=questionnaire_context,
         user_profile=user_profile,
         user_id=user_id,
         analysis_id=str(upload_id),

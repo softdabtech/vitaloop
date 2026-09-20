@@ -32,7 +32,7 @@ def _readiness_score(health_context: Dict[str, Any] | None) -> tuple[float, List
     if readiness.get("has_symptoms"):
         score += 0.15
         reasons.append("symptoms_present")
-    if readiness.get("has_questionnaire"):
+    if readiness.get("has_questionnaire") or readiness.get("has_symptom_context"):
         score += 0.15
         reasons.append("questionnaire_present")
     if readiness.get("has_safety_context"):

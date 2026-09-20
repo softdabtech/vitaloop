@@ -68,11 +68,37 @@ def _questionnaire_summary(questionnaire: Dict[str, Any] | None) -> Dict[str, An
     }
 
 
+def _symptom_context_summary(symptom_context: Dict[str, Any] | None) -> Dict[str, Any]:
+    """Summarizes a user's active questionnaire/intake session (active_concern,
+    completion_score, dimension_scores, llm_summary — see
+    supabase_service.get_active_symptom_context()) for readiness scoring.
+
+    Deliberately does NOT scan for/extract a `domain_scores`/`scores`/`domains`
+    key the way `_questionnaire_summary()` does. `run_lab_analysis_pipeline()`'s
+    `questionnaire` argument feeds `_questionnaire_summary()`, whose
+    `domain_scores` extraction is the one path client-computed health
+    interpretation (e.g. Questionnaire.jsx's buildDomainScores()) could ever
+    blend into provenance-sensitive output (see
+    tests/test_stage2f2_domain_scores_provenance.py). `symptom_context` is a
+    separate, narrower field precisely so a B2C caller can surface "the user
+    has an active intake session" (fields, presence) without ever touching
+    that path — see the P36c fix that introduced this function.
+    """
+    symptom_context = symptom_context if isinstance(symptom_context, dict) else {}
+    if not symptom_context:
+        return {"present": False, "fields": []}
+    return {
+        "present": True,
+        "fields": _present_fields(symptom_context),
+    }
+
+
 def build_health_context(
     *,
     biomarkers: List[Dict[str, Any]],
     symptoms: List[str] | None = None,
     questionnaire: Dict[str, Any] | None = None,
+    symptom_context: Dict[str, Any] | None = None,
     user_profile: Dict[str, Any] | None = None,
     source_metadata: Dict[str, Any] | None = None,
     locale: str = "en",
@@ -94,6 +120,7 @@ def build_health_context(
                 "items": normalized_symptoms,
             },
             "questionnaire": _questionnaire_summary(questionnaire),
+            "symptom_context": _symptom_context_summary(symptom_context),
             "profile": {
                 "present": bool(profile),
                 "fields": _present_fields(profile),
@@ -110,6 +137,7 @@ def build_health_context(
             "has_biomarkers": bool(biomarkers),
             "has_symptoms": bool(normalized_symptoms),
             "has_questionnaire": bool(questionnaire),
+            "has_symptom_context": bool(symptom_context),
             "has_profile": bool(profile),
             "has_safety_context": bool(safety_context),
         },
