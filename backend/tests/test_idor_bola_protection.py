@@ -5,6 +5,7 @@ Test that users cannot access other users' data by modifying object IDs.
 """
 import pytest
 import uuid
+from types import SimpleNamespace
 from httpx import ASGITransport, AsyncClient
 from app.main import app
 from app.dependencies import get_current_user
@@ -22,11 +23,50 @@ def user2_token():
     return {"sub": str(uuid.uuid4()), "email": "user2@test.com"}
 
 
+class _ChainableEmptyResultTable:
+    """Fakes the Supabase fluent query builder (.select().eq().limit()...),
+    returning itself for any chained call and an empty-data result from
+    .execute() -- regardless of chain shape or order.
+
+    Simulates "no matching row for this user/id" so ownership-check code
+    (assert_upload_belongs_to_user, delete_upload's inline check, and the
+    entitlement lookups behind require_active_subscription) can be
+    exercised for real in this test environment, which has no working
+    Supabase credentials (see P36a audit: real credentials -- or CI's own
+    placeholder ones -- raise SupabaseException("Invalid API key") before
+    any ownership logic runs). This does not change what the app code
+    does with an empty result; it only supplies one instead of an
+    unhandled client-init exception.
+    """
+
+    def __getattr__(self, _name):
+        if _name == "execute":
+            return lambda *args, **kwargs: SimpleNamespace(data=[])
+        return lambda *args, **kwargs: self
+
+
+class _FakeSupabaseClient:
+    def table(self, *_args, **_kwargs):
+        return _ChainableEmptyResultTable()
+
+
+@pytest.fixture
+def mock_no_matching_upload(monkeypatch):
+    """Stub _get_supabase() everywhere it's imported so every ownership/
+    entitlement lookup in this test sees "not found" instead of failing
+    on Supabase client init. Test-fixture-only; no app code is modified.
+    """
+    fake_client = _FakeSupabaseClient()
+    monkeypatch.setattr("app.services.supabase_service._get_supabase", lambda: fake_client)
+    monkeypatch.setattr("app.routers.analysis.uploads._get_supabase", lambda: fake_client)
+    return fake_client
+
+
 class TestIDORProtection:
     """Test that endpoints properly validate object ownership"""
 
     @pytest.mark.asyncio
-    async def test_cannot_access_other_user_upload(self, user1_token, user2_token, monkeypatch):
+    async def test_cannot_access_other_user_upload(self, user1_token, user2_token, monkeypatch, mock_no_matching_upload):
         """Verify user1 cannot access user2's upload_id"""
         upload_id = str(uuid.uuid4())
         other_user_id = user2_token["sub"]
@@ -37,10 +77,6 @@ class TestIDORProtection:
 
         async def get_user2():
             return user2_token
-
-        # Try to access with user1 credentials but user2's upload
-        # Mock would need to verify ownership in endpoint
-        # This test will fail until endpoint properly checks ownership
 
         app.dependency_overrides[get_current_user] = get_user1
 
@@ -85,7 +121,7 @@ class TestIDORProtection:
             app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
-    async def test_cannot_delete_other_user_upload(self, user1_token, user2_token, monkeypatch):
+    async def test_cannot_delete_other_user_upload(self, user1_token, user2_token, monkeypatch, mock_no_matching_upload):
         """Verify user1 cannot delete user2's upload"""
         upload_id = str(uuid.uuid4())
 
@@ -109,12 +145,25 @@ class TestIDORProtection:
             app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
-    async def test_cannot_access_other_user_protocol(self, user1_token, user2_token, monkeypatch):
+    async def test_cannot_access_other_user_protocol(self, user1_token, user2_token, monkeypatch, mock_no_matching_upload):
         """Verify user1 cannot access user2's protocol"""
         upload_id = str(uuid.uuid4())
 
         async def get_user1():
             return user1_token
+
+        # GET /protocol/{upload_id} sits behind require_active_subscription,
+        # which runs BEFORE the endpoint's own ownership check. Without a
+        # real Supabase-backed entitlement lookup, a mocked user with no
+        # subscription record correctly gets 402 first -- that's the
+        # subscription gate working as designed, not an IDOR bypass, but it
+        # means this test needs a premium entitlement stub to reach the
+        # ownership check it's actually meant to exercise. Test-only; does
+        # not change require_active_subscription's real behavior.
+        async def fake_premium_entitlements(_user_id, _current_user=None):
+            return {"role": "end_user", "is_premium": True, "profile": {"onboarding_complete": True}}
+
+        monkeypatch.setattr("app.dependencies.resolve_user_entitlements", fake_premium_entitlements)
 
         app.dependency_overrides[get_current_user] = get_user1
 
@@ -137,7 +186,7 @@ class TestBOLAProtection:
     """Test Broken Object Level Authorization scenarios"""
 
     @pytest.mark.asyncio
-    async def test_numeric_id_enumeration_prevention(self, user1_token, monkeypatch):
+    async def test_numeric_id_enumeration_prevention(self, user1_token, monkeypatch, mock_no_matching_upload):
         """Test that sequential ID guessing is prevented"""
         async def get_user1():
             return user1_token
@@ -147,10 +196,17 @@ class TestBOLAProtection:
         try:
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
-                # Try various sequential IDs (simulating ID enumeration)
+                # Try various sequential IDs (simulating ID enumeration).
+                # Stage P36b: retargeted from GET /uploads/{id} (no longer a
+                # real read route -- only DELETE is registered there, so a
+                # GET always 405s regardless of ownership) to GET
+                # /results/{id}, the actual current read endpoint (see
+                # Results.jsx's api.get('/results/${uploadId}') and P36a
+                # audit). Preserves this test's original intent: sequential
+                # IDs must not partially succeed.
                 results = []
                 for i in range(1, 4):
-                    response = await client.get(f"/uploads/{i}")
+                    response = await client.get(f"/results/{i}")
                     results.append(response.status_code)
 
                 # All should be 404 (not found) or 403 (forbidden)
@@ -162,7 +218,7 @@ class TestBOLAProtection:
             app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
-    async def test_admin_cannot_access_user_data_without_permission(self, user1_token, monkeypatch):
+    async def test_admin_cannot_access_user_data_without_permission(self, user1_token, monkeypatch, mock_no_matching_upload):
         """Test that admin endpoints still require proper authorization"""
         upload_id = str(uuid.uuid4())
 
@@ -178,9 +234,11 @@ class TestBOLAProtection:
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
                 # Admin accessing random user's data should still be denied
-                # (unless explicitly designed to have admin view access)
+                # (unless explicitly designed to have admin view access).
+                # Stage P36b: retargeted from GET /uploads/{id} (no longer a
+                # real read route) to GET /results/{id} -- see P36a audit.
                 response = await client.get(
-                    f"/uploads/{upload_id}",
+                    f"/results/{upload_id}",
                 )
                 # Depends on implementation: might allow admin to view, but should log it
                 # For now, just verify endpoint responds (not crashes)
@@ -225,7 +283,7 @@ class TestIDORVectorPatterns:
     """Test common IDOR vulnerability patterns"""
 
     @pytest.mark.asyncio
-    async def test_uuid_not_guessable(self, user1_token, monkeypatch):
+    async def test_uuid_not_guessable(self, user1_token, monkeypatch, mock_no_matching_upload):
         """Verify UUIDs are used (not sequential IDs)"""
         async def get_user1():
             return user1_token
@@ -238,7 +296,9 @@ class TestIDORVectorPatterns:
 
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:
-                response = await client.get(f"/uploads/{fake_uuid}")
+                # Stage P36b: retargeted from GET /uploads/{id} (no longer a
+                # real read route) to GET /results/{id} -- see P36a audit.
+                response = await client.get(f"/results/{fake_uuid}")
                 # Should not find this fake upload
                 assert response.status_code in [403, 404], \
                     f"Fake UUID should not succeed: {response.status_code}"

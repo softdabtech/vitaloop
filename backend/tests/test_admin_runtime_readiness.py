@@ -66,7 +66,6 @@ async def test_runtime_readiness_marks_redis_url_as_missing_when_redis_backend(m
     monkeypatch.setattr(admin.settings, "supabase_service_role_key", "service-role-key")
     monkeypatch.setattr(admin.settings, "resend_api_key", "resend-key")
     monkeypatch.setattr(admin.settings, "resend_from_email", "ops@example.com")
-    monkeypatch.setattr(admin.settings, "sentry_dsn", "")
     monkeypatch.setattr(admin, "is_llm_configured", lambda: True)
     monkeypatch.setattr(admin.settings, "rate_limit_backend", "redis")
 
