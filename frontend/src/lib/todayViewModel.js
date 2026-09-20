@@ -1,3 +1,5 @@
+import { biomarkerDisplayName } from './biomarker-display.js'
+
 // P37d — Today dashboard presentation adapter.
 //
 // A pure function: given already-loaded data (dashboard summary's
@@ -21,6 +23,18 @@
 // moment such a runner is added, without any rewrite. Until then it is
 // verified via manual/browser-fixture checks per state (documented in the
 // P37d delivery report), not by an automated unit suite.
+
+// P37h: evidence_gaps.gaps[].missing_marker / .domain are raw backend keys
+// (e.g. "transferrin_saturation"), never meant for direct display -- reuses
+// the same biomarkerDisplayName() lookup Results.jsx/ProtocolPage.jsx
+// already use for known markers, and for anything not in that table, only
+// humanizes the raw string's punctuation/casing (underscores -> spaces,
+// capitalized) -- it never invents or reclassifies medical meaning.
+function humanizeLabel(raw, isUk) {
+  if (!raw) return ''
+  const displayed = biomarkerDisplayName(raw, isUk) || String(raw).replaceAll('_', ' ')
+  return displayed.charAt(0).toUpperCase() + displayed.slice(1)
+}
 
 function formatDate(isoDate, isUk) {
   if (!isoDate) return null
@@ -108,7 +122,7 @@ function buildReturningUserSections({
       if (!marker?.silent_signal) continue
       const name = marker?.canonical_name || marker?.name
       if (!name) continue
-      changeItems.push(copy.changes.silentSignal(name))
+      changeItems.push(copy.changes.silentSignal(humanizeLabel(name, isUk)))
     }
   }
   const changes = changeItems.length
@@ -117,11 +131,14 @@ function buildReturningUserSections({
 
   // --- what could make this clearer (up to 2 gaps, wording kept close to the field) ---
   const gaps = Array.isArray(reportDetails.evidence_gaps?.gaps) ? reportDetails.evidence_gaps.gaps : []
-  const clarityItems = gaps.slice(0, 2).map((gap) => ({
-    title: gap?.missing_marker || gap?.domain || copy.clarity.genericTitle,
-    body: gap?.reason ? String(gap.reason).replaceAll('_', ' ') : null,
-    to: resultsTo,
-  })).filter((item) => item.title)
+  const clarityItems = gaps.slice(0, 2).map((gap) => {
+    const rawTitle = gap?.missing_marker || gap?.domain
+    return {
+      title: rawTitle ? humanizeLabel(rawTitle, isUk) : copy.clarity.genericTitle,
+      body: gap?.reason ? humanizeLabel(gap.reason, isUk) : null,
+      to: resultsTo,
+    }
+  }).filter((item) => item.title)
   const clarity = clarityItems.length ? { items: clarityItems } : null
 
   // --- when to come back (one checkpoint at most, only from real retest data) ---
@@ -131,7 +148,7 @@ function buildReturningUserSections({
   const retestWithTiming = retestPlan.find((item) => item?.marker && item?.timing)
   let returnCheckpoint = null
   if (retestWithTiming) {
-    returnCheckpoint = { text: copy.returnSection.checkpoint(retestWithTiming.marker, retestWithTiming.timing), to: returnLinkTo, ctaLabel: returnLinkLabel }
+    returnCheckpoint = { text: copy.returnSection.checkpoint(humanizeLabel(retestWithTiming.marker, isUk), retestWithTiming.timing), to: returnLinkTo, ctaLabel: returnLinkLabel }
   } else if (retestPlan.length) {
     // Retest items exist but none carry a timing string -- do not compute one.
     returnCheckpoint = { text: copy.returnSection.noDate, to: returnLinkTo, ctaLabel: returnLinkLabel }

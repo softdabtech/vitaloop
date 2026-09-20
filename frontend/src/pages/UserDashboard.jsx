@@ -3,7 +3,7 @@ import { ArrowRight, HelpCircle, RefreshCw, ShieldAlert, Stethoscope, TrendingUp
 import { useDashboardSummary, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
 import { useProfile } from '../hooks/useProfile.ts'
 import { useSubscription } from '../hooks/useSubscription.js'
-import { CoachButton, CoachCard, CoachSkeleton, EmptyCoachState } from '../components/coach/CoachUI.jsx'
+import { CoachButton, CoachSkeleton, EmptyCoachState } from '../components/coach/CoachUI.jsx'
 import { buildTodayViewModel } from '../lib/todayViewModel.js'
 import { isUkrainianLocale } from '../lib/locale.js'
 // coach-shell/coach-card/etc. (CoachUI.jsx) have no built-in styles of their
@@ -11,6 +11,11 @@ import { isUkrainianLocale } from '../lib/locale.js'
 // route chunk, so each page using CoachUI must import it directly or it
 // renders as unstyled browser-default HTML, not a build error.
 import '../styles/coach-design-system.css'
+// P37h: Today-specific calmer layout (compact hero, no card-stack). Scoped
+// to this page only -- see today-page.css's own header comment for why
+// coach-design-system.css's shared .coach-hero/.coach-card were not edited
+// directly (both are used by other pages).
+import '../styles/today-page.css'
 
 // P37d — Today core layout & state adapter. Replaces the previous Health
 // Signal Score / Journey Progress / Score Breakdown framing (see
@@ -248,83 +253,93 @@ export default function UserDashboard() {
 
   return (
     <div className="coach-shell coach-grid">
-      <div className="flex items-start justify-between gap-3">
-        <p className="coach-eyebrow">{copy.pageTitle}</p>
-        {viewModel.documents && (
-          <button
-            type="button"
-            onClick={() => navigate(viewModel.documents.uploadTo)}
-            className="text-sm font-semibold text-teal-700 hover:text-teal-900 whitespace-nowrap"
-          >
-            {copy.cta.upload}
-          </button>
-        )}
+      <div className="today-header">
+        <div className="today-header__top">
+          <p className="coach-eyebrow">{copy.pageTitle}</p>
+          {viewModel.documents && (
+            <button
+              type="button"
+              onClick={() => navigate(viewModel.documents.uploadTo)}
+              className="text-sm font-semibold text-teal-700 hover:text-teal-900 whitespace-nowrap"
+            >
+              {copy.cta.upload}
+            </button>
+          )}
+        </div>
+        {viewModel.sourceLine && <p className="today-header__source">{viewModel.sourceLine}</p>}
       </div>
-      {viewModel.sourceLine && <p className="text-sm text-slate-500 -mt-2">{viewModel.sourceLine}</p>}
 
       {/* Report-scoped safety (P37e, from GET /results/:uploadId) and
           questionnaire safety (existing, unchanged) are rendered as two
           separate banners when both are present -- never merged, never
           deduplicated by domain guesswork, both above the hero so neither
-          can be visually buried below a lower-priority CTA. */}
-      {viewModel.returning?.reportSafety && (
-        <div
-          role="note"
-          className="rounded-2xl border px-4 py-3.5"
-          style={{
-            background: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.bg,
-            borderColor: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.border,
-          }}
-        >
-          <div className="flex items-start gap-2.5">
-            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }} />
-            <div>
-              <p className="text-sm font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}>
-                {viewModel.returning.reportSafety.text}
-              </p>
-              {viewModel.returning.reportSafety.timing && (
-                <p className="mt-1 text-sm leading-5" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}>
-                  {viewModel.returning.reportSafety.timing}
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={() => navigate(viewModel.returning.reportSafety.to)}
-                className="mt-1.5 block text-sm font-bold underline"
-                style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}
-              >
-                {copy.cta.results}
-              </button>
-              <p className="mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}>
-                {viewModel.returning.reportSafety.sourceLabel}
-              </p>
+          can be visually buried below a lower-priority CTA. P37h.1: shared
+          in one .today-safety-stack wrapper so two present banners read as
+          one compact stack (reduced padding/type-scale via the :has()
+          selector in today-page.css) rather than two full-weight blocks --
+          each banner keeps its own tone/text/source, nothing is merged. */}
+      {(viewModel.returning?.reportSafety || viewModel.safety) && (
+        <div className="today-safety-stack">
+          {viewModel.returning?.reportSafety && (
+            <div
+              role="note"
+              className="today-safety"
+              style={{
+                background: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.bg,
+                borderColor: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.border,
+              }}
+            >
+              <div className="flex items-start gap-2.5">
+                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }} />
+                <div>
+                  <p className="text-sm font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}>
+                    {viewModel.returning.reportSafety.text}
+                  </p>
+                  {viewModel.returning.reportSafety.timing && (
+                    <p className="mt-1 text-sm leading-5" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}>
+                      {viewModel.returning.reportSafety.timing}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => navigate(viewModel.returning.reportSafety.to)}
+                    className="mt-1.5 block text-sm font-bold underline"
+                    style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}
+                  >
+                    {copy.cta.results}
+                  </button>
+                  <p className="today-safety__source mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}>
+                    {viewModel.returning.reportSafety.sourceLabel}
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {viewModel.safety && (
-        <div
-          role="note"
-          className="rounded-2xl border px-4 py-3.5"
-          style={{
-            background: SAFETY_TONE_STYLES[viewModel.safety.tone]?.bg,
-            borderColor: SAFETY_TONE_STYLES[viewModel.safety.tone]?.border,
-          }}
-        >
-          <div className="flex items-start gap-2.5">
-            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[viewModel.safety.tone]?.color }} />
-            <div>
-              <p className="text-sm font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[viewModel.safety.tone]?.color }}>
-                {viewModel.safety.text}
-              </p>
-              {viewModel.safety.sourceLabel && (
-                <p className="mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[viewModel.safety.tone]?.color }}>
-                  {viewModel.safety.sourceLabel}
-                </p>
-              )}
+          {viewModel.safety && (
+            <div
+              role="note"
+              className="today-safety"
+              style={{
+                background: SAFETY_TONE_STYLES[viewModel.safety.tone]?.bg,
+                borderColor: SAFETY_TONE_STYLES[viewModel.safety.tone]?.border,
+              }}
+            >
+              <div className="flex items-start gap-2.5">
+                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[viewModel.safety.tone]?.color }} />
+                <div>
+                  <p className="text-sm font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[viewModel.safety.tone]?.color }}>
+                    {viewModel.safety.text}
+                  </p>
+                  {viewModel.safety.sourceLabel && (
+                    <p className="today-safety__source mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[viewModel.safety.tone]?.color }}>
+                      {viewModel.safety.sourceLabel}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -337,11 +352,14 @@ export default function UserDashboard() {
         />
       )}
 
+      {/* P37h: compact single focus block -- no decorative background shape,
+          no large promo-card padding/shadow. One primary CTA, one plain
+          secondary link, matching the spec's "current focus" hero (§7). */}
       {viewModel.status !== 'summary_error' && viewModel.hero && (
-        <section className="coach-hero">
-          <h1 className="coach-title-xl max-w-2xl">{viewModel.hero.title}</h1>
-          <p className="coach-body mt-4 max-w-2xl">{viewModel.hero.body}</p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <section className="today-hero">
+          <h1>{viewModel.hero.title}</h1>
+          <p>{viewModel.hero.body}</p>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <CoachButton onClick={() => navigate(viewModel.hero.primaryTo)} trailingIcon={ArrowRight}>
               {viewModel.hero.primaryLabel}
             </CoachButton>
@@ -363,22 +381,25 @@ export default function UserDashboard() {
           a slow or failed /results/:uploadId fetch never collapses the
           whole page (see delivery report §3). */}
       {viewModel.returning?.status === 'loading' && (
-        <CoachCard className="p-5 sm:p-6">
+        <div className="today-section">
           <CoachSkeleton rows={2} />
-        </CoachCard>
+        </div>
       )}
 
       {viewModel.returning?.status === 'error' && (
-        <CoachCard className="p-4">
+        <div className="today-section">
           <p className="text-sm text-slate-500">{viewModel.returning.limitationText}</p>
-        </CoachCard>
+        </div>
       )}
 
+      {/* P37h: a balanced row when both exist (spec §17.1), plain dividers
+          instead of two separate heavy cards -- reads as one section with
+          two halves, not two stacked promo boxes. */}
       {(viewModel.returning?.changes || viewModel.returning?.returnCheckpoint) && (
-        <div className="coach-grid coach-grid--2">
+        <div className="today-section coach-grid coach-grid--2">
           {viewModel.returning.changes && (
-            <CoachCard className="p-5 sm:p-6">
-              <div className="mb-3 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-slate-500">
+            <div>
+              <div className="today-section-label">
                 <TrendingUp className="h-4 w-4 text-emerald-600" />
                 {copy.changes.title}
               </div>
@@ -394,12 +415,12 @@ export default function UserDashboard() {
               >
                 {copy.changes.cta} &rarr;
               </button>
-            </CoachCard>
+            </div>
           )}
 
           {viewModel.returning.returnCheckpoint && (
-            <CoachCard className="p-5 sm:p-6">
-              <div className="mb-3 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-slate-500">
+            <div>
+              <div className="today-section-label">
                 <RefreshCw className="h-4 w-4 text-emerald-600" />
                 {copy.returnSection.title}
               </div>
@@ -418,38 +439,43 @@ export default function UserDashboard() {
                   {viewModel.returning.returnCheckpoint.ctaLabel === 'plan' ? copy.cta.plan : copy.cta.results} &rarr;
                 </button>
               )}
-            </CoachCard>
+            </div>
           )}
         </div>
       )}
 
       {viewModel.returning?.clarity && (
-        <CoachCard className="p-5 sm:p-6">
-          <div className="mb-3 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-slate-500">
+        <div className="today-section">
+          <div className="today-section-label">
             <HelpCircle className="h-4 w-4 text-emerald-600" />
             {copy.clarity.title}
           </div>
-          <div className="space-y-3">
+          <div className="today-clarity-grid">
             {viewModel.returning.clarity.items.map((item, index) => (
-              <div key={index}>
+              <div key={index} className="today-clarity-item">
                 <p className="text-sm font-semibold text-slate-950">{item.title}</p>
                 {item.body && <p className="mt-0.5 text-sm leading-6 text-slate-600">{item.body}</p>}
                 <button
                   type="button"
                   onClick={() => navigate(item.to)}
-                  className="mt-0.5 text-sm font-semibold text-teal-700 hover:text-teal-900"
+                  className="mt-1 text-sm font-semibold text-teal-700 hover:text-teal-900"
                 >
                   {copy.clarity.cta} &rarr;
                 </button>
               </div>
             ))}
           </div>
-        </CoachCard>
+        </div>
       )}
 
+      {/* P37h: Documents keeps a single light surface -- the spec's own
+          "stable navigational anchor" (§11) that should never disappear
+          just because a different section became the primary CTA -- but
+          with a smaller shadow/radius than the shared .coach-card default,
+          not another full promo card. */}
       {viewModel.documents && (
-        <CoachCard className="p-5 sm:p-6">
-          <div className="mb-4 flex items-center gap-2 text-base font-extrabold text-slate-950">
+        <div className="today-documents">
+          <div className="mb-3 flex items-center gap-2 text-base font-extrabold text-slate-950">
             <Stethoscope className="h-4 w-4 text-emerald-600" />
             {viewModel.documents.reportLine}
           </div>
@@ -479,8 +505,15 @@ export default function UserDashboard() {
           {viewModel.documents.upgradeNote && (
             <p className="mt-3 text-xs text-slate-500">{viewModel.documents.upgradeNote}</p>
           )}
-        </CoachCard>
+        </div>
       )}
+
+      {/* P37h.1: reserves space so the site-wide fixed-bottom cookie banner
+          never sits on top of the last content section before it is
+          dismissed -- see today-page.css's own comment for the established
+          pattern this reuses. Purely a page-bottom spacer; does not touch
+          CookieConsent.jsx. */}
+      <div aria-hidden="true" className="today-bottom-spacer" />
     </div>
   )
 }

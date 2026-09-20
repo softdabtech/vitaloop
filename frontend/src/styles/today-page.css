@@ -1,0 +1,203 @@
+/* P37h — Today dashboard visual/product alignment fix.
+ *
+ * Page-scoped styles ONLY for UserDashboard.jsx. Deliberately NOT added to
+ * coach-design-system.css: .coach-hero/.coach-card are shared by
+ * LabPlan.jsx, Questionnaire.jsx, and ProtocolPage.jsx, and the design
+ * spec's own instruction is "do not rewrite shared Coach components if the
+ * change is only needed by one page" (§14). This file exists so Today can
+ * move to a calmer, compact layout without touching any other page's look.
+ *
+ * What this fixes vs. the previous coach-hero/coach-card-based layout:
+ * - removes the decorative radial-gradient blobs (coach-hero::after and its
+ *   own background gradients)
+ * - smaller hero padding/radius/shadow -- one calm focus block, not a promo card
+ * - returning-user sections (Changes/Return/Clarity) no longer use the full
+ *   heavy coach-card treatment (border + 20px radius + large soft shadow)
+ *   stacked one after another -- they use a light border-top divider and
+ *   generous spacing instead, so the page reads as one flowing surface, not
+ *   a stack of separate cards
+ * - Documents section keeps a single light surface (spec §11: it is the one
+ *   stable, always-present anchor) but with a smaller shadow/radius than
+ *   the shared .coach-card default
+ */
+
+/* P37h.1 — visual polish pass, addressing pre-release review feedback on
+ * the P37h layout (see output/p37h.1-...-2026-09-20.md for the full list).
+ * Every rule below is additive to the P37h file above; nothing here changes
+ * data/network behavior. */
+
+.today-header {
+  margin-bottom: 4px;
+}
+
+.today-header .today-header__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.today-header .today-header__source {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #64748B;
+}
+
+/* Both safety banners (report-scoped + questionnaire) share one wrapper so
+ * they read as one compact "safety stack" instead of two full-weight blocks
+ * separated by the page's normal 24px section gap -- sources stay fully
+ * separate (each keeps its own text/tone/source label), only the visual
+ * weight is reduced. Compact padding/type-scale applies whenever more than
+ * one banner is present; a single banner keeps the roomier P37h sizing. */
+.today-safety-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.today-safety {
+  border-radius: 14px;
+  border: 1px solid;
+  padding: 12px 14px;
+}
+
+.today-safety-stack:has(> :nth-child(2)) .today-safety {
+  padding: 10px 12px;
+}
+
+.today-safety-stack:has(> :nth-child(2)) .today-safety p {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.today-safety-stack:has(> :nth-child(2)) .today-safety__source {
+  margin-top: 4px !important;
+}
+
+/* P37h.2 — mobile-only: the first viewport at 375px width is dominated by
+ * two stacked warning banners more than at desktop, since there is far less
+ * vertical room before the fold. Reduce visual weight further on small
+ * screens only when 2+ banners are present; sources/tone/meaning stay
+ * exactly as they are above, this only shrinks gap/padding/line-height. */
+@media (max-width: 640px) {
+  .today-safety-stack:has(> :nth-child(2)) {
+    gap: 6px;
+  }
+
+  .today-safety-stack:has(> :nth-child(2)) .today-safety {
+    padding: 8px 10px;
+  }
+
+  .today-safety-stack:has(> :nth-child(2)) .today-safety p {
+    font-size: 12.5px;
+    line-height: 1.35;
+  }
+
+  .today-safety-stack:has(> :nth-child(2)) .today-safety__source {
+    margin-top: 3px !important;
+    font-size: 11px !important;
+  }
+}
+
+/* Clarity: a denser, intentional two-column item grid on wider screens
+ * instead of one loose full-width column -- collapses to a single column
+ * on mobile, same as every other responsive grid on this page. */
+.today-clarity-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px 20px;
+}
+
+@media (min-width: 640px) {
+  .today-clarity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.today-clarity-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.7);
+}
+
+/* Reserves space so the site-wide fixed-bottom cookie banner (see
+ * CookieConsent.jsx: position:fixed, bottom:0) never sits on top of the
+ * last content section (Clarity/Documents) before it is dismissed --
+ * same established pattern already used at the bottom of Results.jsx/
+ * ProtocolPage.jsx/ManualBiomarkerEntry.jsx for the floating chat widget.
+ * This does not touch CookieConsent.jsx or its global behavior; it only
+ * adds bottom padding to this one page's own content.
+ *
+ * Height verified, not guessed: measured the real rendered
+ * CookieConsent.jsx banner at 375px width via getBoundingClientRect() --
+ * 232px tall (its text wraps to 3 lines + 3 buttons at that width). 9rem
+ * (144px) was NOT enough and still overlapped the Documents section by
+ * ~18px in that measurement (see output/p37h1-overlap-check.mjs). 17rem
+ * gives a real margin above the measured height, not just enough to
+ * exactly clear it -- text reflow (longer translations, browser font
+ * settings) could still make the real banner taller than this one
+ * measurement, so this is deliberately not cut close. */
+.today-bottom-spacer {
+  height: 17rem;
+}
+
+.today-hero {
+  padding: 22px 24px;
+  border-radius: 16px;
+  background: #F3FBF9;
+  border: 1px solid rgba(42, 191, 170, 0.16);
+}
+
+.today-hero h1 {
+  margin: 0;
+  font-size: clamp(22px, 3vw, 26px);
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--coach-text);
+}
+
+.today-hero p {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: #475569;
+  max-width: 60ch;
+}
+
+.today-section {
+  padding: 18px 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.today-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.today-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748B;
+}
+
+.today-documents {
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: #FFFFFF;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+@media (max-width: 640px) {
+  .today-hero {
+    padding: 18px 18px;
+    border-radius: 14px;
+  }
+}
