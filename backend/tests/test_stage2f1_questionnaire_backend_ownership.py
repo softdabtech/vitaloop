@@ -278,6 +278,18 @@ def test_q8_readiness_urgency_are_not_consumed_anywhere_in_the_analysis_pipeline
 
 
 def test_q9_dashboard_still_reads_only_real_backend_health_score_components():
+    # P37 UPDATE (2026-09-20): the Health Signal Score / Score Breakdown
+    # display this test pinned was intentionally removed from Today by the
+    # Dashboard Today redesign (see
+    # output/p37d-today-core-layout-state-adapter-2026-09-20.md and the
+    # design spec's do-not-do list) -- a deliberate product decision, not a
+    # regression of this file's own backend-ownership invariant. The
+    # underlying fact this test protects -- no frontend-fabricated
+    # percentage may exist on this page -- is a strictly STRONGER guarantee
+    # now: there is no health-score display left to fabricate at all. Full
+    # detail and the paired assertions live in
+    # tests/test_stage2f_dashboard_metrics.py::test_f1/test_f5 (updated in
+    # the same P37 pass), not duplicated here.
     dashboard_jsx = (FRONTEND_SRC / "pages/UserDashboard.jsx").read_text()
-    assert "healthScoreComponents.biomarker" in dashboard_jsx
+    assert "healthScoreComponents" not in dashboard_jsx
     assert "hasResults ? 70 : 25" not in dashboard_jsx

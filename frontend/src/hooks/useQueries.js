@@ -159,6 +159,26 @@ export const useUserEntitlements = () =>
     gcTime: 5 * 60 * 1000,
   })
 
+// P37e: report details for the Today dashboard's returning-user sections
+// (comparison, evidence gaps, retest timing, report-scoped safety).
+// GET /results/{uploadId} is side-effect-free once the id is known (frozen-
+// report reproducibility, see backend/app/services/report_history.py) --
+// but `enabled` keeps it from ever firing speculatively. Callers must only
+// pass an uploadId sourced from today_contract.latest_ready_report.upload_id
+// (P37c), never from stats.total_uploads/active_program/latest_upload/
+// latest_lab_result -- see output/p37a-.../p37c-...-2026-09-20.md.
+export const useReportDetails = (uploadId) =>
+  useQuery({
+    queryKey: ['report-details', uploadId],
+    queryFn: async () => {
+      const { data } = await api.get(`/results/${uploadId}`)
+      return data || {}
+    },
+    enabled: Boolean(uploadId),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+
 // Symptom check session/context
 export const useQuestionnaireSession = () =>
   useQuery({

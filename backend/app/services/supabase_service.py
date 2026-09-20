@@ -1570,6 +1570,108 @@ async def get_user_progress(user_id: str) -> List[Dict]:
     return result
 
 
+# P37c: Dashboard Today read-only exposure. Neither function here recomputes
+# analysis, mutates a frozen report, or generates/persists a protocol — see
+# output/p37a-dashboard-data-state-contract-review-2026-09-20.md and
+# output/p37b-local-visual-prototype-2026-09-20.md for why this is needed:
+# `/dashboard/summary`'s existing latest_upload/latest_lab_result/
+# active_program fields are all proxies over unfiltered lab_uploads rows and
+# do not prove a report was ever actually generated for that upload.
+async def get_latest_ready_report(user_id: str) -> Optional[Dict[str, Any]]:
+    """Identify the user's latest READY report — i.e. the most recent
+    `report_versions` row whose generation event actually completed
+    (status in {"completed","blocked"}, the same terminal-status set
+    report_history.py::is_frozen_report_version() already treats as
+    servable) — never derived from lab_uploads.status, upload count, or
+    any other proxy.
+
+    Ordering: `report_versions.created_at DESC`, `id DESC` as a
+    deterministic tiebreaker for same-timestamp rows (e.g. multiple
+    locale rows written for the same generation event). This is the same
+    "created_at DESC is the only reliable ordering signal" rule
+    report_history.py already documents for `get_latest_report_version()`
+    — reused here, not reinvented, just applied across the whole user
+    instead of one known upload_id.
+
+    Read-only: two plain SELECTs, no writes, no pipeline invocation, no
+    protocol generation. A locale is deliberately NOT filtered on here —
+    unlike get_latest_report_version() (which serves actual report
+    content and must never leak a different locale's content), this
+    function only ever returns upload/date identity metadata, which is
+    locale-independent.
+
+    Returns None if the user has no report_versions row in a ready
+    status at all (covers: no uploads, uploads still processing, uploads
+    that failed before a report_versions row was ever written — see
+    report_history.py's own note that a row is never written for a
+    pending needs_confirmation gate decision).
+    """
+    supabase = _get_supabase()
+    version_resp = await _run_supabase_read(
+        lambda: supabase.table("report_versions")
+        .select("id, upload_id, status, created_at")
+        .eq("user_id", user_id)
+        .in_("status", ["completed", "blocked"])
+        .order("created_at", desc=True)
+        .order("id", desc=True)
+        .limit(1)
+        .execute(),
+        label="get_latest_ready_report_version",
+    )
+    version_rows = version_resp.data or []
+    if not version_rows:
+        return None
+    version_row = version_rows[0]
+    upload_id = version_row.get("upload_id")
+
+    # Ownership re-checked explicitly on the join, exactly like every other
+    # per-upload read in this module (assert_upload_belongs_to_user,
+    # get_biomarkers_by_upload, etc.) — never trust upload_id alone.
+    upload_resp = await _run_supabase_read(
+        lambda: supabase.table("lab_uploads")
+        .select("id, created_at, lab_name, test_date, collected_at, reported_at, date_source, date_confidence")
+        .eq("id", upload_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute(),
+        label="get_latest_ready_report_upload",
+    )
+    upload_rows = upload_resp.data or []
+    upload_row = upload_rows[0] if upload_rows else {}
+
+    await _audit_medical_read(
+        user_id=user_id,
+        entity_type="latest_ready_report",
+        details={"upload_id": upload_id, "report_version_id": version_row.get("id")},
+    )
+
+    return {
+        "upload_id": upload_id,
+        "report_version_id": version_row.get("id"),
+        "report_status": version_row.get("status"),
+        "report_generated_at": version_row.get("created_at"),
+        "upload_created_at": upload_row.get("created_at"),
+        "measurement_date": choose_measurement_date(upload_row) if upload_row else None,
+        "lab_name": upload_row.get("lab_name"),
+    }
+
+
+async def plan_exists_for_upload(user_id: str, upload_id: str) -> bool:
+    """Boolean-only, read-only "does a plan already exist for this exact
+    upload" check for Dashboard Today (P37c).
+
+    Deliberately reuses get_protocol_by_upload() — the same plain SELECT
+    the real /protocol/{upload_id} route already calls before deciding
+    whether to generate — rather than the route itself. The route
+    (app/routers/protocol/protocol.py::get_or_create_protocol) generates
+    and persists a new protocol via an LLM call on a cache miss; this
+    function never does, and never will, since it only reads the
+    existence result and never continues into generation.
+    """
+    protocol = await get_protocol_by_upload(user_id, upload_id)
+    return protocol is not None
+
+
 async def get_admin_overview() -> Dict[str, Any]:
     """Aggregate platform metrics for the /admin/overview endpoint."""
     supabase = _get_supabase()

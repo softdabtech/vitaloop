@@ -465,6 +465,52 @@ async def _fetch_latest_activity(user_id: str) -> tuple[Optional[dict], Optional
         return None, None
 
 
+# P37c — Dashboard Today read-only exposure helpers. See
+# svc.get_latest_ready_report()/svc.plan_exists_for_upload() for the actual
+# reads; these two helpers only shape the /dashboard/summary response and
+# never call the protocol-generation route or the analysis pipeline.
+
+async def _resolve_plan_exists(user_id: str, latest_ready_report: Optional[dict]) -> Optional[bool]:
+    """None when there is no ready report to check a plan against (a
+    genuinely different meaning from False -- "no plan for this report" vs.
+    "there is no report to have a plan for"). Never calls the
+    generation-capable /protocol/{upload_id} route."""
+    if not latest_ready_report:
+        return None
+    try:
+        return await svc.plan_exists_for_upload(user_id, latest_ready_report["upload_id"])
+    except Exception:
+        return None
+
+
+def _build_today_contract(
+    latest_ready_report: Optional[dict],
+    latest_ready_report_lookup_failed: bool,
+    plan_exists_result: Any,
+) -> Dict[str, Any]:
+    """Assembles the P37c-proposed, narrowly-scoped read-only facts block.
+
+    Kept under its own top-level key (not merged into `stats`/`blocks`) so it
+    is never confused with the existing, weaker proxies those already carry
+    (stats.active_program, blocks.latest_upload, blocks.latest_lab_result --
+    see the P37a review for why none of those prove a ready report exists).
+    """
+    plan_exists = plan_exists_result if isinstance(plan_exists_result, bool) else None
+
+    if latest_ready_report_lookup_failed:
+        return {
+            "latest_ready_report": None,
+            "latest_ready_report_status": "error",
+            "plan_exists_for_latest_ready_report": None,
+        }
+
+    return {
+        "latest_ready_report": latest_ready_report,
+        "latest_ready_report_status": "ready" if latest_ready_report else "none",
+        "plan_exists_for_latest_ready_report": plan_exists,
+    }
+
+
 @router.get("/summary")
 async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     user_id = current_user.get("sub")
@@ -482,6 +528,7 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
         health_tuple,
         goals_achieved,
         activity_tuple,
+        latest_ready_report_result,
     ) = await asyncio.gather(
         svc.get_user_account(user_id),
         resolve_user_entitlements(user_id, current_user),
@@ -491,6 +538,10 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
         _fetch_health_and_streak(user_id),
         _fetch_user_goals(user_id),
         _fetch_latest_activity(user_id),
+        # P37c: the only reliable "is there a ready report" signal — see
+        # get_latest_ready_report()'s own docstring. Deliberately NOT derived
+        # from progress/latest_upload/latest_lab_result above.
+        svc.get_latest_ready_report(user_id),
         return_exceptions=True,
     )
 
@@ -521,11 +572,19 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     else:
         weekly_checkin, questionnaire_latest = None, None
 
+    # P37c: a failure resolving this must never look like "no ready report" --
+    # None here specifically means "could not determine," distinct from the
+    # function's own None return for "genuinely no ready report exists."
+    # _build_today_contract() below keeps that distinction in the response.
+    latest_ready_report = latest_ready_report_result if isinstance(latest_ready_report_result, dict) else None
+    latest_ready_report_lookup_failed = isinstance(latest_ready_report_result, Exception)
+
     global_role = _normalize_role(account.get("global_role"), current_user.get("global_role"), current_user.get("role"))
 
-    assignments, upload_count = await asyncio.gather(
+    assignments, upload_count, plan_exists_result = await asyncio.gather(
         _fetch_assignments(user_id, global_role),
         svc.get_user_upload_count(user_id),
+        _resolve_plan_exists(user_id, latest_ready_report),
         return_exceptions=True,
     )
     if not isinstance(assignments, list):
@@ -606,6 +665,13 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
             "latest_checkin": weekly_checkin,
             "latest_questionnaire": questionnaire_latest,
         },
+        # P37c: narrowly-scoped read-only exposure for the proposed Today
+        # dashboard (see output/p37a-.../p37b-...-2026-09-20.md). Do not
+        # derive "ready report" from stats.active_program or blocks.latest_*
+        # above -- see _build_today_contract()'s docstring.
+        "today_contract": _build_today_contract(
+            latest_ready_report, latest_ready_report_lookup_failed, plan_exists_result
+        ),
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
     _cache_set(user_id, response)

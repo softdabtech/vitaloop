@@ -31,6 +31,22 @@ pass), the frontend-behavior assertions here are enforced two ways:
      assumed removed.
 
 No live database connection is used anywhere in this file.
+
+P37 UPDATE (2026-09-20): the entire Health Signal Score / Score Breakdown /
+Journey Progress UI these source-text assertions were pinned to has been
+intentionally removed from UserDashboard.jsx by the Dashboard Today redesign
+(see output/p37d-today-core-layout-state-adapter-2026-09-20.md and the design
+spec's explicit do-not-do list: no Health Signal Score, no journey/progress
+framing, no default "No urgent red flags reported." banner). This is a
+deliberate product decision, not a regression -- the backend computation
+these tests originally protected (calculate_health_score() ->
+health_scores table -> stats.health_score_components) is untouched and still
+under test here (see test_f5_health_score_components_pass_through_unmodified
+below); only its old frontend *display* is gone. Assertions that pinned the
+removed display's exact source text have been replaced with assertions
+proving the removal was deliberate and complete (not a half-finished
+migration), each pointing at what superseded it in the new P37 Today
+contract. See each test's own comment for its specific before/after.
 """
 
 import inspect
@@ -54,7 +70,15 @@ DASHBOARD_JSX = (FRONTEND_SRC / "pages/UserDashboard.jsx").read_text()
 
 def test_f1_fabricated_biomarker_score_pattern_removed():
     assert "hasResults ? 70 : 25" not in DASHBOARD_JSX, "the flat 70/25 biomarker placeholder must be gone"
-    assert "healthScoreComponents.biomarker" in DASHBOARD_JSX, "biomarkerScore must read the real backend component"
+    # P37 UPDATE: the entire Score Breakdown card (which is what
+    # `healthScoreComponents.biomarker` fed) was intentionally removed from
+    # Today, not just the fabricated 70/25 placeholder -- there is no
+    # replacement biomarker percentage to display on this page at all. The
+    # only requirement left worth pinning is that the old fabricated
+    # constant itself never comes back (asserted above); the real backend
+    # value it would have read remains correctly computed and forwarded
+    # (test_f5_health_score_components_pass_through_unmodified, below).
+    assert "healthScoreComponents" not in DASHBOARD_JSX, "the removed Score Breakdown display must not be reintroduced"
 
 
 # --- F2: fabricated safety percentage is gone -----------------------------------
@@ -90,15 +114,18 @@ async def test_f3_dashboard_stats_reflect_real_upload_presence(monkeypatch):
 
 
 def test_f4_dashboard_falls_back_to_truthful_empty_state_text():
-    # Cabinet reconciliation restructured the dashboard onto origin/main's
-    # journey/KPI-card layout — the old "Symptom Check & Lab Plan"/"Protocol"
-    # sections these two strings lived in no longer exist as such, but the
-    # same truthful-empty-state invariant is preserved by their KPIBlock/
-    # Recent-Context equivalents (still real, still non-fabricated, just
-    # reworded for the new layout).
-    assert "Start with the main concern." in DASHBOARD_JSX  # KPIBlock helper when !hasConcern
-    assert "Generate a protocol after your results." in DASHBOARD_JSX  # Recent Context card when no assignments
-    assert "notYetCalculated: 'Not yet calculated'" in DASHBOARD_JSX
+    # P37 UPDATE: the KPIBlock/Recent-Context cards these strings lived in
+    # were removed along with the rest of the old journey UI. The same
+    # underlying invariant this test protects -- never show a fabricated
+    # value when the real one is absent -- is now enforced by the P37 Today
+    # adapter instead: a missing retest date renders an honest "not set
+    # yet" sentence, never a computed/guessed one (see
+    # buildTodayViewModel()'s returnSection.noDate, and P37e's explicit
+    # "do not invent... retest timing" rule).
+    assert "noDate:" in DASHBOARD_JSX
+    assert "does not include a repeat-test date yet" in DASHBOARD_JSX
+    # And the specific old fabricated fallback constant must not return.
+    assert "notYetCalculated" not in DASHBOARD_JSX
 
 
 # --- F5: real Health Score passed through unchanged, not recomputed in frontend --
@@ -183,7 +210,13 @@ async def test_f5_health_score_components_pass_through_unmodified(monkeypatch):
 
 def test_f5_no_client_side_health_score_recompute_formula_remains():
     assert "100 - concernSummary.severity" not in DASHBOARD_JSX
-    assert "symptomScore = healthScoreComponents.symptom" in DASHBOARD_JSX
+    # P37 UPDATE: `symptomScore`/`healthScoreComponents.symptom` no longer
+    # exist because the whole Score Breakdown display they fed was removed
+    # (see test_f1 above) -- there is nothing left to recompute a health
+    # score FROM on this page, client-side or otherwise, which is a
+    # stronger guarantee than "still reads the real value" was.
+    assert "symptomScore" not in DASHBOARD_JSX
+    assert "healthScoreComponents" not in DASHBOARD_JSX
 
 
 # --- F6: safety state derived from backend data, not substring heuristics -------
@@ -191,24 +224,42 @@ def test_f5_no_client_side_health_score_recompute_formula_remains():
 
 def test_f6_safety_section_has_no_score_threshold_styling():
     assert "safetyScore >= 70" not in DASHBOARD_JSX
-    # The Safety section still displays real text (concernSummary?.urgency) —
-    # that data-provenance question belongs to Questionnaire.jsx, out of
-    # Stage 2F's scope — this test only proves the FABRICATED PERCENTAGE/
-    # THRESHOLD built on top of it in UserDashboard.jsx is gone. Cabinet
-    # reconciliation localized the fallback string (EN/UA) instead of a
-    # hardcoded English literal — same real-urgency-text-or-truthful-fallback
-    # shape, just read from `copy.noRedFlags` now.
-    assert "concernSummary?.urgency || copy.noRedFlags" in DASHBOARD_JSX
+    # P37 UPDATE: the design spec explicitly forbids carrying forward a
+    # default "No urgent red flags reported." banner (do-not-do §14: absence
+    # of a loaded safety value must never be presented as a green
+    # all-clear). The old fallback-to-a-hardcoded-safe-string pattern this
+    # test previously required is now precisely the pattern that must NOT
+    # exist -- real questionnaire urgency is still shown when present
+    # (safetyText, unchanged from before), but there is no default banner
+    # at all when it is absent (see buildTodayViewModel(): safetyTone ===
+    # 'success' -> null, never a rendered "all clear" string).
+    assert "concernSummary?.urgency || copy.noRedFlags" not in DASHBOARD_JSX
+    assert "No urgent red flags reported." not in DASHBOARD_JSX
+    assert "safetyText" in DASHBOARD_JSX  # real urgency text is still read and passed through when present
 
 
 # --- F7: Stage 2E check-in state remains correct --------------------------------
 
 
-def test_f7_stage_2e_checkin_logic_untouched():
-    assert "CHECKIN_DUE_INTERVAL_DAYS = 7" in DASHBOARD_JSX
-    assert "isCheckinCurrent" in DASHBOARD_JSX
-    # Full behavioral coverage lives in test_stage2e_checkin_dashboard.py,
-    # re-run as part of this stage's required test sweep, not duplicated here.
+def test_f7_stage_2e_checkin_untouched_at_its_real_source():
+    # P37 UPDATE: Today no longer surfaces a check-in-due KPI card at all --
+    # the design spec's returning-user "When to come back" checkpoint is
+    # now retest-plan-driven (knowledge_report.retest_plan, see P37e), not
+    # weekly-check-in-driven, so `CHECKIN_DUE_INTERVAL_DAYS`/
+    # `isCheckinCurrent` were removed from UserDashboard.jsx along with the
+    # KPI card that displayed them -- a deliberate scope change, not an
+    # accidental loss of the underlying Stage 2E invariant. That invariant
+    # (a check-in counts as "current" only within a real 7-day window, not
+    # merely "any check-in ever") still lives at its actual source of
+    # truth -- the backend's CHECKIN_DUE_INTERVAL_DAYS constant -- and is
+    # still fully covered by test_stage2e_checkin_dashboard.py (re-run as
+    # part of this stage's required test sweep). This test now proves the
+    # frontend copy was deliberately retired, not silently dropped.
+    assert "CHECKIN_DUE_INTERVAL_DAYS" not in DASHBOARD_JSX
+    assert "isCheckinCurrent" not in DASHBOARD_JSX
+    backend_source = (BACKEND_APP / "routers/analysis/dashboard.py").read_text()
+    assert "CHECKIN_DUE_INTERVAL_DAYS" in backend_source, \
+        "the real 7-day check-in-due invariant must still exist at its backend source of truth"
 
 
 # --- F8: Stage 2D-1 chronology remains correct ----------------------------------
