@@ -43,6 +43,37 @@ function formatDate(isoDate, isUk) {
   return parsed.toLocaleDateString(isUk ? 'uk-UA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+// P37j — presentation-only report age classification. Purely a display
+// decision: it never changes what data is fetched, never recomputes the
+// frozen report's clinical content, and never invents a due/overdue date.
+// It answers one question: "is this the same source date already shown in
+// sourceLine old enough that calling it 'current' would be misleading?"
+//
+// Thresholds are day-counts, not calendar months, specifically to stay
+// deterministic and boundary-free (a calendar-month diff has to define what
+// "12 months" means for e.g. Jan 31 -> Feb 28/29, which day-counting never
+// needs to answer). 365/730 days are the closest fixed-day equivalents of
+// the spec's suggested "12 months" / "24 months" thresholds:
+//   fresh/recent : < 365 days
+//   old          : >= 365 and < 730 days
+//   very_old     : >= 730 days
+// `now` is an explicit parameter (defaulting to `new Date()`) specifically
+// so this stays reproducible in adapter verification -- see P37a's own
+// design-spec instruction (§19.3) to pass current time explicitly for
+// presentation-logic tests rather than reading the clock inside the pure
+// function's own call sites.
+function classifyReportAge(isoDateCandidates, now) {
+  const iso = isoDateCandidates.find(Boolean)
+  if (!iso) return 'unknown'
+  const parsed = new Date(iso)
+  if (Number.isNaN(parsed.getTime())) return 'unknown'
+  const diffDays = (now.getTime() - parsed.getTime()) / 86400000
+  if (diffDays < 0) return 'fresh' // a future-dated source is not "old" -- never invent staleness from clock skew
+  if (diffDays >= 730) return 'very_old'
+  if (diffDays >= 365) return 'old'
+  return 'fresh'
+}
+
 // P37e — returning-user sections (comparison, evidence gaps, retest
 // checkpoint, report-scoped safety), built ONLY from an already-fetched
 // GET /results/{uploadId} response (see P37a: confirmed side-effect-free
@@ -71,6 +102,7 @@ function buildReturningUserSections({
   resultsTo,
   returnLinkTo,
   returnLinkLabel,
+  reportAge,
 }) {
   if (reportDetailsLoading) {
     return { status: 'loading' }
@@ -148,7 +180,16 @@ function buildReturningUserSections({
   const retestWithTiming = retestPlan.find((item) => item?.marker && item?.timing)
   let returnCheckpoint = null
   if (retestWithTiming) {
-    returnCheckpoint = { text: copy.returnSection.checkpoint(humanizeLabel(retestWithTiming.marker, isUk), retestWithTiming.timing), to: returnLinkTo, ctaLabel: returnLinkLabel }
+    // P37j: an interval carried over from an old/very_old report reads as a
+    // live checkpoint ("your plan notes: 6-12 weeks") unless the copy makes
+    // clear it's a saved value from that older report, not a current
+    // recommendation -- still the same interval string verbatim, never a
+    // computed date.
+    const isOldSource = reportAge === 'old' || reportAge === 'very_old'
+    const checkpointText = isOldSource
+      ? copy.returnSection.checkpointSaved(humanizeLabel(retestWithTiming.marker, isUk), retestWithTiming.timing)
+      : copy.returnSection.checkpoint(humanizeLabel(retestWithTiming.marker, isUk), retestWithTiming.timing)
+    returnCheckpoint = { text: checkpointText, to: returnLinkTo, ctaLabel: returnLinkLabel }
   } else if (retestPlan.length) {
     // Retest items exist but none carry a timing string -- do not compute one.
     returnCheckpoint = { text: copy.returnSection.noDate, to: returnLinkTo, ctaLabel: returnLinkLabel }
@@ -186,6 +227,10 @@ export function buildTodayViewModel({
   reportDetailsLoading = false,
   reportDetailsError = null,
   reportDetails = null,
+  // P37j -- explicit "now" for deterministic, reproducible report-age
+  // classification (see classifyReportAge's own comment). Defaulting to
+  // `new Date()` keeps every pre-P37j call site working unchanged.
+  now = new Date(),
 }) {
   const safety = safetyTone === 'success'
     ? null // "no urgent red flags" is not a banner-worthy signal on its own -- see do-not-do §14 (do not carry forward "No urgent red flags reported." as a default banner)
@@ -274,26 +319,58 @@ export function buildTodayViewModel({
   const uploadId = latestReadyReport.upload_id
   const sourceDate = formatDate(latestReadyReport.measurement_date, isUk)
     || formatDate(latestReadyReport.report_generated_at, isUk)
-  const sourceLine = sourceDate ? copy.source.report(sourceDate) : copy.source.unavailable
+
+  // P37j: same two raw date fields sourceDate already prefers, classified
+  // by elapsed time -- see classifyReportAge's own comment for thresholds
+  // and rationale. `unknown` (no usable date) is treated as `fresh` for
+  // copy purposes: there is nothing to honestly call "old" without a date,
+  // and copy.source.unavailable already tells the truth about the date gap.
+  const reportAgeRaw = classifyReportAge([latestReadyReport.measurement_date, latestReadyReport.report_generated_at], now)
+  const reportAge = reportAgeRaw === 'unknown' ? 'fresh' : reportAgeRaw
+  const isOldReport = reportAge === 'old' || reportAge === 'very_old'
+  const isVeryOldReport = reportAge === 'very_old'
+
+  const sourceLine = !sourceDate
+    ? copy.source.unavailable
+    : isVeryOldReport
+      ? copy.source.savedReport(sourceDate)
+      : isOldReport
+        ? copy.source.olderReport(sourceDate)
+        : copy.source.report(sourceDate)
 
   const planExists = contract.plan_exists_for_latest_ready_report === true
   const resultsTo = `/results/${uploadId}`
   const planTo = `/protocol/${uploadId}`
+  const uploadTo = '/upload'
 
   const documentsBase = {
     reportLine: sourceDate ? copy.documents.reportLine(sourceDate) : copy.documents.reportLineUnavailable,
     resultsTo,
     historyTo: '/lab-results',
-    uploadTo: '/upload',
+    uploadTo,
   }
 
   if (!planExists) {
     const returning = buildReturningUserSections({
-      reportDetailsLoading, reportDetailsError, reportDetails, copy, isUk, resultsTo, returnLinkTo: resultsTo, returnLinkLabel: 'results',
+      reportDetailsLoading, reportDetailsError, reportDetails, copy, isUk, resultsTo, returnLinkTo: resultsTo, returnLinkLabel: 'results', reportAge,
     })
+    // P37j: an old/very_old report with no plan already only ever offers
+    // "View results" as its action -- no "next steps are in your plan"
+    // framing exists to soften here, so only the title/body and the
+    // upload prominence change; the results link itself never moves.
+    const oldHero = isOldReport
+      ? {
+        title: copy.oldReport.reportTitle,
+        body: isVeryOldReport ? copy.oldReport.veryOldBody : copy.oldReport.body,
+        primaryLabel: isVeryOldReport ? copy.cta.upload : copy.cta.results,
+        primaryTo: isVeryOldReport ? uploadTo : resultsTo,
+        secondaryLabel: isVeryOldReport ? copy.cta.results : copy.cta.upload,
+        secondaryTo: isVeryOldReport ? resultsTo : uploadTo,
+      }
+      : null
     return {
       status: 'ready_no_plan',
-      hero: {
+      hero: oldHero || {
         title: copy.readyNoPlan.title,
         body: copy.readyNoPlan.body,
         primaryLabel: copy.cta.results,
@@ -304,6 +381,7 @@ export function buildTodayViewModel({
       documents: { ...documentsBase, planTo: null, planLocked: false },
       safety,
       sourceLine,
+      reportAge,
       returning,
     }
   }
@@ -314,11 +392,21 @@ export function buildTodayViewModel({
     // NOT the advanced_protocol export flag). Never render an active link
     // that would 402; never hide that a plan exists either.
     const returning = buildReturningUserSections({
-      reportDetailsLoading, reportDetailsError, reportDetails, copy, isUk, resultsTo, returnLinkTo: resultsTo, returnLinkLabel: 'results',
+      reportDetailsLoading, reportDetailsError, reportDetails, copy, isUk, resultsTo, returnLinkTo: resultsTo, returnLinkLabel: 'results', reportAge,
     })
+    const oldHeroGated = isOldReport
+      ? {
+        title: copy.oldReport.reportTitle,
+        body: isVeryOldReport ? copy.oldReport.veryOldBody : copy.oldReport.body,
+        primaryLabel: isVeryOldReport ? copy.cta.upload : copy.cta.results,
+        primaryTo: isVeryOldReport ? uploadTo : resultsTo,
+        secondaryLabel: isVeryOldReport ? copy.cta.results : copy.cta.upload,
+        secondaryTo: isVeryOldReport ? resultsTo : uploadTo,
+      }
+      : null
     return {
       status: 'ready_plan_gated',
-      hero: {
+      hero: oldHeroGated || {
         title: copy.readyNoPlan.title,
         body: copy.readyNoPlan.body,
         primaryLabel: copy.cta.results,
@@ -334,16 +422,36 @@ export function buildTodayViewModel({
       },
       safety,
       sourceLine,
+      reportAge,
       returning,
     }
   }
 
   const returning = buildReturningUserSections({
-    reportDetailsLoading, reportDetailsError, reportDetails, copy, isUk, resultsTo, returnLinkTo: planTo, returnLinkLabel: 'plan',
+    reportDetailsLoading, reportDetailsError, reportDetails, copy, isUk, resultsTo, returnLinkTo: planTo, returnLinkLabel: 'plan', reportAge,
   })
+  // P37j: an accessible plan is the one case where the ORIGINAL hero
+  // actively implies current guidance ("Your next steps are in your
+  // plan") -- old/very_old swaps in "Review your latest saved plan" and,
+  // at very_old, promotes Upload to primary while demoting the plan link
+  // to secondary (never removing it -- see requirement #5, plan/results
+  // must stay reachable). "old" (12-24mo) keeps the plan as primary, only
+  // relabels title/body and swaps the secondary link to Upload, since a
+  // 12-24 month old plan is still plausibly the most useful single action,
+  // just not implicitly "current".
+  const oldHeroWithPlan = isOldReport
+    ? {
+      title: copy.oldReport.planTitle,
+      body: isVeryOldReport ? copy.oldReport.veryOldBody : copy.oldReport.body,
+      primaryLabel: isVeryOldReport ? copy.cta.upload : copy.cta.plan,
+      primaryTo: isVeryOldReport ? uploadTo : planTo,
+      secondaryLabel: isVeryOldReport ? copy.cta.plan : copy.cta.upload,
+      secondaryTo: isVeryOldReport ? planTo : uploadTo,
+    }
+    : null
   return {
     status: 'ready_with_plan',
-    hero: {
+    hero: oldHeroWithPlan || {
       title: copy.readyWithPlan.title,
       body: copy.readyWithPlan.body,
       primaryLabel: copy.cta.plan,
@@ -354,6 +462,7 @@ export function buildTodayViewModel({
     documents: { ...documentsBase, planTo, planLocked: false },
     safety,
     sourceLine,
+    reportAge,
     returning,
   }
 }

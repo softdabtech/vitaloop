@@ -391,6 +391,89 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     expect(overflow).toBeLessThanOrEqual(1)
   })
 
+  // P37j — old report semantics. contractReady()'s own default
+  // measurementDate ('2026-09-14') stays "fresh" for every test above (a
+  // handful of days before this repo's actual system date) -- these tests
+  // pass an explicit old measurementDate instead, exercising the same
+  // buildTodayViewModel() branches with a source date old/very_old enough
+  // to cross the 365/730-day thresholds relative to whenever this suite
+  // actually runs, without ever touching a mocked clock.
+  test('P37j.1: very_old (Jan 4, 2022) report with plan -> honest source line, non-current hero, upload-first CTA', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true, measurementDate: '2022-01-04' }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+    })
+    await gotoToday(page)
+    // Source line makes the age explicit -- never the plain "Based on your
+    // report from" framing a fresh report gets.
+    await expect(page.getByText(/Based on your latest saved report from Jan 4, 2022/i)).toBeVisible()
+    // Hero no longer implies the plan is current guidance.
+    await expect(page.getByRole('heading', { name: /Review your latest saved plan/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Your next steps are in your plan/i })).not.toBeVisible()
+    await expect(page.getByText(/This report is over two years old/i)).toBeVisible()
+    // Primary CTA is Upload for a very_old report; the saved plan is still
+    // one click away as the secondary action, never removed -- the hero's
+    // secondary link renders with a trailing arrow glyph ("Open my plan →"),
+    // so match loosely rather than the exact Documents-tile button label.
+    await expect(page.getByRole('button', { name: /^Upload new results$/i }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: /Open my plan/i })).toHaveCount(2) // hero secondary + Documents tile
+  })
+
+  test('P37j.2: old (not very_old, ~500 days) report with plan -> plan stays primary, upload becomes secondary', async ({ page }) => {
+    const d = new Date()
+    d.setUTCDate(d.getUTCDate() - 500)
+    const measurementDate = d.toISOString().slice(0, 10)
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true, measurementDate }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+    })
+    await gotoToday(page)
+    await expect(page.getByText(/Based on an older report from/i)).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Review your latest saved plan/i })).toBeVisible()
+    // Plan remains the primary action at "old" (not "very_old"); Upload is
+    // the prominent secondary, not swapped to primary yet.
+    const planButtons = page.getByRole('button', { name: /^Open my plan$/i })
+    await expect(planButtons.first()).toBeVisible()
+    await expect(page.getByText(/This report is older\./i)).toBeVisible()
+  })
+
+  test('P37j.3: very_old retest checkpoint -> "Your saved plan listed" wording, no computed/overdue date', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: false, measurementDate: '2022-01-04' }),
+      results: { knowledge_report: { retest_plan: [{ marker: 'Hemoglobin', timing: '6-12 weeks' }] } },
+    })
+    await gotoToday(page)
+    await expect(page.getByText(/Your saved plan listed 6-12 weeks for Hemoglobin\./i)).toBeVisible()
+    // The old "your plan notes" phrasing (used for fresh reports) must not
+    // appear alongside it.
+    await expect(page.getByText(/^For Hemoglobin, your plan notes:/i)).toHaveCount(0)
+  })
+
+  test('P37j.4: recent report -> old-report copy never appears (regression guard)', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }), // default measurementDate 2026-09-14, fresh
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+    })
+    await gotoToday(page)
+    await expect(page.getByRole('heading', { name: /Your next steps are in your plan/i })).toBeVisible()
+    await expect(page.getByText(/Based on an older report from/i)).toHaveCount(0)
+    await expect(page.getByText(/Based on your latest saved report from/i)).toHaveCount(0)
+    await expect(page.getByText(/This report is older/i)).toHaveCount(0)
+  })
+
+  test('P37j.5: mobile 375px, very_old report state -> no horizontal overflow', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true, measurementDate: '2022-01-04' }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { knowledge_report: { retest_plan: [{ marker: 'Hemoglobin', timing: '6-12 weeks' }] } },
+    })
+    await gotoToday(page)
+    await expect(page.getByRole('heading', { name: /Review your latest saved plan/i })).toBeVisible()
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+    expect(overflow).toBeLessThanOrEqual(1)
+  })
+
   test('console: no new errors from the Today page', async ({ page }) => {
     const errors: string[] = []
     page.on('pageerror', (err) => errors.push(String(err)))

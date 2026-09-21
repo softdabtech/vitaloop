@@ -55,11 +55,28 @@ const TODAY_COPY = {
     source: {
       report: (date) => `Based on your report from ${date}`,
       unavailable: 'Report date unavailable',
+      // P37j: 12-24 months and 24+ months get progressively more
+      // distancing language -- "an older report" still reads as "your"
+      // report, just aging; "your latest saved report" is deliberately more
+      // neutral, framing it as simply what's on file rather than an
+      // implicitly current reading.
+      olderReport: (date) => `Based on an older report from ${date}`,
+      savedReport: (date) => `Based on your latest saved report from ${date}`,
     },
     documents: {
       reportLine: (date) => `Report from ${date}`,
       reportLineUnavailable: 'Report date unavailable',
       upgradeNote: 'Viewing your plan requires an active subscription. Explore options for adding future reports.',
+    },
+    // P37j: old/very_old report hero copy -- never implies the saved plan
+    // or report is current guidance; "reportTitle" is used when there is no
+    // accessible plan to reference (ready_no_plan/ready_plan_gated),
+    // "planTitle" when a plan is the accessible next step (ready_with_plan).
+    oldReport: {
+      reportTitle: 'Review your latest saved report',
+      planTitle: 'Review your latest saved plan',
+      body: 'This report is older. Review what was saved, or upload newer results to refresh your view.',
+      veryOldBody: 'This report is over two years old. Review what was saved, or upload newer results for a current picture.',
     },
     safety: {
       sourceQuestionnaire: 'Source: your symptom check',
@@ -90,6 +107,10 @@ const TODAY_COPY = {
     returnSection: {
       title: 'When to come back',
       checkpoint: (marker, timing) => `For ${marker}, your plan notes: ${timing}`,
+      // P37j: same interval, verbatim, but phrased as a value read from an
+      // old/very_old saved plan rather than a live checkpoint -- never a
+      // computed or overdue date, just honest framing of its source.
+      checkpointSaved: (marker, timing) => `Your saved plan listed ${timing} for ${marker}.`,
       noDate: 'Your plan does not include a repeat-test date yet.',
     },
     error: {
@@ -132,11 +153,19 @@ const TODAY_COPY = {
     source: {
       report: (date) => `На основі звіту від ${date}`,
       unavailable: 'Дата звіту недоступна',
+      olderReport: (date) => `На основі старішого звіту від ${date}`,
+      savedReport: (date) => `На основі вашого останнього збереженого звіту від ${date}`,
     },
     documents: {
       reportLine: (date) => `Звіт від ${date}`,
       reportLineUnavailable: 'Дата звіту недоступна',
       upgradeNote: 'Перегляд плану вимагає активної підписки. Дізнайтеся про варіанти для майбутніх звітів.',
+    },
+    oldReport: {
+      reportTitle: 'Перегляньте ваш останній збережений звіт',
+      planTitle: 'Перегляньте ваш останній збережений план',
+      body: 'Цей звіт застарів. Перегляньте, що було збережено, або завантажте нові результати, щоб оновити картину.',
+      veryOldBody: 'Цьому звіту більше двох років. Перегляньте, що було збережено, або завантажте нові результати для актуальної картини.',
     },
     safety: {
       sourceQuestionnaire: 'Джерело: ваша перевірка симптомів',
@@ -167,6 +196,7 @@ const TODAY_COPY = {
     returnSection: {
       title: 'Коли повернутися',
       checkpoint: (marker, timing) => `Для показника «${marker}» ваш план зазначає: ${timing}`,
+      checkpointSaved: (marker, timing) => `У вашому збереженому плані для показника «${marker}» зазначено: ${timing}.`,
       noDate: 'У вашому плані ще немає дати повторного аналізу.',
     },
     error: {
