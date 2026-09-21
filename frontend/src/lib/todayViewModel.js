@@ -308,11 +308,23 @@ function buildCockpitViewModel({
       const name = isUk
         ? raw.canonical_name || raw.name || raw.source_name || raw.name_en
         : raw.name_en || raw.canonical_name || raw.name || raw.source_name
+      // P37k.2 -- explicit status text alongside the color accent, never a
+      // new clinical interpretation: it only labels the status this row
+      // already carries. "Unknown range" only fires when neither an
+      // explicit backend status nor a usable ref range exists (the same
+      // case inferStatusFromRange otherwise silently defaults to
+      // BORDERLINE for) -- everything else maps straight from `status`.
+      const hasExplicitStatus = Boolean(STATUS_ALIAS_MAP[String(raw.status || '').trim().toUpperCase()])
+      const hasRange = raw.ref_low != null && raw.ref_high != null
+      const statusLabel = (!hasExplicitStatus && !hasRange)
+        ? c.labSnapshot.unknownRange
+        : c.labSnapshot.statusLabels[status]
       return {
         name: humanizeLabel(name, isUk) || name,
         value: raw.value ?? null,
         unit: raw.unit || '',
         status,
+        statusLabel,
         rangeLabel: (raw.ref_low != null && raw.ref_high != null)
           ? `${raw.ref_low}–${raw.ref_high}${raw.unit ? ` ${raw.unit}` : ''}`
           : c.labSnapshot.rangeUnavailable,

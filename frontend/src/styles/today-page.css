@@ -59,6 +59,64 @@
   margin-top: 4px !important;
 }
 
+/* P37k.2/P37k.2.1 -- questionnaire safety banner in the cockpit is a real
+ * <button> (navigates to /questionnaire) rather than plain text, so it gets
+ * native keyboard activation and focus for free. `.today-safety` already
+ * supplies border/padding/border-radius via inline style + this stylesheet;
+ * this block only resets the default <button> UA styling (background/font/
+ * text-align/width/appearance) that would otherwise fight those rules, and
+ * adds the hover/focus ring. */
+.today-safety--actionable {
+  display: block;
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+
+.today-safety--actionable:hover,
+.today-safety--actionable:focus-visible {
+  box-shadow: 0 0 0 2px rgba(146, 64, 14, 0.28);
+  outline: none;
+}
+
+/* P37k.2.1 -- dedicated classes replacing the previous Tailwind-utility-
+ * class selector (.flex.items-start.gap-2\.5.justify-between), which broke
+ * silently if those utility classes were ever reordered/renamed on the JSX
+ * side. These are the only place this layout is defined now. */
+.today-safety__action-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.today-safety__content {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.today-safety__action {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  align-self: center;
+}
+
+@media (max-width: 480px) {
+  .today-safety__action-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
 @media (max-width: 640px) {
   .today-safety-stack:has(> :nth-child(2)) {
     gap: 6px;
@@ -368,7 +426,8 @@
 .cockpit-page {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  /* P37k.2: ~10% tighter than the original 14px, kept comfortable on mobile. */
+  gap: 13px;
 }
 
 .cockpit-header {
@@ -403,6 +462,14 @@
   letter-spacing: 0.04em;
 }
 
+/* P37k.2 -- very_old gets a calmer, non-alarmist amber (not red) so the
+ * header itself makes clear this isn't current data without reading as a
+ * warning/error state. */
+.cockpit-freshness-chip--very-old {
+  background: rgba(217, 119, 6, 0.13);
+  color: #92400e;
+}
+
 .cockpit-link {
   font-size: 14px;
   font-weight: 600;
@@ -420,7 +487,7 @@
 .cockpit-status-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 7px;
 }
 
 @media (max-width: 640px) {
@@ -447,7 +514,8 @@
 }
 
 .cockpit-section {
-  padding: 16px 18px;
+  /* P37k.2: ~10% tighter than the original 16px/18px. */
+  padding: 14px 16px;
   border-radius: 14px;
   background: #F8FAFC;
   border: 1px solid rgba(15, 23, 42, 0.07);
@@ -508,7 +576,7 @@
 .cockpit-row-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
 }
 
 .cockpit-row {
@@ -516,7 +584,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 9px 11px;
   border-radius: 10px;
   background: #FFFFFF;
   border: 1px solid rgba(15, 23, 42, 0.06);
@@ -560,15 +628,17 @@
 .cockpit-lab-grid {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
+/* P37k.2: added an explicit status-text column (name / value / status /
+ * range) so status is never color-only -- see .cockpit-lab-row__status. */
 .cockpit-lab-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr) minmax(0, 0.8fr) minmax(0, 1.1fr);
   align-items: center;
   gap: 8px;
-  padding: 9px 12px;
+  padding: 8px 11px;
   border-radius: 8px;
   background: #FFFFFF;
   border: 1px solid rgba(15, 23, 42, 0.06);
@@ -596,6 +666,17 @@
 .cockpit-lab-row__value {
   color: #334155;
 }
+
+.cockpit-lab-row__status {
+  font-weight: 700;
+  font-size: 12.5px;
+  color: #475569;
+}
+
+.cockpit-lab-row--deficient .cockpit-lab-row__status { color: #0284C7; }
+.cockpit-lab-row--elevated .cockpit-lab-row__status { color: #E11D48; }
+.cockpit-lab-row--borderline .cockpit-lab-row__status { color: #D97706; }
+.cockpit-lab-row--optimal .cockpit-lab-row__status { color: #059669; }
 
 .cockpit-lab-row__range {
   color: #94A3B8;

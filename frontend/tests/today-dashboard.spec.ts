@@ -424,7 +424,8 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     })
     await gotoToday(page)
     await expect(page.getByText(/Lab date: Jan 4, 2022/i)).toBeVisible()
-    await expect(page.getByText('Saved', { exact: true })).toBeVisible() // freshness chip
+    // P37k.2: very_old chip strengthened from "Saved" to "Old saved report".
+    await expect(page.getByText('Old saved report', { exact: true })).toBeVisible() // freshness chip
     await expect(page.getByText(/Based on outdated labs/i)).toBeVisible()
     // Primary CTA is Upload for a very_old report; the saved plan is still
     // one click away in the Documents footer, never removed.
@@ -468,7 +469,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await gotoToday(page)
     await expect(page.getByText(/Based on recent labs/i)).toBeVisible()
     await expect(page.getByText('Older', { exact: true })).toHaveCount(0)
-    await expect(page.getByText('Saved', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('Old saved report', { exact: true })).toHaveCount(0)
     await expect(page.getByText(/Based on outdated labs/i)).toHaveCount(0)
   })
 
@@ -480,7 +481,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       results: { knowledge_report: { retest_plan: [{ marker: 'Hemoglobin', timing: '6-12 weeks' }] } },
     })
     await gotoToday(page)
-    await expect(page.getByText('Saved', { exact: true })).toBeVisible()
+    await expect(page.getByText('Old saved report', { exact: true })).toBeVisible()
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
     expect(overflow).toBeLessThanOrEqual(1)
   })
@@ -722,6 +723,91 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     // Legacy pill class must never appear inside the cockpit's documents footer.
     await expect(page.locator('.cockpit-documents .today-documents__link')).toHaveCount(0)
     await expect(page.locator('.cockpit-documents')).toBeVisible()
+  })
+
+  // ── P37k.2 (light UI polish) ──────────────────────────────────────────
+
+  test('P37k.2-UI-a: questionnaire safety banner is a clickable/focusable whole card navigating to /questionnaire, with a visible action label', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: false }),
+      questionnaireUrgency: 'Some answers suggest timely clinician review is important.',
+      results: {},
+    })
+    await gotoToday(page)
+    // P37k.2.1: a real <button>, not a div+role="button" -- role/tabindex
+    // come from the browser for free, so assert via getByRole instead of
+    // reading hand-set attributes that no longer exist.
+    const banner = page.getByRole('button', { name: /Some answers suggest timely clinician review is important/i })
+    await expect(banner).toBeVisible()
+    await expect(banner).toHaveJSProperty('tagName', 'BUTTON')
+    await expect(banner.getByText('Review symptom answers →', { exact: true })).toBeVisible()
+    // Source label and warning tone are preserved, not just the new action text.
+    await expect(banner.getByText(/Source: your symptom check/i)).toBeVisible()
+    // Native keyboard activation: focus + Enter, no hand-rolled onKeyDown needed.
+    await banner.focus()
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(/\/questionnaire/)
+  })
+
+  test('P37k.2-UI-b: very_old header chip reads "Old saved report", not the plain "Saved"/"Older" wording, calm (non-red) styling', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true, measurementDate: '2022-01-04' }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { biomarkers: [{ name: 'Hemoglobin', value: 14, unit: 'g/dL', ref_low: 12, ref_high: 16 }] },
+    })
+    await gotoToday(page)
+    const chip = page.locator('.cockpit-freshness-chip')
+    await expect(chip).toHaveText('Old saved report')
+    await expect(chip).toHaveClass(/cockpit-freshness-chip--very-old/)
+    const color = await chip.evaluate((el) => getComputedStyle(el).color)
+    // Calm amber (#92400e -> rgb(146, 64, 14)), never alarmist red.
+    expect(color).toBe('rgb(146, 64, 14)')
+  })
+
+  test('P37k.2-UI-c: lab snapshot rows show explicit status text alongside the color accent (High/Low/Watch/In range)', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: {
+        biomarkers: [
+          { name: 'Hemoglobin', value: 10.5, unit: 'g/dL', ref_low: 12, ref_high: 16 }, // DEFICIENT -> Low
+          { name: 'Ferritin', value: 200, unit: 'ng/mL', ref_low: 15, ref_high: 150 }, // ELEVATED -> High
+          { name: 'Glucose', value: 90, unit: 'mg/dL', ref_low: 70, ref_high: 99 }, // OPTIMAL -> In range
+        ],
+      },
+    })
+    await gotoToday(page)
+    await expect(page.locator('.cockpit-lab-row--deficient .cockpit-lab-row__status')).toHaveText('Low')
+    await expect(page.locator('.cockpit-lab-row--elevated .cockpit-lab-row__status')).toHaveText('High')
+    await expect(page.locator('.cockpit-lab-row--optimal .cockpit-lab-row__status')).toHaveText('In range')
+  })
+
+  test('P37k.2-UI-d: lab snapshot row with no status and no ref range shows "Unknown range"', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { biomarkers: [{ name: 'Mystery Marker', value: 42, unit: '' }] },
+    })
+    await gotoToday(page)
+    await expect(page.locator('.cockpit-lab-row__status')).toHaveText('Unknown range')
+  })
+
+  test('P37k.2-UI-e: mobile 375px very_old + safety state -> no horizontal overflow, guarantees still hold', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true, measurementDate: '2022-01-04' }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      questionnaireUrgency: 'Some answers suggest timely clinician review is important.',
+      results: {
+        biomarkers: [{ name: 'Hemoglobin', value: 10.5, unit: 'g/dL', ref_low: 12, ref_high: 16 }],
+        protocol: ['Increase iron-rich foods'],
+      },
+    })
+    await gotoToday(page)
+    await expect(page.locator('.coach-button')).toHaveCount(1)
+    await expect(page.locator('.coach-button')).toHaveText(/Upload new results/i)
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+    expect(overflow).toBeLessThanOrEqual(1)
   })
 
   test('console: no new errors from the Today page', async ({ page }) => {

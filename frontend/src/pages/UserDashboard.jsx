@@ -80,6 +80,10 @@ const TODAY_COPY = {
     },
     safety: {
       sourceQuestionnaire: 'Source: your symptom check',
+      // P37k.2: right-side action text for the now fully clickable
+      // questionnaire safety banner in the cockpit -- same destination
+      // (/questionnaire) the banner already navigated to as a whole card.
+      reviewSymptomAnswersAction: 'Review symptom answers →',
     },
     reportSafety: {
       heading: (level) => level === 'urgent'
@@ -122,7 +126,10 @@ const TODAY_COPY = {
         labDateLabel: (date) => `Lab date: ${date}`,
         labDateUnavailable: 'Lab date unavailable',
         symptomCheckLabel: (date) => `Symptom check: ${date}`,
-        freshness: { fresh: 'Recent', old: 'Older', very_old: 'Saved' },
+        // P37k.2: very_old gets stronger, still-calm framing -- "Saved"
+        // read as neutral/current-adjacent; "Old saved report" makes clear
+        // this is not current health data without alarmist styling.
+        freshness: { fresh: 'Recent', old: 'Older', very_old: 'Old saved report' },
       },
       statusStrip: {
         basisFresh: 'Based on recent labs',
@@ -152,6 +159,11 @@ const TODAY_COPY = {
         title: 'Latest lab snapshot',
         empty: 'No biomarker values available for this report.',
         rangeUnavailable: 'No reference range on file',
+        // P37k.2: explicit status text alongside the color accent -- never
+        // a new interpretation, just labeling the status band already
+        // computed in todayViewModel.js.
+        statusLabels: { ELEVATED: 'High', DEFICIENT: 'Low', BORDERLINE: 'Watch', OPTIMAL: 'In range' },
+        unknownRange: 'Unknown range',
       },
       followUp: {
         title: 'Follow-up timing',
@@ -221,6 +233,7 @@ const TODAY_COPY = {
     },
     safety: {
       sourceQuestionnaire: 'Джерело: ваша перевірка симптомів',
+      reviewSymptomAnswersAction: 'Переглянути відповіді про симптоми →',
     },
     reportSafety: {
       heading: (level) => level === 'urgent'
@@ -256,7 +269,7 @@ const TODAY_COPY = {
         labDateLabel: (date) => `Дата аналізів: ${date}`,
         labDateUnavailable: 'Дата аналізів недоступна',
         symptomCheckLabel: (date) => `Перевірка симптомів: ${date}`,
-        freshness: { fresh: 'Свіжий', old: 'Старіший', very_old: 'Збережений' },
+        freshness: { fresh: 'Свіжий', old: 'Старіший', very_old: 'Старий збережений звіт' },
       },
       statusStrip: {
         basisFresh: 'На основі свіжих аналізів',
@@ -283,6 +296,8 @@ const TODAY_COPY = {
         title: 'Останній зріз аналізів',
         empty: 'Для цього звіту немає значень показників.',
         rangeUnavailable: 'Референс недоступний',
+        statusLabels: { ELEVATED: 'Підвищено', DEFICIENT: 'Знижено', BORDERLINE: 'Слідкувати', OPTIMAL: 'В нормі' },
+        unknownRange: 'Референс невідомий',
       },
       followUp: {
         title: 'Терміни повторного аналізу',
@@ -346,7 +361,9 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
         <div className="cockpit-header__dates">
           <span>{headerContext.labDate ? c.header.labDateLabel(headerContext.labDate) : c.header.labDateUnavailable}</span>
           {headerContext.symptomCheckDate && <span>{c.header.symptomCheckLabel(headerContext.symptomCheckDate)}</span>}
-          <span className="cockpit-freshness-chip">{c.header.freshness[headerContext.reportAge] || c.header.freshness.fresh}</span>
+          <span className={`cockpit-freshness-chip${headerContext.reportAge === 'very_old' ? ' cockpit-freshness-chip--very-old' : ''}`}>
+            {c.header.freshness[headerContext.reportAge] || c.header.freshness.fresh}
+          </span>
         </div>
       </div>
 
@@ -385,15 +402,31 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
             </div>
           )}
           {safety.questionnaire && (
-            <div role="note" className="today-safety" style={{ background: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.bg, borderColor: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.border }}>
-              <div className="flex items-start gap-2.5">
-                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.color }} />
-                <div>
-                  <p className="text-sm font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.color }}>{safety.questionnaire.text}</p>
-                  {safety.questionnaire.sourceLabel && <p className="today-safety__source mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.color }}>{safety.questionnaire.sourceLabel}</p>}
+            // P37k.2.1: a real <button> instead of a div+role="button" --
+            // gets keyboard activation (Enter/Space), focus, and semantics
+            // for free from the browser/AT instead of hand-rolled onKeyDown.
+            // Dedicated .today-safety__action-row/.today-safety__content
+            // classes (not Tailwind utility classes) carry the layout so the
+            // CSS media query below never depends on utility-class internals
+            // -- see .today-safety--actionable's own comment in
+            // today-page.css for why that mattered.
+            <button
+              type="button"
+              onClick={() => navigate(safety.questionnaire.actionTo)}
+              className="today-safety today-safety--actionable"
+              style={{ background: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.bg, borderColor: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.border }}
+            >
+              <div className="today-safety__action-row">
+                <div className="today-safety__content">
+                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.color }} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.color }}>{safety.questionnaire.text}</p>
+                    {safety.questionnaire.sourceLabel && <p className="today-safety__source mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.color }}>{safety.questionnaire.sourceLabel}</p>}
+                  </div>
                 </div>
+                <span className="today-safety__action" style={{ color: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.color }}>{copy.safety.reviewSymptomAnswersAction}</span>
               </div>
-            </div>
+            </button>
           )}
         </div>
       )}
@@ -458,6 +491,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
                   <div key={index} className={`cockpit-lab-row cockpit-lab-row--${m.status.toLowerCase()}`}>
                     <span className="cockpit-lab-row__name">{m.name}</span>
                     <span className="cockpit-lab-row__value">{m.value ?? '—'}{m.unit ? ` ${m.unit}` : ''}</span>
+                    <span className="cockpit-lab-row__status">{m.statusLabel}</span>
                     <span className="cockpit-lab-row__range">{m.rangeLabel}</span>
                   </div>
                 ))}
