@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, HelpCircle, RefreshCw, ShieldAlert, Stethoscope, TrendingUp } from 'lucide-react'
+import { Activity, ArrowRight, CalendarClock, ClipboardList, HelpCircle, ListChecks, RefreshCw, ShieldAlert, Stethoscope, TrendingUp } from 'lucide-react'
 import { useDashboardSummary, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
 import { useProfile } from '../hooks/useProfile.ts'
 import { useSubscription } from '../hooks/useSubscription.js'
@@ -113,6 +113,58 @@ const TODAY_COPY = {
       checkpointSaved: (marker, timing) => `Your saved plan listed ${timing} for ${marker}.`,
       noDate: 'Your plan does not include a repeat-test date yet.',
     },
+    // P37k: Today cockpit copy. Namespaced separately from the pre-existing
+    // hero/documents/changes/clarity keys above (which stay in place for
+    // first_run/labs_intent/error states -- states with no report to build
+    // a cockpit from).
+    cockpit: {
+      header: {
+        labDateLabel: (date) => `Lab date: ${date}`,
+        labDateUnavailable: 'Lab date unavailable',
+        symptomCheckLabel: (date) => `Symptom check: ${date}`,
+        freshness: { fresh: 'Recent', old: 'Older', very_old: 'Saved' },
+      },
+      statusStrip: {
+        basisFresh: 'Based on recent labs',
+        basisOld: 'Based on outdated labs',
+        basisIncomplete: 'Incomplete data',
+        priorityCount: (n) => n === 1 ? '1 marker to watch' : `${n} markers to watch`,
+        priorityNone: 'No markers flagged',
+        nextRetestLabel: (marker, timing) => `${marker}: ${timing}`,
+        nextRetestNone: 'No retest window listed',
+      },
+      thisWeek: {
+        title: 'This week',
+        clinicianReviewTitle: 'Discuss with a doctor',
+        planItemWhy: 'From your saved plan',
+        retestItemTitle: (marker) => `Retest ${marker}`,
+        retestItemWhy: (timing) => `Window listed: ${timing}`,
+        gapItemWhy: 'Missing context in your report',
+        empty: 'Nothing new to flag from your latest report.',
+        // P37k.1: label used whenever a row's actionTo is /questionnaire --
+        // never "View results" for that destination.
+        reviewSymptomAnswers: 'Review symptom answers',
+        // P37k.1: forced primary row for very_old reports.
+        uploadRowTitle: 'Upload newer results',
+        uploadRowWhy: 'This report is old enough that fresher data would be more useful than acting on it as-is.',
+      },
+      labSnapshot: {
+        title: 'Latest lab snapshot',
+        empty: 'No biomarker values available for this report.',
+        rangeUnavailable: 'No reference range on file',
+      },
+      followUp: {
+        title: 'Follow-up timing',
+        windowListed: (marker, timing) => `${marker}: window listed as ${timing}`,
+        windowListedSaved: (marker, timing) => `${marker}: your saved plan listed a window of ${timing}`,
+        none: 'Your plan does not include a repeat-test window yet.',
+      },
+      missingContext: {
+        title: 'Missing context',
+        cta: 'See why this matters',
+        genericTitle: 'Additional context',
+      },
+    },
     error: {
       summaryTitle: 'We couldn’t load your overview',
       summaryBody: 'Your account is safe. Please try again.',
@@ -199,6 +251,51 @@ const TODAY_COPY = {
       checkpointSaved: (marker, timing) => `У вашому збереженому плані для показника «${marker}» зазначено: ${timing}.`,
       noDate: 'У вашому плані ще немає дати повторного аналізу.',
     },
+    cockpit: {
+      header: {
+        labDateLabel: (date) => `Дата аналізів: ${date}`,
+        labDateUnavailable: 'Дата аналізів недоступна',
+        symptomCheckLabel: (date) => `Перевірка симптомів: ${date}`,
+        freshness: { fresh: 'Свіжий', old: 'Старіший', very_old: 'Збережений' },
+      },
+      statusStrip: {
+        basisFresh: 'На основі свіжих аналізів',
+        basisOld: 'На основі застарілих аналізів',
+        basisIncomplete: 'Дані неповні',
+        priorityCount: (n) => n === 1 ? '1 показник потребує уваги' : `${n} показники потребують уваги`,
+        priorityNone: 'Немає позначених показників',
+        nextRetestLabel: (marker, timing) => `${marker}: ${timing}`,
+        nextRetestNone: 'Немає вказаного вікна повторного аналізу',
+      },
+      thisWeek: {
+        title: 'На цьому тижні',
+        clinicianReviewTitle: 'Обговорити з лікарем',
+        planItemWhy: 'З вашого збереженого плану',
+        retestItemTitle: (marker) => `Повторити ${marker}`,
+        retestItemWhy: (timing) => `Вказане вікно: ${timing}`,
+        gapItemWhy: 'Бракує контексту у звіті',
+        empty: 'Немає нових позначок з вашого останнього звіту.',
+        reviewSymptomAnswers: 'Переглянути відповіді про симптоми',
+        uploadRowTitle: 'Завантажити новіші результати',
+        uploadRowWhy: 'Цей звіт достатньо застарів, щоб свіжі дані були кориснішими, ніж дії на основі поточного.',
+      },
+      labSnapshot: {
+        title: 'Останній зріз аналізів',
+        empty: 'Для цього звіту немає значень показників.',
+        rangeUnavailable: 'Референс недоступний',
+      },
+      followUp: {
+        title: 'Терміни повторного аналізу',
+        windowListed: (marker, timing) => `${marker}: вказане вікно — ${timing}`,
+        windowListedSaved: (marker, timing) => `${marker}: у вашому збереженому плані вказане вікно — ${timing}`,
+        none: 'У вашому плані ще немає вікна повторного аналізу.',
+      },
+      missingContext: {
+        title: 'Бракує контексту',
+        cta: 'Дізнатися, чому це важливо',
+        genericTitle: 'Додатковий контекст',
+      },
+    },
     error: {
       summaryTitle: 'Не вдалося завантажити огляд',
       summaryBody: 'Ваш акаунт у безпеці. Спробуйте ще раз.',
@@ -225,6 +322,202 @@ function classifySafetyTone(text) {
 const SAFETY_TONE_STYLES = {
   warning: { bg: '#fef3c7', border: 'rgba(245,158,11,.3)', color: '#92400e' },
   critical: { bg: '#fee2e2', border: 'rgba(239,68,68,.28)', color: '#b91c1c' },
+}
+
+// P37k — Today cockpit body. Renders viewModel.cockpit (built entirely in
+// todayViewModel.js) once a ready report's details have resolved. Exactly
+// one primary CTA on the whole page: the first "This week" row, when any
+// row exists -- nothing else in this component renders a CoachButton.
+function CockpitBody({ viewModel, cockpit, copy, navigate }) {
+  const c = copy.cockpit
+  const { headerContext, statusStrip, safety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction } = cockpit
+
+  return (
+    <div className="cockpit-page">
+      <div className="cockpit-header">
+        <div className="cockpit-header__top">
+          <p className="coach-eyebrow">{copy.pageTitle}</p>
+          {viewModel.documents && (
+            <button type="button" onClick={() => navigate(viewModel.documents.uploadTo)} className="cockpit-link">
+              {copy.cta.upload}
+            </button>
+          )}
+        </div>
+        <div className="cockpit-header__dates">
+          <span>{headerContext.labDate ? c.header.labDateLabel(headerContext.labDate) : c.header.labDateUnavailable}</span>
+          {headerContext.symptomCheckDate && <span>{c.header.symptomCheckLabel(headerContext.symptomCheckDate)}</span>}
+          <span className="cockpit-freshness-chip">{c.header.freshness[headerContext.reportAge] || c.header.freshness.fresh}</span>
+        </div>
+      </div>
+
+      <div className="cockpit-status-strip">
+        <div className="cockpit-status-cell">
+          <Activity className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span>{statusStrip.basisLabel}</span>
+        </div>
+        <div className="cockpit-status-cell">
+          <ListChecks className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span>{statusStrip.priorityLabel}</span>
+        </div>
+        <div className="cockpit-status-cell">
+          <CalendarClock className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span>{statusStrip.nextRetestLabel}</span>
+        </div>
+      </div>
+
+      {/* Report-scoped safety and questionnaire safety stay two separate
+          banners, exactly as in the pre-cockpit layout -- only an explicit
+          actionTo was added in todayViewModel.js, nothing here merges tone,
+          text, or source between them. */}
+      {(safety.report || safety.questionnaire) && (
+        <div className="today-safety-stack">
+          {safety.report && (
+            <div role="note" className="today-safety" style={{ background: SAFETY_TONE_STYLES[safety.report.tone]?.bg, borderColor: SAFETY_TONE_STYLES[safety.report.tone]?.border }}>
+              <div className="flex items-start gap-2.5">
+                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[safety.report.tone]?.color }} />
+                <div>
+                  <p className="text-sm font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[safety.report.tone]?.color }}>{safety.report.text}</p>
+                  {safety.report.timing && <p className="mt-1 text-sm leading-5" style={{ color: SAFETY_TONE_STYLES[safety.report.tone]?.color }}>{safety.report.timing}</p>}
+                  <button type="button" onClick={() => navigate(safety.report.actionTo)} className="mt-1.5 block text-sm font-bold underline" style={{ color: SAFETY_TONE_STYLES[safety.report.tone]?.color }}>{copy.cta.results}</button>
+                  <p className="today-safety__source mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[safety.report.tone]?.color }}>{safety.report.sourceLabel}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          {safety.questionnaire && (
+            <div role="note" className="today-safety" style={{ background: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.bg, borderColor: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.border }}>
+              <div className="flex items-start gap-2.5">
+                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.color }} />
+                <div>
+                  <p className="text-sm font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.color }}>{safety.questionnaire.text}</p>
+                  {safety.questionnaire.sourceLabel && <p className="today-safety__source mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.color }}>{safety.questionnaire.sourceLabel}</p>}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* P37k.1: "Since your previous report" restored -- same already-built
+          comparison object (progress_intelligence/personal_baseline, capped
+          at 3) buildReturningUserSections has produced since P37e. Renders
+          nothing if unavailable; never invents a comparison. */}
+      {sinceLastReport && (
+        <div className="cockpit-section">
+          <div className="today-section-label"><TrendingUp className="h-4 w-4 text-emerald-600" />{copy.changes.title}</div>
+          <div className="space-y-1.5">
+            {sinceLastReport.items.map((text, index) => (
+              <p key={index} className="text-sm leading-6 text-slate-700">{text}</p>
+            ))}
+          </div>
+          <button type="button" onClick={() => navigate(sinceLastReport.to)} className="cockpit-link mt-1.5">{copy.changes.cta} &rarr;</button>
+        </div>
+      )}
+
+      {/* P37k.1: when there is truly nothing for either This week or the lab
+          snapshot to show, collapse both into one honest primary action
+          instead of two empty-placeholder sections -- see
+          buildCockpitViewModel's own isSparse/sparsePrimaryAction comment. */}
+      {isSparse ? (
+        <div className="cockpit-section cockpit-section--sparse">
+          <p className="text-sm text-slate-600 mb-3">{c.thisWeek.empty}</p>
+          <CoachButton onClick={() => navigate(sparsePrimaryAction.to)} trailingIcon={ArrowRight} size="sm">{sparsePrimaryAction.label}</CoachButton>
+        </div>
+      ) : (
+        <>
+          <div className="cockpit-section">
+            <div className="today-section-label"><ClipboardList className="h-4 w-4 text-emerald-600" />{c.thisWeek.title}</div>
+            {thisWeek.length === 0 ? (
+              <p className="text-sm text-slate-500">{c.thisWeek.empty}</p>
+            ) : (
+              <div className="cockpit-row-list">
+                {thisWeek.map((row, index) => (
+                  <div key={index} className="cockpit-row">
+                    <div className="cockpit-row__text">
+                      <p className="cockpit-row__title">{row.title}</p>
+                      {row.why && <p className="cockpit-row__why">{row.why}</p>}
+                    </div>
+                    {row.isPrimary ? (
+                      <CoachButton onClick={() => navigate(row.actionTo)} trailingIcon={ArrowRight} size="sm">{row.actionLabel}</CoachButton>
+                    ) : (
+                      <button type="button" onClick={() => navigate(row.actionTo)} className="cockpit-link cockpit-link--row">{row.actionLabel} &rarr;</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="cockpit-section">
+            <div className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />{c.labSnapshot.title}</div>
+            {labSnapshot.length === 0 ? (
+              <p className="text-sm text-slate-500">{c.labSnapshot.empty}</p>
+            ) : (
+              <div className="cockpit-lab-grid">
+                {labSnapshot.map((m, index) => (
+                  <div key={index} className={`cockpit-lab-row cockpit-lab-row--${m.status.toLowerCase()}`}>
+                    <span className="cockpit-lab-row__name">{m.name}</span>
+                    <span className="cockpit-lab-row__value">{m.value ?? '—'}{m.unit ? ` ${m.unit}` : ''}</span>
+                    <span className="cockpit-lab-row__range">{m.rangeLabel}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {followUp && (
+        <div className="cockpit-section">
+          <div className="today-section-label"><CalendarClock className="h-4 w-4 text-emerald-600" />{c.followUp.title}</div>
+          <p className="text-sm leading-6 text-slate-700">{followUp.text}</p>
+          <button type="button" onClick={() => navigate(followUp.to)} className="cockpit-link mt-1">{copy.cta.results} &rarr;</button>
+        </div>
+      )}
+
+      {missingContext && (
+        <div className="cockpit-section">
+          <div className="today-section-label"><HelpCircle className="h-4 w-4 text-emerald-600" />{c.missingContext.title}</div>
+          <div className="today-clarity-grid">
+            {missingContext.map((item, index) => (
+              <div key={index} className="today-clarity-item">
+                <p className="text-sm font-semibold text-slate-950">{item.title}</p>
+                {item.reason && <p className="mt-0.5 text-sm leading-6 text-slate-600">{item.reason}</p>}
+                {item.suggestedNextStep && <p className="mt-0.5 text-xs text-slate-500">{item.suggestedNextStep}</p>}
+                <button type="button" onClick={() => navigate(item.to)} className="mt-1 text-sm font-semibold text-teal-700 hover:text-teal-900">{c.missingContext.cta} &rarr;</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* P37k.1: quiet report archive/footer, not another CTA cluster -- no
+          pill/button styling (that visual weight now belongs to This week's
+          single primary row, or the sparse-state primary action above).
+          Still every link a user might need (results/plan/history), just
+          de-emphasized to plain text so it never competes as a second
+          primary CTA. */}
+      {viewModel.documents && (
+        <div className="cockpit-section cockpit-documents">
+          <div className="cockpit-documents__report-line">
+            <Stethoscope className="h-4 w-4 text-emerald-600" />
+            {viewModel.documents.reportLine}
+          </div>
+          <div className="cockpit-documents__links">
+            <button type="button" onClick={() => navigate(viewModel.documents.resultsTo)} className="cockpit-link">{copy.cta.results}</button>
+            {viewModel.documents.planTo && (
+              <button type="button" onClick={() => navigate(viewModel.documents.planTo)} className="cockpit-link">{copy.cta.plan}</button>
+            )}
+            {viewModel.documents.planLocked && (
+              <span className="cockpit-documents__locked" title={viewModel.documents.upgradeNote}>{copy.cta.plan}</span>
+            )}
+            <button type="button" onClick={() => navigate(viewModel.documents.historyTo)} className="cockpit-link">{copy.cta.history}</button>
+          </div>
+          {viewModel.documents.upgradeNote && <p className="mt-2 text-xs text-slate-500">{viewModel.documents.upgradeNote}</p>}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function UserDashboard() {
@@ -275,6 +568,10 @@ export default function UserDashboard() {
     reportDetailsLoading: Boolean(readyUploadId) && reportDetailsLoading,
     reportDetailsError,
     reportDetails: readyUploadId ? reportDetails : null,
+    // P37k: summary.blocks.latest_questionnaire.completed_at -- a distinct
+    // event/date from the report's own measurement_date, already present
+    // on the same GET /dashboard/summary payload (no new fetch).
+    symptomCheckCompletedAt: summary?.blocks?.latest_questionnaire?.completed_at || null,
   })
 
   if (viewModel.status === 'loading') {
@@ -291,27 +588,38 @@ export default function UserDashboard() {
   // viewModel fields.
   const hasLowerGrid = Boolean(viewModel.documents)
 
+  // P37k: once reportDetails has resolved for a ready report, the cockpit
+  // view model (built entirely in todayViewModel.js from already-fetched
+  // data) replaces the old hero-first layout below. States with no report
+  // yet (first_run/labs_intent) or still-loading/errored returning-user
+  // data keep the pre-existing hero+lower-grid layout unchanged.
+  const cockpit = viewModel.cockpit
+
   return (
     <div className="coach-shell">
       <div className="today-canvas">
-        <div className="today-focus">
-          <div className="today-header">
-            <div className="today-header__top">
-              <p className="coach-eyebrow">{copy.pageTitle}</p>
-              {viewModel.documents && (
-                <button
-                  type="button"
-                  onClick={() => navigate(viewModel.documents.uploadTo)}
-                  className="text-sm font-semibold text-teal-700 hover:text-teal-900 whitespace-nowrap"
-                >
-                  {copy.cta.upload}
-                </button>
-              )}
-            </div>
-            {viewModel.sourceLine && <p className="today-header__source">{viewModel.sourceLine}</p>}
-          </div>
+        {cockpit ? (
+          <CockpitBody viewModel={viewModel} cockpit={cockpit} copy={copy} navigate={navigate} />
+        ) : (
+          <>
+            <div className="today-focus">
+              <div className="today-header">
+                <div className="today-header__top">
+                  <p className="coach-eyebrow">{copy.pageTitle}</p>
+                  {viewModel.documents && (
+                    <button
+                      type="button"
+                      onClick={() => navigate(viewModel.documents.uploadTo)}
+                      className="text-sm font-semibold text-teal-700 hover:text-teal-900 whitespace-nowrap"
+                    >
+                      {copy.cta.upload}
+                    </button>
+                  )}
+                </div>
+                {viewModel.sourceLine && <p className="today-header__source">{viewModel.sourceLine}</p>}
+              </div>
 
-          {/* Report-scoped safety (P37e, from GET /results/:uploadId) and
+              {/* Report-scoped safety (P37e, from GET /results/:uploadId) and
               questionnaire safety (existing, unchanged) are rendered as two
               separate banners when both are present -- never merged, never
               deduplicated by domain guesswork, both above the hero so
@@ -319,240 +627,242 @@ export default function UserDashboard() {
               Shared in one .today-safety-stack wrapper so two present
               banners read as one compact stack -- each banner keeps its
               own tone/text/source, nothing is merged. */}
-          {(viewModel.returning?.reportSafety || viewModel.safety) && (
-            <div className="today-safety-stack mt-4">
-              {viewModel.returning?.reportSafety && (
-                <div
-                  role="note"
-                  className="today-safety"
-                  style={{
-                    background: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.bg,
-                    borderColor: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.border,
-                  }}
-                >
-                  <div className="flex items-start gap-2.5">
-                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }} />
-                    <div>
-                      <p className="text-sm font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}>
-                        {viewModel.returning.reportSafety.text}
-                      </p>
-                      {viewModel.returning.reportSafety.timing && (
-                        <p className="mt-1 text-sm leading-5" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}>
-                          {viewModel.returning.reportSafety.timing}
-                        </p>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => navigate(viewModel.returning.reportSafety.to)}
-                        className="mt-1.5 block text-sm font-bold underline"
-                        style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}
-                      >
-                        {copy.cta.results}
-                      </button>
-                      <p className="today-safety__source mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}>
-                        {viewModel.returning.reportSafety.sourceLabel}
-                      </p>
+              {(viewModel.returning?.reportSafety || viewModel.safety) && (
+                <div className="today-safety-stack mt-4">
+                  {viewModel.returning?.reportSafety && (
+                    <div
+                      role="note"
+                      className="today-safety"
+                      style={{
+                        background: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.bg,
+                        borderColor: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.border,
+                      }}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }} />
+                        <div>
+                          <p className="text-sm font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}>
+                            {viewModel.returning.reportSafety.text}
+                          </p>
+                          {viewModel.returning.reportSafety.timing && (
+                            <p className="mt-1 text-sm leading-5" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}>
+                              {viewModel.returning.reportSafety.timing}
+                            </p>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => navigate(viewModel.returning.reportSafety.to)}
+                            className="mt-1.5 block text-sm font-bold underline"
+                            style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}
+                          >
+                            {copy.cta.results}
+                          </button>
+                          <p className="today-safety__source mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}>
+                            {viewModel.returning.reportSafety.sourceLabel}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {viewModel.safety && (
+                    <div
+                      role="note"
+                      className="today-safety"
+                      style={{
+                        background: SAFETY_TONE_STYLES[viewModel.safety.tone]?.bg,
+                        borderColor: SAFETY_TONE_STYLES[viewModel.safety.tone]?.border,
+                      }}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[viewModel.safety.tone]?.color }} />
+                        <div>
+                          <p className="text-sm font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[viewModel.safety.tone]?.color }}>
+                            {viewModel.safety.text}
+                          </p>
+                          {viewModel.safety.sourceLabel && (
+                            <p className="today-safety__source mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[viewModel.safety.tone]?.color }}>
+                              {viewModel.safety.sourceLabel}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {viewModel.safety && (
-                <div
-                  role="note"
-                  className="today-safety"
-                  style={{
-                    background: SAFETY_TONE_STYLES[viewModel.safety.tone]?.bg,
-                    borderColor: SAFETY_TONE_STYLES[viewModel.safety.tone]?.border,
-                  }}
-                >
-                  <div className="flex items-start gap-2.5">
-                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[viewModel.safety.tone]?.color }} />
-                    <div>
-                      <p className="text-sm font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[viewModel.safety.tone]?.color }}>
-                        {viewModel.safety.text}
-                      </p>
-                      {viewModel.safety.sourceLabel && (
-                        <p className="today-safety__source mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[viewModel.safety.tone]?.color }}>
-                          {viewModel.safety.sourceLabel}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+              {viewModel.status === 'summary_error' && (
+                <div className="mt-4">
+                  <EmptyCoachState
+                    title={viewModel.hero.title}
+                    body={viewModel.hero.body}
+                    actionLabel={viewModel.hero.primaryLabel}
+                    onAction={() => refetch()}
+                  />
                 </div>
               )}
-            </div>
-          )}
 
-          {viewModel.status === 'summary_error' && (
-            <div className="mt-4">
-              <EmptyCoachState
-                title={viewModel.hero.title}
-                body={viewModel.hero.body}
-                actionLabel={viewModel.hero.primaryLabel}
-                onAction={() => refetch()}
-              />
-            </div>
-          )}
-
-          {/* One primary CTA, one plain secondary link -- matches the
+              {/* One primary CTA, one plain secondary link -- matches the
               spec's "current focus" hero (§7). No decorative background
               shape; the focus band itself (today-focus) now carries the
               tinted surface, so the hero stays a plain content block. */}
-          {viewModel.status !== 'summary_error' && viewModel.hero && (
-            <section className="today-hero">
-              <h1>{viewModel.hero.title}</h1>
-              <p>{viewModel.hero.body}</p>
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <CoachButton onClick={() => navigate(viewModel.hero.primaryTo)} trailingIcon={ArrowRight}>
-                  {viewModel.hero.primaryLabel}
-                </CoachButton>
-                {viewModel.hero.secondaryLabel && (
-                  <button
-                    type="button"
-                    onClick={() => navigate(viewModel.hero.secondaryTo)}
-                    className="text-sm font-semibold text-teal-700 hover:text-teal-900"
-                  >
-                    {viewModel.hero.secondaryLabel} &rarr;
-                  </button>
-                )}
-              </div>
-            </section>
-          )}
-        </div>
+              {viewModel.status !== 'summary_error' && viewModel.hero && (
+                <section className="today-hero">
+                  <h1>{viewModel.hero.title}</h1>
+                  <p>{viewModel.hero.body}</p>
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <CoachButton onClick={() => navigate(viewModel.hero.primaryTo)} trailingIcon={ArrowRight}>
+                      {viewModel.hero.primaryLabel}
+                    </CoachButton>
+                    {viewModel.hero.secondaryLabel && (
+                      <button
+                        type="button"
+                        onClick={() => navigate(viewModel.hero.secondaryTo)}
+                        className="text-sm font-semibold text-teal-700 hover:text-teal-900"
+                      >
+                        {viewModel.hero.secondaryLabel} &rarr;
+                      </button>
+                    )}
+                  </div>
+                </section>
+              )}
+            </div>
 
-        {hasLowerGrid && <div className="today-divider" />}
+            {hasLowerGrid && <div className="today-divider" />}
 
-        {hasLowerGrid && (
-          <div className="today-grid-lower">
-            {/* P37e returning-user sections. Loading/error only affect this
+            {hasLowerGrid && (
+              <div className="today-grid-lower">
+                {/* P37e returning-user sections. Loading/error only affect this
                 grid -- the focus band above is unaffected, so a slow or
                 failed /results/:uploadId fetch never collapses the whole
                 page (see delivery report §3). Documents still renders
                 below regardless, so the grid is never left empty. */}
-            {viewModel.returning?.status === 'loading' && (
-              <div className="today-tile today-tile--wide">
-                <CoachSkeleton rows={2} />
-              </div>
-            )}
-
-            {viewModel.returning?.status === 'error' && (
-              <div className="today-tile today-tile--wide">
-                <p className="text-sm text-slate-500">{viewModel.returning.limitationText}</p>
-              </div>
-            )}
-
-            {/* A balanced row when both exist (spec §17.1); when only one
-                exists, .today-pair's :only-child rule (today-page.css)
-                makes it span the full row instead of leaving an orphaned
-                half beside empty space. */}
-            {(viewModel.returning?.changes || viewModel.returning?.returnCheckpoint) && (
-              <div className="today-pair">
-                {viewModel.returning.changes && (
-                  <div className="today-tile">
-                    <div className="today-section-label">
-                      <TrendingUp className="h-4 w-4 text-emerald-600" />
-                      {copy.changes.title}
-                    </div>
-                    <div className="space-y-2">
-                      {viewModel.returning.changes.items.map((text, index) => (
-                        <p key={index} className="text-sm leading-6 text-slate-700">{text}</p>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => navigate(viewModel.returning.changes.to)}
-                      className="mt-3 text-sm font-semibold text-teal-700 hover:text-teal-900"
-                    >
-                      {copy.changes.cta} &rarr;
-                    </button>
+                {viewModel.returning?.status === 'loading' && (
+                  <div className="today-tile today-tile--wide">
+                    <CoachSkeleton rows={2} />
                   </div>
                 )}
 
-                {viewModel.returning.returnCheckpoint && (
-                  <div className="today-tile">
-                    <div className="today-section-label">
-                      <RefreshCw className="h-4 w-4 text-emerald-600" />
-                      {copy.returnSection.title}
-                    </div>
-                    <p className="text-sm leading-6 text-slate-700">{viewModel.returning.returnCheckpoint.text}</p>
-                    {viewModel.returning.returnCheckpoint.to && (
-                      <button
-                        type="button"
-                        onClick={() => navigate(viewModel.returning.returnCheckpoint.to)}
-                        className="mt-3 text-sm font-semibold text-teal-700 hover:text-teal-900"
-                      >
-                        {/* P37f fix: label must match the actual destination
+                {viewModel.returning?.status === 'error' && (
+                  <div className="today-tile today-tile--wide">
+                    <p className="text-sm text-slate-500">{viewModel.returning.limitationText}</p>
+                  </div>
+                )}
+
+                {/* A balanced row when both exist (spec §17.1); when only one
+                exists, .today-pair's :only-child rule (today-page.css)
+                makes it span the full row instead of leaving an orphaned
+                half beside empty space. */}
+                {(viewModel.returning?.changes || viewModel.returning?.returnCheckpoint) && (
+                  <div className="today-pair">
+                    {viewModel.returning.changes && (
+                      <div className="today-tile">
+                        <div className="today-section-label">
+                          <TrendingUp className="h-4 w-4 text-emerald-600" />
+                          {copy.changes.title}
+                        </div>
+                        <div className="space-y-2">
+                          {viewModel.returning.changes.items.map((text, index) => (
+                            <p key={index} className="text-sm leading-6 text-slate-700">{text}</p>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => navigate(viewModel.returning.changes.to)}
+                          className="mt-3 text-sm font-semibold text-teal-700 hover:text-teal-900"
+                        >
+                          {copy.changes.cta} &rarr;
+                        </button>
+                      </div>
+                    )}
+
+                    {viewModel.returning.returnCheckpoint && (
+                      <div className="today-tile">
+                        <div className="today-section-label">
+                          <RefreshCw className="h-4 w-4 text-emerald-600" />
+                          {copy.returnSection.title}
+                        </div>
+                        <p className="text-sm leading-6 text-slate-700">{viewModel.returning.returnCheckpoint.text}</p>
+                        {viewModel.returning.returnCheckpoint.to && (
+                          <button
+                            type="button"
+                            onClick={() => navigate(viewModel.returning.returnCheckpoint.to)}
+                            className="mt-3 text-sm font-semibold text-teal-700 hover:text-teal-900"
+                          >
+                            {/* P37f fix: label must match the actual destination
                             -- a gated/no-plan user's checkpoint correctly
                             links to resultsTo (never the protected plan
                             route), but the button must say so, not always
                             "Open my plan". */}
-                        {viewModel.returning.returnCheckpoint.ctaLabel === 'plan' ? copy.cta.plan : copy.cta.results} &rarr;
+                            {viewModel.returning.returnCheckpoint.ctaLabel === 'plan' ? copy.cta.plan : copy.cta.results} &rarr;
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {viewModel.returning?.clarity && (
+                  <div className="today-tile today-tile--wide">
+                    <div className="today-section-label">
+                      <HelpCircle className="h-4 w-4 text-emerald-600" />
+                      {copy.clarity.title}
+                    </div>
+                    <div className="today-clarity-grid">
+                      {viewModel.returning.clarity.items.map((item, index) => (
+                        <div key={index} className="today-clarity-item">
+                          <p className="text-sm font-semibold text-slate-950">{item.title}</p>
+                          {item.body && <p className="mt-0.5 text-sm leading-6 text-slate-600">{item.body}</p>}
+                          <button
+                            type="button"
+                            onClick={() => navigate(item.to)}
+                            className="mt-1 text-sm font-semibold text-teal-700 hover:text-teal-900"
+                          >
+                            {copy.clarity.cta} &rarr;
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Documents/"Latest report" keeps a single, slightly stronger
+                surface -- the spec's own "stable navigational anchor"
+                (§11) that should never disappear just because a different
+                section became the primary CTA. */}
+                {viewModel.documents && (
+                  <div className="today-tile today-tile--wide today-documents">
+                    <div className="today-documents__report-line">
+                      <Stethoscope className="h-4 w-4 text-emerald-600" />
+                      {viewModel.documents.reportLine}
+                    </div>
+                    <div className="today-documents__links">
+                      <button type="button" onClick={() => navigate(viewModel.documents.resultsTo)} className="today-documents__link">
+                        {copy.cta.results}
                       </button>
+                      {viewModel.documents.planTo && (
+                        <button type="button" onClick={() => navigate(viewModel.documents.planTo)} className="today-documents__link">
+                          {copy.cta.plan}
+                        </button>
+                      )}
+                      {viewModel.documents.planLocked && (
+                        <span className="today-documents__link today-documents__link--locked" title={viewModel.documents.upgradeNote}>
+                          {copy.cta.plan}
+                        </span>
+                      )}
+                      <button type="button" onClick={() => navigate(viewModel.documents.historyTo)} className="today-documents__link">
+                        {copy.cta.history}
+                      </button>
+                    </div>
+                    {viewModel.documents.upgradeNote && (
+                      <p className="mt-3 text-xs text-slate-500">{viewModel.documents.upgradeNote}</p>
                     )}
                   </div>
                 )}
               </div>
             )}
-
-            {viewModel.returning?.clarity && (
-              <div className="today-tile today-tile--wide">
-                <div className="today-section-label">
-                  <HelpCircle className="h-4 w-4 text-emerald-600" />
-                  {copy.clarity.title}
-                </div>
-                <div className="today-clarity-grid">
-                  {viewModel.returning.clarity.items.map((item, index) => (
-                    <div key={index} className="today-clarity-item">
-                      <p className="text-sm font-semibold text-slate-950">{item.title}</p>
-                      {item.body && <p className="mt-0.5 text-sm leading-6 text-slate-600">{item.body}</p>}
-                      <button
-                        type="button"
-                        onClick={() => navigate(item.to)}
-                        className="mt-1 text-sm font-semibold text-teal-700 hover:text-teal-900"
-                      >
-                        {copy.clarity.cta} &rarr;
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Documents/"Latest report" keeps a single, slightly stronger
-                surface -- the spec's own "stable navigational anchor"
-                (§11) that should never disappear just because a different
-                section became the primary CTA. */}
-            {viewModel.documents && (
-              <div className="today-tile today-tile--wide today-documents">
-                <div className="today-documents__report-line">
-                  <Stethoscope className="h-4 w-4 text-emerald-600" />
-                  {viewModel.documents.reportLine}
-                </div>
-                <div className="today-documents__links">
-                  <button type="button" onClick={() => navigate(viewModel.documents.resultsTo)} className="today-documents__link">
-                    {copy.cta.results}
-                  </button>
-                  {viewModel.documents.planTo && (
-                    <button type="button" onClick={() => navigate(viewModel.documents.planTo)} className="today-documents__link">
-                      {copy.cta.plan}
-                    </button>
-                  )}
-                  {viewModel.documents.planLocked && (
-                    <span className="today-documents__link today-documents__link--locked" title={viewModel.documents.upgradeNote}>
-                      {copy.cta.plan}
-                    </span>
-                  )}
-                  <button type="button" onClick={() => navigate(viewModel.documents.historyTo)} className="today-documents__link">
-                    {copy.cta.history}
-                  </button>
-                </div>
-                {viewModel.documents.upgradeNote && (
-                  <p className="mt-3 text-xs text-slate-500">{viewModel.documents.upgradeNote}</p>
-                )}
-              </div>
-            )}
-          </div>
+          </>
         )}
       </div>
 

@@ -350,3 +350,254 @@
   background: #FFFFFF;
   border: 1px solid rgba(15, 23, 42, 0.06);
 }
+
+/* ────────────────────────────────────────────────────────────────────────
+ * P37k — Today cockpit.
+ *
+ * Replaces the hero-first composition (P37h/P37i) with a denser,
+ * information-forward layout once a ready report's details have resolved:
+ * header -> status strip -> safety (if any) -> this week -> lab snapshot ->
+ * follow-up -> missing context -> report links. No giant headline, no
+ * decorative surface -- every block is a flat, tightly-padded card at the
+ * same visual weight, mobile-first, never nested card-in-card.
+ *
+ * Sizing per spec: 16-20px card padding, 12px section labels (reuses the
+ * existing .today-section-label), 16-18px block titles, 14px body text.
+ */
+
+.cockpit-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cockpit-header {
+  padding-bottom: 2px;
+}
+
+.cockpit-header__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cockpit-header__dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #64748B;
+}
+
+.cockpit-freshness-chip {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(42, 191, 170, 0.12);
+  color: var(--coach-primary-dark, #109581);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cockpit-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--coach-primary-dark, #109581);
+  white-space: nowrap;
+}
+
+.cockpit-link:hover {
+  color: #0b6b5b;
+}
+
+/* Status strip: 3 flat cells in one row on desktop, stacked on mobile --
+ * tight padding, no card-on-card (each cell is a plain bordered block
+ * directly inside the strip, not a card nested inside another card). */
+.cockpit-status-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .cockpit-status-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cockpit-status-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #F8FAFC;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--coach-text);
+}
+
+.cockpit-status-cell span {
+  min-width: 0;
+}
+
+.cockpit-section {
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: #F8FAFC;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+.cockpit-section .today-section-label {
+  margin-bottom: 8px;
+}
+
+.cockpit-section > p {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475569;
+  margin: 0;
+}
+
+/* P37k.1 — quiet report archive/footer. Deliberately NOT .today-documents
+ * (that pill-button treatment made the footer read as a second CTA
+ * cluster, duplicating whatever This week's actual primary action was).
+ * This is plain text on a faint surface -- present, findable, but visibly
+ * secondary to the page's one primary CTA. */
+.cockpit-documents {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #FAFBFC;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.cockpit-documents__report-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.cockpit-documents__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+}
+
+.cockpit-documents__locked {
+  font-size: 14px;
+  font-weight: 600;
+  color: #94A3B8;
+}
+
+/* Sparse ready-report state: one honest primary action instead of two
+ * empty-placeholder sections (This week / Latest lab snapshot). */
+.cockpit-section--sparse {
+  text-align: left;
+}
+
+.cockpit-row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cockpit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #FFFFFF;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+@media (max-width: 480px) {
+  .cockpit-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.cockpit-row__text {
+  min-width: 0;
+}
+
+.cockpit-row__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--coach-text);
+}
+
+.cockpit-row__why {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #64748B;
+}
+
+.cockpit-link--row {
+  white-space: nowrap;
+}
+
+/* Lab snapshot: compact rows, not a table and not individually-shadowed
+ * cards -- a worse-status row gets a left accent bar via border-left,
+ * status is never color-only (the status word itself is always printed
+ * inside .cockpit-lab-row__range's sibling text via the row's own name/
+ * value, so screen readers and colorblind users get the same information
+ * as the color accent). */
+.cockpit-lab-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cockpit-lab-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #FFFFFF;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-left: 3px solid transparent;
+  font-size: 13.5px;
+}
+
+@media (max-width: 480px) {
+  .cockpit-lab-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
+.cockpit-lab-row--deficient { border-left-color: #0284C7; }
+.cockpit-lab-row--elevated { border-left-color: #E11D48; }
+.cockpit-lab-row--borderline { border-left-color: #D97706; }
+.cockpit-lab-row--optimal { border-left-color: #059669; }
+
+.cockpit-lab-row__name {
+  font-weight: 700;
+  color: var(--coach-text);
+}
+
+.cockpit-lab-row__value {
+  color: #334155;
+}
+
+.cockpit-lab-row__range {
+  color: #94A3B8;
+  font-size: 12.5px;
+}

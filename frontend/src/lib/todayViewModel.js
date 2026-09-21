@@ -93,6 +93,285 @@ const PROGRESS_STATUS_LABEL_KEY = {
   stable: 'progressStable',
 }
 
+// P37k — Today cockpit. Same STATUS_ALIAS_MAP + range-inference logic
+// Results.jsx already uses to normalize a biomarker's status band (verified
+// against Results.jsx's own normalizeBiomarkerStatus()/inferStatusFromRange()
+// -- not reinvented). unit/name are read for display only, never classified.
+const STATUS_ALIAS_MAP = {
+  OPTIMAL: 'OPTIMAL',
+  NORMAL: 'OPTIMAL',
+  N: 'OPTIMAL',
+  BORDERLINE: 'BORDERLINE',
+  'LOW NORMAL': 'BORDERLINE',
+  'HIGH NORMAL': 'BORDERLINE',
+  LOW: 'DEFICIENT',
+  L: 'DEFICIENT',
+  DEFICIENT: 'DEFICIENT',
+  HIGH: 'ELEVATED',
+  H: 'ELEVATED',
+  ELEVATED: 'ELEVATED',
+  CRITICAL: 'ELEVATED',
+}
+const STATUS_RANK = { DEFICIENT: 0, ELEVATED: 1, BORDERLINE: 2, OPTIMAL: 3 }
+
+function inferStatusFromRange(biomarker) {
+  const low = Number(biomarker?.ref_low)
+  const high = Number(biomarker?.ref_high)
+  const value = Number(biomarker?.value)
+  if (!Number.isFinite(low) || !Number.isFinite(high) || !Number.isFinite(value) || high <= low) return 'BORDERLINE'
+  if (value < low) return 'DEFICIENT'
+  if (value > high) return 'ELEVATED'
+  const span = high - low
+  if (value <= low + span * 0.15 || value >= high - span * 0.15) return 'BORDERLINE'
+  return 'OPTIMAL'
+}
+
+function normalizeBiomarkerStatus(biomarker) {
+  const raw = String(biomarker?.status || '').trim().toUpperCase()
+  return STATUS_ALIAS_MAP[raw] || inferStatusFromRange(biomarker)
+}
+
+// P37k — Today cockpit view model. Built ONLY from fields already fetched
+// for the returning-user sections above (reportDetails.biomarkers,
+// .protocol, .knowledge_report.{action_plan,retest_plan}, .evidence_gaps)
+// plus the already-fetched summary.blocks.latest_questionnaire.completed_at
+// (passed in, never fetched here) -- no new endpoint, no recomputation of
+// clinical content, no invented scores/trends/dates. See the P37k delivery
+// report for the full field-by-field source mapping.
+// P37k.1 — derives the one correct action label for a given destination.
+// Fixes the release-blocking bug where every cockpit row said "View
+// results" regardless of where it actually navigated (including rows that
+// pointed at /protocol/:id or /questionnaire). This is the single source
+// of truth for row labels now -- no row is allowed to set its own label
+// independently of its actionTo.
+function actionLabelForTarget(to, { copy, planTo, resultsTo, uploadTo }) {
+  if (to === planTo) return copy.cta.plan
+  if (to === resultsTo) return copy.cta.results
+  if (to === uploadTo) return copy.cta.upload
+  if (to === '/questionnaire') return copy.cockpit.thisWeek.reviewSymptomAnswers
+  return copy.cta.results
+}
+
+function buildCockpitViewModel({
+  reportDetails,
+  copy,
+  isUk,
+  resultsTo,
+  planTo,
+  uploadTo,
+  planAccessAllowed,
+  planExists,
+  reportAge,
+  sourceDate,
+  symptomCheckDate,
+  safety, // questionnaire safety (viewModel.safety), already built by the caller
+  reportSafety, // report-scoped safety, already built by buildReturningUserSections
+  changes, // P37k.1: same already-built comparison object buildReturningUserSections
+  // produces (progress_intelligence/personal_baseline, capped at 3, or null) --
+  // not recomputed here, only surfaced in the cockpit's own compact section.
+}) {
+  const c = copy.cockpit
+  const label = (to) => actionLabelForTarget(to, { copy, planTo, resultsTo, uploadTo })
+  const isOldReport = reportAge === 'old' || reportAge === 'very_old'
+  const isVeryOldReport = reportAge === 'very_old'
+
+  // --- headerContext: two independent dates, never conflated -- lab date
+  // is the same measurement_date/report_generated_at sourceLine already
+  // uses; symptom-check date is summary.blocks.latest_questionnaire.
+  // completed_at, a completely different event on a different timeline. ---
+  const headerContext = {
+    labDate: sourceDate || null,
+    symptomCheckDate: symptomCheckDate || null,
+    reportAge,
+  }
+
+  // --- statusStrip ---
+  const biomarkers = Array.isArray(reportDetails?.biomarkers) ? reportDetails.biomarkers : []
+  const normalizedBiomarkers = biomarkers
+    .filter((b) => b && (b.name || b.canonical_name || b.name_en))
+    .map((b) => ({ raw: b, status: normalizeBiomarkerStatus(b) }))
+  const priorityCount = normalizedBiomarkers.filter((b) => b.status !== 'OPTIMAL').length
+
+  const retestPlan = Array.isArray(reportDetails?.knowledge_report?.retest_plan)
+    ? reportDetails.knowledge_report.retest_plan
+    : []
+  // "retest_plan[0] with marker+timing only" -- only the first item, and
+  // only if it actually carries both fields; never fall through to a later
+  // item and never synthesize a window for an incomplete first entry.
+  const firstRetest = retestPlan[0]
+  const nextRetest = (firstRetest?.marker && firstRetest?.timing)
+    ? { marker: humanizeLabel(firstRetest.marker, isUk), timing: firstRetest.timing }
+    : null
+
+  const basisLabel = normalizedBiomarkers.length === 0
+    ? c.statusStrip.basisIncomplete
+    : (reportAge === 'old' || reportAge === 'very_old')
+      ? c.statusStrip.basisOld
+      : c.statusStrip.basisFresh
+
+  const statusStrip = {
+    basisLabel,
+    priorityCount,
+    priorityLabel: priorityCount > 0 ? c.statusStrip.priorityCount(priorityCount) : c.statusStrip.priorityNone,
+    nextRetest,
+    nextRetestLabel: nextRetest ? c.statusStrip.nextRetestLabel(nextRetest.marker, nextRetest.timing) : c.statusStrip.nextRetestNone,
+  }
+
+  // --- safety (same two objects the caller already built; only adding an
+  // explicit action target here, never changing tone/text/source) ---
+  const cockpitSafety = {
+    questionnaire: safety ? { ...safety, actionTo: '/questionnaire' } : null,
+    report: reportSafety ? { ...reportSafety, actionTo: resultsTo } : null,
+  }
+
+  // --- thisWeek: up to 4 rows, strict priority order, only real data,
+  // exactly one primary CTA (the first row inserted) ---
+  const thisWeekRows = []
+  const pushRow = (row) => { if (thisWeekRows.length < 4) thisWeekRows.push(row) }
+
+  // a. clinician-review flag (report safety takes precedence over
+  // questionnaire safety, matching the existing priority order used for
+  // the safety banners themselves elsewhere in this file). actionTo/
+  // actionLabel are derived together via label() -- P37k.1 fix: this row
+  // used to always say "View results" even when it pointed at
+  // /questionnaire.
+  const topSafety = reportSafety || safety
+  if (topSafety) {
+    const to = reportSafety ? resultsTo : '/questionnaire'
+    pushRow({ kind: 'safety', title: c.thisWeek.clinicianReviewTitle, why: topSafety.text, actionLabel: label(to), actionTo: to })
+  }
+
+  // b. first 1-2 protocol/action_plan items (plain-text entries -- see
+  // Results.jsx's own consumption of the same fields, treated as strings)
+  const planItemsSource = Array.isArray(reportDetails?.protocol) && reportDetails.protocol.length
+    ? reportDetails.protocol
+    : Array.isArray(reportDetails?.knowledge_report?.action_plan)
+      ? reportDetails.knowledge_report.action_plan
+      : []
+  const planTarget = (planAccessAllowed && planExists) ? planTo : resultsTo
+  for (const item of planItemsSource.slice(0, 2)) {
+    const text = typeof item === 'string' ? item : (item?.title || item?.text || item?.description || null)
+    if (!text) continue
+    // P37k.1 fix: label must say "Open my plan" when this row actually
+    // targets /protocol/:id, not always "View results".
+    pushRow({ kind: 'plan', title: text, why: c.thisWeek.planItemWhy, actionLabel: label(planTarget), actionTo: planTarget })
+  }
+
+  // c. first retest_plan item with timing (same source as statusStrip's
+  // cell 3, surfaced here as its own actionable row)
+  if (nextRetest) {
+    pushRow({
+      kind: 'retest',
+      title: c.thisWeek.retestItemTitle(nextRetest.marker),
+      why: c.thisWeek.retestItemWhy(nextRetest.timing),
+      actionLabel: label(resultsTo),
+      actionTo: resultsTo,
+    })
+  }
+
+  // d. first evidence gap / missing marker
+  const gaps = Array.isArray(reportDetails?.evidence_gaps?.gaps) ? reportDetails.evidence_gaps.gaps : []
+  const firstGap = gaps[0]
+  if (firstGap) {
+    const gapTitle = firstGap.missing_marker || firstGap.domain
+    if (gapTitle) {
+      pushRow({ kind: 'gap', title: humanizeLabel(gapTitle, isUk), why: c.thisWeek.gapItemWhy, actionLabel: label(resultsTo), actionTo: resultsTo })
+    }
+  }
+
+  // P37k.1 — restores P37j's very_old primary-action semantics inside the
+  // cockpit: an old saved report/plan must never be the page's one primary
+  // CTA once it's old enough that "here's your next step" reads as current
+  // guidance it isn't. For very_old, Upload new results is unconditionally
+  // forced to the front and marked primary; every other row (safety
+  // included -- safety already has its own separate banner above, this is
+  // only about which THIS WEEK row gets the button) is demoted to a
+  // secondary link. This never removes a row, only reorders/relabels.
+  if (isVeryOldReport) {
+    thisWeekRows.unshift({ kind: 'upload', title: c.thisWeek.uploadRowTitle, why: c.thisWeek.uploadRowWhy, actionLabel: label(uploadTo), actionTo: uploadTo })
+    if (thisWeekRows.length > 4) thisWeekRows.length = 4
+  }
+
+  // Exactly one primary CTA on the whole page -- the first row present, in
+  // the priority order above (or the forced Upload row for very_old).
+  // Every other row (here and elsewhere) is a plain secondary link.
+  const thisWeek = thisWeekRows.map((row, index) => ({ ...row, isPrimary: index === 0 }))
+
+  // --- labSnapshot: 4-6 priority biomarkers, worst-status-first, no
+  // sparkline (no delta field exists on this payload's biomarker objects --
+  // see the P37k report's data-shape verification) ---
+  const labSnapshot = normalizedBiomarkers
+    .slice()
+    .sort((a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status])
+    .slice(0, 6)
+    .map(({ raw, status }) => {
+      const name = isUk
+        ? raw.canonical_name || raw.name || raw.source_name || raw.name_en
+        : raw.name_en || raw.canonical_name || raw.name || raw.source_name
+      return {
+        name: humanizeLabel(name, isUk) || name,
+        value: raw.value ?? null,
+        unit: raw.unit || '',
+        status,
+        rangeLabel: (raw.ref_low != null && raw.ref_high != null)
+          ? `${raw.ref_low}–${raw.ref_high}${raw.unit ? ` ${raw.unit}` : ''}`
+          : c.labSnapshot.rangeUnavailable,
+      }
+    })
+
+  // --- followUp: same nextRetest data, "window listed" framing, age-aware
+  // like the existing return-checkpoint copy, never a computed date ---
+  let followUp = null
+  if (nextRetest) {
+    followUp = {
+      text: isOldReport
+        ? c.followUp.windowListedSaved(nextRetest.marker, nextRetest.timing)
+        : c.followUp.windowListed(nextRetest.marker, nextRetest.timing),
+      to: resultsTo,
+    }
+  } else if (retestPlan.length) {
+    followUp = { text: c.followUp.none, to: resultsTo }
+  }
+
+  // --- missingContext (renamed "clarity"): up to 2 items, now including
+  // suggested_next_step verbatim when the backend provides one ---
+  const missingContextItems = gaps.slice(0, 2).map((gap) => {
+    const rawTitle = gap?.missing_marker || gap?.domain
+    return {
+      title: rawTitle ? humanizeLabel(rawTitle, isUk) : c.missingContext.genericTitle,
+      reason: gap?.reason ? humanizeLabel(gap.reason, isUk) : null,
+      suggestedNextStep: gap?.suggested_next_step || null,
+      to: resultsTo,
+    }
+  }).filter((item) => item.title)
+  const missingContext = missingContextItems.length ? missingContextItems : null
+
+  // P37k.1 — restores "Since your previous report" inside the cockpit.
+  // `changes` is the exact same object buildReturningUserSections already
+  // produces from progress_intelligence/personal_baseline (capped at 3,
+  // never invented -- unchanged from before P37k). This only surfaces it
+  // in the cockpit's own compact section; when progress_intelligence is
+  // unavailable and no personal-baseline signal exists, `changes` is
+  // already null and nothing renders here either.
+  const sinceLastReport = changes ? { items: changes.items, to: changes.to } : null
+
+  // P37k.1 — sparse ready-report fix: when there is truly nothing to show
+  // in either This week or the lab snapshot, showing both sections' empty-
+  // state placeholder copy reads as "a page of blank boxes". Instead,
+  // collapse to one honest primary action: for a very_old sparse report,
+  // Upload (the report itself is old AND has nothing else to show); for
+  // any other sparse report, View results (open the one thing that does
+  // exist -- the report itself). This never invents biomarker values, plan
+  // rows, retest timing, or safety; it only changes which single action is
+  // offered when there is genuinely no other content.
+  const isSparse = thisWeek.length === 0 && labSnapshot.length === 0
+  const sparsePrimaryAction = isSparse
+    ? { label: isVeryOldReport ? copy.cta.upload : copy.cta.results, to: isVeryOldReport ? uploadTo : resultsTo }
+    : null
+
+  return { headerContext, statusStrip, safety: cockpitSafety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction }
+}
+
 function buildReturningUserSections({
   reportDetailsLoading,
   reportDetailsError,
@@ -231,6 +510,10 @@ export function buildTodayViewModel({
   // classification (see classifyReportAge's own comment). Defaulting to
   // `new Date()` keeps every pre-P37j call site working unchanged.
   now = new Date(),
+  // P37k -- summary.blocks.latest_questionnaire.completed_at, passed in
+  // (never fetched here) for the cockpit's headerContext. A different
+  // event/date than the report's own measurement_date -- never conflated.
+  symptomCheckCompletedAt = null,
 }) {
   const safety = safetyTone === 'success'
     ? null // "no urgent red flags" is not a banner-worthy signal on its own -- see do-not-do §14 (do not carry forward "No urgent red flags reported." as a default banner)
@@ -350,6 +633,25 @@ export function buildTodayViewModel({
     uploadTo,
   }
 
+  // P37k: symptom-check date is a wholly different event/timeline than the
+  // report's own source date -- summary.blocks.latest_questionnaire.
+  // completed_at, passed in verbatim, never conflated with measurement_date/
+  // report_generated_at.
+  const symptomCheckDate = formatDate(symptomCheckCompletedAt, isUk)
+
+  // P37k: the cockpit is only meaningful once reportDetails has actually
+  // resolved (returning.status === 'ready') -- while loading/erroring, the
+  // existing returning.status tile already communicates that, so cockpit
+  // stays null rather than rendering with partial/stale data.
+  function buildCockpitFor(returning, planLinkTo, planIsAccessible) {
+    if (returning.status !== 'ready') return null
+    return buildCockpitViewModel({
+      reportDetails, copy, isUk, resultsTo, planTo: planLinkTo, uploadTo, reportAge, sourceDate, symptomCheckDate,
+      planAccessAllowed: planIsAccessible, planExists,
+      safety, reportSafety: returning.reportSafety, changes: returning.changes,
+    })
+  }
+
   if (!planExists) {
     const returning = buildReturningUserSections({
       reportDetailsLoading, reportDetailsError, reportDetails, copy, isUk, resultsTo, returnLinkTo: resultsTo, returnLinkLabel: 'results', reportAge,
@@ -383,6 +685,7 @@ export function buildTodayViewModel({
       sourceLine,
       reportAge,
       returning,
+      cockpit: buildCockpitFor(returning, null, false),
     }
   }
 
@@ -424,6 +727,7 @@ export function buildTodayViewModel({
       sourceLine,
       reportAge,
       returning,
+      cockpit: buildCockpitFor(returning, null, false),
     }
   }
 
@@ -464,5 +768,6 @@ export function buildTodayViewModel({
     sourceLine,
     reportAge,
     returning,
+    cockpit: buildCockpitFor(returning, planTo, true),
   }
 }

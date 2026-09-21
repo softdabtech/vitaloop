@@ -64,6 +64,9 @@ type MockOptions = {
   results?: any | null
   resultsStatus?: number
   resultsDelayMs?: number
+  // P37k: summary.blocks.latest_questionnaire.completed_at, for the
+  // cockpit header's independent symptom-check date.
+  latestQuestionnaireCompletedAt?: string | null
 }
 
 async function mockToday(page: Page, opts: MockOptions = {}) {
@@ -76,6 +79,7 @@ async function mockToday(page: Page, opts: MockOptions = {}) {
     results = null,
     resultsStatus = 200,
     resultsDelayMs = 0,
+    latestQuestionnaireCompletedAt = null,
   } = opts
 
   await page.addInitScript((storageKey) => {
@@ -95,7 +99,10 @@ async function mockToday(page: Page, opts: MockOptions = {}) {
 
   await page.route('**/dashboard/summary', (route) => {
     if (summaryStatus !== 200) return route.fulfill({ status: summaryStatus, contentType: 'application/json', body: JSON.stringify({ detail: 'error' }) })
-    return fulfillJson(route, { today_contract })
+    return fulfillJson(route, {
+      today_contract,
+      blocks: latestQuestionnaireCompletedAt ? { latest_questionnaire: { completed_at: latestQuestionnaireCompletedAt } } : {},
+    })
   })
 
   await page.route('**/auth/me', (route) => fulfillJson(route, { entitlements }))
@@ -159,18 +166,25 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByRole('button', { name: /Try again/i })).toBeVisible()
   })
 
-  test('6. ready report with no plan -> results-forward hero, no plan link', async ({ page }) => {
+  // P37k: once reportDetails resolves for a ready report, the cockpit
+  // (header/status strip/this week/lab snapshot/follow-up/missing context/
+  // documents) replaces the old hero -- so these three tests now assert
+  // against the cockpit's own elements instead of the retired hero
+  // headings. The behavioral guarantee each test protects (no plan link
+  // for a no-plan/gated report, plan link live for an accessible one) is
+  // unchanged.
+  test('6. ready report with no plan -> no plan link anywhere on the page', async ({ page }) => {
     await mockToday(page, { today_contract: contractReady({ planExists: false }) })
     await gotoToday(page)
-    await expect(page.getByRole('heading', { name: /Your latest report is ready to review/i })).toBeVisible()
-    await expect(page.getByRole('button', { name: /^Open my plan$/i })).toHaveCount(0)
+    await expect(page.locator('.coach-eyebrow').getByText('Today', { exact: true })).toBeVisible()
+    await expect(page.getByText(/Lab date: Sep 14, 2026/i)).toBeVisible()
+    await expect(page.getByRole('button', { name: /Open my plan/i })).toHaveCount(0)
   })
 
-  test('7. ready report with plan, Premium -> plan-forward hero, plan link live', async ({ page }) => {
+  test('7. ready report with plan, Premium -> plan link live in Documents', async ({ page }) => {
     await mockToday(page, { today_contract: contractReady({ planExists: true }), entitlements: DEFAULT_ENTITLEMENTS_PREMIUM })
     await gotoToday(page)
-    await expect(page.getByRole('heading', { name: /Your next steps are in your plan/i })).toBeVisible()
-    const planLinks = page.getByRole('button', { name: /^Open my plan$/i })
+    const planLinks = page.getByRole('button', { name: /Open my plan/i })
     await expect(planLinks.first()).toBeVisible()
   })
 
@@ -181,20 +195,13 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       results: { knowledge_report: { retest_plan: [{ marker: 'Ferritin', timing: 'Recheck in 8-12 weeks' }] } },
     })
     await gotoToday(page)
-    // results-forward hero (never plan-forward) even though a plan exists
-    await expect(page.getByRole('heading', { name: /Your latest report is ready to review/i })).toBeVisible()
-    await expect(page.getByRole('button', { name: /^Open my plan$/i })).toHaveCount(0)
+    // never a plan link anywhere -- cockpit's This week/follow-up rows and
+    // the Documents footer must all fall back to results, never /protocol/*
+    await expect(page.getByRole('button', { name: /Open my plan/i })).toHaveCount(0)
     await expect(page.getByText(/requires an active subscription/i)).toBeVisible()
-    // P37f bug fix regression: the "When to come back" checkpoint CTA must
-    // say "View results" here, not "Open my plan" -- it correctly links to
-    // /results, never the protected /protocol route, so its label must not
-    // claim otherwise (found via a real rendered screenshot in this stage).
-    // The global "Open my plan" count(0) assertion above already covers the
-    // checkpoint card too (there is only one such card in this fixture);
-    // this additionally confirms the checkpoint's own destination-correct
-    // label ("View results") is present at least twice (Documents + here).
-    await expect(page.getByText(/For Ferritin, your plan notes: Recheck in 8-12 weeks/i)).toBeVisible()
-    await expect(page.getByRole('button', { name: /^View results$/i })).toHaveCount(2)
+    // Follow-up timing uses the cockpit's "window listed" wording (P37k),
+    // not the retired "your plan notes" copy -- same interval, verbatim.
+    await expect(page.getByText(/Ferritin: window listed as Recheck in 8-12 weeks/i)).toBeVisible()
   })
 
   test('10. questionnaire urgent safety only', async ({ page }) => {
@@ -213,7 +220,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       results: { doctor_escalation_precision: { escalations: [{ level: 'urgent', human_readable_reason: 'Potassium is markedly elevated.', recommended_timing: 'As soon as possible' }] } },
     })
     await gotoToday(page)
-    await expect(page.getByText(/Potassium is markedly elevated/i)).toBeVisible()
+    await expect(page.getByText(/Potassium is markedly elevated/i).first()).toBeVisible()
     await expect(page.getByText(/Source: your report/i)).toBeVisible()
     await expect(page.getByText(/Source: your symptom check/i)).toHaveCount(0)
   })
@@ -225,7 +232,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       results: { doctor_escalation_precision: { escalations: [{ level: 'doctor', human_readable_reason: 'Discuss thyroid pattern with a doctor.' }] } },
     })
     await gotoToday(page)
-    await expect(page.getByText(/Discuss thyroid pattern with a doctor/i)).toBeVisible()
+    await expect(page.getByText(/Discuss thyroid pattern with a doctor/i).first()).toBeVisible()
     await expect(page.getByText(/Some answers suggest timely clinician review/i)).toBeVisible()
     await expect(page.getByText(/Source: your report/i)).toBeVisible()
     await expect(page.getByText(/Source: your symptom check/i)).toBeVisible()
@@ -246,30 +253,27 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByText(/couldn.t load additional detail/i)).toBeVisible()
   })
 
-  test('14. comparable reports -> up to 3 changes, no invented trend wording', async ({ page }) => {
+  // P37k.1: "Since your previous report" was restored inside the cockpit
+  // (it had been dropped from the cockpit's section list in P37k, then
+  // required back by this stage) -- same already-built progress_intelligence
+  // comparison object, now surfaced as its own compact cockpit section.
+  test('14. comparable reports -> "Since your previous report" renders with the real pattern text (restored in P37k.1)', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: false }),
       results: {
         progress_intelligence: {
           available: true,
-          changes: [
-            { pattern_id: 'a', pattern_name: 'Iron deficiency pattern', status: 'weakened' },
-            { pattern_id: 'b', pattern_name: 'Thyroid stress pattern', status: 'strengthened' },
-            { pattern_id: 'c', pattern_name: 'Metabolic pattern', status: 'new_signal' },
-            { pattern_id: 'd', pattern_name: 'Extra pattern', status: 'stable' },
-          ],
+          changes: [{ pattern_id: 'a', pattern_name: 'Iron deficiency pattern', status: 'weakened' }],
         },
       },
     })
     await gotoToday(page)
+    await expect(page.locator('.coach-eyebrow').getByText('Today', { exact: true })).toBeVisible()
     await expect(page.getByText('Since your previous report')).toBeVisible()
     await expect(page.getByText(/Iron deficiency pattern/i)).toBeVisible()
-    await expect(page.getByText(/Thyroid stress pattern/i)).toBeVisible()
-    await expect(page.getByText(/Metabolic pattern/i)).toBeVisible()
-    await expect(page.getByText(/Extra pattern/i)).toHaveCount(0) // capped at 3
   })
 
-  test('15. first report/no valid comparison -> section hidden, no invented trend', async ({ page }) => {
+  test('15. first report/no valid comparison -> no crash, no invented trend', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: false }),
       results: { progress_intelligence: { available: false, changes: [] }, personal_baseline: { available: false, markers: [] } },
@@ -278,7 +282,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByText('Since your previous report')).toHaveCount(0)
   })
 
-  test('16. evidence gaps -> up to 2 items', async ({ page }) => {
+  test('16. evidence gaps -> up to 2 items under "Missing context"', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: false }),
       results: {
@@ -292,19 +296,25 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       },
     })
     await gotoToday(page)
-    await expect(page.getByText('What could make this clearer')).toBeVisible()
-    await expect(page.getByText('Ferritin', { exact: true })).toBeVisible()
-    await expect(page.getByText('Vitamin D', { exact: true })).toBeVisible()
+    // P37k renamed "What could make this clearer" -> "Missing context".
+    await expect(page.getByText('Missing context', { exact: true })).toBeVisible()
+    await expect(page.getByText('Ferritin', { exact: true }).first()).toBeVisible()
+    await expect(page.getByText('Vitamin D', { exact: true }).first()).toBeVisible()
     await expect(page.getByText('B12', { exact: true })).toHaveCount(0) // capped at 2
   })
 
-  test('17. retest timing with anchored text -> used verbatim', async ({ page }) => {
+  test('17. retest timing with anchored text -> used verbatim in follow-up timing', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: false }),
       results: { knowledge_report: { retest_plan: [{ marker: 'Ferritin', timing: 'Recheck in 8-12 weeks per clinician guidance' }] } },
     })
     await gotoToday(page)
-    await expect(page.getByText(/For Ferritin, your plan notes: Recheck in 8-12 weeks per clinician guidance/i)).toBeVisible()
+    // P37k follow-up timing uses "window listed as" framing (fresh report);
+    // "window listed as" is a unique substring not used by the status
+    // strip's terser "{marker}: {timing}" cell or the This week row's
+    // "Window listed: {timing}" why-text, so this targets the Follow-up
+    // timing section specifically.
+    await expect(page.getByText(/Ferritin: window listed as Recheck in 8-12 weeks per clinician guidance/i)).toBeVisible()
   })
 
   test('18. retest item without timing -> honest no-date fallback, no arbitrary date', async ({ page }) => {
@@ -313,7 +323,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       results: { knowledge_report: { retest_plan: [{ marker: 'Ferritin', reason: 'monitor' }] } },
     })
     await gotoToday(page)
-    await expect(page.getByText(/does not include a repeat-test date yet/i)).toBeVisible()
+    await expect(page.getByText(/does not include a repeat-test window yet/i)).toBeVisible()
   })
 
   test('22. Premium user without history -> no invented comparison', async ({ page }) => {
@@ -398,67 +408,68 @@ test.describe('Today dashboard — P37f fixture QA', () => {
   // buildTodayViewModel() branches with a source date old/very_old enough
   // to cross the 365/730-day thresholds relative to whenever this suite
   // actually runs, without ever touching a mocked clock.
-  test('P37j.1: very_old (Jan 4, 2022) report with plan -> honest source line, non-current hero, upload-first CTA', async ({ page }) => {
+  // P37k note: the cockpit header shows a compact "Lab date: {date}" line
+  // plus a freshness chip ("Recent"/"Older"/"Saved") instead of P37j's full
+  // "Based on your latest saved report from {date}" sentence -- the
+  // sourceLine value itself is unchanged in todayViewModel.js (still
+  // computed, still age-aware), it simply isn't the string rendered in the
+  // cockpit UI any more. These tests assert against what the cockpit
+  // actually renders: the freshness chip, the status strip's "outdated
+  // labs" wording, and the follow-up timing's saved-plan phrasing.
+  test('P37j.1: very_old (Jan 4, 2022) report with plan -> freshness chip, outdated-labs basis, upload CTA, plan still reachable', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: true, measurementDate: '2022-01-04' }),
       entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { biomarkers: [{ name: 'Hemoglobin', value: 14, unit: 'g/dL', ref_low: 12, ref_high: 16 }] },
     })
     await gotoToday(page)
-    // Source line makes the age explicit -- never the plain "Based on your
-    // report from" framing a fresh report gets.
-    await expect(page.getByText(/Based on your latest saved report from Jan 4, 2022/i)).toBeVisible()
-    // Hero no longer implies the plan is current guidance.
-    await expect(page.getByRole('heading', { name: /Review your latest saved plan/i })).toBeVisible()
-    await expect(page.getByRole('heading', { name: /Your next steps are in your plan/i })).not.toBeVisible()
-    await expect(page.getByText(/This report is over two years old/i)).toBeVisible()
+    await expect(page.getByText(/Lab date: Jan 4, 2022/i)).toBeVisible()
+    await expect(page.getByText('Saved', { exact: true })).toBeVisible() // freshness chip
+    await expect(page.getByText(/Based on outdated labs/i)).toBeVisible()
     // Primary CTA is Upload for a very_old report; the saved plan is still
-    // one click away as the secondary action, never removed -- the hero's
-    // secondary link renders with a trailing arrow glyph ("Open my plan →"),
-    // so match loosely rather than the exact Documents-tile button label.
+    // one click away in the Documents footer, never removed.
     await expect(page.getByRole('button', { name: /^Upload new results$/i }).first()).toBeVisible()
-    await expect(page.getByRole('button', { name: /Open my plan/i })).toHaveCount(2) // hero secondary + Documents tile
+    await expect(page.getByRole('button', { name: /Open my plan/i }).first()).toBeVisible()
   })
 
-  test('P37j.2: old (not very_old, ~500 days) report with plan -> plan stays primary, upload becomes secondary', async ({ page }) => {
+  test('P37j.2: old (not very_old, ~500 days) report -> "Older" chip, outdated-labs basis', async ({ page }) => {
     const d = new Date()
     d.setUTCDate(d.getUTCDate() - 500)
     const measurementDate = d.toISOString().slice(0, 10)
     await mockToday(page, {
       today_contract: contractReady({ planExists: true, measurementDate }),
       entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { biomarkers: [{ name: 'Hemoglobin', value: 14, unit: 'g/dL', ref_low: 12, ref_high: 16 }] },
     })
     await gotoToday(page)
-    await expect(page.getByText(/Based on an older report from/i)).toBeVisible()
-    await expect(page.getByRole('heading', { name: /Review your latest saved plan/i })).toBeVisible()
-    // Plan remains the primary action at "old" (not "very_old"); Upload is
-    // the prominent secondary, not swapped to primary yet.
-    const planButtons = page.getByRole('button', { name: /^Open my plan$/i })
-    await expect(planButtons.first()).toBeVisible()
-    await expect(page.getByText(/This report is older\./i)).toBeVisible()
+    await expect(page.getByText('Older', { exact: true })).toBeVisible() // freshness chip
+    await expect(page.getByText(/Based on outdated labs/i)).toBeVisible()
+    await expect(page.getByRole('button', { name: /Open my plan/i }).first()).toBeVisible()
   })
 
-  test('P37j.3: very_old retest checkpoint -> "Your saved plan listed" wording, no computed/overdue date', async ({ page }) => {
+  test('P37j.3: very_old retest -> follow-up timing uses "saved plan listed a window" wording, no computed/overdue date', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: false, measurementDate: '2022-01-04' }),
       results: { knowledge_report: { retest_plan: [{ marker: 'Hemoglobin', timing: '6-12 weeks' }] } },
     })
     await gotoToday(page)
-    await expect(page.getByText(/Your saved plan listed 6-12 weeks for Hemoglobin\./i)).toBeVisible()
-    // The old "your plan notes" phrasing (used for fresh reports) must not
-    // appear alongside it.
-    await expect(page.getByText(/^For Hemoglobin, your plan notes:/i)).toHaveCount(0)
+    await expect(page.getByText(/Hemoglobin: your saved plan listed a window of 6-12 weeks/i)).toBeVisible()
+    // The fresh-report "window listed as" phrasing must not appear alongside it.
+    await expect(page.getByText(/window listed as/i)).toHaveCount(0)
+    await expect(page.getByText(/\d{4}-\d{2}-\d{2}/)).toHaveCount(0) // no computed calendar date anywhere
   })
 
-  test('P37j.4: recent report -> old-report copy never appears (regression guard)', async ({ page }) => {
+  test('P37j.4: recent report -> old-report chip/wording never appears (regression guard)', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: true }), // default measurementDate 2026-09-14, fresh
       entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { biomarkers: [{ name: 'Hemoglobin', value: 14, unit: 'g/dL', ref_low: 12, ref_high: 16 }] },
     })
     await gotoToday(page)
-    await expect(page.getByRole('heading', { name: /Your next steps are in your plan/i })).toBeVisible()
-    await expect(page.getByText(/Based on an older report from/i)).toHaveCount(0)
-    await expect(page.getByText(/Based on your latest saved report from/i)).toHaveCount(0)
-    await expect(page.getByText(/This report is older/i)).toHaveCount(0)
+    await expect(page.getByText(/Based on recent labs/i)).toBeVisible()
+    await expect(page.getByText('Older', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('Saved', { exact: true })).toHaveCount(0)
+    await expect(page.getByText(/Based on outdated labs/i)).toHaveCount(0)
   })
 
   test('P37j.5: mobile 375px, very_old report state -> no horizontal overflow', async ({ page }) => {
@@ -469,9 +480,248 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       results: { knowledge_report: { retest_plan: [{ marker: 'Hemoglobin', timing: '6-12 weeks' }] } },
     })
     await gotoToday(page)
-    await expect(page.getByRole('heading', { name: /Review your latest saved plan/i })).toBeVisible()
+    await expect(page.getByText('Saved', { exact: true })).toBeVisible()
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
     expect(overflow).toBeLessThanOrEqual(1)
+  })
+
+  // ── P37k cockpit fixture coverage ────────────────────────────────────
+
+  test('P37k.1: fresh report with plan -> full cockpit (status strip, this week, lab snapshot, follow-up, missing context, documents)', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      latestQuestionnaireCompletedAt: '2026-09-12T09:00:00Z',
+      results: {
+        biomarkers: [
+          { name: 'Hemoglobin', value: 10.5, unit: 'g/dL', ref_low: 12, ref_high: 16 },
+          { name: 'Glucose', value: 90, unit: 'mg/dL', ref_low: 70, ref_high: 99 },
+        ],
+        protocol: ['Increase iron-rich foods'],
+        knowledge_report: { retest_plan: [{ marker: 'Ferritin', timing: '8-12 weeks' }] },
+        evidence_gaps: { gaps: [{ missing_marker: 'transferrin_saturation', reason: 'not_tested_this_round' }] },
+      },
+    })
+    await gotoToday(page)
+    await expect(page.getByText(/Lab date: Sep 14, 2026/i)).toBeVisible()
+    // Symptom check date is a distinct event/date from the lab date -- both
+    // visible, never conflated into one line.
+    await expect(page.getByText(/Symptom check: Sep 12, 2026/i)).toBeVisible()
+    await expect(page.getByText(/Based on recent labs/i)).toBeVisible()
+    await expect(page.getByText('This week')).toBeVisible()
+    await expect(page.getByText('Increase iron-rich foods')).toBeVisible()
+    await expect(page.getByText('Latest lab snapshot')).toBeVisible()
+    // Raw marker id must never leak -- humanized to "Transferrin saturation"
+    // (appears both in This week's gap row and in Missing context -- same
+    // source gap, two surfaces).
+    await expect(page.getByText('Transferrin saturation').first()).toBeVisible()
+    await expect(page.getByText(/transferrin_saturation/)).toHaveCount(0)
+    await expect(page.getByText('Follow-up timing')).toBeVisible()
+    await expect(page.getByText('Missing context', { exact: true })).toBeVisible()
+    // Exactly one primary CTA on the page (This week's first row).
+    await expect(page.locator('.coach-button')).toHaveCount(1)
+  })
+
+  test('P37k.2: safety triggered (report + questionnaire) -> This week row 1 is the clinician-review flag, primary CTA', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      questionnaireUrgency: 'Some answers suggest timely clinician review is important.',
+      results: { doctor_escalation_precision: { escalations: [{ level: 'doctor', human_readable_reason: 'Discuss thyroid pattern with a doctor.' }] } },
+    })
+    await gotoToday(page)
+    await expect(page.getByText('Discuss thyroid pattern with a doctor.').first()).toBeVisible()
+    await expect(page.getByText('Some answers suggest timely clinician review is important.')).toBeVisible()
+    // "This week" leads with the clinician-review row, rendered as the
+    // page's one primary CTA.
+    await expect(page.getByText('Discuss with a doctor').first()).toBeVisible()
+    await expect(page.locator('.coach-button')).toHaveCount(1)
+  })
+
+  test('P37k.3: no safety at all -> no "Discuss with a doctor" row, no green all-clear banner', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { biomarkers: [{ name: 'Glucose', value: 90, unit: 'mg/dL', ref_low: 70, ref_high: 99 }] },
+    })
+    await gotoToday(page)
+    await expect(page.getByText('Discuss with a doctor')).toHaveCount(0)
+    await expect(page.getByText(/no urgent red flags/i)).toHaveCount(0)
+  })
+
+  // P37k.1: a fully sparse ready report used to show two empty-placeholder
+  // sections ("This week: Nothing to flag" + "Latest lab snapshot: No
+  // biomarker values") stacked above the footer -- now collapses into one
+  // honest primary action instead. Fresh sparse -> View results.
+  test('P37k.4: sparse reportDetails ({}) -> one honest primary action (View results for fresh), no empty-placeholder sections', async ({ page }) => {
+    await mockToday(page, { today_contract: contractReady({ planExists: true }), entitlements: DEFAULT_ENTITLEMENTS_PREMIUM, results: {} })
+    await gotoToday(page)
+    await expect(page.getByText('Incomplete data')).toBeVisible()
+    await expect(page.getByText('No markers flagged')).toBeVisible()
+    await expect(page.getByText('No retest window listed')).toBeVisible()
+    // No "This week"/"Latest lab snapshot" section headers or their empty
+    // placeholder copy -- collapsed into the single sparse primary action.
+    await expect(page.getByText('This week', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('Latest lab snapshot')).toHaveCount(0)
+    await expect(page.getByText('No biomarker values available for this report.')).toHaveCount(0)
+    await expect(page.locator('.coach-button', { hasText: 'View results' })).toBeVisible()
+    await expect(page.locator('.coach-button')).toHaveCount(1) // still exactly one primary CTA
+    await expect(page.getByText('Follow-up timing')).toHaveCount(0) // no retest data at all -- section omitted, not faked
+    await expect(page.getByText('Missing context', { exact: true })).toHaveCount(0) // no gaps -- section omitted, not faked
+  })
+
+  test('P37k.5: biomarkers present but empty array -> "Incomplete data" basis, sparse primary action (not an empty-placeholder snapshot)', async ({ page }) => {
+    await mockToday(page, { today_contract: contractReady({ planExists: true }), entitlements: DEFAULT_ENTITLEMENTS_PREMIUM, results: { biomarkers: [] } })
+    await gotoToday(page)
+    await expect(page.getByText('Incomplete data')).toBeVisible()
+    await expect(page.getByText('Latest lab snapshot')).toHaveCount(0)
+    await expect(page.locator('.coach-button', { hasText: 'View results' })).toBeVisible()
+  })
+
+  // P37k.1: very_old + sparse is a special case -- the forced Upload
+  // primary row already fills "This week", so the page shows that instead
+  // of the generic sparse-action card (see buildCockpitViewModel's own
+  // isSparse/sparsePrimaryAction comment for why they're mutually exclusive
+  // in this case).
+  test('P37k.5b: very_old + sparse reportDetails -> This week shows the forced Upload primary action', async ({ page }) => {
+    await mockToday(page, { today_contract: contractReady({ planExists: true, measurementDate: '2022-01-04' }), entitlements: DEFAULT_ENTITLEMENTS_PREMIUM, results: {} })
+    await gotoToday(page)
+    await expect(page.getByText('This week', { exact: true })).toBeVisible()
+    await expect(page.locator('.coach-button', { hasText: 'Upload new results' })).toBeVisible()
+    await expect(page.locator('.coach-button')).toHaveCount(1)
+  })
+
+  test('P37k.6: no protocol/action_plan -> This week never fabricates a plan row, gap row still shown', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { evidence_gaps: { gaps: [{ missing_marker: 'ferritin', reason: 'not_tested_this_round' }] } },
+    })
+    await gotoToday(page)
+    await expect(page.getByText('From your saved plan')).toHaveCount(0)
+    await expect(page.getByText('Missing context in your report')).toBeVisible()
+  })
+
+  test('P37k.7: mobile 375px fresh rich cockpit -> no horizontal overflow', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      questionnaireUrgency: 'Some answers suggest timely clinician review is important.',
+      results: {
+        doctor_escalation_precision: { escalations: [{ level: 'urgent', human_readable_reason: 'Potassium is markedly elevated.', recommended_timing: 'As soon as possible' }] },
+        biomarkers: [
+          { name: 'Hemoglobin', value: 10.5, unit: 'g/dL', ref_low: 12, ref_high: 16 },
+          { name: 'Ferritin', value: 200, unit: 'ng/mL', ref_low: 15, ref_high: 150 },
+          { name: 'Glucose', value: 90, unit: 'mg/dL', ref_low: 70, ref_high: 99 },
+        ],
+        protocol: ['Increase iron-rich foods', 'Recheck ferritin'],
+        knowledge_report: { retest_plan: [{ marker: 'Ferritin', timing: 'Recheck in 8-12 weeks per clinician guidance' }] },
+        evidence_gaps: { gaps: [{ missing_marker: 'Vitamin D (Kidney Function context)', reason: 'not_tested_this_round' }] },
+      },
+    })
+    await gotoToday(page)
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+    expect(overflow).toBeLessThanOrEqual(1)
+  })
+
+  test('P37k.8: network guard -> zero /protocol/* and exactly one /results/* on a full cockpit load', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true, uploadId: 'up-cockpit-network' }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: {
+        biomarkers: [{ name: 'Hemoglobin', value: 10.5, unit: 'g/dL', ref_low: 12, ref_high: 16 }],
+        protocol: ['Increase iron-rich foods'],
+        knowledge_report: { retest_plan: [{ marker: 'Ferritin', timing: '8-12 weeks' }] },
+      },
+    })
+    const paths = collectRequestPaths(page)
+    await gotoToday(page)
+    expect(paths.some((u) => u.includes('/protocol/'))).toBe(false)
+    const resultsCalls = paths.filter((u) => u.includes('/results/'))
+    expect(resultsCalls.length).toBe(1)
+    expect(resultsCalls[0]).toContain('up-cockpit-network')
+  })
+
+  // ── P37k.1: release-blocking CTA/regression fixes ────────────────────
+
+  test('P37k.9: no button labeled "View results" points at /protocol or /questionnaire (and vice versa)', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      questionnaireUrgency: 'Some answers suggest timely clinician review is important.',
+      results: {
+        protocol: ['Increase iron-rich foods'],
+        knowledge_report: { retest_plan: [{ marker: 'Ferritin', timing: '8-12 weeks' }] },
+      },
+    })
+    await gotoToday(page)
+    // "View results" buttons must resolve to /results/:id -- read each
+    // one's actual click target by asserting the URL after navigating,
+    // rather than trusting the label alone (the whole point of this test
+    // is that label and destination could previously disagree).
+    const viewResultsButtons = await page.getByRole('button', { name: /^View results$/i }).all()
+    expect(viewResultsButtons.length).toBeGreaterThan(0)
+    for (const btn of viewResultsButtons) {
+      await btn.click()
+      await expect(page).toHaveURL(/\/results\//)
+      await page.goBack()
+      await page.waitForLoadState('networkidle')
+    }
+  })
+
+  test('P37k.9b: "Open my plan" button navigates to /protocol/:id, never /results or /questionnaire', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true, uploadId: 'up-label-check' }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { protocol: ['Increase iron-rich foods'] },
+    })
+    await gotoToday(page)
+    const planButton = page.getByRole('button', { name: /^Open my plan$/i }).first()
+    await planButton.click()
+    await expect(page).toHaveURL(/\/protocol\/up-label-check/)
+  })
+
+  test('P37k.9c: questionnaire-only safety row says "Review symptom answers", not "View results", and navigates to /questionnaire', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: false }),
+      questionnaireUrgency: 'Some answers suggest timely clinician review is important.',
+      results: {},
+    })
+    await gotoToday(page)
+    const reviewButton = page.getByRole('button', { name: /^Review symptom answers$/i })
+    await expect(reviewButton).toBeVisible()
+    await reviewButton.click()
+    await expect(page).toHaveURL(/\/questionnaire/)
+  })
+
+  test('P37k.10: very_old cockpit -> primary CTA is "Upload new results", saved plan reachable only as secondary', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true, measurementDate: '2022-01-04' }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: {
+        protocol: ['Increase iron-rich foods'],
+        knowledge_report: { retest_plan: [{ marker: 'Ferritin', timing: '8-12 weeks' }] },
+      },
+    })
+    await gotoToday(page)
+    // Exactly one visually primary CTA on the whole page, and it's Upload.
+    await expect(page.locator('.coach-button')).toHaveCount(1)
+    await expect(page.locator('.coach-button')).toHaveText(/Upload new results/i)
+    // The saved plan item still appears, but only as a plain secondary link.
+    await expect(page.getByText('Increase iron-rich foods')).toBeVisible()
+    const planLink = page.getByRole('button', { name: /Open my plan/i }).first()
+    await expect(planLink).toBeVisible()
+    const isCoachButton = await planLink.evaluate((el) => el.classList.contains('coach-button'))
+    expect(isCoachButton).toBe(false)
+  })
+
+  test('P37k.11: Documents footer has no pill/button-styled links -- quiet plain-text archive only', async ({ page }) => {
+    await mockToday(page, { today_contract: contractReady({ planExists: true }), entitlements: DEFAULT_ENTITLEMENTS_PREMIUM, results: {} })
+    await gotoToday(page)
+    // Legacy pill class must never appear inside the cockpit's documents footer.
+    await expect(page.locator('.cockpit-documents .today-documents__link')).toHaveCount(0)
+    await expect(page.locator('.cockpit-documents')).toBeVisible()
   })
 
   test('console: no new errors from the Today page', async ({ page }) => {
