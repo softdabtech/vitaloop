@@ -172,6 +172,21 @@ button[aria-label].inline-icon {
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
+/* P38b — CabinetPageFrame's one class (see
+ * components/dashboard/CabinetPageFrame.jsx for the full rationale).
+ * Width + centering only -- no card/border/background/shadow, so it never
+ * fights a page's own surface treatment. 1152px matches the pre-existing
+ * `max-w-6xl` value already in independent use by LabResultsList/Upload/
+ * Insights before this stage (see the P38a audit, §6.1) -- named here so
+ * newly migrated pages share one token instead of repeating the Tailwind
+ * pair. */
+.cabinet-page-frame {
+  width: 100%;
+  max-width: 1152px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .vtl-light-card-hover {
   transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
 }

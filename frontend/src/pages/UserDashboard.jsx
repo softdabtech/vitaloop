@@ -4,6 +4,7 @@ import { useDashboardSummary, useQuestionnaireSession, useReportDetails } from '
 import { useProfile } from '../hooks/useProfile.ts'
 import { useSubscription } from '../hooks/useSubscription.js'
 import { CoachButton, CoachSkeleton, EmptyCoachState } from '../components/coach/CoachUI.jsx'
+import CabinetPageFrame from '../components/dashboard/CabinetPageFrame.jsx'
 import { buildTodayViewModel } from '../lib/todayViewModel.js'
 import { isUkrainianLocale } from '../lib/locale.js'
 // coach-shell/coach-card/etc. (CoachUI.jsx) have no built-in styles of their
@@ -339,6 +340,19 @@ const SAFETY_TONE_STYLES = {
   critical: { bg: '#fee2e2', border: 'rgba(239,68,68,.28)', color: '#b91c1c' },
 }
 
+// P38b — presentational-only tone classification for the status-strip
+// cells: each cell already renders a value todayViewModel.js computed
+// (priorityCount, basisLabel's freshness, nextRetest presence) -- this only
+// picks which of the 3 existing CSS tone modifiers to apply, it does not
+// reclassify or recompute anything. Never applied when there's nothing to
+// classify (loading/error placeholder cells skip this entirely).
+function statusCellToneClass(kind, statusStrip, reportAge) {
+  if (kind === 'basis') return (reportAge === 'old' || reportAge === 'very_old') ? 'cockpit-status-cell--attention' : 'cockpit-status-cell--info'
+  if (kind === 'priority') return statusStrip.priorityCount > 0 ? 'cockpit-status-cell--attention' : 'cockpit-status-cell--good'
+  if (kind === 'retest') return statusStrip.nextRetest ? 'cockpit-status-cell--info' : ''
+  return ''
+}
+
 // P37k — Today cockpit body. Renders viewModel.cockpit (built entirely in
 // todayViewModel.js). Exactly one primary CTA on the whole page: the first
 // "This week" row, when any row exists -- nothing else in this component
@@ -361,7 +375,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
     <div className="cockpit-page">
       <div className="cockpit-header">
         <div className="cockpit-header__top">
-          <p className="coach-eyebrow">{copy.pageTitle}</p>
+          <h1 className="cockpit-title">{copy.pageTitle}</h1>
           {viewModel.documents && (
             <button type="button" onClick={() => navigate(viewModel.documents.uploadTo)} className="cockpit-link">
               {copy.cta.upload}
@@ -377,40 +391,12 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
         </div>
       </div>
 
-      {/* P37k.3: while /results/{uploadId} is still loading, the statusStrip
-          values todayViewModel.js computed are placeholder text (no
-          reportDetails yet) and would read as false "nothing to report"
-          content if shown -- render skeleton bars instead. On error, a
-          static "—" avoids implying real (if sparse) data was found. */}
-      <div className="cockpit-status-strip" aria-busy={isLoadingContent || undefined}>
-        {contentStatus === 'ready' ? (
-          <>
-            <div className="cockpit-status-cell">
-              <Activity className="h-4 w-4 text-emerald-600 shrink-0" />
-              <span>{statusStrip.basisLabel}</span>
-            </div>
-            <div className="cockpit-status-cell">
-              <ListChecks className="h-4 w-4 text-emerald-600 shrink-0" />
-              <span>{statusStrip.priorityLabel}</span>
-            </div>
-            <div className="cockpit-status-cell">
-              <CalendarClock className="h-4 w-4 text-emerald-600 shrink-0" />
-              <span>{statusStrip.nextRetestLabel}</span>
-            </div>
-          </>
-        ) : (
-          [0, 1, 2].map((i) => (
-            <div key={i} className="cockpit-status-cell cockpit-status-cell--placeholder">
-              {isLoadingContent ? <span className="cockpit-skeleton-line" /> : <span className="text-slate-400">—</span>}
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Report-scoped safety and questionnaire safety stay two separate
-          banners, exactly as in the pre-cockpit layout -- only an explicit
-          actionTo was added in todayViewModel.js, nothing here merges tone,
-          text, or source between them. */}
+      {/* P38b required visual order, item 1: safety comes first, above
+          current status -- a safety signal outranks everything else on the
+          page. Report-scoped safety and questionnaire safety stay two
+          separate banners, exactly as before -- only an explicit actionTo
+          was added in todayViewModel.js, nothing here merges tone, text, or
+          source between them. */}
       {(safety.report || safety.questionnaire) && (
         <div className="today-safety-stack">
           {safety.report && (
@@ -456,25 +442,45 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
         </div>
       )}
 
-      {/* P37k.1: "Since your previous report" restored -- same already-built
-          comparison object (progress_intelligence/personal_baseline, capped
-          at 3) buildReturningUserSections has produced since P37e. Renders
-          nothing if unavailable; never invents a comparison. */}
-      {sinceLastReport && (
-        <div className="cockpit-section">
-          <div className="today-section-label"><TrendingUp className="h-4 w-4 text-emerald-600" />{copy.changes.title}</div>
-          <div className="space-y-1.5">
-            {sinceLastReport.items.map((text, index) => (
-              <p key={index} className="text-sm leading-6 text-slate-700">{text}</p>
-            ))}
-          </div>
-          <button type="button" onClick={() => navigate(sinceLastReport.to)} className="cockpit-link mt-1.5">{copy.changes.cta} &rarr;</button>
-        </div>
-      )}
+      {/* P38b required visual order, item 2: current status. While loading/
+          error, todayViewModel.js's statusStrip values are placeholder text
+          (no reportDetails yet) and would read as false "nothing to report"
+          content if shown -- render skeleton bars instead. On error, a
+          static "—" avoids implying real (if sparse) data was found. Given
+          a stronger surface than the sections below it (see .cockpit-
+          status-cell in today-page.css) so "current state" outranks
+          "archive/detail" at a glance, plus a semantic tone per cell
+          (statusCellToneClass -- purely a color choice over an already-
+          computed value, never a new classification). */}
+      <div className="cockpit-status-strip" aria-busy={isLoadingContent || undefined}>
+        {contentStatus === 'ready' ? (
+          <>
+            <div className={`cockpit-status-cell ${statusCellToneClass('basis', statusStrip, headerContext.reportAge)}`}>
+              <Activity className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span>{statusStrip.basisLabel}</span>
+            </div>
+            <div className={`cockpit-status-cell ${statusCellToneClass('priority', statusStrip, headerContext.reportAge)}`}>
+              <ListChecks className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span>{statusStrip.priorityLabel}</span>
+            </div>
+            <div className={`cockpit-status-cell ${statusCellToneClass('retest', statusStrip, headerContext.reportAge)}`}>
+              <CalendarClock className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span>{statusStrip.nextRetestLabel}</span>
+            </div>
+          </>
+        ) : (
+          [0, 1, 2].map((i) => (
+            <div key={i} className="cockpit-status-cell cockpit-status-cell--placeholder">
+              {isLoadingContent ? <span className="cockpit-skeleton-line" /> : <span className="text-slate-400">—</span>}
+            </div>
+          ))
+        )}
+      </div>
 
-      {/* P37k.1: when there is truly nothing for either This week or the lab
-          snapshot to show, collapse both into one honest primary action
-          instead of two empty-placeholder sections -- see
+      {/* P38b required visual order, items 3-4: This week (the dominant
+          action section) then Latest lab snapshot. P37k.1: when there is
+          truly nothing for either to show, collapse both into one honest
+          primary action instead of two empty-placeholder sections -- see
           buildCockpitViewModel's own isSparse/sparsePrimaryAction comment. */}
       {isSparse ? (
         <div className="cockpit-section cockpit-section--sparse">
@@ -499,7 +505,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
             ) : (
               <div className="cockpit-row-list">
                 {thisWeek.map((row, index) => (
-                  <div key={index} className="cockpit-row">
+                  <div key={index} className={`cockpit-row${row.kind === 'safety' || row.kind === 'upload' ? ' cockpit-row--attention' : ''}`}>
                     <div className="cockpit-row__text">
                       <p className="cockpit-row__title">{row.title}</p>
                       {row.why && <p className="cockpit-row__why">{row.why}</p>}
@@ -544,17 +550,37 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
         </>
       )}
 
+      {/* P38b required visual order, item 5: comparisons / follow-up /
+          missing context -- grouped as the "archive/detail" tier, one step
+          quieter than the current-state tier above (.cockpit-section--
+          detail: lighter fill, muted icon color -- see today-page.css).
+          P37k.1: "Since your previous report" is the same already-built
+          comparison object (progress_intelligence/personal_baseline,
+          capped at 3) buildReturningUserSections has produced since P37e.
+          Renders nothing if unavailable; never invents a comparison. */}
+      {sinceLastReport && (
+        <div className="cockpit-section cockpit-section--detail">
+          <div className="today-section-label"><TrendingUp className="h-4 w-4 text-slate-500" />{copy.changes.title}</div>
+          <div className="space-y-1.5">
+            {sinceLastReport.items.map((text, index) => (
+              <p key={index} className="text-sm leading-6 text-slate-700">{text}</p>
+            ))}
+          </div>
+          <button type="button" onClick={() => navigate(sinceLastReport.to)} className="cockpit-link mt-1.5">{copy.changes.cta} &rarr;</button>
+        </div>
+      )}
+
       {followUp && (
-        <div className="cockpit-section">
-          <div className="today-section-label"><CalendarClock className="h-4 w-4 text-emerald-600" />{c.followUp.title}</div>
+        <div className="cockpit-section cockpit-section--detail">
+          <div className="today-section-label"><CalendarClock className="h-4 w-4 text-slate-500" />{c.followUp.title}</div>
           <p className="text-sm leading-6 text-slate-700">{followUp.text}</p>
           <button type="button" onClick={() => navigate(followUp.to)} className="cockpit-link mt-1">{copy.cta.results} &rarr;</button>
         </div>
       )}
 
       {missingContext && (
-        <div className="cockpit-section">
-          <div className="today-section-label"><HelpCircle className="h-4 w-4 text-emerald-600" />{c.missingContext.title}</div>
+        <div className="cockpit-section cockpit-section--detail">
+          <div className="today-section-label"><HelpCircle className="h-4 w-4 text-slate-500" />{c.missingContext.title}</div>
           <div className="today-clarity-grid">
             {missingContext.map((item, index) => (
               <div key={index} className="today-clarity-item">
@@ -568,16 +594,18 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
         </div>
       )}
 
-      {/* P37k.1: quiet report archive/footer, not another CTA cluster -- no
-          pill/button styling (that visual weight now belongs to This week's
-          single primary row, or the sparse-state primary action above).
-          Still every link a user might need (results/plan/history), just
-          de-emphasized to plain text so it never competes as a second
-          primary CTA. */}
+      {/* P38b required visual order, item 6: Documents -- the quiet report
+          archive/footer, not another CTA cluster -- no pill/button styling
+          (that visual weight belongs to This week's single primary row, or
+          the sparse-state primary action above). Still every link a user
+          might need (results/plan/history), just de-emphasized to plain
+          text (and, per item 6's "neutral/report metadata: slate" color
+          rule, a slate icon instead of the active-section emerald) so it
+          never competes as a second primary CTA or reads as "current." */}
       {viewModel.documents && (
         <div className="cockpit-section cockpit-documents">
           <div className="cockpit-documents__report-line">
-            <Stethoscope className="h-4 w-4 text-emerald-600" />
+            <Stethoscope className="h-4 w-4 text-slate-500" />
             {viewModel.documents.reportLine}
           </div>
           <div className="cockpit-documents__links">
@@ -678,7 +706,7 @@ export default function UserDashboard() {
 
   return (
     <div className="coach-shell">
-      <div className="today-canvas">
+      <CabinetPageFrame>
         {cockpit ? (
           <CockpitBody viewModel={viewModel} cockpit={cockpit} copy={copy} navigate={navigate} />
         ) : (
@@ -945,7 +973,7 @@ export default function UserDashboard() {
             )}
           </>
         )}
-      </div>
+      </CabinetPageFrame>
 
       {/* Reserves space so the site-wide fixed-bottom cookie banner never
           sits on top of the last content section before it is dismissed --

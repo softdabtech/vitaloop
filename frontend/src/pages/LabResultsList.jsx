@@ -5,6 +5,7 @@ import api from '../lib/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useFeature } from '../hooks/useFeature.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
+import CabinetPageFrame from '../components/dashboard/CabinetPageFrame.jsx'
 import { ct } from '../lib/cabinetI18n.js'
 import HintBanner from '../components/tour/HintBanner.jsx'
 import { useTourHints } from '../hooks/useTourHints.js'
@@ -335,21 +336,21 @@ export default function LabResultsList() {
   if (loading) {
     return (
       <div className="vtl-page px-4 py-8 sm:px-6">
-        <div className="mx-auto max-w-6xl">
+        <CabinetPageFrame>
           <div className="mb-6 h-8 w-56 animate-pulse rounded-xl bg-slate-200" />
           <div className="space-y-3">
             {[1, 2, 3].map((n) => (
               <div key={n} className="h-24 animate-pulse rounded-xl bg-slate-100" />
             ))}
           </div>
-        </div>
+        </CabinetPageFrame>
       </div>
     )
   }
 
   return (
     <div className="vtl-page px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-6xl">
+      <CabinetPageFrame>
         <CabinetPageHeader
           title={ct().labResults.title}
           subtitle={ct().labResults.subtitle}
@@ -482,7 +483,7 @@ export default function LabResultsList() {
             <ClinicalProgressPanel overview={overview} loading={overviewLoading} t={t} copy={copy} />
           </div>
         )}
-      </div>
+      </CabinetPageFrame>
     </div>
   )
 }

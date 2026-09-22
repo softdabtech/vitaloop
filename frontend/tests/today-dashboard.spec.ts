@@ -176,7 +176,9 @@ test.describe('Today dashboard — P37f fixture QA', () => {
   test('6. ready report with no plan -> no plan link anywhere on the page', async ({ page }) => {
     await mockToday(page, { today_contract: contractReady({ planExists: false }) })
     await gotoToday(page)
-    await expect(page.locator('.coach-eyebrow').getByText('Today', { exact: true })).toBeVisible()
+    // P38b: the cockpit header now renders a real <h1> (was a .coach-eyebrow
+    // label only, so a ready report previously had zero <h1> on the page).
+    await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible()
     await expect(page.getByText(/Lab date: Sep 14, 2026/i)).toBeVisible()
     await expect(page.getByRole('button', { name: /Open my plan/i })).toHaveCount(0)
   })
@@ -278,7 +280,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       },
     })
     await gotoToday(page)
-    await expect(page.locator('.coach-eyebrow').getByText('Today', { exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible()
     await expect(page.getByText('Since your previous report')).toBeVisible()
     await expect(page.getByText(/Iron deficiency pattern/i)).toBeVisible()
   })
@@ -912,5 +914,179 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await gotoToday(page)
     const todayErrors = errors.filter((e) => !e.includes('fetchPriority')) // pre-existing, unrelated Landing.jsx warning (see P37d/P37e reports)
     expect(todayErrors).toEqual([])
+  })
+
+  // ── P38b: shared CabinetPageFrame + Today visual hierarchy ────────────
+
+  test('P38b-1: Today renders exactly one <h1>, reading "Today"', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { biomarkers: [{ name: 'Hemoglobin', value: 14, unit: 'g/dL', ref_low: 12, ref_high: 16 }] },
+    })
+    await gotoToday(page)
+    const headings = page.getByRole('heading', { level: 1 })
+    await expect(headings).toHaveCount(1)
+    await expect(headings).toHaveText('Today')
+  })
+
+  test('P38b-2: Today uses the shared CabinetPageFrame, not the old .today-canvas whole-page card', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { biomarkers: [{ name: 'Hemoglobin', value: 14, unit: 'g/dL', ref_low: 12, ref_high: 16 }] },
+    })
+    await gotoToday(page)
+    await expect(page.locator('.cabinet-page-frame')).toBeVisible()
+    await expect(page.locator('.today-canvas')).toHaveCount(0)
+    // The frame itself must not add a card surface of its own (no card,
+    // border, background, radius, or shadow beyond the browser default).
+    const frameStyle = await page.locator('.cabinet-page-frame').evaluate((el) => {
+      const s = getComputedStyle(el)
+      return { borderWidth: s.borderWidth, boxShadow: s.boxShadow, backgroundColor: s.backgroundColor, maxWidth: s.maxWidth }
+    })
+    expect(frameStyle.borderWidth).toBe('0px')
+    expect(frameStyle.boxShadow).toBe('none')
+    expect(frameStyle.backgroundColor).toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
+    expect(frameStyle.maxWidth).toBe('1152px')
+  })
+
+  test('P38b-3a: one primary CTA holds after the frame migration (fresh)', async ({ page }) => {
+    // contractReady()'s default measurementDate (2026-09-14) is a handful
+    // of days before this suite's own system date -- comfortably "fresh"
+    // (< 365 days), matching every other fresh-state test in this file.
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: {
+        biomarkers: [{ name: 'Hemoglobin', value: 14, unit: 'g/dL', ref_low: 12, ref_high: 16 }],
+        knowledge_report: { retest_plan: [{ marker: 'Hemoglobin', timing: '8-12 weeks' }] },
+      },
+    })
+    await gotoToday(page)
+    await expect(page.locator('.coach-button')).toHaveCount(1)
+    // Fresh state's primary row here is the retest item (no safety, no
+    // protocol/action_plan data in this fixture) -- never the very_old
+    // Upload prompt.
+    await expect(page.locator('.coach-button')).not.toHaveText(/Upload new results/i)
+    const primaryButton = page.locator('.coach-button')
+    await primaryButton.click()
+    await expect(page).toHaveURL(/\/results\//)
+  })
+
+  test('P38b-3b: one primary CTA holds after the frame migration (very_old)', async ({ page }) => {
+    // 2022-01-04 is the same fixture date used throughout this suite
+    // (P37j.1, P37k.10, etc.) for the very_old (>=730 days) state -- already
+    // ~1000+ days old as of this suite's system date and only grows more so,
+    // so it stays deterministically very_old for the life of this fixture.
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true, measurementDate: '2022-01-04' }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: {
+        biomarkers: [{ name: 'Hemoglobin', value: 14, unit: 'g/dL', ref_low: 12, ref_high: 16 }],
+        protocol: ['Increase iron-rich foods'],
+        knowledge_report: { retest_plan: [{ marker: 'Hemoglobin', timing: '8-12 weeks' }] },
+      },
+    })
+    await gotoToday(page)
+    // Exactly one primary CTA, no duplicate.
+    const primaryButtons = page.locator('.coach-button')
+    await expect(primaryButtons).toHaveCount(1)
+    // Primary label is the exact existing very_old copy, and its
+    // destination is /upload -- the forced Upload row, never the saved plan.
+    await expect(primaryButtons).toHaveText(/^Upload new results$/i)
+    await primaryButtons.click()
+    await expect(page).toHaveURL(/\/upload/)
+    await page.goBack()
+    await page.waitForLoadState('networkidle')
+    // Plan/results remain reachable as secondary links, never removed --
+    // "Open my plan" (the saved-plan This week row, demoted) and the
+    // Documents footer's "View results"/"Open my plan" are still present,
+    // none of them styled as a second primary CTA.
+    const secondaryPlanLink = page.getByRole('button', { name: /^Open my plan$/i }).first()
+    await expect(secondaryPlanLink).toBeVisible()
+    const isCoachButton = await secondaryPlanLink.evaluate((el) => el.classList.contains('coach-button'))
+    expect(isCoachButton).toBe(false)
+    await expect(page.locator('.coach-button')).toHaveCount(1)
+  })
+
+  test('P38b-4: delayed /results keeps the same shell -- CabinetPageFrame present throughout, no .today-hero, no layout swap', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { biomarkers: [{ name: 'Hemoglobin', value: 14, unit: 'g/dL', ref_low: 12, ref_high: 16 }] },
+      resultsDelayMs: 800,
+    })
+    await page.goto(`${LOCAL_BASE}/dashboard`)
+    await expect(page.locator('.cabinet-page-frame')).toBeVisible()
+    await expect(page.locator('.cockpit-page')).toBeVisible()
+    await expect(page.locator('.today-hero')).toHaveCount(0)
+    await expect(page.locator('.cockpit-skeleton-line').first()).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    await expect(page.locator('.cabinet-page-frame')).toBeVisible()
+    await expect(page.locator('.cockpit-skeleton-line')).toHaveCount(0)
+    await expect(page.locator('.today-hero')).toHaveCount(0)
+  })
+
+  test('P38b-5: network guard -- zero /protocol/* and exactly one /results/* after the frame migration', async ({ page }) => {
+    const paths = collectRequestPaths(page)
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true, uploadId: 'up-p38b-network' }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { protocol: ['Increase iron-rich foods'] },
+    })
+    await gotoToday(page)
+    expect(paths.some((u) => u.includes('/protocol/'))).toBe(false)
+    const resultsCalls = paths.filter((u) => u.includes('/results/'))
+    expect(resultsCalls.length).toBe(1)
+    expect(resultsCalls[0]).toContain('up-p38b-network')
+  })
+
+  test('P38b-6: mobile 375px -- no horizontal overflow on the richest cockpit state after the frame migration', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true, measurementDate: '2022-01-04' }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      questionnaireUrgency: 'Some answers suggest timely clinician review is important.',
+      results: {
+        biomarkers: [
+          { name: 'Hemoglobin', value: 10.5, unit: 'g/dL', ref_low: 12, ref_high: 16 },
+          { name: 'Ferritin', value: 200, unit: 'ng/mL', ref_low: 15, ref_high: 150 },
+        ],
+        protocol: ['Increase iron-rich foods'],
+        knowledge_report: { retest_plan: [{ marker: 'Ferritin', timing: '8-12 weeks' }] },
+        evidence_gaps: { gaps: [{ missing_marker: 'transferrin_saturation', reason: 'not_tested_this_round' }] },
+      },
+    })
+    await gotoToday(page)
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+    expect(overflow).toBeLessThanOrEqual(1)
+  })
+
+  test('P38b-7: LabResultsList uses the shared CabinetPageFrame at the same 1152px effective width, header/CTA unchanged', async ({ page }) => {
+    await page.addInitScript((storageKey) => {
+      const farFuture = Math.floor(Date.now() / 1000) + 3600
+      window.localStorage.setItem(storageKey, JSON.stringify({
+        access_token: 'fixture-access-token', refresh_token: 'fixture-refresh-token', token_type: 'bearer',
+        expires_at: farFuture, expires_in: 3600, user: { id: 'fixture-user-1', email: 'p38b-fixture@example.com' },
+      }))
+    }, SUPABASE_AUTH_STORAGE_KEY)
+    // Real endpoints this page calls (api.get('/progress'), api.get('/progress/overview'))
+    // -- confirmed by reading LabResultsList.jsx, not guessed. An empty list
+    // is a valid, safely-handled response shape (normalizeProgressPayload
+    // falls back to []), sufficient to verify the frame/header/CTA render;
+    // this test does not exercise the populated-list rendering itself.
+    await page.route('**/progress/overview', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) }))
+    await page.route('**/progress', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) }))
+    await page.route('**/auth/me', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ entitlements: DEFAULT_ENTITLEMENTS_PREMIUM }) }))
+    await page.route('**/profile', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ profile: { goals: [] } }) }))
+    await page.route('**/auth/onboarding/state', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ role: 'end_user', requires_onboarding: false, completed: true }) }))
+    await page.goto(`${LOCAL_BASE}/lab-results`)
+    await page.waitForLoadState('networkidle')
+    await expect(page.locator('.cabinet-page-frame')).toBeVisible()
+    const maxWidth = await page.locator('.cabinet-page-frame').evaluate((el) => getComputedStyle(el).maxWidth)
+    expect(maxWidth).toBe('1152px')
+    await expect(page.getByRole('heading', { name: /Lab Results/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Upload Results/i })).toBeVisible()
   })
 })

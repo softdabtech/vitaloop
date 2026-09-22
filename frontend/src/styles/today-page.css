@@ -151,98 +151,54 @@
 
 @media (min-width: 641px) {
   .today-bottom-spacer {
-    /* Desktop has no bottom nav and the chat bubble sits in the corner, not
-       spanning full width -- only the cookie banner needs clearance there,
-       and it's far shorter at desktop width (single line, no wrap). */
-    height: 6rem;
+    /* P38b -- bumped from 6rem: removing .today-canvas's outer padding
+       shortened the page enough that 6rem no longer cleared the corner
+       chat bubble at true scroll-rest (confirmed via getBoundingClientRect()
+       -- output/p37k.2.1-overlap-check.mjs -- documentsFooter's bottom
+       edge landed ~8px inside the chat bubble's top edge). 9rem restores a
+       real margin above it, not just enough to exactly clear it, matching
+       this file's own established convention (see the 17rem mobile value's
+       comment above). Desktop has no bottom nav, so only the chat bubble
+       and cookie banner need clearance here. */
+    height: 9rem;
   }
 }
 
 /* ────────────────────────────────────────────────────────────────────────
- * P37i — Recompose Today into a finished product page ("cockpit").
+ * P38b — Today moves onto the shared CabinetPageFrame (see
+ * components/dashboard/CabinetPageFrame.jsx and the P38a audit,
+ * output/p38a-cabinet-visual-information-audit-2026-09-22.md §3/§6.8).
  *
- * Context: P37h/P37h.1/P37h.2 fixed real bugs (decorative blob, card-stack
- * shadows, raw marker IDs, mobile overlay) but the result read as too bare
- * on a wide screen -- content stretched full-width inside the shared page
- * shell (UserCabinetLayout's 1380px canvas) with no containment of its own,
- * so a rich state still looked like a handful of scattered blocks rather
- * than one finished page. This section replaces that with an explicit,
- * contained "cockpit" composition:
- *
- *   .today-canvas   -- one bounded panel (not full-bleed) with its own
- *                      background band and border, so the page reads as a
- *                      single designed surface at any viewport width
- *   .today-focus    -- the top band: header + safety + hero, on a distinct
- *                      tinted background so it reads as "current focus"
- *   .today-divider  -- a visual seam between focus and the lower grid
- *   .today-grid-lower -- the structured lower area (Changes/Return/
- *                      Clarity/Latest report), built from .today-tile
- *                      surfaces with deliberate spans (not CSS auto-flow)
- *                      so a missing section never leaves an orphaned half
- *                      row -- see .today-pair's :only-child rule below.
+ * P37i's `.today-canvas` (a bordered/shadowed 1040px white panel the whole
+ * page sat inside) is removed: Today's sections now render directly on the
+ * shared cabinet page background, exactly like every other cabinet route --
+ * no second, page-level "card inside a card" wrapper. `.today-focus` is
+ * simplified to a normal tinted section (no more negative-margin trick,
+ * which only existed to bleed edge-to-edge inside the removed canvas's
+ * padding) -- it still marks "current focus" with a distinct tint, it just
+ * no longer needs to fight an outer panel that no longer exists.
  *
  * None of this changes what data is fetched or how state is chosen --
  * UserDashboard.jsx's viewModel branches are unchanged; only how each
  * already-present piece of it is composed on screen.
  */
 
-.today-canvas {
-  max-width: 1040px;
-  margin: 0 auto;
-  padding: 28px 32px 32px;
-  border-radius: 28px;
-  background: linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 100%);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 24px 60px -32px rgba(15, 23, 42, 0.18);
-}
-
-@media (max-width: 640px) {
-  .today-canvas {
-    padding: 18px 16px 20px;
-    border-radius: 20px;
-  }
-}
-
-/* The focus band gets its own soft mint-tinted background, extending edge
- * to edge within the canvas via negative margins + matching padding, so it
- * reads as a distinct "current focus" zone rather than the hero floating
- * alone on white. This is a flat, single-tone band -- no gradients/blobs. */
+/* P38b.1 -- flat mint fill, no gradient: reuses the existing
+ * --coach-primary-soft token (#DDF8F2, already used elsewhere for mint
+ * surfaces, e.g. the pre-P38b Documents pill background) instead of the
+ * two near-identical mint stops (#F3FBF9/#F6FCFB) this replaced. Radius
+ * capped at 16px at every width, matching the P38b.1 radius rule. */
 .today-focus {
-  margin: -28px -32px 0;
-  padding: 24px 32px 26px;
-  border-radius: 28px 28px 0 0;
-  background: linear-gradient(180deg, #F3FBF9 0%, #F6FCFB 100%);
-  border-bottom: 1px solid rgba(42, 191, 170, 0.14);
+  padding: 20px 24px 24px;
+  border-radius: 16px;
+  background: var(--coach-primary-soft, #DDF8F2);
+  border: 1px solid rgba(42, 191, 170, 0.14);
 }
 
 @media (max-width: 640px) {
   .today-focus {
-    margin: -18px -16px 0;
-    padding: 18px 16px 20px;
-    border-radius: 20px 20px 0 0;
-  }
-}
-
-/* When there's nothing below the focus band (first-run/labs-intent/error
- * states -- no report yet), it IS the whole canvas, so it should own the
- * canvas's full rounding instead of only the top corners. */
-.today-canvas:has(> .today-focus:last-child) {
-  /* The focus band already supplies its own bottom padding/radius when
-     it's the only content -- without this, the canvas's own bottom
-     padding left a large, oddly empty white gap below an otherwise
-     self-contained rounded card (visible in first-run/labs-intent/error
-     states, which never have a lower grid). */
-  padding-bottom: 0;
-}
-
-.today-canvas:has(> .today-focus:last-child) .today-focus {
-  border-radius: 28px;
-  border-bottom: none;
-}
-
-@media (max-width: 640px) {
-  .today-canvas:has(> .today-focus:last-child) .today-focus {
-    border-radius: 20px;
+    padding: 16px 18px 20px;
+    border-radius: 16px;
   }
 }
 
@@ -441,6 +397,21 @@
   gap: 12px;
 }
 
+/* P38b -- Today's real page-level <h1>. Previously the cockpit header used
+ * only `.coach-eyebrow` (a small uppercase label, not a heading element) --
+ * for a ready report (the vast majority of real usage, since P37k.3 the
+ * cockpit renders for every ready state) that left the page with NO <h1> at
+ * all. Sized close to the removed hero's h1 so the page doesn't lose visual
+ * weight at its top, just gains a real heading. */
+.cockpit-title {
+  margin: 0;
+  font-size: clamp(20px, 2.6vw, 24px);
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--coach-text);
+}
+
 .cockpit-header__dates {
   display: flex;
   flex-wrap: wrap;
@@ -496,14 +467,21 @@
   }
 }
 
+/* P38b -- "current status" (item 2 in the required visual order) is the
+ * page's own current-state summary, so it gets a stronger surface (white,
+ * not the same flat gray as every other section) plus a per-cell semantic
+ * icon color instead of uniform emerald -- see the tone modifiers below.
+ * Still flat/bordered, still no gradient -- "stronger" means more contrast
+ * against the page background and its neighbors, not decorative. */
 .cockpit-status-cell {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: #F8FAFC;
-  border: 1px solid rgba(15, 23, 42, 0.07);
+  background: #FFFFFF;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   font-size: 13px;
   line-height: 1.35;
   color: var(--coach-text);
@@ -512,6 +490,13 @@
 .cockpit-status-cell span {
   min-width: 0;
 }
+
+/* Tone modifiers -- applied per cell based on the already-computed value
+ * that cell displays (priority count / basis freshness), never a new
+ * classification. See UserDashboard.jsx's statusToneClass() helper. */
+.cockpit-status-cell--attention svg { color: #D97706; }
+.cockpit-status-cell--good svg { color: #059669; }
+.cockpit-status-cell--info svg { color: #0284C7; }
 
 /* P37k.3 -- loading/error placeholder cells. Same size/padding as a real
  * status cell so nothing shifts layout when real content arrives. */
@@ -581,6 +566,20 @@
   margin: 0;
 }
 
+/* P38b -- "comparisons/follow-up/missing context" (item 5) and Documents
+ * (item 6) are archive/detail tier, one step quieter than the current-state
+ * tier above (status strip / This week / Lab snapshot) -- a lighter fill
+ * and no bold section-label color shift, so scanning the page top-to-
+ * bottom reads as a real priority order, not seven identical gray boxes. */
+.cockpit-section--detail {
+  background: #FAFBFC;
+  border-color: rgba(15, 23, 42, 0.06);
+}
+
+.cockpit-section--detail .today-section-label svg {
+  color: #64748B;
+}
+
 /* P37k.1 — quiet report archive/footer. Deliberately NOT .today-documents
  * (that pill-button treatment made the footer read as a second CTA
  * cluster, duplicating whatever This week's actual primary action was).
@@ -637,6 +636,19 @@
   border-radius: 10px;
   background: #FFFFFF;
   border: 1px solid rgba(15, 23, 42, 0.06);
+  border-left: 3px solid transparent;
+}
+
+/* P38b -- color used only where the row already carries real semantic
+ * meaning (row.kind, already computed in todayViewModel.js -- no new
+ * classification added here): a clinician-review/safety row gets the same
+ * amber "watch attention" accent as the freshness chip and status-strip
+ * cells; the forced very_old Upload row gets the same amber treatment,
+ * matching its chip. Plan/retest/gap rows carry no inherent status of
+ * their own and stay neutral (no color decoration), per the rule against
+ * decorating sections with no semantic status. */
+.cockpit-row--attention {
+  border-left-color: #D97706;
 }
 
 @media (max-width: 480px) {
