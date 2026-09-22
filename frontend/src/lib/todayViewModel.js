@@ -153,6 +153,14 @@ function actionLabelForTarget(to, { copy, planTo, resultsTo, uploadTo }) {
 }
 
 function buildCockpitViewModel({
+  contentStatus = 'ready', // P37k.3 -- 'loading' | 'error' | 'ready'. The
+  // cockpit shell (header/statusStrip shape/safety/very_old forced CTA) is
+  // built the moment a ready report is known to exist, independent of
+  // whether GET /results/{uploadId} has resolved yet -- see the call site
+  // in buildTodayViewModel for why. Only the fields that actually require
+  // reportDetails are gated on contentStatus === 'ready'; everything else
+  // (headerContext, questionnaire safety, isVeryOldReport) is already
+  // available from the contract alone and renders immediately.
   reportDetails,
   copy,
   isUk,
@@ -174,6 +182,14 @@ function buildCockpitViewModel({
   const label = (to) => actionLabelForTarget(to, { copy, planTo, resultsTo, uploadTo })
   const isOldReport = reportAge === 'old' || reportAge === 'very_old'
   const isVeryOldReport = reportAge === 'very_old'
+  const hasData = contentStatus === 'ready'
+  // Every reportDetails-derived computation below already tolerates a null/
+  // undefined reportDetails (Array.isArray(reportDetails?.x) guards, etc.),
+  // so gating it here -- rather than threading a hasData check through every
+  // call site -- keeps the rest of this function byte-for-byte the same as
+  // before P37k.3 while guaranteeing no partial/stale reportDetails is ever
+  // read while it's still loading or errored.
+  reportDetails = hasData ? reportDetails : null
 
   // --- headerContext: two independent dates, never conflated -- lab date
   // is the same measurement_date/report_generated_at sourceLine already
@@ -376,12 +392,18 @@ function buildCockpitViewModel({
   // exist -- the report itself). This never invents biomarker values, plan
   // rows, retest timing, or safety; it only changes which single action is
   // offered when there is genuinely no other content.
-  const isSparse = thisWeek.length === 0 && labSnapshot.length === 0
+  // P37k.3 -- sparse collapse only ever applies once reportDetails has
+  // actually resolved (hasData): while loading, thisWeek/labSnapshot are
+  // "empty" simply because they haven't loaded yet, not because there is
+  // genuinely nothing to show -- that must render a loading placeholder,
+  // never the sparse "one honest primary action" UI meant for real absence
+  // of data.
+  const isSparse = hasData && thisWeek.length === 0 && labSnapshot.length === 0
   const sparsePrimaryAction = isSparse
     ? { label: isVeryOldReport ? copy.cta.upload : copy.cta.results, to: isVeryOldReport ? uploadTo : resultsTo }
     : null
 
-  return { headerContext, statusStrip, safety: cockpitSafety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction }
+  return { contentStatus, headerContext, statusStrip, safety: cockpitSafety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction }
 }
 
 function buildReturningUserSections({
@@ -651,13 +673,21 @@ export function buildTodayViewModel({
   // report_generated_at.
   const symptomCheckDate = formatDate(symptomCheckCompletedAt, isUk)
 
-  // P37k: the cockpit is only meaningful once reportDetails has actually
-  // resolved (returning.status === 'ready') -- while loading/erroring, the
-  // existing returning.status tile already communicates that, so cockpit
-  // stays null rather than rendering with partial/stale data.
+  // P37k.3 -- the cockpit shell is built as soon as a ready report is known
+  // to exist (this function is only ever called from the three ready_*
+  // branches below), never gated on GET /results/{uploadId} having
+  // resolved. Fixes the two-screen flicker where the legacy hero layout
+  // rendered first and was replaced by the cockpit once reportDetails
+  // arrived -- one stable cockpit-shaped screen now renders from the start,
+  // with `contentStatus` telling buildCockpitViewModel/CockpitBody which
+  // sections have real data yet vs. which should show a loading/limited
+  // placeholder. `returning.status` can be 'loading', 'error', 'ready', or
+  // (defensively) 'idle' for a brief instant before the query starts --
+  // 'idle' is treated as 'loading', never as an empty/ready state.
   function buildCockpitFor(returning, planLinkTo, planIsAccessible) {
-    if (returning.status !== 'ready') return null
+    const contentStatus = returning.status === 'ready' ? 'ready' : returning.status === 'error' ? 'error' : 'loading'
     return buildCockpitViewModel({
+      contentStatus,
       reportDetails, copy, isUk, resultsTo, planTo: planLinkTo, uploadTo, reportAge, sourceDate, symptomCheckDate,
       planAccessAllowed: planIsAccessible, planExists,
       safety, reportSafety: returning.reportSafety, changes: returning.changes,

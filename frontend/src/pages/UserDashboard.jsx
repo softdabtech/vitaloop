@@ -340,12 +340,22 @@ const SAFETY_TONE_STYLES = {
 }
 
 // P37k — Today cockpit body. Renders viewModel.cockpit (built entirely in
-// todayViewModel.js) once a ready report's details have resolved. Exactly
-// one primary CTA on the whole page: the first "This week" row, when any
-// row exists -- nothing else in this component renders a CoachButton.
+// todayViewModel.js). Exactly one primary CTA on the whole page: the first
+// "This week" row, when any row exists -- nothing else in this component
+// renders a CoachButton.
+//
+// P37k.3 -- this now renders for EVERY ready-report state, not only once
+// GET /results/{uploadId} has resolved: cockpit.contentStatus ('loading' |
+// 'error' | 'ready') tells each data-dependent section whether to show its
+// real content, a loading placeholder, or a limited-detail message. This is
+// what fixes the two-screen flicker -- the same cockpit shell mounts
+// immediately and fills in, instead of a whole different (legacy) layout
+// rendering first and being replaced once the fetch resolves.
 function CockpitBody({ viewModel, cockpit, copy, navigate }) {
   const c = copy.cockpit
-  const { headerContext, statusStrip, safety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction } = cockpit
+  const { headerContext, statusStrip, safety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction, contentStatus } = cockpit
+  const isLoadingContent = contentStatus === 'loading'
+  const isErrorContent = contentStatus === 'error'
 
   return (
     <div className="cockpit-page">
@@ -367,19 +377,34 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
         </div>
       </div>
 
-      <div className="cockpit-status-strip">
-        <div className="cockpit-status-cell">
-          <Activity className="h-4 w-4 text-emerald-600 shrink-0" />
-          <span>{statusStrip.basisLabel}</span>
-        </div>
-        <div className="cockpit-status-cell">
-          <ListChecks className="h-4 w-4 text-emerald-600 shrink-0" />
-          <span>{statusStrip.priorityLabel}</span>
-        </div>
-        <div className="cockpit-status-cell">
-          <CalendarClock className="h-4 w-4 text-emerald-600 shrink-0" />
-          <span>{statusStrip.nextRetestLabel}</span>
-        </div>
+      {/* P37k.3: while /results/{uploadId} is still loading, the statusStrip
+          values todayViewModel.js computed are placeholder text (no
+          reportDetails yet) and would read as false "nothing to report"
+          content if shown -- render skeleton bars instead. On error, a
+          static "—" avoids implying real (if sparse) data was found. */}
+      <div className="cockpit-status-strip" aria-busy={isLoadingContent || undefined}>
+        {contentStatus === 'ready' ? (
+          <>
+            <div className="cockpit-status-cell">
+              <Activity className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>{statusStrip.basisLabel}</span>
+            </div>
+            <div className="cockpit-status-cell">
+              <ListChecks className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>{statusStrip.priorityLabel}</span>
+            </div>
+            <div className="cockpit-status-cell">
+              <CalendarClock className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>{statusStrip.nextRetestLabel}</span>
+            </div>
+          </>
+        ) : (
+          [0, 1, 2].map((i) => (
+            <div key={i} className="cockpit-status-cell cockpit-status-cell--placeholder">
+              {isLoadingContent ? <span className="cockpit-skeleton-line" /> : <span className="text-slate-400">—</span>}
+            </div>
+          ))
+        )}
       </div>
 
       {/* Report-scoped safety and questionnaire safety stay two separate
@@ -461,7 +486,16 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
           <div className="cockpit-section">
             <div className="today-section-label"><ClipboardList className="h-4 w-4 text-emerald-600" />{c.thisWeek.title}</div>
             {thisWeek.length === 0 ? (
-              <p className="text-sm text-slate-500">{c.thisWeek.empty}</p>
+              isLoadingContent ? (
+                <div className="cockpit-skeleton-rows" aria-busy="true">
+                  <span className="cockpit-skeleton-line" />
+                  <span className="cockpit-skeleton-line" />
+                </div>
+              ) : isErrorContent ? (
+                <p className="text-sm text-slate-500">{copy.error.resultsSectionsUnavailable}</p>
+              ) : (
+                <p className="text-sm text-slate-500">{c.thisWeek.empty}</p>
+              )
             ) : (
               <div className="cockpit-row-list">
                 {thisWeek.map((row, index) => (
@@ -484,7 +518,16 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
           <div className="cockpit-section">
             <div className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />{c.labSnapshot.title}</div>
             {labSnapshot.length === 0 ? (
-              <p className="text-sm text-slate-500">{c.labSnapshot.empty}</p>
+              isLoadingContent ? (
+                <div className="cockpit-skeleton-rows" aria-busy="true">
+                  <span className="cockpit-skeleton-line" />
+                  <span className="cockpit-skeleton-line" />
+                </div>
+              ) : isErrorContent ? (
+                <p className="text-sm text-slate-500">{copy.error.resultsSectionsUnavailable}</p>
+              ) : (
+                <p className="text-sm text-slate-500">{c.labSnapshot.empty}</p>
+              )
             ) : (
               <div className="cockpit-lab-grid">
                 {labSnapshot.map((m, index) => (
@@ -622,11 +665,15 @@ export default function UserDashboard() {
   // viewModel fields.
   const hasLowerGrid = Boolean(viewModel.documents)
 
-  // P37k: once reportDetails has resolved for a ready report, the cockpit
-  // view model (built entirely in todayViewModel.js from already-fetched
-  // data) replaces the old hero-first layout below. States with no report
-  // yet (first_run/labs_intent) or still-loading/errored returning-user
-  // data keep the pre-existing hero+lower-grid layout unchanged.
+  // P37k.3: the cockpit now renders for ANY ready report, immediately --
+  // not only once reportDetails has resolved (fixes the two-screen flicker
+  // where this legacy hero-first layout rendered first and was replaced by
+  // the cockpit once GET /results/{uploadId} came back). cockpit.
+  // contentStatus tells CockpitBody which sections have real data yet.
+  // Only true non-ready states (no report yet -- first_run/labs_intent/
+  // contract_error/summary_error) keep the legacy hero+lower-grid layout
+  // below; it's never shown for a ready report merely because reportDetails
+  // is still loading or failed.
   const cockpit = viewModel.cockpit
 
   return (

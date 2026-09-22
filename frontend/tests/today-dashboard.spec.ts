@@ -238,19 +238,29 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByText(/Source: your symptom check/i)).toBeVisible()
   })
 
-  test('13. results loading after core layout has loaded -> hero still renders, quiet skeleton for returning sections', async ({ page }) => {
+  // P37k.3 rewrite: this test used to assert the pre-cockpit hero rendered
+  // while /results/:uploadId was still loading -- that behavior WAS the
+  // two-screen flicker bug (hero first, cockpit replacing it once the fetch
+  // resolved). The cockpit shell now renders immediately for any ready
+  // report; see the dedicated "P37k.3: no two-screen flicker..." tests
+  // below for the full before/during/after assertions.
+  test('13. results loading after core layout has loaded -> cockpit shell renders immediately, no legacy hero', async ({ page }) => {
     await mockToday(page, { today_contract: contractReady({ planExists: false }), results: {}, resultsDelayMs: 1500 })
     await page.goto(`${LOCAL_BASE}/dashboard`)
     // Do not wait for networkidle here -- we want to catch the mid-flight state.
-    await expect(page.getByRole('heading', { name: /Your latest report is ready to review/i })).toBeVisible()
+    await expect(page.locator('.cockpit-page')).toBeVisible()
+    await expect(page.locator('.today-hero')).toHaveCount(0)
     await page.waitForLoadState('networkidle')
   })
 
-  test('12. failed /results/:uploadId after core layout has loaded -> limitation message, not "all clear"', async ({ page }) => {
+  // P37k.3 rewrite: same reasoning -- an error now renders inside the
+  // cockpit shell (a limited-detail message), never the legacy hero.
+  test('12. failed /results/:uploadId after core layout has loaded -> cockpit-shaped limitation message, not the legacy hero', async ({ page }) => {
     await mockToday(page, { today_contract: contractReady({ planExists: false }), resultsStatus: 500 })
     await gotoToday(page)
-    await expect(page.getByRole('heading', { name: /Your latest report is ready to review/i })).toBeVisible()
-    await expect(page.getByText(/couldn.t load additional detail/i)).toBeVisible()
+    await expect(page.locator('.cockpit-page')).toBeVisible()
+    await expect(page.locator('.today-hero')).toHaveCount(0)
+    await expect(page.getByText(/couldn.t load additional detail/i).first()).toBeVisible()
   })
 
   // P37k.1: "Since your previous report" was restored inside the cockpit
@@ -723,6 +733,90 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     // Legacy pill class must never appear inside the cockpit's documents footer.
     await expect(page.locator('.cockpit-documents .today-documents__link')).toHaveCount(0)
     await expect(page.locator('.cockpit-documents')).toBeVisible()
+  })
+
+  // ── P37k.3 (two-screen load-flicker fix) ──────────────────────────────
+
+  test('P37k.3: no two-screen flicker -- cockpit shell (not the legacy hero) is visible immediately, with loading placeholders, while /results/{uploadId} is still in flight', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: {
+        biomarkers: [{ name: 'Hemoglobin', value: 14, unit: 'g/dL', ref_low: 12, ref_high: 16 }],
+        knowledge_report: { retest_plan: [{ marker: 'Hemoglobin', timing: '8-12 weeks' }] },
+      },
+      resultsDelayMs: 800,
+    })
+    // Deliberately not using gotoToday()'s networkidle wait -- this test
+    // needs to observe the page WHILE /results/{uploadId} is still pending.
+    await page.goto(`${LOCAL_BASE}/dashboard`)
+    await expect(page.locator('.cockpit-page')).toBeVisible()
+    // The legacy hero (ready_with_plan's "Your next steps are in your plan"
+    // headline, or the .today-hero section itself) must never appear at
+    // any point for a ready report -- this is the exact flicker this stage
+    // fixes: previously that whole layout rendered first and was replaced.
+    await expect(page.getByText('Your next steps are in your plan')).toHaveCount(0)
+    await expect(page.locator('.today-hero')).toHaveCount(0)
+    // Loading placeholders are visible inside the cockpit's own sections.
+    await expect(page.locator('.cockpit-skeleton-line').first()).toBeVisible()
+    await expect(page.locator('.cockpit-status-cell--placeholder').first()).toBeVisible()
+    // The header/freshness chip (contract-only data) is already correct,
+    // even before /results resolves.
+    await expect(page.getByText(/Lab date: Sep 14, 2026/i)).toBeVisible()
+
+    // Now let the delayed /results/{uploadId} response resolve.
+    await page.waitForLoadState('networkidle')
+    await expect(page.locator('.cockpit-skeleton-line')).toHaveCount(0)
+    await expect(page.locator('.cockpit-lab-row__name')).toHaveText('Hemoglobin')
+    // Still exactly one primary CTA and one /results/{uploadId} call --
+    // the loading phase never doubled up on either guarantee.
+    await expect(page.locator('.coach-button')).toHaveCount(1)
+    // The legacy hero still never appeared, even after content resolved.
+    await expect(page.locator('.today-hero')).toHaveCount(0)
+  })
+
+  test('P37k.3: very_old report still loading -> the forced Upload primary CTA is already visible before /results resolves (no flicker in which action is primary)', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true, measurementDate: '2022-01-04' }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { protocol: ['Increase iron-rich foods'] },
+      resultsDelayMs: 800,
+    })
+    await page.goto(`${LOCAL_BASE}/dashboard`)
+    await expect(page.locator('.coach-button')).toHaveCount(1)
+    await expect(page.locator('.coach-button')).toHaveText(/Upload new results/i)
+    await page.waitForLoadState('networkidle')
+    // Same one primary CTA, same label, after resolution -- no swap.
+    await expect(page.locator('.coach-button')).toHaveCount(1)
+    await expect(page.locator('.coach-button')).toHaveText(/Upload new results/i)
+  })
+
+  test('P37k.3: reportDetails error -> cockpit-shaped limited-detail message, never the legacy hero layout', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      resultsStatus: 500,
+    })
+    await gotoToday(page)
+    await expect(page.locator('.cockpit-page')).toBeVisible()
+    await expect(page.locator('.today-hero')).toHaveCount(0)
+    await expect(page.locator('.cockpit-skeleton-line')).toHaveCount(0)
+    await expect(page.getByText(/couldn.t load additional detail/i).first()).toBeVisible()
+  })
+
+  test('P37k.3: network guard holds even with a delayed /results response -- zero /protocol/* and exactly one /results/* call', async ({ page }) => {
+    const paths = collectRequestPaths(page)
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true, uploadId: 'up-flicker-network' }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: { protocol: ['Increase iron-rich foods'] },
+      resultsDelayMs: 500,
+    })
+    await gotoToday(page)
+    expect(paths.some((u) => u.includes('/protocol/'))).toBe(false)
+    const resultsCalls = paths.filter((u) => u.includes('/results/'))
+    expect(resultsCalls.length).toBe(1)
+    expect(resultsCalls[0]).toContain('up-flicker-network')
   })
 
   // ── P37k.2 (light UI polish) ──────────────────────────────────────────

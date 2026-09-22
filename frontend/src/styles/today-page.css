@@ -513,6 +513,55 @@
   min-width: 0;
 }
 
+/* P37k.3 -- loading/error placeholder cells. Same size/padding as a real
+ * status cell so nothing shifts layout when real content arrives. */
+.cockpit-status-cell--placeholder {
+  align-items: center;
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * P37k.3 -- cockpit loading skeleton. Fixes the two-screen flicker where
+ * the legacy hero+lower-grid layout rendered first and was fully replaced
+ * by the cockpit once GET /results/{uploadId} resolved. The cockpit shell
+ * now mounts immediately for any ready report; these are the placeholders
+ * shown inside its own sections (status strip / this week / lab snapshot)
+ * while that fetch is still in flight, never a whole different layout.
+ */
+@keyframes cockpit-skeleton-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.cockpit-skeleton-line {
+  display: block;
+  width: 70%;
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.09);
+  animation: cockpit-skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.cockpit-skeleton-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cockpit-skeleton-rows .cockpit-skeleton-line {
+  height: 14px;
+}
+
+.cockpit-skeleton-rows .cockpit-skeleton-line:nth-child(2) {
+  width: 55%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cockpit-skeleton-line {
+    animation: none;
+    opacity: 0.75;
+  }
+}
+
 .cockpit-section {
   /* P37k.2: ~10% tighter than the original 16px/18px. */
   padding: 14px 16px;
