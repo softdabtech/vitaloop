@@ -67,12 +67,34 @@ def _add_event(events: List[Dict[str, Any]], *, key: str, severity: str, message
     events.append({"key": key, "severity": severity, "message": message, "item": item})
 
 
+# 2026-09-22 fix: a free-text health-profile field answered with a plain
+# negative ("No", "None", "N/A", "Нет") was being treated as "value
+# present" by simple truthiness -- a non-empty string is still a string.
+# That fired current_medications_context/known_allergies_context/etc. on
+# _every_ subsequent report for that user (see _profile_events below),
+# which cascades into doctor_discussion_required=True regardless of the
+# uploaded biomarkers -- found via a manual end-to-end QA pass where a
+# "Known allergies" field literally containing "No" produced a permanent
+# false "discuss with a doctor" flag. Case/punctuation-insensitive; kept
+# to unambiguous negatives only (never treats an actual answer, however
+# short, as absent).
+_NEGATIVE_FREE_TEXT_ANSWERS = {
+    "no", "none", "n/a", "na", "nil", "nope", "not applicable",
+    "no allergies", "no known allergies", "no medications", "no known medications",
+    "none known", "-", "--",
+    "нет", "немає", "відсутні", "відсутня", "ні", "нема", "не приймаю",
+}
+
+
 def _value_present(value: Any) -> bool:
     if isinstance(value, list):
-        return any(str(item).strip() for item in value)
+        return any(_value_present(item) for item in value)
     if isinstance(value, dict):
-        return any(str(item).strip() for item in value.values())
-    return bool(str(value or "").strip())
+        return any(_value_present(item) for item in value.values())
+    text = str(value or "").strip()
+    if not text:
+        return False
+    return text.lower().strip(" .!?") not in _NEGATIVE_FREE_TEXT_ANSWERS
 
 
 def _dedupe_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
