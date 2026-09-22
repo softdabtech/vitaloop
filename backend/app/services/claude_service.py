@@ -382,7 +382,7 @@ def _fallback_generate_protocol(
                 "dosage": "Кожен основний прийом їжі: джерело білка + продукти з залізом/B12/фолатом + овочі; підтримуйте гідратацію",
                 "timing": "daily_with_meals",
                 "priority": "MEDIUM",
-                "rationale": "Це підтримує інтерпретацію маркерів крові без передчасного призначення добавок.",
+                "rationale": "Це підтримує інтерпретацію маркерів крові без передчасного призначення добавок. Йдеться лише про харчові джерела заліза/B12/фолату — додавання будь-яких добавок обговорюйте з лікарем.",
                 "iherb_search": "whole food multinutrient",
                 "category": "nutrition",
             }
@@ -417,7 +417,7 @@ def _fallback_generate_protocol(
                 "dosage": "Each main meal: protein source + iron/B12/folate food source + vegetables; hydrate consistently",
                 "timing": "daily_with_meals",
                 "priority": "MEDIUM",
-                "rationale": "Supports interpretation of blood-count related markers while avoiding premature supplementation.",
+                "rationale": "Supports interpretation of blood-count related markers while avoiding premature supplementation. This is food-based iron/B12/folate only — confirm any supplement additions with a clinician.",
                 "iherb_search": "whole food multinutrient",
                 "category": "nutrition",
             }
