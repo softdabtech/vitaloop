@@ -127,6 +127,53 @@ def test_low_variability_marker_flags_smaller_move_as_significant():
     assert trend["direction"] == "falling"  # would have been "stable" under the old flat 10%
 
 
+def test_unit_mismatch_between_current_and_previous_is_converted_before_comparing():
+    """2026-09-22 regression: a previous Hemoglobin result stored in g/L
+    (135) compared raw against a current value in g/dL (13.5) read as a
+    ~90x-scale drop. 135 g/L == 13.5 g/dL — once converted, no real change."""
+    result = evaluate_biomarker_trends(
+        current_biomarkers=[
+            {"name": "Hemoglobin", "canonical_name": "canonical_hemoglobin", "value": 13.5, "unit": "g/dL", "status": "OPTIMAL"},
+        ],
+        historical_biomarkers=[
+            {
+                "upload_id": "old-upload",
+                "name": "Hemoglobin",
+                "value": 135,
+                "unit": "g/L",
+                "status": "OPTIMAL",
+                "test_date": "2026-01-01",
+            }
+        ],
+    )
+    trend = result["trends"][0]
+    assert trend["previous_value"] == 13.5
+    assert trend["percent_change"] == 0.0
+    assert trend["direction"] == "stable"
+
+
+def test_unconvertible_previous_unit_is_dropped_not_compared_raw():
+    """A previous value in a unit the biomarker doesn't recognize can't be
+    safely compared — the trend must be skipped, not computed from raw,
+    unit-mismatched numbers."""
+    result = evaluate_biomarker_trends(
+        current_biomarkers=[
+            {"name": "Hemoglobin", "canonical_name": "canonical_hemoglobin", "value": 13.5, "unit": "g/dL", "status": "OPTIMAL"},
+        ],
+        historical_biomarkers=[
+            {
+                "upload_id": "old-upload",
+                "name": "Hemoglobin",
+                "value": 999,
+                "unit": "not_a_real_unit",
+                "status": "OPTIMAL",
+                "test_date": "2026-01-01",
+            }
+        ],
+    )
+    assert result["trends"] == []
+
+
 def test_unlisted_marker_keeps_default_10_percent_threshold():
     result = evaluate_biomarker_trends(
         current_biomarkers=[

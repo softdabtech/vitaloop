@@ -36,7 +36,7 @@ def test_silent_signal_flagged_when_in_range_but_drifted_from_baseline():
     to 3.8 but is still reported as OPTIMAL by the lab reference range —
     this must surface as a silent_signal, not disappear."""
     current = [{"canonical_name": "tsh", "value": 3.8, "unit": "mIU/L", "status": "OPTIMAL"}]
-    history = _history("tsh", [1.3, 1.4, 1.5])
+    history = _history("tsh", [1.3, 1.4, 1.5], unit="mIU/L")
 
     result = build_personal_baseline(current_biomarkers=current, historical_biomarkers=history)
 
@@ -53,7 +53,7 @@ def test_not_a_silent_signal_when_out_of_reference_range():
     """A marker already flagged abnormal by the lab doesn't need the
     silent-signal framing — that case is already visible without this."""
     current = [{"canonical_name": "tsh", "value": 8.0, "unit": "mIU/L", "status": "ELEVATED"}]
-    history = _history("tsh", [1.3, 1.4, 1.5])
+    history = _history("tsh", [1.3, 1.4, 1.5], unit="mIU/L")
 
     result = build_personal_baseline(current_biomarkers=current, historical_biomarkers=history)
 
@@ -98,12 +98,45 @@ def test_current_upload_excluded_from_its_own_history():
     assert result["markers"][0]["personal_baseline_value"] == 11.0
 
 
+def test_unit_mismatch_does_not_fabricate_a_silent_signal():
+    """2026-09-22 regression: a prior PDF-extracted Hemoglobin in g/L (135)
+    compared raw against a same-marker manual entry in g/dL (13.5) used to
+    read as a ~90x-scale "crash" and fire a false silent_signal/doctor-
+    review flag. 135 g/L == 13.5 g/dL — the same value, just a different
+    unit, so once converted there is no drift at all."""
+    current = [{"canonical_name": "hemoglobin", "value": 13.5, "unit": "g/dL", "status": "OPTIMAL"}]
+    history = _history("hemoglobin", [135, 136, 134], unit="g/L")
+
+    result = build_personal_baseline(current_biomarkers=current, historical_biomarkers=history)
+
+    marker = result["markers"][0]
+    assert marker["silent_signal"] is False
+    assert marker["direction"] == "stable"
+    # baseline mean of [135, 136, 134] g/L converted to g/dL: 13.5
+    assert round(marker["personal_baseline_value"], 1) == 13.5
+
+
+def test_unconvertible_unit_excludes_that_history_point_rather_than_mixing_raw_numbers():
+    """A prior row in a unit the biomarker doesn't recognize can't be safely
+    compared — it must be dropped, not averaged in as if unit-equivalent."""
+    current = [{"canonical_name": "hemoglobin", "value": 13.5, "unit": "g/dL", "status": "OPTIMAL"}]
+    history = _history("hemoglobin", [14.0, 13.8], unit="g/dL") + _history(
+        "hemoglobin", [999], unit="not_a_real_unit"
+    )
+
+    result = build_personal_baseline(current_biomarkers=current, historical_biomarkers=history)
+
+    marker = result["markers"][0]
+    assert marker["history_points"] == 2
+    assert round(marker["personal_baseline_value"], 2) == 13.9
+
+
 def test_markers_sorted_with_silent_signals_first():
     current = [
         {"canonical_name": "sodium", "value": 140.0, "unit": "mmol/L", "status": "OPTIMAL"},
         {"canonical_name": "tsh", "value": 3.8, "unit": "mIU/L", "status": "OPTIMAL"},
     ]
-    history = _history("sodium", [140.0, 140.1], unit="mmol/L") + _history("tsh", [1.3, 1.4])
+    history = _history("sodium", [140.0, 140.1], unit="mmol/L") + _history("tsh", [1.3, 1.4], unit="mIU/L")
 
     result = build_personal_baseline(current_biomarkers=current, historical_biomarkers=history)
 

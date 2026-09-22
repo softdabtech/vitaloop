@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from typing import Any, Dict, Iterable, List
 
+from app.services.biomarker_reference import convert_unit
 from app.services.lab_date_extraction import choose_measurement_date
 from app.services.lab_normalization.biomarker_mapping import to_canonical_name
 
@@ -93,6 +94,36 @@ def _parse_dt(value: Any) -> datetime | None:
 
 def _measurement_date(row: Dict[str, Any]) -> datetime | None:
     return _parse_dt(choose_measurement_date(row))
+
+
+def _value_in_unit(canonical_key: str, value: float, from_unit: Any, to_unit: Any) -> float | None:
+    """Convert `value` (in `from_unit`) to `to_unit` for the given canonical
+    marker, using biomarker_reference.py's unit table — the single source of
+    truth for per-biomarker conversion factors (e.g. Hemoglobin g/L <-> g/dL).
+
+    Found 2026-09-22: every consumer of _normalize_history_rows() (trend
+    detection, personal baseline, baseline velocity) previously compared raw
+    `value` numbers across history points without checking `unit` at all. A
+    historical PDF-extracted result in g/L (e.g. Hemoglobin "148") compared
+    directly against a same-day manual entry in g/dL ("13.5") reads as an
+    ~91% crash and fires a false "discuss with a doctor" safety signal even
+    though both values are in range once normalized (148 g/L = 14.8 g/dL).
+
+    Returns the converted value, the original value unchanged when both
+    units are missing/equal (preserves prior behavior for same-unit or
+    unit-less fixtures), or None when the units differ and conversion isn't
+    possible (unknown biomarker/unit) — callers must treat None as "cannot
+    safely compare", not "assume equal".
+    """
+    from_unit = (from_unit or "").strip()
+    to_unit = (to_unit or "").strip()
+    if not from_unit or not to_unit or from_unit == to_unit:
+        return value
+    biomarker_id = str(canonical_key or "").removeprefix("canonical_")
+    try:
+        return convert_unit(value, biomarker_id, from_unit, to_unit)
+    except (ValueError, KeyError, TypeError):
+        return None
 
 
 def _normalize_history_rows(rows: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -187,6 +218,9 @@ def evaluate_biomarker_trends(
         if current_measured_at and previous_measured_at and previous_measured_at.date() == current_measured_at.date():
             continue
         previous_value = _num(previous.get("value"))
+        if previous_value in (None, 0):
+            continue
+        previous_value = _value_in_unit(key, previous_value, previous.get("unit"), current.get("unit"))
         if previous_value in (None, 0):
             continue
         absolute_change = current_value - previous_value

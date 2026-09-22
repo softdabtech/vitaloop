@@ -27,6 +27,7 @@ from app.services.trend_engine import (
     _num,
     _parse_dt,
     _significance_threshold_pct,
+    _value_in_unit,
 )
 
 PERSONAL_BASELINE_VERSION = "personal_baseline_v1"
@@ -74,7 +75,21 @@ def build_personal_baseline(
         if len(prior_rows) < min_history_points:
             continue
 
-        values = [row["value"] for row in prior_rows]
+        # 2026-09-22 fix: prior rows may carry a different unit than the
+        # current value (e.g. a PDF-extracted Hemoglobin in g/L vs a manual
+        # entry in g/dL) — averaging raw numbers across mismatched units
+        # produced a fabricated "silent signal"/doctor-review flag. Convert
+        # each prior value into the current value's unit first; a row that
+        # can't be converted (unknown unit/biomarker) is excluded rather
+        # than silently mixed in.
+        current_unit = current.get("unit")
+        values = [
+            converted
+            for row in prior_rows
+            if (converted := _value_in_unit(key, row["value"], row.get("unit"), current_unit)) is not None
+        ]
+        if len(values) < min_history_points:
+            continue
         baseline_value = statistics.mean(values)
         if baseline_value == 0:
             continue
@@ -97,7 +112,7 @@ def build_personal_baseline(
                 "current_value": current_value,
                 "unit": current.get("unit") or prior_rows[-1].get("unit"),
                 "personal_baseline_value": round(baseline_value, 4),
-                "history_points": len(prior_rows),
+                "history_points": len(values),
                 "percent_change_from_baseline": delta_pct,
                 "significance_threshold_pct": threshold_pct,
                 "direction": direction,
@@ -276,7 +291,19 @@ def _assess_marker_velocity(
         return None
 
     ordered = sorted(prior_rows, key=lambda row: row.get("measured_at") or "")
-    values = [row["value"] for row in ordered] + [current_value]
+    current_unit = current.get("unit")
+    # 2026-09-22 fix: same unit-mismatch issue as build_personal_baseline()
+    # above — convert every prior row into the current value's unit before
+    # it enters the velocity/direction sequence; drop rows that can't be
+    # converted instead of comparing raw numbers across units.
+    converted_priors = [
+        converted
+        for row in ordered
+        if (converted := _value_in_unit(key, row["value"], row.get("unit"), current_unit)) is not None
+    ]
+    if not converted_priors:
+        return None
+    values = converted_priors + [current_value]
     n = len(values)
 
     latest_prior = values[-2]
