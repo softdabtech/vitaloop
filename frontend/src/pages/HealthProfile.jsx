@@ -104,7 +104,7 @@ const HEALTH_PROFILE_COPY = {
     ageMetric: 'Age',
     weightMetric: 'Weight',
     heightMetric: 'Height',
-    tip: 'TIP',
+    tip: 'Why this matters',
     tipBody: 'Your profile data is used to personalize supplement recommendations, nutrition guidance, and protocol timing. Keep it updated!',
   },
   uk: {
@@ -160,7 +160,7 @@ const HEALTH_PROFILE_COPY = {
     ageMetric: 'Вік',
     weightMetric: 'Вага',
     heightMetric: 'Зріст',
-    tip: 'ПОРАДА',
+    tip: 'Навіщо це потрібно',
     tipBody: 'Дані профілю персоналізують рекомендації добавок, харчування та терміни протоколу. Тримайте їх актуальними!',
   },
 }
@@ -358,8 +358,8 @@ export default function HealthProfile() {
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-6">
-          {/* Main grid: Personal Info + Health Goals side by side */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Personal Info + Health Goals stacked */}
+          <div className="grid grid-cols-1 gap-6">
             {/* Biometrics Section - Left Column */}
             <CoachCard className="p-6 sm:p-8">
               <h3 className="coach-title-lg mb-6">{copy.basics}</h3>
@@ -463,16 +463,16 @@ export default function HealthProfile() {
 
           {/* Medical Flags - Important Context */}
           <CoachCard tone="attention" className="p-6 sm:p-8">
-            <h3 className="mb-2 text-lg font-extrabold text-rose-900">⚠️ {copy.conditionsTitle}</h3>
+            <h3 className="coach-title-lg mb-2 !text-rose-900">⚠️ {copy.conditionsTitle}</h3>
             <p className="mb-5 text-sm text-rose-700">{copy.conditionsBody}</p>
 
-            <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <CoachInput label={copy.medications}>
                 <textarea
                   value={profile.medications}
                   onChange={(e) => setProfile({ ...profile, medications: e.target.value })}
                   placeholder={copy.medicationsPlaceholder}
-                  rows={3}
+                  rows={2}
                 />
               </CoachInput>
 
@@ -481,7 +481,7 @@ export default function HealthProfile() {
                   value={profile.allergies}
                   onChange={(e) => setProfile({ ...profile, allergies: e.target.value })}
                   placeholder={copy.allergiesPlaceholder}
-                  rows={3}
+                  rows={2}
                 />
               </CoachInput>
 
@@ -503,7 +503,7 @@ export default function HealthProfile() {
                   value={profile.current_supplements}
                   onChange={(e) => setProfile({ ...profile, current_supplements: e.target.value })}
                   placeholder={copy.supplementsPlaceholder}
-                  rows={3}
+                  rows={2}
                 />
               </CoachInput>
 
@@ -512,7 +512,7 @@ export default function HealthProfile() {
                   value={profile.current_medications}
                   onChange={(e) => setProfile({ ...profile, current_medications: e.target.value })}
                   placeholder={copy.currentMedicationsPlaceholder}
-                  rows={3}
+                  rows={2}
                 />
               </CoachInput>
 
@@ -521,7 +521,7 @@ export default function HealthProfile() {
                   value={profile.prior_diagnoses}
                   onChange={(e) => setProfile({ ...profile, prior_diagnoses: e.target.value })}
                   placeholder={copy.priorDiagnosesPlaceholder}
-                  rows={3}
+                  rows={2}
                 />
               </CoachInput>
             </div>

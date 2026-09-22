@@ -22,7 +22,7 @@ function isCrmRole(user) {
 }
 
 const PAGE_META = {
-  '/dashboard': { title: 'Today', ukTitle: 'Сьогодні', subtitle: null },
+  '/dashboard': { title: 'Dashboard', ukTitle: 'Дашборд', subtitle: null },
   '/upload': { title: 'Upload Results', ukTitle: 'Завантажити аналізи', subtitle: null },
   '/lab-plan': { title: 'Lab Plan', ukTitle: 'План аналізів', subtitle: null },
   '/lab-results': { title: 'Results & Trends', ukTitle: 'Результати й динаміка', subtitle: null },
@@ -32,7 +32,7 @@ const PAGE_META = {
   '/check-ins': { title: 'Check-in', ukTitle: 'Чек-ін', subtitle: null },
   '/onboarding': { title: 'Onboarding', ukTitle: 'Налаштування', subtitle: null },
   '/questionnaire': { title: 'Symptom Check', ukTitle: 'Перевірка симптомів', subtitle: null },
-  '/settings': { title: 'Account', ukTitle: 'Акаунт', subtitle: null },
+  '/account': { title: 'Account', ukTitle: 'Акаунт', subtitle: null },
   '/help-center': { title: 'Help Center', ukTitle: 'Допомога', subtitle: null },
 }
 

@@ -273,6 +273,20 @@ function buildCockpitViewModel({
     pushRow({ kind: 'plan', title: text, why: c.thisWeek.planItemWhy, actionLabel: label(planTarget), actionTo: planTarget })
   }
 
+  // --- nutritionFocus: first nutrition-category action_plan item, if any.
+  // knowledge_report.action_plan objects carry title/body/category (see
+  // backend build_knowledge_report/_fallback_action_plan) -- reportDetails.
+  // protocol is plain strings only (per planItemsSource's own comment
+  // above), so this reads knowledge_report directly regardless of which
+  // source planItemsSource picked. Never invents content -- renders nothing
+  // when no nutrition item is present in this report.
+  const nutritionItem = Array.isArray(reportDetails?.knowledge_report?.action_plan)
+    ? reportDetails.knowledge_report.action_plan.find((item) => item?.category === 'nutrition' && item?.title)
+    : null
+  const nutritionFocus = nutritionItem
+    ? { title: nutritionItem.title, body: nutritionItem.body || null, to: planTarget }
+    : null
+
   // c. first retest_plan item with timing (same source as statusStrip's
   // cell 3, surfaced here as its own actionable row)
   if (nextRetest) {
@@ -403,7 +417,7 @@ function buildCockpitViewModel({
     ? { label: isVeryOldReport ? copy.cta.upload : copy.cta.results, to: isVeryOldReport ? uploadTo : resultsTo }
     : null
 
-  return { contentStatus, headerContext, statusStrip, safety: cockpitSafety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction }
+  return { contentStatus, headerContext, statusStrip, safety: cockpitSafety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction, nutritionFocus }
 }
 
 function buildReturningUserSections({

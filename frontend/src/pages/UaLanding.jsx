@@ -1133,15 +1133,6 @@ export default function UaLanding() {
     }
   }, [])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined
-    if (showWellbeingModal || autoModalDismissed) return undefined
-    const timer = window.setTimeout(() => {
-      setShowWellbeingModal(true)
-    }, 12000)
-    return () => window.clearTimeout(timer)
-  }, [autoModalDismissed, showWellbeingModal])
-
   const dismissModal = () => {
     try { sessionStorage.setItem(UA_MODAL_SESSION_KEY, '1') } catch {}
     setAutoModalDismissed(true)
@@ -1170,6 +1161,11 @@ export default function UaLanding() {
         locale="uk_UA"
         image={UA_OG_IMAGE}
         imageAlt="Vitaloop Ukraine — персональна оцінка симптомів, аналізів і плану дій"
+        alternates={[
+          { lang: 'uk-UA', href: 'https://ua.vitaloop.today/' },
+          { lang: 'en', href: 'https://vitaloop.today/' },
+          { lang: 'x-default', href: 'https://vitaloop.today/' },
+        ]}
         schemas={[SCHEMA_SOFTWARE, SCHEMA_ORGANIZATION, SCHEMA_FAQ]}
       />
       <UaHeader />
@@ -1196,13 +1192,13 @@ export default function UaLanding() {
                 </div>
 
                 {/* Main headline */}
-                <h1 className="mt-5 text-[34px] font-black leading-[1.05] tracking-[-0.02em] text-white">
-                  Ваші аналізи<br />
-                  <span className="text-[#5eead4]">розшифровані.</span><br />
-                  Ваш план — готовий.
-                </h1>
+                <h2 className="mt-5 text-[34px] font-black leading-[1.05] tracking-[-0.02em] text-white">
+                  Постійна втома?<br />
+                  Поганий сон?<br />
+                  <span className="text-[#5eead4]">Низька енергія?</span>
+                </h2>
                 <p className="mt-4 text-[14px] leading-[1.65] text-white/55">
-                  Описуєте симптоми або завантажуєте аналізи — AI аналізує 95+ біомаркерів і формує персональний план дій.
+                  Vitaloop допомагає звʼязати симптоми, PDF або фото аналізів і динаміку показників у зрозумілий план наступних кроків.
                 </p>
 
                 {/* 3 feature rows */}
@@ -1231,13 +1227,13 @@ export default function UaLanding() {
                     className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[linear-gradient(135deg,#0f766e_0%,#14b8a6_100%)] py-[18px] text-[16px] font-black text-white shadow-[0_12px_36px_rgba(13,148,136,0.38)] transition active:scale-[0.98]"
                   >
                     <Sparkles className="h-5 w-5" />
-                    Пройти чекап самопочуття
+                    Отримати персональну оцінку
                   </button>
                   <button
-                    onClick={startSignup}
+                    onClick={() => scrollTo('how')}
                     className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 py-4 text-[14px] font-semibold text-white/65 transition active:scale-[0.98]"
                   >
-                    Зареєструватись безкоштовно
+                    Як це працює
                   </button>
                   <div className="mt-5 flex items-center justify-center gap-1 text-[11px] text-white/30">
                     <Check className="h-3 w-3" /><span>Безкоштовно</span>
@@ -1246,6 +1242,9 @@ export default function UaLanding() {
                     <span className="mx-2 opacity-40">·</span>
                     <Check className="h-3 w-3" /><span>Не діагноз</span>
                   </div>
+                  <p className="mt-3 text-center text-[11px] leading-5 text-white/38">
+                    Це освітній сервіс і не замінює консультацію лікаря.
+                  </p>
                 </div>
               </div>
             </div>
@@ -1267,7 +1266,7 @@ export default function UaLanding() {
                   Постійна втома? Поганий сон? Низька енергія?
                 </h1>
                 <p className="mt-5 max-w-xl text-lg leading-8 text-[#334155]">
-                  Знайдіть можливу причину та отримайте персональний план дій. Почніть із симптомів або завантажте аналізи, якщо вони вже є.
+                  Vitaloop допомагає звʼязати симптоми, PDF або фото аналізів і динаміку показників у зрозумілий план наступних кроків.
                 </p>
                 <div className="mt-7 flex gap-3">
                   <button onClick={startWellbeingAssessment} className={`${CTA_CLASS}`}>
@@ -1281,6 +1280,9 @@ export default function UaLanding() {
                     Переглянути приклад
                   </button>
                 </div>
+                <p className="mt-4 max-w-xl text-sm leading-6 text-[#64748b]">
+                  Це не діагноз і не заміна лікаря. Сервіс готує освітній підсумок, питання для консультації та напрямки для повторної перевірки.
+                </p>
               </div>
             </div>
           </div>
@@ -1297,6 +1299,27 @@ export default function UaLanding() {
                 <span className="border-b border-[#e5dfd6] px-5 py-4">Симптоми + аналізи</span>
                 <span className="border-b border-[#e5dfd6] px-5 py-4 sm:border-b-0 sm:border-r">Для всієї родини</span>
                 <span className="px-5 py-4">Українські формати</span>
+              </div>
+            </div>
+            <div className="mt-8 rounded-[28px] border border-[#dcefe9] bg-[#f1fbf8] p-5 sm:p-6">
+              <div className="grid gap-5 md:grid-cols-[0.78fr_1.22fr] md:items-center">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#0f766e]">Українські бланки</p>
+                  <h2 className="mt-2 text-2xl font-black leading-tight text-[#0f172a]">
+                    PDF, фото або скан з популярних лабораторій
+                  </h2>
+                  <p className="mt-3 text-sm leading-7 text-[#475569]">
+                    Підійдуть результати з Сінево, Діла, Ескулаб та інших лабораторій, якщо видно назви показників, значення, одиниці й референси.
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {['PDF із кабінету', 'Фото бланка', 'Скан результатів'].map((item) => (
+                    <div key={item} className="rounded-[20px] bg-white p-4 text-sm font-black text-[#0f172a] shadow-sm ring-1 ring-[#dcefe9]">
+                      <Check className="mb-3 h-5 w-5 text-[#0f766e]" />
+                      {item}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

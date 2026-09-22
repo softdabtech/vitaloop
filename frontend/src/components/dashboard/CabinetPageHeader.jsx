@@ -1,3 +1,7 @@
+// P39 -- unified cabinet header: same gradient-hero visual family as the
+// coach-hero pages (see .cabinet-header-hero in dashboard2026.css), so every
+// cabinet page shares one header language instead of Today's cockpit-hero
+// gradient sitting next to a plain flat white card everywhere else.
 export default function CabinetPageHeader({
   title,
   subtitle,
@@ -7,10 +11,10 @@ export default function CabinetPageHeader({
 }) {
   return (
     <div className={`mb-6 ${className}`}>
-      <div className={`vtl-light-card p-5 sm:p-6 ${action ? 'flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between' : ''}`}>
+      <div className={`cabinet-header-hero ${action ? 'flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between' : ''}`}>
         <div>
-          <h2 className="mb-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{title}</h2>
-          {subtitle && <p className="text-sm leading-relaxed text-slate-500">{subtitle}</p>}
+          <h1 className="cabinet-title">{title}</h1>
+          {subtitle && <p className="mt-2 text-sm leading-relaxed text-slate-500">{subtitle}</p>}
           {helper && <p className="mt-1 text-xs text-slate-400">{helper}</p>}
         </div>
         {action ? <div className="flex items-center gap-2">{action}</div> : null}

@@ -188,17 +188,27 @@
  * surfaces, e.g. the pre-P38b Documents pill background) instead of the
  * two near-identical mint stops (#F3FBF9/#F6FCFB) this replaced. Radius
  * capped at 16px at every width, matching the P38b.1 radius rule. */
+/* P39 -- same gradient hero treatment as .cockpit-hero above, so the
+ * first_run/labs_intent entry states read as the same visual family as the
+ * ready-report cockpit and the rest of the cabinet (Lab Plan/Questionnaire/
+ * Protocol), instead of a flatter, plainer surface. */
 .today-focus {
-  padding: 20px 24px 24px;
-  border-radius: 16px;
-  background: var(--coach-primary-soft, #DDF8F2);
-  border: 1px solid rgba(42, 191, 170, 0.14);
+  position: relative;
+  overflow: hidden;
+  padding: 32px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(42, 191, 170, 0.18), transparent 34%),
+    radial-gradient(circle at 88% 5%, rgba(47, 128, 237, 0.11), transparent 26%),
+    linear-gradient(135deg, #ffffff 0%, #effdf9 100%);
+  border: 1px solid rgba(42, 191, 170, 0.2);
+  box-shadow: var(--coach-shadow, 0 20px 50px rgba(15, 23, 42, 0.08));
 }
 
 @media (max-width: 640px) {
   .today-focus {
-    padding: 16px 18px 20px;
-    border-radius: 16px;
+    padding: 20px;
+    border-radius: 24px;
   }
 }
 
@@ -210,8 +220,8 @@
 
 .today-hero h1 {
   margin: 0;
-  font-size: clamp(22px, 3vw, 27px);
-  line-height: 1.2;
+  font-size: clamp(28px, 4vw, 32px);
+  line-height: 1.15;
   font-weight: 800;
   letter-spacing: 0;
   color: var(--coach-text);
@@ -386,8 +396,45 @@
   gap: 13px;
 }
 
+/* P39 -- Today's cockpit gets the same calm gradient "hero" treatment as
+ * Lab Plan/Questionnaire/Protocol (.coach-hero in coach-design-system.css),
+ * instead of a plain flat block -- this is the visual-parity fix requested
+ * after the September 2026 full-cabinet-unification review. Purely a
+ * decorative wrapper around the existing header/safety/status-strip
+ * markup -- no change to what renders inside it or in what order. */
+.cockpit-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 28px 32px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(42, 191, 170, 0.18), transparent 34%),
+    radial-gradient(circle at 88% 5%, rgba(47, 128, 237, 0.11), transparent 26%),
+    linear-gradient(135deg, #ffffff 0%, #effdf9 100%);
+  border: 1px solid rgba(42, 191, 170, 0.2);
+  box-shadow: var(--coach-shadow, 0 20px 50px rgba(15, 23, 42, 0.08));
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.cockpit-hero > .today-safety-stack {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .cockpit-hero {
+    padding: 18px 18px 16px;
+    border-radius: 24px;
+  }
+}
+
 .cockpit-header {
   padding-bottom: 2px;
+}
+
+.cockpit-header .coach-eyebrow {
+  margin-bottom: 4px;
 }
 
 .cockpit-header__top {
@@ -405,8 +452,8 @@
  * weight at its top, just gains a real heading. */
 .cockpit-title {
   margin: 0;
-  font-size: clamp(20px, 2.6vw, 24px);
-  line-height: 1.2;
+  font-size: clamp(28px, 4vw, 32px);
+  line-height: 1.15;
   font-weight: 800;
   letter-spacing: 0;
   color: var(--coach-text);
@@ -452,12 +499,51 @@
   color: #0b6b5b;
 }
 
+/* P39 -- the header's Upload action gets real button weight (pill, border,
+ * background) instead of reading as a stray text link floating in the top
+ * corner of the hero -- matches the secondary-button language used
+ * elsewhere (Lab Plan's "Upload existing results"). */
+.cockpit-header__upload-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1px solid #E2E8F0;
+  background: #ffffff;
+  color: var(--coach-text, #0f172a);
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.cockpit-header__upload-btn:hover {
+  background: var(--coach-primary-soft, #DDF8F2);
+  border-color: rgba(42, 191, 170, 0.5);
+}
+
+@media (max-width: 480px) {
+  .cockpit-header__upload-btn {
+    font-size: 12.5px;
+    padding: 0 12px;
+  }
+}
+
 /* Status strip: 3 flat cells in one row on desktop, stacked on mobile --
  * tight padding, no card-on-card (each cell is a plain bordered block
  * directly inside the strip, not a card nested inside another card). */
+/* P39 -- the retest cell (marker name + timing window) is reliably the
+ * longest of the three, so it gets a slightly wider track instead of an
+ * even 1fr/1fr/1fr split -- that even split was what pushed it to wrap onto
+ * a second line while the other two stayed single-line, making the row look
+ * misaligned (uneven card heights, dangling empty space under the shorter
+ * two). */
 .cockpit-status-strip {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.85fr) minmax(0, 1.3fr);
   gap: 7px;
 }
 
@@ -475,7 +561,7 @@
  * against the page background and its neighbors, not decorative. */
 .cockpit-status-cell {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   padding: 12px 14px;
   border-radius: 12px;
@@ -548,9 +634,10 @@
 }
 
 .cockpit-section {
-  /* P37k.2: ~10% tighter than the original 16px/18px. */
+  /* P37k.2: ~10% tighter than the original 16px/18px. P40: radius unified
+     to 16px, the cabinet's shared "inner element" tier. */
   padding: 14px 16px;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #F8FAFC;
   border: 1px solid rgba(15, 23, 42, 0.07);
 }
@@ -633,7 +720,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 9px 11px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #FFFFFF;
   border: 1px solid rgba(15, 23, 42, 0.06);
   border-left: 3px solid transparent;
@@ -700,7 +787,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 11px;
-  border-radius: 8px;
+  border-radius: 12px;
   background: #FFFFFF;
   border: 1px solid rgba(15, 23, 42, 0.06);
   border-left: 3px solid transparent;

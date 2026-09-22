@@ -147,14 +147,7 @@ export default function AvatarUpload({ user, onUpdate, isUk = false }) {
           <button
             onClick={() => inputRef.current?.click()}
             disabled={loading}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '10px 20px', borderRadius: 100, border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-              background: 'linear-gradient(135deg, #0f766e, #14b8a6)',
-              color: '#fff', fontWeight: 700, fontSize: 13.5,
-              boxShadow: '0 4px 14px rgba(15,118,110,0.28)',
-              opacity: loading ? 0.6 : 1,
-            }}
+            className="cabinet-btn cabinet-btn--primary cabinet-btn--sm"
           >
             <Upload size={15} />
             {loading ? T.saving : T.upload}
@@ -163,12 +156,7 @@ export default function AvatarUpload({ user, onUpdate, isUk = false }) {
           {currentUrl && !loading && (
             <button
               onClick={handleRemove}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '8px 16px', borderRadius: 100,
-                border: '1.5px solid #e2e8f0', background: 'transparent',
-                color: '#94a3b8', fontWeight: 600, fontSize: 13, cursor: 'pointer',
-              }}
+              className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm"
             >
               <Trash2 size={13} />
               {T.remove}

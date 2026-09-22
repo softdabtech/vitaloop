@@ -10,6 +10,9 @@ import BiomarkerAlertsDisplay from '../components/BiomarkerAlertsDisplay.jsx'
 import HealthTipsDisplay from '../components/HealthTipsDisplay.jsx'
 import TrendAnalyticsDashboard from '../components/TrendAnalyticsDashboard.jsx'
 import { useTimeline, useInsights, useHealthScore, useProgress } from '../hooks/useQueries.js'
+// CabinetPageHeader's .cabinet-header-hero class lives here -- Vite code-
+// splits CSS per lazy route chunk, so this page must import it directly.
+import '../styles/dashboard2026.css'
 
 const EVENT_LABELS = {
   lab_uploaded: 'Upload',

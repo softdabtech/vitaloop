@@ -4,11 +4,11 @@ import { ActivitySquare, Home, Settings, Stethoscope, Upload } from 'lucide-reac
 import { isUkrainianLocale } from '../../lib/locale.js'
 
 const TAB_ITEMS = [
-  { path: '/dashboard', label: 'Today', ukLabel: 'Сьогодні', icon: Home },
+  { path: '/dashboard', label: 'Dashboard', ukLabel: 'Дашборд', icon: Home },
   { path: '/questionnaire', label: 'Symptom', ukLabel: 'Симптоми', icon: Stethoscope },
   { path: '/upload', label: 'Upload', ukLabel: 'Аналізи', icon: Upload, accent: true },
   { path: '/lab-results', label: 'Results', ukLabel: 'Результати', icon: ActivitySquare },
-  { path: '/settings', label: 'Account', ukLabel: 'Акаунт', icon: Settings },
+  { path: '/account', label: 'Account', ukLabel: 'Акаунт', icon: Settings },
 ]
 
 function isActive(current, item) {

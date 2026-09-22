@@ -21,9 +21,15 @@ export default function UaTerms() {
       margin: '0 auto',
     }}>
       <Seo
-        title="Умови використання | VITALOOP Ukraine"
+        title="Умови користування | VITALOOP Україна"
         description="Ознайомтеся з умовами використання VITALOOP, умовами підписки, медичним дисклеймером та відповідальністю."
-        path="/terms"
+        canonicalUrl="https://ua.vitaloop.today/terms/"
+        locale="uk_UA"
+        alternates={[
+          { lang: 'uk-UA', href: 'https://ua.vitaloop.today/terms/' },
+          { lang: 'en', href: 'https://vitaloop.today/terms/' },
+          { lang: 'x-default', href: 'https://vitaloop.today/terms/' },
+        ]}
       />
       <button
         onClick={() => navigate('/')}

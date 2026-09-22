@@ -6,6 +6,7 @@ import NotificationPreferences from '../components/NotificationPreferences.jsx'
 import AvatarUpload from '../components/AvatarUpload.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { useSubscription } from '../hooks/useSubscription.js'
+import { useDashboardSummary, useReportDetails } from '../hooks/useQueries.js'
 import { supabase } from '../lib/supabase.js'
 import api from '../lib/api.js'
 import { isUkrainianLocale } from '../lib/locale.js'
@@ -45,6 +46,21 @@ export default function Settings() {
   const { user, signOut } = useAuth()
   const { isPremium } = useSubscription()
   const isUk = isUkrainianLocale()
+
+  // Next-retest data for the "Add to calendar" block in Notification
+  // Preferences -- same today_contract.latest_ready_report -> useReportDetails
+  // -> knowledge_report.retest_plan chain UserDashboard.jsx already uses for
+  // Today's cockpit, read fresh here since Settings has no shared view model.
+  const { data: summary } = useDashboardSummary()
+  const readyUploadId = summary?.today_contract?.latest_ready_report_status === 'ready'
+    ? summary?.today_contract?.latest_ready_report?.upload_id
+    : undefined
+  const { data: reportDetails } = useReportDetails(readyUploadId)
+  const retestPlan = Array.isArray(reportDetails?.knowledge_report?.retest_plan)
+    ? reportDetails.knowledge_report.retest_plan
+    : []
+  const nextRetest = retestPlan.find((item) => item?.marker && item?.timing) || null
+  const lastReportDate = summary?.today_contract?.latest_ready_report?.measurement_date || null
   const [notifications, setNotifications] = useState({
     weekly_checkin: user?.user_metadata?.weekly_checkin !== false,
     assignment_due: user?.user_metadata?.assignment_due !== false,
@@ -269,13 +285,15 @@ export default function Settings() {
           </div>
         </CoachCard>
 
-        <CoachCard className="p-6">
+        <CoachCard className="p-6 lg:col-span-2">
           <NotificationPreferences
             currentPreferences={notifications}
             onSave={(prefs) => {
               setNotifications(prefs)
               toast.success(isUk ? 'Налаштування сповіщень оновлено' : 'Notification preferences updated!')
             }}
+            nextRetest={nextRetest}
+            lastReportDate={lastReportDate}
           />
         </CoachCard>
 
@@ -319,17 +337,19 @@ export default function Settings() {
               ? 'Скачайте копію профілю, завантажених результатів, динаміки, інсайтів і чек-інів у JSON форматі.'
               : 'Download a JSON copy of your profile, uploaded result history, progress, insights, and check-ins.'}
           </p>
-          <button onClick={exportAccountData} disabled={exportingData} className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60">
+          <button onClick={exportAccountData} disabled={exportingData} className="cabinet-btn cabinet-btn--secondary">
             {exportingData ? (isUk ? 'Готуємо експорт...' : 'Preparing export...') : (isUk ? 'Скачати мої дані' : 'Download my data')}
           </button>
         </CoachCard>
 
-        <CoachCard tone="attention" className="p-6 lg:col-span-2">
+        <CoachCard className="p-6 lg:col-span-2">
           <div className="mb-4 flex items-center gap-3">
-            <AlertTriangle size={18} className="text-rose-700" />
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100">
+              <AlertTriangle size={18} className="text-slate-500" />
+            </span>
             <div>
-              <div className="text-base font-semibold text-rose-900">{isUk ? 'Небезпечна зона' : 'Danger zone'}</div>
-              <div className="text-xs text-rose-700">{isUk ? 'Незворотні дії' : 'Irreversible actions'}</div>
+              <div className="text-sm font-bold text-slate-900">{isUk ? 'Керування акаунтом' : 'Account controls'}</div>
+              <div className="text-xs text-slate-500">{isUk ? 'Деякі дії тут неможливо скасувати' : "Some actions here can't be undone"}</div>
             </div>
           </div>
 
@@ -340,17 +360,17 @@ export default function Settings() {
                   await signOut()
                   safeNavigateToLogin()
                 }}
-                className="w-full rounded-2xl border border-rose-300 bg-white px-6 py-3 text-center font-semibold text-rose-600 transition hover:bg-rose-50"
+                className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm"
               >
-                <span className="inline-flex items-center gap-2"><LogOut className="h-4 w-4" /> {isUk ? 'Вийти з усіх пристроїв' : 'Sign Out from All Devices'}</span>
+                <LogOut className="h-4 w-4" /> {isUk ? 'Вийти з усіх пристроїв' : 'Sign Out from All Devices'}
               </button>
-              <p className="mt-2 text-xs text-rose-700">
+              <p className="mt-2 text-xs text-slate-500">
                 {isUk ? 'Вийдіть із VITALOOP на всіх пристроях. Потрібно буде увійти знову.' : "Sign out of VITALOOP on all your devices. You'll need to log in again."}
               </p>
             </div>
 
             {isPremium && (
-              <div className="border-t border-rose-300/50 pt-3">
+              <div className="border-t border-slate-200 pt-3">
                 <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
                   <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-blue-900">
                     <CreditCard className="h-4 w-4" />
@@ -361,23 +381,23 @@ export default function Settings() {
                       ? 'Premium доступ активується вручну. Медичні дані не передаються платіжним інструментам.'
                       : 'Premium access is activated manually. Medical data is not shared with billing tools.'}
                   </p>
-                  <button type="button" onClick={() => { window.location.href = '/billing-history' }} className="mt-3 inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                  <button type="button" onClick={() => { window.location.href = '/billing-history' }} className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm mt-3">
                     {isUk ? 'Переглянути оплату' : 'View billing'}
                   </button>
                 </div>
               </div>
             )}
 
-            <div className="border-t border-rose-300/50 pt-3">
+            <div className="border-t border-slate-200 pt-3">
               {!showDeleteConfirm ? (
                 <>
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="w-full rounded-2xl border border-red-500 bg-white px-6 py-3 text-center font-semibold text-red-700 transition hover:bg-red-50"
+                    className="cabinet-btn cabinet-btn--danger cabinet-btn--sm"
                   >
                     {isUk ? 'Видалити акаунт назавжди' : 'Delete Account Permanently'}
                   </button>
-                  <p className="mt-2 text-xs text-rose-700">
+                  <p className="mt-2 text-xs text-slate-500">
                     {isUk ? 'Назавжди видалити акаунт і всі повʼязані дані. Цю дію не можна скасувати.' : 'Permanently delete your account and all associated data. This cannot be undone.'}
                   </p>
                 </>
@@ -390,14 +410,14 @@ export default function Settings() {
                     <button
                       onClick={deleteAccount}
                       disabled={deleting}
-                      className="flex-1 rounded-lg bg-red-700 px-4 py-2 font-semibold text-white transition hover:bg-red-800 disabled:opacity-60"
+                      className="cabinet-btn cabinet-btn--danger-solid cabinet-btn--sm flex-1"
                     >
                       {deleting ? (isUk ? 'Видалення...' : 'Deleting...') : (isUk ? 'Так, видалити все' : 'Yes, Delete Everything')}
                     </button>
                     <button
                       onClick={() => setShowDeleteConfirm(false)}
                       disabled={deleting}
-                      className="flex-1 rounded-lg border border-rose-400 bg-white px-4 py-2 font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
+                      className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm flex-1"
                     >
                       {isUk ? 'Скасувати' : 'Cancel'}
                     </button>

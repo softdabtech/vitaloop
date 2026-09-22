@@ -1,4 +1,4 @@
-import { Mail, Zap, Calendar, AlertCircle } from 'lucide-react'
+import { Bell, CalendarPlus, Mail, Zap, Calendar, AlertCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../lib/api.js'
@@ -11,6 +11,7 @@ import {
   subscribeToPush,
   unsubscribeFromPush,
 } from '../lib/notifications.ts'
+import { addWeeks, downloadICS, googleCalendarUrl, parseWeeksFromTiming } from '../lib/calendarEvent.js'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
 // rule lives in this stylesheet. Belt-and-suspenders here since the parent
 // (Settings.jsx) already imports it and Vite bundles CSS per route chunk,
@@ -49,6 +50,18 @@ const NOTIFICATION_COPY = {
       'No spam - we respect your time',
       'You control everything here',
     ],
+    calendar: {
+      title: 'Add to calendar',
+      subtitleWithRetest: (marker) => `Retest reminder: ${marker}`,
+      subtitleGeneric: 'Next checkup reminder',
+      bodyWithRetest: (marker, timing) => `Your plan noted a retest window of ${timing} for ${marker}. We've estimated a date below — adjust it to whatever works for you.`,
+      bodyGeneric: 'No retest window on file yet. Pick a date to remind yourself to check in or upload new labs.',
+      dateLabel: 'Event date',
+      addButton: 'Add to calendar (.ics)',
+      googleButton: 'Add to Google Calendar',
+      eventTitleWithRetest: (marker) => `VITALOOP: retest ${marker}`,
+      eventTitleGeneric: 'VITALOOP: health checkup',
+    },
     types: {
       weekly_checkin: { label: 'Weekly Check-in Reminder', description: 'Friday 6pm - Remind me to complete weekly symptom check-in' },
       assignment_due: { label: 'Upcoming Assignment', description: 'Nudge when active tasks stay pending' },
@@ -91,6 +104,18 @@ const NOTIFICATION_COPY = {
       'Без спаму — ми цінуємо ваш час',
       'Ви керуєте всім тут',
     ],
+    calendar: {
+      title: 'Додати в календар',
+      subtitleWithRetest: (marker) => `Нагадування про повторний аналіз: ${marker}`,
+      subtitleGeneric: 'Нагадування про наступний чекап',
+      bodyWithRetest: (marker, timing) => `У вашому плані вказане вікно повторного аналізу ${timing} для ${marker}. Ми оцінили дату нижче — змініть її на зручну.`,
+      bodyGeneric: 'Поки немає вікна повторного аналізу. Оберіть дату, щоб нагадати собі пройти чекап або завантажити нові аналізи.',
+      dateLabel: 'Дата події',
+      addButton: 'Додати в календар (.ics)',
+      googleButton: 'Додати в Google Календар',
+      eventTitleWithRetest: (marker) => `VITALOOP: повторний аналіз ${marker}`,
+      eventTitleGeneric: 'VITALOOP: чекап здоров\'я',
+    },
     types: {
       weekly_checkin: { label: 'Нагадування про щотижневий чек-ін', description: 'Пʼятниця 18:00 — нагадати пройти щотижневий чек-ін симптомів' },
       assignment_due: { label: 'Найближче завдання', description: 'Нагадування, коли активні завдання залишаються невиконаними' },
@@ -104,18 +129,26 @@ const NOTIFICATION_COPY = {
   },
 }
 
+// P39 -- unified cabinet color scale: every notification type is the same
+// "neutral setting", not a safety/urgency signal, so they all share one
+// enabled/disabled treatment instead of five arbitrary decorative pastels
+// (the old purple/orange/red/blue/yellow mapping flagged in the September
+// 2026 full-cabinet-unification review). Only biomarker_alert has a real
+// safety connection -- it stays visually identical to the others here since
+// this list is a preference toggle, not the alert itself; the alert's own
+// tone is set where it actually fires (Today's safety banners).
 const NOTIFICATION_ICONS = {
-  weekly_checkin: { icon: Calendar, color: 'purple', default: true },
-  assignment_due: { icon: AlertCircle, color: 'orange', default: true },
-  retest_reminder: { icon: Calendar, color: 'blue', default: true },
-  streak_reminder: { icon: Zap, color: 'red', default: true },
-  weekly_digest: { icon: Mail, color: 'blue', default: true },
-  achievement_unlock: { icon: Zap, color: 'yellow', default: true },
-  biomarker_alert: { icon: AlertCircle, color: 'red', default: true },
-  insight_published: { icon: Zap, color: 'purple', default: true },
+  weekly_checkin: { icon: Calendar, default: true },
+  assignment_due: { icon: AlertCircle, default: true },
+  retest_reminder: { icon: Calendar, default: true },
+  streak_reminder: { icon: Zap, default: true },
+  weekly_digest: { icon: Mail, default: true },
+  achievement_unlock: { icon: Zap, default: true },
+  biomarker_alert: { icon: AlertCircle, default: true },
+  insight_published: { icon: Zap, default: true },
 }
 
-export default function NotificationPreferences({ currentPreferences = {}, onSave }) {
+export default function NotificationPreferences({ currentPreferences = {}, onSave, nextRetest = null, lastReportDate = null }) {
   const isUk = isUkrainianLocale()
   const copy = isUk ? NOTIFICATION_COPY.uk : NOTIFICATION_COPY.en
   const [preferences, setPreferences] = useState(currentPreferences)
@@ -123,6 +156,37 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
   const [pushBusy, setPushBusy] = useState(false)
   const [pushEnabled, setPushEnabled] = useState(false)
   const [pushCount, setPushCount] = useState(0)
+
+  // "Add to calendar" -- weeksOut is only ever a rough default read out of
+  // the plan's own free-text timing window (see parseWeeksFromTiming's own
+  // comment); the date input lets the user correct it before it's used.
+  const weeksOut = nextRetest ? parseWeeksFromTiming(nextRetest.timing) : null
+  const computeDefaultEventDate = () => (
+    weeksOut
+      ? addWeeks(lastReportDate ? new Date(lastReportDate) : new Date(), weeksOut)
+      : addWeeks(new Date(), 8)
+  )
+  const [eventDateInput, setEventDateInput] = useState(() => computeDefaultEventDate().toISOString().slice(0, 10))
+  const [dateTouched, setDateTouched] = useState(false)
+
+  useEffect(() => {
+    if (dateTouched) return
+    setEventDateInput(computeDefaultEventDate().toISOString().slice(0, 10))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextRetest?.marker, nextRetest?.timing, lastReportDate])
+
+  const calendarTitle = nextRetest ? copy.calendar.eventTitleWithRetest(nextRetest.marker) : copy.calendar.eventTitleGeneric
+  const calendarSubtitle = nextRetest ? copy.calendar.subtitleWithRetest(nextRetest.marker) : copy.calendar.subtitleGeneric
+  const calendarBody = nextRetest
+    ? copy.calendar.bodyWithRetest(nextRetest.marker, nextRetest.timing)
+    : copy.calendar.bodyGeneric
+  const eventDate = eventDateInput ? new Date(`${eventDateInput}T00:00:00Z`) : null
+  const googleUrl = eventDate ? googleCalendarUrl({ title: calendarTitle, description: calendarBody, date: eventDate }) : null
+
+  const handleAddToCalendar = () => {
+    if (!eventDate) return
+    downloadICS({ title: calendarTitle, description: calendarBody, date: eventDate })
+  }
 
   useEffect(() => {
     let mounted = true
@@ -236,35 +300,81 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
         <p className="coach-body mt-1">{copy.subtitle}</p>
       </div>
 
-      <CoachCard className="p-4" tone="soft">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-slate-900">{copy.pushTitle}</p>
-            <p className="mt-1 text-xs text-slate-600">
+      <CoachCard className="p-5" tone="soft">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:divide-x sm:divide-slate-200/80">
+          <div className="sm:pr-5">
+            <div className="mb-2 flex items-center gap-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-50">
+                <Bell className="h-4 w-4 text-teal-700" />
+              </span>
+              <p className="text-sm font-semibold text-slate-900">{copy.pushTitle}</p>
+            </div>
+            <p className="text-xs text-slate-600">
               {isPushSupported()
                 ? (pushEnabled ? copy.pushEnabled(pushCount) : copy.pushDisabled)
                 : copy.pushUnsupported}
             </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {!pushEnabled ? (
-              <CoachButton size="sm" onClick={enablePush} disabled={pushBusy || !isPushSupported()}>
-                {copy.enablePush}
-              </CoachButton>
-            ) : (
-              <>
-                <CoachButton size="sm" variant="secondary" onClick={triggerTestPush} disabled={pushBusy}>
-                  {copy.sendTest}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {!pushEnabled ? (
+                <CoachButton size="sm" onClick={enablePush} disabled={pushBusy || !isPushSupported()}>
+                  {copy.enablePush}
                 </CoachButton>
-                <button
-                  onClick={disablePush}
-                  disabled={pushBusy}
-                  className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
-                >
-                  {copy.disablePush}
-                </button>
-              </>
-            )}
+              ) : (
+                <>
+                  <CoachButton size="sm" variant="secondary" onClick={triggerTestPush} disabled={pushBusy}>
+                    {copy.sendTest}
+                  </CoachButton>
+                  <button
+                    onClick={disablePush}
+                    disabled={pushBusy}
+                    className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                  >
+                    {copy.disablePush}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="sm:pl-5">
+            <div className="mb-2 flex items-center gap-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-50">
+                <CalendarPlus className="h-4 w-4 text-teal-700" />
+              </span>
+              <p className="text-sm font-semibold text-slate-900">{copy.calendar.title}</p>
+            </div>
+            <p className="text-xs font-medium text-slate-600">{calendarSubtitle}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">{calendarBody}</p>
+
+            <div className="mt-3 flex flex-col gap-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold text-slate-600">{copy.calendar.dateLabel}</span>
+                <input
+                  type="date"
+                  value={eventDateInput}
+                  onChange={(e) => {
+                    setEventDateInput(e.target.value)
+                    setDateTouched(true)
+                  }}
+                  className="w-full max-w-[180px] rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900"
+                />
+              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                <CoachButton size="sm" onClick={handleAddToCalendar} disabled={!eventDate}>
+                  {copy.calendar.addButton}
+                </CoachButton>
+                {googleUrl && (
+                  <a
+                    href={googleUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-semibold text-teal-700 underline underline-offset-4 hover:text-teal-900"
+                  >
+                    {copy.calendar.googleButton}
+                  </a>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </CoachCard>
@@ -273,23 +383,15 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
       <div className="space-y-3">
         {Object.entries(NOTIFICATION_ICONS).map(([key, meta]) => {
           const Icon = meta.icon
-          const colorClasses = {
-            purple: 'border-purple-200 bg-purple-50',
-            orange: 'border-orange-200 bg-orange-50',
-            red: 'border-red-200 bg-red-50',
-            blue: 'border-blue-200 bg-blue-50',
-            yellow: 'border-yellow-200 bg-yellow-50',
-          }
-
           const isEnabled = preferences[key] ?? meta.default
           const notificationCopy = copy.types[key]
 
           return (
             <div
               key={key}
-              className={`flex items-start gap-4 rounded-2xl border-2 p-4 transition ${
+              className={`flex items-start gap-4 rounded-2xl border p-4 transition ${
                 isEnabled
-                  ? colorClasses[meta.color]
+                  ? 'border-teal-200 bg-teal-50/60'
                   : 'border-slate-200 bg-slate-50'
               }`}
             >

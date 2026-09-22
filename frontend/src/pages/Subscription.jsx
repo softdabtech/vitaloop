@@ -1,11 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Mail, ShieldCheck, Sparkles } from 'lucide-react'
+import { CheckCircle2, Mail, ShieldCheck, Sparkles, XCircle } from 'lucide-react'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useSubscription } from '../hooks/useSubscription.js'
-import { requestPremiumAccess } from '../lib/premiumAccess.js'
+import { requestPremiumAccess, requestSubscriptionCancellation } from '../lib/premiumAccess.js'
 import { gaViewPricing } from '../lib/analytics.js'
 import '../styles/dashboard2026.css'
 
@@ -43,6 +43,7 @@ export default function Subscription() {
   const { isPremium, subStatus, planName, loading } = useSubscription()
   const statusLabel = isPremium ? 'Premium active' : 'Free plan active'
   const planLabel = isPremium ? 'Premium' : 'Free'
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
   useEffect(() => {
     if (loading) return
@@ -69,6 +70,11 @@ export default function Subscription() {
     await requestPremiumAccess({ userEmail: user?.email, source: 'subscription_page' })
   }
 
+  async function handleCancelSubscription() {
+    await requestSubscriptionCancellation({ userEmail: user?.email, source: 'subscription_page' })
+    setShowCancelConfirm(false)
+  }
+
   return (
     <div className="space-y-6">
       <CabinetPageHeader
@@ -80,7 +86,7 @@ export default function Subscription() {
       <motion.section
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+        className="rounded-[20px] border border-slate-200 bg-white p-6 shadow-sm"
       >
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -88,7 +94,7 @@ export default function Subscription() {
               <ShieldCheck className="h-3.5 w-3.5" />
               Access status
             </div>
-            <h2 className="text-3xl font-bold text-slate-950">{statusLabel}</h2>
+            <h2 className="cabinet-title-lg text-slate-950">{statusLabel}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
               Your free report shows what VITALOOP found. Premium is for going further: understanding why it was flagged, closing evidence gaps, tracking your baseline over time, and preparing for your next doctor conversation.
             </p>
@@ -98,7 +104,7 @@ export default function Subscription() {
               <button
                 type="button"
                 onClick={handlePremiumRequest}
-                className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700"
+                className="cabinet-btn cabinet-btn--primary"
               >
                 <Mail className="h-4 w-4" />
                 Request Premium access
@@ -106,7 +112,7 @@ export default function Subscription() {
               <button
                 type="button"
                 onClick={handlePremiumRequest}
-                className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100"
+                className="cabinet-btn cabinet-btn--secondary"
               >
                 <Sparkles className="h-4 w-4" />
                 Ask about annual access
@@ -114,6 +120,43 @@ export default function Subscription() {
               <p className="text-xs leading-5 text-slate-500">
                 <strong className="text-slate-600">What happens next:</strong> clicking either button opens an email to our team with your account details pre-filled. We confirm and activate Premium by email — nothing is charged automatically.
               </p>
+            </div>
+          )}
+          {isPremium && (
+            <div className="grid w-full gap-3 sm:w-auto sm:min-w-[260px]">
+              {!showCancelConfirm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCancelConfirm(true)}
+                  className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Cancel subscription
+                </button>
+              ) : (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-900">Cancel your Premium subscription?</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    You'll keep Premium access through the end of your current billing period. We'll confirm by email.
+                  </p>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCancelSubscription}
+                      className="cabinet-btn cabinet-btn--danger cabinet-btn--sm flex-1"
+                    >
+                      Yes, cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowCancelConfirm(false)}
+                      className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm flex-1"
+                    >
+                      Keep Premium
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -139,7 +182,7 @@ export default function Subscription() {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className={`rounded-2xl border p-6 shadow-sm ${isPremium ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'}`}
+          className={`rounded-[20px] border p-6 shadow-sm ${isPremium ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'}`}
         >
           <h3 className="mb-2 text-lg font-bold text-slate-950">Premium</h3>
           <p className="mb-5 text-sm leading-6 text-slate-600">
@@ -152,7 +195,7 @@ export default function Subscription() {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+          className="rounded-[20px] border border-slate-200 bg-white p-6 shadow-sm"
         >
           <h3 className="mb-2 text-lg font-bold text-slate-950">Free</h3>
           <p className="mb-5 text-sm leading-6 text-slate-600">
@@ -166,7 +209,7 @@ export default function Subscription() {
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="rounded-2xl border border-blue-200 bg-blue-50 p-6"
+        className="rounded-[20px] border border-blue-200 bg-blue-50 p-6"
       >
         <div className="flex items-start gap-3">
           <Mail className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" />
@@ -175,7 +218,7 @@ export default function Subscription() {
             <p className="mt-1 text-sm leading-6 text-blue-800">
               Premium access is currently invite-based and activated manually by the VITALOOP team. We do not send symptoms, uploaded labs, biomarkers, reports, or medical notes to billing tools.
             </p>
-            <button type="button" onClick={handlePremiumRequest} className="mt-4 inline-flex rounded-xl bg-blue-700 px-4 py-2 text-sm font-bold text-white hover:bg-blue-800">
+            <button type="button" onClick={handlePremiumRequest} className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm mt-4">
               Email us
             </button>
           </div>

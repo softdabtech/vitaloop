@@ -107,6 +107,25 @@ const PAGE_CONTENT = {
       ['399 грн/міс', 'Проста ціна для регулярної роботи зі станом.'],
     ],
   },
+  faq: {
+    eyebrow: 'Питання та відповіді',
+    title: 'Коротко про аналізи, симптоми і безпеку',
+    description:
+      'Відповіді про те, як Vitaloop працює з аналізами, симптомами, Premium-доступом і медичною безпекою.',
+    icon: MessageCircle,
+    cta: 'Почати оцінку',
+    blocks: [
+      ['Це медичний діагноз?', 'Ні. Vitaloop — освітній сервіс для структурування симптомів, аналізів, питань до лікаря і повторних перевірок.'],
+      ['Чи можна почати без аналізів?', 'Так. Можна спочатку описати самопочуття, а результати аналізів додати пізніше.'],
+      ['Які бланки підходять?', 'PDF, фото або скан, якщо видно назви показників, значення, одиниці й референси лабораторії.'],
+      ['Що з даними?', 'Файли аналізів, симптоми, біомаркери і звіти не передаються в маркетингову аналітику або платіжні інструменти.'],
+    ],
+    steps: [
+      ['Опишіть стан', 'Почніть із симптомів або завантажте результати, якщо вони вже є.'],
+      ['Перевірте підсумок', 'Vitaloop покаже пріоритети, пояснення і питання для консультації.'],
+      ['Відстежуйте динаміку', 'Повторні аналізи і чек-іни допомагають бачити зміни з часом.'],
+    ],
+  },
   ferytyn: {
     eyebrow: 'Корисні матеріали',
     title: 'Що таке феритин і чому він важливий',
@@ -219,6 +238,30 @@ const PAGE_CONTENT = {
 
 const DEFAULT_SLUG = 'samopochuttia'
 
+const EN_EQUIVALENT_BY_SLUG = {
+  samopochuttia: 'https://vitaloop.today/symptom-intake/',
+  symptomy: 'https://vitaloop.today/symptom-intake/',
+  analizy: 'https://vitaloop.today/features/',
+  laboratorii: 'https://vitaloop.today/features/',
+  tarify: 'https://vitaloop.today/pricing/',
+  faq: 'https://vitaloop.today/faq/',
+}
+
+function uaCanonical(slug) {
+  return `https://ua.vitaloop.today/${slug}/`
+}
+
+function alternateLinksFor(slug) {
+  const en = EN_EQUIVALENT_BY_SLUG[slug]
+  return [
+    { lang: 'uk-UA', href: uaCanonical(slug) },
+    ...(en ? [
+      { lang: 'en', href: en },
+      { lang: 'x-default', href: en },
+    ] : []),
+  ]
+}
+
 function PageIcon({ icon: Icon }) {
   return (
     <span className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-white text-[#0f766e] shadow-[0_18px_34px_rgba(15,118,110,0.12)] ring-1 ring-[#e5dfd6]">
@@ -278,7 +321,7 @@ export default function UaPage({ pageSlug }) {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
     name: `${page.title} | Vitaloop Ukraine`,
-    url: `https://ua.vitaloop.today/${slug}`,
+    url: uaCanonical(slug),
     inLanguage: 'uk-UA',
     description: page.description,
   }), [page.description, page.title, slug])
@@ -288,9 +331,10 @@ export default function UaPage({ pageSlug }) {
       <Seo
         title={`${page.title} | Vitaloop Ukraine`}
         description={page.description}
-        canonicalUrl={`https://ua.vitaloop.today/${slug}`}
+        canonicalUrl={uaCanonical(slug)}
         locale="uk_UA"
         image="https://ua.vitaloop.today/images/ua-health-hero-dashboard-ua-20260603.png"
+        alternates={alternateLinksFor(slug)}
         schemas={[schema]}
       />
       <UaHeader />

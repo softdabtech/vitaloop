@@ -33,13 +33,13 @@ export default function BillingHistory() {
           Back to Subscription
         </button>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <section className="rounded-[20px] border border-slate-200 bg-white p-8 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
               <Mail className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="text-xl font-bold text-slate-950">Premium access support</h2>
+              <h2 className="cabinet-title-lg text-slate-950">Premium access support</h2>
               <p className="text-sm text-slate-500">Premium is currently activated manually by the VITALOOP team.</p>
             </div>
           </div>
@@ -67,7 +67,7 @@ export default function BillingHistory() {
             <button
               type="button"
               onClick={handlePremiumRequest}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
+              className="cabinet-btn cabinet-btn--primary"
             >
               <Mail className="h-4 w-4" />
               Request Premium access
@@ -75,7 +75,7 @@ export default function BillingHistory() {
             <button
               type="button"
               onClick={handlePremiumRequest}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+              className="cabinet-btn cabinet-btn--secondary"
             >
               <Mail className="h-4 w-4" />
               Contact support

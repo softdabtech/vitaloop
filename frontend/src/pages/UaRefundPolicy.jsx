@@ -7,9 +7,15 @@ export default function UaRefundPolicy() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <Seo
-        title="Політика повернення | VITALOOP Ukraine"
+        title="Політика повернення | VITALOOP Україна"
         description="Ознайомтеся з політикою повернення VITALOOP, скасування, доступу до підписки та підтримки виставлення рахунків."
-        path="/refund-policy"
+        canonicalUrl="https://ua.vitaloop.today/refund-policy/"
+        locale="uk_UA"
+        alternates={[
+          { lang: 'uk-UA', href: 'https://ua.vitaloop.today/refund-policy/' },
+          { lang: 'en', href: 'https://vitaloop.today/refund-policy/' },
+          { lang: 'x-default', href: 'https://vitaloop.today/refund-policy/' },
+        ]}
       />
       <main className="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6 lg:py-20">
         <Link to="/" className="text-sm font-semibold text-emerald-700 underline-offset-4 hover:underline">

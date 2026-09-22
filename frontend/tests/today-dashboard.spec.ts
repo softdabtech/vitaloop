@@ -178,7 +178,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await gotoToday(page)
     // P38b: the cockpit header now renders a real <h1> (was a .coach-eyebrow
     // label only, so a ready report previously had zero <h1> on the page).
-    await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible()
     await expect(page.getByText(/Lab date: Sep 14, 2026/i)).toBeVisible()
     await expect(page.getByRole('button', { name: /Open my plan/i })).toHaveCount(0)
   })
@@ -280,7 +280,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       },
     })
     await gotoToday(page)
-    await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible()
     await expect(page.getByText('Since your previous report')).toBeVisible()
     await expect(page.getByText(/Iron deficiency pattern/i)).toBeVisible()
   })
@@ -918,7 +918,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
 
   // ── P38b: shared CabinetPageFrame + Today visual hierarchy ────────────
 
-  test('P38b-1: Today renders exactly one <h1>, reading "Today"', async ({ page }) => {
+  test('P38b-1: Today renders exactly one <h1>, reading "Dashboard"', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: true }),
       entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
@@ -927,7 +927,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await gotoToday(page)
     const headings = page.getByRole('heading', { level: 1 })
     await expect(headings).toHaveCount(1)
-    await expect(headings).toHaveText('Today')
+    await expect(headings).toHaveText('Dashboard')
   })
 
   test('P38b-2: Today uses the shared CabinetPageFrame, not the old .today-canvas whole-page card', async ({ page }) => {

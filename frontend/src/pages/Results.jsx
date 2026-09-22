@@ -36,6 +36,9 @@ import { CoachBadge, CoachCard } from '../components/coach/CoachUI.jsx'
 // so each page using CoachUI must import it directly or it renders as
 // unstyled browser-default HTML, not a build error.
 import '../styles/coach-design-system.css'
+// CabinetPageHeader's .cabinet-header-hero class lives here -- Vite code-
+// splits CSS per lazy route chunk, so this page must import it directly.
+import '../styles/dashboard2026.css'
 
 const STATUS_META = {
   DEFICIENT: { rank: 0, label: 'Below range', ukLabel: 'Нижче референсу', badge: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500' },
@@ -1652,7 +1655,7 @@ export default function Results() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
-          className="mb-6 overflow-hidden rounded-[28px] border border-emerald-100 bg-white shadow-sm"
+          className="cabinet-header-hero mb-6 overflow-hidden !p-0"
         >
           <div className="grid gap-0 lg:grid-cols-[1.35fr_0.65fr]">
             <div className="p-6 sm:p-8">
@@ -1660,7 +1663,7 @@ export default function Results() {
                 <HeartPulse className="h-3.5 w-3.5" />
                 {copy.healthSummary}
               </div>
-              <h1 className="max-w-3xl text-3xl font-bold leading-tight text-slate-950 sm:text-4xl">
+              <h1 className="cabinet-title max-w-3xl">
                 {reportSummary?.headline || (priorityMarkers[0] ? `${displayBiomarkerName(priorityMarkers[0], isUk)} may need attention.` : copy.fallbackHeadline)}
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
@@ -1669,14 +1672,14 @@ export default function Results() {
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button
                   onClick={() => navigate(`/protocol/${uploadId}`)}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                  className="cabinet-btn cabinet-btn--primary"
                 >
                   {copy.actionPlan}
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => navigate('/check-ins')}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700"
+                  className="cabinet-btn cabinet-btn--secondary"
                 >
                   {copy.checkIn}
                 </button>

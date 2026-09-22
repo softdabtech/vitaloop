@@ -5,7 +5,7 @@ const BREADCRUMB_NAMES = {
   '/dashboard': 'Dashboard',
   '/upload': 'Upload',
   '/results': 'Results',
-  '/settings': 'Settings',
+  '/account': 'Account',
   '/insights': 'Insights',
   '/assignments': 'Tasks',
   '/progress': 'Progress',

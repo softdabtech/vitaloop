@@ -11,7 +11,9 @@
   --vtl-danger: #ef4444;
   --vtl-success: var(--brand, #1d9e75);
   --vtl-radius-card: 20px;
-  --vtl-radius-btn: 16px;
+  /* P40 -- unified with .coach-button/.cabinet-btn's pill radius so every
+     primary/secondary action button in the cabinet looks the same. */
+  --vtl-radius-btn: 999px;
   --vtl-radius-sm: 12px;
   --vtl-shadow-dark: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.2);
   --vtl-shadow-light: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -102,12 +104,12 @@ button[aria-label].inline-icon {
 }
 
 .vtl-button-primary {
-  min-height: 44px;
+  min-height: 48px;
   border-radius: var(--vtl-radius-btn);
   border: 1px solid rgba(var(--brand-rgb, 29, 158, 117), 0.72);
   background: linear-gradient(135deg, var(--vtl-accent), #0f7f5f);
   color: #ffffff;
-  font-weight: 700;
+  font-weight: 800;
   transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
 }
 
@@ -185,6 +187,149 @@ button[aria-label].inline-icon {
   max-width: 1152px;
   margin-left: auto;
   margin-right: auto;
+}
+
+/* P39 -- shared cabinet page header, unified visual family with the coach-
+ * hero pages (Today/Lab Plan/Symptom Check/Protocol use .coach-hero directly
+ * in coach-design-system.css; this is the same gradient/radius/border
+ * language for the remaining "informational" pages -- Settings, Health
+ * Profile, Subscription, Upload, Lab Results, Billing History, Insights,
+ * Progress, Assignments, Results, Onboarding). Self-contained (no --coach-*
+ * custom-property dependency) because not every page importing
+ * CabinetPageHeader also imports coach-design-system.css, and Vite code-
+ * splits that stylesheet per lazy route chunk. */
+/* P40 -- unified cabinet design spec (2026-09-22 full-cabinet audit). Exact
+ * match to .coach-hero (coach-design-system.css) so every page's header
+ * block is visually identical, not just "close" -- self-contained here
+ * because not every page importing CabinetPageHeader also imports
+ * coach-design-system.css. */
+.cabinet-header-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  padding: 32px;
+  border: 1px solid rgba(42, 191, 170, 0.2);
+  background:
+    radial-gradient(circle at 15% 20%, rgba(42, 191, 170, 0.18), transparent 34%),
+    radial-gradient(circle at 88% 5%, rgba(47, 128, 237, 0.11), transparent 26%),
+    linear-gradient(135deg, #ffffff 0%, #effdf9 100%);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+}
+
+@media (max-width: 640px) {
+  .cabinet-header-hero {
+    padding: 20px;
+    border-radius: 24px;
+  }
+}
+
+/* P40 -- one page-title style everywhere: CabinetPageHeader, Today's
+ * cockpit title, and Results.jsx's headline all use this instead of each
+ * picking its own size/weight. */
+.cabinet-title {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 32px);
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #0f172a;
+}
+
+/* P40 -- one section-title style (one step below .cabinet-title) for
+ * in-page groupings ("Notification Preferences", "Basics", "Top Findings",
+ * etc.) that were previously sized anywhere from 18px to 24px depending on
+ * the page. */
+.cabinet-title-lg {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #0f172a;
+}
+
+/* P40 -- the two button treatments every cabinet page should use instead
+ * of the mix of ad-hoc rounded-xl/rounded-2xl/pill buttons the audit found
+ * (worst on Settings: 9 distinct button styles on one page). Self-
+ * contained, matching .coach-button exactly, for pages that don't import
+ * coach-design-system.css. */
+.cabinet-btn {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.cabinet-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.cabinet-btn:focus-visible {
+  outline: 3px solid rgba(42, 191, 170, 0.28);
+  outline-offset: 3px;
+}
+
+.cabinet-btn--primary {
+  color: #fff;
+  background: linear-gradient(135deg, #2ABFAA 0%, #109581 100%);
+  box-shadow: 0 14px 26px rgba(42, 191, 170, 0.25);
+}
+
+.cabinet-btn--primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 36px rgba(42, 191, 170, 0.32);
+}
+
+.cabinet-btn--secondary {
+  color: #0f172a;
+  background: #fff;
+  border-color: #E2E8F0;
+}
+
+.cabinet-btn--secondary:hover {
+  border-color: rgba(42, 191, 170, 0.45);
+}
+
+.cabinet-btn--danger {
+  color: #b91c1c;
+  background: #fff;
+  border-color: #fecaca;
+}
+
+.cabinet-btn--danger:hover {
+  background: #fef2f2;
+}
+
+/* Solid fill for a final, one-step-from-irreversible confirm (e.g. "Yes,
+ * delete everything") -- visually stronger than the outline .cabinet-btn--
+ * danger used for the entry point into that flow. */
+.cabinet-btn--danger-solid {
+  color: #fff;
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.cabinet-btn--danger-solid:hover {
+  background: #991b1b;
+}
+
+/* Small utility action (remove entry, sign out, etc.) -- one consistent
+ * compact size instead of each page inventing its own (44px/100px, 40px/
+ * 999px, 52px/16px were all found in the same Settings page). */
+.cabinet-btn--sm {
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: 13px;
 }
 
 .vtl-light-card-hover {

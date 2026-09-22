@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Activity, ArrowRight, CalendarClock, ClipboardList, HelpCircle, ListChecks, RefreshCw, ShieldAlert, Stethoscope, TrendingUp } from 'lucide-react'
+import { Activity, Apple, ArrowRight, CalendarClock, ClipboardList, HelpCircle, ListChecks, RefreshCw, ShieldAlert, Stethoscope, TrendingUp } from 'lucide-react'
 import { useDashboardSummary, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
 import { useProfile } from '../hooks/useProfile.ts'
 import { useSubscription } from '../hooks/useSubscription.js'
@@ -26,7 +26,7 @@ import '../styles/today-page.css'
 // and copy assembly lives there, kept pure and dependency-free.
 const TODAY_COPY = {
   en: {
-    pageTitle: 'Today',
+    pageTitle: 'Dashboard',
     firstRun: {
       title: 'Let’s start with what matters to you',
       body: 'Share what has been on your mind to add context before your first report.',
@@ -177,6 +177,10 @@ const TODAY_COPY = {
         cta: 'See why this matters',
         genericTitle: 'Additional context',
       },
+      nutritionFocus: {
+        title: 'Nutrition focus',
+        cta: 'See full plan',
+      },
     },
     error: {
       summaryTitle: 'We couldn’t load your overview',
@@ -188,7 +192,7 @@ const TODAY_COPY = {
     },
   },
   uk: {
-    pageTitle: 'Сьогодні',
+    pageTitle: 'Дашборд',
     firstRun: {
       title: 'Почнімо з того, що для вас важливо',
       body: 'Опишіть, що вас турбує, щоб додати контекст перед першим звітом.',
@@ -311,6 +315,10 @@ const TODAY_COPY = {
         cta: 'Дізнатися, чому це важливо',
         genericTitle: 'Додатковий контекст',
       },
+      nutritionFocus: {
+        title: 'Фокус на харчуванні',
+        cta: 'Переглянути повний план',
+      },
     },
     error: {
       summaryTitle: 'Не вдалося завантажити огляд',
@@ -367,29 +375,30 @@ function statusCellToneClass(kind, statusStrip, reportAge) {
 // rendering first and being replaced once the fetch resolves.
 function CockpitBody({ viewModel, cockpit, copy, navigate }) {
   const c = copy.cockpit
-  const { headerContext, statusStrip, safety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction, contentStatus } = cockpit
+  const { headerContext, statusStrip, safety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction, contentStatus, nutritionFocus } = cockpit
   const isLoadingContent = contentStatus === 'loading'
   const isErrorContent = contentStatus === 'error'
 
   return (
     <div className="cockpit-page">
-      <div className="cockpit-header">
-        <div className="cockpit-header__top">
-          <h1 className="cockpit-title">{copy.pageTitle}</h1>
-          {viewModel.documents && (
-            <button type="button" onClick={() => navigate(viewModel.documents.uploadTo)} className="cockpit-link">
-              {copy.cta.upload}
-            </button>
-          )}
+      <div className="cockpit-hero">
+        <div className="cockpit-header">
+          <div className="cockpit-header__top">
+            <h1 className="cockpit-title">{copy.pageTitle}</h1>
+            {viewModel.documents && (
+              <button type="button" onClick={() => navigate(viewModel.documents.uploadTo)} className="cockpit-header__upload-btn">
+                {copy.cta.upload}
+              </button>
+            )}
+          </div>
+          <div className="cockpit-header__dates">
+            <span>{headerContext.labDate ? c.header.labDateLabel(headerContext.labDate) : c.header.labDateUnavailable}</span>
+            {headerContext.symptomCheckDate && <span>{c.header.symptomCheckLabel(headerContext.symptomCheckDate)}</span>}
+            <span className={`cockpit-freshness-chip${headerContext.reportAge === 'very_old' ? ' cockpit-freshness-chip--very-old' : ''}`}>
+              {c.header.freshness[headerContext.reportAge] || c.header.freshness.fresh}
+            </span>
+          </div>
         </div>
-        <div className="cockpit-header__dates">
-          <span>{headerContext.labDate ? c.header.labDateLabel(headerContext.labDate) : c.header.labDateUnavailable}</span>
-          {headerContext.symptomCheckDate && <span>{c.header.symptomCheckLabel(headerContext.symptomCheckDate)}</span>}
-          <span className={`cockpit-freshness-chip${headerContext.reportAge === 'very_old' ? ' cockpit-freshness-chip--very-old' : ''}`}>
-            {c.header.freshness[headerContext.reportAge] || c.header.freshness.fresh}
-          </span>
-        </div>
-      </div>
 
       {/* P38b required visual order, item 1: safety comes first, above
           current status -- a safety signal outranks everything else on the
@@ -475,6 +484,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
             </div>
           ))
         )}
+      </div>
       </div>
 
       {/* P38b required visual order, items 3-4: This week (the dominant
@@ -575,6 +585,15 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
           <div className="today-section-label"><CalendarClock className="h-4 w-4 text-slate-500" />{c.followUp.title}</div>
           <p className="text-sm leading-6 text-slate-700">{followUp.text}</p>
           <button type="button" onClick={() => navigate(followUp.to)} className="cockpit-link mt-1">{copy.cta.results} &rarr;</button>
+        </div>
+      )}
+
+      {nutritionFocus && (
+        <div className="cockpit-section cockpit-section--detail">
+          <div className="today-section-label"><Apple className="h-4 w-4 text-slate-500" />{c.nutritionFocus.title}</div>
+          <p className="text-sm font-semibold text-slate-950">{nutritionFocus.title}</p>
+          {nutritionFocus.body && <p className="mt-0.5 text-sm leading-6 text-slate-700">{nutritionFocus.body}</p>}
+          <button type="button" onClick={() => navigate(nutritionFocus.to)} className="cockpit-link mt-1.5">{c.nutritionFocus.cta} &rarr;</button>
         </div>
       )}
 

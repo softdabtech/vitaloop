@@ -9,6 +9,9 @@ import { trackFunnelEvent } from '../lib/funnel.js'
 import { gaOnboardingComplete } from '../lib/analytics.js'
 import { isUkrainianLocale } from '../lib/locale.js'
 import toast from 'react-hot-toast'
+// CabinetPageHeader's .cabinet-header-hero class lives here -- Vite code-
+// splits CSS per lazy route chunk, so this page must import it directly.
+import '../styles/dashboard2026.css'
 
 // ── Localization ─────────────────────────────────────────────────────────────
 const T = {

@@ -28,3 +28,26 @@ export async function requestPremiumAccess({ userEmail, source = 'cabinet', succ
 export function getPremiumAccessEmail() {
   return SUPPORT_EMAIL
 }
+
+export function openCancelSubscriptionEmail(userEmail, source = 'cabinet') {
+  if (typeof window === 'undefined') return
+
+  const subject = 'VITALOOP Premium cancellation request'
+  const body = [
+    'Hi VITALOOP team,',
+    '',
+    'I would like to cancel my Premium subscription.',
+    '',
+    `Account email: ${userEmail || ''}`,
+    `Source: ${source}`,
+    '',
+    'Thank you.',
+  ].join('\n')
+
+  window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+}
+
+export async function requestSubscriptionCancellation({ userEmail, source = 'cabinet', successMessage } = {}) {
+  openCancelSubscriptionEmail(userEmail, source)
+  toast.success(successMessage || 'Email sent — we will confirm your cancellation')
+}

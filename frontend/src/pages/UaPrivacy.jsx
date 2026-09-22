@@ -22,9 +22,15 @@ export default function UaPrivacy() {
       margin: '0 auto',
     }}>
       <Seo
-        title="Політика приватності | VITALOOP Ukraine"
+        title="Політика приватності | VITALOOP Україна"
         description="Дізнайтеся, як VITALOOP збирає, обробляє, зберігає, захищає та видаляє дані про симптоми, звіти про аналізи крові, результати біомаркерів та інформацію облікового запису."
-        path="/privacy-policy"
+        canonicalUrl="https://ua.vitaloop.today/privacy-policy/"
+        locale="uk_UA"
+        alternates={[
+          { lang: 'uk-UA', href: 'https://ua.vitaloop.today/privacy-policy/' },
+          { lang: 'en', href: 'https://vitaloop.today/privacy-policy/' },
+          { lang: 'x-default', href: 'https://vitaloop.today/privacy-policy/' },
+        ]}
       />
       <button
         onClick={() => navigate('/')}

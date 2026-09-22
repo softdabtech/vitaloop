@@ -9,11 +9,104 @@ const DEFAULT_IMAGE = `${BASE_URL}/vitaloop-social-preview-2026-06.png`
 const UA_ALTERNATE_BY_EN_PATH = {
   '/': 'https://ua.vitaloop.today/',
   '/symptom-intake/': 'https://ua.vitaloop.today/samopochuttia/',
+  '/features/': 'https://ua.vitaloop.today/analizy/',
+  '/pricing/': 'https://ua.vitaloop.today/tarify/',
+  '/faq/': 'https://ua.vitaloop.today/faq/',
   '/about/': 'https://ua.vitaloop.today/about/',
   '/privacy-policy/': 'https://ua.vitaloop.today/privacy-policy/',
   '/terms/': 'https://ua.vitaloop.today/terms/',
-  '/health-hub/': 'https://ua.vitaloop.today/health-hub/',
 }
+
+const UA_ROUTES = [
+  {
+    path: '/',
+    enPath: '/',
+    title: 'Постійна втома, сон і аналізи — персональна оцінка | VITALOOP Україна',
+    description: 'Vitaloop допомагає звʼязати симптоми, PDF або фото аналізів і динаміку показників у зрозумілий план наступних кроків.',
+    priority: '1.0',
+    changefreq: 'weekly',
+  },
+  {
+    path: '/samopochuttia',
+    enPath: '/symptom-intake',
+    title: 'Самопочуття — оцінка симптомів і пріоритетів | VITALOOP Україна',
+    description: 'Опишіть втому, сон, енергію та інші симптоми, щоб отримати освітній підсумок і питання для консультації.',
+    priority: '0.9',
+    changefreq: 'weekly',
+  },
+  {
+    path: '/symptomy',
+    enPath: '/symptom-intake',
+    title: 'Симптоми — зрозуміла підготовка до перевірки | VITALOOP Україна',
+    description: 'Структуруйте симптоми, тривалість і контекст без самодіагностики та підготуйте наступний медичний крок.',
+    priority: '0.8',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/analizy',
+    enPath: '/features',
+    title: 'Аналізи українською — PDF, фото і біомаркери | VITALOOP Україна',
+    description: 'Завантажуйте PDF, фото або скан лабораторного бланка, щоб побачити показники, референси і пріоритети.',
+    priority: '0.9',
+    changefreq: 'weekly',
+  },
+  {
+    path: '/laboratorii',
+    enPath: '/features',
+    title: 'Бланки лабораторій — PDF, фото, скани | VITALOOP Україна',
+    description: 'Vitaloop працює з бланками з українських лабораторій, якщо видно назви показників, значення, одиниці й референси.',
+    priority: '0.8',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/tarify',
+    enPath: '/pricing',
+    title: 'Тарифи VITALOOP Україна — безкоштовний старт і Premium',
+    description: 'Порівняйте Free і Premium: стартова оцінка, завантаження аналізів, пояснення показників, динаміка і план дій.',
+    priority: '0.8',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/faq',
+    enPath: '/faq',
+    title: 'Питання та відповіді — аналізи, симптоми, безпека | VITALOOP Україна',
+    description: 'Відповіді про аналізи, симптоми, безпеку даних, Premium-доступ і межі сервісу: це не діагноз і не заміна лікаря.',
+    priority: '0.8',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/privacy-policy',
+    enPath: '/privacy-policy',
+    title: 'Політика конфіденційності | VITALOOP Україна',
+    description: 'Як Vitaloop обробляє облікові дані, завантажені аналізи, симптоми, cookie, доступ, видалення і запити підтримки.',
+    priority: '0.6',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/terms',
+    enPath: '/terms',
+    title: 'Умови користування | VITALOOP Україна',
+    description: 'Правила використання Vitaloop, освітній характер сервісу, обмеження відповідальності та контакт підтримки.',
+    priority: '0.6',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/refund-policy',
+    enPath: '/refund-policy',
+    title: 'Політика повернення | VITALOOP Україна',
+    description: 'Умови скасування, повернення коштів і звернення до підтримки щодо Premium-доступу Vitaloop.',
+    priority: '0.5',
+    changefreq: 'monthly',
+  },
+  {
+    path: '/contact',
+    enPath: '/contact',
+    title: 'Контакти підтримки | VITALOOP Україна',
+    description: 'Звертайтеся до Vitaloop щодо акаунта, приватності, видалення даних, Premium-доступу або партнерства.',
+    priority: '0.6',
+    changefreq: 'monthly',
+  },
+]
 
 const routes = [
   {
@@ -551,6 +644,61 @@ Sitemap: ${BASE_URL}/sitemap.xml
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${urls}
+</urlset>
+`)
+
+  writeTextFile('ua-robots.txt', `User-agent: *
+Allow: /
+
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /upload
+Disallow: /lab-plan
+Disallow: /avatar
+Disallow: /lab-results
+Disallow: /lab-results/
+Disallow: /results/
+Disallow: /protocol/
+Disallow: /settings
+Disallow: /assignments
+Disallow: /check-ins
+Disallow: /insights
+Disallow: /health-profile
+Disallow: /billing-history
+Disallow: /help-center
+Disallow: /subscription
+Disallow: /onboarding
+Disallow: /questionnaire
+Disallow: /admin
+Disallow: /ops
+Disallow: /login
+Disallow: /auth/confirmation
+
+Sitemap: https://ua.vitaloop.today/sitemap.xml
+`)
+
+  const uaUrls = UA_ROUTES.map((route) => {
+    const uaPath = route.path === '/' ? '/' : `${route.path.replace(/\/+$/, '')}/`
+    const enPath = route.enPath ? `${route.enPath.replace(/\/+$/, '')}/` : null
+    const alternates = [
+      `    <xhtml:link rel="alternate" hreflang="uk-UA" href="https://ua.vitaloop.today${uaPath}" />`,
+      enPath ? `    <xhtml:link rel="alternate" hreflang="en" href="${BASE_URL}${enPath}" />` : null,
+      enPath ? `    <xhtml:link rel="alternate" hreflang="x-default" href="${BASE_URL}${enPath}" />` : null,
+    ].filter(Boolean).join('\n')
+    return `  <url>
+    <loc>https://ua.vitaloop.today${uaPath}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${route.changefreq}</changefreq>
+    <priority>${route.priority}</priority>
+${alternates}
+  </url>`
+  }).join('\n')
+
+  writeTextFile('ua-sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+${uaUrls}
 </urlset>
 `)
 

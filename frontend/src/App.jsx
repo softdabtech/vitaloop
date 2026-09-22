@@ -231,6 +231,7 @@ function FloatingSupportChat() {
     '/progress',
     '/assignments',
     '/lab-results',
+    '/account',
     '/settings',
     '/health-profile',
     '/subscription',
@@ -642,6 +643,7 @@ function PublicSymptomPrompt({ disabled = false }) {
     '/progress',
     '/assignments',
     '/lab-results',
+    '/account',
     '/settings',
     '/health-profile',
     '/subscription',
@@ -827,10 +829,10 @@ export default function App() {
           <Route path="/dity-analizy" element={isUaHost ? <UaPage pageSlug="dity-analizy" /> : <NotFound />} />
           <Route path="/product" element={<Navigate to="/how-it-works/" replace />} />
           <Route path="/features" element={<Features />} />
-          <Route path="/pricing" element={<Navigate to="/#pricing" replace />} />
+          <Route path="/pricing" element={isUaHost ? <Navigate to="/tarify" replace /> : <Navigate to="/#pricing" replace />} />
           <Route path="/stories" element={<Navigate to="/#stories" replace />} />
           <Route path="/investors" element={<Navigate to="/for-investors/" replace />} />
-          <Route path="/faq" element={<FAQ />} />
+          <Route path="/faq" element={isUaHost ? <UaPage pageSlug="faq" /> : <FAQ />} />
           <Route path="/example-report" element={<ExampleReport />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/about" element={<About />} />
@@ -882,7 +884,8 @@ export default function App() {
           <Route path="/assignments" element={<Navigate to="/dashboard" replace />} />
           <Route path="/assignments/:assignmentId" element={<Navigate to="/dashboard" replace />} />
           <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />, { allowBeforeOnboarding: true })} />
-          <Route path="/settings" element={renderCabinetRoute(<Settings />, { allowBeforeOnboarding: true })} />
+          <Route path="/account" element={renderCabinetRoute(<Settings />, { allowBeforeOnboarding: true })} />
+          <Route path="/settings" element={<Navigate to="/account" replace />} />
           <Route path="/health-profile" element={renderCabinetRoute(<HealthProfile />, { allowBeforeOnboarding: true })} />
           <Route path="/subscription" element={renderCabinetRoute(<Subscription />, { allowBeforeOnboarding: true })} />
           <Route path="/billing-history" element={renderCabinetRoute(<BillingHistory />, { allowBeforeOnboarding: true })} />

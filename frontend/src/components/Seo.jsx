@@ -18,6 +18,7 @@ function canonicalizePath(path) {
  * @param {string}  image       - Absolute OG image URL.
  * @param {string}  imageAlt    - Alt text for the OG/Twitter image.
  * @param {boolean} noindex     - Set true to prevent indexing (404, private pages).
+ * @param {Array}   alternates   - Hreflang alternate links: [{ lang, href }].
  * @param {Array}   schemas     - JSON-LD schema objects to inject as <script type="application/ld+json">.
  */
 export default function Seo({
@@ -29,6 +30,7 @@ export default function Seo({
   image = `${BASE_URL}/vitaloop-social-preview-2026-06.png`,
   imageAlt = 'VITALOOP AI-powered health tracking dashboard with biomarker analysis, personalized protocols, and progress tracking',
   noindex = false,
+  alternates = [],
   schemas = [],
 }) {
   const fullTitle = title || DEFAULT_TITLE
@@ -50,6 +52,9 @@ export default function Seo({
       <meta name="description" content={safeDescription} />
       <meta name="robots" content={robotsContent} />
       <link rel="canonical" href={canonical} />
+      {alternates.map((alternate) => (
+        <link key={`${alternate.lang}:${alternate.href}`} rel="alternate" hrefLang={alternate.lang} href={alternate.href} />
+      ))}
 
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content="VITALOOP" />
