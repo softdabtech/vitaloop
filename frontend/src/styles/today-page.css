@@ -693,7 +693,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 14px;
+  gap: 8px;
 }
 
 .cockpit-documents__locked {
@@ -706,6 +706,60 @@
  * empty-placeholder sections (This week / Latest lab snapshot). */
 .cockpit-section--sparse {
   text-align: left;
+}
+
+/* P41: Main clinical signal + Medical attention level + Basis merged into
+ * one card (confirmed non-redundant fields, see the P40 session's overlap
+ * check -- this is presentation compaction only). Every sub-block shares
+ * one skeleton (micro-label -> bold title + badge -> description) so the
+ * three read as one consistent, tabular clinical entry instead of three
+ * differently-shaped widgets stacked together. */
+.cockpit-clinical-summary__label {
+  margin: 0 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94A3B8;
+}
+
+.cockpit-clinical-summary__block + .cockpit-clinical-summary__block--divided,
+.cockpit-clinical-summary__block--divided {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+/* P41: dot meter for degree/ordinal values (confidence, evidence basis) --
+ * sequential single-hue fill, never a multi-hue categorical badge, per the
+ * dataviz skill's "sequential = one hue, light-to-dark" rule. Fill state
+ * (not hue) carries the value so it reads under any color vision. */
+.cockpit-meter-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.cockpit-meter-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.12);
+}
+
+.cockpit-meter-dot--filled {
+  background: #0D9488;
+}
+
+.cockpit-clinical-summary__footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.07);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .cockpit-row-list {

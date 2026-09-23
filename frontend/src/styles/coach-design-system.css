@@ -207,6 +207,7 @@
 .coach-badge {
   display: inline-flex;
   align-items: center;
+  gap: 5px;
   min-height: 28px;
   border-radius: 999px;
   border: 1px solid transparent;
@@ -320,7 +321,10 @@
   transition: width 500ms ease;
 }
 
-.coach-progress__bar--primary { background: linear-gradient(90deg, var(--coach-primary), #2f80ed); }
+/* dataviz skill: sequential = one hue, light->dark -- was teal->blue, a
+ * two-hue gradient on a single completeness value (a classic "rainbow"
+ * anti-pattern that implies a second dimension where there is only one). */
+.coach-progress__bar--primary { background: linear-gradient(90deg, var(--coach-primary-dark), var(--coach-primary)); }
 .coach-progress__bar--warning { background: var(--coach-warning); }
 .coach-progress__bar--success { background: var(--coach-success); }
 .coach-progress__bar--critical { background: var(--coach-critical); }

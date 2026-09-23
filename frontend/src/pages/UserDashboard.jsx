@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router-dom'
-import { Activity, Apple, ArrowRight, CalendarClock, ClipboardList, HelpCircle, ListChecks, RefreshCw, ShieldAlert, Stethoscope, TrendingUp } from 'lucide-react'
+import { Activity, Apple, ArrowRight, CalendarClock, CheckCircle2, ClipboardList, HelpCircle, ListChecks, RefreshCw, ShieldAlert, Stethoscope, TrendingUp } from 'lucide-react'
 import { useDashboardSummary, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
 import { useProfile } from '../hooks/useProfile.ts'
 import { useSubscription } from '../hooks/useSubscription.js'
-import { CoachButton, CoachSkeleton, EmptyCoachState } from '../components/coach/CoachUI.jsx'
+import { CoachBadge, CoachButton, CoachSkeleton, EmptyCoachState } from '../components/coach/CoachUI.jsx'
 import CabinetPageFrame from '../components/dashboard/CabinetPageFrame.jsx'
 import { buildTodayViewModel } from '../lib/todayViewModel.js'
 import { isUkrainianLocale } from '../lib/locale.js'
@@ -157,7 +157,7 @@ const TODAY_COPY = {
         uploadRowWhy: 'This report is old enough that fresher data would be more useful than acting on it as-is.',
       },
       labSnapshot: {
-        title: 'Latest lab snapshot',
+        title: 'Key biomarkers',
         empty: 'No biomarker values available for this report.',
         rangeUnavailable: 'No reference range on file',
         // P37k.2: explicit status text alongside the color accent -- never
@@ -180,6 +180,42 @@ const TODAY_COPY = {
       nutritionFocus: {
         title: 'Nutrition focus',
         cta: 'See full plan',
+      },
+      clinicalSummary: {
+        title: 'Clinical summary',
+        disclaimer: 'Not a diagnosis. Based on available data only — not all systems have been tested.',
+      },
+      clinicalFinding: {
+        title: 'Main clinical signal',
+        microLabel: 'Main finding',
+        confidenceLabels: { likely: 'Higher confidence', possible: 'Moderate confidence', unlikely_but_flagged: 'Low confidence' },
+        supportsLabel: 'Supports:',
+        missingLabel: 'Missing:',
+        emptyTitle: 'No clinical pattern flagged',
+        emptyBody: 'Nothing in this report’s markers or symptoms matched a known clinical pattern strongly enough to surface here.',
+        cta: 'See full reasoning',
+      },
+      attentionLevel: {
+        title: 'Medical attention level',
+        microLabel: 'Attention level',
+        labels: {
+          urgent: 'Urgent consultation needed',
+          doctor: 'Doctor discussion recommended',
+          practitioner: 'Increased attention recommended',
+          self: 'Routine monitoring',
+        },
+        bodyWithDomain: (domain) => `Recommended: clarify ${domain} with a clinician.`,
+        bodyNone: 'Nothing in this report needs escalation right now — continue with your current plan.',
+      },
+      evidenceBasis: {
+        title: 'Basis',
+        microLabel: 'Evidence basis',
+        labels: { low: 'Sufficient', moderate: 'Partial', high: 'Limited', blocked: 'Very limited' },
+        markersAnalyzed: (n) => `${n} marker${n === 1 ? '' : 's'} analyzed`,
+        missingContext: (n) => `${n} important context item${n === 1 ? '' : 's'} missing`,
+        noMissingContext: 'No additional context flagged as missing.',
+        symptomsUpdated: (date) => `Symptoms updated ${date}`,
+        symptomsUnavailable: 'No symptom check on file',
       },
     },
     error: {
@@ -319,6 +355,42 @@ const TODAY_COPY = {
         title: 'Фокус на харчуванні',
         cta: 'Переглянути повний план',
       },
+      clinicalSummary: {
+        title: 'Клінічний підсумок',
+        disclaimer: 'Це не діагноз. На основі доступних даних — перевірені не всі системи.',
+      },
+      clinicalFinding: {
+        title: 'Головний клінічний сигнал',
+        microLabel: 'Головна знахідка',
+        confidenceLabels: { likely: 'Вища впевненість', possible: 'Помірна впевненість', unlikely_but_flagged: 'Низька впевненість' },
+        supportsLabel: 'Підтверджує:',
+        missingLabel: 'Бракує:',
+        emptyTitle: 'Клінічний патерн не виявлено',
+        emptyBody: 'У цьому звіті жоден показник чи симптом не збігся з відомим клінічним патерном достатньою мірою.',
+        cta: 'Переглянути повне обґрунтування',
+      },
+      attentionLevel: {
+        title: 'Рівень медичної уваги',
+        microLabel: 'Рівень уваги',
+        labels: {
+          urgent: 'Потрібна термінова консультація',
+          doctor: 'Рекомендоване обговорення з лікарем',
+          practitioner: 'Рекомендована підвищена увага',
+          self: 'Планове спостереження',
+        },
+        bodyWithDomain: (domain) => `Рекомендовано уточнити з лікарем: ${domain}.`,
+        bodyNone: 'У цьому звіті немає нічого, що потребує ескалації — дотримуйтесь поточного плану.',
+      },
+      evidenceBasis: {
+        title: 'Основа цього висновку',
+        microLabel: 'Основа доказів',
+        labels: { low: 'Достатня', moderate: 'Часткова', high: 'Обмежена', blocked: 'Дуже обмежена' },
+        markersAnalyzed: (n) => `Проаналізовано показників: ${n}`,
+        missingContext: (n) => `Бракує важливого контексту: ${n}`,
+        noMissingContext: 'Додаткового бракуючого контексту не виявлено.',
+        symptomsUpdated: (date) => `Симптоми оновлено ${date}`,
+        symptomsUnavailable: 'Перевірку симптомів ще не пройдено',
+      },
     },
     error: {
       summaryTitle: 'Не вдалося завантажити огляд',
@@ -361,6 +433,24 @@ function statusCellToneClass(kind, statusStrip, reportAge) {
   return ''
 }
 
+// P41 -- dot meter for ORDINAL/degree values (confidence, evidence basis).
+// Per the dataviz skill's form guidance: a categorical STATE (attention
+// level) earns a colored status badge with an icon, but a DEGREE on a fixed
+// scale is a meter, not a badge -- filled/unfilled dots read the same
+// regardless of color vision, so identity never depends on hue alone here.
+function MeterDots({ filled, total, label }) {
+  return (
+    <span className="cockpit-meter-dots" role="img" aria-label={label}>
+      {Array.from({ length: total }, (_, i) => (
+        <span key={i} className={`cockpit-meter-dot${i < filled ? ' cockpit-meter-dot--filled' : ''}`} />
+      ))}
+    </span>
+  )
+}
+
+const CONFIDENCE_METER = { likely: 3, possible: 2, unlikely_but_flagged: 1 }
+const EVIDENCE_METER = { low: 4, moderate: 3, high: 2, blocked: 1 }
+
 // P37k — Today cockpit body. Renders viewModel.cockpit (built entirely in
 // todayViewModel.js). Exactly one primary CTA on the whole page: the first
 // "This week" row, when any row exists -- nothing else in this component
@@ -375,7 +465,7 @@ function statusCellToneClass(kind, statusStrip, reportAge) {
 // rendering first and being replaced once the fetch resolves.
 function CockpitBody({ viewModel, cockpit, copy, navigate }) {
   const c = copy.cockpit
-  const { headerContext, statusStrip, safety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction, contentStatus, nutritionFocus } = cockpit
+  const { headerContext, statusStrip, safety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction, contentStatus, nutritionFocus, clinicalFinding, attentionLevel, evidenceBasis } = cockpit
   const isLoadingContent = contentStatus === 'loading'
   const isErrorContent = contentStatus === 'error'
 
@@ -486,6 +576,92 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
         )}
       </div>
       </div>
+
+      {/* Clinical-engine transparency block (P40, merged into one card in
+          P41 per direct product feedback -- these three were confirmed
+          non-redundant, see the P40 session's field-overlap check, so this
+          is a compaction of presentation only, not a data change). Shows
+          the engine's own reasoning output (clinical_hypotheses/
+          doctor_escalation_precision/evidence_debt, all already frozen into
+          every report) instead of only its action items. Renders nothing
+          for fields reportDetails doesn't have (loading/error/no report
+          yet). One shared disclaimer + one CTA at the bottom instead of
+          repeating "not a diagnosis" per sub-block. */}
+      {(clinicalFinding || attentionLevel || evidenceBasis) && (
+        <div className="cockpit-section cockpit-clinical-summary">
+          <div className="today-section-label"><Stethoscope className="h-4 w-4 text-emerald-600" />{c.clinicalSummary.title}</div>
+
+          {clinicalFinding && (
+            <div className="cockpit-clinical-summary__block">
+              <p className="cockpit-clinical-summary__label">{c.clinicalFinding.microLabel}</p>
+              {clinicalFinding.empty ? (
+                <div>
+                  <p className="text-sm font-bold text-slate-950">{c.clinicalFinding.emptyTitle}</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-700">{c.clinicalFinding.emptyBody}</p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm font-bold text-slate-950">{clinicalFinding.label}</p>
+                  {clinicalFinding.likelihoodBucket && (
+                    <div className="mt-1 flex items-center gap-2">
+                      <MeterDots filled={CONFIDENCE_METER[clinicalFinding.likelihoodBucket] || 0} total={3} label={c.clinicalFinding.confidenceLabels[clinicalFinding.likelihoodBucket]} />
+                      <span className="text-xs text-slate-500">{c.clinicalFinding.confidenceLabels[clinicalFinding.likelihoodBucket]}</span>
+                    </div>
+                  )}
+                  {clinicalFinding.reasoningStatement && <p className="mt-1.5 text-sm leading-6 text-slate-700">{clinicalFinding.reasoningStatement}</p>}
+                  {clinicalFinding.supportingEvidence.length > 0 && (
+                    <p className="mt-2 text-xs leading-5 text-slate-600"><span className="font-semibold text-slate-700">{c.clinicalFinding.supportsLabel}</span> {clinicalFinding.supportingEvidence.join(', ')}</p>
+                  )}
+                  {clinicalFinding.missingContext.length > 0 && (
+                    <p className="mt-1 text-xs leading-5 text-slate-600"><span className="font-semibold text-slate-700">{c.clinicalFinding.missingLabel}</span> {clinicalFinding.missingContext.join(', ')}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {attentionLevel && (
+            <div className="cockpit-clinical-summary__block cockpit-clinical-summary__block--divided">
+              <p className="cockpit-clinical-summary__label">{c.attentionLevel.microLabel}</p>
+              <CoachBadge tone={attentionLevel.level === 'urgent' ? 'critical' : attentionLevel.level === 'doctor' ? 'warning' : attentionLevel.level === 'practitioner' ? 'primary' : 'success'}>
+                {attentionLevel.level === 'self'
+                  ? <CheckCircle2 className="h-3.5 w-3.5" />
+                  : <ShieldAlert className="h-3.5 w-3.5" />}
+                {c.attentionLevel.labels[attentionLevel.level]}
+              </CoachBadge>
+              <p className="mt-2 text-sm leading-6 text-slate-700">
+                {attentionLevel.domain ? c.attentionLevel.bodyWithDomain(attentionLevel.domain) : c.attentionLevel.bodyNone}
+              </p>
+            </div>
+          )}
+
+          {evidenceBasis && (
+            <div className="cockpit-clinical-summary__block cockpit-clinical-summary__block--divided">
+              <p className="cockpit-clinical-summary__label">{c.evidenceBasis.microLabel}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <MeterDots filled={EVIDENCE_METER[evidenceBasis.level] || 1} total={4} label={c.evidenceBasis.labels[evidenceBasis.level] || c.evidenceBasis.labels.high} />
+                <span className="text-sm font-bold text-slate-950">{c.evidenceBasis.labels[evidenceBasis.level] || c.evidenceBasis.labels.high}</span>
+                <span className="text-xs text-slate-500">{c.evidenceBasis.markersAnalyzed(evidenceBasis.markerCount)}</span>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-slate-700">
+                {evidenceBasis.missingContextCount != null && evidenceBasis.missingContextCount > 0
+                  ? c.evidenceBasis.missingContext(evidenceBasis.missingContextCount)
+                  : c.evidenceBasis.noMissingContext}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                {evidenceBasis.symptomCheckDate ? c.evidenceBasis.symptomsUpdated(evidenceBasis.symptomCheckDate) : c.evidenceBasis.symptomsUnavailable}
+              </p>
+            </div>
+          )}
+
+          <div className="cockpit-clinical-summary__footer">
+            <p className="text-xs text-slate-400">{c.clinicalSummary.disclaimer}</p>
+            {clinicalFinding && !clinicalFinding.empty && (
+              <button type="button" onClick={() => navigate(clinicalFinding.to)} className="cockpit-link">{c.clinicalFinding.cta} &rarr;</button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* P38b required visual order, items 3-4: This week (the dominant
           action section) then Latest lab snapshot. P37k.1: when there is
@@ -613,14 +789,12 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
         </div>
       )}
 
-      {/* P38b required visual order, item 6: Documents -- the quiet report
-          archive/footer, not another CTA cluster -- no pill/button styling
-          (that visual weight belongs to This week's single primary row, or
-          the sparse-state primary action above). Still every link a user
-          might need (results/plan/history), just de-emphasized to plain
-          text (and, per item 6's "neutral/report metadata: slate" color
-          rule, a slate icon instead of the active-section emerald) so it
-          never competes as a second primary CTA or reads as "current." */}
+      {/* P38b's original wording kept plain-text links here so this footer
+          never competed with This week's single primary CTA. Per direct
+          product feedback these should read as real buttons -- kept at
+          --sm/secondary weight (not --primary) so that intent still holds:
+          findable and clickable, but visually quieter than the page's one
+          primary action. */}
       {viewModel.documents && (
         <div className="cockpit-section cockpit-documents">
           <div className="cockpit-documents__report-line">
@@ -628,14 +802,14 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
             {viewModel.documents.reportLine}
           </div>
           <div className="cockpit-documents__links">
-            <button type="button" onClick={() => navigate(viewModel.documents.resultsTo)} className="cockpit-link">{copy.cta.results}</button>
+            <button type="button" onClick={() => navigate(viewModel.documents.resultsTo)} className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm">{copy.cta.results}</button>
             {viewModel.documents.planTo && (
-              <button type="button" onClick={() => navigate(viewModel.documents.planTo)} className="cockpit-link">{copy.cta.plan}</button>
+              <button type="button" onClick={() => navigate(viewModel.documents.planTo)} className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm">{copy.cta.plan}</button>
             )}
             {viewModel.documents.planLocked && (
               <span className="cockpit-documents__locked" title={viewModel.documents.upgradeNote}>{copy.cta.plan}</span>
             )}
-            <button type="button" onClick={() => navigate(viewModel.documents.historyTo)} className="cockpit-link">{copy.cta.history}</button>
+            <button type="button" onClick={() => navigate(viewModel.documents.historyTo)} className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm">{copy.cta.history}</button>
           </div>
           {viewModel.documents.upgradeNote && <p className="mt-2 text-xs text-slate-500">{viewModel.documents.upgradeNote}</p>}
         </div>

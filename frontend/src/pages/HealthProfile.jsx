@@ -180,7 +180,7 @@ const DEFAULT_PROFILE = {
   prior_diagnoses: '',
 }
 
-function MetricTile({ label, value, tone = 'default' }) {
+function MetricTile({ label, value, tone = 'default', note }) {
   const toneClass = tone === 'success' ? 'border-emerald-200 bg-emerald-50' : 'border-slate-100 bg-slate-50'
   const valueClass = tone === 'success' ? 'text-emerald-900' : 'text-slate-950'
   const labelClass = tone === 'success' ? 'text-emerald-700' : 'text-slate-500'
@@ -188,6 +188,10 @@ function MetricTile({ label, value, tone = 'default' }) {
     <div className={`rounded-2xl border p-4 ${toneClass}`}>
       <p className={`text-xs font-bold uppercase tracking-wide ${labelClass}`}>{label}</p>
       <p className={`mt-2 text-2xl font-extrabold ${valueClass}`}>{value}</p>
+      {/* dataviz skill: a status tone never rides on color alone -- a plain
+          word next to the value gives the same reading regardless of color
+          vision instead of leaving "why is this tile green" implicit. */}
+      {note && <p className="mt-0.5 text-xs font-semibold text-emerald-700">{note}</p>}
     </div>
   )
 }
@@ -551,6 +555,7 @@ export default function HealthProfile() {
               label={copy.bmi}
               value={bmi}
               tone={bmi < 25 ? 'success' : 'default'}
+              note={bmi < 25 ? 'Healthy range' : null}
             />
           )}
 

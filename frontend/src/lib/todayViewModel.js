@@ -233,6 +233,59 @@ function buildCockpitViewModel({
     nextRetestLabel: nextRetest ? c.statusStrip.nextRetestLabel(nextRetest.marker, nextRetest.timing) : c.statusStrip.nextRetestNone,
   }
 
+  // --- clinicalFinding: top-ranked item from clinical_hypotheses, the
+  // engine's own per-pattern reasoning output (already frozen into every
+  // report -- see report_history.py's assemble_frozen_response). Renders
+  // nothing invented: hypothesis_engine.py itself returns an explicit
+  // empty_reason when no pattern was detected, which is surfaced as-is
+  // rather than hidden, so the card is honest either way.
+  const hypotheses = Array.isArray(reportDetails?.clinical_hypotheses?.hypotheses)
+    ? reportDetails.clinical_hypotheses.hypotheses
+    : []
+  const topHypothesis = hypotheses[0] || null
+  const clinicalFinding = topHypothesis
+    ? {
+        label: topHypothesis.label || null,
+        likelihoodBucket: topHypothesis.likelihood_bucket || null,
+        reasoningStatement: topHypothesis.reasoning_statement || null,
+        supportingEvidence: (topHypothesis.supporting_evidence || [])
+          .map((m) => (typeof m === 'string' ? m : m?.name))
+          .filter(Boolean)
+          .slice(0, 4),
+        missingContext: (topHypothesis.weakening_evidence?.missing_context || []).slice(0, 4),
+        to: resultsTo,
+      }
+    : (reportDetails?.clinical_hypotheses ? { empty: true, to: resultsTo } : null)
+
+  // --- attentionLevel: doctor_escalation_precision's own overall_level
+  // (urgent/doctor/practitioner/self), already a pure translation of
+  // existing safety/pattern flags -- never a new detection layer (see that
+  // module's own docstring). The top escalation's domain+human_readable_
+  // reason (if any) gives the "recommended: clarify X" detail.
+  const escalation = reportDetails?.doctor_escalation_precision || null
+  const topEscalation = Array.isArray(escalation?.escalations) ? escalation.escalations[0] : null
+  const attentionLevel = escalation
+    ? {
+        level: escalation.overall_level || 'self',
+        domain: topEscalation?.domain ? humanizeLabel(topEscalation.domain, isUk) : null,
+        reason: topEscalation?.human_readable_reason || null,
+      }
+    : null
+
+  // --- evidenceBasis: evidence_debt's own overall_debt category (low/
+  // moderate/high/blocked), translated in the UI layer to sufficient/
+  // partial/limited -- never shows the raw numeric score to the user (see
+  // evidence_debt.py's own module docstring on why).
+  const evidenceDebt = reportDetails?.evidence_debt || null
+  const evidenceBasis = evidenceDebt
+    ? {
+        level: evidenceDebt.overall_debt || null,
+        markerCount: normalizedBiomarkers.length,
+        missingContextCount: evidenceDebt.summary?.missing_context_count ?? null,
+        symptomCheckDate: symptomCheckDate || null,
+      }
+    : null
+
   // --- safety (same two objects the caller already built; only adding an
   // explicit action target here, never changing tone/text/source) ---
   const cockpitSafety = {
@@ -417,7 +470,7 @@ function buildCockpitViewModel({
     ? { label: isVeryOldReport ? copy.cta.upload : copy.cta.results, to: isVeryOldReport ? uploadTo : resultsTo }
     : null
 
-  return { contentStatus, headerContext, statusStrip, safety: cockpitSafety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction, nutritionFocus }
+  return { contentStatus, headerContext, statusStrip, safety: cockpitSafety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction, nutritionFocus, clinicalFinding, attentionLevel, evidenceBasis }
 }
 
 function buildReturningUserSections({

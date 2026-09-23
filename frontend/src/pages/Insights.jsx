@@ -84,7 +84,11 @@ export default function Insights() {
     }
   }
 
-  const scoreColor = healthScore ? (healthScore.score >= 70 ? '#1d9e75' : healthScore.score >= 50 ? '#f59e0b' : '#ef4444') : '#64748b'
+  // dataviz skill: a continuous 0-100 score is a sequential magnitude, not a
+  // categorical status -- it gets one hue (teal, matching the app's accent)
+  // with the value itself carried by bar width/number, never a red/amber/
+  // green threshold hue-swap reused simultaneously across text+bar+background.
+  const scoreColor = '#0D9488'
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">

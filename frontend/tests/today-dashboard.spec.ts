@@ -523,7 +523,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByText(/Based on recent labs/i)).toBeVisible()
     await expect(page.getByText('This week')).toBeVisible()
     await expect(page.getByText('Increase iron-rich foods')).toBeVisible()
-    await expect(page.getByText('Latest lab snapshot')).toBeVisible()
+    await expect(page.getByText('Key biomarkers')).toBeVisible()
     // Raw marker id must never leak -- humanized to "Transferrin saturation"
     // (appears both in This week's gap row and in Missing context -- same
     // source gap, two surfaces).
@@ -563,7 +563,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
   })
 
   // P37k.1: a fully sparse ready report used to show two empty-placeholder
-  // sections ("This week: Nothing to flag" + "Latest lab snapshot: No
+  // sections ("This week: Nothing to flag" + "Key biomarkers: No
   // biomarker values") stacked above the footer -- now collapses into one
   // honest primary action instead. Fresh sparse -> View results.
   test('P37k.4: sparse reportDetails ({}) -> one honest primary action (View results for fresh), no empty-placeholder sections', async ({ page }) => {
@@ -572,10 +572,10 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByText('Incomplete data')).toBeVisible()
     await expect(page.getByText('No markers flagged')).toBeVisible()
     await expect(page.getByText('No retest window listed')).toBeVisible()
-    // No "This week"/"Latest lab snapshot" section headers or their empty
+    // No "This week"/"Key biomarkers" section headers or their empty
     // placeholder copy -- collapsed into the single sparse primary action.
     await expect(page.getByText('This week', { exact: true })).toHaveCount(0)
-    await expect(page.getByText('Latest lab snapshot')).toHaveCount(0)
+    await expect(page.getByText('Key biomarkers')).toHaveCount(0)
     await expect(page.getByText('No biomarker values available for this report.')).toHaveCount(0)
     await expect(page.locator('.coach-button', { hasText: 'View results' })).toBeVisible()
     await expect(page.locator('.coach-button')).toHaveCount(1) // still exactly one primary CTA
@@ -587,7 +587,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await mockToday(page, { today_contract: contractReady({ planExists: true }), entitlements: DEFAULT_ENTITLEMENTS_PREMIUM, results: { biomarkers: [] } })
     await gotoToday(page)
     await expect(page.getByText('Incomplete data')).toBeVisible()
-    await expect(page.getByText('Latest lab snapshot')).toHaveCount(0)
+    await expect(page.getByText('Key biomarkers')).toHaveCount(0)
     await expect(page.locator('.coach-button', { hasText: 'View results' })).toBeVisible()
   })
 
