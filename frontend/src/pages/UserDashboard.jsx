@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Activity, Apple, ArrowRight, CalendarClock, CheckCircle2, ClipboardList, HelpCircle, ListChecks, RefreshCw, ShieldAlert, Stethoscope, TrendingUp } from 'lucide-react'
+import { Activity, ArrowRight, CalendarClock, CheckCircle2, ClipboardList, HelpCircle, ListChecks, RefreshCw, ShieldAlert, Stethoscope, TrendingUp } from 'lucide-react'
 import { useDashboardSummary, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
 import { useProfile } from '../hooks/useProfile.ts'
 import { useSubscription } from '../hooks/useSubscription.js'
@@ -87,9 +87,11 @@ const TODAY_COPY = {
       reviewSymptomAnswersAction: 'Review symptom answers →',
     },
     reportSafety: {
-      heading: (level) => level === 'urgent'
-        ? 'Your report includes a recommendation for prompt medical review'
-        : 'Your report includes a recommendation to speak with a doctor',
+      heading: (level, domainLabel) => level === 'urgent'
+        ? (domainLabel ? `Your ${domainLabel} results include a recommendation for prompt medical review` : 'Your report includes a recommendation for prompt medical review')
+        : (domainLabel ? `Your ${domainLabel} results are worth discussing with a doctor` : 'Your report includes a recommendation to speak with a doctor'),
+      timingPrefix: 'Recommended timing',
+      cta: 'See the flagged results →',
       sourceLabel: 'Source: your report',
     },
     changes: {
@@ -177,10 +179,6 @@ const TODAY_COPY = {
         cta: 'See why this matters',
         genericTitle: 'Additional context',
       },
-      nutritionFocus: {
-        title: 'Nutrition focus',
-        cta: 'See full plan',
-      },
       clinicalSummary: {
         title: 'Clinical summary',
         disclaimer: 'Not a diagnosis. Based on available data only — not all systems have been tested.',
@@ -188,6 +186,8 @@ const TODAY_COPY = {
       clinicalFinding: {
         title: 'Main clinical signal',
         microLabel: 'Main finding',
+        incompleteMicroLabel: 'Incomplete read',
+        incompleteTitle: 'Not enough context for a confident read yet',
         confidenceLabels: { likely: 'Higher confidence', possible: 'Moderate confidence', unlikely_but_flagged: 'Low confidence' },
         supportsLabel: 'Supports:',
         missingLabel: 'Missing:',
@@ -277,10 +277,15 @@ const TODAY_COPY = {
       reviewSymptomAnswersAction: 'Переглянути відповіді про симптоми →',
     },
     reportSafety: {
-      heading: (level) => level === 'urgent'
-        ? 'Ваш звіт містить рекомендацію щодо термінового медичного огляду'
-        : 'Ваш звіт містить рекомендацію обговорити результати з лікарем',
-      sourceLabel: 'Джерело: ваш звіт',
+      heading: (level, domainLabel) => {
+        const domain = domainLabel ? domainLabel.charAt(0).toUpperCase() + domainLabel.slice(1) : null
+        return level === 'urgent'
+          ? (domain ? `Ваш звіт відзначає результати в напрямку «${domain}», що потребують термінового медичного огляду` : 'Ваш звіт містить рекомендацію щодо термінового медичного огляду')
+          : (domain ? `Ваш звіт відзначає результати в напрямку «${domain}», варті обговорення з лікарем` : 'Ваш звіт містить рекомендацію обговорити результати з лікарем')
+      },
+      timingPrefix: 'Рекомендований термін',
+      cta: 'Переглянути позначені показники →',
+      sourceLabel: 'Джерело: автоматичний аналіз VITALOOP',
     },
     changes: {
       title: 'З часу попереднього звіту',
@@ -351,10 +356,6 @@ const TODAY_COPY = {
         cta: 'Дізнатися, чому це важливо',
         genericTitle: 'Додатковий контекст',
       },
-      nutritionFocus: {
-        title: 'Фокус на харчуванні',
-        cta: 'Переглянути повний план',
-      },
       clinicalSummary: {
         title: 'Клінічний підсумок',
         disclaimer: 'Це не діагноз. На основі доступних даних — перевірені не всі системи.',
@@ -362,6 +363,8 @@ const TODAY_COPY = {
       clinicalFinding: {
         title: 'Головний клінічний сигнал',
         microLabel: 'Головна знахідка',
+        incompleteMicroLabel: 'Неповний розбір',
+        incompleteTitle: 'Поки недостатньо контексту для впевненого висновку',
         confidenceLabels: { likely: 'Вища впевненість', possible: 'Помірна впевненість', unlikely_but_flagged: 'Низька впевненість' },
         supportsLabel: 'Підтверджує:',
         missingLabel: 'Бракує:',
@@ -465,7 +468,7 @@ const EVIDENCE_METER = { low: 4, moderate: 3, high: 2, blocked: 1 }
 // rendering first and being replaced once the fetch resolves.
 function CockpitBody({ viewModel, cockpit, copy, navigate }) {
   const c = copy.cockpit
-  const { headerContext, statusStrip, safety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction, contentStatus, nutritionFocus, clinicalFinding, attentionLevel, evidenceBasis } = cockpit
+  const { headerContext, statusStrip, safety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction, contentStatus, clinicalFinding, attentionLevel, evidenceBasis } = cockpit
   const isLoadingContent = contentStatus === 'loading'
   const isErrorContent = contentStatus === 'error'
 
@@ -593,7 +596,9 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
 
           {clinicalFinding && (
             <div className="cockpit-clinical-summary__block">
-              <p className="cockpit-clinical-summary__label">{c.clinicalFinding.microLabel}</p>
+              <p className="cockpit-clinical-summary__label">
+                {clinicalFinding.empty || !clinicalFinding.isLowConfidence ? c.clinicalFinding.microLabel : c.clinicalFinding.incompleteMicroLabel}
+              </p>
               {clinicalFinding.empty ? (
                 <div>
                   <p className="text-sm font-bold text-slate-950">{c.clinicalFinding.emptyTitle}</p>
@@ -601,14 +606,24 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
                 </div>
               ) : (
                 <div>
-                  <p className="text-sm font-bold text-slate-950">{clinicalFinding.label}</p>
+                  {/* P42: low-confidence patterns never headline as the named
+                      finding -- "Thyroid pattern" then "but low confidence"
+                      reads as a diagnosis walked back, not a diagnosis. The
+                      pattern-specific reasoningStatement is suppressed for
+                      the same reason; supports/missing/confidence meter stay
+                      since those are the honest "why" regardless of tone. */}
+                  <p className="text-sm font-bold text-slate-950">
+                    {clinicalFinding.isLowConfidence ? c.clinicalFinding.incompleteTitle : clinicalFinding.label}
+                  </p>
                   {clinicalFinding.likelihoodBucket && (
                     <div className="mt-1 flex items-center gap-2">
                       <MeterDots filled={CONFIDENCE_METER[clinicalFinding.likelihoodBucket] || 0} total={3} label={c.clinicalFinding.confidenceLabels[clinicalFinding.likelihoodBucket]} />
                       <span className="text-xs text-slate-500">{c.clinicalFinding.confidenceLabels[clinicalFinding.likelihoodBucket]}</span>
                     </div>
                   )}
-                  {clinicalFinding.reasoningStatement && <p className="mt-1.5 text-sm leading-6 text-slate-700">{clinicalFinding.reasoningStatement}</p>}
+                  {!clinicalFinding.isLowConfidence && clinicalFinding.reasoningStatement && (
+                    <p className="mt-1.5 text-sm leading-6 text-slate-700">{clinicalFinding.reasoningStatement}</p>
+                  )}
                   {clinicalFinding.supportingEvidence.length > 0 && (
                     <p className="mt-2 text-xs leading-5 text-slate-600"><span className="font-semibold text-slate-700">{c.clinicalFinding.supportsLabel}</span> {clinicalFinding.supportingEvidence.join(', ')}</p>
                   )}
@@ -761,15 +776,6 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
           <div className="today-section-label"><CalendarClock className="h-4 w-4 text-slate-500" />{c.followUp.title}</div>
           <p className="text-sm leading-6 text-slate-700">{followUp.text}</p>
           <button type="button" onClick={() => navigate(followUp.to)} className="cockpit-link mt-1">{copy.cta.results} &rarr;</button>
-        </div>
-      )}
-
-      {nutritionFocus && (
-        <div className="cockpit-section cockpit-section--detail">
-          <div className="today-section-label"><Apple className="h-4 w-4 text-slate-500" />{c.nutritionFocus.title}</div>
-          <p className="text-sm font-semibold text-slate-950">{nutritionFocus.title}</p>
-          {nutritionFocus.body && <p className="mt-0.5 text-sm leading-6 text-slate-700">{nutritionFocus.body}</p>}
-          <button type="button" onClick={() => navigate(nutritionFocus.to)} className="cockpit-link mt-1.5">{c.nutritionFocus.cta} &rarr;</button>
         </div>
       )}
 
@@ -948,7 +954,7 @@ export default function UserDashboard() {
                           </p>
                           {viewModel.returning.reportSafety.timing && (
                             <p className="mt-1 text-sm leading-5" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}>
-                              {viewModel.returning.reportSafety.timing}
+                              <span className="font-semibold">{copy.reportSafety.timingPrefix}:</span> {viewModel.returning.reportSafety.timing}
                             </p>
                           )}
                           <button
@@ -957,7 +963,7 @@ export default function UserDashboard() {
                             className="mt-1.5 block text-sm font-bold underline"
                             style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}
                           >
-                            {copy.cta.results}
+                            {copy.reportSafety.cta}
                           </button>
                           <p className="today-safety__source mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[viewModel.returning.reportSafety.tone]?.color }}>
                             {viewModel.returning.reportSafety.sourceLabel}

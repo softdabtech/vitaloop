@@ -295,6 +295,13 @@ function buildCockpitViewModel({
     ? {
         label: topHypothesis.label || null,
         likelihoodBucket: topHypothesis.likelihood_bucket || null,
+        // P42: a pattern flagged "unlikely_but_flagged" is the engine's own
+        // low-confidence bucket -- naming it as the hero finding reads as
+        // "you have X" then immediately "but probably not", which is worse
+        // than not naming it. isLowConfidence gates the render to an
+        // "incomplete read" framing instead; supports/missing still show,
+        // nothing is hidden, only which text carries the headline.
+        isLowConfidence: topHypothesis.likelihood_bucket === 'unlikely_but_flagged',
         reasoningStatement: topHypothesis.reasoning_statement || null,
         supportingEvidence: (topHypothesis.supporting_evidence || [])
           .map((m) => (typeof m === 'string' ? m : m?.name))
@@ -366,7 +373,11 @@ function buildCockpitViewModel({
       ? reportDetails.knowledge_report.action_plan
       : []
   const planTarget = (planAccessAllowed && planExists) ? planTo : resultsTo
-  for (const item of planItemsSource.slice(0, 2)) {
+  // Only ever one plan row here -- two items both point at the same
+  // planTarget/"Open my plan" CTA, which reads as a duplicated button
+  // rather than two distinct actions (see the standalone Nutrition focus
+  // section, now removed for the same reason).
+  for (const item of planItemsSource.slice(0, 1)) {
     const text = typeof item === 'string' ? item : (item?.title || item?.text || item?.description || null)
     if (!text) continue
     // P37k.1 fix: label must say "Open my plan" when this row actually
