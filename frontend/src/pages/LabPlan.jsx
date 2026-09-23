@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Beaker, CheckCircle2, Circle, Coins, FlaskConical, HelpCircle, Upload } from 'lucide-react'
 import { CoachBadge, CoachButton, CoachCard, CoachProgress, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
-import { useQuestionnaireSession } from '../hooks/useQueries.js'
+import { useDashboardSummary, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
 import { isUkrainianLocale } from '../lib/locale.js'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
 // rule lives in this stylesheet. Vite code-splits CSS per lazy route chunk,
@@ -37,7 +37,9 @@ const LAB_COPY_UK = {
   status: {
     uploaded: 'завантажено',
     suggested: 'рекомендовано',
+    inLatestReport: 'вже у вашому звіті',
   },
+  alreadyHave: 'Уже у вашому останньому звіті',
   labs: {
     CBC: {
       why: 'Базова картина крові та контекст запалення.',
@@ -99,6 +101,50 @@ function LabCard({ item, status, isUk }) {
   )
 }
 
+// P43: tests already present in the latest uploaded report are pulled out
+// of the "best first pass" grid (re-suggesting a test you already have
+// results for reads as VITALOOP not having looked) and listed here
+// instead -- a quiet strip, not a full card, since there's nothing left
+// to decide about them.
+function AlreadyHaveStrip({ items, isUk }) {
+  if (!items.length) return null
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+      <span className="text-xs font-bold uppercase tracking-wide text-slate-400">{isUk ? LAB_COPY_UK.alreadyHave : 'Already in your latest report'}</span>
+      {items.map((item) => (
+        <span key={item.name} className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-xs font-bold text-green-700">
+          <CheckCircle2 className="h-3 w-3" />
+          {item.name}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+// P43: catalog names are consumer-facing groupings ("TSH + fT4", "CBC"),
+// not literal biomarker names from the report -- a panel name like "CBC"
+// in particular has no single matching marker at all, it's a bundle of
+// several (WBC, RBC, Hemoglobin, ...). This intentionally only catches the
+// cases where a catalog entry's own token is literally present in a
+// reported marker's name (TSH, Ferritin, CRP, Vitamin D, Magnesium, B12,
+// Glucose, HbA1c) -- a false negative (not flagged as "already have" when
+// it technically is) is the safe failure direction here, never a false
+// positive. A real panel-to-marker mapping is out of scope for this pass.
+function inLatestReport(item, activeMarkerNames) {
+  if (!activeMarkerNames.size) return false
+  const tokens = item.name
+    .toLowerCase()
+    .split(/\s*\+\s*/)
+    .map((part) => part.split(' ')[0])
+    .filter((part) => part.length > 2)
+  return tokens.some((token) => {
+    for (const markerName of activeMarkerNames) {
+      if (markerName.includes(token)) return true
+    }
+    return false
+  })
+}
+
 export default function LabPlan() {
   const navigate = useNavigate()
   const isUk = isUkrainianLocale()
@@ -114,6 +160,32 @@ export default function LabPlan() {
 
   const uploaded = useMemo(() => new Set(Array.isArray(concernSummary?.linkedLabs) ? concernSummary.linkedLabs : []), [concernSummary])
   const statusFor = (item) => uploaded.has(item.name.toLowerCase()) ? 'uploaded' : 'suggested'
+
+  // P43: same activeReport source Dashboard already reads (today_contract's
+  // latest_ready_report -> GET /results/:uploadId) -- not a new entity, the
+  // same one contract reused here so Lab Plan and Dashboard never disagree
+  // about which report is active.
+  const { data: summary } = useDashboardSummary()
+  const readyUploadId = summary?.today_contract?.latest_ready_report_status === 'ready'
+    ? summary?.today_contract?.latest_ready_report?.upload_id
+    : null
+  const { data: reportDetails } = useReportDetails(readyUploadId)
+  const activeMarkerNames = useMemo(() => {
+    const biomarkers = Array.isArray(reportDetails?.biomarkers) ? reportDetails.biomarkers : []
+    return new Set(
+      biomarkers
+        .map((b) => b?.name || b?.canonical_name || b?.name_en)
+        .filter(Boolean)
+        .map((name) => String(name).toLowerCase())
+    )
+  }, [reportDetails])
+  const splitByLatestReport = (items) => ({
+    needed: items.filter((item) => !inLatestReport(item, activeMarkerNames)),
+    haveAlready: items.filter((item) => inLatestReport(item, activeMarkerNames)),
+  })
+  const coreSplit = useMemo(() => splitByLatestReport(CORE_LABS), [activeMarkerNames])
+  const recommendedSplit = useMemo(() => splitByLatestReport(RECOMMENDED_LABS), [activeMarkerNames])
+  const optionalSplit = useMemo(() => splitByLatestReport(OPTIONAL_LABS), [activeMarkerNames])
 
   if (!concern) {
     return (
@@ -167,8 +239,9 @@ export default function LabPlan() {
           <h2 className="coach-title-lg">{isUk ? 'Найкращий перший крок' : 'Best first pass'}</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {CORE_LABS.map((item) => <LabCard key={item.name} item={item} status={statusFor(item)} isUk={isUk} />)}
+          {coreSplit.needed.map((item) => <LabCard key={item.name} item={item} status={statusFor(item)} isUk={isUk} />)}
         </div>
+        <AlreadyHaveStrip items={coreSplit.haveAlready} isUk={isUk} />
       </CoachCard>
 
       <CoachCard className="p-5 sm:p-6">
@@ -177,8 +250,9 @@ export default function LabPlan() {
           <h2 className="coach-title-lg">{isUk ? 'Додайте, коли вони відповідають патерну симптомів' : 'Add when they match your symptom pattern'}</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          {RECOMMENDED_LABS.map((item) => <LabCard key={item.name} item={item} status={statusFor(item)} isUk={isUk} />)}
+          {recommendedSplit.needed.map((item) => <LabCard key={item.name} item={item} status={statusFor(item)} isUk={isUk} />)}
         </div>
+        <AlreadyHaveStrip items={recommendedSplit.haveAlready} isUk={isUk} />
       </CoachCard>
 
       <CoachCard className="p-5 sm:p-6">
@@ -187,8 +261,9 @@ export default function LabPlan() {
           <h2 className="coach-title-lg">{isUk ? 'Корисні для глибшого контексту, але не завжди потрібні спочатку' : 'Useful for deeper context, not always necessary first'}</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-          {OPTIONAL_LABS.map((item) => <LabCard key={item.name} item={item} status={statusFor(item)} isUk={isUk} />)}
+          {optionalSplit.needed.map((item) => <LabCard key={item.name} item={item} status={statusFor(item)} isUk={isUk} />)}
         </div>
+        <AlreadyHaveStrip items={optionalSplit.haveAlready} isUk={isUk} />
       </CoachCard>
 
       <CoachCard id="why-tests" className="p-5 sm:p-6">
