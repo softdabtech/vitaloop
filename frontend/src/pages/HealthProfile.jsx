@@ -569,14 +569,14 @@ export default function HealthProfile() {
           {profile.weight_kg && (
             <MetricTile
               label={copy.weightMetric}
-              value={`${profile.weight_kg} kg`}
+              value={`${profile.weight_kg} ${isUk ? 'кг' : 'kg'}`}
             />
           )}
 
           {profile.height_cm && (
             <MetricTile
               label={copy.heightMetric}
-              value={`${profile.height_cm} cm`}
+              value={`${profile.height_cm} ${isUk ? 'см' : 'cm'}`}
             />
           )}
 

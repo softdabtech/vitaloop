@@ -439,9 +439,10 @@
 
 .cockpit-header__top {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px 12px;
 }
 
 /* P38b -- Today's real page-level <h1>. Previously the cockpit header used

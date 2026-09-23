@@ -36,6 +36,45 @@ function humanizeLabel(raw, isUk) {
   return displayed.charAt(0).toUpperCase() + displayed.slice(1)
 }
 
+// P41 -- doctor_escalation_precision's `domain` values are the clinical
+// body-system taxonomy (domain_registry.py), a different vocabulary than
+// individual biomarker names -- biomarkerDisplayName has no entries for
+// these, so it silently falls through to the raw English word (e.g.
+// "Thyroid") even under isUk. A small dedicated map, not the biomarker
+// table, is the correct fix.
+const DOMAIN_LABELS_UK = {
+  thyroid: 'щитоподібна залоза',
+  kidney: 'нирки',
+  liver: 'печінка',
+  cardiovascular: 'серцево-судинна система',
+  metabolic_health: 'метаболізм',
+  iron_status: 'запаси заліза',
+  inflammation: 'запалення',
+  micronutrients: 'мікроелементи',
+  recovery: 'відновлення',
+}
+
+function humanizeDomain(raw, isUk) {
+  if (!raw) return ''
+  const key = String(raw).trim().toLowerCase()
+  if (isUk && DOMAIN_LABELS_UK[key]) return DOMAIN_LABELS_UK[key]
+  return humanizeLabel(raw, isUk)
+}
+
+// recommended_timing is a fixed backend enum (doctor_escalation_precision.py:
+// urgent/prompt/soon/routine/unknown) -- never meant for direct display, but
+// was being interpolated raw (literally rendering the word "prompt").
+const TIMING_LABELS = {
+  en: { urgent: 'as soon as possible', prompt: 'promptly', soon: 'soon', routine: 'at your next routine visit', unknown: 'when convenient' },
+  uk: { urgent: 'якнайшвидше', prompt: 'найближчим часом', soon: 'найближчим часом', routine: 'на найближчому плановому візиті', unknown: 'коли буде зручно' },
+}
+
+function humanizeTiming(raw, isUk) {
+  if (!raw) return null
+  const table = isUk ? TIMING_LABELS.uk : TIMING_LABELS.en
+  return table[raw] || table.unknown
+}
+
 function formatDate(isoDate, isUk) {
   if (!isoDate) return null
   const parsed = new Date(isoDate)
@@ -233,15 +272,24 @@ function buildCockpitViewModel({
     nextRetestLabel: nextRetest ? c.statusStrip.nextRetestLabel(nextRetest.marker, nextRetest.timing) : c.statusStrip.nextRetestNone,
   }
 
+  // P41 -- /results/{uploadId} has been observed returning these P22-P25
+  // fields at the top level in some responses and nested under
+  // `final_analysis` in others (same upload, same request headers -- an
+  // existing backend inconsistency, not something to paper over silently).
+  // reportSafety below already defended against this for
+  // doctor_escalation_precision; applying the same fallback here so
+  // clinicalFinding/attentionLevel/evidenceBasis don't go missing purely
+  // because of which response shape happened to come back.
+  const pickField = (key) => reportDetails?.[key] || reportDetails?.final_analysis?.[key] || null
+
   // --- clinicalFinding: top-ranked item from clinical_hypotheses, the
   // engine's own per-pattern reasoning output (already frozen into every
   // report -- see report_history.py's assemble_frozen_response). Renders
   // nothing invented: hypothesis_engine.py itself returns an explicit
   // empty_reason when no pattern was detected, which is surfaced as-is
   // rather than hidden, so the card is honest either way.
-  const hypotheses = Array.isArray(reportDetails?.clinical_hypotheses?.hypotheses)
-    ? reportDetails.clinical_hypotheses.hypotheses
-    : []
+  const clinicalHypotheses = pickField('clinical_hypotheses')
+  const hypotheses = Array.isArray(clinicalHypotheses?.hypotheses) ? clinicalHypotheses.hypotheses : []
   const topHypothesis = hypotheses[0] || null
   const clinicalFinding = topHypothesis
     ? {
@@ -255,19 +303,19 @@ function buildCockpitViewModel({
         missingContext: (topHypothesis.weakening_evidence?.missing_context || []).slice(0, 4),
         to: resultsTo,
       }
-    : (reportDetails?.clinical_hypotheses ? { empty: true, to: resultsTo } : null)
+    : (clinicalHypotheses ? { empty: true, to: resultsTo } : null)
 
   // --- attentionLevel: doctor_escalation_precision's own overall_level
   // (urgent/doctor/practitioner/self), already a pure translation of
   // existing safety/pattern flags -- never a new detection layer (see that
   // module's own docstring). The top escalation's domain+human_readable_
   // reason (if any) gives the "recommended: clarify X" detail.
-  const escalation = reportDetails?.doctor_escalation_precision || null
+  const escalation = pickField('doctor_escalation_precision')
   const topEscalation = Array.isArray(escalation?.escalations) ? escalation.escalations[0] : null
   const attentionLevel = escalation
     ? {
         level: escalation.overall_level || 'self',
-        domain: topEscalation?.domain ? humanizeLabel(topEscalation.domain, isUk) : null,
+        domain: topEscalation?.domain ? humanizeDomain(topEscalation.domain, isUk) : null,
         reason: topEscalation?.human_readable_reason || null,
       }
     : null
@@ -276,7 +324,7 @@ function buildCockpitViewModel({
   // moderate/high/blocked), translated in the UI layer to sufficient/
   // partial/limited -- never shows the raw numeric score to the user (see
   // evidence_debt.py's own module docstring on why).
-  const evidenceDebt = reportDetails?.evidence_debt || null
+  const evidenceDebt = pickField('evidence_debt')
   const evidenceBasis = evidenceDebt
     ? {
         level: evidenceDebt.overall_debt || null,
@@ -507,8 +555,14 @@ function buildReturningUserSections({
   const reportSafety = topEscalation
     ? {
       tone: topEscalation.level === 'urgent' ? 'critical' : 'warning',
-      text: topEscalation.human_readable_reason || copy.reportSafety.heading(topEscalation.level),
-      timing: topEscalation.recommended_timing || null,
+      // human_readable_reason is a backend-generated sentence, English only
+      // regardless of locale (doctor_escalation_precision.py has no locale
+      // param yet) -- for uk, prefer the app's own localized template over
+      // showing raw English inside an otherwise-Ukrainian page. This is
+      // still the real safety signal, just in the right language; nothing
+      // is suppressed or watered down, only which sentence carries it.
+      text: (!isUk && topEscalation.human_readable_reason) || copy.reportSafety.heading(topEscalation.level),
+      timing: humanizeTiming(topEscalation.recommended_timing, isUk),
       sourceLabel: copy.reportSafety.sourceLabel,
       to: resultsTo,
     }

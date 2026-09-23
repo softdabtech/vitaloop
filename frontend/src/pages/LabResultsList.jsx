@@ -215,7 +215,7 @@ function ClinicalProgressPanel({ overview, loading, t, copy }) {
           {topChanges.map((change) => (
             <div key={change.canonical_name} className="rounded-xl border border-slate-200 bg-white p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-slate-800">{change.name}</p>
+                <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">{change.name}</p>
                 <span className={`vtl-status-pill border ${statusGroupTone(change.current_status_group)}`}>
                   {labels.direction[change.direction] || change.direction}
                 </span>
@@ -423,7 +423,7 @@ export default function LabResultsList() {
                         </p>
                       </button>
 
-                      <div className="flex items-center gap-2 text-xs">
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
                         <span className="vtl-status-pill border border-emerald-200 bg-emerald-50 text-emerald-700">{copy.optimal} {optimal}</span>
                         <span className="vtl-status-pill border border-amber-200 bg-amber-50 text-amber-700">{copy.warning} {warning}</span>
                         <span className="vtl-status-pill border border-rose-200 bg-rose-50 text-rose-700">{copy.review} {critical}</span>

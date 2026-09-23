@@ -137,13 +137,15 @@ button[aria-label].inline-icon {
 }
 
 .vtl-status-pill {
-  height: 32px;
+  min-height: 32px;
   border-radius: 9999px;
   padding: 0 16px;
   display: inline-flex;
   align-items: center;
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .vtl-focus-ring:focus-visible {

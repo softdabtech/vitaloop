@@ -137,7 +137,7 @@ export default function LabPlan() {
             <p className="coach-eyebrow">{isUk ? 'План аналізів' : 'Lab Plan'}</p>
             <h1 className="coach-title-xl">{isUk ? 'Аналізи, які мають сенс для вашого поточного запиту.' : 'Tests that make sense for your current question.'}</h1>
             <p className="coach-body mt-4 max-w-2xl">
-              {isUk ? 'На основі: ' : 'Based on: '}<strong>{concern}</strong>.
+              {isUk ? 'На основі: ' : 'Based on: '}<strong>{concern}</strong>{/\.\s*$/.test(concern) ? '' : '.'}
               {' '}
               {isUk ? 'Це не діагноз. Це пріоритетний список для обговорення з лікарем і завантаження результатів.' : 'This is not a diagnosis. It is a prioritized checklist for clinician discussion and result upload.'}
             </p>
