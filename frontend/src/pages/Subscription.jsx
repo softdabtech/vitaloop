@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Mail, ShieldCheck, Sparkles, XCircle } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { CheckCircle2, CreditCard, Mail, ShieldCheck, Sparkles, XCircle } from 'lucide-react'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import { requestPremiumAccess, requestSubscriptionCancellation } from '../lib/premiumAccess.js'
-import { gaViewPricing } from '../lib/analytics.js'
+import { openWayforpayCheckout } from '../lib/wayforpayCheckout.js'
+import { gaViewPricing, gaBeginCheckout, gaPurchase } from '../lib/analytics.js'
 import { isUkrainianLocale } from '../lib/locale.js'
 import '../styles/dashboard2026.css'
 
@@ -59,11 +61,52 @@ function FeatureList({ items }) {
 
 export default function Subscription() {
   const { user } = useAuth()
-  const { isPremium, subStatus, planName, loading } = useSubscription()
+  const { isPremium, subStatus, planName, loading, refresh } = useSubscription()
   const isUk = isUkrainianLocale()
   const statusLabel = isPremium ? (isUk ? 'Преміум активний' : 'Premium active') : (isUk ? 'Активний безкоштовний тариф' : 'Free plan active')
   const planLabel = isPremium ? 'Premium' : (isUk ? 'Безкоштовний' : 'Free')
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  // P46 -- WayForPay checkout, UA cabinet only (see lib/wayforpayCheckout.js
+  // + backend/app/routers/billing/wayforpay.py). EN cabinet keeps the
+  // existing manual/email flow below unchanged; this state only drives the
+  // isUk checkout buttons.
+  const [checkoutPlan, setCheckoutPlan] = useState(null) // 'monthly' | 'yearly' | null while idle
+
+  async function handleWayforpayCheckout(plan) {
+    if (checkoutPlan) return
+    setCheckoutPlan(plan)
+    gaBeginCheckout(plan === 'yearly' ? '2499 грн/рік' : '249 грн/міс')
+    try {
+      await openWayforpayCheckout(plan, {
+        onApproved: () => {
+          gaPurchase(`wayforpay_${plan}_${Date.now()}`, plan === 'yearly' ? 2499 : 249, 'UAH')
+          toast.success(isUk ? 'Оплату прийнято! Активуємо Premium…' : 'Payment received! Activating Premium…')
+          // The webhook that actually activates the subscription is
+          // server-to-server and may land a moment after this client
+          // callback fires -- a few staggered refetches instead of one,
+          // rather than a fixed delay that could still be too short.
+          refresh()
+          setTimeout(refresh, 3000)
+          setTimeout(refresh, 8000)
+          setCheckoutPlan(null)
+        },
+        onDeclined: (reason) => {
+          toast.error(isUk ? `Оплату відхилено: ${reason}` : `Payment declined: ${reason}`)
+          setCheckoutPlan(null)
+        },
+        onPending: () => {
+          toast(isUk ? 'Оплата обробляється…' : 'Payment is processing…')
+          setCheckoutPlan(null)
+        },
+        onClose: () => {
+          setCheckoutPlan(null)
+        },
+      })
+    } catch (err) {
+      toast.error(isUk ? 'Не вдалося відкрити форму оплати. Спробуйте ще раз.' : 'Could not open checkout. Please try again.')
+      setCheckoutPlan(null)
+    }
+  }
 
   useEffect(() => {
     if (loading) return
@@ -121,7 +164,33 @@ export default function Subscription() {
                 : 'Your free report shows what VITALOOP found. Premium is for going further: understanding why it was flagged, closing evidence gaps, tracking your baseline over time, and preparing for your next doctor conversation.'}
             </p>
           </div>
-          {!isPremium && (
+          {!isPremium && isUk && (
+            <div className="grid w-full gap-3 sm:w-auto sm:min-w-[260px]">
+              <button
+                type="button"
+                onClick={() => handleWayforpayCheckout('monthly')}
+                disabled={Boolean(checkoutPlan)}
+                className="cabinet-btn cabinet-btn--primary disabled:opacity-60"
+              >
+                <CreditCard className="h-4 w-4" />
+                {checkoutPlan === 'monthly' ? 'Відкриваємо оплату…' : 'Оформити Premium — 249 грн/міс'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleWayforpayCheckout('yearly')}
+                disabled={Boolean(checkoutPlan)}
+                className="cabinet-btn cabinet-btn--secondary disabled:opacity-60"
+              >
+                <Sparkles className="h-4 w-4" />
+                {checkoutPlan === 'yearly' ? 'Відкриваємо оплату…' : 'Оформити на рік — 2499 грн/рік'}
+              </button>
+              <p className="text-xs leading-5 text-slate-500">
+                <strong className="text-slate-600">Оплата карткою:</strong>{' '}
+                оплата проходить на захищеній сторінці WayForPay — ми не бачимо і не зберігаємо дані вашої картки. Premium активується автоматично одразу після оплати.
+              </p>
+            </div>
+          )}
+          {!isPremium && !isUk && (
             <div className="grid w-full gap-3 sm:w-auto sm:min-w-[260px]">
               <button
                 type="button"
@@ -129,7 +198,7 @@ export default function Subscription() {
                 className="cabinet-btn cabinet-btn--primary"
               >
                 <Mail className="h-4 w-4" />
-                {isUk ? 'Запросити доступ Premium' : 'Request Premium access'}
+                Request Premium access
               </button>
               <button
                 type="button"
@@ -137,13 +206,11 @@ export default function Subscription() {
                 className="cabinet-btn cabinet-btn--secondary"
               >
                 <Sparkles className="h-4 w-4" />
-                {isUk ? 'Дізнатися про річний доступ' : 'Ask about annual access'}
+                Ask about annual access
               </button>
               <p className="text-xs leading-5 text-slate-500">
-                <strong className="text-slate-600">{isUk ? 'Що далі:' : 'What happens next:'}</strong>{' '}
-                {isUk
-                  ? 'натискання будь-якої кнопки відкриває лист нашій команді з уже заповненими даними акаунта. Ми підтвердимо й активуємо Premium електронною поштою — нічого не списується автоматично.'
-                  : 'clicking either button opens an email to our team with your account details pre-filled. We confirm and activate Premium by email — nothing is charged automatically.'}
+                <strong className="text-slate-600">What happens next:</strong>{' '}
+                clicking either button opens an email to our team with your account details pre-filled. We confirm and activate Premium by email — nothing is charged automatically.
               </p>
             </div>
           )}
@@ -245,10 +312,10 @@ export default function Subscription() {
         <div className="flex items-start gap-3">
           <Mail className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" />
           <div>
-            <h3 className="text-base font-bold text-blue-950">{isUk ? 'Підтримка доступу Premium' : 'Premium access support'}</h3>
+            <h3 className="text-base font-bold text-blue-950">{isUk ? 'Питання щодо оплати Premium' : 'Premium access support'}</h3>
             <p className="mt-1 text-sm leading-6 text-blue-800">
               {isUk
-                ? 'Наразі доступ Premium надається за запрошенням і активується вручну командою VITALOOP. Ми не передаємо симптоми, завантажені аналізи, біомаркери, звіти чи медичні нотатки платіжним інструментам.'
+                ? 'Оплата Premium проходить через WayForPay і активується автоматично. Ми не передаємо симптоми, завантажені аналізи, біомаркери, звіти чи медичні нотатки платіжним інструментам — лише суму й дані картки, потрібні для оплати.'
                 : 'Premium access is currently invite-based and activated manually by the VITALOOP team. We do not send symptoms, uploaded labs, biomarkers, reports, or medical notes to billing tools.'}
             </p>
             <button type="button" onClick={handlePremiumRequest} className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm mt-4">

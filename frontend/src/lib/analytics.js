@@ -174,10 +174,10 @@ export function gaBeginCheckout(priceLabel = null) {
  * Fire on a confirmed purchase / successful checkout return.
  * Pass the payment provider's session/transaction ID if available.
  */
-export function gaPurchase(transactionId, value = PREMIUM_MONTHLY_PRICE) {
+export function gaPurchase(transactionId, value = PREMIUM_MONTHLY_PRICE, currency = 'USD') {
   gaEvent('purchase', {
     transaction_id: transactionId || `vtl_${Date.now()}`,
-    currency: 'USD',
+    currency,
     value,
     items: [
       {
@@ -190,11 +190,11 @@ export function gaPurchase(transactionId, value = PREMIUM_MONTHLY_PRICE) {
     ],
   })
   fbqTrack('Purchase', {
-    currency: 'USD',
+    currency,
     value,
   })
   fbqTrack('Subscribe', {
-    currency: 'USD',
+    currency,
     value,
   })
 }

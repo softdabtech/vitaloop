@@ -74,6 +74,17 @@ class Settings(BaseSettings):
     emergency_fixes_enabled: bool = False
     knowledge_context_enabled: bool = True
     knowledge_evaluation_after_analyze_enabled: bool = True
+    # WayForPay (UA cabinet Premium checkout). merchant_password is the
+    # merchant dashboard login password, not used by the SimpleSignature
+    # flow this integration uses (Purchase request + serviceUrl webhook are
+    # both authenticated with HMAC_MD5 over merchant_secret_key only) --
+    # kept here only in case a future flow needs it.
+    wayforpay_merchant_login: str = ""
+    wayforpay_secret_key: str = ""
+    wayforpay_merchant_password: str = ""
+    wayforpay_merchant_domain: str = "ua.vitaloop.today"
+    wayforpay_api_base_url: str = "https://api.vitaloop.today"
+    wayforpay_return_url: str = "https://ua.vitaloop.today/subscription?sub=success"
 
     @property
     def origins_list(self) -> List[str]:

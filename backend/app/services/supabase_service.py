@@ -1307,6 +1307,10 @@ async def upsert_user_subscription_row(
     current_period_start: Optional[str] = None,
     current_period_end: Optional[str] = None,
     cancel_at_period_end: bool = False,
+    billing_provider: Optional[str] = None,
+    wayforpay_order_reference: Optional[str] = None,
+    wayforpay_rec_token: Optional[str] = None,
+    wayforpay_regular_mode: Optional[str] = None,
 ) -> None:
     """Keep the canonical subscriptions table aligned with external billing state."""
     supabase = _get_supabase()
@@ -1322,6 +1326,14 @@ async def upsert_user_subscription_row(
         payload["current_period_end"] = current_period_end
     if status in {"cancelled", "paused"}:
         payload["cancelled_at"] = datetime.now(timezone.utc).isoformat()
+    if billing_provider:
+        payload["billing_provider"] = billing_provider
+    if wayforpay_order_reference:
+        payload["wayforpay_order_reference"] = wayforpay_order_reference
+    if wayforpay_rec_token:
+        payload["wayforpay_rec_token"] = wayforpay_rec_token
+    if wayforpay_regular_mode:
+        payload["wayforpay_regular_mode"] = wayforpay_regular_mode
 
     existing_query = (
         supabase.table("subscriptions")
