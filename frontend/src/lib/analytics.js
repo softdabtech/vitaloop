@@ -142,7 +142,7 @@ export function gaLogin(method = 'email') {
 // ---------------------------------------------------------------------------
 
 /**
- * Fire when a user initiates the Stripe checkout flow.
+ * Fire when a user initiates the checkout flow (provider-agnostic).
  * Treat as the top-of-funnel purchase intent signal.
  */
 export function gaBeginCheckout(priceLabel = null) {
@@ -171,8 +171,8 @@ export function gaBeginCheckout(priceLabel = null) {
 }
 
 /**
- * Fire on a confirmed purchase / successful Stripe checkout return.
- * Pass the Stripe session / transaction ID if available.
+ * Fire on a confirmed purchase / successful checkout return.
+ * Pass the payment provider's session/transaction ID if available.
  */
 export function gaPurchase(transactionId, value = PREMIUM_MONTHLY_PRICE) {
   gaEvent('purchase', {

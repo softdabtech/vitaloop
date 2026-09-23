@@ -128,7 +128,12 @@ function GAPageTracker() {
     const purchaseTrackedKey = 'vtl_purchase_tracked_sub_success'
     if (window.sessionStorage.getItem(purchaseTrackedKey) === '1') return
     window.sessionStorage.setItem(purchaseTrackedKey, '1')
-    gaPurchase(`stripe_sub_success_${Date.now()}`)
+    // Provider-neutral transaction id -- this used to say "stripe_" from a
+    // retired Stripe checkout flow. No checkout currently redirects here
+    // with ?sub=success (Premium is manual/email-based today), but this
+    // stays wired for whichever provider (WayForPay) ends up redirecting
+    // back with that query param.
+    gaPurchase(`sub_success_${Date.now()}`)
   }, [location.pathname, location.search])
   return null
 }

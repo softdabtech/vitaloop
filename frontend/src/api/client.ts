@@ -83,7 +83,6 @@ api.interceptors.response.use(
 
     const isPassiveCabinetRequest = [
       '/dashboard/summary',
-      '/stripe/subscription',
       '/progress',
       '/timeline',
       '/insights',

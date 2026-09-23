@@ -281,7 +281,8 @@ export const PRICING = [
   },
   {
     name: 'Premium',
-    price: '399 грн/міс',
+    price: '249 грн/міс',
+    annualPrice: '2499 грн/рік',
     note: 'для регулярного контролю',
     description: 'Необмежені аналізи, AI-протокол, 95+ біомаркерів і щотижневий чек-ін стану здоров\'я.',
     features: [
@@ -364,7 +365,8 @@ const SCHEMA_SOFTWARE = {
   description: 'Vitaloop допомагає почати з симптомів, зрозуміти можливі причини, підібрати доречні аналізи і сформувати персональний план дій.',
   offers: [
     { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: 'UAH' },
-    { '@type': 'Offer', name: 'Premium', price: '399', priceCurrency: 'UAH' },
+    { '@type': 'Offer', name: 'Premium (monthly)', price: '249', priceCurrency: 'UAH' },
+    { '@type': 'Offer', name: 'Premium (annual)', price: '2499', priceCurrency: 'UAH' },
   ],
 }
 
@@ -1587,6 +1589,9 @@ export default function UaLanding() {
                 )}
                 <p className={`text-sm font-black uppercase tracking-[0.14em] ${plan.featured ? 'text-[#5eead4]' : 'text-[#0f766e]'}`}>{plan.name}</p>
                 <h3 className="mt-3 text-4xl font-black">{plan.price}</h3>
+                {plan.annualPrice && (
+                  <p className={`mt-1 text-sm font-bold ${plan.featured ? 'text-[#5eead4]' : 'text-[#0f766e]'}`}>{plan.annualPrice} — економія ~16%</p>
+                )}
                 <p className={`mt-1 text-sm ${plan.featured ? 'text-[#cbd5e1]' : 'text-[#6b7280]'}`}>{plan.note}</p>
                 <p className={`mt-5 text-sm leading-7 ${plan.featured ? 'text-[#e2e8f0]' : 'text-[#4b5563]'}`}>{plan.description}</p>
                 <div className="mt-6 grid flex-1 content-start gap-3">
