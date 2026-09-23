@@ -1,3 +1,6 @@
+from unittest.mock import AsyncMock, patch
+
+import httpx
 import pytest
 
 from app.config import settings
@@ -105,3 +108,33 @@ def test_plan_name_for():
     assert wfp.plan_name_for("monthly") == "personal"
     assert wfp.plan_name_for("yearly") == "personal"
     assert wfp.plan_name_for("bogus") == "free"
+
+
+def _mock_response(json_body, status_code=200):
+    resp = httpx.Response(status_code, json=json_body, request=httpx.Request("POST", wfp.REGULAR_API_URL))
+    return resp
+
+
+@pytest.mark.asyncio
+async def test_remove_regular_payment_success():
+    with patch("httpx.AsyncClient.post", new=AsyncMock(return_value=_mock_response({"reasonCode": 4100, "reason": "Ok"}))) as mock_post:
+        result = await wfp.remove_regular_payment("vtl-abc-123")
+    assert result["reasonCode"] == 4100
+    sent_payload = mock_post.call_args.kwargs["json"]
+    assert sent_payload["requestType"] == "REMOVE"
+    assert sent_payload["orderReference"] == "vtl-abc-123"
+    assert sent_payload["merchantAccount"] == "test_merchant"
+
+
+@pytest.mark.asyncio
+async def test_remove_regular_payment_rejects_error_response():
+    with patch("httpx.AsyncClient.post", new=AsyncMock(return_value=_mock_response({"reasonCode": 1104, "reason": "Order not found"}))):
+        with pytest.raises(RuntimeError, match="Order not found"):
+            await wfp.remove_regular_payment("vtl-abc-123")
+
+
+@pytest.mark.asyncio
+async def test_remove_regular_payment_rejects_transport_error():
+    with patch("httpx.AsyncClient.post", new=AsyncMock(side_effect=httpx.ConnectTimeout("timed out"))):
+        with pytest.raises(RuntimeError, match="Could not reach WayForPay"):
+            await wfp.remove_regular_payment("vtl-abc-123")

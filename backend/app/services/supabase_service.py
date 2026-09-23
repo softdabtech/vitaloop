@@ -1388,7 +1388,7 @@ async def get_user_active_subscription(user_id: str) -> Optional[Dict]:
     supabase = _get_supabase()
     resp = await _run_supabase_read(
         lambda: supabase.table("subscriptions")
-        .select("plan_name, status, current_period_end, cancel_at_period_end")
+        .select("plan_name, status, current_period_end, cancel_at_period_end, billing_provider, wayforpay_order_reference")
         .eq("user_id", user_id)
         .in_("status", ["active", "past_due", "paused"])
         .order("updated_at", desc=True)

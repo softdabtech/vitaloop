@@ -120,3 +120,46 @@ async def wayforpay_webhook(request: Request):
         user_id, order_reference, plan,
     )
     return wfp.build_webhook_ack(order_reference)
+
+
+@router.post("/cancel")
+async def cancel_subscription(current_user: dict = Depends(get_current_user)):
+    """Stops future recurring charges for the caller's WayForPay
+    subscription. Never touches current access -- WayForPay's REMOVE call
+    only stops the *next* scheduled charge, so this sets
+    cancel_at_period_end=True and leaves status='active' until
+    current_period_end actually passes (same UX the pre-existing
+    mailto-cancel flow already promised: "keep Premium through the end of
+    your current billing period")."""
+    user_id = current_user.get("sub")
+    active_sub = await svc.get_user_active_subscription(user_id)
+
+    if not active_sub:
+        raise HTTPException(status_code=404, detail="No active subscription found")
+
+    if active_sub.get("billing_provider") != "wayforpay" or not active_sub.get("wayforpay_order_reference"):
+        # Manually-activated or Stripe-era rows have nothing for WayForPay's
+        # REMOVE call to act on -- the frontend falls back to the existing
+        # email flow for these, this endpoint is WayForPay-subscriptions only.
+        raise HTTPException(status_code=400, detail="This subscription is not managed by WayForPay")
+
+    order_reference = active_sub["wayforpay_order_reference"]
+
+    try:
+        await wfp.remove_regular_payment(order_reference)
+    except RuntimeError as exc:
+        logger.error("wayforpay_cancel_failed user_id=%s orderReference=%s error=%s", user_id, order_reference, exc)
+        raise HTTPException(status_code=502, detail=f"Could not cancel with WayForPay: {exc}") from exc
+
+    await svc.upsert_user_subscription_row(
+        user_id,
+        plan_name=active_sub.get("plan_name") or "personal",
+        status="active",
+        current_period_end=active_sub.get("current_period_end"),
+        cancel_at_period_end=True,
+        billing_provider="wayforpay",
+        wayforpay_order_reference=order_reference,
+    )
+
+    logger.info("wayforpay_cancel_succeeded user_id=%s orderReference=%s", user_id, order_reference)
+    return {"status": "cancelled", "cancel_at_period_end": True, "current_period_end": active_sub.get("current_period_end")}

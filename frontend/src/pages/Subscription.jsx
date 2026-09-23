@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth.js'
 import { useSubscription } from '../hooks/useSubscription.js'
 import { requestPremiumAccess, requestSubscriptionCancellation } from '../lib/premiumAccess.js'
 import { openWayforpayCheckout } from '../lib/wayforpayCheckout.js'
+import api from '../lib/api.js'
 import { gaViewPricing, gaBeginCheckout, gaPurchase } from '../lib/analytics.js'
 import { isUkrainianLocale } from '../lib/locale.js'
 import '../styles/dashboard2026.css'
@@ -133,9 +134,34 @@ export default function Subscription() {
     await requestPremiumAccess({ userEmail: user?.email, source: 'subscription_page' })
   }
 
+  const [cancelling, setCancelling] = useState(false)
+
   async function handleCancelSubscription() {
-    await requestSubscriptionCancellation({ userEmail: user?.email, source: 'subscription_page' })
-    setShowCancelConfirm(false)
+    // P46 -- for a WayForPay-billed subscription, cancel it there directly
+    // (stops the next recurring charge; current access is untouched until
+    // the period already paid for ends). /wayforpay/cancel 400s for any
+    // subscription it doesn't manage (manual/email-activated, or the never-
+    // live Stripe path) -- that's the signal to fall back to the existing
+    // email flow rather than a special "which provider am I on" check here.
+    setCancelling(true)
+    try {
+      await api.post('/wayforpay/cancel')
+      toast.success(isUk
+        ? 'Підписку скасовано. Premium залишиться активним до кінця поточного періоду.'
+        : 'Subscription cancelled. Premium stays active through the end of your current billing period.')
+      refresh()
+    } catch (err) {
+      if (err?.response?.status === 400) {
+        await requestSubscriptionCancellation({ userEmail: user?.email, source: 'subscription_page' })
+      } else {
+        toast.error(isUk
+          ? 'Не вдалося скасувати підписку автоматично. Спробуйте ще раз або напишіть нам.'
+          : 'Could not cancel automatically. Please try again or email us.')
+      }
+    } finally {
+      setCancelling(false)
+      setShowCancelConfirm(false)
+    }
   }
 
   return (
@@ -237,9 +263,10 @@ export default function Subscription() {
                     <button
                       type="button"
                       onClick={handleCancelSubscription}
-                      className="cabinet-btn cabinet-btn--danger cabinet-btn--sm flex-1"
+                      disabled={cancelling}
+                      className="cabinet-btn cabinet-btn--danger cabinet-btn--sm flex-1 disabled:opacity-60"
                     >
-                      {isUk ? 'Так, скасувати' : 'Yes, cancel'}
+                      {cancelling ? (isUk ? 'Скасовуємо…' : 'Cancelling…') : (isUk ? 'Так, скасувати' : 'Yes, cancel')}
                     </button>
                     <button
                       type="button"

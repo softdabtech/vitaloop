@@ -21,11 +21,18 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import logging
 import time
 import uuid
 from typing import Any, Dict, Optional
 
+import httpx
+
 from app.config import settings
+
+logger = logging.getLogger("uvicorn.error")
+
+REGULAR_API_URL = "https://api.wayforpay.com/regularApi"
 
 # UAH prices, kept in one place -- see frontend/src/pages/UaLanding.jsx's
 # PRICING array (249 грн/міс, 2499 грн/рік) for the customer-facing copy;
@@ -183,3 +190,56 @@ def plan_name_for(plan: str) -> str:
     monthly and yearly WayForPay plans grant the same 'personal' (Premium)
     tier, billing period is tracked via current_period_end, not plan_name."""
     return "personal" if plan in PLAN_CONFIG else "free"
+
+
+async def remove_regular_payment(order_reference: str) -> Dict[str, Any]:
+    """Permanently stops the recurring charge tied to order_reference
+    (WayForPay's REMOVE request, https://wiki.wayforpay.com/uk/view/852521).
+    Irreversible on WayForPay's side ("без можливості відновлення") -- this
+    only ever stops *future* charges, it never claws back a period the user
+    already paid for, which is why the router still leaves the subscription
+    row 'active' with cancel_at_period_end=True rather than downgrading
+    access immediately.
+
+    Auth here is merchantAccount + merchantPassword (not the HMAC signature
+    used by Purchase/webhook) -- this is the one WayForPay call that uses
+    the merchant dashboard password rather than the secret key, per its own
+    docs.
+
+    Raises RuntimeError with a human-readable reason on any non-Ok
+    response, including transport failures -- callers must not silently
+    treat a failed REMOVE as a successful cancellation.
+    """
+    payload = {
+        "requestType": "REMOVE",
+        "merchantAccount": settings.wayforpay_merchant_login,
+        "merchantPassword": settings.wayforpay_merchant_password,
+        "orderReference": order_reference,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(REGULAR_API_URL, json=payload)
+    except httpx.HTTPError as exc:
+        logger.error("wayforpay_remove_transport_error orderReference=%s error=%s", order_reference, repr(exc))
+        raise RuntimeError("Could not reach WayForPay") from exc
+
+    try:
+        data = resp.json()
+    except ValueError as exc:
+        logger.error(
+            "wayforpay_remove_invalid_response orderReference=%s status=%s body=%s",
+            order_reference, resp.status_code, resp.text[:500],
+        )
+        raise RuntimeError("WayForPay returned an unreadable response") from exc
+
+    reason_code = data.get("reasonCode")
+    # 4100 is WayForPay's documented "Ok" code for this endpoint.
+    if reason_code != 4100:
+        logger.error(
+            "wayforpay_remove_failed orderReference=%s reasonCode=%s reason=%s",
+            order_reference, reason_code, data.get("reason"),
+        )
+        raise RuntimeError(str(data.get("reason") or f"WayForPay error {reason_code}"))
+
+    logger.info("wayforpay_remove_succeeded orderReference=%s", order_reference)
+    return data
