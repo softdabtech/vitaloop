@@ -460,8 +460,12 @@ const EVIDENCE_METER = { low: 4, moderate: 3, high: 2, blocked: 1 }
 
 // P37k — Today cockpit body. Renders viewModel.cockpit (built entirely in
 // todayViewModel.js). Exactly one primary CTA on the whole page: the first
-// "This week" row, when any row exists -- nothing else in this component
-// renders a CoachButton.
+// "This week" row, when any row exists. P45 -- Dashboard home has no
+// filled/pill button chrome at all: every action here (header Upload,
+// This week rows, "See full reasoning", "View all results", Missing
+// context links, and the Documents footer) is bold text with a hover
+// color/underline change only. CoachButton is never rendered inside this
+// component.
 //
 // P37k.3 -- this now renders for EVERY ready-report state, not only once
 // GET /results/{uploadId} has resolved: cockpit.contentStatus ('loading' |
@@ -483,7 +487,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
           <div className="cockpit-header__top">
             <h1 className="cockpit-title">{copy.pageTitle}</h1>
             {viewModel.documents && (
-              <button type="button" onClick={() => navigate(viewModel.documents.uploadTo)} className="cockpit-header__upload-btn">
+              <button type="button" onClick={() => navigate(viewModel.documents.uploadTo)} className="cockpit-link">
                 {copy.cta.upload}
               </button>
             )}
@@ -696,7 +700,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
       {isSparse ? (
         <div className="cockpit-section cockpit-section--sparse">
           <p className="text-sm text-slate-600 mb-3">{c.thisWeek.empty}</p>
-          <CoachButton onClick={() => navigate(sparsePrimaryAction.to)} trailingIcon={ArrowRight} size="sm">{sparsePrimaryAction.label}</CoachButton>
+          <button type="button" onClick={() => navigate(sparsePrimaryAction.to)} className="cockpit-link">{sparsePrimaryAction.label} &rarr;</button>
         </div>
       ) : (
         <>
@@ -721,11 +725,12 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
                       <p className="cockpit-row__title">{row.title}</p>
                       {row.why && <p className="cockpit-row__why">{row.why}</p>}
                     </div>
-                    {row.isPrimary ? (
-                      <CoachButton onClick={() => navigate(row.actionTo)} trailingIcon={ArrowRight} size="sm">{row.actionLabel}</CoachButton>
-                    ) : (
-                      <button type="button" onClick={() => navigate(row.actionTo)} className="cockpit-link cockpit-link--row">{row.actionLabel} &rarr;</button>
-                    )}
+                    {/* P45: no filled/pill button chrome on Dashboard home --
+                        every action here is bold text, isPrimary or not.
+                        isPrimary still exists in the data (still exactly one
+                        row is "the" primary action), it just no longer gets
+                        different visual weight than the rest. */}
+                    <button type="button" onClick={() => navigate(row.actionTo)} className="cockpit-link cockpit-link--row">{row.actionLabel} &rarr;</button>
                   </div>
                 ))}
               </div>
@@ -790,7 +795,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
                 <p className="text-sm font-semibold text-slate-950">{item.title}</p>
                 {item.reason && <p className="mt-0.5 text-sm leading-6 text-slate-600">{item.reason}</p>}
                 {item.suggestedNextStep && <p className="mt-0.5 text-xs text-slate-500">{item.suggestedNextStep}</p>}
-                <button type="button" onClick={() => navigate(item.to)} className="mt-1 text-sm font-semibold text-teal-700 hover:text-teal-900">{c.missingContext.cta} &rarr;</button>
+                <button type="button" onClick={() => navigate(item.to)} className="cockpit-link mt-1">{c.missingContext.cta} &rarr;</button>
               </div>
             ))}
           </div>
@@ -809,15 +814,18 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
             <Stethoscope className="h-4 w-4 text-slate-500" />
             {viewModel.documents.reportLine}
           </div>
+          {/* P45: no filled/pill button chrome on Dashboard home -- these
+              three used to be cabinet-btn--secondary pill buttons; now bold
+              text like every other action on this page. */}
           <div className="cockpit-documents__links">
-            <button type="button" onClick={() => navigate(viewModel.documents.resultsTo)} className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm">{copy.cta.results}</button>
+            <button type="button" onClick={() => navigate(viewModel.documents.resultsTo)} className="cockpit-link">{copy.cta.results}</button>
             {viewModel.documents.planTo && (
-              <button type="button" onClick={() => navigate(viewModel.documents.planTo)} className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm">{copy.cta.plan}</button>
+              <button type="button" onClick={() => navigate(viewModel.documents.planTo)} className="cockpit-link">{copy.cta.plan}</button>
             )}
             {viewModel.documents.planLocked && (
               <span className="cockpit-documents__locked" title={viewModel.documents.upgradeNote}>{copy.cta.plan}</span>
             )}
-            <button type="button" onClick={() => navigate(viewModel.documents.historyTo)} className="cabinet-btn cabinet-btn--secondary cabinet-btn--sm">{copy.cta.history}</button>
+            <button type="button" onClick={() => navigate(viewModel.documents.historyTo)} className="cockpit-link">{copy.cta.history}</button>
           </div>
           {viewModel.documents.upgradeNote && <p className="mt-2 text-xs text-slate-500">{viewModel.documents.upgradeNote}</p>}
         </div>
