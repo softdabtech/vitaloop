@@ -201,9 +201,11 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     // the Documents footer must all fall back to results, never /protocol/*
     await expect(page.getByRole('button', { name: /Open my plan/i })).toHaveCount(0)
     await expect(page.getByText(/requires an active subscription/i)).toBeVisible()
-    // Follow-up timing uses the cockpit's "window listed" wording (P37k),
-    // not the retired "your plan notes" copy -- same interval, verbatim.
-    await expect(page.getByText(/Ferritin: window listed as Recheck in 8-12 weeks/i)).toBeVisible()
+    // P44: the standalone Follow-up section was removed (third copy of the
+    // same retest window) -- the This week retest row is now the fact's
+    // only home, same interval, verbatim.
+    await expect(page.getByText('Retest Ferritin')).toBeVisible()
+    await expect(page.getByText(/Window listed: Recheck in 8-12 weeks/i)).toBeVisible()
   })
 
   test('10. questionnaire urgent safety only', async ({ page }) => {
@@ -269,7 +271,15 @@ test.describe('Today dashboard — P37f fixture QA', () => {
   // (it had been dropped from the cockpit's section list in P37k, then
   // required back by this stage) -- same already-built progress_intelligence
   // comparison object, now surfaced as its own compact cockpit section.
-  test('14. comparable reports -> "Since your previous report" renders with the real pattern text (restored in P37k.1)', async ({ page }) => {
+  // P44 Dashboard rebuild: "Since your previous report" was removed from
+  // the home cockpit entirely -- its only data source (progress_
+  // intelligence.changes[].pattern_name) is a pattern-name string, not a
+  // real per-marker delta, and showing it as "since previous report" would
+  // misrepresent a pattern that may not even be currently detected
+  // (current_confidence: null on real payloads) as a tracked change. It
+  // stays fully intact on /results; this only asserts it never reappears
+  // on Dashboard home.
+  test('14. comparable reports -> "Since your previous report" never renders on Dashboard home (removed in P44)', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: false }),
       results: {
@@ -281,8 +291,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     })
     await gotoToday(page)
     await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible()
-    await expect(page.getByText('Since your previous report')).toBeVisible()
-    await expect(page.getByText(/Iron deficiency pattern/i)).toBeVisible()
+    await expect(page.getByText('Since your previous report')).toHaveCount(0)
   })
 
   test('15. first report/no valid comparison -> no crash, no invented trend', async ({ page }) => {
@@ -315,27 +324,36 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByText('B12', { exact: true })).toHaveCount(0) // capped at 2
   })
 
-  test('17. retest timing with anchored text -> used verbatim in follow-up timing', async ({ page }) => {
+  // P44 Dashboard rebuild: the standalone "Follow-up timing" section was
+  // removed -- it was a third copy of the exact same retest window already
+  // shown in the status strip ("{marker}: {timing}" cell) and as a This
+  // week row ("Retest {marker}" / "Window listed: {timing}"). The retest
+  // fact itself is not lost, only the extra copy of it.
+  test('17. retest timing with anchored text -> used verbatim in the This week retest row', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: false }),
       results: { knowledge_report: { retest_plan: [{ marker: 'Ferritin', timing: 'Recheck in 8-12 weeks per clinician guidance' }] } },
     })
     await gotoToday(page)
-    // P37k follow-up timing uses "window listed as" framing (fresh report);
-    // "window listed as" is a unique substring not used by the status
-    // strip's terser "{marker}: {timing}" cell or the This week row's
-    // "Window listed: {timing}" why-text, so this targets the Follow-up
-    // timing section specifically.
-    await expect(page.getByText(/Ferritin: window listed as Recheck in 8-12 weeks per clinician guidance/i)).toBeVisible()
+    await expect(page.getByText('Retest Ferritin')).toBeVisible()
+    await expect(page.getByText(/Window listed: Recheck in 8-12 weeks per clinician guidance/i)).toBeVisible()
+    await expect(page.getByText('Follow-up timing')).toHaveCount(0)
   })
 
-  test('18. retest item without timing -> honest no-date fallback, no arbitrary date', async ({ page }) => {
+  test('18. retest item without timing -> no row anywhere, no arbitrary date (Follow-up section removed in P44)', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: false }),
       results: { knowledge_report: { retest_plan: [{ marker: 'Ferritin', reason: 'monitor' }] } },
     })
     await gotoToday(page)
-    await expect(page.getByText(/does not include a repeat-test window yet/i)).toBeVisible()
+    // No marker+timing pair exists, so neither the status strip's retest
+    // cell, the This week retest row, nor the removed Follow-up section's
+    // old "does not include a repeat-test window yet" fallback show
+    // anything for this -- consistent with "skip a block when its data is
+    // empty," never a fabricated or guessed date.
+    await expect(page.getByText(/does not include a repeat-test window yet/i)).toHaveCount(0)
+    await expect(page.getByText('Follow-up timing')).toHaveCount(0)
+    await expect(page.getByText(/No retest window listed/i)).toBeVisible()
   })
 
   test('22. Premium user without history -> no invented comparison', async ({ page }) => {
@@ -460,15 +478,23 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByRole('button', { name: /Open my plan/i }).first()).toBeVisible()
   })
 
-  test('P37j.3: very_old retest -> follow-up timing uses "saved plan listed a window" wording, no computed/overdue date', async ({ page }) => {
+  // P44 Dashboard rebuild: the removed Follow-up section was the only place
+  // that distinguished fresh vs old/very_old retest phrasing ("window
+  // listed as" vs "your saved plan listed a window of"). The This week
+  // retest row (its replacement as the retest fact's only home now) has a
+  // single wording regardless of report age -- an accepted consequence of
+  // removing the section, not a regression to chase here. What still must
+  // hold: the real marker+timing appears verbatim, and no computed/overdue
+  // date is ever fabricated.
+  test('P37j.3: very_old retest -> This week shows the real marker+timing verbatim, no computed/overdue date', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: false, measurementDate: '2022-01-04' }),
       results: { knowledge_report: { retest_plan: [{ marker: 'Hemoglobin', timing: '6-12 weeks' }] } },
     })
     await gotoToday(page)
-    await expect(page.getByText(/Hemoglobin: your saved plan listed a window of 6-12 weeks/i)).toBeVisible()
-    // The fresh-report "window listed as" phrasing must not appear alongside it.
-    await expect(page.getByText(/window listed as/i)).toHaveCount(0)
+    await expect(page.getByText('Retest Hemoglobin')).toBeVisible()
+    await expect(page.getByText(/Window listed: 6-12 weeks/i)).toBeVisible()
+    await expect(page.getByText('Follow-up timing')).toHaveCount(0)
     await expect(page.getByText(/\d{4}-\d{2}-\d{2}/)).toHaveCount(0) // no computed calendar date anywhere
   })
 
@@ -500,7 +526,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
 
   // ── P37k cockpit fixture coverage ────────────────────────────────────
 
-  test('P37k.1: fresh report with plan -> full cockpit (status strip, this week, lab snapshot, follow-up, missing context, documents)', async ({ page }) => {
+  test('P37k.1/P44: fresh report with plan -> full cockpit (status strip, this week, pinned markers, missing context, documents)', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: true }),
       entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
@@ -523,13 +549,16 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByText(/Based on recent labs/i)).toBeVisible()
     await expect(page.getByText('This week')).toBeVisible()
     await expect(page.getByText('Increase iron-rich foods')).toBeVisible()
-    await expect(page.getByText('Key biomarkers')).toBeVisible()
+    await expect(page.getByText('Pinned markers')).toBeVisible()
+    // P44: the retest fact lives only in the This week row now (the
+    // standalone Follow-up section was removed as a third copy of it).
+    await expect(page.getByText('Retest Ferritin')).toBeVisible()
+    await expect(page.getByText('Follow-up timing')).toHaveCount(0)
     // Raw marker id must never leak -- humanized to "Transferrin saturation"
     // (appears both in This week's gap row and in Missing context -- same
     // source gap, two surfaces).
     await expect(page.getByText('Transferrin saturation').first()).toBeVisible()
     await expect(page.getByText(/transferrin_saturation/)).toHaveCount(0)
-    await expect(page.getByText('Follow-up timing')).toBeVisible()
     await expect(page.getByText('Missing context', { exact: true })).toBeVisible()
     // Exactly one primary CTA on the page (This week's first row).
     await expect(page.locator('.coach-button')).toHaveCount(1)
@@ -563,7 +592,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
   })
 
   // P37k.1: a fully sparse ready report used to show two empty-placeholder
-  // sections ("This week: Nothing to flag" + "Key biomarkers: No
+  // sections ("This week: Nothing to flag" + "Pinned markers: No
   // biomarker values") stacked above the footer -- now collapses into one
   // honest primary action instead. Fresh sparse -> View results.
   test('P37k.4: sparse reportDetails ({}) -> one honest primary action (View results for fresh), no empty-placeholder sections', async ({ page }) => {
@@ -572,10 +601,10 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByText('Incomplete data')).toBeVisible()
     await expect(page.getByText('No markers flagged')).toBeVisible()
     await expect(page.getByText('No retest window listed')).toBeVisible()
-    // No "This week"/"Key biomarkers" section headers or their empty
+    // No "This week"/"Pinned markers" section headers or their empty
     // placeholder copy -- collapsed into the single sparse primary action.
     await expect(page.getByText('This week', { exact: true })).toHaveCount(0)
-    await expect(page.getByText('Key biomarkers')).toHaveCount(0)
+    await expect(page.getByText('Pinned markers')).toHaveCount(0)
     await expect(page.getByText('No biomarker values available for this report.')).toHaveCount(0)
     await expect(page.locator('.coach-button', { hasText: 'View results' })).toBeVisible()
     await expect(page.locator('.coach-button')).toHaveCount(1) // still exactly one primary CTA
@@ -587,7 +616,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await mockToday(page, { today_contract: contractReady({ planExists: true }), entitlements: DEFAULT_ENTITLEMENTS_PREMIUM, results: { biomarkers: [] } })
     await gotoToday(page)
     await expect(page.getByText('Incomplete data')).toBeVisible()
-    await expect(page.getByText('Key biomarkers')).toHaveCount(0)
+    await expect(page.getByText('Pinned markers')).toHaveCount(0)
     await expect(page.locator('.coach-button', { hasText: 'View results' })).toBeVisible()
   })
 
@@ -860,7 +889,12 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     expect(color).toBe('rgb(146, 64, 14)')
   })
 
-  test('P37k.2-UI-c: lab snapshot rows show explicit status text alongside the color accent (High/Low/Watch/In range)', async ({ page }) => {
+  // P44: pinned markers cap at 2, worst-status-first -- with 3+ markers
+  // present, only the top 2 by STATUS_RANK (deficient/elevated before
+  // borderline/optimal) are ever pinned to Dashboard home; the rest stay
+  // on /lab-results. Split into two fixtures (each with exactly 2 markers)
+  // so both status pairs get to actually render and be checked.
+  test('P37k.2-UI-c: pinned marker rows show explicit status text alongside the color accent (High/Low)', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: true }),
       entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
@@ -868,13 +902,28 @@ test.describe('Today dashboard — P37f fixture QA', () => {
         biomarkers: [
           { name: 'Hemoglobin', value: 10.5, unit: 'g/dL', ref_low: 12, ref_high: 16 }, // DEFICIENT -> Low
           { name: 'Ferritin', value: 200, unit: 'ng/mL', ref_low: 15, ref_high: 150 }, // ELEVATED -> High
-          { name: 'Glucose', value: 90, unit: 'mg/dL', ref_low: 70, ref_high: 99 }, // OPTIMAL -> In range
         ],
       },
     })
     await gotoToday(page)
     await expect(page.locator('.cockpit-lab-row--deficient .cockpit-lab-row__status')).toHaveText('Low')
     await expect(page.locator('.cockpit-lab-row--elevated .cockpit-lab-row__status')).toHaveText('High')
+    await expect(page.locator('.cockpit-lab-row')).toHaveCount(2)
+  })
+
+  test('P37k.2-UI-c2: pinned marker rows show explicit status text alongside the color accent (Watch/In range)', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady({ planExists: true }),
+      entitlements: DEFAULT_ENTITLEMENTS_PREMIUM,
+      results: {
+        biomarkers: [
+          { name: 'Hemoglobin', value: 12.3, unit: 'g/dL', ref_low: 12, ref_high: 16 }, // BORDERLINE -> Watch
+          { name: 'Glucose', value: 90, unit: 'mg/dL', ref_low: 70, ref_high: 99 }, // OPTIMAL -> In range
+        ],
+      },
+    })
+    await gotoToday(page)
+    await expect(page.locator('.cockpit-lab-row--borderline .cockpit-lab-row__status')).toHaveText('Watch')
     await expect(page.locator('.cockpit-lab-row--optimal .cockpit-lab-row__status')).toHaveText('In range')
   })
 

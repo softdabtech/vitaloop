@@ -373,11 +373,33 @@ function buildCockpitViewModel({
       ? reportDetails.knowledge_report.action_plan
       : []
   const planTarget = (planAccessAllowed && planExists) ? planTo : resultsTo
+  // P44: while the primary pattern is low-confidence ("Incomplete read"),
+  // a nutrition/supplement action row reads as treatment advice attached
+  // to a finding the page itself just said isn't confident enough to
+  // name -- see the Dashboard rebuild spec's Next-section filter. Category
+  // is a real backend field on knowledge_report.action_plan items
+  // (nutrition/supplement_safety/supplements/...), checked first; a plain
+  // string item (reportDetails.protocol's other possible shape) carries no
+  // tag at all, so it falls back to a conservative keyword match on the
+  // text itself. The documented failure direction is hiding an uncertain
+  // row, never showing a nutrition row that slipped past the filter.
+  const NUTRITION_LIKE_CATEGORIES = new Set(['nutrition', 'nutrition_context', 'supplements', 'supplement', 'supplement_safety'])
+  const NUTRITION_LIKE_TEXT = /\b(nutrition|supplement|deficienc|vitamin|iron|b12|folate)\b/i
+  const isNutritionLikePlanItem = (item) => {
+    if (typeof item === 'string') return NUTRITION_LIKE_TEXT.test(item)
+    const category = String(item?.category || '').toLowerCase()
+    if (NUTRITION_LIKE_CATEGORIES.has(category)) return true
+    if (category) return false // has a real, non-nutrition tag -- trust it over text
+    return NUTRITION_LIKE_TEXT.test(item?.title || item?.text || item?.description || '')
+  }
+  const filteredPlanItems = clinicalFinding?.isLowConfidence
+    ? planItemsSource.filter((item) => !isNutritionLikePlanItem(item))
+    : planItemsSource
   // Only ever one plan row here -- two items both point at the same
   // planTarget/"Open my plan" CTA, which reads as a duplicated button
   // rather than two distinct actions (see the standalone Nutrition focus
   // section, now removed for the same reason).
-  for (const item of planItemsSource.slice(0, 1)) {
+  for (const item of filteredPlanItems.slice(0, 1)) {
     const text = typeof item === 'string' ? item : (item?.title || item?.text || item?.description || null)
     if (!text) continue
     // P37k.1 fix: label must say "Open my plan" when this row actually
@@ -439,13 +461,17 @@ function buildCockpitViewModel({
   // Every other row (here and elsewhere) is a plain secondary link.
   const thisWeek = thisWeekRows.map((row, index) => ({ ...row, isPrimary: index === 0 }))
 
-  // --- labSnapshot: 4-6 priority biomarkers, worst-status-first, no
-  // sparkline (no delta field exists on this payload's biomarker objects --
-  // see the P37k report's data-shape verification) ---
+  // --- labSnapshot (pinned markers): P44 Dashboard rebuild caps this at 2
+  // -- home is a summary surface, not a biomarker registry; the full list
+  // already lives on /lab-results. Worst-status-first so the "to watch"
+  // marker is always pinned first. No sparkline: confirmed against the
+  // real payload that no per-marker dated history exists on this object
+  // (only a single snapshot's value/range per biomarker) -- see the P37k
+  // report's data-shape verification, still true today. ---
   const labSnapshot = normalizedBiomarkers
     .slice()
     .sort((a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status])
-    .slice(0, 6)
+    .slice(0, 2)
     .map(({ raw, status }) => {
       const name = isUk
         ? raw.canonical_name || raw.name || raw.source_name || raw.name_en
@@ -489,13 +515,24 @@ function buildCockpitViewModel({
 
   // --- missingContext (renamed "clarity"): up to 2 items, now including
   // suggested_next_step verbatim when the backend provides one ---
+  // P44: evidence_gaps has no real lab-vs-profile type field (verified
+  // against evidence_gaps.py -- even a plainly lab-shaped gap like "missing
+  // thyroid antibodies" carries missing_marker: null when its source is
+  // interpreted_report, since only domain_expected_marker-sourced gaps ever
+  // populate missing_marker). This is a documented heuristic, not a
+  // contract: missing_marker present -> treat as a lab gap (Lab Plan);
+  // otherwise -> treat as a profile gap (Profile & Safety). It will
+  // sometimes send a lab-ish gap to Profile & Safety (anti-TPO on the zzz
+  // account does exactly this) -- that is the known, accepted failure
+  // direction, not a bug to chase here; building a real gap-type field is
+  // explicitly out of scope for this change.
   const missingContextItems = gaps.slice(0, 2).map((gap) => {
     const rawTitle = gap?.missing_marker || gap?.domain
     return {
       title: rawTitle ? humanizeLabel(rawTitle, isUk) : c.missingContext.genericTitle,
       reason: gap?.reason ? humanizeLabel(gap.reason, isUk) : null,
       suggestedNextStep: gap?.suggested_next_step || null,
-      to: resultsTo,
+      to: gap?.missing_marker != null ? '/lab-plan' : '/health-profile',
     }
   }).filter((item) => item.title)
   const missingContext = missingContextItems.length ? missingContextItems : null

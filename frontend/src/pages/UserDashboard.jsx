@@ -159,7 +159,7 @@ const TODAY_COPY = {
         uploadRowWhy: 'This report is old enough that fresher data would be more useful than acting on it as-is.',
       },
       labSnapshot: {
-        title: 'Key biomarkers',
+        title: 'Pinned markers',
         empty: 'No biomarker values available for this report.',
         rangeUnavailable: 'No reference range on file',
         // P37k.2: explicit status text alongside the color accent -- never
@@ -167,6 +167,7 @@ const TODAY_COPY = {
         // computed in todayViewModel.js.
         statusLabels: { ELEVATED: 'High', DEFICIENT: 'Low', BORDERLINE: 'Watch', OPTIMAL: 'In range' },
         unknownRange: 'Unknown range',
+        viewAll: 'View all results',
       },
       followUp: {
         title: 'Follow-up timing',
@@ -188,6 +189,7 @@ const TODAY_COPY = {
         microLabel: 'Main finding',
         incompleteMicroLabel: 'Incomplete read',
         incompleteTitle: 'Not enough context for a confident read yet',
+        mutedPatternLine: (label) => `Possible pattern kept in background: ${label} (low confidence)`,
         confidenceLabels: { likely: 'Higher confidence', possible: 'Moderate confidence', unlikely_but_flagged: 'Low confidence' },
         supportsLabel: 'Supports:',
         missingLabel: 'Missing:',
@@ -339,11 +341,12 @@ const TODAY_COPY = {
         uploadRowWhy: 'Цей звіт достатньо застарів, щоб свіжі дані були кориснішими, ніж дії на основі поточного.',
       },
       labSnapshot: {
-        title: 'Останній зріз аналізів',
+        title: 'Закріплені показники',
         empty: 'Для цього звіту немає значень показників.',
         rangeUnavailable: 'Референс недоступний',
         statusLabels: { ELEVATED: 'Підвищено', DEFICIENT: 'Знижено', BORDERLINE: 'Слідкувати', OPTIMAL: 'В нормі' },
         unknownRange: 'Референс невідомий',
+        viewAll: 'Переглянути всі результати',
       },
       followUp: {
         title: 'Терміни повторного аналізу',
@@ -365,6 +368,7 @@ const TODAY_COPY = {
         microLabel: 'Головна знахідка',
         incompleteMicroLabel: 'Неповний розбір',
         incompleteTitle: 'Поки недостатньо контексту для впевненого висновку',
+        mutedPatternLine: (label) => `Можливий патерн (у фоні): ${label} (низька впевненість)`,
         confidenceLabels: { likely: 'Вища впевненість', possible: 'Помірна впевненість', unlikely_but_flagged: 'Низька впевненість' },
         supportsLabel: 'Підтверджує:',
         missingLabel: 'Бракує:',
@@ -468,7 +472,7 @@ const EVIDENCE_METER = { low: 4, moderate: 3, high: 2, blocked: 1 }
 // rendering first and being replaced once the fetch resolves.
 function CockpitBody({ viewModel, cockpit, copy, navigate }) {
   const c = copy.cockpit
-  const { headerContext, statusStrip, safety, thisWeek, labSnapshot, followUp, missingContext, sinceLastReport, isSparse, sparsePrimaryAction, contentStatus, clinicalFinding, attentionLevel, evidenceBasis } = cockpit
+  const { headerContext, statusStrip, safety, thisWeek, labSnapshot, missingContext, isSparse, sparsePrimaryAction, contentStatus, clinicalFinding, attentionLevel, evidenceBasis } = cockpit
   const isLoadingContent = contentStatus === 'loading'
   const isErrorContent = contentStatus === 'error'
 
@@ -615,6 +619,12 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
                   <p className="text-sm font-bold text-slate-950">
                     {clinicalFinding.isLowConfidence ? c.clinicalFinding.incompleteTitle : clinicalFinding.label}
                   </p>
+                  {/* P44: the pattern name is allowed back in at Incomplete
+                      read, but only as a quiet secondary line -- never the
+                      card's H1 again. */}
+                  {clinicalFinding.isLowConfidence && clinicalFinding.label && (
+                    <p className="mt-0.5 text-xs text-slate-400">{c.clinicalFinding.mutedPatternLine(clinicalFinding.label)}</p>
+                  )}
                   {clinicalFinding.likelihoodBucket && (
                     <div className="mt-1 flex items-center gap-2">
                       <MeterDots filled={CONFIDENCE_METER[clinicalFinding.likelihoodBucket] || 0} total={3} label={c.clinicalFinding.confidenceLabels[clinicalFinding.likelihoodBucket]} />
@@ -736,48 +746,40 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
                 <p className="text-sm text-slate-500">{c.labSnapshot.empty}</p>
               )
             ) : (
-              <div className="cockpit-lab-grid">
-                {labSnapshot.map((m, index) => (
-                  <div key={index} className={`cockpit-lab-row cockpit-lab-row--${m.status.toLowerCase()}`}>
-                    <span className="cockpit-lab-row__name">{m.name}</span>
-                    <span className="cockpit-lab-row__value">{m.value ?? '—'}{m.unit ? ` ${m.unit}` : ''}</span>
-                    <span className="cockpit-lab-row__status">{m.statusLabel}</span>
-                    <span className="cockpit-lab-row__range">{m.rangeLabel}</span>
-                  </div>
-                ))}
-              </div>
+              <>
+                <div className="cockpit-lab-grid">
+                  {labSnapshot.map((m, index) => (
+                    <div key={index} className={`cockpit-lab-row cockpit-lab-row--${m.status.toLowerCase()}`}>
+                      <span className="cockpit-lab-row__name">{m.name}</span>
+                      <span className="cockpit-lab-row__value">{m.value ?? '—'}{m.unit ? ` ${m.unit}` : ''}</span>
+                      <span className="cockpit-lab-row__status">{m.statusLabel}</span>
+                      <span className="cockpit-lab-row__range">{m.rangeLabel}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* P44: home only ever pins the top 1-2 markers -- the rest
+                    of the panel lives on /lab-results, not on a growing
+                    home-screen registry. */}
+                <button type="button" onClick={() => navigate('/lab-results')} className="cockpit-link mt-2">{c.labSnapshot.viewAll} &rarr;</button>
+              </>
             )}
           </div>
         </>
       )}
 
-      {/* P38b required visual order, item 5: comparisons / follow-up /
-          missing context -- grouped as the "archive/detail" tier, one step
-          quieter than the current-state tier above (.cockpit-section--
-          detail: lighter fill, muted icon color -- see today-page.css).
-          P37k.1: "Since your previous report" is the same already-built
-          comparison object (progress_intelligence/personal_baseline,
-          capped at 3) buildReturningUserSections has produced since P37e.
-          Renders nothing if unavailable; never invents a comparison. */}
-      {sinceLastReport && (
-        <div className="cockpit-section cockpit-section--detail">
-          <div className="today-section-label"><TrendingUp className="h-4 w-4 text-slate-500" />{copy.changes.title}</div>
-          <div className="space-y-1.5">
-            {sinceLastReport.items.map((text, index) => (
-              <p key={index} className="text-sm leading-6 text-slate-700">{text}</p>
-            ))}
-          </div>
-          <button type="button" onClick={() => navigate(sinceLastReport.to)} className="cockpit-link mt-1.5">{copy.changes.cta} &rarr;</button>
-        </div>
-      )}
-
-      {followUp && (
-        <div className="cockpit-section cockpit-section--detail">
-          <div className="today-section-label"><CalendarClock className="h-4 w-4 text-slate-500" />{c.followUp.title}</div>
-          <p className="text-sm leading-6 text-slate-700">{followUp.text}</p>
-          <button type="button" onClick={() => navigate(followUp.to)} className="cockpit-link mt-1">{copy.cta.results} &rarr;</button>
-        </div>
-      )}
+      {/* P44 Dashboard rebuild: "Since your previous report" (pattern-name
+          strings from progress_intelligence -- e.g. "Cardiovascular risk
+          pattern - no longer detected" with current_confidence: null) and
+          the standalone "Follow-up timing" block (the exact same retest
+          window already shown in the status strip above and as a This
+          Week row) were both removed from Dashboard home. Neither is
+          fabricated data, but the first has no real per-marker delta
+          behind it (personal_baseline.markers has real numbers, but
+          against a rolling baseline, not the previous report -- labeling
+          that "since previous report" would be a false pairing) and the
+          second is a third copy of one fact already shown twice above.
+          Both remain fully intact on /results -- this only removes the
+          redundant/misleading copies from the home summary. */}
 
       {missingContext && (
         <div className="cockpit-section cockpit-section--detail">
