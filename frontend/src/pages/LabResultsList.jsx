@@ -98,8 +98,8 @@ function measurementDateValue(item) {
   return item?.test_date || item?.collected_at || item?.reported_at || null
 }
 
-function getItemDate(item) {
-  return measurementDateValue(item) || 'Unknown date'
+function getItemDate(item, isUk) {
+  return measurementDateValue(item) || (isUk ? 'Дата невідома' : 'Unknown date')
 }
 
 function getBiomarkerCounts(item) {
@@ -401,7 +401,7 @@ export default function LabResultsList() {
               </div>
 
               {sortedItems.map((item, index) => {
-                const date = getItemDate(item)
+                const date = getItemDate(item, isUk)
                 const { optimal, warning, critical } = getBiomarkerCounts(item)
                 const uploadId = item?.upload_id || item?.id
 

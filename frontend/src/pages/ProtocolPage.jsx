@@ -42,6 +42,34 @@ const TIMING_LABELS_UK = {
   bedtime: 'Перед сном',
 }
 
+const CATEGORY_LABELS = {
+  nutrition: 'Nutrition',
+  nutrition_context: 'Nutrition',
+  nutrients: 'Nutrients',
+  vitamins: 'Vitamins',
+  supplements: 'Supplements',
+  supplement: 'Supplement',
+  supplement_safety: 'Supplement safety',
+  training_recovery: 'Training & recovery',
+  lifestyle: 'Lifestyle',
+  profile: 'Profile',
+  stress: 'Stress',
+}
+
+const CATEGORY_LABELS_UK = {
+  nutrition: 'Харчування',
+  nutrition_context: 'Харчування',
+  nutrients: 'Нутрієнти',
+  vitamins: 'Вітаміни',
+  supplements: 'Добавки',
+  supplement: 'Добавка',
+  supplement_safety: 'Безпека добавок',
+  training_recovery: 'Тренування й відновлення',
+  lifestyle: 'Спосіб життя',
+  profile: 'Профіль',
+  stress: 'Стрес',
+}
+
 const PROTOCOL_COPY = {
   en: {
     errorTitle: 'Protocol is not available',
@@ -353,8 +381,11 @@ function protocolTiming(item, isUk = false) {
   return labels[raw] || raw.replaceAll('_', ' ') || ''
 }
 
-function protocolCategory(item) {
-  return String(item?.category || item?.type || '').trim()
+function protocolCategory(item, isUk = false) {
+  const raw = String(item?.category || item?.type || '').trim()
+  if (!raw) return ''
+  const labels = isUk ? CATEGORY_LABELS_UK : CATEGORY_LABELS
+  return labels[raw.toLowerCase()] || raw.replaceAll('_', ' ')
 }
 
 function effortLabel(item) {
@@ -673,7 +704,7 @@ function ActionCard({ item, copy, isUk }) {
   const title = protocolTitle(item)
   const body = protocolBody(item)
   const timing = protocolTiming(item, isUk)
-  const category = protocolCategory(item)
+  const category = protocolCategory(item, isUk)
   const effort = effortLabel(item)
   const outcome = outcomeLabel(item)
   const evidence = displayEvidence(evidenceLabel(item), isUk)
@@ -766,7 +797,7 @@ async function exportProtocolPdf({ protocolRows, retestPlan, doctorDiscussion, u
   protocolRows.forEach((item, index) => {
     addText(`${index + 1}. ${protocolTitle(item)}${item?.priority ? ` [${formatPriority(item.priority, isUk)}]` : ''}`, 11)
     addText(protocolBody(item), 9)
-    const meta = [protocolTiming(item, isUk), protocolCategory(item), evidenceLabel(item)].filter(Boolean).join(' · ')
+    const meta = [protocolTiming(item, isUk), protocolCategory(item, isUk), evidenceLabel(item)].filter(Boolean).join(' · ')
     addText(meta, 9)
   })
   addTitle(copy.pdfDiscussion, 14)
@@ -945,7 +976,7 @@ export default function ProtocolPage() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <h3 className="font-extrabold text-slate-950">{item.label || item.search_query}</h3>
-                    {item.category && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-emerald-700">{item.category}</p>}
+                    {item.category && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-emerald-700">{protocolCategory(item, isUk)}</p>}
                   </div>
                   {item.priority && <CoachBadge tone={priorityTone(item.priority)}>{formatPriority(item.priority, isUk)}</CoachBadge>}
                 </div>

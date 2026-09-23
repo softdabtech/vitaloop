@@ -555,7 +555,7 @@ export default function HealthProfile() {
               label={copy.bmi}
               value={bmi}
               tone={bmi < 25 ? 'success' : 'default'}
-              note={bmi < 25 ? 'Healthy range' : null}
+              note={bmi < 25 ? (isUk ? 'Здоровий діапазон' : 'Healthy range') : null}
             />
           )}
 

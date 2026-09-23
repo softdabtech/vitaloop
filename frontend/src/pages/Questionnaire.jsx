@@ -247,11 +247,11 @@ function checkScoreTone(value) {
   return 'critical'
 }
 
-function formatCheckDate(iso) {
+function formatCheckDate(iso, isUk) {
   if (!iso) return ''
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return date.toLocaleDateString(isUk ? 'uk-UA' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function daysSince(dateStr) {
@@ -681,7 +681,7 @@ export default function Questionnaire() {
           <div className="space-y-3">
             {previousChecks.map((item) => {
               const concernText = toText(item?.session_metadata?.active_concern) || (isUk ? 'Без опису' : 'Untitled check')
-              const dateLabel = formatCheckDate(item?.completed_at || item?.created_at)
+              const dateLabel = formatCheckDate(item?.completed_at || item?.created_at, isUk)
               const score = item?.completion_score
               return (
                 <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
@@ -721,8 +721,8 @@ export default function Questionnaire() {
                 <h2 className="coach-title-lg">{isUk ? 'Ви вже відмітилися цього тижня' : "You're already checked in this week"}</h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
                   {isUk
-                    ? `Останній чек-ін: ${formatCheckDate(latestCheckin?.week_start || latestCheckin?.created_at)}. Наступний доступний: ${formatCheckDate(nextCheckinDate)}.`
-                    : `Last check-in: ${formatCheckDate(latestCheckin?.week_start || latestCheckin?.created_at)}. Next one available: ${formatCheckDate(nextCheckinDate)}.`}
+                    ? `Останній чек-ін: ${formatCheckDate(latestCheckin?.week_start || latestCheckin?.created_at, isUk)}. Наступний доступний: ${formatCheckDate(nextCheckinDate, isUk)}.`
+                    : `Last check-in: ${formatCheckDate(latestCheckin?.week_start || latestCheckin?.created_at, isUk)}. Next one available: ${formatCheckDate(nextCheckinDate, isUk)}.`}
                 </p>
               </div>
             </div>
@@ -1160,7 +1160,7 @@ export default function Questionnaire() {
             <InsightCard
               icon={CalendarClock}
               title={isUk ? 'Останній чек-ін' : 'Last check-in'}
-              body={formatCheckDate(latestCheckin.week_start || latestCheckin.created_at) || (isUk ? 'Дата невідома' : 'Date unknown')}
+              body={formatCheckDate(latestCheckin.week_start || latestCheckin.created_at, isUk) || (isUk ? 'Дата невідома' : 'Date unknown')}
             />
           )}
           <CoachCard className="p-5">

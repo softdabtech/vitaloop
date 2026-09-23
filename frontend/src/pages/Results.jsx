@@ -119,6 +119,7 @@ const RESULTS_COPY = {
     eyebrow: 'Lab report summary',
     fallbackHeadline: 'Your results are organized into clear priorities.',
     healthSummary: 'Your Health Summary',
+    healthSummarySubtitle: 'What is happening, why it matters, and what to do next.',
     topFindings: 'Top Findings',
     whyMatters: 'Why this matters',
     doctorQuestions: 'Questions for your doctor',
@@ -309,6 +310,7 @@ const RESULTS_COPY = {
     eyebrow: 'Підсумок аналізів',
     fallbackHeadline: 'Ваші результати зібрані в зрозумілі пріоритети.',
     healthSummary: 'Підсумок здоровʼя',
+    healthSummarySubtitle: 'Що відбувається, чому це важливо і що робити далі.',
     topFindings: 'Головні знахідки',
     whyMatters: 'Чому це важливо',
     doctorQuestions: 'Питання до лікаря',
@@ -497,11 +499,15 @@ const HEALTH_DOMAIN_LABELS_UK = {
   cardiovascular: 'Серцево-судинний профіль',
   'cardiovascular risk context': 'Серцево-судинний профіль',
   inflammation: 'Запалення',
+  'inflammation load': 'Запалення',
   thyroid: 'Щитоподібна залоза',
+  'thyroid context': 'Щитоподібна залоза',
   liver: 'Печінка',
   'liver stress context': 'Печінка',
   kidney: 'Нирки',
+  'kidney function context': 'Нирки',
   micronutrients: 'Мікронутрієнти',
+  'micronutrient status': 'Мікронутрієнти',
   recovery_energy: 'Відновлення й енергія',
   'recovery and energy': 'Відновлення й енергія',
 }
@@ -1635,7 +1641,7 @@ export default function Results() {
     <div className="space-y-6">
       <CabinetPageHeader
         title={copy.healthSummary}
-        subtitle="What is happening, why it matters, and what to do next."
+        subtitle={copy.healthSummarySubtitle}
         action={(
           <div className="flex flex-wrap items-center gap-2">
             <button onClick={() => navigate('/lab-results')} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 inline-flex items-center gap-2">
