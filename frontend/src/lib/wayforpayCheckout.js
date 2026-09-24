@@ -56,10 +56,17 @@ export async function openWayforpayCheckout(plan, handlers = {}) {
   ])
 
   let settled = false
+  let guardActive = false
+  const removeGuard = () => {
+    if (!guardActive) return
+    guardActive = false
+    window.removeEventListener('popstate', onPopState)
+  }
   const settleOnce = (fn) => (...args) => {
     if (settled) return
     settled = true
     window.removeEventListener('message', onMessage)
+    removeGuard()
     fn?.(...args)
   }
   const approved = settleOnce(onApproved)
@@ -71,6 +78,19 @@ export async function openWayforpayCheckout(plan, handlers = {}) {
     if (event.data === 'WfpWidgetEventClose') closed()
   }
   window.addEventListener('message', onMessage)
+
+  // The widget renders its own overlay/iframe outside React's root. A
+  // browser/gesture "back" while it's open would otherwise pop the SPA
+  // route out from under it (stranding the overlay on screen with nothing
+  // to close it) instead of returning the user to this page -- push a
+  // throwaway history entry so back closes the widget in place instead.
+  history.pushState({ wfpCheckoutGuard: true }, '', window.location.href)
+  function onPopState() {
+    history.pushState({ wfpCheckoutGuard: true }, '', window.location.href)
+    closed()
+  }
+  window.addEventListener('popstate', onPopState)
+  guardActive = true
 
   const wayforpay = new window.Wayforpay()
   wayforpay.run(

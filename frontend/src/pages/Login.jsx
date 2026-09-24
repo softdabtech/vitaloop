@@ -1024,7 +1024,7 @@ export default function Login() {
           </button>
 
           {/* Logo */}
-          <div style={{ marginBottom: 40, marginTop: 8 }}>
+          <div style={{ marginBottom: 40, marginTop: viewportWidth < 600 ? 36 : 8 }}>
             {isUaAuth && (
               <div className="ua-auth-badge" style={{ marginBottom: 18 }}>
                 <span aria-hidden="true">🇺🇦</span>

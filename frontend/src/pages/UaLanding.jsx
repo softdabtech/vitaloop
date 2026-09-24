@@ -490,9 +490,17 @@ export function UaHeader() {
                 {link.label}
               </button>
             ))}
-            <button onClick={() => navigate(getUaAuthPath({ signup: true }))} className={`${CTA_CLASS} mt-2 w-full`}>
-              Отримати персональну оцінку
-            </button>
+            <div className="mt-2 flex flex-col gap-2">
+              <button onClick={() => navigate(getUaAuthPath({ signup: true }))} className={`${CTA_CLASS} w-full`}>
+                Отримати персональну оцінку
+              </button>
+              <button
+                onClick={() => navigate(getUaAuthPath())}
+                className="w-full rounded-full border border-[#e5dfd6] px-4 py-3 text-center text-sm font-semibold text-[#4b5563] transition hover:bg-[#f1fbf8] hover:text-[#0f766e]"
+              >
+                Увійти
+              </button>
+            </div>
           </div>
         </div>
       )}
