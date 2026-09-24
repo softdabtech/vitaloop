@@ -67,6 +67,7 @@ export default function Subscription() {
   const statusLabel = isPremium ? (isUk ? 'Преміум активний' : 'Premium active') : (isUk ? 'Активний безкоштовний тариф' : 'Free plan active')
   const planLabel = isPremium ? 'Premium' : (isUk ? 'Безкоштовний' : 'Free')
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
   // P46 -- WayForPay checkout, UA cabinet only (see lib/wayforpayCheckout.js
   // + backend/app/routers/billing/wayforpay.py). EN cabinet keeps the
   // existing manual/email flow below unchanged; this state only drives the
@@ -133,8 +134,6 @@ export default function Subscription() {
   async function handlePremiumRequest() {
     await requestPremiumAccess({ userEmail: user?.email, source: 'subscription_page' })
   }
-
-  const [cancelling, setCancelling] = useState(false)
 
   async function handleCancelSubscription() {
     // P46 -- for a WayForPay-billed subscription, cancel it there directly

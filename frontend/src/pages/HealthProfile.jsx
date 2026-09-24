@@ -62,7 +62,9 @@ const HEALTH_PROFILE_COPY = {
     female: 'Female',
     other: 'Other',
     heightCm: 'Height (cm)',
+    heightPlaceholder: 'e.g., 180',
     weightKg: 'Weight (kg)',
+    weightPlaceholder: 'e.g., 80',
     timezone: 'Timezone',
     goals: 'Goals',
     goalsBody: 'Select goals to personalize your protocol recommendations.',
@@ -118,7 +120,9 @@ const HEALTH_PROFILE_COPY = {
     female: 'Жіноча',
     other: 'Інша',
     heightCm: 'Зріст (см)',
+    heightPlaceholder: 'напр., 180',
     weightKg: 'Вага (кг)',
+    weightPlaceholder: 'напр., 80',
     timezone: 'Часовий пояс',
     goals: 'Цілі',
     goalsBody: 'Оберіть цілі, щоб персоналізувати рекомендації протоколу.',
@@ -397,7 +401,7 @@ export default function HealthProfile() {
                     type="number"
                     value={profile.height_cm}
                     onChange={(e) => setProfile({ ...profile, height_cm: e.target.value })}
-                    placeholder="e.g., 180"
+                    placeholder={copy.heightPlaceholder}
                     min="0"
                     max="300"
                     step="0.1"
@@ -409,7 +413,7 @@ export default function HealthProfile() {
                     type="number"
                     value={profile.weight_kg}
                     onChange={(e) => setProfile({ ...profile, weight_kg: e.target.value })}
-                    placeholder="e.g., 80"
+                    placeholder={copy.weightPlaceholder}
                     min="0"
                     max="500"
                     step="0.1"

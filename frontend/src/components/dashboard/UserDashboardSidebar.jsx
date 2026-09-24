@@ -88,8 +88,8 @@ export default function UserDashboardSidebar({
   const { isActive: hasPremium, loading: subscriptionLoading, planName } = useSubscription()
   const sidebarWidth = collapsed ? 'w-[72px]' : 'w-[280px]'
   const visibleItems = MENU_ITEMS
-  const upgradeTarget = hasPremium ? null : getCabinetUpgradeTarget(planName, hasPremium)
   const isUk = isUkrainianLocale()
+  const upgradeTarget = hasPremium ? null : getCabinetUpgradeTarget(planName, hasPremium, isUk)
 
   function handleLockedFeature(item) {
     if (!item.premium || subscriptionLoading || hasPremium) return
