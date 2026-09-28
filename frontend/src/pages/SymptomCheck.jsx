@@ -15,6 +15,7 @@ import {
   Stethoscope,
 } from 'lucide-react'
 import CabinetPageFrame from '../components/dashboard/CabinetPageFrame.jsx'
+import ControlledSymptomFallback from './ControlledSymptomFallback.jsx'
 import {
   abandonSymptomSession,
   createSymptomSession,
@@ -358,7 +359,11 @@ export default function SymptomCheck() {
     )
   }
 
-  if (stage === 'unavailable' || stage === 'load_error') {
+  if (stage === 'unavailable') {
+    return <ControlledSymptomFallback />
+  }
+
+  if (stage === 'load_error') {
     return (
       <CabinetPageFrame>
         <div className="coach-shell mx-auto max-w-3xl">
@@ -366,8 +371,8 @@ export default function SymptomCheck() {
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-600"><Stethoscope /></span>
             <div>
               <p className="coach-eyebrow">Symptom Check</p>
-              <h1 className="coach-title-xl">{stage === 'unavailable' ? 'Symptom Check is not available yet' : 'We could not load Symptom Check'}</h1>
-              <p className="coach-body mt-3">{error || 'This controlled assessment is still behind a release flag. You can continue to your dashboard or upload existing lab results.'}</p>
+              <h1 className="coach-title-xl">We could not load Symptom Check</h1>
+              <p className="coach-body mt-3">{error || 'Your saved progress is safe. Return to the dashboard or upload existing lab results.'}</p>
             </div>
             <div className="flex flex-wrap gap-3">
               <button className="coach-button coach-button--primary coach-button--md" onClick={() => navigate('/dashboard')}>Back to dashboard</button>

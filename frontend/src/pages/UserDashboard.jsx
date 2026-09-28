@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Activity, ArrowRight, CalendarClock, CheckCircle2, ClipboardList, HelpCircle, ListChecks, RefreshCw, ShieldAlert, Stethoscope, TrendingUp } from 'lucide-react'
+import { Activity, ArrowRight, CalendarClock, CheckCircle2, ClipboardList, FileUp, HelpCircle, ListChecks, RefreshCw, ShieldAlert, Stethoscope, TrendingUp, UserRound } from 'lucide-react'
 import { useDashboardSummary, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
 import { useProfile } from '../hooks/useProfile.ts'
 import { useSubscription } from '../hooks/useSubscription.js'
@@ -834,6 +834,132 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
   )
 }
 
+function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety }) {
+  const completedSteps = hasConcern ? 2 : 1
+  const progress = Math.round((completedSteps / 3) * 100)
+  const primaryAction = hasConcern || isLabsReadyIntent
+    ? { label: 'Upload lab results', to: '/upload', Icon: FileUp }
+    : { label: 'Start symptom check', to: '/questionnaire', Icon: Stethoscope }
+  const secondaryAction = primaryAction.to === '/upload'
+    ? { label: hasConcern ? 'Review symptom context' : 'Add symptom context', to: '/questionnaire' }
+    : { label: 'I have lab results to upload', to: '/upload' }
+
+  const steps = [
+    {
+      title: 'Health profile',
+      body: 'Your required baseline information is saved.',
+      state: 'complete',
+      Icon: UserRound,
+      action: 'Review profile',
+      to: '/health-profile',
+    },
+    {
+      title: 'Symptom context',
+      body: hasConcern ? 'Your current concern is saved and can be updated.' : 'Add how you feel so reports have useful context.',
+      state: hasConcern ? 'complete' : 'next',
+      Icon: Stethoscope,
+      action: hasConcern ? 'Review' : 'Start check',
+      to: '/questionnaire',
+    },
+    {
+      title: 'Lab results',
+      body: 'Upload a report or enter values manually to create your first analysis.',
+      state: 'pending',
+      Icon: FileUp,
+      action: 'Add results',
+      to: '/upload',
+    },
+  ]
+
+  return (
+    <div className="grid gap-5">
+      {safety && (
+        <button
+          type="button"
+          onClick={() => navigate('/questionnaire')}
+          className="flex w-full items-start justify-between gap-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-left text-amber-950 transition hover:border-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+        >
+          <span className="flex items-start gap-3">
+            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" />
+            <span><strong className="block">Review your symptom safety note</strong><span className="mt-1 block text-sm leading-6">{safety.text}</span>{safety.sourceLabel && <span className="mt-2 block text-xs font-black uppercase tracking-wide opacity-70">{safety.sourceLabel}</span>}</span>
+          </span>
+          <span className="shrink-0 text-sm font-black">Review &rarr;</span>
+        </button>
+      )}
+      <section className="today-focus">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-center">
+          <div>
+            <p className="coach-eyebrow">Your VITALOOP workspace</p>
+            <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl xl:text-5xl">Turn your health data into a clear next step</h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">Complete your symptom context, add lab results, and VITALOOP will organize both into one structured view you can return to and compare over time.</p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <CoachButton className="w-full justify-center whitespace-nowrap sm:w-auto" onClick={() => navigate(primaryAction.to)} icon={primaryAction.Icon} trailingIcon={ArrowRight}>
+                {primaryAction.label}
+              </CoachButton>
+              <button type="button" onClick={() => navigate(secondaryAction.to)} className="whitespace-nowrap text-center text-sm font-bold text-teal-700 hover:text-teal-900 sm:text-left">
+                {secondaryAction.label} &rarr;
+              </button>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/80 bg-white/80 p-5 shadow-sm">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-teal-700">Getting started</p>
+                <p className="mt-2 text-3xl font-black text-slate-950">{completedSteps} of 3</p>
+              </div>
+              <span className="text-sm font-bold text-slate-500">{progress}%</span>
+            </div>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200" aria-label={`${progress}% setup complete`}>
+              <div className="h-full rounded-full bg-emerald-500" style={{ width: `${progress}%` }} />
+            </div>
+            <p className="mt-4 text-sm leading-6 text-slate-600">Your dashboard will fill with reports, priorities, and comparisons as you add information.</p>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="setup-steps-title">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <p className="coach-eyebrow">Your path</p>
+            <h2 id="setup-steps-title" className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">Build your first health snapshot</h2>
+          </div>
+          <p className="hidden text-sm text-slate-500 sm:block">Every card leads to a working action</p>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          {steps.map(({ title, body, state, Icon, action, to }, index) => (
+            <article key={title} className={`rounded-2xl border bg-white p-5 shadow-sm ${state === 'next' ? 'border-emerald-300 ring-2 ring-emerald-100' : 'border-slate-200'}`}>
+              <div className="flex items-start justify-between gap-3">
+                <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${state === 'complete' ? 'bg-emerald-100 text-emerald-700' : state === 'next' ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-600'}`}>
+                  {state === 'complete' ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+                </span>
+                <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Step {index + 1}</span>
+              </div>
+              <h3 className="mt-4 text-lg font-black text-slate-950">{title}</h3>
+              <p className="mt-2 min-h-[48px] text-sm leading-6 text-slate-600">{body}</p>
+              <button type="button" onClick={() => navigate(to)} className="mt-4 inline-flex items-center gap-1.5 text-sm font-black text-teal-700 hover:text-teal-900">
+                {action} <ArrowRight className="h-4 w-4" />
+              </button>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-950 p-5 text-white sm:grid-cols-3 sm:p-6">
+        {[
+          ['1', 'Structured context', 'Symptoms and lab values stay connected instead of living in separate forms.'],
+          ['2', 'Focused analysis', 'See what is supported by your data, what remains uncertain, and what deserves attention.'],
+          ['3', 'Progress over time', 'Future reports can be compared with the same saved baseline and symptom context.'],
+        ].map(([number, title, body]) => (
+          <div key={number} className="flex gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-400 font-black text-slate-950">{number}</span>
+            <div><h3 className="font-black">{title}</h3><p className="mt-1 text-sm leading-6 text-slate-300">{body}</p></div>
+          </div>
+        ))}
+      </section>
+    </div>
+  )
+}
+
 export default function UserDashboard() {
   const navigate = useNavigate()
   const { data, isLoading, error, refetch } = useDashboardSummary()
@@ -918,6 +1044,8 @@ export default function UserDashboard() {
       <CabinetPageFrame>
         {cockpit ? (
           <CockpitBody viewModel={viewModel} cockpit={cockpit} copy={copy} navigate={navigate} />
+        ) : (viewModel.status === 'first_run' || viewModel.status === 'labs_intent') && !isUk ? (
+          <FirstRunWorkspace navigate={navigate} hasConcern={hasConcern} isLabsReadyIntent={isLabsReadyIntent} safety={viewModel.safety} />
         ) : (
           <>
             <div className="today-focus">

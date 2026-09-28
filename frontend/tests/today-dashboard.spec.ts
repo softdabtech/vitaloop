@@ -141,14 +141,20 @@ test.describe('Today dashboard — P37f fixture QA', () => {
   test('1/3. first-run: no report, no labs intent', async ({ page }) => {
     await mockToday(page, { today_contract: contractNone(), goals: [] })
     await gotoToday(page)
-    await expect(page.getByRole('heading', { name: /Let.s start with what matters to you/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Turn your health data into a clear next step/i })).toBeVisible()
     await expect(page.getByRole('button', { name: /Start symptom check/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Build your first health snapshot/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Review profile/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Start check/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Add results/i })).toBeVisible()
+    await page.getByRole('button', { name: /Start symptom check/i }).click()
+    await expect(page).toHaveURL(/\/questionnaire$/)
   })
 
   test('4. labs-intent with no ready report', async ({ page }) => {
     await mockToday(page, { today_contract: contractNone(), goals: ['intent:labs'] })
     await gotoToday(page)
-    await expect(page.getByRole('heading', { name: /Add your lab results to get started/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Turn your health data into a clear next step/i })).toBeVisible()
     await expect(page.getByRole('button', { name: /Upload lab results/i })).toBeVisible()
   })
 
@@ -156,7 +162,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await mockToday(page, { today_contract: contractError() })
     await gotoToday(page)
     await expect(page.getByText(/temporarily unavailable/i)).toBeVisible()
-    await expect(page.getByRole('heading', { name: /Let.s start with what matters to you/i })).not.toBeVisible()
+    await expect(page.getByRole('heading', { name: /Turn your health data into a clear next step/i })).not.toBeVisible()
   })
 
   test('2. summary error -> distinct error state with retry, not first-run', async ({ page }) => {
@@ -360,7 +366,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await mockToday(page, { today_contract: contractNone(), entitlements: DEFAULT_ENTITLEMENTS_PREMIUM })
     await gotoToday(page)
     await expect(page.getByText('Since your previous report')).toHaveCount(0)
-    await expect(page.getByRole('heading', { name: /Let.s start with what matters to you/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Turn your health data into a clear next step/i })).toBeVisible()
   })
 
   test('network: no /results/* request when no ready report exists', async ({ page }) => {
