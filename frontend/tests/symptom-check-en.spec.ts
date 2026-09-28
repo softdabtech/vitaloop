@@ -7,6 +7,8 @@ type AnswerCall = { body: Json; idempotencyKey: string }
 
 type Scenario = {
   session: Json | null
+  structuredUnavailable?: boolean
+  fallbackContextCalls?: Json[]
   summary?: Json
   initialCalls?: Json[]
   answerCalls: AnswerCall[]
@@ -43,6 +45,23 @@ function adaptiveSession(overrides: Json = {}) {
     },
     ...overrides,
   }
+}
+
+function sequentialAdaptiveSession(sequence: number) {
+  const prompts = [
+    ['q-red-1', 'Do any of these warning signs apply?', 'Severe warning sign', 'red_flags'],
+    ['q-energy-2', 'How is your energy affected?', 'Noticeable loss of energy', 'diagnosis'],
+    ['q-sleep-3', 'Has your sleep changed?', 'Unrefreshing or disrupted sleep', 'diagnosis'],
+    ['q-activity-4', 'Does activity make the problem worse?', 'Symptoms worsen after activity', 'diagnosis'],
+    ['q-pattern-5', 'Is there a consistent daily pattern?', 'Symptoms follow a daily pattern', 'diagnosis'],
+  ]
+  const [id, text, label, source] = prompts[sequence - 1]
+  return adaptiveSession({
+    question: {
+      id, sequence, type: 'group_multiple', source, text,
+      items: [{ id: `signal-${sequence}`, label, choices }],
+    },
+  })
 }
 
 function initialSession() {
@@ -145,7 +164,11 @@ async function installApi(page: Page, scenario: Scenario) {
     if (path.endsWith('/auth/me')) {
       return json(route, { user: { global_role: 'end_user' }, memberships: [], entitlements: { is_premium: false, features: {} } })
     }
-    if (path.endsWith('/symptom-check/catalog/root-concerns')) return json(route, catalog)
+    if (path.endsWith('/symptom-check/catalog/root-concerns')) {
+      return scenario.structuredUnavailable
+        ? json(route, { detail: 'disabled' }, 404)
+        : json(route, catalog)
+    }
     if (path.endsWith('/symptom-check/sessions/current')) return json(route, { session: scenario.session })
 
     if (path.endsWith('/symptom-check/sessions') && method === 'POST') {
@@ -188,6 +211,10 @@ async function installApi(page: Page, scenario: Scenario) {
     if (path.endsWith('/dashboard/summary')) {
       return json(route, { today_contract: { latest_ready_report: null }, blocks: {} })
     }
+    if (path.endsWith('/questionnaire/session/context') && method === 'PATCH') {
+      scenario.fallbackContextCalls?.push(request.postDataJSON() as Json)
+      return json(route, { ok: true, session_context: request.postDataJSON() })
+    }
     if (path.includes('/progress') || path.includes('/timeline') || path.includes('/questionnaire/session')) {
       return json(route, [])
     }
@@ -204,6 +231,11 @@ async function openCheck(page: Page, scenario: Scenario) {
   await expect(page.getByText('Structured symptom check')).toBeVisible({ timeout: 10_000 })
 }
 
+async function captureDemoStage(page: Page, name: string) {
+  if (process.env.CAPTURE_SYMPTOM_DEMO !== '1') return
+  await page.screenshot({ path: `../output/symptom-demo-${name}.png`, fullPage: true })
+}
+
 test('positive baseline completes without assuming illness and links to lab upload', async ({ page }) => {
   const scenario: Scenario = { session: null, answerCalls: [] }
   await openCheck(page, scenario)
@@ -215,6 +247,40 @@ test('positive baseline completes without assuming illness and links to lab uplo
   await expect(page.getByRole('heading', { name: 'Your structured symptom context is ready' })).toBeVisible()
   await page.getByRole('button', { name: /Upload lab results/ }).click()
   await expect(page).toHaveURL(/\/upload$/)
+})
+
+test('disabled provider uses the controlled three-stage internal flow', async ({ page }) => {
+  const scenario: Scenario = { session: null, answerCalls: [], structuredUnavailable: true, fallbackContextCalls: [] }
+  await authenticate(page)
+  await installApi(page, scenario)
+  await page.goto('/questionnaire')
+
+  await expect(page.getByRole('heading', { name: 'Start with how you feel today' })).toBeVisible()
+  await page.getByLabel('How do you feel overall today?').selectOption('reduced')
+  await page.getByLabel('What area would you like to highlight?').selectOption('energy')
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  await expect(page.getByText('Step 2 of 3')).toBeVisible()
+  await page.getByLabel('Main signal').selectOption('fatigue')
+  await page.getByLabel('How long has it been present?').selectOption('weeks_1_4')
+  await page.getByRole('button', { name: /Start focused questions/ }).click()
+
+  for (const choice of ['moderate', 'stable', 'mild', 'absent', 'absent']) {
+    await page.getByLabel('Select the closest answer').selectOption(choice)
+    await page.getByRole('button', { name: /Save and continue|Save symptom context/ }).click()
+  }
+
+  await expect(page.getByRole('heading', { name: 'Your symptom context is saved' })).toBeVisible()
+  expect(scenario.fallbackContextCalls).toHaveLength(1)
+  expect(scenario.fallbackContextCalls?.[0].summary).toMatchObject({
+    schema_version: 'controlled_symptom_fallback_v1',
+    input_mode: 'controlled_only',
+    primary_concern_id: 'energy',
+    primary_concept_id: 'fatigue',
+    duration_bucket: 'weeks_1_4',
+    controlled_answers: { severity: 'moderate', trajectory: 'stable', functional_impact: 'mild', domain_detail: 'absent', urgent_warning: 'absent' },
+  })
+  await expect(page.getByText('Symptom Check is not available yet')).toHaveCount(0)
+  await expect(page.getByText('Step 1 of 8')).toHaveCount(0)
 })
 
 test('skip is optional and returns directly to dashboard', async ({ page }) => {
@@ -229,22 +295,80 @@ test('fatigue journey crosses all three stages and produces upload-ready context
   await openCheck(page, scenario)
   await page.getByLabel('How do you feel overall today?').selectOption('reduced')
   await page.getByLabel('What would you like to highlight?').selectOption('fatigue_low_energy')
+  await captureDemoStage(page, 'stage-1-baseline')
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
 
   await expect(page.getByText('Step 2 of 3')).toBeVisible()
   await page.getByLabel('Main signal').selectOption('fatigue')
   await page.getByLabel('How long has it been present?').selectOption('weeks_1_4')
+  await captureDemoStage(page, 'stage-2-concern')
   await page.getByRole('button', { name: /Start adaptive questions/ }).click()
   await expect(page.getByText('Step 3 of 3')).toBeVisible()
   await page.getByLabel('Severe warning sign').selectOption('absent')
+  await captureDemoStage(page, 'stage-3-adaptive')
   await page.getByRole('button', { name: /Save and continue/ }).click()
 
   await expect(page.getByRole('heading', { name: 'Your structured symptom context is ready' })).toBeVisible()
+  await captureDemoStage(page, 'stage-4-result')
   expect(scenario.initialCalls).toEqual([{
     primary_concept_id: 'fatigue', secondary_concept_ids: [], duration_bucket: 'weeks_1_4',
   }])
   expect(scenario.answerCalls[0].body.answers).toEqual([{ item_id: 's-warning', choice_id: 'absent' }])
   await expect(page.getByRole('button', { name: /Upload lab results/ })).toBeVisible()
+})
+
+test('five adaptive questions run consecutively without losing answers or sequence', async ({ page }) => {
+  const selectedChoices = ['absent', 'present', 'unknown', 'present', 'absent']
+  const scenario: Scenario = {
+    session: null,
+    initialCalls: [],
+    answerCalls: [],
+    answerHandler: (route, state) => {
+      const answered = state.answerCalls.length
+      state.session = answered < 5
+        ? sequentialAdaptiveSession(answered + 1)
+        : completedSession('routine')
+      return json(route, { session: state.session })
+    },
+  }
+
+  await openCheck(page, scenario)
+  await page.getByLabel('How do you feel overall today?').selectOption('reduced')
+  await page.getByLabel('What would you like to highlight?').selectOption('fatigue_low_energy')
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  await page.getByLabel('Main signal').selectOption('fatigue')
+  await page.getByLabel('How long has it been present?').selectOption('weeks_1_4')
+  await page.getByRole('button', { name: /Start adaptive questions/ }).click()
+
+  for (let index = 0; index < 5; index += 1) {
+    const sequence = index + 1
+    await expect(page.getByText(`Question ${sequence}`, { exact: true })).toBeVisible()
+    const select = page.getByLabel([
+      'Severe warning sign',
+      'Noticeable loss of energy',
+      'Unrefreshing or disrupted sleep',
+      'Symptoms worsen after activity',
+      'Symptoms follow a daily pattern',
+    ][index])
+    await select.selectOption(selectedChoices[index])
+    await captureDemoStage(page, `adaptive-question-${sequence}`)
+    await page.getByRole('button', { name: /Save and continue/ }).click()
+
+    if (sequence === 3) {
+      await page.reload()
+      await expect(page.getByText('Question 4', { exact: true })).toBeVisible()
+    }
+  }
+
+  await expect(page.getByRole('heading', { name: 'Your structured symptom context is ready' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Monitor how you feel' })).toBeVisible()
+  expect(scenario.answerCalls.map((call) => call.body)).toEqual(selectedChoices.map((choice, index) => ({
+    question_id: [
+      'q-red-1', 'q-energy-2', 'q-sleep-3', 'q-activity-4', 'q-pattern-5',
+    ][index],
+    answers: [{ item_id: index === 0 ? 's-warning' : `signal-${index + 1}`, choice_id: choice }],
+  })))
+  expect(new Set(scenario.answerCalls.map((call) => call.idempotencyKey)).size).toBe(5)
 })
 
 test('unknown stays unknown, refresh resumes, and double click submits once', async ({ page }) => {
