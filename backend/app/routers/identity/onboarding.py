@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.dependencies import get_current_user
 from app.services import supabase_service as svc
+from app.services.profile_requirements import missing_required_profile_fields
 
 router = APIRouter(prefix="/auth/onboarding", tags=["onboarding"])
 logger = logging.getLogger(__name__)
@@ -23,13 +24,17 @@ def _as_bool(value: Any) -> bool:
     return False
 
 
+def _missing_profile_basics(profile: Dict[str, Any]) -> list[str]:
+    """Return invalid or missing required adult B2C profile fields.
+
+    This is the server-side source of truth for cabinet access. A stale or
+    manually-set ``onboarding_complete`` flag must never bypass these checks.
+    """
+    return missing_required_profile_fields(profile)
+
+
 def _has_profile_basics(profile: Dict[str, Any]) -> bool:
-    return bool(
-        profile.get("age")
-        and profile.get("sex")
-        and profile.get("height_cm")
-        and profile.get("weight_kg")
-    )
+    return not _missing_profile_basics(profile)
 
 
 def _has_location(location: Dict[str, Any]) -> bool:
@@ -90,10 +95,12 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
 
     role = _normalize_role(account.get("global_role"), current_user.get("global_role"), current_user.get("role"))
     onboarding_completed = _as_bool(profile.get("onboarding_complete") or current_user.get("onboarding_completed"))
+    missing_profile_fields = _missing_profile_basics(profile)
+    has_profile_basics = not missing_profile_fields
 
-    # Treat onboarding_complete as account-setup completion. Health-loop milestones
-    # are tracked separately in checklist fields below.
-    account_setup_complete = onboarding_completed
+    # The boolean flag records that the flow was submitted, but valid required
+    # profile data is what makes the account setup safe to use. Both are needed.
+    account_setup_complete = onboarding_completed and has_profile_basics
 
     # Only end-user role is constrained by account setup.
     requires_onboarding = role == "end_user" and not account_setup_complete
@@ -120,7 +127,6 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
             "first_health_loop_complete": True,
         }
 
-    has_profile_basics = _has_profile_basics(profile)
     has_location = _has_location(location)
     has_complaints = await _has_user_row("recurring_complaints", user_id)
     has_uploads = await _has_user_row("lab_uploads", user_id)
@@ -175,6 +181,7 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
         "account_setup_complete": account_setup_complete,
         "first_health_loop_started": first_health_loop_started,
         "first_health_loop_complete": first_health_loop_complete,
+        "missing_required_profile_fields": missing_profile_fields,
     }
 
 
@@ -186,17 +193,35 @@ async def complete_onboarding(current_user: dict = Depends(get_current_user)):
     if not profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_PROFILE_NOT_FOUND)
 
+    missing = _missing_profile_basics(profile)
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "detail": "Complete the required profile fields before entering the cabinet.",
+                "code": "REQUIRED_PROFILE_INCOMPLETE",
+                "missing_fields": missing,
+            },
+        )
+
     updated = await svc.upsert_user_profile(user_id, {"onboarding_complete": True})
     return {"ok": True, "profile": updated}
 
 
 @router.post("/skip")
 async def skip_onboarding(current_user: dict = Depends(get_current_user)):
-    """Fail-safe skip endpoint for end users.
-
-    Some accounts may not have a pre-created user_profile row yet. Using upsert
-    here prevents a 404 flow-break and lets users enter the dashboard.
-    """
+    """Skip only optional onboarding steps after required profile completion."""
     user_id = current_user.get("sub")
+    profile = await svc.get_user_profile(user_id) or {}
+    missing = _missing_profile_basics(profile)
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "detail": "Age, sex, height, and weight cannot be skipped.",
+                "code": "REQUIRED_PROFILE_INCOMPLETE",
+                "missing_fields": missing,
+            },
+        )
     updated = await svc.upsert_user_profile(user_id, {"onboarding_complete": True})
     return {"ok": True, "profile": updated, "skipped": True}

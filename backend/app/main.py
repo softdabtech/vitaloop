@@ -24,7 +24,7 @@ from app.services.ai.openai_service import is_llm_configured
 
 logger = logging.getLogger("uvicorn.error")
 
-from app.routers import health, llm_consult, emergency_fixes, assessment, monitoring
+from app.routers import health, llm_consult, emergency_fixes, assessment, monitoring, symptom_check
 from app.routers.identity import auth, profile, onboarding, settings as settings_router
 from app.routers.analysis import analyze, insights, red_flags, timeline, dashboard, uploads
 from app.routers.protocol import protocol, progress, symptoms, checkins, questionnaire, assignments, compatibility
@@ -114,6 +114,7 @@ app.add_middleware(
         RateLimitRule(prefix="/auth", max_requests=settings.auth_rate_limit_per_minute, window_seconds=60),
         RateLimitRule(prefix="/analyze", max_requests=settings.analyze_rate_limit_per_minute, window_seconds=60),
         RateLimitRule(prefix="/protocol", max_requests=settings.protocol_rate_limit_per_minute, window_seconds=60),
+        RateLimitRule(prefix="/symptom-check", max_requests=settings.symptom_check_rate_limit_per_minute, window_seconds=60),
     ],
     backend=rate_limit_backend,
     trust_forwarded_for=settings.rate_limit_trust_forwarded_for,
@@ -171,6 +172,7 @@ app.include_router(red_flags.router, prefix="/red-flags", tags=["red-flags"])
 app.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(onboarding.router)
+app.include_router(symptom_check.router)
 app.include_router(questionnaire.router, prefix="/questionnaire", tags=["questionnaire"])
 # Backward-compatible aliases used by older clients/tests.
 app.include_router(auth.router, prefix="/users", tags=["users"])

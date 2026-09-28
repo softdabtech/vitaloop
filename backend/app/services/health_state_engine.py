@@ -39,6 +39,25 @@ def _symptom_matches(symptoms: List[str], aliases: set[str]) -> List[str]:
     return matches[:8]
 
 
+def _structured_present_symptoms_for_domain(
+    health_context: Dict[str, Any] | None, domain: str
+) -> List[str]:
+    """Match approved concept-domain links before falling back to labels."""
+    inputs = (health_context or {}).get("inputs")
+    snapshot = inputs.get("symptom_snapshot") if isinstance(inputs, dict) else {}
+    evidence = snapshot.get("evidence") if isinstance(snapshot, dict) else {}
+    present = evidence.get("present") if isinstance(evidence, dict) else {}
+    items = present.get("items") if isinstance(present, dict) else []
+    matches: List[str] = []
+    for item in items or []:
+        if not isinstance(item, dict) or domain not in (item.get("domain_keys") or []):
+            continue
+        signal = str(item.get("vitaloop_concept_id") or item.get("display_name_en") or "").strip()
+        if signal and signal not in matches:
+            matches.append(signal)
+    return matches[:8]
+
+
 def _risk_level(score: int) -> str:
     if score < 45:
         return "high_attention"
@@ -87,7 +106,9 @@ def evaluate_health_states(
         domain = str(definition.get("key") or "")
         aliases = set(definition.get("marker_aliases") or [])
         contributing = [item for item in biomarkers or [] if _matches_marker(item, aliases)]
-        matched_symptoms = _symptom_matches(symptoms, set(definition.get("symptom_aliases") or []))
+        exact_symptoms = _structured_present_symptoms_for_domain(health_context, domain)
+        alias_symptoms = _symptom_matches(symptoms, set(definition.get("symptom_aliases") or []))
+        matched_symptoms = list(dict.fromkeys([*exact_symptoms, *alias_symptoms]))[:8]
         required = set(definition.get("required_markers") or [])
         missing_data = sorted(
             marker

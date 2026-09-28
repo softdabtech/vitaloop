@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
+from pydantic import Field
 from typing import List
 
 
@@ -46,6 +47,7 @@ class Settings(BaseSettings):
     auth_rate_limit_per_minute: int = 60
     analyze_rate_limit_per_minute: int = 30
     protocol_rate_limit_per_minute: int = 30
+    symptom_check_rate_limit_per_minute: int = 60
     b2b_partner_rate_limit_per_minute: int = 60
     b2b_api_key_rate_limit_per_minute: int = 30
     metrics_enabled: bool = True
@@ -74,6 +76,25 @@ class Settings(BaseSettings):
     emergency_fixes_enabled: bool = False
     knowledge_context_enabled: bool = True
     knowledge_evaluation_after_analyze_enabled: bool = True
+    # Structured symptom engine. Server-only credentials; rollout remains off
+    # until local integration, clinical review, and explicit deployment approval.
+    infermedica_enabled: bool = False
+    infermedica_app_id: str = ""
+    infermedica_app_key: str = ""
+    infermedica_base_url: str = "https://api.infermedica.com/v3"
+    infermedica_model_en: str = "infermedica-en"
+    infermedica_model_uk: str = "infermedica-uk"
+    infermedica_timeout_seconds: float = 15.0
+    infermedica_dev_mode: bool = True
+    infermedica_max_questions: int = 30
+    infermedica_store_condition_candidates: bool = False
+    symptom_engine_allowlist_user_ids: str = ""
+    symptom_engine_rollout_percent: int = Field(default=0, ge=0, le=100)
+    symptom_engine_clinical_approval_recorded: bool = False
+    symptom_engine_privacy_approval_recorded: bool = False
+    symptom_engine_commercial_approval_recorded: bool = False
+    symptom_engine_security_approval_recorded: bool = False
+    symptom_engine_alerting_ready: bool = False
     # WayForPay (UA cabinet Premium checkout). merchant_password is the
     # merchant dashboard login password, not used by the SimpleSignature
     # flow this integration uses (Purchase request + serviceUrl webhook are

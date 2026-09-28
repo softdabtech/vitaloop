@@ -1,1019 +1,269 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Shield, Sparkles, User } from 'lucide-react'
+import { CheckCircle2, Ruler, Scale, ShieldCheck, UserRound } from 'lucide-react'
+import toast from 'react-hot-toast'
+
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import api from '../lib/api.js'
-import { trackFunnelEvent } from '../lib/funnel.js'
 import { gaOnboardingComplete } from '../lib/analytics.js'
+import { trackFunnelEvent } from '../lib/funnel.js'
 import { isUkrainianLocale } from '../lib/locale.js'
-import toast from 'react-hot-toast'
-// CabinetPageHeader's .cabinet-header-hero class lives here -- Vite code-
-// splits CSS per lazy route chunk, so this page must import it directly.
 import '../styles/dashboard2026.css'
 
-// ── Localization ─────────────────────────────────────────────────────────────
-const T = {
+const COPY = {
   en: {
-    intentOptions: [
-      { id: 'symptoms', label: 'I have symptoms and want to know what to check' },
-      { id: 'labs', label: 'I already have lab results' },
-      { id: 'baseline', label: 'I want a long-term health baseline' },
-      { id: 'practitioner', label: 'My practitioner invited me' },
-    ],
-    goalOptions: [
-      { id: 'energy', label: 'Energy and focus' },
-      { id: 'sleep', label: 'Sleep quality' },
-      { id: 'recovery', label: 'Recovery and resilience' },
-      { id: 'metabolic', label: 'Metabolic health' },
-      { id: 'hormonal', label: 'Hormonal balance' },
-      { id: 'prevention', label: 'Prevention and longevity' },
-    ],
-    bodyAreas: ['General', 'Head', 'Chest', 'Abdomen', 'Back', 'Arms', 'Legs', 'Skin', 'Mood/Cognition'],
-    durationOptions: ['A few days', '1-2 weeks', '2-6 weeks', '2-6 months', 'More than 6 months'],
-    redFlagOptions: [
-      'Sudden severe symptom change',
-      'New chest pain or shortness of breath',
-      'Fainting, numbness, or weakness',
-      'High fever with rapid worsening',
-      'Recent injury with persistent pain',
-    ],
-    steps: ['Intent', 'Main context', 'Follow-up', 'Safety', 'Profile', 'First action'],
-    headerTitle: 'Setup',
-    headerSub: 'Tell us what brought you to VITALOOP.',
-    headerDesc: 'Your answers help VITALOOP suggest useful labs, connect results to symptoms, and build safer recommendations.',
-    stepLabel: (n, t) => `STEP ${n} OF ${t}`,
-    intentTitle: 'What brought you to VITALOOP?',
-    intentSub: 'Choose one path. You can change this anytime from Today.',
-    contextTitle: 'What\'s your main concern right now?',
-    contextSub: 'Describe what you\'re experiencing. This helps VITALOOP focus on the right area.',
-    contextLabel: 'Describe your main concern',
-    contextPlaceholder: 'e.g. I\'ve had low energy for 3 months, poor sleep, and some hair loss.',
-    durationLabel: 'How long has this been going on?',
-    bodyAreaLabel: 'Which body area or system is most affected?',
-    triggersLabel: 'Noticed any triggers? (optional)',
-    triggersPlaceholder: 'e.g. gets worse after eating, after stress, in the morning...',
-    symptomsLabel: 'Related symptoms? (optional)',
-    symptomsPlaceholder: 'e.g. brain fog, bloating, cold hands...',
-    triedLabel: 'What have you already tried? (optional)',
-    triedPlaceholder: 'e.g. sleep supplements, cut caffeine, vitamin D, saw a GP...',
-    followupTitle: 'Follow-up questions',
-    followupSub: 'A few questions to better understand your situation.',
-    severityLabel: 'How much does this affect your daily life?',
-    severityMin: 'Minimal',
-    severityMax: 'Severe',
-    goalsLabel: 'Main health goals? (choose up to 3)',
-    safetyTitle: 'Safety',
-    safetySub: 'This helps avoid unsafe recommendations. All information stays private.',
-    medsLabel: 'Current medications (optional)',
-    medsPlaceholder: 'e.g. levothyroxine 50mcg, metformin',
-    suppLabel: 'Supplements (optional)',
-    suppPlaceholder: 'e.g. vitamin D 2000 IU, magnesium glycinate',
-    allergyLabel: 'Known allergies or intolerances (optional)',
-    allergyPlaceholder: 'e.g. penicillin, latex, gluten',
-    pregnancyLabel: 'Pregnancy or breastfeeding (optional)',
-    pregnancyPlaceholder: 'e.g. 12 weeks pregnant, breastfeeding',
-    redFlagsLabel: 'Flag any urgent symptoms (if any)',
-    profileTitle: 'Basic profile',
-    profileSub: 'Used to personalize reference ranges and recommendations.',
-    firstNameLabel: 'First name',
-    lastNameLabel: 'Last name',
-    heightLabel: 'Height (cm)',
-    weightLabel: 'Weight (kg)',
-    countryLabel: 'Country (optional)',
-    countryPlaceholder: 'e.g. Ukraine',
-    finalTitle: 'You\'re set up. Here\'s your first action:',
-    finalSymptoms: 'Your concern is saved. Next: symptom check and lab selection.',
-    finalLabs: 'Great — head to Upload to add your first lab file.',
-    finalBaseline: 'Your focus is set. Head to Today to see your starting dashboard.',
-    finalPractitioner: 'Practitioner path confirmed. Continue to Upload.',
-    next: 'Next',
-    back: 'Back',
-    skip: 'Skip setup',
-    complete: 'Go to dashboard',
-    practitionerConfirmBtn: (confirmed) => confirmed ? 'Confirmed: my practitioner invited me' : 'Click to confirm practitioner invitation',
-    practitionerConfirmSub: 'Confirm the practitioner context so we can set things up correctly.',
-    hasLabsQuestion: 'Do you have lab results to upload?',
-    hasLabsYes: 'Yes — ready to upload',
-    hasLabsNo: 'No — I\'ll upload later',
-    baselineFocusLabel: 'Which area would you like to track first?',
+    eyebrow: 'Required profile',
+    title: 'First, tell us the basics',
+    subtitle: 'These four values are required before VITALOOP can safely personalize lab ranges and symptom questions.',
+    privacy: 'Used for clinical context only. We do not infer missing values.',
+    age: 'Age', ageHint: 'Adults 18–120',
+    sex: 'Sex for lab reference ranges', sexHint: 'Required by laboratory ranges and the symptom engine.',
+    select: 'Select an option', female: 'Female', male: 'Male',
+    height: 'Height', heightHint: '100–250 cm',
+    weight: 'Weight', weightHint: '30–350 kg',
+    submit: 'Save and enter dashboard', saving: 'Saving…',
+    optionalNext: 'Symptom Check is optional. You can start it later from the dashboard or go directly to Upload Results.',
+    invalidAge: 'Enter an age from 18 to 120.',
+    invalidSex: 'Select the sex used for laboratory reference ranges.',
+    invalidHeight: 'Enter a height from 100 to 250 cm.',
+    invalidWeight: 'Enter a weight from 30 to 350 kg.',
+    saveError: 'Could not save your profile. Please try again.',
     orgTitle: 'Organization setup',
-    orgSub: 'As an organization admin, please create your organization to continue.',
-    orgNameLabel: 'Organization name',
-    orgNamePlaceholder: 'e.g. Vitaloop Health Clinic',
-    orgSave: 'Create organization',
-    orgSaving: 'Creating...',
-    toastSaved: 'Profile saved',
-    toastOrgCreated: (name) => `Organisation "${name}" created`,
-    toastError: 'Could not save — please try again.',
-    toastSelectIntent: 'Please select how you found us.',
-    toastDescribe: 'Please describe your concern first.',
-    toastConfirmPractitioner: 'Please confirm practitioner relationship to continue.',
+    orgSubtitle: 'Create your organization to continue to the professional workspace.',
+    orgName: 'Organization name', orgPlaceholder: 'e.g. Vitaloop Health Clinic', orgSubmit: 'Create organization',
   },
   uk: {
-    intentOptions: [
-      { id: 'symptoms', label: 'Маю симптоми і хочу знати, що перевірити' },
-      { id: 'labs', label: 'Вже є результати аналізів' },
-      { id: 'baseline', label: 'Хочу контролювати здоров\'я в динаміці' },
-      { id: 'practitioner', label: 'Мене запросив нутриціолог / лікар' },
-    ],
-    goalOptions: [
-      { id: 'energy', label: 'Енергія та концентрація' },
-      { id: 'sleep', label: 'Якість сну' },
-      { id: 'recovery', label: 'Відновлення та витривалість' },
-      { id: 'metabolic', label: 'Метаболічне здоров\'я' },
-      { id: 'hormonal', label: 'Гормональний баланс' },
-      { id: 'prevention', label: 'Профілактика та довголіття' },
-    ],
-    bodyAreas: ['Загальне', 'Голова', 'Грудна клітка', 'Живіт', 'Спина', 'Руки', 'Ноги', 'Шкіра', 'Настрій / когніція'],
-    durationOptions: ['Кілька днів', '1–2 тижні', '2–6 тижнів', '2–6 місяців', 'Понад 6 місяців'],
-    redFlagOptions: [
-      'Раптове сильне погіршення симптомів',
-      'Новий біль у грудях або задишка',
-      'Непритомність, оніміння або слабкість',
-      'Висока температура з швидким погіршенням',
-      'Нещодавня травма з постійним болем',
-    ],
-    steps: ['Мета', 'Скарга', 'Деталі', 'Безпека', 'Профіль', 'Перший крок'],
-    headerTitle: 'Налаштування',
-    headerSub: 'Розкажіть, що привело вас до Vitaloop.',
-    headerDesc: 'Ваші відповіді допоможуть Vitaloop підібрати відповідні аналізи, пов\'язати результати з симптомами і сформувати безпечні рекомендації.',
-    stepLabel: (n, t) => `КРОК ${n} З ${t}`,
-    intentTitle: 'Що привело вас до Vitaloop?',
-    intentSub: 'Оберіть один напрямок. Змінити можна будь-коли в розділі «Сьогодні».',
-    contextTitle: 'Що турбує найбільше?',
-    contextSub: 'Опишіть, що ви відчуваєте. Це допоможе Vitaloop зосередитись на потрібному напрямку.',
-    contextLabel: 'Опишіть вашу основну скаргу',
-    contextPlaceholder: 'напр.: Три місяці низька енергія, поганий сон і випадіння волосся.',
-    durationLabel: 'Як довго тривають ці симптоми?',
-    bodyAreaLabel: 'Яка ділянка тіла або система найбільше страждає?',
-    triggersLabel: 'Помічаєте тригери? (необов\'язково)',
-    triggersPlaceholder: 'напр.: гірше після їжі, після стресу, вранці...',
-    symptomsLabel: 'Супутні симптоми? (необов\'язково)',
-    symptomsPlaceholder: 'напр.: туман у голові, здуття, холодні руки...',
-    triedLabel: 'Що вже пробували? (необов\'язково)',
-    triedPlaceholder: 'напр.: добавки для сну, відмовились від кофеїну, вітамін D, консультація у лікаря...',
-    followupTitle: 'Уточнюючі питання',
-    followupSub: 'Кілька питань для кращого розуміння вашої ситуації.',
-    severityLabel: 'Наскільки це впливає на щоденне життя?',
-    severityMin: 'Мінімально',
-    severityMax: 'Дуже сильно',
-    goalsLabel: 'Головні цілі щодо здоров\'я? (оберіть до 3)',
-    safetyTitle: 'Безпека',
-    safetySub: 'Це допомагає уникнути небезпечних рекомендацій. Вся інформація залишається приватною.',
-    medsLabel: 'Поточні ліки (необов\'язково)',
-    medsPlaceholder: 'напр.: левотироксин 50 мкг, метформін',
-    suppLabel: 'Добавки (необов\'язково)',
-    suppPlaceholder: 'напр.: вітамін D 2000 МО, магній гліцинат',
-    allergyLabel: 'Відомі алергії або непереносимість (необов\'язково)',
-    allergyPlaceholder: 'напр.: пеніцилін, глютен',
-    pregnancyLabel: 'Вагітність або годування груддю (необов\'язково)',
-    pregnancyPlaceholder: 'напр.: 12 тижнів вагітності, годування груддю',
-    redFlagsLabel: 'Позначте термінові симптоми (якщо є)',
-    profileTitle: 'Базовий профіль',
-    profileSub: 'Використовується для персоналізації референсних меж і рекомендацій.',
-    firstNameLabel: 'Ім\'я',
-    lastNameLabel: 'Прізвище',
-    heightLabel: 'Зріст (см)',
-    weightLabel: 'Вага (кг)',
-    countryLabel: 'Країна (необов\'язково)',
-    countryPlaceholder: 'напр.: Україна',
-    finalTitle: 'Все готово. Ваш перший крок:',
-    finalSymptoms: 'Скарга збережена. Далі — Перевірка симптомів і вибір аналізів.',
-    finalLabs: 'Відмінно — перейдіть до Завантаження, щоб додати перший файл аналізів.',
-    finalBaseline: 'Ваш фокус зафіксований. Перейдіть до «Сьогодні», щоб побачити стартовий дашборд.',
-    finalPractitioner: 'Шлях через нутриціолога підтверджено. Продовжте в розділі завантаження.',
-    next: 'Далі',
-    back: 'Назад',
-    skip: 'Пропустити налаштування',
-    complete: 'Перейти до кабінету',
-    practitionerConfirmBtn: (confirmed) => confirmed ? 'Підтверджено: мене запросив нутриціолог' : 'Натисніть для підтвердження',
-    practitionerConfirmSub: 'Підтвердіть контекст нутриціолога для коректного налаштування завдань.',
-    hasLabsQuestion: 'Є результати аналізів для завантаження?',
-    hasLabsYes: 'Так — готовий завантажити',
-    hasLabsNo: 'Ні — завантажу пізніше',
-    baselineFocusLabel: 'Яку область хочете відстежувати першою?',
+    eyebrow: 'Обов’язковий профіль',
+    title: 'Спочатку вкажіть основні дані',
+    subtitle: 'Ці чотири значення потрібні, щоб VITALOOP безпечно персоналізував лабораторні межі та питання про симптоми.',
+    privacy: 'Використовуються лише для медичного контексту. Ми не визначаємо відсутні значення самостійно.',
+    age: 'Вік', ageHint: 'Дорослі 18–120 років',
+    sex: 'Стать для лабораторних референсів', sexHint: 'Потрібна для лабораторних меж і механізму оцінки симптомів.',
+    select: 'Оберіть варіант', female: 'Жіноча', male: 'Чоловіча',
+    height: 'Зріст', heightHint: '100–250 см',
+    weight: 'Вага', weightHint: '30–350 кг',
+    submit: 'Зберегти та перейти до кабінету', saving: 'Збереження…',
+    optionalNext: 'Перевірка симптомів необов’язкова. Її можна пройти пізніше з дашборда або одразу перейти до завантаження аналізів.',
+    invalidAge: 'Вкажіть вік від 18 до 120 років.',
+    invalidSex: 'Оберіть стать, що використовується для лабораторних референсів.',
+    invalidHeight: 'Вкажіть зріст від 100 до 250 см.',
+    invalidWeight: 'Вкажіть вагу від 30 до 350 кг.',
+    saveError: 'Не вдалося зберегти профіль. Спробуйте ще раз.',
     orgTitle: 'Налаштування організації',
-    orgSub: 'Як адміністратор організації, будь ласка, створіть свою організацію для продовження.',
-    orgNameLabel: 'Назва організації',
-    orgNamePlaceholder: 'напр.: Клініка здоров\'я',
-    orgSave: 'Створити організацію',
-    orgSaving: 'Створення...',
-    toastSaved: 'Профіль збережено',
-    toastOrgCreated: (name) => `Організацію "${name}" створено`,
-    toastError: 'Не вдалося зберегти — спробуйте ще раз.',
-    toastSelectIntent: 'Будь ласка, оберіть, що привело вас до Vitaloop.',
-    toastDescribe: 'Будь ласка, спочатку опишіть свою скаргу.',
-    toastConfirmPractitioner: 'Підтвердіть запрошення від нутриціолога для продовження.',
+    orgSubtitle: 'Створіть організацію, щоб перейти до професійного кабінету.',
+    orgName: 'Назва організації', orgPlaceholder: 'наприклад, Vitaloop Health Clinic', orgSubmit: 'Створити організацію',
   },
 }
 
-const INTENT_OPTIONS = T.en.intentOptions
-const GOAL_OPTIONS = T.en.goalOptions
-const BODY_AREAS = T.en.bodyAreas
-const DURATION_OPTIONS = T.en.durationOptions
+const EMPTY_FORM = { age: '', sex: '', height_cm: '', weight_kg: '' }
 
-function getViewportWidth() {
-  if (typeof window === 'undefined') return 1024
-  return window.innerWidth
+function numberInRange(value, minimum, maximum) {
+  const number = Number(value)
+  return value !== '' && Number.isFinite(number) && number >= minimum && number <= maximum
 }
 
-function parseCsvList(value) {
-  return String(value || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
-
-function toCommaSeparatedString(value) {
-  if (Array.isArray(value)) return value.join(', ')
-  if (typeof value === 'string') return value
-  return ''
-}
-
-function splitFullName(fullName) {
-  const normalized = String(fullName || '').trim().replace(/\s+/g, ' ')
-  if (!normalized) return { first_name: '', last_name: '' }
-  const parts = normalized.split(' ')
-  if (parts.length === 1) return { first_name: parts[0], last_name: '' }
-  return { first_name: parts[0], last_name: parts.slice(1).join(' ') }
-}
-
-function buildSafetySummary(safety) {
-  const notes = []
-  if (safety.allergies) notes.push(`Allergies: ${safety.allergies}`)
-  if (safety.pregnancy) notes.push(`Pregnancy/Breastfeeding: ${safety.pregnancy}`)
-  if (safety.redFlags.length > 0) notes.push(`Red flags selected: ${safety.redFlags.join(', ')}`)
-  return notes.join(' | ')
-}
-
-const s = {
-  wrap: {
-    minHeight: '100vh',
-    background: '#f8fafc',
-    color: '#0f172a',
-    fontFamily: 'system-ui, sans-serif',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    padding: '24px 16px',
-  },
-  card: {
-    width: '100%',
-    maxWidth: 640,
-    background: '#ffffff',
-    border: '1px solid rgba(15,23,42,0.08)',
-    borderRadius: 24,
-    padding: '36px 30px',
-    boxShadow: '0 1px 3px rgba(15,23,42,0.06)',
-  },
-  title: { fontSize: 26, fontWeight: 700, color: '#0f172a', marginBottom: 6 },
-  sub: { fontSize: 15, color: '#64748b', marginBottom: 22, lineHeight: 1.55 },
-  label: { display: 'block', fontSize: 12, color: '#475569', marginBottom: 8, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' },
-  input: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box', minHeight: '44px' },
-  textarea: { width: '100%', background: '#f8fafc', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, padding: '12px 14px', color: '#0f172a', fontSize: 15, outline: 'none', boxSizing: 'border-box', minHeight: '98px', resize: 'vertical' },
-  btnPrimary: { width: '100%', padding: '14px', background: '#10b981', borderRadius: 12, color: '#ffffff', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', minHeight: '44px' },
-  btnSec: { background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontSize: 14, marginTop: 12, textDecoration: 'underline', padding: 0 },
-  progress: { display: 'flex', gap: 6, marginBottom: 28 },
-  dot: (active, done) => ({
-    height: 4,
-    flex: 1,
-    borderRadius: 2,
-    background: done ? '#10b981' : active ? 'rgba(16,185,129,0.5)' : 'rgba(15,23,42,0.1)',
-    transition: 'background 0.3s',
-  }),
+function Field({ label, hint, error, children }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-bold text-slate-800">{label}</span>
+      {children}
+      <span className={`mt-1.5 block text-xs ${error ? 'font-semibold text-rose-600' : 'text-slate-500'}`}>
+        {error || hint}
+      </span>
+    </label>
+  )
 }
 
 export default function Onboarding() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const t = isUkrainianLocale() ? T.uk : T.en
-  const [step, setStep] = useState(0)
+  const copy = isUkrainianLocale() ? COPY.uk : COPY.en
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [viewportWidth, setViewportWidth] = useState(getViewportWidth)
-
-  const [orgCheckDone, setOrgCheckDone] = useState(false)
-  const [needsOrg, setNeedsOrg] = useState(false)
-  const [orgName, setOrgName] = useState('')
-  const [orgSaving, setOrgSaving] = useState(false)
-
-  const [intent, setIntent] = useState('')
-  const [hasLabsNow, setHasLabsNow] = useState(null)
-  const [practitionerConfirmed, setPractitionerConfirmed] = useState(false)
-  const [baselineFocus, setBaselineFocus] = useState('')
-
-  const [concern, setConcern] = useState({
-    summary: '',
-    duration: '',
-    severity: 5,
-    body_area: 'General',
-    triggers: '',
-    related_symptoms: '',
-    tried: '',
-  })
-
-  const [safety, setSafety] = useState({
-    medications: '',
-    supplements: '',
-    allergies: '',
-    pregnancy: '',
-    redFlags: [],
-  })
-
-  const [profile, setProfile] = useState({
-    first_name: '',
-    last_name: '',
-    height_cm: '',
-    weight_kg: '',
-    goals: [],
-    country: '',
-  })
-
-  const redFlagOptions = useMemo(() => t.redFlagOptions, [t])
-
-  const steps = useMemo(() => t.steps, [t])
-
-  const TOTAL = steps.length
+  const [organizationRequired, setOrganizationRequired] = useState(false)
+  const [organizationName, setOrganizationName] = useState('')
 
   useEffect(() => {
-    api.get('/auth/me').then((r) => {
-      const memberships = r.data?.memberships
-      const globalRole = String(r.data?.user?.global_role || r.data?.global_role || '').toLowerCase()
-      const fullName = r.data?.user?.full_name || ''
-      const nameParts = splitFullName(fullName)
+    let active = true
 
-      setProfile((prev) => ({
-        ...prev,
-        first_name: prev.first_name || nameParts.first_name,
-        last_name: prev.last_name || nameParts.last_name,
-      }))
+    async function load() {
+      try {
+        const [authResponse, profileResponse] = await Promise.all([api.get('/auth/me'), api.get('/profile')])
+        if (!active) return
 
-      const requiresOrg = globalRole === 'org_admin' || globalRole === 'super_admin'
-      const hasMembership = Array.isArray(memberships) && memberships.length > 0
-      setNeedsOrg(requiresOrg && !hasMembership)
-      setOrgCheckDone(true)
-    }).catch(() => {
-      setNeedsOrg(false)
-      setOrgCheckDone(true)
-    })
-  }, [])
+        const authData = authResponse.data || {}
+        const role = String(authData?.user?.global_role || authData?.global_role || 'end_user').toLowerCase()
+        const memberships = authData?.memberships
+        const requiresOrganization = ['org_admin', 'super_admin'].includes(role)
+          && (!Array.isArray(memberships) || memberships.length === 0)
 
-  useEffect(() => {
-    api.get('/profile').then((r) => {
-      const p = r.data?.profile || {}
-      const loc = r.data?.location || {}
-      setProfile((prev) => ({
-        ...prev,
-        height_cm: p.height_cm || '',
-        weight_kg: p.weight_kg || '',
-        goals: Array.isArray(p.goals) ? p.goals.filter((goal) => !String(goal).startsWith('intent:')) : [],
-        country: loc.country || '',
-      }))
-      setSafety((prev) => ({
-        ...prev,
-        supplements: toCommaSeparatedString(p.current_supplements),
-        medications: toCommaSeparatedString(p.current_medications),
-      }))
-      if (p.onboarding_complete) {
-        navigate('/dashboard', { replace: true })
-      }
-    }).catch(() => {})
-  }, [navigate])
+        if (requiresOrganization) {
+          setOrganizationRequired(true)
+          return
+        }
+        if (role !== 'end_user') {
+          navigate(role === 'practitioner' ? '/crm/clients' : '/dashboard', { replace: true })
+          return
+        }
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined
-    const onResize = () => setViewportWidth(window.innerWidth)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-
-  const toggleGoal = (id) => {
-    setProfile((prev) => ({
-      ...prev,
-      goals: prev.goals.includes(id) ? prev.goals.filter((goal) => goal !== id) : [...prev.goals, id],
-    }))
-  }
-
-  const toggleRedFlag = (label) => {
-    setSafety((prev) => ({
-      ...prev,
-      redFlags: prev.redFlags.includes(label)
-        ? prev.redFlags.filter((item) => item !== label)
-        : [...prev.redFlags, label],
-    }))
-  }
-
-  const validateCurrentStep = () => {
-    if (step === 0 && !intent) {
-      toast.error(t.toastSelectIntent)
-      return false
-    }
-
-    if (step === 1) {
-      if (intent === 'symptoms' && !concern.summary.trim()) {
-        toast.error(t.toastDescribe)
-        return false
-      }
-      if (intent === 'labs' && hasLabsNow === null) {
-        toast.error('Tell us whether you already have labs to upload.')
-        return false
-      }
-      if (intent === 'practitioner' && !practitionerConfirmed) {
-        toast.error(t.toastConfirmPractitioner)
-        return false
-      }
-      if (intent === 'baseline' && !baselineFocus.trim()) {
-        toast.error('Choose what you want to improve first.')
-        return false
+        const profile = profileResponse.data?.profile || {}
+        setForm({
+          age: profile.age ?? '',
+          sex: ['male', 'female'].includes(String(profile.sex || '').toLowerCase()) ? String(profile.sex).toLowerCase() : '',
+          height_cm: profile.height_cm ?? '',
+          weight_kg: profile.weight_kg ?? '',
+        })
+      } catch {
+        if (active) toast.error(copy.saveError)
+      } finally {
+        if (active) setLoading(false)
       }
     }
 
-    if (step === 2 && intent === 'symptoms') {
-      if (!concern.duration || !concern.severity) {
-        toast.error('Add duration and severity so we can prioritize safely.')
-        return false
-      }
-    }
+    load()
+    return () => { active = false }
+  }, [copy.saveError, navigate])
 
-    return true
+  const inputClass = useMemo(
+    () => 'min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-base text-slate-950 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100',
+    [],
+  )
+
+  const validate = () => {
+    const nextErrors = {}
+    if (!numberInRange(form.age, 18, 120) || !Number.isInteger(Number(form.age))) nextErrors.age = copy.invalidAge
+    if (!['male', 'female'].includes(form.sex)) nextErrors.sex = copy.invalidSex
+    if (!numberInRange(form.height_cm, 100, 250)) nextErrors.height_cm = copy.invalidHeight
+    if (!numberInRange(form.weight_kg, 30, 350)) nextErrors.weight_kg = copy.invalidWeight
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
   }
 
-  const isLabsReady = intent === 'labs' && hasLabsNow === true
-
-  const goNext = () => {
-    if (!validateCurrentStep()) return
-    setStep((prev) => {
-      // Labs-ready users already know why they're here — the Follow-up step only
-      // gathers symptom-specific context, so it adds no value on this path.
-      const next = prev === 1 && isLabsReady ? prev + 2 : prev + 1
-      return Math.min(next, TOTAL - 1)
-    })
+  const updateField = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }))
+    setErrors((current) => ({ ...current, [field]: undefined }))
   }
 
-  const goBack = () => {
-    setStep((prev) => (prev === 3 && isLabsReady ? prev - 2 : prev - 1))
-  }
+  const saveRequiredProfile = async (event) => {
+    event.preventDefault()
+    if (!validate()) return
 
-  const buildConcernPayload = () => {
-    if (intent === 'symptoms' && concern.summary.trim()) {
-      return {
-        complaint: concern.summary.trim(),
-        duration_description: `${concern.duration || 'Not specified'} | Severity ${concern.severity}/10 | Area: ${concern.body_area}`,
-        tried_interventions: [
-          concern.tried ? `Tried: ${concern.tried}` : null,
-          concern.triggers ? `Triggers: ${concern.triggers}` : null,
-          concern.related_symptoms ? `Related: ${concern.related_symptoms}` : null,
-        ].filter(Boolean).join(' | '),
-      }
-    }
-
-    if (intent === 'labs') {
-      return {
-        complaint: hasLabsNow ? 'User has existing labs and wants interpretation context' : 'User needs lab direction before upload',
-        duration_description: 'Lab-first path',
-        tried_interventions: concern.summary ? `Focus: ${concern.summary}` : undefined,
-      }
-    }
-
-    if (intent === 'baseline' && baselineFocus.trim()) {
-      return {
-        complaint: `Baseline focus: ${baselineFocus.trim()}`,
-        duration_description: 'Long-term baseline path',
-        tried_interventions: undefined,
-      }
-    }
-
-    return null
-  }
-
-  const saveAll = async () => {
     setSaving(true)
     try {
-      const fullName = [profile.first_name, profile.last_name]
-        .map((part) => String(part || '').trim())
-        .filter(Boolean)
-        .join(' ')
-
-      const derivedGoals = [...profile.goals, `intent:${intent}`]
-      const profilePayload = {
-        full_name: fullName || undefined,
-        height_cm: profile.height_cm ? Number(profile.height_cm) : undefined,
-        weight_kg: profile.weight_kg ? Number(profile.weight_kg) : undefined,
-        goals: derivedGoals,
-        current_supplements: parseCsvList(safety.supplements),
-        current_medications: parseCsvList(safety.medications),
-        prior_diagnoses: buildSafetySummary(safety) || undefined,
-        onboarding_complete: true,
-      }
-
-      await api.patch('/profile', profilePayload)
-
-      if (profile.country.trim()) {
-        await api.patch('/profile/location', { country: profile.country.trim() })
-      }
-
-      const complaintPayload = buildConcernPayload()
-      if (complaintPayload?.complaint) {
-        await api.post('/complaints', complaintPayload)
-      }
-
+      await api.patch('/profile', {
+        age: Number(form.age), sex: form.sex,
+        height_cm: Number(form.height_cm), weight_kg: Number(form.weight_kg),
+      })
       await api.post('/auth/onboarding/complete')
-
-      gaOnboardingComplete()
-      trackFunnelEvent('funnel_onboarding_completed', 'User completed symptom-first onboarding', {
-        intent,
-        red_flags_count: safety.redFlags.length,
-      }, { oncePerSession: true })
-
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['profile'] }),
         queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
-        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
-        queryClient.invalidateQueries({ queryKey: ['insights'] }),
-        queryClient.invalidateQueries({ queryKey: ['health-score'] }),
       ])
-
-      toast.success(t.toastSaved)
-      navigate(isLabsReady ? '/upload' : '/dashboard', { replace: true })
-    } catch {
-      toast.error(t.toastError)
+      gaOnboardingComplete()
+      trackFunnelEvent('funnel_required_profile_completed', 'User completed required profile', {
+        symptom_check_required: false,
+      }, { oncePerSession: true })
+      toast.success(isUkrainianLocale() ? 'Профіль збережено' : 'Profile saved')
+      // This is a one-time safety boundary. Reload so the route guard reads the
+      // just-persisted server state instead of reusing its pre-submit state.
+      window.location.replace('/dashboard')
+    } catch (error) {
+      const detail = error?.response?.data?.detail
+      toast.error(typeof detail?.detail === 'string' ? detail.detail : copy.saveError)
     } finally {
       setSaving(false)
     }
   }
 
-  const handleSkipOnboarding = async () => {
-    try {
-      await api.post('/auth/onboarding/skip')
-      trackFunnelEvent('funnel_onboarding_skipped', 'User skipped onboarding and entered dashboard', {
-        stage: steps[step] || 'unknown',
-      }, { oncePerSession: true })
-      toast('Setup skipped. You can complete it later from Profile & Safety.', {
-        icon: 'ℹ️',
-        style: { background: '#fef9c3', color: '#92400e', fontSize: 14 },
-      })
-    } catch {
-      // Fail-open.
-    }
-    navigate('/dashboard', { replace: true })
-  }
-
-  const handleCreateOrg = async (e) => {
-    e.preventDefault()
-    const name = orgName.trim()
-    if (!name) {
-      toast.error('Enter organization name.')
-      return
-    }
-    setOrgSaving(true)
+  const createOrganization = async (event) => {
+    event.preventDefault()
+    const name = organizationName.trim()
+    if (!name) return
+    setSaving(true)
     try {
       await api.post('/auth/onboarding/organization', { name })
-      toast.success('Organization created.')
       navigate('/admin/dashboard', { replace: true })
-    } catch (err) {
-      toast.error(err?.response?.data?.detail || 'Unable to create organization.')
+    } catch (error) {
+      toast.error(error?.response?.data?.detail || copy.saveError)
     } finally {
-      setOrgSaving(false)
+      setSaving(false)
     }
   }
 
-  const cardStyle = {
-    ...s.card,
-    padding: viewportWidth < 500 ? '24px 16px' : '36px 30px',
+  if (loading) {
+    return <div className="mx-auto mt-20 h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" aria-label="Loading" />
+  }
+
+  if (organizationRequired) {
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4 py-8">
+        <CabinetPageHeader eyebrow="SETUP" title={copy.orgTitle} subtitle={copy.orgSubtitle} />
+        <form onSubmit={createOrganization} className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <Field label={copy.orgName} hint="">
+            <input className={inputClass} value={organizationName} onChange={(event) => setOrganizationName(event.target.value)} placeholder={copy.orgPlaceholder} required />
+          </Field>
+          <button type="submit" disabled={saving} className="mt-6 min-h-12 w-full rounded-xl bg-emerald-600 px-5 font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60">
+            {saving ? copy.saving : copy.orgSubmit}
+          </button>
+        </form>
+      </div>
+    )
   }
 
   return (
-    <div style={s.wrap}>
-      <div style={{ width: '100%', maxWidth: 760 }}>
-        <CabinetPageHeader
-          title={t.headerTitle}
-          subtitle={t.headerSub}
-          helper={t.headerDesc}
-        />
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
+      <CabinetPageHeader eyebrow={copy.eyebrow.toUpperCase()} title={copy.title} subtitle={copy.subtitle} />
 
-        <motion.div style={cardStyle} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
-          {!orgCheckDone && (
-            <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid #10b981', borderTopColor: 'transparent', margin: '0 auto', animation: 'spin 0.7s linear infinite' }} />
-              <div style={{ marginTop: 16, color: '#64748b', fontSize: 14 }}>Loading...</div>
+      <form onSubmit={saveRequiredProfile} className="mt-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-emerald-100 bg-emerald-50/70 px-5 py-4 sm:px-8">
+          <p className="flex items-start gap-2 text-sm leading-6 text-emerald-900">
+            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
+            {copy.privacy}
+          </p>
+        </div>
+
+        <div className="grid gap-6 px-5 py-6 sm:grid-cols-2 sm:px-8 sm:py-8">
+          <Field label={copy.age} hint={copy.ageHint} error={errors.age}>
+            <div className="relative">
+              <UserRound className="pointer-events-none absolute left-3.5 top-3.5 h-5 w-5 text-slate-400" aria-hidden="true" />
+              <input className={`${inputClass} pl-11`} type="number" min="18" max="120" step="1" inputMode="numeric" value={form.age} onChange={(event) => updateField('age', event.target.value)} aria-invalid={Boolean(errors.age)} required />
             </div>
-          )}
+          </Field>
 
-          {orgCheckDone && needsOrg && (
-            <motion.div key="org-setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <div style={{ textAlign: 'center', marginBottom: 10 }}>
-                <div style={{ fontSize: 30, marginBottom: 10 }}>👋</div>
-                <div style={s.title}>Welcome</div>
-                <div style={s.sub}>Name your organization to continue to CRM.</div>
-              </div>
-              <form onSubmit={handleCreateOrg}>
-                <label>
-                  <span style={s.label}>Organization Name</span>
-                  <input
-                    style={s.input}
-                    type="text"
-                    placeholder="HealthFirst Clinic"
-                    value={orgName}
-                    onChange={(e) => setOrgName(e.target.value)}
-                    autoFocus
-                    maxLength={120}
-                  />
-                </label>
-                <button type="submit" style={{ ...s.btnPrimary, marginTop: 16, opacity: orgSaving ? 0.6 : 1 }} disabled={orgSaving}>
-                  {orgSaving ? t.orgSaving : 'Create Organization'}
-                </button>
-              </form>
-            </motion.div>
-          )}
+          <Field label={copy.sex} hint={copy.sexHint} error={errors.sex}>
+            <select className={inputClass} value={form.sex} onChange={(event) => updateField('sex', event.target.value)} aria-invalid={Boolean(errors.sex)} required>
+              <option value="">{copy.select}</option>
+              <option value="female">{copy.female}</option>
+              <option value="male">{copy.male}</option>
+            </select>
+          </Field>
 
-          {orgCheckDone && !needsOrg && (
-            <>
-              <div style={s.progress}>
-                {steps.map((_, i) => <div key={i} style={s.dot(i === step, i < step)} />)}
-              </div>
+          <Field label={`${copy.height} (cm)`} hint={copy.heightHint} error={errors.height_cm}>
+            <div className="relative">
+              <Ruler className="pointer-events-none absolute left-3.5 top-3.5 h-5 w-5 text-slate-400" aria-hidden="true" />
+              <input className={`${inputClass} pl-11`} type="number" min="100" max="250" step="0.1" inputMode="decimal" value={form.height_cm} onChange={(event) => updateField('height_cm', event.target.value)} aria-invalid={Boolean(errors.height_cm)} required />
+            </div>
+          </Field>
 
-              <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 24, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                Step {step + 1} of {TOTAL} - {steps[step]}
-              </div>
+          <Field label={`${copy.weight} (kg)`} hint={copy.weightHint} error={errors.weight_kg}>
+            <div className="relative">
+              <Scale className="pointer-events-none absolute left-3.5 top-3.5 h-5 w-5 text-slate-400" aria-hidden="true" />
+              <input className={`${inputClass} pl-11`} type="number" min="30" max="350" step="0.1" inputMode="decimal" value={form.weight_kg} onChange={(event) => updateField('weight_kg', event.target.value)} aria-invalid={Boolean(errors.weight_kg)} required />
+            </div>
+          </Field>
+        </div>
 
-              {step === 0 && (
-                <motion.div key="intent" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}><Sparkles size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />What brought you to VITALOOP today?</div>
-                  <div style={s.sub}>Choose one starting path. You can refine it anytime in Today.</div>
-                  <div style={{ display: 'grid', gap: 10 }}>
-                    {t.intentOptions.map((option) => (
-                      <button
-                        key={option.id}
-                        onClick={() => setIntent(option.id)}
-                        style={{
-                          textAlign: 'left',
-                          padding: '12px 14px',
-                          borderRadius: 12,
-                          border: `1px solid ${intent === option.id ? '#10b981' : 'rgba(15,23,42,0.15)'}`,
-                          background: intent === option.id ? 'rgba(16,185,129,0.08)' : '#f8fafc',
-                          color: '#0f172a',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-
-              {step === 1 && (
-                <motion.div key="main-context" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}><AlertTriangle size={22} style={{ display: 'inline', marginRight: 10, color: '#f59e0b' }} />Main context</div>
-
-                  {intent === 'symptoms' && (
-                    <>
-                      <div style={s.sub}>What do you want to understand first?</div>
-                      <label>
-                        <span style={s.label}>Main Concern</span>
-                        <textarea
-                          style={s.textarea}
-                          placeholder="Examples: low energy, poor sleep, recurring headaches, brain fog"
-                          value={concern.summary}
-                          onChange={(e) => setConcern((prev) => ({ ...prev, summary: e.target.value }))}
-                        />
-                      </label>
-                    </>
-                  )}
-
-                  {intent === 'labs' && (
-                    <>
-                      <div style={s.sub}>Do you already have lab files to upload now?</div>
-                      <div style={{ display: 'grid', gap: 10 }}>
-                        <button
-                          onClick={() => setHasLabsNow(true)}
-                          style={{ ...s.input, cursor: 'pointer', textAlign: 'left', borderColor: hasLabsNow === true ? '#10b981' : 'rgba(15,23,42,0.12)' }}
-                        >Yes, I have lab results</button>
-                        <button
-                          onClick={() => setHasLabsNow(false)}
-                          style={{ ...s.input, cursor: 'pointer', textAlign: 'left', borderColor: hasLabsNow === false ? '#10b981' : 'rgba(15,23,42,0.12)' }}
-                        >No, I need lab direction first</button>
-                      </div>
-                      <div style={{ marginTop: 16 }}>
-                        <span style={s.label}>What are you trying to improve?</span>
-                        <input
-                          style={s.input}
-                          placeholder="Optional context for interpretation"
-                          value={concern.summary}
-                          onChange={(e) => setConcern((prev) => ({ ...prev, summary: e.target.value }))}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {intent === 'baseline' && (
-                    <>
-                      <div style={s.sub}>Set your first baseline focus area.</div>
-                      <label>
-                        <span style={s.label}>Baseline Focus</span>
-                        <input
-                          style={s.input}
-                          placeholder="Energy, sleep, recovery, prevention..."
-                          value={baselineFocus}
-                          onChange={(e) => setBaselineFocus(e.target.value)}
-                        />
-                      </label>
-                    </>
-                  )}
-
-                  {intent === 'practitioner' && (
-                    <>
-                      <div style={s.sub}>Confirm practitioner context to align assignments safely.</div>
-                      <button
-                        onClick={() => setPractitionerConfirmed((prev) => !prev)}
-                        style={{
-                          ...s.input,
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          borderColor: practitionerConfirmed ? '#10b981' : 'rgba(15,23,42,0.12)',
-                        }}
-                      >
-                        {t.practitionerConfirmBtn(practitionerConfirmed)}
-                      </button>
-                    </>
-                  )}
-                </motion.div>
-              )}
-
-              {step === 2 && (
-                <motion.div key="followups" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}>Smart follow-ups</div>
-                  <div style={s.sub}>
-                    {intent === 'symptoms'
-                      ? 'These details help prioritize what to check first.'
-                      : 'Optional — skip anything that doesn\'t apply to you.'}
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 14 }}>
-                    <div>
-                      <span style={s.label}>Duration</span>
-                      <select
-                        style={s.input}
-                        value={concern.duration}
-                        onChange={(e) => setConcern((prev) => ({ ...prev, duration: e.target.value }))}
-                      >
-                        <option value="">Select duration</option>
-                        {t.durationOptions.map((item) => <option key={item} value={item}>{item}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <span style={s.label}>Severity (1-10)</span>
-                      <input
-                        style={s.input}
-                        type="number"
-                        min="1"
-                        max="10"
-                        value={concern.severity}
-                        onChange={(e) => setConcern((prev) => ({ ...prev, severity: Number(e.target.value) || 1 }))}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 14 }}>
-                    <div>
-                      <span style={s.label}>Body area / system</span>
-                      <select
-                        style={s.input}
-                        value={concern.body_area}
-                        onChange={(e) => setConcern((prev) => ({ ...prev, body_area: e.target.value }))}
-                      >
-                        {t.bodyAreas.map((item) => <option key={item} value={item}>{item}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <span style={s.label}>Better/worse triggers</span>
-                      <input
-                        style={s.input}
-                        value={concern.triggers}
-                        onChange={(e) => setConcern((prev) => ({ ...prev, triggers: e.target.value }))}
-                        placeholder="Sleep loss, stress, meals, exercise..."
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: 14 }}>
-                    <span style={s.label}>Related symptoms</span>
-                    <input
-                      style={s.input}
-                      value={concern.related_symptoms}
-                      onChange={(e) => setConcern((prev) => ({ ...prev, related_symptoms: e.target.value }))}
-                      placeholder="Brain fog, palpitations, GI discomfort..."
-                    />
-                  </div>
-
-                  <div style={{ marginTop: 14 }}>
-                    <span style={s.label}>What have you tried so far?</span>
-                    <input
-                      style={s.input}
-                      value={concern.tried}
-                      onChange={(e) => setConcern((prev) => ({ ...prev, tried: e.target.value }))}
-                      placeholder="Supplements, schedule changes, diet, therapy..."
-                    />
-                  </div>
-                </motion.div>
-              )}
-
-              {step === 3 && (
-                <motion.div key="safety" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}><Shield size={22} style={{ display: 'inline', marginRight: 10, color: '#2563eb' }} />Safety context</div>
-                  <div style={s.sub}>This does not diagnose. It helps route you toward safer next steps.</div>
-
-                  <div style={{ marginBottom: 12 }}>
-                    <span style={s.label}>Red-flag check (select any that apply)</span>
-                    <div style={{ display: 'grid', gap: 8 }}>
-                      {redFlagOptions.map((option) => (
-                        <button
-                          key={option}
-                          onClick={() => toggleRedFlag(option)}
-                          style={{
-                            ...s.input,
-                            textAlign: 'left',
-                            cursor: 'pointer',
-                            borderColor: safety.redFlags.includes(option) ? '#ef4444' : 'rgba(15,23,42,0.12)',
-                            background: safety.redFlags.includes(option) ? 'rgba(239,68,68,0.06)' : '#f8fafc',
-                          }}
-                        >
-                          {safety.redFlags.includes(option) ? '✓ ' : ''}{option}
-                        </button>
-                      ))}
-                    </div>
-                    {safety.redFlags.length > 0 && (
-                      <div style={{ marginTop: 10, fontSize: 13, color: '#b91c1c' }}>
-                        Urgent symptoms may require immediate qualified medical review.
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ marginTop: 12 }}>
-                    <span style={s.label}>Current medications</span>
-                    <input
-                      style={s.input}
-                      placeholder="Comma-separated"
-                      value={safety.medications}
-                      onChange={(e) => setSafety((prev) => ({ ...prev, medications: e.target.value }))}
-                    />
-                  </div>
-                  <div style={{ marginTop: 12 }}>
-                    <span style={s.label}>Current supplements</span>
-                    <input
-                      style={s.input}
-                      placeholder="Comma-separated"
-                      value={safety.supplements}
-                      onChange={(e) => setSafety((prev) => ({ ...prev, supplements: e.target.value }))}
-                    />
-                  </div>
-                  <div style={{ marginTop: 12 }}>
-                    <span style={s.label}>Allergies (optional)</span>
-                    <input
-                      style={s.input}
-                      value={safety.allergies}
-                      onChange={(e) => setSafety((prev) => ({ ...prev, allergies: e.target.value }))}
-                    />
-                  </div>
-                  <div style={{ marginTop: 12 }}>
-                    <span style={s.label}>Pregnancy/Breastfeeding (optional)</span>
-                    <input
-                      style={s.input}
-                      value={safety.pregnancy}
-                      onChange={(e) => setSafety((prev) => ({ ...prev, pregnancy: e.target.value }))}
-                    />
-                  </div>
-                </motion.div>
-              )}
-
-              {step === 4 && (
-                <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}><User size={22} style={{ display: 'inline', marginRight: 10, color: '#10b981' }} />Profile basics</div>
-                  <div style={s.sub}>Optional now, useful later for deeper personalization.</div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 14 }}>
-                    <div>
-                      <span style={s.label}>First Name</span>
-                      <input
-                        style={s.input}
-                        value={profile.first_name}
-                        onChange={(e) => setProfile((prev) => ({ ...prev, first_name: e.target.value }))}
-                        placeholder="John"
-                      />
-                    </div>
-                    <div>
-                      <span style={s.label}>Last Name</span>
-                      <input
-                        style={s.input}
-                        value={profile.last_name}
-                        onChange={(e) => setProfile((prev) => ({ ...prev, last_name: e.target.value }))}
-                        placeholder="Doe"
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 14 }}>
-                    <div>
-                      <span style={s.label}>Height (cm) - optional</span>
-                      <input
-                        style={s.input}
-                        type="number"
-                        min="50"
-                        max="250"
-                        value={profile.height_cm}
-                        onChange={(e) => setProfile((prev) => ({ ...prev, height_cm: e.target.value }))}
-                        placeholder="175"
-                      />
-                    </div>
-                    <div>
-                      <span style={s.label}>Weight (kg) - optional</span>
-                      <input
-                        style={s.input}
-                        type="number"
-                        min="20"
-                        max="300"
-                        value={profile.weight_kg}
-                        onChange={(e) => setProfile((prev) => ({ ...prev, weight_kg: e.target.value }))}
-                        placeholder="72"
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: 14 }}>
-                    <span style={s.label}>Country / Region (optional)</span>
-                    <input
-                      style={s.input}
-                      value={profile.country}
-                      onChange={(e) => setProfile((prev) => ({ ...prev, country: e.target.value }))}
-                      placeholder="United States"
-                    />
-                  </div>
-
-                  <div style={{ marginTop: 14 }}>
-                    <span style={s.label}>Secondary goals</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: viewportWidth < 600 ? '1fr' : '1fr 1fr', gap: 10 }}>
-                      {t.goalOptions.map((goal) => (
-                        <button
-                          key={goal.id}
-                          onClick={() => toggleGoal(goal.id)}
-                          style={{
-                            ...s.input,
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            borderColor: profile.goals.includes(goal.id) ? '#10b981' : 'rgba(15,23,42,0.12)',
-                            background: profile.goals.includes(goal.id) ? 'rgba(16,185,129,0.08)' : '#f8fafc',
-                          }}
-                        >
-                          {profile.goals.includes(goal.id) ? '✓ ' : ''}{goal.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {step === 5 && (
-                <motion.div key="action" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <div style={s.title}>Your first action</div>
-                  <div style={s.sub}>
-                    {intent === 'symptoms' && t.finalSymptoms}
-                    {intent === 'labs' && (hasLabsNow ? 'Great. Continue to Upload Results and connect your symptoms for a precise protocol.' : 'We will guide you through a practical lab direction before upload.')}
-                    {intent === 'baseline' && 'Your baseline path is set. Continue to Lab Plan to build your first tracking panel.'}
-                    {intent === 'practitioner' && t.finalPractitioner}
-                  </div>
-                  <div style={{ padding: '14px 16px', borderRadius: 12, border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.06)', fontSize: 14, color: '#1e293b' }}>
-                    VITALOOP is a decision-support tool and does not provide diagnosis.
-                    Share urgent symptoms with a qualified medical professional.
-                  </div>
-                </motion.div>
-              )}
-
-              <div style={{ display: 'flex', gap: 12, marginTop: 28, alignItems: 'center' }}>
-                {step > 0 && (
-                  <button style={{ ...s.btnPrimary, flex: 0.4, background: '#e2e8f0', color: '#475569' }} onClick={goBack}>
-                    <ChevronLeft size={18} style={{ display: 'inline' }} /> Back
-                  </button>
-                )}
-                {step < TOTAL - 1 ? (
-                  <button style={{ ...s.btnPrimary, flex: 1 }} onClick={goNext}>
-                    Next <ChevronRight size={18} style={{ display: 'inline' }} />
-                  </button>
-                ) : (
-                  <button style={{ ...s.btnPrimary, flex: 1, opacity: saving ? 0.6 : 1 }} onClick={saveAll} disabled={saving}>
-                    {saving ? 'Saving...' : <><CheckCircle size={18} style={{ display: 'inline', marginRight: 6 }} />{isLabsReady ? 'Continue to upload labs' : 'Start my health loop'}</>}
-                  </button>
-                )}
-              </div>
-
-              <div style={{ textAlign: 'center', marginTop: 16 }}>
-                <button style={s.btnSec} onClick={handleSkipOnboarding}>Skip setup for now</button>
-              </div>
-            </>
-          )}
-        </motion.div>
-      </div>
+        <div className="border-t border-slate-200 bg-slate-50 px-5 py-5 sm:px-8">
+          <button type="submit" disabled={saving} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60">
+            <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+            {saving ? copy.saving : copy.submit}
+          </button>
+          <p className="mt-3 text-center text-xs leading-5 text-slate-500">{copy.optionalNext}</p>
+        </div>
+      </form>
     </div>
   )
 }

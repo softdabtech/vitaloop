@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends
 
 from app.dependencies import get_current_user
 from app.services import supabase_service as svc
+from app.services.profile_requirements import has_required_profile
 from app.services.entitlements import resolve_user_entitlements
 from app.services.assignment_service import AssignmentService
 from app.utils.roles import normalize_global_role as _normalize_role, as_bool as _as_bool
@@ -90,14 +91,9 @@ async def _resolve_onboarding_state(user_id: str, current_user: dict) -> Dict[st
 
     role = _normalize_role(current_user.get("global_role"), current_user.get("role"))
     onboarding_completed = _as_bool(profile.get("onboarding_complete") or current_user.get("onboarding_completed"))
-    requires_onboarding = role == "end_user" and not onboarding_completed
-
-    has_profile_basics = bool(
-        profile.get("height_cm")
-        or profile.get("weight_kg")
-        or profile.get("prior_diagnoses")
-        or (isinstance(profile.get("goals"), list) and len(profile.get("goals")) > 0)
-    )
+    has_profile_basics = has_required_profile(profile)
+    account_setup_complete = onboarding_completed and has_profile_basics
+    requires_onboarding = role == "end_user" and not account_setup_complete
     has_location = bool(location.get("city") or location.get("state") or location.get("country") or location.get("district"))
 
     sb = svc._get_supabase()
@@ -178,7 +174,7 @@ async def _resolve_onboarding_state(user_id: str, current_user: dict) -> Dict[st
         "complaints": has_complaints,
         "first_upload": has_upload,
         "questionnaire_completed": has_questionnaire,
-        "onboarding_complete": onboarding_completed,
+        "onboarding_complete": account_setup_complete,
     }
     done_count = sum(1 for value in checklist.values() if value)
     pct = 100 if not requires_onboarding else round((done_count / len(checklist)) * 100)

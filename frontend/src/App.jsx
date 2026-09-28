@@ -67,7 +67,7 @@ const HealthProfile = lazy(() => import('./pages/HealthProfile.jsx'))
 const Subscription = lazy(() => import('./pages/Subscription.jsx'))
 const BillingHistory = lazy(() => import('./pages/BillingHistory.jsx'))
 const Onboarding = lazy(() => import('./pages/Onboarding.jsx'))
-const Questionnaire = lazy(() => import('./pages/Questionnaire.jsx'))
+const Questionnaire = lazy(() => import('./pages/SymptomCheck.jsx'))
 const UserCabinetLayout = lazy(() => import('./components/dashboard/UserCabinetLayout.jsx'))
 
 // CRM pages — lazy (role-gated, not on main user path)
@@ -862,12 +862,12 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<RegisterRedirect />} />
           <Route path="/auth/confirmation" element={<EmailConfirmation />} />
-          <Route path="/dashboard" element={renderCabinetRoute(<UserDashboard />, { allowBeforeOnboarding: true })} />
+          <Route path="/dashboard" element={renderCabinetRoute(<UserDashboard />)} />
           <Route path="/today" element={<Navigate to="/dashboard" replace />} />
           <Route path="/symptom-check" element={<Navigate to="/questionnaire" replace />} />
           <Route path="/results-trends" element={<Navigate to="/lab-results" replace />} />
-          <Route path="/upload" element={renderCabinetRoute(<Upload />, { allowBeforeOnboarding: true })} />
-          <Route path="/lab-plan" element={renderCabinetRoute(<LabPlan />, { allowBeforeOnboarding: true })} />
+          <Route path="/upload" element={renderCabinetRoute(<Upload />)} />
+          <Route path="/lab-plan" element={renderCabinetRoute(<LabPlan />)} />
           <Route path="/results/:uploadId" element={renderCabinetRoute(<Results />)} />
           <Route path="/protocol/:uploadId" element={renderCabinetRoute(<ProtocolPage />)} />
           <Route path="/avatar" element={<Navigate to="/dashboard" replace />} />
@@ -888,13 +888,13 @@ export default function App() {
               reason. */}
           <Route path="/assignments" element={<Navigate to="/dashboard" replace />} />
           <Route path="/assignments/:assignmentId" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />, { allowBeforeOnboarding: true })} />
-          <Route path="/account" element={renderCabinetRoute(<Settings />, { allowBeforeOnboarding: true })} />
+          <Route path="/lab-results" element={renderCabinetRoute(<LabResultsList />)} />
+          <Route path="/account" element={renderCabinetRoute(<Settings />)} />
           <Route path="/settings" element={<Navigate to="/account" replace />} />
-          <Route path="/health-profile" element={renderCabinetRoute(<HealthProfile />, { allowBeforeOnboarding: true })} />
-          <Route path="/subscription" element={renderCabinetRoute(<Subscription />, { allowBeforeOnboarding: true })} />
-          <Route path="/billing-history" element={renderCabinetRoute(<BillingHistory />, { allowBeforeOnboarding: true })} />
-          <Route path="/help-center" element={renderCabinetRoute(<Help embedded basePath="/help-center" />, { allowBeforeOnboarding: true })} />
+          <Route path="/health-profile" element={renderCabinetRoute(<HealthProfile />)} />
+          <Route path="/subscription" element={renderCabinetRoute(<Subscription />)} />
+          <Route path="/billing-history" element={renderCabinetRoute(<BillingHistory />)} />
+          <Route path="/help-center" element={renderCabinetRoute(<Help embedded basePath="/help-center" />)} />
           <Route path="/admin" element={<ProtectedRoute><CRMRoute needsOps><Navigate to="/ops" replace /></CRMRoute></ProtectedRoute>} />
           <Route path="/ops" element={<ProtectedRoute><CRMRoute needsOps><OpsDashboard /></CRMRoute></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<ProtectedRoute><CRMRoute><OpsDashboard /></CRMRoute></ProtectedRoute>} />
@@ -904,16 +904,13 @@ export default function App() {
           <Route path="/crm/practitioners" element={<ProtectedRoute><CRMRoute><CRMPractitioners /></CRMRoute></ProtectedRoute>} />
           <Route path="/crm/activity" element={<ProtectedRoute><CRMRoute><CRMAuditLog /></CRMRoute></ProtectedRoute>} />
           <Route path="/onboarding" element={renderCabinetRoute(<Onboarding />, { allowBeforeOnboarding: true })} />
-          <Route path="/questionnaire" element={renderCabinetRoute(<Questionnaire />, { allowBeforeOnboarding: true })} />
+          <Route path="/questionnaire" element={renderCabinetRoute(<Questionnaire />)} />
           <Route path="/insights" element={renderCabinetRoute(<Insights />)} />
-          {/* Legacy route redirects */}
-          {/* Structural merge: /check-ins and /questionnaire became one page
-              (Questionnaire.jsx now has an 'intake'/'pulse' mode instead of
-              two separate wizards) — both old URLs keep working as redirects
-              rather than breaking bookmarks, the sidebar's former Check-in
-              link, and the dashboard's "complete check-in" CTA. */}
+          {/* Legacy check-in URLs currently lead to the structured symptom flow.
+              The old mixed free-text questionnaire remains outside the active
+              route while the server-owned three-stage flow is validated. */}
           <Route path="/check-ins" element={<Navigate to="/questionnaire" replace />} />
-          <Route path="/checkin" element={<Navigate to="/questionnaire" replace />} />
+          <Route path="/checkin" element={<Navigate to="/check-ins" replace />} />
           <Route path="/timeline" element={<Navigate to="/insights" replace />} />
           <Route path="/dashboard-legacy" element={<Navigate to="/dashboard" replace />} />
           <Route path="/ops/legacy" element={<Navigate to="/ops" replace />} />

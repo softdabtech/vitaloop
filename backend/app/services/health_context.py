@@ -93,12 +93,52 @@ def _symptom_context_summary(symptom_context: Dict[str, Any] | None) -> Dict[str
     }
 
 
+def _symptom_snapshot_summary(symptom_snapshot: Dict[str, Any] | None) -> Dict[str, Any]:
+    """Expose structured choices without provider identifiers or predictions."""
+    snapshot = symptom_snapshot if isinstance(symptom_snapshot, dict) else {}
+    if not snapshot:
+        return {"present": False, "version": None, "evidence": {}}
+
+    raw_evidence = snapshot.get("evidence")
+    raw_evidence = raw_evidence if isinstance(raw_evidence, dict) else {}
+    evidence: Dict[str, Any] = {}
+    for choice in ("present", "absent", "unknown"):
+        items = []
+        for item in raw_evidence.get(choice) or []:
+            if not isinstance(item, dict):
+                continue
+            items.append(
+                {
+                    "vitaloop_concept_id": item.get("vitaloop_concept_id"),
+                    "display_name_en": item.get("display_name_en"),
+                    "concept_type": item.get("concept_type"),
+                    "is_primary": bool(item.get("is_primary")),
+                    "domain_keys": list(item.get("domain_keys") or []),
+                }
+            )
+        evidence[choice] = {"count": len(items), "items": items}
+
+    safety = snapshot.get("safety") if isinstance(snapshot.get("safety"), dict) else {}
+    return {
+        "present": True,
+        "version": snapshot.get("version"),
+        "session_id": snapshot.get("session_id"),
+        "questionnaire_version": snapshot.get("questionnaire_version"),
+        "overall_wellbeing": snapshot.get("overall_wellbeing"),
+        "duration_bucket": snapshot.get("duration_bucket"),
+        "evidence": evidence,
+        "safety": {"final_level": safety.get("final_level")},
+        "completed_at": snapshot.get("completed_at"),
+    }
+
+
 def build_health_context(
     *,
     biomarkers: List[Dict[str, Any]],
     symptoms: List[str] | None = None,
     questionnaire: Dict[str, Any] | None = None,
     symptom_context: Dict[str, Any] | None = None,
+    symptom_snapshot: Dict[str, Any] | None = None,
     user_profile: Dict[str, Any] | None = None,
     source_metadata: Dict[str, Any] | None = None,
     locale: str = "en",
@@ -108,6 +148,18 @@ def build_health_context(
     normalized_symptoms = _clean_list(symptoms, limit=100)
     person_avatar = build_deidentified_person_avatar(profile)
     safety_context = build_deidentified_safety_context(profile)
+    readiness = {
+        "has_biomarkers": bool(biomarkers),
+        "has_symptoms": bool(normalized_symptoms),
+        "has_questionnaire": bool(questionnaire),
+        "has_symptom_context": bool(symptom_context),
+        "has_profile": bool(profile),
+        "has_safety_context": bool(safety_context),
+    }
+    # Preserve the established response shape for reports created without a
+    # structured interview; add the new capability flag only when applicable.
+    if symptom_snapshot:
+        readiness["has_symptom_snapshot"] = True
 
     return {
         "version": HEALTH_CONTEXT_VERSION,
@@ -121,6 +173,7 @@ def build_health_context(
             },
             "questionnaire": _questionnaire_summary(questionnaire),
             "symptom_context": _symptom_context_summary(symptom_context),
+            "symptom_snapshot": _symptom_snapshot_summary(symptom_snapshot),
             "profile": {
                 "present": bool(profile),
                 "fields": _present_fields(profile),
@@ -133,14 +186,7 @@ def build_health_context(
             "api_version": source.get("api_version"),
             "partner_present": bool(source.get("partner_id") or source.get("partner_name")),
         },
-        "readiness": {
-            "has_biomarkers": bool(biomarkers),
-            "has_symptoms": bool(normalized_symptoms),
-            "has_questionnaire": bool(questionnaire),
-            "has_symptom_context": bool(symptom_context),
-            "has_profile": bool(profile),
-            "has_safety_context": bool(safety_context),
-        },
+        "readiness": readiness,
     }
 
 

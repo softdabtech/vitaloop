@@ -87,6 +87,7 @@ api.interceptors.response.use(
       '/timeline',
       '/insights',
       '/assignments',
+      '/symptom-check',
     ].some((path) => requestUrl.includes(path))
 
     const resolveMessage = () => {

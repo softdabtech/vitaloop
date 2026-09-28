@@ -1,0 +1,230 @@
+from __future__ import annotations
+
+from copy import deepcopy
+
+import pytest
+
+from app.services import lab_analysis_pipeline
+from app.services.health_context import build_health_context
+from app.services.report_history import assemble_frozen_response
+from app.services.symptom_snapshot import (
+    SYMPTOM_SNAPSHOT_VERSION,
+    build_symptom_snapshot,
+    public_symptom_snapshot,
+    should_load_symptom_snapshot,
+    symptoms_from_snapshot,
+)
+
+
+def _session(**overrides):
+    value = {
+        "id": "session-1",
+        "status": "completed",
+        "questionnaire_version": "symptom_check_v3",
+        "provider": "infermedica_engine",
+        "provider_model": "infermedica-en",
+        "provider_model_version": "2026-09",
+        "root_concern_id": "fatigue_low_energy",
+        "primary_concept_id": "fatigue",
+        "primary_provider_concept_id": "s_001",
+        "overall_wellbeing": "reduced",
+        "duration_bucket": "weeks_1_4",
+        "provider_triage_level": "consultation",
+        "provider_triage_root_cause": "consultation_condition_likely",
+        "internal_safety_level": "routine",
+        "provider_safety_level": "clinician_review",
+        "final_safety_level": "clinician_review",
+        "completed_at": "2026-09-28T07:20:00Z",
+    }
+    value.update(overrides)
+    return value
+
+
+def _evidence():
+    return [
+        {
+            "vitaloop_concept_id": "fatigue",
+            "provider_concept_id": "s_001",
+            "display_name_en": "Fatigue",
+            "concept_type": "symptom",
+            "choice_id": "present",
+            "source": "initial",
+            "is_primary": True,
+            "domain_keys": ["recovery_energy"],
+            "provider_payload": {"must": "never be copied"},
+        },
+        {
+            "vitaloop_concept_id": "fever",
+            "provider_concept_id": "s_002",
+            "display_name_en": "Fever",
+            "concept_type": "symptom",
+            "choice_id": "absent",
+            "source": "diagnosis",
+            "is_primary": False,
+            "domain_keys": ["inflammation"],
+        },
+        {
+            "vitaloop_concept_id": "dizziness",
+            "provider_concept_id": "s_003",
+            "display_name_en": "Dizziness",
+            "concept_type": "symptom",
+            "choice_id": "unknown",
+            "source": "diagnosis",
+            "is_primary": False,
+            "domain_keys": ["cardiovascular"],
+        },
+    ]
+
+
+def test_snapshot_requires_completed_session_and_copies_allowlisted_facts():
+    assert build_symptom_snapshot(session=_session(status="active"), evidence=_evidence()) is None
+
+    rows = _evidence()
+    snapshot = build_symptom_snapshot(session=_session(), evidence=rows)
+    assert snapshot["version"] == SYMPTOM_SNAPSHOT_VERSION
+    assert [item["vitaloop_concept_id"] for item in snapshot["evidence"]["present"]] == ["fatigue"]
+    assert [item["vitaloop_concept_id"] for item in snapshot["evidence"]["absent"]] == ["fever"]
+    assert [item["vitaloop_concept_id"] for item in snapshot["evidence"]["unknown"]] == ["dizziness"]
+    assert "provider_payload" not in snapshot["evidence"]["present"][0]
+    rows[0]["display_name_en"] = "Changed later"
+    assert snapshot["evidence"]["present"][0]["display_name_en"] == "Fatigue"
+
+
+def test_legacy_bridge_uses_present_canonical_en_only():
+    snapshot = build_symptom_snapshot(session=_session(), evidence=_evidence())
+    assert symptoms_from_snapshot(snapshot) == ["Fatigue"]
+
+
+def test_public_projection_removes_provider_concept_and_model_ids():
+    snapshot = build_symptom_snapshot(session=_session(), evidence=_evidence())
+    public = public_symptom_snapshot(snapshot)
+    assert "provider_model" not in public
+    assert "provider_model_version" not in public
+    assert "provider_concept_id" not in public["primary_concern"]
+    assert all(
+        "provider_concept_id" not in item
+        for group in public["evidence"].values()
+        for item in group
+    )
+    assert snapshot["primary_concern"]["provider_concept_id"] == "s_001"
+
+
+def test_health_context_keeps_present_absent_unknown_separate():
+    snapshot = build_symptom_snapshot(session=_session(), evidence=_evidence())
+    context = build_health_context(biomarkers=[], symptom_snapshot=snapshot)
+    summary = context["inputs"]["symptom_snapshot"]
+    assert context["readiness"]["has_symptom_snapshot"] is True
+    assert summary["evidence"]["present"]["count"] == 1
+    assert summary["evidence"]["absent"]["count"] == 1
+    assert summary["evidence"]["unknown"]["count"] == 1
+    assert "provider_concept_id" not in str(summary)
+
+
+def test_health_state_prefers_exact_approved_domain_links_and_ignores_absent_unknown():
+    from app.services.health_state_engine import evaluate_health_states
+
+    snapshot = build_symptom_snapshot(session=_session(), evidence=_evidence())
+    context = build_health_context(biomarkers=[], symptom_snapshot=snapshot)
+    states = evaluate_health_states(
+        biomarkers=[],
+        symptoms=[],
+        health_context=context,
+        domain_definitions=[
+            {
+                "key": "recovery_energy",
+                "label": "Recovery",
+                "marker_aliases": [],
+                "symptom_aliases": ["label-that-does-not-match"],
+                "required_markers": [],
+                "registry_version": "test",
+            },
+            {
+                "key": "inflammation",
+                "label": "Inflammation",
+                "marker_aliases": [],
+                "symptom_aliases": [],
+                "required_markers": [],
+                "registry_version": "test",
+            },
+            {
+                "key": "cardiovascular",
+                "label": "Cardiovascular",
+                "marker_aliases": [],
+                "symptom_aliases": [],
+                "required_markers": [],
+                "registry_version": "test",
+            },
+        ],
+    )["states"]
+    by_domain = {item["domain"]: item for item in states}
+    assert by_domain["recovery_energy"]["symptom_signals"] == ["fatigue"]
+    assert by_domain["recovery_energy"]["risk_level"] != "unknown"
+    assert by_domain["inflammation"]["symptom_signals"] == []
+    assert by_domain["inflammation"]["risk_level"] == "unknown"
+    assert by_domain["cardiovascular"]["symptom_signals"] == []
+    assert by_domain["cardiovascular"]["risk_level"] == "unknown"
+
+
+@pytest.mark.asyncio
+async def test_b2c_pipeline_autoloads_snapshot_and_adds_only_present_to_legacy_symptoms(monkeypatch):
+    snapshot = build_symptom_snapshot(session=_session(), evidence=_evidence())
+    original = deepcopy(snapshot)
+
+    async def fake_load(user_id):
+        assert user_id == "user-1"
+        return snapshot
+
+    monkeypatch.setattr(lab_analysis_pipeline, "load_latest_eligible_symptom_snapshot", fake_load)
+    result = await lab_analysis_pipeline.run_lab_analysis_pipeline(
+        biomarkers=[],
+        user_id="user-1",
+        source_metadata={"source": "b2c_file"},
+    )
+    assert result["analysis_status"] == "needs_confirmation"
+    assert result["metadata"]["symptom_snapshot_present"] is True
+    assert result["health_context"]["inputs"]["symptoms"]["items"] == ["fatigue"]
+    assert "fever" not in result["health_context"]["inputs"]["symptoms"]["items"]
+    assert result["symptom_snapshot"]["evidence"]["unknown"][0]["display_name_en"] == "Dizziness"
+    assert snapshot == original
+
+
+def test_snapshot_loading_scope_covers_all_current_b2c_paths_not_b2b():
+    sources = {
+        "b2c_file",
+        "b2c_text",
+        "b2c_manual",
+        "legacy_multipart_pdf",
+        "candidate_quality_review",
+        "candidate_confirmation",
+        "results_read",
+        "report_regeneration",
+        "results_compatibility",
+    }
+    assert all(should_load_symptom_snapshot({"source": source}) for source in sources)
+    assert not should_load_symptom_snapshot({"source": "b2b_api"})
+
+
+def test_frozen_response_serves_original_snapshot_and_redacts_provider_ids():
+    snapshot = build_symptom_snapshot(session=_session(), evidence=_evidence())
+    report_version = {
+        "id": "report-1",
+        "status": "completed",
+        "input_snapshot": {"symptom_snapshot": snapshot},
+        "knowledge_report": {},
+        "protocol": {},
+        "safety_result": {},
+        "explainability": {},
+    }
+    response = assemble_frozen_response(
+        upload_id="upload-1",
+        biomarkers=[],
+        protocol_recommendations=[],
+        report_version=report_version,
+        user_profile={},
+        locale="en",
+    )
+    served = response["symptom_snapshot"]
+    assert served["session_id"] == "session-1"
+    assert "provider_concept_id" not in str(served)
+    assert "provider_concept_id" not in str(response["report_version"]["input_snapshot"]["symptom_snapshot"])
+    assert report_version["input_snapshot"]["symptom_snapshot"]["primary_concern"]["provider_concept_id"] == "s_001"

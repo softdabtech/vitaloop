@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 from datetime import date, datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
 import logging
@@ -33,6 +34,14 @@ from app.services.cost_analytics import record_analysis_cost
 from app.services.evidence_gaps import build_evidence_gaps
 from app.services.explainability import build_recommendation_explanations
 from app.services.health_context import build_health_context
+from app.services.symptom_snapshot import (
+    load_latest_eligible_symptom_snapshot,
+    public_symptom_snapshot,
+    redact_report_version_symptom_snapshot,
+    should_load_symptom_snapshot,
+    symptoms_from_snapshot,
+)
+from app.services.symptom_metrics import record_lab_analysis_snapshot
 from app.services.health_state_engine import evaluate_health_states
 from app.services.knowledge.domain_registry import DOMAIN_REGISTRY_VERSION, resolve_domain_definitions
 from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
@@ -808,6 +817,7 @@ async def run_lab_analysis_pipeline(
     symptoms: Optional[List[str]] = None,
     questionnaire: Optional[Dict[str, Any]] = None,
     symptom_context: Optional[Dict[str, Any]] = None,
+    symptom_snapshot: Optional[Dict[str, Any]] = None,
     user_profile: Optional[Dict[str, Any]] = None,
     user_id: Optional[str] = None,
     analysis_id: Optional[str] = None,
@@ -819,6 +829,22 @@ async def run_lab_analysis_pipeline(
     biomarker_name_aliases: Optional[Dict[str, str]] = None,
     generate_ai_protocol: bool = True,
 ) -> Dict[str, Any]:
+    # Capture the newest completed interview at analysis-generation time. The
+    # detached value below is persisted into this report version and is never
+    # reloaded when the frozen report is read later.
+    if symptom_snapshot is None and user_id and should_load_symptom_snapshot(source_metadata):
+        try:
+            symptom_snapshot = await load_latest_eligible_symptom_snapshot(user_id)
+        except RuntimeError as exc:
+            # Pure unit/offline callers historically run the pipeline without
+            # any Supabase configuration. Only that configuration absence is
+            # optional; failures from a configured database still propagate so
+            # an available clinical snapshot cannot be silently dropped.
+            if "Supabase is not configured" not in str(exc):
+                raise
+            symptom_snapshot = None
+    symptom_snapshot = deepcopy(symptom_snapshot) if isinstance(symptom_snapshot, dict) else None
+
     # Extract sex and age from user_profile for sex/age-specific reference ranges
     user_sex = None
     user_age = None
@@ -847,12 +873,19 @@ async def run_lab_analysis_pipeline(
         source_metadata=source_metadata,
         user_profile=user_profile,
     )
-    normalized_symptoms = [str(item).strip().lower() for item in (symptoms or []) if str(item).strip()]
+    normalized_symptoms: List[str] = []
+    seen_symptoms: set[str] = set()
+    for item in [*(symptoms or []), *symptoms_from_snapshot(symptom_snapshot)]:
+        normalized = str(item).strip().lower()
+        if normalized and normalized not in seen_symptoms:
+            seen_symptoms.add(normalized)
+            normalized_symptoms.append(normalized)
     health_context = build_health_context(
         biomarkers=normalized_biomarkers,
         symptoms=normalized_symptoms,
         questionnaire=questionnaire,
         symptom_context=symptom_context,
+        symptom_snapshot=symptom_snapshot,
         user_profile=user_profile,
         source_metadata=source_metadata,
         locale=locale,
@@ -885,10 +918,12 @@ async def run_lab_analysis_pipeline(
             "normalized_biomarkers": normalized_biomarkers,
             "clinical_data_integrity": clinical_integrity,
             "health_context": health_context,
+            "symptom_snapshot": public_symptom_snapshot(symptom_snapshot),
             "analysis_input_quality_gate": analysis_input_quality_gate,
             "metadata": {
                 "source": source_metadata or {},
                 "questionnaire_present": bool(questionnaire),
+                "symptom_snapshot_present": bool(symptom_snapshot),
                 "profile_present": bool(user_profile),
                 "biomarker_count": len(normalized_biomarkers),
                 "analysis_core_version": LAB_ANALYSIS_PIPELINE_VERSION,
@@ -1614,9 +1649,11 @@ async def run_lab_analysis_pipeline(
         "cost_metadata": cost_metadata,
         "quality_snapshot": quality_snapshot,
         "health_context": health_context,
+        "symptom_snapshot": public_symptom_snapshot(symptom_snapshot),
         "metadata": {
             "source": source_metadata or {},
             "questionnaire_present": bool(questionnaire),
+            "symptom_snapshot_present": bool(symptom_snapshot),
             "profile_present": bool(user_profile),
             "profile_context_fields": sorted([key for key, value in (user_profile or {}).items() if value not in (None, "", [])]),
             "health_context_version": health_context.get("version"),
@@ -1642,6 +1679,7 @@ async def run_lab_analysis_pipeline(
                 input_snapshot={
                     "biomarkers": normalized_biomarkers,
                     "symptoms": normalized_symptoms,
+                    "symptom_snapshot": deepcopy(symptom_snapshot),
                     "profile_context_fields": result["metadata"]["profile_context_fields"],
                     "source": source_metadata or {},
                     "health_context": health_context,
@@ -1702,7 +1740,11 @@ async def run_lab_analysis_pipeline(
                 interpreted_report=interpreted_report,
                 status="completed" if safety_result.get("status") != "blocked" else "blocked",
             )
-            result["report_version"] = report_version
+            record_lab_analysis_snapshot(
+                source=str((source_metadata or {}).get("source") or "unknown"),
+                snapshot=symptom_snapshot,
+            )
+            result["report_version"] = redact_report_version_symptom_snapshot(report_version)
             await supabase.save_safety_events(
                 user_id=user_id,
                 upload_id=analysis_id,

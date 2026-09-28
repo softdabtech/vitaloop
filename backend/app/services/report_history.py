@@ -56,6 +56,10 @@ from app.services.safety import (
     sanitize_safety_result_for_output,
 )
 from app.services.safety.safety_engine import blocked_content_notice
+from app.services.symptom_snapshot import (
+    public_symptom_snapshot,
+    redact_report_version_symptom_snapshot,
+)
 
 REPORT_SOURCE_FROZEN = "frozen"
 REPORT_SOURCE_REGENERATED = "regenerated"
@@ -143,13 +147,13 @@ def assemble_frozen_response(
     sanitized_input_snapshot = sanitize_safety_result_for_output(report_version.get("input_snapshot"), locale=locale)
     sanitized_explainability = sanitize_safety_result_for_output(report_version.get("explainability"), locale=locale)
 
-    sanitized_report_version = {
+    sanitized_report_version = redact_report_version_symptom_snapshot({
         **report_version,
         "knowledge_report": sanitized_knowledge_report,
         "protocol": frozen_protocol_snapshot,
         "input_snapshot": sanitized_input_snapshot,
         "explainability": sanitized_explainability,
-    }
+    })
 
     is_blocked = str(report_version.get("status") or "").lower() == "blocked"
     input_snapshot = sanitized_input_snapshot
@@ -169,6 +173,7 @@ def assemble_frozen_response(
         "analysis_input_quality_gate": input_snapshot.get("analysis_input_quality_gate"),
         "clinical_data_integrity": input_snapshot.get("clinical_data_integrity"),
         "evidence_gaps": input_snapshot.get("evidence_gaps"),
+        "symptom_snapshot": public_symptom_snapshot(input_snapshot.get("symptom_snapshot")),
         # Follow-up on 2026-09-12 audit items #2/#3/#6: same frozen-verbatim
         # treatment as evidence_gaps directly above — persisted into
         # input_snapshot at generation time by lab_analysis_pipeline.py, not

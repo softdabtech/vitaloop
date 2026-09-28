@@ -68,6 +68,7 @@ from app.services.report_history import (
     assemble_frozen_response,
     is_frozen_report_version,
 )
+from app.services.profile_requirements import missing_required_profile_fields
 from app.utils.locale import resolve_locale
 
 router = APIRouter()
@@ -89,7 +90,6 @@ _ANALYSIS_PROFILE_REQUIRED_EN = (
     "Complete age, sex, height, and weight before analysis. "
     "This is required to distinguish pediatric and adult context and avoid unsafe recommendations."
 )
-_REQUIRED_ANALYSIS_PROFILE_FIELDS = ("age", "sex", "height_cm", "weight_kg")
 
 _analyze_idempotency: dict[tuple[str, str], dict] = {}
 _analyze_idempotency_lock = asyncio.Lock()
@@ -215,7 +215,7 @@ def _stable_analysis_source(default: str = "fallback") -> str:
 
 
 def _missing_analysis_profile_fields(profile: Dict[str, Any]) -> List[str]:
-    return [field for field in _REQUIRED_ANALYSIS_PROFILE_FIELDS if not profile.get(field)]
+    return missing_required_profile_fields(profile)
 
 
 async def _require_analysis_profile_context(user_id: str, locale: str) -> Dict[str, Any]:

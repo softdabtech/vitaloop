@@ -114,6 +114,21 @@ if [[ -f ".env.production" ]]; then
     echo ""
 fi
 
+# 8. Symptom-engine rollout gate. Disabled-by-default deployments pass;
+# any enabled rollout fails closed unless all recorded gates are present.
+log_info "Checking symptom-engine rollout readiness..."
+BACKEND_PYTHON="${BACKEND_PYTHON:-backend/.venv/bin/python}"
+if [[ ! -x "$BACKEND_PYTHON" ]]; then
+    BACKEND_PYTHON="python3"
+fi
+if PYTHONPATH=backend "$BACKEND_PYTHON" backend/scripts/check_symptom_rollout_readiness.py --target auto >/tmp/vitaloop-symptom-rollout-readiness.json; then
+    log_info "✓ Symptom-engine rollout gate passed"
+else
+    log_error "Symptom-engine rollout gate failed:"
+    cat /tmp/vitaloop-symptom-rollout-readiness.json >&2 || true
+fi
+echo ""
+
 # Final summary
 echo "=== Summary ==="
 if [[ $ERRORS -eq 0 ]]; then
