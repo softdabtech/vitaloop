@@ -11,10 +11,16 @@ from app.services.symptom_snapshot import (
     SYMPTOM_SNAPSHOT_VERSION,
     build_symptom_snapshot,
     build_legacy_questionnaire_snapshot,
+    load_latest_eligible_symptom_snapshot,
     public_symptom_snapshot,
     should_load_symptom_snapshot,
     symptoms_from_snapshot,
 )
+
+
+class _Response:
+    def __init__(self, data):
+        self.data = data
 
 
 def _session(**overrides):
@@ -115,6 +121,43 @@ def test_controlled_questionnaire_becomes_full_immutable_snapshot():
         "severity": 6, "trajectory": "stable", "functional_impact": "mild",
         "domain_detail": "absent", "urgent_warning": "absent",
     }
+
+
+@pytest.mark.asyncio
+async def test_loader_falls_back_when_optional_provider_table_is_not_deployed(monkeypatch):
+    legacy = {
+        "id": "legacy-1", "status": "completed", "completed_at": "2026-09-29T08:00:00Z",
+        "model_version": "v2", "session_metadata": {
+            "active_concern": "Fatigue",
+            "summary": {"primary_signal": "Fatigue", "severity": 6},
+        },
+    }
+    calls = 0
+
+    async def fake_run(operation):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError(
+                "{'code': 'PGRST205', 'message': \"Could not find the table "
+                "'public.symptom_check_sessions' in the schema cache\"}"
+            )
+        return _Response([legacy])
+
+    class _Query:
+        def __getattr__(self, _name):
+            return lambda *_args, **_kwargs: self
+
+    class _Supabase:
+        def table(self, _name):
+            return _Query()
+
+    monkeypatch.setattr("app.services.symptom_snapshot.svc._get_supabase", lambda: _Supabase())
+    monkeypatch.setattr("app.services.symptom_snapshot.svc._run", fake_run)
+
+    snapshot = await load_latest_eligible_symptom_snapshot("user-1")
+    assert snapshot["session_id"] == "legacy-1"
+    assert symptoms_from_snapshot(snapshot) == ["Fatigue"]
 
 
 def test_legacy_bridge_uses_present_canonical_en_only():

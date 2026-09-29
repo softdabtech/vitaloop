@@ -167,15 +167,26 @@ def build_legacy_questionnaire_snapshot(session: dict[str, Any]) -> dict[str, An
 async def load_latest_eligible_symptom_snapshot(user_id: str) -> dict[str, Any] | None:
     """Load the newest completed interview owned by ``user_id``."""
     supabase = svc._get_supabase()
-    response = await svc._run(
-        lambda: supabase.table("symptom_check_sessions")
-        .select("*")
-        .eq("user_id", user_id)
-        .eq("status", "completed")
-        .order("completed_at", desc=True)
-        .limit(1)
-        .execute()
-    )
+    # The provider-backed symptom tables are optional while the controlled
+    # questionnaire is the production fallback.  A deployment with
+    # INFERMEDICA_ENABLED=false must therefore keep report generation working
+    # even before those optional migrations have been applied.
+    try:
+        response = await svc._run(
+            lambda: supabase.table("symptom_check_sessions")
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("status", "completed")
+            .order("completed_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        provider_session = (response.data or [None])[0]
+    except Exception as exc:
+        message = str(exc)
+        if "PGRST205" not in message or "symptom_check_sessions" not in message:
+            raise
+        provider_session = None
     legacy_response = await svc._run(
         lambda: supabase.table("questionnaire_sessions")
         .select("*")
@@ -186,7 +197,6 @@ async def load_latest_eligible_symptom_snapshot(user_id: str) -> dict[str, Any] 
         .execute()
     )
     legacy_session = (legacy_response.data or [None])[0]
-    provider_session = (response.data or [None])[0]
     if not provider_session:
         return build_legacy_questionnaire_snapshot(legacy_session) if legacy_session else None
     if legacy_session:
