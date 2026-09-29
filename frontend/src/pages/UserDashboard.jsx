@@ -1002,6 +1002,21 @@ export default function UserDashboard() {
   const sessionContext = questionnaireSession?.session_context || questionnaireSession?.session?.session_metadata || {}
   const concern = sessionContext?.active_concern || ''
   const concernSummary = sessionContext?.summary || null
+  const legacyRelatedSymptoms = Array.isArray(concernSummary?.related_symptoms)
+    ? concernSummary.related_symptoms
+    : Array.isArray(concernSummary?.relatedSymptoms)
+      ? concernSummary.relatedSymptoms
+      : String(concernSummary?.related_symptoms || concernSummary?.relatedSymptoms || '').split(',').map((item) => item.trim()).filter(Boolean)
+  const primarySymptomSignal = concernSummary?.primary_signal || legacyRelatedSymptoms[0] || concern || null
+  const symptomContext = concernSummary ? {
+    ...concernSummary,
+    primary_signal: primarySymptomSignal,
+    related_symptoms: legacyRelatedSymptoms.filter((item) => item !== primarySymptomSignal),
+    duration_bucket: concernSummary.duration_bucket || concernSummary.duration,
+    overall_wellbeing: concernSummary.overall_wellbeing || concernSummary.overallWellbeing,
+    symptom_pattern: concernSummary.symptom_pattern || concernSummary.symptomPattern,
+    functional_impact: concernSummary.functional_impact || concernSummary.functionalImpact,
+  } : null
   const hasConcern = Boolean(concern)
   const safetyText = concernSummary?.urgency || null
   const safetyTone = classifySafetyTone(safetyText)
@@ -1074,7 +1089,7 @@ export default function UserDashboard() {
             cockpit={cockpit}
             copy={copy}
             navigate={navigate}
-            symptomContext={concernSummary}
+            symptomContext={symptomContext}
             symptomSessionId={questionnaireSession?.session?.id}
             reportSymptomSnapshot={reportDetails?.symptom_snapshot}
           />

@@ -597,6 +597,26 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByText('Included in the current lab report analysis')).toBeVisible()
   })
 
+  test('legacy symptom answers are normalized into the same dashboard context card', async ({ page }) => {
+    await mockToday(page, {
+      today_contract: contractReady(),
+      latestQuestionnaireCompletedAt: '2026-09-11T13:12:54Z',
+      questionnaireSummary: {
+        relatedSymptoms: 'Fatigue, Brain fog, Low stamina', duration: '1-3 months',
+        severity: 6, symptomPattern: 'Worse after poor sleep', functionalImpact: 'Affects work or study',
+        urgency: 'No urgent red flags reported.',
+      },
+      questionnaireSessionId: 'qs-legacy-1',
+      results: { symptom_snapshot: { session_id: 'qs-legacy-1' }, biomarkers: [] },
+    })
+    await gotoToday(page)
+    await expect(page.getByText('Latest symptom context', { exact: true })).toBeVisible()
+    await expect(page.getByText('Fatigue', { exact: true })).toBeVisible()
+    await expect(page.getByText('Brain fog, Low stamina', { exact: false })).toBeVisible()
+    await expect(page.getByText('1-3 months')).toBeVisible()
+    await expect(page.getByText('Affects work or study')).toBeVisible()
+  })
+
   test('P37k.2: safety triggered (report + questionnaire) -> This week row 1 is the clinician-review flag, primary CTA', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: true }),
