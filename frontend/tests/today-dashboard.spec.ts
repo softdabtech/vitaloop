@@ -69,6 +69,7 @@ type MockOptions = {
   latestQuestionnaireCompletedAt?: string | null
   questionnaireSummary?: any | null
   questionnaireSessionId?: string
+  latestUpload?: any | null
 }
 
 async function mockToday(page: Page, opts: MockOptions = {}) {
@@ -84,6 +85,7 @@ async function mockToday(page: Page, opts: MockOptions = {}) {
     latestQuestionnaireCompletedAt = null,
     questionnaireSummary = null,
     questionnaireSessionId = 'qs-fixture-1',
+    latestUpload = null,
   } = opts
 
   await page.addInitScript((storageKey) => {
@@ -105,7 +107,10 @@ async function mockToday(page: Page, opts: MockOptions = {}) {
     if (summaryStatus !== 200) return route.fulfill({ status: summaryStatus, contentType: 'application/json', body: JSON.stringify({ detail: 'error' }) })
     return fulfillJson(route, {
       today_contract,
-      blocks: latestQuestionnaireCompletedAt ? { latest_questionnaire: { completed_at: latestQuestionnaireCompletedAt } } : {},
+      blocks: {
+        ...(latestQuestionnaireCompletedAt ? { latest_questionnaire: { completed_at: latestQuestionnaireCompletedAt } } : {}),
+        ...(latestUpload ? { latest_upload: latestUpload, latest_lab_result: latestUpload } : {}),
+      },
     })
   })
 
@@ -164,9 +169,18 @@ test.describe('Today dashboard — P37f fixture QA', () => {
   })
 
   test('5. today_contract.latest_ready_report_status: error -> honest message, not "no reports"', async ({ page }) => {
-    await mockToday(page, { today_contract: contractError() })
+    await mockToday(page, {
+      today_contract: contractError(),
+      questionnaireUrgency: 'Some answers suggest timely clinician review is important.',
+      questionnaireSummary: { primary_signal: 'Fatigue', duration_bucket: 'weeks_1_4', severity: 6 },
+      latestUpload: { test_date: '2026-09-16', biomarkers: [{ name: 'TSH', value: 4.6, unit: 'uIU/mL', status: 'ELEVATED' }] },
+    })
     await gotoToday(page)
     await expect(page.getByText(/temporarily unavailable/i)).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible()
+    await expect(page.getByText('Fatigue', { exact: true })).toBeVisible()
+    await expect(page.getByText('TSH', { exact: true })).toBeVisible()
+    await expect(page.locator('.today-safety')).toHaveCount(0)
     await expect(page.getByRole('heading', { name: /Turn your health data into a clear next step/i })).not.toBeVisible()
   })
 
@@ -236,11 +250,11 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     })
     await gotoToday(page)
     await expect(page.getByText(/Potassium is markedly elevated/i).first()).toBeVisible()
-    await expect(page.getByText(/Source: your report/i)).toBeVisible()
+    await expect(page.locator('.today-safety')).toHaveCount(0)
     await expect(page.getByText(/Source: your symptom check/i)).toHaveCount(0)
   })
 
-  test('11. report safety + questionnaire safety together, separate banners', async ({ page }) => {
+  test('11. report and questionnaire safety remain in structured content without banner duplication', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: false }),
       questionnaireUrgency: 'Some answers suggest timely clinician review is important.',
@@ -249,8 +263,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await gotoToday(page)
     await expect(page.getByText(/Discuss thyroid pattern with a doctor/i).first()).toBeVisible()
     await expect(page.getByText(/Some answers suggest timely clinician review/i)).toBeVisible()
-    await expect(page.getByText(/Source: your report/i)).toBeVisible()
-    await expect(page.getByText(/Source: your symptom check/i)).toBeVisible()
+    await expect(page.locator('.today-safety')).toHaveCount(0)
   })
 
   // P37k.3 rewrite: this test used to assert the pre-cockpit hero rendered
@@ -467,7 +480,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByText(/Lab date: Jan 4, 2022/i)).toBeVisible()
     // P37k.2: very_old chip strengthened from "Saved" to "Old saved report".
     await expect(page.getByText('Old saved report', { exact: true })).toBeVisible() // freshness chip
-    await expect(page.getByText(/Based on outdated labs/i)).toBeVisible()
+    await expect(page.getByText(/Older lab report/i)).toBeVisible()
     // Primary CTA is Upload for a very_old report; the saved plan is still
     // one click away in the Documents footer, never removed.
     await expect(page.getByRole('button', { name: /^Upload new results$/i }).first()).toBeVisible()
@@ -485,7 +498,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     })
     await gotoToday(page)
     await expect(page.getByText('Older', { exact: true })).toBeVisible() // freshness chip
-    await expect(page.getByText(/Based on outdated labs/i)).toBeVisible()
+    await expect(page.getByText(/Older lab report/i)).toBeVisible()
     await expect(page.getByRole('button', { name: /Open my plan/i }).first()).toBeVisible()
   })
 
@@ -516,7 +529,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       results: { biomarkers: [{ name: 'Hemoglobin', value: 14, unit: 'g/dL', ref_low: 12, ref_high: 16 }] },
     })
     await gotoToday(page)
-    await expect(page.getByText(/Based on recent labs/i)).toBeVisible()
+    await expect(page.getByText(/Latest lab report/i)).toBeVisible()
     await expect(page.getByText('Older', { exact: true })).toHaveCount(0)
     await expect(page.getByText('Old saved report', { exact: true })).toHaveCount(0)
     await expect(page.getByText(/Based on outdated labs/i)).toHaveCount(0)
@@ -557,7 +570,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     // Symptom check date is a distinct event/date from the lab date -- both
     // visible, never conflated into one line.
     await expect(page.getByText(/Symptom check: Sep 12, 2026/i)).toBeVisible()
-    await expect(page.getByText(/Based on recent labs/i)).toBeVisible()
+    await expect(page.getByText(/Latest lab report/i)).toBeVisible()
     await expect(page.getByText('This week')).toBeVisible()
     await expect(page.getByText('Increase iron-rich foods')).toBeVisible()
     await expect(page.getByText('Pinned markers')).toBeVisible()
@@ -652,7 +665,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await mockToday(page, { today_contract: contractReady({ planExists: true }), entitlements: DEFAULT_ENTITLEMENTS_PREMIUM, results: {} })
     await gotoToday(page)
     await expect(page.getByText('Incomplete data')).toBeVisible()
-    await expect(page.getByText('No markers flagged')).toBeVisible()
+    await expect(page.getByText('No results need follow-up')).toBeVisible()
     await expect(page.getByText('No retest window listed')).toBeVisible()
     // No "This week"/"Pinned markers" section headers or their empty
     // placeholder copy -- collapsed into the single sparse primary action.
@@ -923,24 +936,18 @@ test.describe('Today dashboard — P37f fixture QA', () => {
 
   // ── P37k.2 (light UI polish) ──────────────────────────────────────────
 
-  test('P37k.2-UI-a: questionnaire safety banner is a clickable/focusable whole card navigating to /questionnaire, with a visible action label', async ({ page }) => {
+  test('P37k.2-UI-a: questionnaire safety is a standard section with an explicit review action, not a warning banner', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady({ planExists: false }),
       questionnaireUrgency: 'Some answers suggest timely clinician review is important.',
       results: {},
     })
     await gotoToday(page)
-    // P37k.2.1: a real <button>, not a div+role="button" -- role/tabindex
-    // come from the browser for free, so assert via getByRole instead of
-    // reading hand-set attributes that no longer exist.
-    const banner = page.getByRole('button', { name: /Some answers suggest timely clinician review is important/i })
-    await expect(banner).toBeVisible()
-    await expect(banner).toHaveJSProperty('tagName', 'BUTTON')
-    await expect(banner.getByText('Review symptom answers →', { exact: true })).toBeVisible()
-    // Source label and warning tone are preserved, not just the new action text.
-    await expect(banner.getByText(/Source: your symptom check/i)).toBeVisible()
-    // Native keyboard activation: focus + Enter, no hand-rolled onKeyDown needed.
-    await banner.focus()
+    await expect(page.locator('.today-safety')).toHaveCount(0)
+    const note = page.getByRole('region', { name: 'Symptom-check safety note' })
+    await expect(note.getByText(/Some answers suggest timely clinician review/i)).toBeVisible()
+    const review = note.getByRole('button', { name: /Review symptom answers/i })
+    await review.focus()
     await page.keyboard.press('Enter')
     await expect(page).toHaveURL(/\/questionnaire/)
   })

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Activity, ArrowRight, CalendarClock, CheckCircle2, ClipboardList, FileUp, HelpCircle, ListChecks, RefreshCw, ShieldAlert, Stethoscope, TrendingUp, UserRound } from 'lucide-react'
+import { Activity, AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, ClipboardList, FileUp, HelpCircle, ListChecks, RefreshCw, ShieldAlert, Stethoscope, TrendingUp, UserRound } from 'lucide-react'
 import { useDashboardSummary, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
 import { useProfile } from '../hooks/useProfile.ts'
 import { useSubscription } from '../hooks/useSubscription.js'
@@ -135,12 +135,12 @@ const TODAY_COPY = {
         freshness: { fresh: 'Recent', old: 'Older', very_old: 'Old saved report' },
       },
       statusStrip: {
-        basisFresh: 'Based on recent labs',
-        basisOld: 'Based on outdated labs',
+        basisFresh: 'Latest lab report',
+        basisOld: 'Older lab report',
         basisIncomplete: 'Incomplete data',
-        priorityCount: (n) => n === 1 ? '1 marker to watch' : `${n} markers to watch`,
-        priorityNone: 'No markers flagged',
-        nextRetestLabel: (marker, timing) => `${marker}: ${timing}`,
+        priorityCount: (n) => n === 1 ? '1 result needs follow-up' : `${n} results need follow-up`,
+        priorityNone: 'No results need follow-up',
+        nextRetestLabel: (marker, timing) => `Repeat ${marker} in ${timing}`,
         nextRetestNone: 'No retest window listed',
       },
       thisWeek: {
@@ -320,12 +320,12 @@ const TODAY_COPY = {
         freshness: { fresh: 'Свіжий', old: 'Старіший', very_old: 'Старий збережений звіт' },
       },
       statusStrip: {
-        basisFresh: 'На основі свіжих аналізів',
-        basisOld: 'На основі застарілих аналізів',
+        basisFresh: 'Останній лабораторний звіт',
+        basisOld: 'Старіший лабораторний звіт',
         basisIncomplete: 'Дані неповні',
-        priorityCount: (n) => n === 1 ? '1 показник потребує уваги' : `${n} показники потребують уваги`,
-        priorityNone: 'Немає позначених показників',
-        nextRetestLabel: (marker, timing) => `${marker}: ${timing}`,
+        priorityCount: (n) => n === 1 ? '1 результат потребує контролю' : `${n} результати потребують контролю`,
+        priorityNone: 'Немає результатів, що потребують контролю',
+        nextRetestLabel: (marker, timing) => `Повторити ${marker} через ${timing}`,
         nextRetestNone: 'Немає вказаного вікна повторного аналізу',
       },
       thisWeek: {
@@ -503,92 +503,44 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
             </span>
           </div>
         </div>
+      </div>
 
-      {/* P38b required visual order, item 1: safety comes first, above
-          current status -- a safety signal outranks everything else on the
-          page. Report-scoped safety and questionnaire safety stay two
-          separate banners, exactly as before -- only an explicit actionTo
-          was added in todayViewModel.js, nothing here merges tone, text, or
-          source between them. */}
-      {(safety.report || safety.questionnaire) && (
-        <div className="today-safety-stack">
-          {safety.report && (
-            <div role="note" className="today-safety" style={{ background: SAFETY_TONE_STYLES[safety.report.tone]?.bg, borderColor: SAFETY_TONE_STYLES[safety.report.tone]?.border }}>
-              <div className="flex items-start gap-2.5">
-                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[safety.report.tone]?.color }} />
-                <div>
-                  <p className="text-sm font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[safety.report.tone]?.color }}>{safety.report.text}</p>
-                  {safety.report.timing && <p className="mt-1 text-sm leading-5" style={{ color: SAFETY_TONE_STYLES[safety.report.tone]?.color }}>{safety.report.timing}</p>}
-                  <button type="button" onClick={() => navigate(safety.report.actionTo)} className="mt-1.5 block text-sm font-bold underline" style={{ color: SAFETY_TONE_STYLES[safety.report.tone]?.color }}>{copy.cta.results}</button>
-                  <p className="today-safety__source mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[safety.report.tone]?.color }}>{safety.report.sourceLabel}</p>
-                </div>
+      <section className="cockpit-section cockpit-report-overview" aria-label="Current report overview" aria-busy={isLoadingContent || undefined}>
+        <div className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />Current report overview</div>
+        <p className="cockpit-section-intro">What the latest report found and the next follow-up step.</p>
+        <div className="cockpit-status-strip">
+          {contentStatus === 'ready' ? (
+            <>
+              <div className={`cockpit-status-cell ${statusCellToneClass('basis', statusStrip, headerContext.reportAge)}`}>
+                <Activity className="h-4 w-4 shrink-0 text-emerald-600" />
+                <span><small>Data source</small>{statusStrip.basisLabel}</span>
               </div>
-            </div>
-          )}
-          {safety.questionnaire && (
-            // P37k.2.1: a real <button> instead of a div+role="button" --
-            // gets keyboard activation (Enter/Space), focus, and semantics
-            // for free from the browser/AT instead of hand-rolled onKeyDown.
-            // Dedicated .today-safety__action-row/.today-safety__content
-            // classes (not Tailwind utility classes) carry the layout so the
-            // CSS media query below never depends on utility-class internals
-            // -- see .today-safety--actionable's own comment in
-            // today-page.css for why that mattered.
-            <button
-              type="button"
-              onClick={() => navigate(safety.questionnaire.actionTo)}
-              className="today-safety today-safety--actionable"
-              style={{ background: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.bg, borderColor: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.border }}
-            >
-              <div className="today-safety__action-row">
-                <div className="today-safety__content">
-                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" style={{ color: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.color }} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold leading-5" style={{ color: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.color }}>{safety.questionnaire.text}</p>
-                    {safety.questionnaire.sourceLabel && <p className="today-safety__source mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-70" style={{ color: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.color }}>{safety.questionnaire.sourceLabel}</p>}
-                  </div>
-                </div>
-                <span className="today-safety__action" style={{ color: SAFETY_TONE_STYLES[safety.questionnaire.tone]?.color }}>{copy.safety.reviewSymptomAnswersAction}</span>
+              <div className={`cockpit-status-cell ${statusCellToneClass('priority', statusStrip, headerContext.reportAge)}`}>
+                <ListChecks className="h-4 w-4 shrink-0 text-emerald-600" />
+                <span><small>Follow-up</small>{statusStrip.priorityLabel}</span>
               </div>
-            </button>
+              <div className={`cockpit-status-cell ${statusCellToneClass('retest', statusStrip, headerContext.reportAge)}`}>
+                <CalendarClock className="h-4 w-4 shrink-0 text-emerald-600" />
+                <span><small>Next check</small>{statusStrip.nextRetestLabel}</span>
+              </div>
+            </>
+          ) : (
+            [0, 1, 2].map((i) => (
+              <div key={i} className="cockpit-status-cell cockpit-status-cell--placeholder">
+                {isLoadingContent ? <span className="cockpit-skeleton-line" /> : <span className="text-slate-400">—</span>}
+              </div>
+            ))
           )}
         </div>
-      )}
+      </section>
 
-      {/* P38b required visual order, item 2: current status. While loading/
-          error, todayViewModel.js's statusStrip values are placeholder text
-          (no reportDetails yet) and would read as false "nothing to report"
-          content if shown -- render skeleton bars instead. On error, a
-          static "—" avoids implying real (if sparse) data was found. Given
-          a stronger surface than the sections below it (see .cockpit-
-          status-cell in today-page.css) so "current state" outranks
-          "archive/detail" at a glance, plus a semantic tone per cell
-          (statusCellToneClass -- purely a color choice over an already-
-          computed value, never a new classification). */}
-      <div className="cockpit-status-strip" aria-busy={isLoadingContent || undefined}>
-        {contentStatus === 'ready' ? (
-          <>
-            <div className={`cockpit-status-cell ${statusCellToneClass('basis', statusStrip, headerContext.reportAge)}`}>
-              <Activity className="h-4 w-4 shrink-0 text-emerald-600" />
-              <span>{statusStrip.basisLabel}</span>
-            </div>
-            <div className={`cockpit-status-cell ${statusCellToneClass('priority', statusStrip, headerContext.reportAge)}`}>
-              <ListChecks className="h-4 w-4 shrink-0 text-emerald-600" />
-              <span>{statusStrip.priorityLabel}</span>
-            </div>
-            <div className={`cockpit-status-cell ${statusCellToneClass('retest', statusStrip, headerContext.reportAge)}`}>
-              <CalendarClock className="h-4 w-4 shrink-0 text-emerald-600" />
-              <span>{statusStrip.nextRetestLabel}</span>
-            </div>
-          </>
-        ) : (
-          [0, 1, 2].map((i) => (
-            <div key={i} className="cockpit-status-cell cockpit-status-cell--placeholder">
-              {isLoadingContent ? <span className="cockpit-skeleton-line" /> : <span className="text-slate-400">—</span>}
-            </div>
-          ))
-        )}
-      </div>
+      {safety.questionnaire && (
+        <section className="cockpit-section cockpit-safety-note" aria-label="Symptom-check safety note">
+          <div className="today-section-label"><ShieldAlert className="h-4 w-4 text-red-700" />Symptom-check safety note</div>
+          <p>{safety.questionnaire.text}</p>
+          <button type="button" onClick={() => navigate(safety.questionnaire.actionTo)} className="cockpit-link mt-2">{copy.safety.reviewSymptomAnswersAction}</button>
+        </section>
+      )}
 
       {symptomContext?.primary_signal && (
         <section className="cockpit-section" aria-label="Latest symptom context">
@@ -610,8 +562,6 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
           </div>
         </section>
       )}
-      </div>
-
       {/* Clinical-engine transparency block (P40, merged into one card in
           P41 per direct product feedback -- these three were confirmed
           non-redundant, see the P40 session's field-overlap check, so this
@@ -986,6 +936,68 @@ function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety }) 
   )
 }
 
+function LimitedDashboard({ summary, symptomContext, safety, navigate, refetch }) {
+  const latestUpload = summary?.blocks?.latest_upload || summary?.blocks?.latest_lab_result || null
+  const biomarkers = Array.isArray(latestUpload?.biomarkers) ? latestUpload.biomarkers.slice(0, 3) : []
+  const labDate = latestUpload?.measurement_date || latestUpload?.test_date || latestUpload?.created_at
+  const formattedDate = labDate ? new Date(labDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
+
+  return (
+    <div className="cockpit-page">
+      <header className="cockpit-hero">
+        <div className="cockpit-header">
+          <p className="coach-eyebrow">Your VITALOOP workspace</p>
+          <div className="cockpit-header__top"><h1 className="cockpit-title">Dashboard</h1></div>
+          <p className="cockpit-header__intro">Your saved health information remains available while report details reconnect.</p>
+          {formattedDate && <div className="cockpit-header__dates"><span>Latest lab date: {formattedDate}</span></div>}
+        </div>
+      </header>
+
+      <section className="cockpit-section" aria-label="Report connection status">
+        <div className="today-section-label"><AlertTriangle className="h-4 w-4 text-slate-500" />Report connection</div>
+        <h2 className="text-base font-bold text-slate-950">Additional report detail is temporarily unavailable</h2>
+        <p className="mt-1">Your saved symptom and lab data are still shown below. Retry the connection or open report history.</p>
+        <div className="mt-3 flex flex-wrap gap-4">
+          <button type="button" onClick={() => refetch()} className="cockpit-link">Try again &rarr;</button>
+          <button type="button" onClick={() => navigate('/lab-results')} className="cockpit-link">All reports &rarr;</button>
+        </div>
+      </section>
+
+      {safety && (
+        <section className="cockpit-section cockpit-safety-note" aria-label="Symptom-check safety note">
+          <div className="today-section-label"><ShieldAlert className="h-4 w-4 text-red-700" />Symptom-check safety note</div>
+          <p>{safety.text}</p>
+          <button type="button" onClick={() => navigate('/questionnaire')} className="cockpit-link mt-2">Review symptom answers &rarr;</button>
+        </section>
+      )}
+
+      {symptomContext?.primary_signal && (
+        <section className="cockpit-section" aria-label="Latest symptom context">
+          <div className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />Latest symptom context</div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div><p className="coach-eyebrow">Main signal</p><p className="mt-1 text-sm font-bold text-slate-950">{symptomContext.primary_signal}</p></div>
+            <div><p className="coach-eyebrow">Duration</p><p className="mt-1 text-sm text-slate-700">{String(symptomContext.duration_bucket || 'Not recorded').replaceAll('_', ' ')}</p></div>
+            <div><p className="coach-eyebrow">Severity</p><p className="mt-1 text-sm text-slate-700">{symptomContext.severity != null ? `${symptomContext.severity}/10` : 'Not recorded'}</p></div>
+          </div>
+        </section>
+      )}
+
+      {latestUpload && (
+        <section className="cockpit-section" aria-label="Latest lab results">
+          <div className="today-section-label"><Stethoscope className="h-4 w-4 text-emerald-600" />Latest lab results</div>
+          {biomarkers.length ? <div className="cockpit-lab-grid">{biomarkers.map((marker) => (
+            <div key={marker.name} className="cockpit-lab-row">
+              <span className="cockpit-lab-row__name">{marker.name}</span>
+              <span className="cockpit-lab-row__value">{marker.value}{marker.unit ? ` ${marker.unit}` : ''}</span>
+              <span className="cockpit-lab-row__status">{marker.status || 'Recorded'}</span>
+            </div>
+          ))}</div> : <p>Lab results are saved. Open report history to review them.</p>}
+        </section>
+      )}
+    </div>
+  )
+}
+
 export default function UserDashboard() {
   const navigate = useNavigate()
   const { data, isLoading, error, refetch } = useDashboardSummary()
@@ -1083,7 +1095,9 @@ export default function UserDashboard() {
   return (
     <div className="coach-shell">
       <CabinetPageFrame>
-        {cockpit ? (
+        {viewModel.status === 'contract_error' ? (
+          <LimitedDashboard summary={summary} symptomContext={symptomContext} safety={viewModel.safety} navigate={navigate} refetch={refetch} />
+        ) : cockpit ? (
           <CockpitBody
             viewModel={viewModel}
             cockpit={cockpit}

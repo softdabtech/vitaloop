@@ -146,19 +146,47 @@ export default function ControlledSymptomFallback() {
 
   if (completed) {
     const urgent = answers.urgent_warning === 'present'
+    const relatedLabels = related.filter(Boolean).map((id) => signalOptions.find(([value]) => value === id)?.[1]).filter(Boolean)
+    const answerLabel = (questionId) => questions.find((question) => question.id === questionId)?.options.find(([id]) => id === answers[questionId])?.[1] || 'Not recorded'
+    const durationLabel = DURATIONS.find(([id]) => id === duration)?.[1] || 'Not recorded'
     return (
       <CabinetPageFrame>
-        <div className="coach-shell mx-auto grid max-w-4xl gap-5">
-          <section className={`rounded-3xl border p-6 sm:p-8 ${urgent ? 'border-red-300 bg-red-50 text-red-950' : 'border-emerald-200 bg-emerald-50 text-emerald-950'}`}>
+        <div className="coach-shell mx-auto grid max-w-5xl gap-5">
+          <section className={`rounded-3xl border bg-white p-6 sm:p-8 ${urgent ? 'border-red-300' : 'border-emerald-200'}`}>
             <div className="flex items-start gap-4">
-              {urgent ? <ShieldAlert className="h-7 w-7 shrink-0" /> : <CheckCircle2 className="h-7 w-7 shrink-0" />}
-              <div><h1 className="text-2xl font-black">{urgent ? 'Get urgent medical help now' : 'Your symptom context is saved'}</h1><p className="mt-2 leading-7">{urgent ? 'These warning signs require prompt professional assessment. Call your local emergency number if symptoms are severe or worsening.' : 'Your controlled answers are ready to add context to lab results and future comparisons. This is not a diagnosis.'}</p></div>
+              {urgent ? <ShieldAlert className="h-7 w-7 shrink-0 text-red-700" /> : <CheckCircle2 className="h-7 w-7 shrink-0 text-emerald-700" />}
+              <div>
+                <p className={`coach-eyebrow ${urgent ? 'text-red-700' : ''}`}>{urgent ? 'Safety result' : 'Symptom check complete'}</p>
+                <h1 className="coach-title-lg">{urgent ? 'Get urgent medical help now' : 'Your symptom context is saved'}</h1>
+                <p className="coach-body mt-2">{urgent ? 'Your answer indicates that at least one urgent warning sign may be present. This result comes from the safety question below — not from a diagnosis or a lab result.' : 'Your controlled answers are ready to add context to lab results and future comparisons. This is not a diagnosis.'}</p>
+              </div>
             </div>
           </section>
-          <div className="flex flex-wrap gap-3">
-            {!urgent && <button className="coach-button coach-button--primary coach-button--md" onClick={() => navigate('/upload')}><FileUp className="h-4 w-4" /> Upload lab results</button>}
-            <button className="coach-button coach-button--secondary coach-button--md" onClick={() => navigate('/dashboard')}>Dashboard</button>
-          </div>
+
+          {urgent && (
+            <section className="coach-card grid gap-5 p-6 sm:p-8" aria-label="Why this result was shown">
+              <div><p className="coach-eyebrow">Why this result was shown</p><h2 className="coach-title-lg">You answered “Yes” to urgent warning signs</h2></div>
+              <p className="coach-body">The question covered severe chest pain, trouble breathing, fainting, new one-sided weakness, confusion, or uncontrolled bleeding. Because the answer was “Yes”, VITALOOP stops the assessment and recommends prompt professional evaluation.</p>
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-950">
+                Call your local emergency number now if symptoms are severe, rapidly worsening, or you feel unsafe. Otherwise, contact an appropriate medical professional promptly.
+              </div>
+            </section>
+          )}
+
+          <section className="coach-card p-6 sm:p-8" aria-label="Your symptom check answers">
+            <div><p className="coach-eyebrow">Your submitted answers</p><h2 className="coach-title-lg">Symptom-check summary</h2></div>
+            <dl className="mt-6 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+              <div><dt className="coach-eyebrow">Main signal</dt><dd className="mt-1 text-sm font-bold text-slate-950">{selectedSignalLabel}</dd></div>
+              <div><dt className="coach-eyebrow">Duration</dt><dd className="mt-1 text-sm text-slate-700">{durationLabel}</dd></div>
+              <div><dt className="coach-eyebrow">Severity</dt><dd className="mt-1 text-sm text-slate-700">{answerLabel('severity')}</dd></div>
+              <div><dt className="coach-eyebrow">Change over time</dt><dd className="mt-1 text-sm text-slate-700">{answerLabel('trajectory')}</dd></div>
+              <div><dt className="coach-eyebrow">Daily impact</dt><dd className="mt-1 text-sm text-slate-700">{answerLabel('functional_impact')}</dd></div>
+              <div><dt className="coach-eyebrow">Urgent warning signs</dt><dd className={`mt-1 text-sm font-bold ${urgent ? 'text-red-700' : 'text-slate-700'}`}>{answerLabel('urgent_warning')}</dd></div>
+            </dl>
+            {relatedLabels.length > 0 && <p className="mt-5 border-t border-slate-100 pt-4 text-sm text-slate-600"><span className="font-bold text-slate-800">Related signals:</span> {relatedLabels.join(', ')}</p>}
+          </section>
+
+          {!urgent && <button className="coach-button coach-button--primary coach-button--md justify-self-start" onClick={() => navigate('/upload')}><FileUp className="h-4 w-4" /> Upload lab results</button>}
         </div>
       </CabinetPageFrame>
     )

@@ -284,6 +284,31 @@ test('disabled provider uses the controlled three-stage internal flow', async ({
   await expect(page.getByText('Step 1 of 8')).toHaveCount(0)
 })
 
+test('urgent controlled result explains the trigger and shows the submitted summary without a dashboard button', async ({ page }) => {
+  const scenario: Scenario = { session: null, answerCalls: [], structuredUnavailable: true, fallbackContextCalls: [] }
+  await authenticate(page)
+  await installApi(page, scenario)
+  await page.goto('/questionnaire')
+
+  await page.getByLabel('How do you feel overall today?').selectOption('poor')
+  await page.getByLabel('What area would you like to highlight?').selectOption('energy')
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  await page.getByLabel('Main signal').selectOption('fatigue')
+  await page.getByLabel('How long has it been present?').selectOption('today')
+  await page.getByRole('button', { name: /Start focused questions/ }).click()
+
+  for (const choice of ['severe', 'worsening', 'severe', 'present', 'present']) {
+    await page.getByLabel('Select the closest answer').selectOption(choice)
+    await page.getByRole('button', { name: /Save and continue|Save symptom context/ }).click()
+  }
+
+  await expect(page.getByRole('heading', { name: 'Get urgent medical help now' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'You answered “Yes” to urgent warning signs' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Symptom-check summary' })).toBeVisible()
+  await expect(page.getByText('Severe', { exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Dashboard' })).toHaveCount(0)
+})
+
 test('skip is optional and returns directly to dashboard', async ({ page }) => {
   const scenario: Scenario = { session: initialSession(), answerCalls: [] }
   await openCheck(page, scenario)
