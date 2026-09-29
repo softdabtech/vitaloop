@@ -474,7 +474,7 @@ const EVIDENCE_METER = { low: 4, moderate: 3, high: 2, blocked: 1 }
 // what fixes the two-screen flicker -- the same cockpit shell mounts
 // immediately and fills in, instead of a whole different (legacy) layout
 // rendering first and being replaced once the fetch resolves.
-function CockpitBody({ viewModel, cockpit, copy, navigate }) {
+function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, symptomSessionId, reportSymptomSnapshot }) {
   const c = copy.cockpit
   const { headerContext, statusStrip, safety, thisWeek, labSnapshot, missingContext, isSparse, sparsePrimaryAction, contentStatus, clinicalFinding, attentionLevel, evidenceBasis } = cockpit
   const isLoadingContent = contentStatus === 'loading'
@@ -589,6 +589,27 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
           ))
         )}
       </div>
+
+      {symptomContext?.primary_signal && (
+        <section className="cockpit-section" aria-label="Latest symptom context">
+          <div className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />Latest symptom context</div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Main signal</p><p className="mt-1 text-sm font-bold text-slate-950">{symptomContext.primary_signal}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Duration</p><p className="mt-1 text-sm text-slate-700">{String(symptomContext.duration_bucket || 'Not recorded').replaceAll('_', ' ')}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Severity</p><p className="mt-1 text-sm text-slate-700">{symptomContext.severity != null ? `${symptomContext.severity}/10` : 'Not recorded'}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Wellbeing</p><p className="mt-1 text-sm text-slate-700">{String(symptomContext.overall_wellbeing || 'Not recorded').replaceAll('_', ' ')}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Pattern</p><p className="mt-1 text-sm text-slate-700">{String(symptomContext.symptom_pattern || 'Not recorded').replaceAll('_', ' ')}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Daily impact</p><p className="mt-1 text-sm text-slate-700">{String(symptomContext.functional_impact || 'Not recorded').replaceAll('_', ' ')}</p></div>
+          </div>
+          {Array.isArray(symptomContext.related_symptoms) && symptomContext.related_symptoms.length > 0 && <p className="mt-3 text-sm text-slate-600"><span className="font-semibold">Related:</span> {symptomContext.related_symptoms.join(', ')}</p>}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
+            <p className={`text-xs font-bold ${reportSymptomSnapshot?.session_id === symptomSessionId ? 'text-emerald-700' : 'text-amber-700'}`}>
+              {reportSymptomSnapshot?.session_id === symptomSessionId ? 'Included in the current lab report analysis' : 'Saved after this report — upload or regenerate a report to include it'}
+            </p>
+            <button type="button" onClick={() => navigate('/questionnaire')} className="cockpit-link">Review symptom answers &rarr;</button>
+          </div>
+        </section>
+      )}
       </div>
 
       {/* Clinical-engine transparency block (P40, merged into one card in
@@ -1048,7 +1069,15 @@ export default function UserDashboard() {
     <div className="coach-shell">
       <CabinetPageFrame>
         {cockpit ? (
-          <CockpitBody viewModel={viewModel} cockpit={cockpit} copy={copy} navigate={navigate} />
+          <CockpitBody
+            viewModel={viewModel}
+            cockpit={cockpit}
+            copy={copy}
+            navigate={navigate}
+            symptomContext={concernSummary}
+            symptomSessionId={questionnaireSession?.session?.id}
+            reportSymptomSnapshot={reportDetails?.symptom_snapshot}
+          />
         ) : (viewModel.status === 'first_run' || viewModel.status === 'labs_intent') && !isUk ? (
           <FirstRunWorkspace navigate={navigate} hasConcern={hasConcern} isLabsReadyIntent={isLabsReadyIntent} safety={viewModel.safety} />
         ) : (

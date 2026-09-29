@@ -67,6 +67,8 @@ type MockOptions = {
   // P37k: summary.blocks.latest_questionnaire.completed_at, for the
   // cockpit header's independent symptom-check date.
   latestQuestionnaireCompletedAt?: string | null
+  questionnaireSummary?: any | null
+  questionnaireSessionId?: string
 }
 
 async function mockToday(page: Page, opts: MockOptions = {}) {
@@ -80,6 +82,8 @@ async function mockToday(page: Page, opts: MockOptions = {}) {
     resultsStatus = 200,
     resultsDelayMs = 0,
     latestQuestionnaireCompletedAt = null,
+    questionnaireSummary = null,
+    questionnaireSessionId = 'qs-fixture-1',
   } = opts
 
   await page.addInitScript((storageKey) => {
@@ -109,9 +113,10 @@ async function mockToday(page: Page, opts: MockOptions = {}) {
   await page.route('**/profile', (route) => fulfillJson(route, { profile: { goals } }))
   await page.route('**/auth/onboarding/state', (route) => fulfillJson(route, { role: 'end_user', requires_onboarding: false, completed: true }))
   await page.route('**/questionnaire/session', (route) => fulfillJson(route, {
+    session: { id: questionnaireSessionId, status: 'completed' },
     session_context: {
-      active_concern: questionnaireUrgency ? 'fatigue and hair loss' : '',
-      summary: questionnaireUrgency ? { urgency: questionnaireUrgency } : null,
+      active_concern: questionnaireSummary?.primary_signal || (questionnaireUrgency ? 'fatigue and hair loss' : ''),
+      summary: questionnaireSummary || (questionnaireUrgency ? { urgency: questionnaireUrgency } : null),
     },
   }))
 
@@ -569,6 +574,27 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     // P45: no filled/pill button chrome on Dashboard home -- every action
     // is bold text, including what used to be the one CoachButton primary.
     await expect(page.locator('.coach-button')).toHaveCount(0)
+  })
+
+  test('controlled symptom context is visible and provenance confirms the report snapshot', async ({ page }) => {
+    const symptomSummary = {
+      primary_signal: 'Fatigue', related_symptoms: ['Low stamina'], duration_bucket: 'weeks_1_4',
+      severity: 6, overall_wellbeing: 'reduced', symptom_pattern: 'stable', functional_impact: 'mild',
+      urgency: 'No urgent red flags reported.',
+    }
+    await mockToday(page, {
+      today_contract: contractReady(),
+      latestQuestionnaireCompletedAt: '2026-09-29T08:00:00Z',
+      questionnaireSummary: symptomSummary,
+      questionnaireSessionId: 'qs-controlled-1',
+      results: { symptom_snapshot: { session_id: 'qs-controlled-1' }, biomarkers: [] },
+    })
+    await gotoToday(page)
+    await expect(page.getByText('Latest symptom context', { exact: true })).toBeVisible()
+    await expect(page.getByText('Fatigue', { exact: true })).toBeVisible()
+    await expect(page.getByText('Low stamina', { exact: false })).toBeVisible()
+    await expect(page.getByText('6/10')).toBeVisible()
+    await expect(page.getByText('Included in the current lab report analysis')).toBeVisible()
   })
 
   test('P37k.2: safety triggered (report + questionnaire) -> This week row 1 is the clinician-review flag, primary CTA', async ({ page }) => {

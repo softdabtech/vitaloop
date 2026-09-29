@@ -1038,6 +1038,7 @@ async def run_lab_analysis_pipeline(
             "unit_blocked": len(_enriched_mc.get("unit_blocked", [])),
             "unknown_status": len(_enriched_mc.get("unknown_status", [])),
         },
+        "symptom_context": (health_context.get("inputs") or {}).get("symptom_snapshot") or {},
         # Coverage-aware LLM prompt contract, part 1 (2026-09-12 audit item
         # #4 of "not implemented yet"): the summary above only ever told the
         # LLM HOW MANY markers had no rule/were unit-blocked, never WHICH
@@ -1174,6 +1175,20 @@ async def run_lab_analysis_pipeline(
         locale=locale,
     )
     safety_result = sanitize_safety_result_for_output(safety_result, locale=locale) or safety_result
+    symptom_assessment = (symptom_snapshot or {}).get("assessment") or {}
+    if symptom_assessment.get("urgent_warning") == "present":
+        safety_result = {
+            **safety_result,
+            "status": "approved_with_warnings",
+            "risk_level": "urgent",
+            "urgent_review_required": True,
+            "doctor_discussion_required": True,
+            "prominent_user_warning": (
+                "Your symptom check reports an urgent warning sign. Seek prompt medical assessment; call your local emergency number if symptoms are severe or worsening."
+                if not str(locale).lower().startswith("uk") else
+                "У перевірці симптомів зазначено термінову небезпечну ознаку. Негайно зверніться по медичну допомогу; якщо стан тяжкий або погіршується, телефонуйте до місцевої екстреної служби."
+            ),
+        }
     # Stage 2C: plain-language, user-facing notice — never exposes blocked_items'
     # internal rule keys — surfaced consistently alongside safety_result in every
     # live response path (see analyze.py's response dicts).

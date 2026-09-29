@@ -121,6 +121,61 @@ class QuestionnaireCreateRequest(BaseModel):
 class QuestionnaireContextRequest(BaseModel):
     active_concern: Optional[str] = None
     summary: Optional[Dict[str, Any]] = None
+    complete: bool = False
+
+
+_CONTROLLED_REQUIRED_FIELDS = {
+    "overall_wellbeing", "primary_concern_id", "primary_concept_id",
+    "primary_signal", "duration_bucket", "severity", "symptom_pattern",
+    "functional_impact", "domain_detail", "urgent_warning", "controlled_answers",
+}
+_CONTROLLED_SIGNALS = {
+    "energy": {"fatigue": "Fatigue", "low_stamina": "Low stamina", "post_activity_exhaustion": "Post-activity exhaustion", "general_weakness": "General weakness"},
+    "sleep": {"difficulty_falling_asleep": "Difficulty falling asleep", "waking_during_the_night": "Waking during the night", "unrefreshing_sleep": "Unrefreshing sleep", "daytime_sleepiness": "Daytime sleepiness"},
+    "cognition": {"brain_fog": "Brain fog", "poor_concentration": "Poor concentration", "memory_difficulty": "Memory difficulty", "head_pressure": "Head pressure"},
+    "digestion": {"bloating": "Bloating", "abdominal_discomfort": "Abdominal discomfort", "bowel_changes": "Bowel changes", "food_related_symptoms": "Food-related symptoms"},
+    "hair_skin": {"hair_shedding": "Hair shedding", "dry_skin": "Dry skin", "brittle_nails": "Brittle nails", "skin_changes": "Skin changes"},
+    "mood": {"low_mood": "Low mood", "anxiety": "Anxiety", "irritability": "Irritability", "high_stress_load": "High stress load"},
+    "pain": {"muscle_pain": "Muscle pain", "joint_pain": "Joint pain", "headache": "Headache", "general_aches": "General aches"},
+}
+_CONTROLLED_ENUMS = {
+    "overall_wellbeing": {"good", "mostly_good", "reduced", "poor"},
+    "duration_bucket": {"today", "days_2_7", "weeks_1_4", "months_1_3", "months_3_plus", "intermittent", "unknown"},
+    "symptom_pattern": {"improving", "stable", "worsening", "intermittent"},
+    "functional_impact": {"none", "mild", "moderate", "severe"},
+    "domain_detail": {"present", "absent", "unknown"},
+    "urgent_warning": {"present", "absent", "unknown"},
+}
+
+
+def _validate_controlled_summary(summary: Dict[str, Any]) -> None:
+    if summary.get("schema_version") != "controlled_symptom_fallback_v1":
+        raise HTTPException(status_code=422, detail="Unsupported controlled symptom schema")
+    missing = sorted(key for key in _CONTROLLED_REQUIRED_FIELDS if summary.get(key) in (None, "", {}))
+    if missing:
+        raise HTTPException(status_code=422, detail={"message": "Incomplete controlled symptom context", "missing": missing})
+    answers = summary.get("controlled_answers")
+    if not isinstance(answers, dict) or set(answers) != {
+        "severity", "trajectory", "functional_impact", "domain_detail", "urgent_warning"
+    }:
+        raise HTTPException(status_code=422, detail="Invalid controlled symptom answers")
+    for field, allowed in _CONTROLLED_ENUMS.items():
+        if summary.get(field) not in allowed:
+            raise HTTPException(status_code=422, detail=f"Invalid controlled value: {field}")
+    if summary.get("severity") not in {3, 6, 9}:
+        raise HTTPException(status_code=422, detail="Invalid controlled value: severity")
+    concern_id = summary.get("primary_concern_id")
+    signals = _CONTROLLED_SIGNALS.get(concern_id)
+    concept_id = summary.get("primary_concept_id")
+    if not signals or concept_id not in signals or summary.get("primary_signal") != signals[concept_id]:
+        raise HTTPException(status_code=422, detail="Invalid controlled symptom concept")
+    related = summary.get("related_symptoms") or []
+    allowed_related = set(signals.values()) - {signals[concept_id]}
+    if not isinstance(related, list) or len(related) > 2 or any(item not in allowed_related for item in related):
+        raise HTTPException(status_code=422, detail="Invalid related symptom concepts")
+    expected_severity = {"mild": 3, "moderate": 6, "severe": 9}.get(answers.get("severity"))
+    if expected_severity != summary.get("severity") or answers.get("trajectory") != summary.get("symptom_pattern") or answers.get("functional_impact") != summary.get("functional_impact") or answers.get("domain_detail") != summary.get("domain_detail") or answers.get("urgent_warning") != summary.get("urgent_warning"):
+        raise HTTPException(status_code=422, detail="Controlled answer summary mismatch")
 
 
 def _is_missing_questionnaire_tables(ex: Exception) -> bool:
@@ -276,6 +331,8 @@ async def update_questionnaire_context(
     if body.active_concern is not None:
         session_metadata["active_concern"] = body.active_concern.strip()
     if body.summary is not None:
+        if body.complete:
+            _validate_controlled_summary(body.summary)
         # Stage 2F.1: `readiness` and `urgency` are derived clinical-adjacent
         # state, not raw answers — the client may still send them (backward
         # compatibility with the existing request contract), but they are
@@ -285,14 +342,34 @@ async def update_questionnaire_context(
         # whatever the client submitted before persisting. Any client-
         # supplied readiness/urgency is discarded here, not merged.
         locale = resolve_locale(request)
-        session_metadata["summary"] = apply_authoritative_derived_state(body.summary, locale=locale)
+        controlled_summary = dict(body.summary)
+        if controlled_summary.get("urgent_warning") == "present":
+            controlled_summary["red_flags"] = {"urgentWarning": True}
+        session_metadata["summary"] = apply_authoritative_derived_state(controlled_summary, locale=locale)
 
-    await _update_session(session["id"], {"session_metadata": session_metadata})
-    updated_session = {**session, "session_metadata": session_metadata}
+    updates: Dict[str, Any] = {"session_metadata": session_metadata}
+    if body.complete:
+        now = datetime.now(timezone.utc).isoformat()
+        updates.update({"status": "completed", "completed_at": now})
+    await _update_session(session["id"], updates)
+    updated_session = {**session, **updates, "session_metadata": session_metadata}
+    if body.complete:
+        await svc.write_audit_log(
+            user_id=user_id, action="update", entity_type="questionnaire_session",
+            entity_id=str(session.get("id") or ""),
+            new_value={"scope": "medical", "status": "completed", "schema_version": "controlled_symptom_fallback_v1"},
+        )
+        await svc.save_timeline_event(
+            user_id=user_id, event_type="questionnaire_completed",
+            summary="Structured symptom check completed",
+            source="questionnaire:controlled_v1",
+            metadata={"session_id": session["id"], "schema_version": "controlled_symptom_fallback_v1"},
+        )
     return {
         "ok": True,
         "session": updated_session,
         "session_context": _session_context(updated_session),
+        "completed": bool(body.complete),
     }
 
 

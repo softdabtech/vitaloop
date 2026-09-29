@@ -9,6 +9,7 @@ interview can never change the clinical context of an earlier report.
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import datetime, timezone
 from typing import Any
 
 from app.services import supabase_service as svc
@@ -86,6 +87,13 @@ def build_symptom_snapshot(
         },
         "overall_wellbeing": session.get("overall_wellbeing"),
         "duration_bucket": session.get("duration_bucket"),
+        "assessment": {
+            "severity": session.get("severity"),
+            "trajectory": session.get("trajectory"),
+            "functional_impact": session.get("functional_impact"),
+            "domain_detail": session.get("domain_detail"),
+            "urgent_warning": session.get("urgent_warning"),
+        },
         "evidence": grouped,
         "triage": {
             "provider_level": session.get("provider_triage_level"),
@@ -101,6 +109,61 @@ def build_symptom_snapshot(
     return deepcopy(snapshot)
 
 
+def build_legacy_questionnaire_snapshot(session: dict[str, Any]) -> dict[str, Any] | None:
+    """Normalize a completed legacy/controlled questionnaire into the immutable snapshot contract."""
+    if str(session.get("status") or "") != "completed" or not session.get("completed_at"):
+        return None
+    metadata = session.get("session_metadata") if isinstance(session.get("session_metadata"), dict) else {}
+    summary = metadata.get("summary") if isinstance(metadata.get("summary"), dict) else {}
+    active_concern = str(metadata.get("active_concern") or summary.get("concern") or "").strip()
+    primary = str(summary.get("primary_signal") or active_concern).strip()
+    related_raw = summary.get("related_symptoms") or summary.get("relatedSymptoms") or []
+    if isinstance(related_raw, str):
+        related = [item.strip() for item in related_raw.split(",") if item.strip()]
+    else:
+        related = [str(item).strip() for item in related_raw if str(item).strip()]
+    labels = [label for label in [primary, *related] if label]
+    evidence = [
+        {
+            "vitaloop_concept_id": (
+                summary.get("primary_concept_id") if index == 0
+                else str(label).lower().replace(" ", "_")
+            ),
+            "provider_concept_id": None,
+            "display_name_en": label,
+            "concept_type": "symptom",
+            "choice_id": "present",
+            "source": "controlled_questionnaire",
+            "is_primary": index == 0,
+            "domain_keys": [summary.get("primary_concern_id")] if index == 0 and summary.get("primary_concern_id") else [],
+        }
+        for index, label in enumerate(dict.fromkeys(labels))
+    ]
+    urgent = summary.get("urgent_warning")
+    if urgent is None:
+        urgency_text = str(summary.get("urgency") or "").lower()
+        urgent = "present" if "timely clinician" in urgency_text or "do not delay" in urgency_text else "absent"
+    normalized_session = {
+        "id": session.get("id"),
+        "status": "completed",
+        "completed_at": session.get("completed_at"),
+        "questionnaire_version": summary.get("schema_version") or session.get("model_version") or "questionnaire_v2",
+        "provider": "vitaloop_controlled" if summary.get("schema_version") == "controlled_symptom_fallback_v1" else "vitaloop_legacy",
+        "root_concern_id": summary.get("primary_concern_id") or summary.get("bodySystem") or summary.get("body_system"),
+        "primary_concept_id": summary.get("primary_concept_id"),
+        "overall_wellbeing": summary.get("overall_wellbeing"),
+        "duration_bucket": summary.get("duration_bucket") or summary.get("duration"),
+        "severity": summary.get("severity"),
+        "trajectory": summary.get("symptom_pattern") or summary.get("symptomPattern"),
+        "functional_impact": summary.get("functional_impact") or summary.get("functionalImpact"),
+        "domain_detail": summary.get("domain_detail"),
+        "urgent_warning": urgent,
+        "internal_safety_level": "urgent" if urgent == "present" else "routine",
+        "final_safety_level": "urgent" if urgent == "present" else "routine",
+    }
+    return build_symptom_snapshot(session=normalized_session, evidence=evidence)
+
+
 async def load_latest_eligible_symptom_snapshot(user_id: str) -> dict[str, Any] | None:
     """Load the newest completed interview owned by ``user_id``."""
     supabase = svc._get_supabase()
@@ -113,9 +176,30 @@ async def load_latest_eligible_symptom_snapshot(user_id: str) -> dict[str, Any] 
         .limit(1)
         .execute()
     )
-    if not response.data:
-        return None
-    session = response.data[0]
+    legacy_response = await svc._run(
+        lambda: supabase.table("questionnaire_sessions")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("status", "completed")
+        .order("completed_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    legacy_session = (legacy_response.data or [None])[0]
+    provider_session = (response.data or [None])[0]
+    if not provider_session:
+        return build_legacy_questionnaire_snapshot(legacy_session) if legacy_session else None
+    if legacy_session:
+        def _completed_at(value: dict[str, Any]) -> datetime:
+            raw = str(value.get("completed_at") or "").replace("Z", "+00:00")
+            try:
+                parsed = datetime.fromisoformat(raw)
+                return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+            except ValueError:
+                return datetime.min.replace(tzinfo=timezone.utc)
+        if _completed_at(legacy_session) > _completed_at(provider_session):
+            return build_legacy_questionnaire_snapshot(legacy_session)
+    session = provider_session
     evidence_response = await svc._run(
         lambda: supabase.table("symptom_evidence")
         .select(

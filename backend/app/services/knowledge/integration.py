@@ -247,6 +247,7 @@ async def evaluate_biomarkers_with_knowledge(
             "health_context_readiness": health_context.get("readiness") or {},
             "biomarker_summary": ((health_context.get("inputs") or {}).get("biomarkers") or {}),
             "questionnaire_summary": ((health_context.get("inputs") or {}).get("questionnaire") or {}),
+            "symptom_snapshot": ((health_context.get("inputs") or {}).get("symptom_snapshot") or {}),
             "person_avatar": person_avatar,
             "safety_context": safety_context,
             "profile_context_fields": profile_context_fields,

@@ -271,6 +271,7 @@ test('disabled provider uses the controlled three-stage internal flow', async ({
 
   await expect(page.getByRole('heading', { name: 'Your symptom context is saved' })).toBeVisible()
   expect(scenario.fallbackContextCalls).toHaveLength(1)
+  expect(scenario.fallbackContextCalls?.[0].complete).toBe(true)
   expect(scenario.fallbackContextCalls?.[0].summary).toMatchObject({
     schema_version: 'controlled_symptom_fallback_v1',
     input_mode: 'controlled_only',

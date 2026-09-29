@@ -134,6 +134,8 @@ def compute_urgency(summary: Dict[str, Any], *, locale: str = "en") -> str:
     red_flags = summary.get("redFlags") if summary.get("redFlags") is not None else summary.get("red_flags")
     red_flags = red_flags if isinstance(red_flags, dict) else {}
     active_count = sum(1 for key in _RED_FLAG_KEYS if bool(red_flags.get(key)))
+    if summary.get("urgent_warning") == "present" or red_flags.get("urgentWarning"):
+        active_count = max(1, active_count)
     return _urgency_text(active_count, locale)
 
 

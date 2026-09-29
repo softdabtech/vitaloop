@@ -1042,6 +1042,9 @@ async def get_active_symptom_context(user_id: str) -> tuple[List[str], Dict[str,
             questionnaire["dimension_scores"] = session.get("dimension_scores")
         if session.get("llm_summary"):
             questionnaire["llm_summary"] = session.get("llm_summary")
+        summary = metadata.get("summary")
+        if isinstance(summary, dict):
+            questionnaire["structured_summary"] = summary
 
         return symptoms, questionnaire
     except Exception as exc:

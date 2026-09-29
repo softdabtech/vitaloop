@@ -109,6 +109,7 @@ export default function ControlledSymptomFallback() {
       const relatedLabels = related.filter(Boolean).map((id) => signalOptions.find(([value]) => value === id)?.[1]).filter(Boolean)
       const severityScore = { mild: 3, moderate: 6, severe: 9 }[answers.severity] || 5
       await api.patch('/questionnaire/session/context', {
+        complete: true,
         active_concern: [selectedSignalLabel, ...relatedLabels].join(', '),
         summary: {
           schema_version: 'controlled_symptom_fallback_v1',

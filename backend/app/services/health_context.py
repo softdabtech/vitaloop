@@ -119,6 +119,7 @@ def _symptom_snapshot_summary(symptom_snapshot: Dict[str, Any] | None) -> Dict[s
         evidence[choice] = {"count": len(items), "items": items}
 
     safety = snapshot.get("safety") if isinstance(snapshot.get("safety"), dict) else {}
+    assessment = snapshot.get("assessment") if isinstance(snapshot.get("assessment"), dict) else {}
     return {
         "present": True,
         "version": snapshot.get("version"),
@@ -127,6 +128,11 @@ def _symptom_snapshot_summary(symptom_snapshot: Dict[str, Any] | None) -> Dict[s
         "overall_wellbeing": snapshot.get("overall_wellbeing"),
         "duration_bucket": snapshot.get("duration_bucket"),
         "evidence": evidence,
+        "assessment": {
+            key: assessment.get(key)
+            for key in ("severity", "trajectory", "functional_impact", "domain_detail", "urgent_warning")
+            if assessment.get(key) is not None
+        },
         "safety": {"final_level": safety.get("final_level")},
         "completed_at": snapshot.get("completed_at"),
     }
@@ -202,4 +208,5 @@ def build_knowledge_context_from_health_context(health_context: Dict[str, Any] |
         "readiness": context.get("readiness") or {},
         "biomarker_summary": ((context.get("inputs") or {}).get("biomarkers") or {}),
         "questionnaire_summary": ((context.get("inputs") or {}).get("questionnaire") or {}),
+        "symptom_snapshot": ((context.get("inputs") or {}).get("symptom_snapshot") or {}),
     }

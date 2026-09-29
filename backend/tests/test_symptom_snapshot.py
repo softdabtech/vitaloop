@@ -10,6 +10,7 @@ from app.services.report_history import assemble_frozen_response
 from app.services.symptom_snapshot import (
     SYMPTOM_SNAPSHOT_VERSION,
     build_symptom_snapshot,
+    build_legacy_questionnaire_snapshot,
     public_symptom_snapshot,
     should_load_symptom_snapshot,
     symptoms_from_snapshot,
@@ -88,6 +89,32 @@ def test_snapshot_requires_completed_session_and_copies_allowlisted_facts():
     assert "provider_payload" not in snapshot["evidence"]["present"][0]
     rows[0]["display_name_en"] = "Changed later"
     assert snapshot["evidence"]["present"][0]["display_name_en"] == "Fatigue"
+
+
+def test_controlled_questionnaire_becomes_full_immutable_snapshot():
+    session = {
+        "id": "legacy-1", "status": "completed", "completed_at": "2026-09-29T08:00:00Z",
+        "model_version": "v2", "session_metadata": {
+            "active_concern": "Fatigue, Low stamina",
+            "summary": {
+                "schema_version": "controlled_symptom_fallback_v1",
+                "overall_wellbeing": "reduced", "primary_concern_id": "energy",
+                "primary_concept_id": "fatigue", "primary_signal": "Fatigue",
+                "related_symptoms": ["Low stamina"], "duration_bucket": "weeks_1_4",
+                "severity": 6, "symptom_pattern": "stable", "functional_impact": "mild",
+                "domain_detail": "absent", "urgent_warning": "absent",
+            },
+        },
+    }
+    snapshot = build_legacy_questionnaire_snapshot(session)
+    assert snapshot["session_id"] == "legacy-1"
+    assert symptoms_from_snapshot(snapshot) == ["Fatigue", "Low stamina"]
+    assert snapshot["overall_wellbeing"] == "reduced"
+    assert snapshot["duration_bucket"] == "weeks_1_4"
+    assert snapshot["assessment"] == {
+        "severity": 6, "trajectory": "stable", "functional_impact": "mild",
+        "domain_detail": "absent", "urgent_warning": "absent",
+    }
 
 
 def test_legacy_bridge_uses_present_canonical_en_only():
