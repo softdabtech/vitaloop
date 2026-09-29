@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Activity, ArrowRight, CalendarClock, CheckCircle2, ClipboardList, FileUp, HelpCircle, ListChecks, RefreshCw, ShieldAlert, Stethoscope, TrendingUp, UserRound } from 'lucide-react'
 import { useDashboardSummary, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
 import { useProfile } from '../hooks/useProfile.ts'
@@ -893,12 +893,14 @@ function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety }) 
             <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl xl:text-5xl">Turn your health data into a clear next step</h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">Complete your symptom context, add lab results, and VITALOOP will organize both into one structured view you can return to and compare over time.</p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <CoachButton className="w-full justify-center whitespace-nowrap sm:w-auto" onClick={() => navigate(primaryAction.to)} icon={primaryAction.Icon} trailingIcon={ArrowRight}>
-                {primaryAction.label}
-              </CoachButton>
-              <button type="button" onClick={() => navigate(secondaryAction.to)} className="whitespace-nowrap text-center text-sm font-bold text-teal-700 hover:text-teal-900 sm:text-left">
+              <Link to={primaryAction.to} className="coach-button coach-button--primary coach-button--md w-full justify-center whitespace-nowrap sm:w-auto">
+                <primaryAction.Icon className="coach-button__icon" aria-hidden="true" />
+                <span>{primaryAction.label}</span>
+                <ArrowRight className="coach-button__icon" aria-hidden="true" />
+              </Link>
+              <Link to={secondaryAction.to} className="whitespace-nowrap text-center text-sm font-bold text-teal-700 hover:text-teal-900 sm:text-left">
                 {secondaryAction.label} &rarr;
-              </button>
+              </Link>
             </div>
           </div>
           <div className="rounded-2xl border border-white/80 bg-white/80 p-5 shadow-sm">
@@ -936,9 +938,9 @@ function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety }) 
               </div>
               <h3 className="mt-4 text-lg font-black text-slate-950">{title}</h3>
               <p className="mt-2 min-h-[48px] text-sm leading-6 text-slate-600">{body}</p>
-              <button type="button" onClick={() => navigate(to)} className="mt-4 inline-flex items-center gap-1.5 text-sm font-black text-teal-700 hover:text-teal-900">
+              <Link to={to} className="mt-4 inline-flex items-center gap-1.5 text-sm font-black text-teal-700 hover:text-teal-900">
                 {action} <ArrowRight className="h-4 w-4" />
-              </button>
+              </Link>
             </article>
           ))}
         </div>

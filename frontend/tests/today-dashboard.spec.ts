@@ -142,12 +142,12 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await mockToday(page, { today_contract: contractNone(), goals: [] })
     await gotoToday(page)
     await expect(page.getByRole('heading', { name: /Turn your health data into a clear next step/i })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Start symptom check/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Start symptom check/i })).toBeVisible()
     await expect(page.getByRole('heading', { name: /Build your first health snapshot/i })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Review profile/i })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Start check/i })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Add results/i })).toBeVisible()
-    await page.getByRole('button', { name: /Start symptom check/i }).click()
+    await expect(page.getByRole('link', { name: /Review profile/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Start check/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Add results/i })).toBeVisible()
+    await page.getByRole('link', { name: /Start symptom check/i }).click()
     await expect(page).toHaveURL(/\/questionnaire$/)
   })
 
@@ -155,7 +155,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await mockToday(page, { today_contract: contractNone(), goals: ['intent:labs'] })
     await gotoToday(page)
     await expect(page.getByRole('heading', { name: /Turn your health data into a clear next step/i })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Upload lab results/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /Upload lab results/i })).toBeVisible()
   })
 
   test('5. today_contract.latest_ready_report_status: error -> honest message, not "no reports"', async ({ page }) => {
@@ -395,7 +395,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
   test('accessibility: keyboard tab order reaches primary CTA and focus is visible', async ({ page }) => {
     await mockToday(page, { today_contract: contractNone() })
     await gotoToday(page)
-    const primaryCta = page.getByRole('button', { name: /Start symptom check/i })
+    const primaryCta = page.getByRole('link', { name: /Start symptom check/i })
     await primaryCta.focus()
     await expect(primaryCta).toBeFocused()
     // A visible focus outline is either a browser default or an explicit
