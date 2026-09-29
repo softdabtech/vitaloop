@@ -484,14 +484,17 @@ function CockpitBody({ viewModel, cockpit, copy, navigate }) {
     <div className="cockpit-page">
       <div className="cockpit-hero">
         <div className="cockpit-header">
+          <p className="coach-eyebrow">Your VITALOOP workspace</p>
           <div className="cockpit-header__top">
             <h1 className="cockpit-title">{copy.pageTitle}</h1>
             {viewModel.documents && (
-              <button type="button" onClick={() => navigate(viewModel.documents.uploadTo)} className="cockpit-link">
+              <button type="button" onClick={() => navigate(viewModel.documents.uploadTo)} className="cockpit-header__upload-btn">
+                <FileUp className="h-4 w-4" aria-hidden="true" />
                 {copy.cta.upload}
               </button>
             )}
           </div>
+          <p className="cockpit-header__intro">Your latest symptom context, lab findings, priorities, and follow-up steps in one structured view.</p>
           <div className="cockpit-header__dates">
             <span>{headerContext.labDate ? c.header.labDateLabel(headerContext.labDate) : c.header.labDateUnavailable}</span>
             {headerContext.symptomCheckDate && <span>{c.header.symptomCheckLabel(headerContext.symptomCheckDate)}</span>}

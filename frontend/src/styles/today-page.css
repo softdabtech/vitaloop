@@ -392,8 +392,7 @@
 .cockpit-page {
   display: flex;
   flex-direction: column;
-  /* P37k.2: ~10% tighter than the original 14px, kept comfortable on mobile. */
-  gap: 13px;
+  gap: 18px;
 }
 
 /* P39 -- Today's cockpit gets the same calm gradient "hero" treatment as
@@ -434,7 +433,7 @@
 }
 
 .cockpit-header .coach-eyebrow {
-  margin-bottom: 4px;
+  margin: 0 0 10px;
 }
 
 .cockpit-header__top {
@@ -453,11 +452,19 @@
  * weight at its top, just gains a real heading. */
 .cockpit-title {
   margin: 0;
-  font-size: clamp(28px, 4vw, 32px);
+  font-size: clamp(32px, 4vw, 44px);
   line-height: 1.15;
-  font-weight: 800;
-  letter-spacing: 0;
+  font-weight: 900;
+  letter-spacing: -0.025em;
   color: var(--coach-text);
+}
+
+.cockpit-header__intro {
+  max-width: 720px;
+  margin: 12px 0 0;
+  font-size: 16px;
+  line-height: 1.65;
+  color: #475569;
 }
 
 .cockpit-header__dates {
@@ -465,7 +472,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 10px;
-  margin: 4px 0 0;
+  margin: 14px 0 0;
   font-size: 13px;
   color: #64748B;
 }
@@ -508,6 +515,7 @@
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   justify-content: center;
   min-height: 48px;
   padding: 0 20px;
@@ -635,12 +643,11 @@
 }
 
 .cockpit-section {
-  /* P37k.2: ~10% tighter than the original 16px/18px. P40: radius unified
-     to 16px, the cabinet's shared "inner element" tier. */
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: #F8FAFC;
-  border: 1px solid rgba(15, 23, 42, 0.07);
+  padding: 20px;
+  border-radius: 20px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.055);
 }
 
 .cockpit-section .today-section-label {
@@ -660,8 +667,8 @@
  * and no bold section-label color shift, so scanning the page top-to-
  * bottom reads as a real priority order, not seven identical gray boxes. */
 .cockpit-section--detail {
-  background: #FAFBFC;
-  border-color: rgba(15, 23, 42, 0.06);
+  background: #FFFFFF;
+  border-color: #E2E8F0;
 }
 
 .cockpit-section--detail .today-section-label svg {
@@ -674,10 +681,11 @@
  * This is plain text on a faint surface -- present, findable, but visibly
  * secondary to the page's one primary CTA. */
 .cockpit-documents {
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: #FAFBFC;
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045);
 }
 
 .cockpit-documents__report-line {
