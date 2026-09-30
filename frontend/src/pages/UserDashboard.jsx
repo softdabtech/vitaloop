@@ -455,6 +455,22 @@ function MeterDots({ filled, total, label }) {
   )
 }
 
+const SYMPTOM_VALUE_LABELS = {
+  duration: {
+    days_0_2: 'Less than 3 days', days_3_7: '3–7 days', weeks_1_4: '1–4 weeks',
+    months_1_3: '1-3 months', months_3_6: '3-6 months', months_6_plus: 'More than 6 months',
+  },
+  wellbeing: { good: 'Good', mostly_good: 'Mostly good', reduced: 'Reduced', poor: 'Poor' },
+  pattern: { constant: 'Constant', intermittent: 'Comes and goes', worsening: 'Getting worse', improving: 'Improving', unknown: 'Not sure' },
+  impact: { none: 'No impact', mild: 'Mild impact', moderate: 'Moderate impact', severe: 'Severe impact' },
+}
+
+function readableSymptomValue(group, value) {
+  if (!value) return 'Not recorded'
+  return SYMPTOM_VALUE_LABELS[group]?.[value]
+    || String(value).replaceAll('_', ' ').replace(/^./, (character) => character.toUpperCase())
+}
+
 const CONFIDENCE_METER = { likely: 3, possible: 2, unlikely_but_flagged: 1 }
 const EVIDENCE_METER = { low: 4, moderate: 3, high: 2, blocked: 1 }
 
@@ -479,6 +495,9 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
   const { headerContext, statusStrip, safety, thisWeek, labSnapshot, missingContext, isSparse, sparsePrimaryAction, contentStatus, clinicalFinding, attentionLevel, evidenceBasis } = cockpit
   const isLoadingContent = contentStatus === 'loading'
   const isErrorContent = contentStatus === 'error'
+  const visibleThisWeek = thisWeek
+    .filter((row) => row.kind !== 'safety' || Boolean(safety.report))
+    .map((row, index) => ({ ...row, isPrimary: index === 0 && !safety.questionnaire }))
 
   return (
     <div className="cockpit-page">
@@ -506,7 +525,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
       </div>
 
       <section className="cockpit-section cockpit-report-overview" aria-label="Current report overview" aria-busy={isLoadingContent || undefined}>
-        <div className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />Current report overview</div>
+        <h2 className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />Current report overview</h2>
         <p className="cockpit-section-intro">What the latest report found and the next follow-up step.</p>
         <div className="cockpit-status-strip">
           {contentStatus === 'ready' ? (
@@ -536,22 +555,23 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
 
       {safety.questionnaire && (
         <section className="cockpit-section cockpit-safety-note" aria-label="Symptom-check safety note">
-          <div className="today-section-label"><ShieldAlert className="h-4 w-4 text-red-700" />Symptom-check safety note</div>
+          <h2 className="today-section-label"><ShieldAlert className="h-4 w-4 text-red-700" />Symptom-check safety note</h2>
           <p>{safety.questionnaire.text}</p>
-          <button type="button" onClick={() => navigate(safety.questionnaire.actionTo)} className="cockpit-link mt-2">{copy.safety.reviewSymptomAnswersAction}</button>
+          <p className="cockpit-safety-note__reason">This note comes from answers in your latest symptom check—not from a diagnosis or a lab result.</p>
+          <button type="button" onClick={() => navigate(safety.questionnaire.actionTo)} className="cockpit-primary-action mt-3">{copy.safety.reviewSymptomAnswersAction}</button>
         </section>
       )}
 
       {symptomContext?.primary_signal && (
         <section className="cockpit-section" aria-label="Latest symptom context">
-          <div className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />Latest symptom context</div>
+          <h2 className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />Latest symptom context</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Main signal</p><p className="mt-1 text-sm font-bold text-slate-950">{symptomContext.primary_signal}</p></div>
-            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Duration</p><p className="mt-1 text-sm text-slate-700">{String(symptomContext.duration_bucket || 'Not recorded').replaceAll('_', ' ')}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Duration</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue('duration', symptomContext.duration_bucket)}</p></div>
             <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Severity</p><p className="mt-1 text-sm text-slate-700">{symptomContext.severity != null ? `${symptomContext.severity}/10` : 'Not recorded'}</p></div>
-            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Wellbeing</p><p className="mt-1 text-sm text-slate-700">{String(symptomContext.overall_wellbeing || 'Not recorded').replaceAll('_', ' ')}</p></div>
-            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Pattern</p><p className="mt-1 text-sm text-slate-700">{String(symptomContext.symptom_pattern || 'Not recorded').replaceAll('_', ' ')}</p></div>
-            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Daily impact</p><p className="mt-1 text-sm text-slate-700">{String(symptomContext.functional_impact || 'Not recorded').replaceAll('_', ' ')}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Wellbeing</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue('wellbeing', symptomContext.overall_wellbeing)}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Pattern</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue('pattern', symptomContext.symptom_pattern)}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Daily impact</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue('impact', symptomContext.functional_impact)}</p></div>
           </div>
           {Array.isArray(symptomContext.related_symptoms) && symptomContext.related_symptoms.length > 0 && <p className="mt-3 text-sm text-slate-600"><span className="font-semibold">Related:</span> {symptomContext.related_symptoms.join(', ')}</p>}
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
@@ -573,8 +593,8 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
           yet). One shared disclaimer + one CTA at the bottom instead of
           repeating "not a diagnosis" per sub-block. */}
       {(clinicalFinding || attentionLevel || evidenceBasis) && (
-        <div className="cockpit-section cockpit-clinical-summary">
-          <div className="today-section-label"><Stethoscope className="h-4 w-4 text-emerald-600" />{c.clinicalSummary.title}</div>
+        <section className="cockpit-section cockpit-clinical-summary" aria-label={c.clinicalSummary.title}>
+          <h2 className="today-section-label"><Stethoscope className="h-4 w-4 text-emerald-600" />{c.clinicalSummary.title}</h2>
 
           {clinicalFinding && (
             <div className="cockpit-clinical-summary__block">
@@ -663,7 +683,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
               <button type="button" onClick={() => navigate(clinicalFinding.to)} className="cockpit-link">{c.clinicalFinding.cta} &rarr;</button>
             )}
           </div>
-        </div>
+        </section>
       )}
 
       {/* P38b required visual order, items 3-4: This week (the dominant
@@ -678,41 +698,26 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
         </div>
       ) : (
         <>
-          <div className="cockpit-section">
-            <div className="today-section-label"><ClipboardList className="h-4 w-4 text-emerald-600" />{c.thisWeek.title}</div>
-            {thisWeek.length === 0 ? (
-              isLoadingContent ? (
-                <div className="cockpit-skeleton-rows" aria-busy="true">
-                  <span className="cockpit-skeleton-line" />
-                  <span className="cockpit-skeleton-line" />
-                </div>
-              ) : isErrorContent ? (
-                <p className="text-sm text-slate-500">{copy.error.resultsSectionsUnavailable}</p>
-              ) : (
-                <p className="text-sm text-slate-500">{c.thisWeek.empty}</p>
-              )
-            ) : (
-              <div className="cockpit-row-list">
-                {thisWeek.map((row, index) => (
-                  <div key={index} className={`cockpit-row${row.kind === 'safety' || row.kind === 'upload' ? ' cockpit-row--attention' : ''}`}>
-                    <div className="cockpit-row__text">
-                      <p className="cockpit-row__title">{row.title}</p>
-                      {row.why && <p className="cockpit-row__why">{row.why}</p>}
-                    </div>
-                    {/* P45: no filled/pill button chrome on Dashboard home --
-                        every action here is bold text, isPrimary or not.
-                        isPrimary still exists in the data (still exactly one
-                        row is "the" primary action), it just no longer gets
-                        different visual weight than the rest. */}
-                    <button type="button" onClick={() => navigate(row.actionTo)} className="cockpit-link cockpit-link--row">{row.actionLabel} &rarr;</button>
+          {visibleThisWeek.length > 0 && <section className="cockpit-section" aria-label={c.thisWeek.title}>
+            <h2 className="today-section-label"><ClipboardList className="h-4 w-4 text-emerald-600" />{c.thisWeek.title}</h2>
+            <div className="cockpit-row-list">
+              {visibleThisWeek.map((row, index) => (
+                <div key={index} className={`cockpit-row${row.kind === 'safety' || row.kind === 'upload' ? ' cockpit-row--attention' : ''}`}>
+                  <div className="cockpit-row__text">
+                    <p className="cockpit-row__title">{row.title}</p>
+                    {row.why && <p className="cockpit-row__why">{row.why}</p>}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  {/* Keep exactly one visually dominant next action. When the
+                      symptom safety card already owns that role, every row
+                      here remains a secondary text action. */}
+                  <button type="button" onClick={() => navigate(row.actionTo)} className={row.isPrimary ? 'cockpit-primary-action cockpit-primary-action--compact' : 'cockpit-link cockpit-link--row'}>{row.actionLabel} &rarr;</button>
+                </div>
+              ))}
+            </div>
+          </section>}
 
-          <div className="cockpit-section">
-            <div className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />{c.labSnapshot.title}</div>
+          <section className="cockpit-section" aria-label={c.labSnapshot.title}>
+            <h2 className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />{c.labSnapshot.title}</h2>
             {labSnapshot.length === 0 ? (
               isLoadingContent ? (
                 <div className="cockpit-skeleton-rows" aria-busy="true">
@@ -742,7 +747,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
                 <button type="button" onClick={() => navigate('/lab-results')} className="cockpit-link mt-2">{c.labSnapshot.viewAll} &rarr;</button>
               </>
             )}
-          </div>
+          </section>
         </>
       )}
 
@@ -761,8 +766,8 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
           redundant/misleading copies from the home summary. */}
 
       {missingContext && (
-        <div className="cockpit-section cockpit-section--detail">
-          <div className="today-section-label"><HelpCircle className="h-4 w-4 text-slate-500" />{c.missingContext.title}</div>
+        <section className="cockpit-section cockpit-section--detail" aria-label={c.missingContext.title}>
+          <h2 className="today-section-label"><HelpCircle className="h-4 w-4 text-slate-500" />{c.missingContext.title}</h2>
           <div className="today-clarity-grid">
             {missingContext.map((item, index) => (
               <div key={index} className="today-clarity-item">
@@ -773,7 +778,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {/* P38b's original wording kept plain-text links here so this footer
@@ -783,7 +788,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
           findable and clickable, but visually quieter than the page's one
           primary action. */}
       {viewModel.documents && (
-        <div className="cockpit-section cockpit-documents">
+        <section className="cockpit-section cockpit-documents" aria-label={viewModel.documents.reportLine}>
           <div className="cockpit-documents__report-line">
             <Stethoscope className="h-4 w-4 text-slate-500" />
             {viewModel.documents.reportLine}
@@ -802,7 +807,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
             <button type="button" onClick={() => navigate(viewModel.documents.historyTo)} className="cockpit-link">{copy.cta.history}</button>
           </div>
           {viewModel.documents.upgradeNote && <p className="mt-2 text-xs text-slate-500">{viewModel.documents.upgradeNote}</p>}
-        </div>
+        </section>
       )}
     </div>
   )
@@ -954,7 +959,7 @@ function LimitedDashboard({ summary, symptomContext, safety, navigate, refetch }
       </header>
 
       <section className="cockpit-section" aria-label="Report connection status">
-        <div className="today-section-label"><AlertTriangle className="h-4 w-4 text-slate-500" />Report connection</div>
+        <h2 className="today-section-label"><AlertTriangle className="h-4 w-4 text-slate-500" />Report connection</h2>
         <h2 className="text-base font-bold text-slate-950">Additional report detail is temporarily unavailable</h2>
         <p className="mt-1">Your saved symptom and lab data are still shown below. Retry the connection or open report history.</p>
         <div className="mt-3 flex flex-wrap gap-4">
@@ -965,7 +970,7 @@ function LimitedDashboard({ summary, symptomContext, safety, navigate, refetch }
 
       {safety && (
         <section className="cockpit-section cockpit-safety-note" aria-label="Symptom-check safety note">
-          <div className="today-section-label"><ShieldAlert className="h-4 w-4 text-red-700" />Symptom-check safety note</div>
+          <h2 className="today-section-label"><ShieldAlert className="h-4 w-4 text-red-700" />Symptom-check safety note</h2>
           <p>{safety.text}</p>
           <button type="button" onClick={() => navigate('/questionnaire')} className="cockpit-link mt-2">Review symptom answers &rarr;</button>
         </section>
@@ -973,10 +978,10 @@ function LimitedDashboard({ summary, symptomContext, safety, navigate, refetch }
 
       {symptomContext?.primary_signal && (
         <section className="cockpit-section" aria-label="Latest symptom context">
-          <div className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />Latest symptom context</div>
+          <h2 className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />Latest symptom context</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             <div><p className="coach-eyebrow">Main signal</p><p className="mt-1 text-sm font-bold text-slate-950">{symptomContext.primary_signal}</p></div>
-            <div><p className="coach-eyebrow">Duration</p><p className="mt-1 text-sm text-slate-700">{String(symptomContext.duration_bucket || 'Not recorded').replaceAll('_', ' ')}</p></div>
+            <div><p className="coach-eyebrow">Duration</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue('duration', symptomContext.duration_bucket)}</p></div>
             <div><p className="coach-eyebrow">Severity</p><p className="mt-1 text-sm text-slate-700">{symptomContext.severity != null ? `${symptomContext.severity}/10` : 'Not recorded'}</p></div>
           </div>
         </section>

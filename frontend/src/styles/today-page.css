@@ -507,6 +507,37 @@
   color: #0b6b5b;
 }
 
+.cockpit-link:focus-visible,
+.cockpit-header__upload-btn:focus-visible,
+.cockpit-primary-action:focus-visible {
+  outline: 3px solid rgba(13, 148, 136, 0.3);
+  outline-offset: 3px;
+}
+
+.cockpit-primary-action {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 18px;
+  background: #0d9488;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.cockpit-primary-action:hover {
+  background: #0f766e;
+}
+
+.cockpit-primary-action--compact {
+  min-height: 38px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
 /* P39 -- the header's Upload action gets real button weight (pill, border,
  * background) instead of reading as a stray text link floating in the top
  * corner of the hero -- matches the secondary-button language used
@@ -689,6 +720,17 @@
   margin: 0;
 }
 
+.cockpit-safety-note {
+  border-left: 4px solid #dc2626;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.cockpit-safety-note__reason {
+  margin-top: 6px !important;
+  color: #64748b !important;
+  font-size: 13px !important;
+}
+
 /* P38b -- "comparisons/follow-up/missing context" (item 5) and Documents
  * (item 6) are archive/detail tier, one step quieter than the current-state
  * tier above (status strip / This week / Lab snapshot) -- a lighter fill
@@ -839,6 +881,15 @@
   .cockpit-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  body:has(.cockpit-page) button[aria-label="Open support chat"] {
+    right: 10px;
+    width: 44px;
+    height: 44px;
+    opacity: 0.88;
   }
 }
 
