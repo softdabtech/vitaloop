@@ -884,13 +884,11 @@
   }
 }
 
-@media (max-width: 640px) {
-  body:has(.cockpit-page) button[aria-label="Open support chat"] {
-    right: 10px;
-    width: 44px;
-    height: 44px;
-    opacity: 0.88;
-  }
+body:has(.cockpit-page) button[aria-label="Open support chat"] {
+  right: 2px !important;
+  width: 38px !important;
+  height: 38px !important;
+  opacity: 0.82;
 }
 
 .cockpit-row__text {
