@@ -27,6 +27,30 @@ import '../styles/today-page.css'
 const TODAY_COPY = {
   en: {
     pageTitle: 'Dashboard',
+    ui: {
+      workspace: 'Your VITALOOP workspace',
+      intro: 'Your latest symptom context, lab findings, priorities, and follow-up steps in one structured view.',
+      overview: 'Current report overview', overviewIntro: 'What the latest report found and the next follow-up step.',
+      dataSource: 'Data source', followUp: 'Follow-up', nextCheck: 'Next check',
+      safetyNote: 'Symptom-check safety note',
+      safetyReason: 'This note comes from answers in your latest symptom check—not from a diagnosis or a lab result.',
+      symptomContext: 'Latest symptom context', mainSignal: 'Main signal', duration: 'Duration', severity: 'Severity',
+      wellbeing: 'Wellbeing', pattern: 'Pattern', dailyImpact: 'Daily impact', related: 'Related:',
+      included: 'Included in the current lab report analysis',
+      notIncluded: 'Saved after this report — upload or regenerate a report to include it',
+      reviewAnswers: 'Review symptom answers →', notRecorded: 'Not recorded',
+      connection: 'Report connection', connectionTitle: 'Additional report detail is temporarily unavailable',
+      connectionBody: 'Your saved symptom and lab data are still shown below. Retry the connection or open report history.',
+      retry: 'Try again →', latestLabDate: (date) => `Latest lab date: ${date}`,
+      reconnectIntro: 'Your saved health information remains available while report details reconnect.',
+      latestLabResults: 'Latest lab results', recorded: 'Recorded', labsSaved: 'Lab results are saved. Open report history to review them.',
+    },
+    symptomValues: {
+      duration: { days_0_2: 'Less than 3 days', days_3_7: '3–7 days', weeks_1_4: '1–4 weeks', months_1_3: '1-3 months', months_3_6: '3-6 months', months_6_plus: 'More than 6 months' },
+      wellbeing: { good: 'Good', mostly_good: 'Mostly good', reduced: 'Reduced', poor: 'Poor' },
+      pattern: { constant: 'Constant', intermittent: 'Comes and goes', worsening: 'Getting worse', improving: 'Improving', unknown: 'Not sure' },
+      impact: { none: 'No impact', mild: 'Mild impact', moderate: 'Moderate impact', severe: 'Severe impact' },
+    },
     firstRun: {
       title: 'Let’s start with what matters to you',
       body: 'Share what has been on your mind to add context before your first report.',
@@ -231,6 +255,30 @@ const TODAY_COPY = {
   },
   uk: {
     pageTitle: 'Дашборд',
+    ui: {
+      workspace: 'Ваш простір VITALOOP',
+      intro: 'Останній контекст симптомів, результати аналізів, пріоритети та наступні кроки в одному структурованому огляді.',
+      overview: 'Огляд поточного звіту', overviewIntro: 'Що показав останній звіт і який наступний крок.',
+      dataSource: 'Джерело даних', followUp: 'Потребує уваги', nextCheck: 'Наступна перевірка',
+      safetyNote: 'Зауваження щодо безпеки симптомів',
+      safetyReason: 'Це зауваження сформовано з відповідей у вашій останній перевірці симптомів, а не з діагнозу чи результатів аналізів.',
+      symptomContext: 'Останній контекст симптомів', mainSignal: 'Основний симптом', duration: 'Тривалість', severity: 'Вираженість',
+      wellbeing: 'Самопочуття', pattern: 'Характер прояву', dailyImpact: 'Вплив на повсякденність', related: 'Пов’язані симптоми:',
+      included: 'Враховано в аналізі поточного лабораторного звіту',
+      notIncluded: 'Збережено після цього звіту — завантажте або сформуйте звіт повторно, щоб урахувати ці дані',
+      reviewAnswers: 'Переглянути відповіді про симптоми →', notRecorded: 'Не вказано',
+      connection: 'З’єднання зі звітом', connectionTitle: 'Додаткові деталі звіту тимчасово недоступні',
+      connectionBody: 'Збережені дані про симптоми та аналізи показані нижче. Спробуйте відновити з’єднання або відкрийте історію звітів.',
+      retry: 'Спробувати ще раз →', latestLabDate: (date) => `Остання дата аналізів: ${date}`,
+      reconnectIntro: 'Збережена інформація про ваше здоров’я залишається доступною, поки відновлюється з’єднання зі звітом.',
+      latestLabResults: 'Останні результати аналізів', recorded: 'Збережено', labsSaved: 'Результати аналізів збережено. Відкрийте історію звітів, щоб переглянути їх.',
+    },
+    symptomValues: {
+      duration: { days_0_2: 'Менше ніж 3 дні', days_3_7: '3–7 днів', weeks_1_4: '1–4 тижні', months_1_3: '1–3 місяці', months_3_6: '3–6 місяців', months_6_plus: 'Понад 6 місяців' },
+      wellbeing: { good: 'Добре', mostly_good: 'Переважно добре', reduced: 'Погіршене', poor: 'Погане' },
+      pattern: { constant: 'Постійно', intermittent: 'Час від часу', worsening: 'Погіршується', improving: 'Покращується', unknown: 'Не впевнений(-а)' },
+      impact: { none: 'Не впливає', mild: 'Незначний вплив', moderate: 'Помірний вплив', severe: 'Сильний вплив' },
+    },
     firstRun: {
       title: 'Почнімо з того, що для вас важливо',
       body: 'Опишіть, що вас турбує, щоб додати контекст перед першим звітом.',
@@ -422,6 +470,51 @@ function classifySafetyTone(text) {
   return 'success'
 }
 
+const UK_SYMPTOM_LABELS = {
+  'Fatigue': 'Втома',
+  'Low stamina': 'Низька витривалість',
+  'Post-activity exhaustion': 'Виснаження після навантаження',
+  'General weakness': 'Загальна слабкість',
+  'Difficulty falling asleep': 'Труднощі із засинанням',
+  'Waking during the night': 'Нічні пробудження',
+  'Unrefreshing sleep': 'Сон не приносить відпочинку',
+  'Daytime sleepiness': 'Денна сонливість',
+  'Brain fog': 'Затуманеність мислення',
+  'Poor concentration': 'Труднощі з концентрацією',
+  'Memory difficulty': 'Труднощі з пам’яттю',
+  'Head pressure': 'Відчуття тиску в голові',
+  'Bloating': 'Здуття живота',
+  'Abdominal discomfort': 'Дискомфорт у животі',
+  'Bowel changes': 'Зміни випорожнень',
+  'Food-related symptoms': 'Симптоми, пов’язані з їжею',
+  'Hair shedding': 'Випадіння волосся',
+  'Dry skin': 'Сухість шкіри',
+  'Brittle nails': 'Ламкі нігті',
+  'Skin changes': 'Зміни шкіри',
+  'Low mood': 'Знижений настрій',
+  'Anxiety': 'Тривожність',
+  'Irritability': 'Дратівливість',
+  'High stress load': 'Високий рівень стресу',
+  'Muscle pain': 'Біль у м’язах',
+  'Joint pain': 'Біль у суглобах',
+  'Headache': 'Головний біль',
+  'General aches': 'Загальний біль у тілі',
+}
+
+const UK_SAFETY_TEXT = {
+  'No urgent red flags reported.': 'Термінових червоних прапорців не зазначено.',
+  'Some answers suggest timely clinician review is important.': 'Деякі відповіді вказують, що своєчасний огляд лікаря важливий.',
+  'Multiple red flags detected. Do not delay medical review.': 'Виявлено кілька червоних прапорців. Не відкладайте медичний огляд.',
+}
+
+function localizedSymptomLabel(value, isUk) {
+  return isUk ? (UK_SYMPTOM_LABELS[String(value || '')] || value) : value
+}
+
+function localizedSafetyText(value, isUk) {
+  return isUk ? (UK_SAFETY_TEXT[String(value || '')] || value) : value
+}
+
 const SAFETY_TONE_STYLES = {
   warning: { bg: '#fef3c7', border: 'rgba(245,158,11,.3)', color: '#92400e' },
   critical: { bg: '#fee2e2', border: 'rgba(239,68,68,.28)', color: '#b91c1c' },
@@ -455,19 +548,9 @@ function MeterDots({ filled, total, label }) {
   )
 }
 
-const SYMPTOM_VALUE_LABELS = {
-  duration: {
-    days_0_2: 'Less than 3 days', days_3_7: '3–7 days', weeks_1_4: '1–4 weeks',
-    months_1_3: '1-3 months', months_3_6: '3-6 months', months_6_plus: 'More than 6 months',
-  },
-  wellbeing: { good: 'Good', mostly_good: 'Mostly good', reduced: 'Reduced', poor: 'Poor' },
-  pattern: { constant: 'Constant', intermittent: 'Comes and goes', worsening: 'Getting worse', improving: 'Improving', unknown: 'Not sure' },
-  impact: { none: 'No impact', mild: 'Mild impact', moderate: 'Moderate impact', severe: 'Severe impact' },
-}
-
-function readableSymptomValue(group, value) {
-  if (!value) return 'Not recorded'
-  return SYMPTOM_VALUE_LABELS[group]?.[value]
+function readableSymptomValue(copy, group, value) {
+  if (!value) return copy.ui.notRecorded
+  return copy.symptomValues[group]?.[value]
     || String(value).replaceAll('_', ' ').replace(/^./, (character) => character.toUpperCase())
 }
 
@@ -490,7 +573,7 @@ const EVIDENCE_METER = { low: 4, moderate: 3, high: 2, blocked: 1 }
 // what fixes the two-screen flicker -- the same cockpit shell mounts
 // immediately and fills in, instead of a whole different (legacy) layout
 // rendering first and being replaced once the fetch resolves.
-function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, symptomSessionId, reportSymptomSnapshot }) {
+function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, symptomSessionId, reportSymptomSnapshot, isUk }) {
   const c = copy.cockpit
   const { headerContext, statusStrip, safety, thisWeek, labSnapshot, missingContext, isSparse, sparsePrimaryAction, contentStatus, clinicalFinding, attentionLevel, evidenceBasis } = cockpit
   const isLoadingContent = contentStatus === 'loading'
@@ -503,7 +586,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
     <div className="cockpit-page">
       <div className="cockpit-hero">
         <div className="cockpit-header">
-          <p className="coach-eyebrow">Your VITALOOP workspace</p>
+          <p className="coach-eyebrow">{copy.ui.workspace}</p>
           <div className="cockpit-header__top">
             <h1 className="cockpit-title">{copy.pageTitle}</h1>
             {viewModel.documents && (
@@ -513,7 +596,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
               </button>
             )}
           </div>
-          <p className="cockpit-header__intro">Your latest symptom context, lab findings, priorities, and follow-up steps in one structured view.</p>
+          <p className="cockpit-header__intro">{copy.ui.intro}</p>
           <div className="cockpit-header__dates">
             <span>{headerContext.labDate ? c.header.labDateLabel(headerContext.labDate) : c.header.labDateUnavailable}</span>
             {headerContext.symptomCheckDate && <span>{c.header.symptomCheckLabel(headerContext.symptomCheckDate)}</span>}
@@ -524,23 +607,23 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
         </div>
       </div>
 
-      <section className="cockpit-section cockpit-report-overview" aria-label="Current report overview" aria-busy={isLoadingContent || undefined}>
-        <h2 className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />Current report overview</h2>
-        <p className="cockpit-section-intro">What the latest report found and the next follow-up step.</p>
+      <section className="cockpit-section cockpit-report-overview" aria-label={copy.ui.overview} aria-busy={isLoadingContent || undefined}>
+        <h2 className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />{copy.ui.overview}</h2>
+        <p className="cockpit-section-intro">{copy.ui.overviewIntro}</p>
         <div className="cockpit-status-strip">
           {contentStatus === 'ready' ? (
             <>
               <div className={`cockpit-status-cell ${statusCellToneClass('basis', statusStrip, headerContext.reportAge)}`}>
                 <Activity className="h-4 w-4 shrink-0 text-emerald-600" />
-                <span><small>Data source</small>{statusStrip.basisLabel}</span>
+                <span><small>{copy.ui.dataSource}</small>{statusStrip.basisLabel}</span>
               </div>
               <div className={`cockpit-status-cell ${statusCellToneClass('priority', statusStrip, headerContext.reportAge)}`}>
                 <ListChecks className="h-4 w-4 shrink-0 text-emerald-600" />
-                <span><small>Follow-up</small>{statusStrip.priorityLabel}</span>
+                <span><small>{copy.ui.followUp}</small>{statusStrip.priorityLabel}</span>
               </div>
               <div className={`cockpit-status-cell ${statusCellToneClass('retest', statusStrip, headerContext.reportAge)}`}>
                 <CalendarClock className="h-4 w-4 shrink-0 text-emerald-600" />
-                <span><small>Next check</small>{statusStrip.nextRetestLabel}</span>
+                <span><small>{copy.ui.nextCheck}</small>{statusStrip.nextRetestLabel}</span>
               </div>
             </>
           ) : (
@@ -554,31 +637,31 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
       </section>
 
       {safety.questionnaire && (
-        <section className="cockpit-section cockpit-safety-note" aria-label="Symptom-check safety note">
-          <h2 className="today-section-label"><ShieldAlert className="h-4 w-4 text-red-700" />Symptom-check safety note</h2>
-          <p>{safety.questionnaire.text}</p>
-          <p className="cockpit-safety-note__reason">This note comes from answers in your latest symptom check—not from a diagnosis or a lab result.</p>
+        <section className="cockpit-section cockpit-safety-note" aria-label={copy.ui.safetyNote}>
+          <h2 className="today-section-label"><ShieldAlert className="h-4 w-4 text-red-700" />{copy.ui.safetyNote}</h2>
+          <p>{localizedSafetyText(safety.questionnaire.text, isUk)}</p>
+          <p className="cockpit-safety-note__reason">{copy.ui.safetyReason}</p>
           <button type="button" onClick={() => navigate(safety.questionnaire.actionTo)} className="cockpit-primary-action mt-3">{copy.safety.reviewSymptomAnswersAction}</button>
         </section>
       )}
 
       {symptomContext?.primary_signal && (
-        <section className="cockpit-section" aria-label="Latest symptom context">
-          <h2 className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />Latest symptom context</h2>
+        <section className="cockpit-section" aria-label={copy.ui.symptomContext}>
+          <h2 className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />{copy.ui.symptomContext}</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Main signal</p><p className="mt-1 text-sm font-bold text-slate-950">{symptomContext.primary_signal}</p></div>
-            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Duration</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue('duration', symptomContext.duration_bucket)}</p></div>
-            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Severity</p><p className="mt-1 text-sm text-slate-700">{symptomContext.severity != null ? `${symptomContext.severity}/10` : 'Not recorded'}</p></div>
-            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Wellbeing</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue('wellbeing', symptomContext.overall_wellbeing)}</p></div>
-            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Pattern</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue('pattern', symptomContext.symptom_pattern)}</p></div>
-            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Daily impact</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue('impact', symptomContext.functional_impact)}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.ui.mainSignal}</p><p className="mt-1 text-sm font-bold text-slate-950">{localizedSymptomLabel(symptomContext.primary_signal, isUk)}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.ui.duration}</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue(copy, 'duration', symptomContext.duration_bucket)}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.ui.severity}</p><p className="mt-1 text-sm text-slate-700">{symptomContext.severity != null ? `${symptomContext.severity}/10` : copy.ui.notRecorded}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.ui.wellbeing}</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue(copy, 'wellbeing', symptomContext.overall_wellbeing)}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.ui.pattern}</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue(copy, 'pattern', symptomContext.symptom_pattern)}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.ui.dailyImpact}</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue(copy, 'impact', symptomContext.functional_impact)}</p></div>
           </div>
-          {Array.isArray(symptomContext.related_symptoms) && symptomContext.related_symptoms.length > 0 && <p className="mt-3 text-sm text-slate-600"><span className="font-semibold">Related:</span> {symptomContext.related_symptoms.join(', ')}</p>}
+          {Array.isArray(symptomContext.related_symptoms) && symptomContext.related_symptoms.length > 0 && <p className="mt-3 text-sm text-slate-600"><span className="font-semibold">{copy.ui.related}</span> {symptomContext.related_symptoms.map((value) => localizedSymptomLabel(value, isUk)).join(', ')}</p>}
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
             <p className={`text-xs font-bold ${reportSymptomSnapshot?.session_id === symptomSessionId ? 'text-emerald-700' : 'text-amber-700'}`}>
-              {reportSymptomSnapshot?.session_id === symptomSessionId ? 'Included in the current lab report analysis' : 'Saved after this report — upload or regenerate a report to include it'}
+              {reportSymptomSnapshot?.session_id === symptomSessionId ? copy.ui.included : copy.ui.notIncluded}
             </p>
-            <button type="button" onClick={() => navigate('/questionnaire')} className="cockpit-link">Review symptom answers &rarr;</button>
+            <button type="button" onClick={() => navigate('/questionnaire')} className="cockpit-link">{copy.ui.reviewAnswers}</button>
           </div>
         </section>
       )}
@@ -813,39 +896,50 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
   )
 }
 
-function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety }) {
+function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety, isUk }) {
+  const t = isUk ? {
+    upload: 'Завантажити результати аналізів', start: 'Почати перевірку симптомів', reviewContext: 'Переглянути контекст симптомів', addContext: 'Додати контекст симптомів', haveLabs: 'У мене є результати аналізів',
+    healthProfile: 'Профіль здоров’я', healthProfileBody: 'Обов’язкові базові дані збережено.', reviewProfile: 'Переглянути профіль',
+    symptomContext: 'Контекст симптомів', symptomSaved: 'Ваш поточний запит збережено, його можна оновити.', symptomAdd: 'Додайте інформацію про самопочуття, щоб звіти мали корисний контекст.', review: 'Переглянути', startCheck: 'Почати перевірку',
+    labs: 'Результати аналізів', labsBody: 'Завантажте звіт або введіть значення вручну, щоб створити перший аналіз.', addResults: 'Додати результати',
+    safetyTitle: 'Перегляньте зауваження щодо безпеки симптомів', reviewSafety: 'Переглянути →', workspace: 'Ваш простір VITALOOP',
+    hero: 'Перетворіть дані про здоров’я на зрозумілий наступний крок', heroBody: 'Заповніть контекст симптомів, додайте результати аналізів — VITALOOP об’єднає їх у структурований огляд для подальших порівнянь.',
+    gettingStarted: 'Початок роботи', ofThree: (n) => `${n} із 3`, setupComplete: (n) => `Налаштування завершено на ${n}%`, progressBody: 'Дашборд наповнюватиметься звітами, пріоритетами та порівняннями після додавання інформації.',
+    path: 'Ваш шлях', snapshot: 'Створіть перший огляд здоров’я', cardsWork: 'Кожна картка веде до відповідної дії', step: (n) => `Крок ${n}`,
+    benefits: [['1', 'Структурований контекст', 'Симптоми та лабораторні показники пов’язані між собою.'], ['2', 'Сфокусований аналіз', 'Побачте, що підтверджують дані, чого бракує та що потребує уваги.'], ['3', 'Динаміка в часі', 'Наступні звіти можна порівнювати з тією самою базою та контекстом симптомів.']],
+  } : {
+    upload: 'Upload lab results', start: 'Start symptom check', reviewContext: 'Review symptom context', addContext: 'Add symptom context', haveLabs: 'I have lab results to upload',
+    healthProfile: 'Health profile', healthProfileBody: 'Your required baseline information is saved.', reviewProfile: 'Review profile', symptomContext: 'Symptom context', symptomSaved: 'Your current concern is saved and can be updated.', symptomAdd: 'Add how you feel so reports have useful context.', review: 'Review', startCheck: 'Start check', labs: 'Lab results', labsBody: 'Upload a report or enter values manually to create your first analysis.', addResults: 'Add results', safetyTitle: 'Review your symptom safety note', reviewSafety: 'Review →', workspace: 'Your VITALOOP workspace', hero: 'Turn your health data into a clear next step', heroBody: 'Complete your symptom context, add lab results, and VITALOOP will organize both into one structured view you can return to and compare over time.', gettingStarted: 'Getting started', ofThree: (n) => `${n} of 3`, setupComplete: (n) => `${n}% setup complete`, progressBody: 'Your dashboard will fill with reports, priorities, and comparisons as you add information.', path: 'Your path', snapshot: 'Build your first health snapshot', cardsWork: 'Every card leads to a working action', step: (n) => `Step ${n}`, benefits: [['1', 'Structured context', 'Symptoms and lab values stay connected instead of living in separate forms.'], ['2', 'Focused analysis', 'See what is supported by your data, what remains uncertain, and what deserves attention.'], ['3', 'Progress over time', 'Future reports can be compared with the same saved baseline and symptom context.']],
+  }
   const completedSteps = hasConcern ? 2 : 1
   const progress = Math.round((completedSteps / 3) * 100)
   const primaryAction = hasConcern || isLabsReadyIntent
-    ? { label: 'Upload lab results', to: '/upload', Icon: FileUp }
-    : { label: 'Start symptom check', to: '/questionnaire', Icon: Stethoscope }
+    ? { label: t.upload, to: '/upload', Icon: FileUp }
+    : { label: t.start, to: '/questionnaire', Icon: Stethoscope }
   const secondaryAction = primaryAction.to === '/upload'
-    ? { label: hasConcern ? 'Review symptom context' : 'Add symptom context', to: '/questionnaire' }
-    : { label: 'I have lab results to upload', to: '/upload' }
+    ? { label: hasConcern ? t.reviewContext : t.addContext, to: '/questionnaire' }
+    : { label: t.haveLabs, to: '/upload' }
 
   const steps = [
     {
-      title: 'Health profile',
-      body: 'Your required baseline information is saved.',
+      title: t.healthProfile, body: t.healthProfileBody,
       state: 'complete',
       Icon: UserRound,
-      action: 'Review profile',
+      action: t.reviewProfile,
       to: '/health-profile',
     },
     {
-      title: 'Symptom context',
-      body: hasConcern ? 'Your current concern is saved and can be updated.' : 'Add how you feel so reports have useful context.',
+      title: t.symptomContext, body: hasConcern ? t.symptomSaved : t.symptomAdd,
       state: hasConcern ? 'complete' : 'next',
       Icon: Stethoscope,
-      action: hasConcern ? 'Review' : 'Start check',
+      action: hasConcern ? t.review : t.startCheck,
       to: '/questionnaire',
     },
     {
-      title: 'Lab results',
-      body: 'Upload a report or enter values manually to create your first analysis.',
+      title: t.labs, body: t.labsBody,
       state: 'pending',
       Icon: FileUp,
-      action: 'Add results',
+      action: t.addResults,
       to: '/upload',
     },
   ]
@@ -860,17 +954,17 @@ function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety }) 
         >
           <span className="flex items-start gap-3">
             <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" />
-            <span><strong className="block">Review your symptom safety note</strong><span className="mt-1 block text-sm leading-6">{safety.text}</span>{safety.sourceLabel && <span className="mt-2 block text-xs font-black uppercase tracking-wide opacity-70">{safety.sourceLabel}</span>}</span>
+            <span><strong className="block">{t.safetyTitle}</strong><span className="mt-1 block text-sm leading-6">{localizedSafetyText(safety.text, isUk)}</span>{safety.sourceLabel && <span className="mt-2 block text-xs font-black uppercase tracking-wide opacity-70">{safety.sourceLabel}</span>}</span>
           </span>
-          <span className="shrink-0 text-sm font-black">Review &rarr;</span>
+          <span className="shrink-0 text-sm font-black">{t.reviewSafety}</span>
         </button>
       )}
       <section className="today-focus">
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-center">
           <div>
-            <p className="coach-eyebrow">Your VITALOOP workspace</p>
-            <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl xl:text-5xl">Turn your health data into a clear next step</h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">Complete your symptom context, add lab results, and VITALOOP will organize both into one structured view you can return to and compare over time.</p>
+            <p className="coach-eyebrow">{t.workspace}</p>
+            <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl xl:text-5xl">{t.hero}</h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">{t.heroBody}</p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link to={primaryAction.to} className="coach-button coach-button--primary coach-button--md w-full justify-center whitespace-nowrap sm:w-auto">
                 <primaryAction.Icon className="coach-button__icon" aria-hidden="true" />
@@ -885,15 +979,15 @@ function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety }) 
           <div className="rounded-2xl border border-white/80 bg-white/80 p-5 shadow-sm">
             <div className="flex items-end justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-teal-700">Getting started</p>
-                <p className="mt-2 text-3xl font-black text-slate-950">{completedSteps} of 3</p>
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-teal-700">{t.gettingStarted}</p>
+                <p className="mt-2 text-3xl font-black text-slate-950">{t.ofThree(completedSteps)}</p>
               </div>
               <span className="text-sm font-bold text-slate-500">{progress}%</span>
             </div>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200" aria-label={`${progress}% setup complete`}>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200" aria-label={t.setupComplete(progress)}>
               <div className="h-full rounded-full bg-emerald-500" style={{ width: `${progress}%` }} />
             </div>
-            <p className="mt-4 text-sm leading-6 text-slate-600">Your dashboard will fill with reports, priorities, and comparisons as you add information.</p>
+            <p className="mt-4 text-sm leading-6 text-slate-600">{t.progressBody}</p>
           </div>
         </div>
       </section>
@@ -901,10 +995,10 @@ function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety }) 
       <section aria-labelledby="setup-steps-title">
         <div className="mb-3 flex items-end justify-between gap-3">
           <div>
-            <p className="coach-eyebrow">Your path</p>
-            <h2 id="setup-steps-title" className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">Build your first health snapshot</h2>
+            <p className="coach-eyebrow">{t.path}</p>
+            <h2 id="setup-steps-title" className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">{t.snapshot}</h2>
           </div>
-          <p className="hidden text-sm text-slate-500 sm:block">Every card leads to a working action</p>
+          <p className="hidden text-sm text-slate-500 sm:block">{t.cardsWork}</p>
         </div>
         <div className="grid gap-4 lg:grid-cols-3">
           {steps.map(({ title, body, state, Icon, action, to }, index) => (
@@ -913,7 +1007,7 @@ function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety }) 
                 <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${state === 'complete' ? 'bg-emerald-100 text-emerald-700' : state === 'next' ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-600'}`}>
                   {state === 'complete' ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                 </span>
-                <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Step {index + 1}</span>
+                <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">{t.step(index + 1)}</span>
               </div>
               <h3 className="mt-4 text-lg font-black text-slate-950">{title}</h3>
               <p className="mt-2 min-h-[48px] text-sm leading-6 text-slate-600">{body}</p>
@@ -926,11 +1020,7 @@ function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety }) 
       </section>
 
       <section className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-950 p-5 text-white sm:grid-cols-3 sm:p-6">
-        {[
-          ['1', 'Structured context', 'Symptoms and lab values stay connected instead of living in separate forms.'],
-          ['2', 'Focused analysis', 'See what is supported by your data, what remains uncertain, and what deserves attention.'],
-          ['3', 'Progress over time', 'Future reports can be compared with the same saved baseline and symptom context.'],
-        ].map(([number, title, body]) => (
+        {t.benefits.map(([number, title, body]) => (
           <div key={number} className="flex gap-3">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-400 font-black text-slate-950">{number}</span>
             <div><h3 className="font-black">{title}</h3><p className="mt-1 text-sm leading-6 text-slate-300">{body}</p></div>
@@ -941,62 +1031,62 @@ function FirstRunWorkspace({ navigate, hasConcern, isLabsReadyIntent, safety }) 
   )
 }
 
-function LimitedDashboard({ summary, symptomContext, safety, navigate, refetch }) {
+function LimitedDashboard({ summary, symptomContext, safety, navigate, refetch, copy, isUk }) {
   const latestUpload = summary?.blocks?.latest_upload || summary?.blocks?.latest_lab_result || null
   const biomarkers = Array.isArray(latestUpload?.biomarkers) ? latestUpload.biomarkers.slice(0, 3) : []
   const labDate = latestUpload?.measurement_date || latestUpload?.test_date || latestUpload?.created_at
-  const formattedDate = labDate ? new Date(labDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
+  const formattedDate = labDate ? new Date(labDate).toLocaleDateString(isUk ? 'uk-UA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
 
   return (
     <div className="cockpit-page">
       <header className="cockpit-hero">
         <div className="cockpit-header">
-          <p className="coach-eyebrow">Your VITALOOP workspace</p>
-          <div className="cockpit-header__top"><h1 className="cockpit-title">Dashboard</h1></div>
-          <p className="cockpit-header__intro">Your saved health information remains available while report details reconnect.</p>
-          {formattedDate && <div className="cockpit-header__dates"><span>Latest lab date: {formattedDate}</span></div>}
+          <p className="coach-eyebrow">{copy.ui.workspace}</p>
+          <div className="cockpit-header__top"><h1 className="cockpit-title">{copy.pageTitle}</h1></div>
+          <p className="cockpit-header__intro">{copy.ui.reconnectIntro}</p>
+          {formattedDate && <div className="cockpit-header__dates"><span>{copy.ui.latestLabDate(formattedDate)}</span></div>}
         </div>
       </header>
 
-      <section className="cockpit-section" aria-label="Report connection status">
-        <h2 className="today-section-label"><AlertTriangle className="h-4 w-4 text-slate-500" />Report connection</h2>
-        <h2 className="text-base font-bold text-slate-950">Additional report detail is temporarily unavailable</h2>
-        <p className="mt-1">Your saved symptom and lab data are still shown below. Retry the connection or open report history.</p>
+      <section className="cockpit-section" aria-label={copy.ui.connection}>
+        <h2 className="today-section-label"><AlertTriangle className="h-4 w-4 text-slate-500" />{copy.ui.connection}</h2>
+        <h3 className="text-base font-bold text-slate-950">{copy.ui.connectionTitle}</h3>
+        <p className="mt-1">{copy.ui.connectionBody}</p>
         <div className="mt-3 flex flex-wrap gap-4">
-          <button type="button" onClick={() => refetch()} className="cockpit-link">Try again &rarr;</button>
-          <button type="button" onClick={() => navigate('/lab-results')} className="cockpit-link">All reports &rarr;</button>
+          <button type="button" onClick={() => refetch()} className="cockpit-link">{copy.ui.retry}</button>
+          <button type="button" onClick={() => navigate('/lab-results')} className="cockpit-link">{copy.cta.history} &rarr;</button>
         </div>
       </section>
 
       {safety && (
-        <section className="cockpit-section cockpit-safety-note" aria-label="Symptom-check safety note">
-          <h2 className="today-section-label"><ShieldAlert className="h-4 w-4 text-red-700" />Symptom-check safety note</h2>
-          <p>{safety.text}</p>
-          <button type="button" onClick={() => navigate('/questionnaire')} className="cockpit-link mt-2">Review symptom answers &rarr;</button>
+        <section className="cockpit-section cockpit-safety-note" aria-label={copy.ui.safetyNote}>
+          <h2 className="today-section-label"><ShieldAlert className="h-4 w-4 text-red-700" />{copy.ui.safetyNote}</h2>
+          <p>{localizedSafetyText(safety.text, isUk)}</p>
+          <button type="button" onClick={() => navigate('/questionnaire')} className="cockpit-link mt-2">{copy.ui.reviewAnswers}</button>
         </section>
       )}
 
       {symptomContext?.primary_signal && (
-        <section className="cockpit-section" aria-label="Latest symptom context">
-          <h2 className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />Latest symptom context</h2>
+        <section className="cockpit-section" aria-label={copy.ui.symptomContext}>
+          <h2 className="today-section-label"><Activity className="h-4 w-4 text-emerald-600" />{copy.ui.symptomContext}</h2>
           <div className="grid gap-4 sm:grid-cols-3">
-            <div><p className="coach-eyebrow">Main signal</p><p className="mt-1 text-sm font-bold text-slate-950">{symptomContext.primary_signal}</p></div>
-            <div><p className="coach-eyebrow">Duration</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue('duration', symptomContext.duration_bucket)}</p></div>
-            <div><p className="coach-eyebrow">Severity</p><p className="mt-1 text-sm text-slate-700">{symptomContext.severity != null ? `${symptomContext.severity}/10` : 'Not recorded'}</p></div>
+            <div><p className="coach-eyebrow">{copy.ui.mainSignal}</p><p className="mt-1 text-sm font-bold text-slate-950">{localizedSymptomLabel(symptomContext.primary_signal, isUk)}</p></div>
+            <div><p className="coach-eyebrow">{copy.ui.duration}</p><p className="mt-1 text-sm text-slate-700">{readableSymptomValue(copy, 'duration', symptomContext.duration_bucket)}</p></div>
+            <div><p className="coach-eyebrow">{copy.ui.severity}</p><p className="mt-1 text-sm text-slate-700">{symptomContext.severity != null ? `${symptomContext.severity}/10` : copy.ui.notRecorded}</p></div>
           </div>
         </section>
       )}
 
       {latestUpload && (
-        <section className="cockpit-section" aria-label="Latest lab results">
-          <div className="today-section-label"><Stethoscope className="h-4 w-4 text-emerald-600" />Latest lab results</div>
+        <section className="cockpit-section" aria-label={copy.ui.latestLabResults}>
+          <h2 className="today-section-label"><Stethoscope className="h-4 w-4 text-emerald-600" />{copy.ui.latestLabResults}</h2>
           {biomarkers.length ? <div className="cockpit-lab-grid">{biomarkers.map((marker) => (
             <div key={marker.name} className="cockpit-lab-row">
               <span className="cockpit-lab-row__name">{marker.name}</span>
               <span className="cockpit-lab-row__value">{marker.value}{marker.unit ? ` ${marker.unit}` : ''}</span>
-              <span className="cockpit-lab-row__status">{marker.status || 'Recorded'}</span>
+              <span className="cockpit-lab-row__status">{marker.status || copy.ui.recorded}</span>
             </div>
-          ))}</div> : <p>Lab results are saved. Open report history to review them.</p>}
+          ))}</div> : <p>{copy.ui.labsSaved}</p>}
         </section>
       )}
     </div>
@@ -1101,7 +1191,7 @@ export default function UserDashboard() {
     <div className="coach-shell">
       <CabinetPageFrame>
         {viewModel.status === 'contract_error' ? (
-          <LimitedDashboard summary={summary} symptomContext={symptomContext} safety={viewModel.safety} navigate={navigate} refetch={refetch} />
+          <LimitedDashboard summary={summary} symptomContext={symptomContext} safety={viewModel.safety} navigate={navigate} refetch={refetch} copy={copy} isUk={isUk} />
         ) : cockpit ? (
           <CockpitBody
             viewModel={viewModel}
@@ -1111,9 +1201,10 @@ export default function UserDashboard() {
             symptomContext={symptomContext}
             symptomSessionId={questionnaireSession?.session?.id}
             reportSymptomSnapshot={reportDetails?.symptom_snapshot}
+            isUk={isUk}
           />
-        ) : (viewModel.status === 'first_run' || viewModel.status === 'labs_intent') && !isUk ? (
-          <FirstRunWorkspace navigate={navigate} hasConcern={hasConcern} isLabsReadyIntent={isLabsReadyIntent} safety={viewModel.safety} />
+        ) : (viewModel.status === 'first_run' || viewModel.status === 'labs_intent') ? (
+          <FirstRunWorkspace navigate={navigate} hasConcern={hasConcern} isLabsReadyIntent={isLabsReadyIntent} safety={viewModel.safety} isUk={isUk} />
         ) : (
           <>
             <div className="today-focus">
