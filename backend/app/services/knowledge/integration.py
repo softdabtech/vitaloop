@@ -22,28 +22,75 @@ def _knowledge_marker_key(name: str) -> str:
     return _KNOWLEDGE_KEY_ALIASES.get(canonical, canonical)
 
 
-def biomarkers_to_knowledge_lab_results(biomarkers: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+def partition_biomarkers_for_knowledge(
+    biomarkers: List[Dict[str, Any]],
+) -> tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]:
+    """Split pipeline biomarkers into KB inputs and explicitly excluded rows.
+
+    The KB intentionally evaluates numeric abnormality only for eligible
+    statuses.  Keeping the excluded side of that decision makes every input
+    marker auditable instead of making normal or incomplete markers disappear
+    before ``marker_coverage`` is built.
+    """
     lab_results: Dict[str, Dict[str, Any]] = {}
+    excluded: List[Dict[str, Any]] = []
     for item in biomarkers or []:
+        name = str(item.get("name") or item.get("display_name") or "").strip()
+        key = _knowledge_marker_key(name) if name else None
+
         # P0 Reference Safety Fix: Filter ineligible statuses before KB evaluation
         is_eligible, ineligible_reason = _is_eligible_for_kb_numeric_classification(item)
         if not is_eligible:
-            # Ineligible biomarkers (UNEVALUATED, UNKNOWN, NEEDS_CONFIRMATION) are excluded
-            # from KB numeric abnormality evaluation but remain in the biomarker record
-            # for display and Safety Engine independent evaluation
+            # Ineligible biomarkers (including OPTIMAL, UNEVALUATED, UNKNOWN,
+            # and NEEDS_CONFIRMATION) are excluded from KB numeric abnormality
+            # evaluation but remain visible to the report and Safety Engine.
+            excluded.append(
+                {
+                    "marker": key,
+                    "source_name": name or None,
+                    "canonical_name": item.get("canonical_name"),
+                    "status": item.get("status"),
+                    "reason": ineligible_reason or "not_eligible_for_kb_numeric_classification",
+                }
+            )
             continue
 
-        name = str(item.get("name") or item.get("display_name") or "").strip()
         if not name:
+            excluded.append(
+                {
+                    "marker": None,
+                    "source_name": None,
+                    "canonical_name": item.get("canonical_name"),
+                    "status": item.get("status"),
+                    "reason": "missing_marker_name",
+                }
+            )
             continue
-        key = _knowledge_marker_key(name)
         value = item.get("value")
         unit = str(item.get("unit") or "").strip()
         if value is None or not unit:
+            excluded.append(
+                {
+                    "marker": key,
+                    "source_name": name,
+                    "canonical_name": item.get("canonical_name"),
+                    "status": item.get("status"),
+                    "reason": "missing_numeric_value" if value is None else "missing_unit",
+                }
+            )
             continue
         try:
             numeric_value = float(value)
         except (TypeError, ValueError):
+            excluded.append(
+                {
+                    "marker": key,
+                    "source_name": name,
+                    "canonical_name": item.get("canonical_name"),
+                    "status": item.get("status"),
+                    "reason": "invalid_numeric_value",
+                }
+            )
             continue
         entry = {
             "value": numeric_value,
@@ -66,7 +113,31 @@ def biomarkers_to_knowledge_lab_results(biomarkers: List[Dict[str, Any]]) -> Dic
         # is a choice between two reported values, never a unit conversion -- a
         # percentage and a count stay unconvertible in the evaluator.
         if _is_percentage_unit(existing.get("unit")) and not _is_percentage_unit(unit):
+            excluded.append(
+                {
+                    "marker": key,
+                    "source_name": existing.get("source_name"),
+                    "canonical_name": None,
+                    "status": existing.get("status"),
+                    "reason": "duplicate_percentage_replaced_by_absolute_value",
+                }
+            )
             lab_results[key] = entry
+        else:
+            excluded.append(
+                {
+                    "marker": key,
+                    "source_name": name,
+                    "canonical_name": item.get("canonical_name"),
+                    "status": item.get("status"),
+                    "reason": "duplicate_lower_priority_representation",
+                }
+            )
+    return lab_results, excluded
+
+
+def biomarkers_to_knowledge_lab_results(biomarkers: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    lab_results, _excluded = partition_biomarkers_for_knowledge(biomarkers)
     return lab_results
 
 
@@ -209,9 +280,28 @@ async def evaluate_biomarkers_with_knowledge(
     if not settings.knowledge_evaluation_after_analyze_enabled:
         return None
 
-    lab_results = biomarkers_to_knowledge_lab_results(biomarkers)
+    lab_results, ineligible_markers = partition_biomarkers_for_knowledge(biomarkers)
     if not lab_results:
-        return None
+        return {
+            "matched_rules": [],
+            "generated_recommendations": [],
+            "requires_doctor": False,
+            "max_confidence": 0.0,
+            "confidence": 0.0,
+            "safety_alerts": [],
+            "source_references": [],
+            "rule_evaluation_ids": [],
+            "nutrition_context": {},
+            "unevaluated_markers": [],
+            "ineligible_markers": ineligible_markers,
+            "marker_coverage": {
+                "evaluated": [],
+                "no_matching_rule": [],
+                "unit_blocked": [],
+                "fired": [],
+                "excluded": [item.get("marker") for item in ineligible_markers if item.get("marker")],
+            },
+        }
 
     profile: Dict[str, Any] = user_profile if isinstance(user_profile, dict) else {}
     if user_id and not profile:
@@ -255,7 +345,14 @@ async def evaluate_biomarkers_with_knowledge(
         },
     }
     try:
-        return await evaluate_health_input(payload, user_id=user_id, persist=persist)
+        output = await evaluate_health_input(payload, user_id=user_id, persist=persist)
+        output["ineligible_markers"] = ineligible_markers
+        marker_coverage = output.get("marker_coverage") if isinstance(output.get("marker_coverage"), dict) else {}
+        output["marker_coverage"] = {
+            **marker_coverage,
+            "excluded": [item.get("marker") for item in ineligible_markers if item.get("marker")],
+        }
+        return output
     except Exception as exc:
         logger.warning(
             "knowledge_evaluation_after_analyze_failed upload_id=%s user_id=%s error=%s",

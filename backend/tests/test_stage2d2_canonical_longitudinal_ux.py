@@ -184,9 +184,10 @@ def test_d2_8_upload_history_list_remains_and_is_visually_separate_from_progress
 # see the Stage 2D-2 report for the full pytest invocation and pass counts)
 
 
-def test_d2_dead_code_progress_jsx_still_unreferenced():
-    """Progress.jsx was not revived — still not imported/routed anywhere."""
-    assert PROGRESS_JSX_PATH.exists(), "Progress.jsx should still exist untouched, not deleted in this stage"
+def test_d2_retired_progress_jsx_stays_removed_and_redirected():
+    """The retired Progress page stays removed and its URL stays compatible."""
+    assert not PROGRESS_JSX_PATH.exists()
     assert "Progress.jsx" not in APP_JSX
     assert "from './pages/Progress.jsx'" not in APP_JSX
     assert "from '../pages/Progress.jsx'" not in APP_JSX
+    assert '<Route path="/progress" element={<Navigate to="/lab-results" replace />} />' in APP_JSX

@@ -158,11 +158,47 @@ def assemble_frozen_response(
     is_blocked = str(report_version.get("status") or "").lower() == "blocked"
     input_snapshot = sanitized_input_snapshot
     input_snapshot = input_snapshot if isinstance(input_snapshot, dict) else {}
+    frozen_biomarkers = input_snapshot.get("biomarkers")
+    frozen_biomarkers = frozen_biomarkers if isinstance(frozen_biomarkers, list) and frozen_biomarkers else biomarkers
+    version_provenance = input_snapshot.get("version_provenance")
+    version_provenance = version_provenance if isinstance(version_provenance, dict) else {}
+    health_context = input_snapshot.get("health_context")
+    health_context = health_context if isinstance(health_context, dict) else {}
+    frozen_metadata = input_snapshot.get("metadata")
+    if not isinstance(frozen_metadata, dict):
+        # Rows created before P0 did not persist the result metadata envelope.
+        # Rebuild only fields already frozen elsewhere in input_snapshot; do
+        # not evaluate current rules or infer new clinical content.
+        readiness = health_context.get("readiness") if isinstance(health_context.get("readiness"), dict) else {}
+        ai_orchestration = input_snapshot.get("ai_orchestration")
+        ai_orchestration = ai_orchestration if isinstance(ai_orchestration, dict) else {}
+        ai_metadata = ai_orchestration.get("metadata") if isinstance(ai_orchestration.get("metadata"), dict) else {}
+        quality_snapshot = input_snapshot.get("quality_snapshot")
+        quality_snapshot = quality_snapshot if isinstance(quality_snapshot, dict) else {}
+        frozen_metadata = {
+            "source": input_snapshot.get("source") or {},
+            "questionnaire_present": bool(readiness.get("has_questionnaire")),
+            "symptom_snapshot_present": bool(input_snapshot.get("symptom_snapshot")),
+            "profile_present": bool(readiness.get("has_profile")),
+            "profile_context_fields": input_snapshot.get("profile_context_fields") or [],
+            "health_context_version": health_context.get("version"),
+            "health_context_readiness": readiness,
+            "ai_orchestration_version": ai_orchestration.get("version"),
+            "ai_analysis_source": ai_metadata.get("analysis_source"),
+            "quality_snapshot_version": quality_snapshot.get("version"),
+            "biomarker_count": len(frozen_biomarkers),
+            "analysis_core_version": version_provenance.get("pipeline_version"),
+            "version_provenance": version_provenance,
+        }
 
-    return {
+    response = {
         "upload_id": upload_id,
         "analysis_status": "blocked" if is_blocked else "completed",
-        "biomarkers": biomarkers,
+        # The canonical IDs/reference provenance exist only in the immutable
+        # analysis snapshot; the legacy biomarkers table does not have those
+        # columns. Serving the frozen list prevents that information from
+        # disappearing between the engine and the UI.
+        "biomarkers": frozen_biomarkers,
         "protocol": sanitized_protocol_recommendations,
         "knowledge_evaluation": knowledge_evaluation,
         "knowledge_report": knowledge_report,
@@ -174,6 +210,14 @@ def assemble_frozen_response(
         "clinical_data_integrity": input_snapshot.get("clinical_data_integrity"),
         "evidence_gaps": input_snapshot.get("evidence_gaps"),
         "symptom_snapshot": public_symptom_snapshot(input_snapshot.get("symptom_snapshot")),
+        "health_context": health_context,
+        "health_states": input_snapshot.get("health_states"),
+        "trend_analysis": input_snapshot.get("trend_analysis"),
+        "ai_orchestration": input_snapshot.get("ai_orchestration"),
+        "quality_snapshot": input_snapshot.get("quality_snapshot"),
+        "cost_metadata": input_snapshot.get("cost_metadata"),
+        "metadata": frozen_metadata,
+        "version_provenance": version_provenance,
         # Follow-up on 2026-09-12 audit items #2/#3/#6: same frozen-verbatim
         # treatment as evidence_gaps directly above — persisted into
         # input_snapshot at generation time by lab_analysis_pipeline.py, not
@@ -259,3 +303,10 @@ def assemble_frozen_response(
         "report_version": {**sanitized_report_version, "safety_result": safety_result},
         "report_source": REPORT_SOURCE_FROZEN,
     }
+    # Both public results endpoints must expose the same shape. Results.jsx
+    # reads the analysis-core panel from final_analysis, while other sections
+    # read top-level aliases. The compatibility endpoint previously returned
+    # only the aliases for frozen rows, making persisted quality/domain/trend
+    # output unreachable in the UI.
+    response["final_analysis"] = dict(response)
+    return response

@@ -1697,6 +1697,11 @@ async def run_lab_analysis_pipeline(
                     "symptom_snapshot": deepcopy(symptom_snapshot),
                     "profile_context_fields": result["metadata"]["profile_context_fields"],
                     "source": source_metadata or {},
+                    # Persist the exact public analysis metadata so frozen
+                    # responses do not lose source/version/readiness fields
+                    # that Results consumes. Older rows are handled by the
+                    # read-side compatibility builder in report_history.py.
+                    "metadata": deepcopy(result["metadata"]),
                     "health_context": health_context,
                     "analysis_input_quality_gate": analysis_input_quality_gate,
                     "clinical_data_integrity": clinical_integrity,

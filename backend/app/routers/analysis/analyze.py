@@ -1565,7 +1565,9 @@ async def get_results(
             entity_id=str(upload_id),
             new_value={"biomarker_count": len(biomarkers), "has_protocol": bool(protocol_recommendations), "report_source": REPORT_SOURCE_FROZEN},
         )
-        response["final_analysis"] = dict(response)
+        response["final_analysis"] = {
+            key: value for key, value in response.items() if key != "final_analysis"
+        }
         return response
 
     # Protocol-locale fix (cabinet reconciliation): `protocols` is one mutable

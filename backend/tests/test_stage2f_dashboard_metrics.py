@@ -234,7 +234,10 @@ def test_f6_safety_section_has_no_score_threshold_styling():
     # at all when it is absent (see buildTodayViewModel(): safetyTone ===
     # 'success' -> null, never a rendered "all clear" string).
     assert "concernSummary?.urgency || copy.noRedFlags" not in DASHBOARD_JSX
-    assert "No urgent red flags reported." not in DASHBOARD_JSX
+    assert "safetyText || 'No urgent red flags reported.'" not in DASHBOARD_JSX
+    # The phrase may remain as a localization key for a real backend value;
+    # its presence in this map does not create a default banner.
+    assert "'No urgent red flags reported.':" in DASHBOARD_JSX
     assert "safetyText" in DASHBOARD_JSX  # real urgency text is still read and passed through when present
 
 

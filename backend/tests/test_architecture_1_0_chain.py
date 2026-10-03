@@ -275,8 +275,9 @@ def test_chain_11_frontend_reads_progress_overview_not_a_second_trend_engine():
     assert "api.get('/progress/overview')" in lab_results_jsx
     progress_jsx = (FRONTEND_SRC / "pages/Progress.jsx")
     app_jsx = (FRONTEND_SRC / "App.jsx").read_text()
-    assert progress_jsx.exists()
+    assert not progress_jsx.exists()
     assert "Progress.jsx" not in app_jsx
+    assert '<Route path="/progress" element={<Navigate to="/lab-results" replace />} />' in app_jsx
 
 
 # --- 12: entitlement is resolved canonically -------------------------------------
