@@ -47,6 +47,15 @@ def _report_version():
             "clinical_hypotheses": {
                 "hypotheses": [{"label": "Thyroid function pattern"}],
             },
+            "case_synthesis": {
+                "version": "case_synthesis_v1",
+                "main_conclusion": [
+                    {
+                        "text": "TSH needs review.",
+                        "evidence": [{"type": "biomarker", "id": "canonical_tsh"}],
+                    }
+                ],
+            },
             "version_provenance": {"pipeline_version": "lab_analysis_pipeline_v2"},
         },
         "knowledge_report": {
@@ -97,6 +106,8 @@ def test_p0_audit_traces_complete_frozen_case_without_identifiers():
     assert audit["lost_fields"] == []
     assert response["final_analysis"]["quality_snapshot"]["version"] == "analysis_quality_snapshot_v1"
     assert response["final_analysis"]["biomarkers"][1]["canonical_name"] == "canonical_tsh"
+    assert response["case_synthesis"] == report["input_snapshot"]["case_synthesis"]
+    assert response["final_analysis"]["case_synthesis"] == response["case_synthesis"]
     assert "final_analysis" not in response["final_analysis"]
 
 

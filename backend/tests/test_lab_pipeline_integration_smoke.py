@@ -43,6 +43,9 @@ async def test_child_reticulocyte_panel_runs_core_pipeline_without_external_ai()
     assert result["clinical_data_integrity"]["version"] == "clinical_data_integrity_v1"
     assert result["analysis_input_quality_gate"]["version"] == "analysis_input_quality_gate_v1"
     assert result["evidence_gaps"]["version"] == "evidence_gaps_v1"
+    assert result["case_synthesis"]["version"] == "case_synthesis_v1"
+    assert result["case_synthesis"]["grounding"]["all_statements_grounded"] is True
+    assert 2 <= len(result["case_synthesis"]["main_conclusion"]) <= 4
     assert result["safety_result"]["status"] in {"approved", "approved_with_warnings"}
     assert result["metadata"]["version_provenance"]["kb_version"]
 

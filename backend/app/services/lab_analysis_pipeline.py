@@ -26,6 +26,7 @@ from app.services.report_quality_audit import build_report_quality_audit
 from app.services.population_profiles import build_population_profile_overlays
 from app.services.population_profile_selection import select_population_profiles
 from app.services.doctor_escalation_precision import build_doctor_escalation_precision
+from app.services.case_synthesis import build_case_synthesis
 from app.services.progress_intelligence import build_progress_intelligence
 from app.services.personal_baseline import build_personal_baseline, build_personal_baseline_velocity
 from app.services.action_plan_by_role import build_action_plan_by_role
@@ -1561,6 +1562,26 @@ async def run_lab_analysis_pipeline(
         "population_profile_selection_version": population_profile_selection.get("version"),
     }
 
+    # P1 Case Synthesis: one deterministic, evidence-linked contract over the
+    # reasoning outputs already produced above. It adds no diagnosis or new
+    # threshold logic; every user-facing statement references a concrete
+    # biomarker, symptom, or profile field.
+    case_synthesis = build_case_synthesis(
+        biomarkers=normalized_biomarkers,
+        symptoms=normalized_symptoms,
+        user_profile=user_profile,
+        interpreted_report=interpreted_report,
+        clinical_hypotheses=clinical_hypotheses,
+        clinical_contradictions=clinical_contradictions,
+        evidence_gaps=evidence_gaps,
+        action_plan_by_role=action_plan_by_role,
+        retest_suggestions=retest_suggestions,
+        next_best_tests=next_best_tests,
+        safety_result=safety_result,
+        locale=locale,
+    )
+    version_provenance["case_synthesis_version"] = case_synthesis.get("version")
+
     # Report Quality Audit (P23, backend-first v1): a technical/product
     # audit of THIS report's generation — what ran, domain coverage,
     # safety/cost signals, reproducibility — never a health score or
@@ -1651,6 +1672,7 @@ async def run_lab_analysis_pipeline(
         "population_profile_overlays": population_profile_overlays,
         "population_profile_selection": population_profile_selection,
         "doctor_escalation_precision": doctor_escalation_precision,
+        "case_synthesis": case_synthesis,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
         "action_plan_by_role": action_plan_by_role,
@@ -1730,6 +1752,7 @@ async def run_lab_analysis_pipeline(
                     "population_profile_overlays": population_profile_overlays,
                     "population_profile_selection": population_profile_selection,
                     "doctor_escalation_precision": doctor_escalation_precision,
+                    "case_synthesis": case_synthesis,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
                     "action_plan_by_role": action_plan_by_role,

@@ -284,6 +284,10 @@ def assemble_frozen_response(
         # they stood AT GENERATION TIME, and those are themselves
         # frozen-verbatim above.
         "doctor_escalation_precision": input_snapshot.get("doctor_escalation_precision"),
+        # P1 Case Synthesis is the immutable user-facing synthesis assembled
+        # at generation time. Older report versions intentionally expose None
+        # instead of being recomputed with newer reasoning rules.
+        "case_synthesis": input_snapshot.get("case_synthesis"),
         # Frozen-verbatim, same posture: a report generated before P5
         # existed reads back None; progress_intelligence is itself a diff
         # against an even-earlier snapshot, so re-running it here on read

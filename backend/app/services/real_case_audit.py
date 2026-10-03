@@ -28,6 +28,7 @@ UI_FIELD_CONSUMERS = {
     "ai_orchestration": [],
     "cost_metadata": [],
     "health_context": [],
+    "case_synthesis": [],
 }
 
 UI_RESPONSE_PATHS = {
