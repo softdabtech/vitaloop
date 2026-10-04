@@ -402,6 +402,32 @@ def build_case_synthesis(
                 ),
             )
 
+    # An evidence gap is also an explicit limit on the conclusion even when
+    # no measured marker directly contradicts it. Keep that limit visible in
+    # this section as well as in missing_information so callers do not mistake
+    # "no contradiction detected" for "no uncertainty present".
+    for gap in gaps[:8]:
+        missing_marker = gap.get("missing_marker")
+        if missing_marker:
+            references = [_missing_marker_ref(missing_marker)]
+            domain = str(gap.get("domain") or "current").replace("_", " ")
+            text = (
+                f"Missing {missing_marker} limits confidence in the {domain} interpretation."
+            )
+        else:
+            references = _profile_gap_refs(profile) if str(gap.get("domain")) == "data_quality" else []
+            text = gap.get("reason") or gap.get("suggested_next_step")
+        _append(
+            sections["contradictions_and_limits"],
+            _statement(
+                text,
+                references,
+                kind="evidence_limit",
+                priority=gap.get("priority"),
+                domain=gap.get("domain"),
+            ),
+        )
+
     # Missing information names the absent marker/profile context directly.
     for gap in gaps[:12]:
         missing_marker = gap.get("missing_marker")

@@ -225,3 +225,32 @@ def test_case_synthesis_does_not_fabricate_statements_without_evidence():
     assert result["main_conclusion"] == []
     assert result["likely_explanations"] == []
     assert result["grounding"]["all_statements_grounded"] is True
+
+
+def test_missing_evidence_is_also_exposed_as_a_conclusion_limit():
+    result = build_case_synthesis(
+        biomarkers=BIOMARKERS,
+        clinical_contradictions={"contradictions": []},
+        evidence_gaps={
+            "gaps": [
+                {
+                    "domain": "iron_status",
+                    "missing_marker": "transferrin_saturation",
+                    "priority": "high",
+                    "suggested_next_step": "Add this marker.",
+                }
+            ]
+        },
+    )
+
+    limits = result["contradictions_and_limits"]
+    assert len(limits) == 1
+    assert limits[0]["kind"] == "evidence_limit"
+    assert limits[0]["evidence"] == [
+        {
+            "type": "biomarker",
+            "id": "transferrin_saturation",
+            "label": "transferrin_saturation",
+            "availability": "missing",
+        }
+    ]
