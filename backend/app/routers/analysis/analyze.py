@@ -190,6 +190,8 @@ class AnalyzeResponse(BaseModel):
     analysis_status: Optional[str] = None
     report_source: Optional[str] = None
     safety_notice: Optional[str] = None
+    case_synthesis: Optional[dict] = None
+    symptom_analysis: Optional[dict] = None
 
 
 class CandidateDecision(BaseModel):
@@ -1487,6 +1489,8 @@ async def confirm_upload_candidates(
         "safety_result": pipeline_result.get("safety_result"),
         "safety_notice": pipeline_result.get("safety_notice"),
         "explainability": pipeline_result.get("explainability"),
+        "case_synthesis": pipeline_result.get("case_synthesis"),
+        "symptom_analysis": pipeline_result.get("symptom_analysis"),
         "report_version": pipeline_result.get("report_version"),
         "final_analysis": pipeline_result,
     }
@@ -1757,6 +1761,8 @@ async def regenerate_results(
         "safety_result": pipeline_result.get("safety_result"),
         "safety_notice": pipeline_result.get("safety_notice"),
         "explainability": pipeline_result.get("explainability"),
+        "case_synthesis": pipeline_result.get("case_synthesis"),
+        "symptom_analysis": pipeline_result.get("symptom_analysis"),
         "report_version": pipeline_result.get("report_version"),
         "report_source": REPORT_SOURCE_REGENERATED,
         "final_analysis": pipeline_result,

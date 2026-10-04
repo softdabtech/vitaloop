@@ -288,6 +288,9 @@ def assemble_frozen_response(
         # at generation time. Older report versions intentionally expose None
         # instead of being recomputed with newer reasoning rules.
         "case_synthesis": input_snapshot.get("case_synthesis"),
+        # P2 stable symptom-concept matrix and its exact priority effects at
+        # generation time. A newer symptom check never mutates this snapshot.
+        "symptom_analysis": input_snapshot.get("symptom_analysis"),
         # Frozen-verbatim, same posture: a report generated before P5
         # existed reads back None; progress_intelligence is itself a diff
         # against an even-earlier snapshot, so re-running it here on read

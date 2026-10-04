@@ -84,6 +84,7 @@ async def _build(args: argparse.Namespace) -> dict:
         retest_suggestions=knowledge_report.get("retest_plan") or [],
         next_best_tests=snapshot.get("next_best_tests") or {},
         safety_result=report.get("safety_result") or {},
+        symptom_analysis=snapshot.get("symptom_analysis") or {},
         locale="en",
     )
     section_counts = {section: len(synthesis.get(section) or []) for section in CASE_SYNTHESIS_SECTIONS}

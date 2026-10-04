@@ -29,6 +29,7 @@ UI_FIELD_CONSUMERS = {
     "cost_metadata": [],
     "health_context": [],
     "case_synthesis": [],
+    "symptom_analysis": [],
 }
 
 UI_RESPONSE_PATHS = {

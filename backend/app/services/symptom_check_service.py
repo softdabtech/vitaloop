@@ -31,6 +31,7 @@ from app.services.symptom_metrics import (
     record_mapping_miss,
     record_session_terminal,
 )
+from app.services.symptom_report_update import resolve_report_update_offer
 
 
 logger = logging.getLogger(__name__)
@@ -1177,7 +1178,13 @@ async def submit_answers(
             .eq("user_id", user_id)
             .execute()
         )
-        response_payload = {"session": _public_session(updated.data[0])}
+        updated_session = updated.data[0]
+        response_payload = {"session": _public_session(updated_session)}
+        if updated_session.get("status") == "completed":
+            response_payload["report_update"] = await resolve_report_update_offer(
+                user_id=user_id,
+                completed_at=updated_session.get("completed_at"),
+            )
         await svc._run(
             lambda: supabase.table("symptom_answer_submissions")
             .update(

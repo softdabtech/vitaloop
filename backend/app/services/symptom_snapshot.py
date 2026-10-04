@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.services import supabase_service as svc
+from app.services.symptom_analysis import stable_unmapped_concept_id
 from app.services.symptom_safety_policy import map_provider_triage
 
 
@@ -40,6 +41,7 @@ def _evidence_item(row: dict[str, Any]) -> dict[str, Any]:
         "provider_concept_id": row.get("provider_concept_id"),
         "display_name_en": row.get("display_name_en"),
         "concept_type": row.get("concept_type"),
+        "mapping_status": row.get("mapping_status"),
         "is_primary": bool(row.get("is_primary")),
         "source": row.get("source"),
         "domain_keys": sorted(
@@ -126,8 +128,9 @@ def build_legacy_questionnaire_snapshot(session: dict[str, Any]) -> dict[str, An
     evidence = [
         {
             "vitaloop_concept_id": (
-                summary.get("primary_concept_id") if index == 0
-                else str(label).lower().replace(" ", "_")
+                summary.get("primary_concept_id")
+                if index == 0 and summary.get("primary_concept_id")
+                else stable_unmapped_concept_id(label)
             ),
             "provider_concept_id": None,
             "display_name_en": label,
@@ -136,6 +139,11 @@ def build_legacy_questionnaire_snapshot(session: dict[str, Any]) -> dict[str, An
             "source": "controlled_questionnaire",
             "is_primary": index == 0,
             "domain_keys": [summary.get("primary_concern_id")] if index == 0 and summary.get("primary_concern_id") else [],
+            "mapping_status": (
+                "mapped"
+                if index == 0 and summary.get("primary_concept_id")
+                else "unmapped"
+            ),
         }
         for index, label in enumerate(dict.fromkeys(labels))
     ]

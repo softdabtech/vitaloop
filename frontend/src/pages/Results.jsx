@@ -1370,6 +1370,54 @@ function ReasoningTraceSection({ traces, copy }) {
   )
 }
 
+function SymptomImpactNotice({ finalAnalysis, isUk }) {
+  const analysis = finalAnalysis?.symptom_analysis || {}
+  const impact = finalAnalysis?.case_synthesis?.symptom_impact || analysis?.conclusion_change || {}
+  if (!impact?.changed) return null
+
+  const concepts = new Map((analysis.concepts || []).map((item) => [item.concept_id, item]))
+  const hypotheses = new Map(
+    (finalAnalysis?.clinical_hypotheses?.hypotheses || []).map((item) => [item.hypothesis_id, item.label])
+  )
+  const explanations = Array.isArray(impact.explanations) ? impact.explanations : []
+
+  return (
+    <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-5 text-blue-950 shadow-sm">
+      <div className="font-semibold">
+        {isUk ? 'Що змінилося через ваші відповіді' : 'What changed because of your answers'}
+      </div>
+      <p className="mt-1 text-sm leading-6">
+        {isUk
+          ? 'Перевірка симптомів змінила пріоритет або пояснення у цьому звіті. Це контекст для пріоритету, а не доказ причини.'
+          : 'Your symptom check changed the priority or explanation in this report. This affects priority and does not prove cause.'}
+      </p>
+      {!!explanations.length && (
+        <ul className="mt-3 space-y-2 text-sm leading-6">
+          {explanations.map((item, index) => {
+            const labels = (item.symptom_concept_ids || []).map((id) => {
+              const concept = concepts.get(id)
+              if (!concept) return id
+              const answer = concept.choice === 'absent'
+                ? (isUk ? 'не виявлено' : 'reported absent')
+                : concept.choice === 'unknown'
+                  ? (isUk ? 'не впевнені' : 'unsure')
+                  : (isUk ? 'наявний' : 'reported present')
+              return `${concept.label} (${answer})`
+            })
+            const hypothesis = hypotheses.get(item.hypothesis_id) || item.hypothesis_id
+            return (
+              <li key={`${item.hypothesis_id || 'impact'}-${index}`}>
+                <span className="font-semibold">{hypothesis}</span>
+                {labels.length ? ` — ${labels.join(', ')}` : ''}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function AnalysisCoreV2Panel({ finalAnalysis, copy }) {
   if (!finalAnalysis) return null
   const healthStates = finalAnalysis.health_states || {}
@@ -1716,6 +1764,7 @@ export default function Results() {
             redundant top-of-page overview widgets identified in the P31a
             audit. AnalysisCoreV2Panel below carries the remaining
             domain-level detail that isn't already in the hero. */}
+        <SymptomImpactNotice finalAnalysis={finalAnalysis} isUk={isUk} />
         <AnalysisCoreV2Panel finalAnalysis={finalAnalysis} copy={copy} />
 
         {!!urgentWarning && (

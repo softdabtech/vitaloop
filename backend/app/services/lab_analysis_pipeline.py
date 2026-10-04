@@ -27,6 +27,10 @@ from app.services.population_profiles import build_population_profile_overlays
 from app.services.population_profile_selection import select_population_profiles
 from app.services.doctor_escalation_precision import build_doctor_escalation_precision
 from app.services.case_synthesis import build_case_synthesis
+from app.services.symptom_analysis import (
+    apply_symptom_priority,
+    build_symptom_analysis,
+)
 from app.services.progress_intelligence import build_progress_intelligence
 from app.services.personal_baseline import build_personal_baseline, build_personal_baseline_velocity
 from app.services.action_plan_by_role import build_action_plan_by_role
@@ -1329,6 +1333,11 @@ async def run_lab_analysis_pipeline(
         next_best_tests=next_best_tests,
         safety_result=safety_result,
     )
+    symptom_analysis = build_symptom_analysis(
+        symptom_snapshot=symptom_snapshot,
+        hypotheses=clinical_hypotheses.get("hypotheses"),
+        biomarkers=normalized_biomarkers,
+    )
     # Clinical Contradiction Detector (P15, backend-only v1): deterministic
     # marker-vs-marker / marker-vs-symptom rules (ferritin+CRP masking,
     # TSH+FT4 subclinical signal, glucose+insulin, LDL+ApoB, etc.) — reads
@@ -1399,6 +1408,7 @@ async def run_lab_analysis_pipeline(
         evidence_gaps=evidence_gaps,
         patterns=interpreted_report.get("patterns"),
         symptoms=normalized_symptoms,
+        symptom_analysis=symptom_analysis,
         progress_intelligence=progress_intelligence,
         personal_baseline=personal_baseline,
     )
@@ -1413,6 +1423,24 @@ async def run_lab_analysis_pipeline(
         "hypotheses": apply_calibration_to_hypotheses(
             clinical_hypotheses.get("hypotheses"), confidence_calibration
         ),
+    }
+    symptom_ranked_hypotheses, symptom_analysis = apply_symptom_priority(
+        clinical_hypotheses.get("hypotheses"),
+        symptom_analysis,
+    )
+    clinical_hypotheses = {
+        **clinical_hypotheses,
+        "hypotheses": symptom_ranked_hypotheses,
+        "summary": {
+            **(clinical_hypotheses.get("summary") or {}),
+            "top_hypothesis_id": (
+                symptom_ranked_hypotheses[0].get("hypothesis_id")
+                if symptom_ranked_hypotheses else None
+            ),
+            "symptom_priority_applied": bool(
+                (symptom_analysis.get("conclusion_change") or {}).get("changed")
+            ),
+        },
     }
     # Negative Evidence Layer (P17, backend-only v1): runs after P14/P15/P16
     # so it can see which domains already have a strong signal reported
@@ -1601,6 +1629,7 @@ async def run_lab_analysis_pipeline(
         "evidence_debt_version": evidence_debt.get("version"),
         "population_profile_overlays_version": population_profile_overlays.get("version"),
         "population_profile_selection_version": population_profile_selection.get("version"),
+        "symptom_analysis_version": symptom_analysis.get("version"),
     }
 
     # P1 Case Synthesis: one deterministic, evidence-linked contract over the
@@ -1619,6 +1648,7 @@ async def run_lab_analysis_pipeline(
         retest_suggestions=retest_suggestions,
         next_best_tests=next_best_tests,
         safety_result=safety_result,
+        symptom_analysis=symptom_analysis,
         locale=locale,
     )
     version_provenance["case_synthesis_version"] = case_synthesis.get("version")
@@ -1713,6 +1743,7 @@ async def run_lab_analysis_pipeline(
         "population_profile_overlays": population_profile_overlays,
         "population_profile_selection": population_profile_selection,
         "doctor_escalation_precision": doctor_escalation_precision,
+        "symptom_analysis": symptom_analysis,
         "case_synthesis": case_synthesis,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
@@ -1793,6 +1824,7 @@ async def run_lab_analysis_pipeline(
                     "population_profile_overlays": population_profile_overlays,
                     "population_profile_selection": population_profile_selection,
                     "doctor_escalation_precision": doctor_escalation_precision,
+                    "symptom_analysis": symptom_analysis,
                     "case_synthesis": case_synthesis,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,

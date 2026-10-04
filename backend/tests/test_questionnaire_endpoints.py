@@ -258,9 +258,17 @@ async def test_complete_builds_session_result(monkeypatch):
     async def fake_summary(**_kw):
         return "You sleep lightly, but your energy looks good. Focus on consistent sleep timing tonight."
 
+    async def fake_report_update(**_kwargs):
+        return {
+            "status": "update_available",
+            "update_available": True,
+            "action": {"endpoint": "/analyze/upload-1/regenerate"},
+        }
+
     monkeypatch.setattr(q, "_get_or_create_active_session", lambda _uid: coro(_ACTIVE_SESSION))
     monkeypatch.setattr(q, "_get_session_answers", lambda _sid: coro(answers))
     monkeypatch.setattr(claude_service, "generate_questionnaire_summary", fake_summary)
+    monkeypatch.setattr(q, "resolve_report_update_offer", fake_report_update)
 
     import app.services.supabase_service as svc
     monkeypatch.setattr(svc, "_get_supabase", lambda: _FakeSB())
@@ -275,6 +283,7 @@ async def test_complete_builds_session_result(monkeypatch):
     assert "completion_score" in completed
     assert isinstance(completed["completion_score"], float)
     assert "dimension_scores" in completed
+    assert result["report_update"]["action"]["endpoint"] == "/analyze/upload-1/regenerate"
 
 
 @pytest.mark.asyncio

@@ -187,6 +187,8 @@ def _calibrate_hypothesis(
     evidence_gaps: Dict[str, Any] | None,
     patterns: List[Dict[str, Any]] | None,
     symptom_keys: set[str],
+    stable_symptom_hypothesis_ids: set[str],
+    use_legacy_symptom_matching: bool,
     progress_intelligence: Dict[str, Any] | None,
     personal_baseline: Dict[str, Any] | None,
 ) -> Dict[str, Any]:
@@ -221,10 +223,15 @@ def _calibrate_hypothesis(
     pattern_symptoms = {
         str(s).strip().lower() for s in ((pattern or {}).get("symptom_signal") or [])
     }
-    if pattern_symptoms and (pattern_symptoms & symptom_keys):
+    stable_symptom_match = hypothesis_id in stable_symptom_hypothesis_ids
+    legacy_symptom_match = use_legacy_symptom_matching and pattern_symptoms and (pattern_symptoms & symptom_keys)
+    if stable_symptom_match or legacy_symptom_match:
         score += _SYMPTOM_MATCH_BONUS
         reason_codes.append("supportive_symptom_match")
-        positive_factors.append("Reported symptoms support this pattern.")
+        positive_factors.append(
+            "Stable symptom concepts support this pattern."
+            if stable_symptom_match else "Reported symptoms support this pattern."
+        )
 
     matched_contradictions = _contradictions_for_hypothesis(
         contradictions or [], domain=domain, hypothesis_id=hypothesis_id
@@ -314,6 +321,7 @@ def build_confidence_calibration(
     evidence_gaps: Dict[str, Any] | None = None,
     patterns: List[Dict[str, Any]] | None = None,
     symptoms: List[Any] | None = None,
+    symptom_analysis: Dict[str, Any] | None = None,
     progress_intelligence: Dict[str, Any] | None = None,
     personal_baseline: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
@@ -330,6 +338,12 @@ def build_confidence_calibration(
         }
 
     symptom_keys = _symptom_keys(symptoms)
+    stable_symptom_hypothesis_ids = {
+        str(item)
+        for item in (symptom_analysis or {}).get("matched_hypothesis_ids") or []
+        if str(item)
+    }
+    use_legacy_symptom_matching = not isinstance(symptom_analysis, dict)
     calibrated_items: List[Dict[str, Any]] = []
     for hypothesis in valid_hypotheses:
         try:
@@ -339,6 +353,8 @@ def build_confidence_calibration(
                 evidence_gaps=evidence_gaps,
                 patterns=patterns,
                 symptom_keys=symptom_keys,
+                stable_symptom_hypothesis_ids=stable_symptom_hypothesis_ids,
+                use_legacy_symptom_matching=use_legacy_symptom_matching,
                 progress_intelligence=progress_intelligence,
                 personal_baseline=personal_baseline,
             )

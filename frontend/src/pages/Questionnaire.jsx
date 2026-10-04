@@ -301,6 +301,7 @@ export default function Questionnaire() {
   const { isPremium, loading: subLoading } = useSubscription()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [reportUpdating, setReportUpdating] = useState(false)
   const [error, setError] = useState('')
   const [step, setStep] = useState(0)
   const [nextQuestion, setNextQuestion] = useState(null)
@@ -595,7 +596,10 @@ export default function Questionnaire() {
           queryClient.invalidateQueries({ queryKey: ['insights'] }),
           queryClient.invalidateQueries({ queryKey: ['health-score'] }),
         ])
-        setResults(completeResp?.data?.session || {})
+        setResults({
+          ...(completeResp?.data?.session || {}),
+          report_update: completeResp?.data?.report_update || null,
+        })
         gaQuestionnaireComplete(completeResp?.data?.session?.completion_score)
         toast.success(isUk ? 'Перевірку симптомів завершено' : 'Symptom check completed')
       }
@@ -603,6 +607,25 @@ export default function Questionnaire() {
       toast.error(parseApiError(err, isUk ? 'Не вдалося зберегти відповідь.' : 'Failed to save answer.'))
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function updateLatestReport() {
+    const offer = results?.report_update
+    if (!offer?.update_available || !offer?.action?.endpoint) return
+    setReportUpdating(true)
+    try {
+      await api.post(offer.action.endpoint)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+        queryClient.invalidateQueries({ queryKey: ['report-details', offer.report_upload_id] }),
+      ])
+      toast.success(isUk ? 'Звіт оновлено з новими відповідями' : 'Report updated with your new answers')
+      navigate(offer.action.path || `/results/${offer.report_upload_id}`)
+    } catch (err) {
+      toast.error(parseApiError(err, isUk ? 'Не вдалося оновити звіт.' : 'Failed to update report.'))
+    } finally {
+      setReportUpdating(false)
     }
   }
 
@@ -1121,6 +1144,23 @@ export default function Questionnaire() {
                   {toText(results.llm_summary) || (isUk ? 'Ваші відповіді збережено.' : 'Your answers are saved.')}
                 </p>
               </div>
+              {results.report_update?.update_available && (
+                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-blue-950">
+                  <div className="font-extrabold">
+                    {isUk ? 'Нові відповіді ще не включені до останнього звіту' : 'Your latest report does not include these answers yet'}
+                  </div>
+                  <p className="mt-1 text-sm leading-6">
+                    {isUk
+                      ? 'Оновіть звіт, щоб VITALOOP перерахував пріоритети та показав, які висновки змінилися через цю перевірку симптомів.'
+                      : 'Update the report so VITALOOP can recalculate priorities and show which conclusions changed because of this symptom check.'}
+                  </p>
+                  <div className="mt-4">
+                    <CoachButton onClick={updateLatestReport} disabled={reportUpdating} trailingIcon={ArrowRight}>
+                      {reportUpdating ? (isUk ? 'Оновлення...' : 'Updating...') : (isUk ? 'Оновити останній звіт' : 'Update latest report')}
+                    </CoachButton>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-wrap gap-3">
                 <CoachButton onClick={() => navigate('/upload')} trailingIcon={ArrowRight}>{isUk ? 'Завантажити аналізи' : 'Upload labs'}</CoachButton>
                 <CoachButton variant="secondary" onClick={() => navigate('/lab-plan')}>{isUk ? 'План аналізів' : 'Lab plan'}</CoachButton>

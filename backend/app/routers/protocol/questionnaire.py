@@ -8,6 +8,7 @@ from app.dependencies import get_current_user
 from app.services import supabase_service as svc
 from app.services import claude_service
 from app.services.questionnaire_scoring import apply_authoritative_derived_state
+from app.services.symptom_report_update import resolve_report_update_offer
 from app.utils.locale import resolve_locale
 
 router = APIRouter()
@@ -365,11 +366,16 @@ async def update_questionnaire_context(
             source="questionnaire:controlled_v1",
             metadata={"session_id": session["id"], "schema_version": "controlled_symptom_fallback_v1"},
         )
+    report_update = (
+        await resolve_report_update_offer(user_id=user_id, completed_at=updates.get("completed_at"))
+        if body.complete else None
+    )
     return {
         "ok": True,
         "session": updated_session,
         "session_context": _session_context(updated_session),
         "completed": bool(body.complete),
+        "report_update": report_update,
     }
 
 
@@ -521,7 +527,11 @@ async def complete_questionnaire(
                       "completion_score": completion_score, "dimension_scores": dimension_scores},
         )
 
-        return {"ok": True, "session": completed}
+        report_update = await resolve_report_update_offer(
+            user_id=user_id,
+            completed_at=completed.get("completed_at") or now,
+        )
+        return {"ok": True, "session": completed, "report_update": report_update}
     except HTTPException:
         raise
     except Exception as ex:

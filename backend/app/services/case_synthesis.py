@@ -76,12 +76,21 @@ def _missing_marker_ref(marker: Any) -> Dict[str, Any]:
 
 
 def _symptom_ref(symptom: Any) -> Dict[str, Any]:
-    label = str(symptom or "").strip()
+    if isinstance(symptom, dict):
+        label = str(symptom.get("label") or symptom.get("symptom_label") or "Symptom answer").strip()
+        concept_id = str(
+            symptom.get("concept_id") or symptom.get("symptom_concept_id") or ""
+        ).strip()
+        choice = str(symptom.get("choice") or "present").strip()
+    else:
+        label = str(symptom or "").strip()
+        concept_id = _key(label)
+        choice = "present"
     return {
         "type": "symptom",
-        "id": _key(label),
+        "id": concept_id or _key(label),
         "label": label,
-        "availability": "reported",
+        "availability": "reported" if choice == "present" else choice,
     }
 
 
@@ -248,6 +257,7 @@ def build_case_synthesis(
     retest_suggestions: List[Dict[str, Any]] | None = None,
     next_best_tests: Dict[str, Any] | None = None,
     safety_result: Dict[str, Any] | None = None,
+    symptom_analysis: Dict[str, Any] | None = None,
     locale: str = "en",
 ) -> Dict[str, Any]:
     """Build the P1 Case Synthesis contract without new clinical inference."""
@@ -259,6 +269,13 @@ def build_case_synthesis(
     hypotheses = _valid_dicts((clinical_hypotheses or {}).get("hypotheses"))
     contradictions = _valid_dicts((clinical_contradictions or {}).get("contradictions"))
     gaps = _valid_dicts((evidence_gaps or {}).get("gaps"))
+    symptom_analysis = symptom_analysis if isinstance(symptom_analysis, dict) else {}
+    symptom_matrix = _valid_dicts(symptom_analysis.get("matrix"))
+    symptom_concepts = {
+        str(item.get("concept_id")): item
+        for item in _valid_dicts(symptom_analysis.get("concepts"))
+        if item.get("concept_id")
+    }
     pattern_by_id = {
         str(item.get("pattern_id") or item.get("key")): item
         for item in patterns
@@ -314,37 +331,69 @@ def build_case_synthesis(
             ),
         )
 
-    # Symptom-to-lab links are explicit only when the pattern engine linked them.
-    linked_symptoms: set[str] = set()
-    for pattern in patterns:
-        matched = [str(item).strip() for item in (pattern.get("symptom_signal") or []) if str(item).strip()]
-        if not matched:
-            continue
-        marker_references = _pattern_refs(pattern, index)
-        symptom_references = [_symptom_ref(item) for item in matched]
-        linked_symptoms.update(_key(item) for item in matched)
-        title = pattern.get("pattern_name") or pattern.get("title") or "the detected marker pattern"
-        marker_names = ", ".join(str(item.get("label")) for item in marker_references[:3])
-        suffix = f" alongside {marker_names}" if marker_names else ""
-        _append(
-            sections["symptom_connections"],
-            _statement(
-                f"{', '.join(matched)} overlaps with {title}{suffix}; this is a correlation to review, not proof of cause.",
-                [*symptom_references, *marker_references],
-                pattern_id=pattern.get("pattern_id") or pattern.get("key"),
-            ),
-        )
-    for symptom in symptom_rows:
-        if _key(symptom) in linked_symptoms:
-            continue
-        _append(
-            sections["symptom_connections"],
-            _statement(
-                f"{symptom} was reported, but the current analysis did not link it to a detected biomarker pattern.",
-                [_symptom_ref(symptom)],
-                relationship="unlinked",
-            ),
-        )
+    # P2 uses stable concept IDs and reviewed domain links. The legacy text
+    # bridge remains only for reports generated without symptom_analysis.
+    if symptom_matrix:
+        for row in symptom_matrix:
+            concept = symptom_concepts.get(str(row.get("symptom_concept_id") or ""), row)
+            symptom_reference = _symptom_ref(concept)
+            matches = _valid_dicts(row.get("hypotheses"))
+            if row.get("choice") == "present" and matches:
+                for match in matches[:3]:
+                    hypothesis = hypothesis_by_id.get(str(match.get("hypothesis_id") or ""), {})
+                    marker_references = _marker_refs(match.get("confirming_marker_ids") or [], index)
+                    label = hypothesis.get("label") or match.get("hypothesis_id") or "the related explanation"
+                    _append(
+                        sections["symptom_connections"],
+                        _statement(
+                            f"{concept.get('label')} increases the priority of {label} because the stable symptom concept and hypothesis share the {match.get('domain')} domain; this is supportive context, not proof of cause.",
+                            [symptom_reference, *marker_references],
+                            relationship="domain_supported",
+                            symptom_concept_id=concept.get("concept_id"),
+                            hypothesis_id=match.get("hypothesis_id"),
+                        ),
+                    )
+            elif row.get("choice") == "present":
+                _append(
+                    sections["symptom_connections"],
+                    _statement(
+                        f"{concept.get('label')} was reported, but its stable concept did not match a current biomarker hypothesis.",
+                        [symptom_reference],
+                        relationship="unlinked",
+                        symptom_concept_id=concept.get("concept_id"),
+                    ),
+                )
+    else:
+        linked_symptoms: set[str] = set()
+        for pattern in patterns:
+            matched = [str(item).strip() for item in (pattern.get("symptom_signal") or []) if str(item).strip()]
+            if not matched:
+                continue
+            marker_references = _pattern_refs(pattern, index)
+            symptom_references = [_symptom_ref(item) for item in matched]
+            linked_symptoms.update(_key(item) for item in matched)
+            title = pattern.get("pattern_name") or pattern.get("title") or "the detected marker pattern"
+            marker_names = ", ".join(str(item.get("label")) for item in marker_references[:3])
+            suffix = f" alongside {marker_names}" if marker_names else ""
+            _append(
+                sections["symptom_connections"],
+                _statement(
+                    f"{', '.join(matched)} overlaps with {title}{suffix}; this is a correlation to review, not proof of cause.",
+                    [*symptom_references, *marker_references],
+                    pattern_id=pattern.get("pattern_id") or pattern.get("key"),
+                ),
+            )
+        for symptom in symptom_rows:
+            if _key(symptom) in linked_symptoms:
+                continue
+            _append(
+                sections["symptom_connections"],
+                _statement(
+                    f"{symptom} was reported, but the current analysis did not link it to a detected biomarker pattern.",
+                    [_symptom_ref(symptom)],
+                    relationship="unlinked",
+                ),
+            )
 
     # Ranked explanations reuse calibrated hypotheses and always stay non-diagnostic.
     for hypothesis in hypotheses[:5]:
@@ -354,14 +403,40 @@ def build_case_synthesis(
             references = _pattern_refs(pattern, index) if pattern else []
         label = hypothesis.get("label") or hypothesis.get("hypothesis_id") or "This explanation"
         bucket = hypothesis.get("calibrated_confidence") or hypothesis.get("likelihood_bucket") or "uncertain"
+        symptom_priority = hypothesis.get("symptom_priority") or {}
+        supporting_concept_ids = symptom_priority.get("supporting_concept_ids") or []
+        absent_concept_ids = symptom_priority.get("absent_concept_ids") or []
+        supporting_concepts = [symptom_concepts[item] for item in supporting_concept_ids if item in symptom_concepts]
+        absent_concepts = [symptom_concepts[item] for item in absent_concept_ids if item in symptom_concepts]
+        references = [
+            *references,
+            *[_symptom_ref(item) for item in supporting_concepts],
+            *[_symptom_ref(item) for item in absent_concepts],
+        ]
+        symptom_reason = ""
+        if supporting_concepts:
+            symptom_reason = (
+                " Reported "
+                + ", ".join(str(item.get("label")) for item in supporting_concepts)
+                + " raises its priority through the stable symptom-domain link."
+            )
+        if absent_concepts:
+            symptom_reason += (
+                " Reported absence of "
+                + ", ".join(str(item.get("label")) for item in absent_concepts)
+                + " lowers its priority through the stable symptom-domain link."
+            )
         _append(
             sections["likely_explanations"],
             _statement(
-                f"{label} is ranked {bucket} from the available evidence and remains an explanation to review rather than a diagnosis.",
+                f"{label} is ranked {bucket} from the available evidence and remains an explanation to review rather than a diagnosis.{symptom_reason}",
                 references,
                 hypothesis_id=hypothesis.get("hypothesis_id"),
                 rank=hypothesis.get("rank"),
                 confidence=bucket,
+                changed_by_symptoms=bool(supporting_concepts or absent_concepts),
+                symptom_concept_ids=supporting_concept_ids,
+                absent_symptom_concept_ids=absent_concept_ids,
             ),
         )
 
@@ -610,6 +685,14 @@ def build_case_synthesis(
         "locale": str(locale or "en").lower(),
         "status": status,
         **sections,
+        "symptom_impact": {
+            "changed": bool((symptom_analysis.get("conclusion_change") or {}).get("changed")),
+            "reason": (symptom_analysis.get("conclusion_change") or {}).get("reason"),
+            "explanations": (symptom_analysis.get("conclusion_change") or {}).get("explanations") or [],
+            "concept_ids": sorted(symptom_concepts),
+            "matrix_version": symptom_analysis.get("matrix_version"),
+            "source_completed_at": (symptom_analysis.get("source") or {}).get("completed_at"),
+        },
         "grounding": {
             "policy": "every_statement_references_biomarker_symptom_or_profile",
             "statement_count": len(all_statements),

@@ -126,10 +126,14 @@ async def test_controlled_context_completion_is_persisted_atomically(monkeypatch
     async def noop(**_kwargs):
         return None
 
+    async def fake_report_update(**_kwargs):
+        return {"status": "update_available", "update_available": True}
+
     monkeypatch.setattr(q, "_get_or_create_active_session", fake_session)
     monkeypatch.setattr(q, "_update_session", fake_update)
     monkeypatch.setattr(q.svc, "write_audit_log", noop)
     monkeypatch.setattr(q.svc, "save_timeline_event", noop)
+    monkeypatch.setattr(q, "resolve_report_update_offer", fake_report_update)
     request = Request({"type": "http", "method": "PATCH", "path": "/questionnaire/session/context", "headers": []})
     response = await q.update_questionnaire_context(
         q.QuestionnaireContextRequest(active_concern="Fatigue, Low stamina", summary=summary, complete=True),
@@ -140,6 +144,7 @@ async def test_controlled_context_completion_is_persisted_atomically(monkeypatch
     assert captured["status"] == "completed"
     assert captured["completed_at"]
     assert captured["session_metadata"]["summary"]["urgency_source"] == "backend"
+    assert response["report_update"] == {"status": "update_available", "update_available": True}
 
 
 @pytest.mark.asyncio
