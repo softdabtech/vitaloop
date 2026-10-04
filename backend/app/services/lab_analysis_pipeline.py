@@ -27,6 +27,7 @@ from app.services.population_profiles import build_population_profile_overlays
 from app.services.population_profile_selection import select_population_profiles
 from app.services.doctor_escalation_precision import build_doctor_escalation_precision
 from app.services.case_synthesis import build_case_synthesis
+from app.services.grounded_ai_narrative import build_grounded_ai_narrative
 from app.services.symptom_analysis import (
     apply_symptom_priority,
     build_symptom_analysis,
@@ -870,6 +871,7 @@ async def run_lab_analysis_pipeline(
     locale: str = "en",
     biomarker_name_aliases: Optional[Dict[str, str]] = None,
     generate_ai_protocol: bool = True,
+    generate_ai_narrative: bool = True,
 ) -> Dict[str, Any]:
     # Capture the newest completed interview at analysis-generation time. The
     # detached value below is persisted into this report version and is never
@@ -1653,6 +1655,18 @@ async def run_lab_analysis_pipeline(
     )
     version_provenance["case_synthesis_version"] = case_synthesis.get("version")
 
+    # P3 Grounded AI Narrative: the model sees only the closed, verified
+    # statement/evidence registry derived from Case Synthesis and can only
+    # select statement IDs. It never receives raw lab text, free-form symptom
+    # answers, or a profile payload, and cannot author new clinical facts.
+    grounded_ai_narrative = await build_grounded_ai_narrative(
+        case_synthesis=case_synthesis,
+        user_id=user_id,
+        upload_id=analysis_id,
+        use_llm=generate_ai_narrative,
+    )
+    version_provenance["grounded_ai_narrative_version"] = grounded_ai_narrative.get("version")
+
     # Report Quality Audit (P23, backend-first v1): a technical/product
     # audit of THIS report's generation — what ran, domain coverage,
     # safety/cost signals, reproducibility — never a health score or
@@ -1745,6 +1759,7 @@ async def run_lab_analysis_pipeline(
         "doctor_escalation_precision": doctor_escalation_precision,
         "symptom_analysis": symptom_analysis,
         "case_synthesis": case_synthesis,
+        "grounded_ai_narrative": grounded_ai_narrative,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
         "action_plan_by_role": action_plan_by_role,
@@ -1826,6 +1841,7 @@ async def run_lab_analysis_pipeline(
                     "doctor_escalation_precision": doctor_escalation_precision,
                     "symptom_analysis": symptom_analysis,
                     "case_synthesis": case_synthesis,
+                    "grounded_ai_narrative": grounded_ai_narrative,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
                     "action_plan_by_role": action_plan_by_role,

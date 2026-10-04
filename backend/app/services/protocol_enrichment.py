@@ -211,7 +211,19 @@ def _domain_context(
         if isinstance(item, dict) and str(item.get("key") or "")
     }
     contexts: List[Dict[str, Any]] = []
-    for state in (health_states.get("top_priorities") or [])[:3]:
+    context_states = health_states.get("top_priorities") or []
+    if not context_states:
+        # A domain can be evidence-backed yet score "stable" (and therefore
+        # be absent from top_priorities). If a protocol item still exists,
+        # preserve the managed registry context for domains with actual marker
+        # or symptom evidence instead of returning an empty provenance list.
+        context_states = [
+            state
+            for state in (health_states.get("states") or [])
+            if isinstance(state, dict)
+            and (state.get("contributing_biomarkers") or state.get("symptom_signals"))
+        ]
+    for state in context_states[:3]:
         if not isinstance(state, dict):
             continue
         definition = definitions_by_key.get(str(state.get("domain") or "")) or get_domain_definition(str(state.get("domain") or ""))

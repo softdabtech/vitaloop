@@ -35,6 +35,26 @@ logger = logging.getLogger("uvicorn.error")
 _BIOMARKER_KEYS = {"name", "value", "unit", "status"}
 _BIOMARKER_OPTIONAL_KEYS = {"assay_qualifier"}  # Optional fields added to biomarker extraction
 _PROTOCOL_KEYS = {"supplement", "dosage", "timing", "priority", "rationale", "iherb_search"}
+_VERIFIED_PROTOCOL_CONTEXT_KEYS = {
+    "engine_version",
+    "biomarker_count",
+    "abnormal_count",
+    "unknown_count",
+    "matched_rules",
+    "safety_alerts",
+    "risk_flags",
+    "prioritized_abnormal",
+    "knowledge_headline",
+    "knowledge_risk_level",
+    "requires_doctor",
+    "confidence",
+    "marker_coverage_summary",
+    "no_matching_rule_markers",
+    "unit_blocked_markers",
+    "detected_patterns",
+    "evidence_gaps_summary",
+    "evidence_gaps_preview",
+}
 _SYSTEM_PROMPT = (
     "You are a precise health data assistant. "
     "Return only valid JSON matching the requested schema. "
@@ -752,15 +772,43 @@ async def generate_protocol(
         _analysis_source_cv.set("fallback")
         return _fallback_generate_protocol(biomarkers, symptoms, locale=locale)
 
+    # P3 trust boundary: an LLM call is allowed only after the deterministic
+    # engine has produced its structured context. Direct callers without that
+    # context use the local fallback; raw biomarkers/symptoms/profile are never
+    # sent to the model as a substitute.
+    if not isinstance(clinical_context, dict) or not clinical_context:
+        logger.error(
+            "llm_fallback_used task=generate_protocol reason=verified_context_missing "
+            "user_id=%s upload_id=%s hint='Protocol used local templates, raw inputs were not sent to LLM'",
+            user_id,
+            upload_id,
+        )
+        _analysis_source_cv.set("fallback")
+        return _fallback_generate_protocol(biomarkers, symptoms, locale=locale)
+
     started = time.perf_counter()
-    symptoms_str = ", ".join(symptoms) if symptoms else "none reported"
-    biomarkers_str = json.dumps(biomarkers, indent=2)
-    profile_str = json.dumps(user_profile or {}, indent=2, ensure_ascii=False)
-    # clinical_context carries the deterministic engine's output: matched rules,
-    # safety alerts, risk flags, marker coverage.  When present, it is injected
-    # into the prompt so the LLM sees what the system already computed instead of
-    # re-deriving it from raw biomarkers.
-    clinical_context_str = json.dumps(clinical_context, indent=2, ensure_ascii=False) if clinical_context else ""
+    verified_clinical_context = {
+        key: clinical_context[key]
+        for key in _VERIFIED_PROTOCOL_CONTEXT_KEYS
+        if key in clinical_context
+    }
+    # These placeholders preserve the long-standing prompt template while the
+    # real input comes exclusively from the allowlisted engine context below.
+    # In particular, free-form symptom/profile payloads and unverified marker
+    # rows never cross this boundary.
+    symptoms_str = "Use only verified detected_patterns; no raw symptom payload is provided."
+    biomarkers_str = json.dumps(
+        verified_clinical_context.get("prioritized_abnormal") or [],
+        indent=2,
+        ensure_ascii=False,
+    )
+    profile_str = "Use only verified engine context; no raw profile payload is provided."
+    clinical_context_str = json.dumps(
+        verified_clinical_context,
+        indent=2,
+        ensure_ascii=False,
+        sort_keys=True,
+    )
     prompt = (
         PROTOCOL_PROMPT
         .replace("{biomarkers}", biomarkers_str)
@@ -768,30 +816,28 @@ async def generate_protocol(
         .replace("{user_profile}", profile_str)
         .replace("{language_instruction}", _protocol_language_instruction(locale))
     )
-    # Append clinical context section if available
-    if clinical_context_str:
-        prompt += (
-            "\n\n## Clinical Engine Analysis (deterministic, already computed)\n"
-            "Use this as the authoritative analysis of the biomarkers above. "
-            "Do NOT contradict the matched rules or safety alerts below.\n\n"
-            # Coverage-aware LLM prompt contract (2026-09-12 clinical analyzer
-            # audit item #4): clinical_context now names the specific markers
-            # in no_matching_rule_markers/unit_blocked_markers instead of only
-            # counting them — this instruction is what actually makes that
-            # data useful, telling the model it must not fill the gap with an
-            # unsupported inference just because the marker happened to be in
-            # the panel.
-            "IMPORTANT: 'no_matching_rule_markers' lists markers present in the "
-            "panel that no active clinical rule evaluates yet, and "
-            "'unit_blocked_markers' lists markers whose unit could not be "
-            "reconciled with the rule that would otherwise apply. For markers "
-            "in either list, do NOT state or imply a clinical interpretation, "
-            "risk level, or recommendation based on that marker's value alone — "
-            "note it as measured-but-not-yet-interpreted context if relevant, "
-            "and only use the matched_rules/safety_alerts already provided as "
-            "the basis for any conclusion.\n\n"
-            f"{clinical_context_str}"
-        )
+    prompt += (
+        "\n\n## Clinical Engine Analysis (deterministic, already computed)\n"
+        "This allowlisted JSON is the sole factual input for this task. "
+        "Do NOT infer facts from omitted raw data or contradict the matched rules or safety alerts below.\n\n"
+        # Coverage-aware LLM prompt contract (2026-09-12 clinical analyzer
+        # audit item #4): clinical_context now names the specific markers
+        # in no_matching_rule_markers/unit_blocked_markers instead of only
+        # counting them — this instruction is what actually makes that
+        # data useful, telling the model it must not fill the gap with an
+        # unsupported inference just because the marker happened to be in
+        # the panel.
+        "IMPORTANT: 'no_matching_rule_markers' lists markers present in the "
+        "panel that no active clinical rule evaluates yet, and "
+        "'unit_blocked_markers' lists markers whose unit could not be "
+        "reconciled with the rule that would otherwise apply. For markers "
+        "in either list, do NOT state or imply a clinical interpretation, "
+        "risk level, or recommendation based on that marker's value alone — "
+        "note it as measured-but-not-yet-interpreted context if relevant, "
+        "and only use the matched_rules/safety_alerts already provided as "
+        "the basis for any conclusion.\n\n"
+        f"{clinical_context_str}"
+    )
     try:
         raw = _strip_code_block(
             await _chat_completion(

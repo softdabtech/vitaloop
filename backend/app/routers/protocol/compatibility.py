@@ -152,6 +152,7 @@ async def get_results_by_upload(upload_id: str, request: Request, current_user: 
         "knowledge_evaluation": knowledge_evaluation,
         "knowledge_report": knowledge_report,
         "interpreted_report": pipeline_result.get("interpreted_report"),
+        "grounded_ai_narrative": pipeline_result.get("grounded_ai_narrative"),
         # P29a exposure-review fix: the frozen branch above (assemble_frozen_response)
         # already surfaces doctor_escalation_precision at the top level; this
         # live/legacy-fallback branch previously only had it nested inside

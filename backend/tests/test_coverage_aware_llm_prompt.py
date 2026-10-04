@@ -35,8 +35,9 @@ async def test_generate_protocol_prompt_names_uncovered_markers_and_warns_llm(mo
     }
 
     await claude_service.generate_protocol(
-        biomarkers=[{"name": "LDL", "value": 210, "unit": "mg/dL"}],
-        symptoms=[],
+        biomarkers=[{"name": "RAW_SECRET_MARKER", "value": 999, "unit": "secret-unit"}],
+        symptoms=["raw secret symptom"],
+        user_profile={"private_note": "raw secret profile"},
         locale="en",
         clinical_context=clinical_context,
     )
@@ -47,3 +48,33 @@ async def test_generate_protocol_prompt_names_uncovered_markers_and_warns_llm(mo
     assert "crp" in prompt
     assert "homocysteine" in prompt
     assert "do not state or imply a clinical interpretation" in prompt.lower()
+    assert "RAW_SECRET_MARKER" not in prompt
+    assert "secret-unit" not in prompt
+    assert "raw secret symptom" not in prompt
+    assert "raw secret profile" not in prompt
+    assert "sole factual input" in prompt
+
+
+@pytest.mark.asyncio
+async def test_generate_protocol_does_not_call_llm_without_verified_context(monkeypatch):
+    called = False
+
+    async def fake_chat_completion(*_args, **_kwargs):
+        nonlocal called
+        called = True
+        return json.dumps([])
+
+    monkeypatch.setattr(claude_service, "is_llm_configured", lambda: True)
+    monkeypatch.setattr(claude_service, "_chat_completion", fake_chat_completion)
+
+    result = await claude_service.generate_protocol(
+        biomarkers=[{"name": "Unverified marker", "value": 999, "unit": "x"}],
+        symptoms=["free-form symptom"],
+        user_profile={"note": "free-form profile"},
+        locale="en",
+        clinical_context=None,
+    )
+
+    assert called is False
+    assert result
+    assert claude_service.get_analysis_source() == "fallback"
