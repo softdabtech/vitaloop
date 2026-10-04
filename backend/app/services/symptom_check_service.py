@@ -507,6 +507,22 @@ def _public_session(session: dict[str, Any], *, initial_options: list[dict[str, 
     }
 
 
+async def _completion_response(
+    *,
+    user_id: str,
+    session: dict[str, Any],
+    initial_options: list[dict[str, Any]] | None = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    response = {**extra, "session": _public_session(session, initial_options=initial_options)}
+    if session.get("status") == "completed":
+        response["report_update"] = await resolve_report_update_offer(
+            user_id=user_id,
+            completed_at=session.get("completed_at"),
+        )
+    return response
+
+
 async def create_or_resume_session(
     *, user_id: str, request: CreateSymptomSessionRequest
 ) -> dict[str, Any]:
@@ -592,7 +608,12 @@ async def create_or_resume_session(
         action="create",
         event="session_created",
     )
-    return {"created": True, "session": _public_session(session, initial_options=options)}
+    return await _completion_response(
+        user_id=user_id,
+        session=session,
+        initial_options=options,
+        created=True,
+    )
 
 
 async def get_current_session(*, user_id: str) -> dict[str, Any]:
@@ -892,7 +913,7 @@ async def submit_initial_evidence(
             action="update",
             event="initial_evidence_submitted",
         )
-        return {"session": _public_session(updated_session)}
+        return await _completion_response(user_id=user_id, session=updated_session)
     except InfermedicaError as exc:
         # Keep the session resumable and make uncertainty explicit. Provider
         # failure must never be translated into routine/self-care.
@@ -1179,12 +1200,7 @@ async def submit_answers(
             .execute()
         )
         updated_session = updated.data[0]
-        response_payload = {"session": _public_session(updated_session)}
-        if updated_session.get("status") == "completed":
-            response_payload["report_update"] = await resolve_report_update_offer(
-                user_id=user_id,
-                completed_at=updated_session.get("completed_at"),
-            )
+        response_payload = await _completion_response(user_id=user_id, session=updated_session)
         await svc._run(
             lambda: supabase.table("symptom_answer_submissions")
             .update(

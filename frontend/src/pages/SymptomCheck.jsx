@@ -22,6 +22,7 @@ import {
   getCurrentSymptomSession,
   getRootConcernCatalog,
   getSymptomSessionSummary,
+  regenerateSymptomLinkedReport,
   skipSymptomSession,
   submitInitialSymptomEvidence,
   submitSymptomAnswers,
@@ -178,6 +179,8 @@ export default function SymptomCheck() {
   const [durationBucket, setDurationBucket] = useState('')
   const [answers, setAnswers] = useState({})
   const [pendingSubmission, setPendingSubmission] = useState(null)
+  const [reportUpdate, setReportUpdate] = useState(null)
+  const [reportUpdating, setReportUpdating] = useState(false)
 
   const availableConcerns = useMemo(
     () => catalog.filter((item) => item.available),
@@ -243,6 +246,7 @@ export default function SymptomCheck() {
       })
       applySession(data.session)
       if (data.session?.status !== 'active') {
+        setReportUpdate(data.report_update || null)
         const summaryData = await getSymptomSessionSummary(data.session.id)
         setSummary(summaryData.summary)
       }
@@ -270,6 +274,7 @@ export default function SymptomCheck() {
       })
       applySession(data.session)
       if (data.session?.status !== 'active') {
+        setReportUpdate(data.report_update || null)
         const summaryData = await getSymptomSessionSummary(data.session.id)
         setSummary(summaryData.summary)
       }
@@ -302,6 +307,7 @@ export default function SymptomCheck() {
       const data = await submitSymptomAnswers(session.id, payload, idempotencyKey)
       applySession(data.session)
       if (data.session?.status !== 'active') {
+        setReportUpdate(data.report_update || null)
         const summaryData = await getSymptomSessionSummary(data.session.id)
         setSummary(summaryData.summary)
       }
@@ -336,6 +342,7 @@ export default function SymptomCheck() {
       setPrimaryConceptId('')
       setSecondaryConceptIds(['', ''])
       setDurationBucket('')
+      setReportUpdate(null)
     } catch (abandonError) {
       setError(apiError(abandonError, 'We could not end this check.'))
     } finally {
@@ -346,6 +353,20 @@ export default function SymptomCheck() {
   function updateAnswer(itemId, choiceId) {
     setAnswers((current) => ({ ...current, [itemId]: choiceId }))
     setPendingSubmission(null)
+  }
+
+  async function updateLatestReport() {
+    if (!reportUpdate?.update_available || !reportUpdate?.action?.endpoint) return
+    setReportUpdating(true)
+    setError('')
+    try {
+      await regenerateSymptomLinkedReport(reportUpdate.action.endpoint)
+      navigate(reportUpdate.action.path || `/results/${reportUpdate.report_upload_id}`)
+    } catch (updateError) {
+      setError(apiError(updateError, 'We could not update your latest report. Your symptom answers are saved.'))
+    } finally {
+      setReportUpdating(false)
+    }
   }
 
   if (loading) {
@@ -431,6 +452,23 @@ export default function SymptomCheck() {
               <h1 className="coach-title-lg">Your structured symptom context is ready</h1>
               <p className="coach-body mt-2">Use it as context for your lab results and future comparisons. It is not a diagnosis.</p>
             </div>
+            {reportUpdate?.update_available && (
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-blue-950">
+                <h2 className="font-extrabold">Your latest report does not include these answers yet</h2>
+                <p className="mt-1 text-sm leading-6">
+                  Update it to recalculate explanation priorities and show what changed because of this symptom check.
+                </p>
+                <button
+                  type="button"
+                  disabled={reportUpdating}
+                  onClick={updateLatestReport}
+                  className="coach-button coach-button--primary coach-button--md mt-4"
+                >
+                  {reportUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                  {reportUpdating ? 'Updating report…' : 'Update latest report'}
+                </button>
+              </div>
+            )}
             <div className="flex flex-wrap gap-3">
               <button className="coach-button coach-button--primary coach-button--md" onClick={() => navigate('/upload')}><FileUp className="h-4 w-4" /> Upload lab results</button>
               <button className="coach-button coach-button--secondary coach-button--md" onClick={() => navigate('/dashboard')}>Dashboard</button>

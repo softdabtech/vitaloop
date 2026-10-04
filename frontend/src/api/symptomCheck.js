@@ -52,3 +52,8 @@ export async function getSymptomSessionSummary(sessionId) {
   const { data } = await api.get(`/symptom-check/sessions/${sessionId}/summary`)
   return data
 }
+
+export async function regenerateSymptomLinkedReport(endpoint) {
+  const { data } = await api.post(endpoint)
+  return data
+}

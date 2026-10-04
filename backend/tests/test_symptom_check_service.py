@@ -148,10 +148,14 @@ async def test_no_current_concern_creates_completed_positive_baseline(monkeypatc
     async def immediate_run(fn):
         return fn()
 
+    async def fake_report_update(**_kwargs):
+        return {"status": "update_available", "update_available": True}
+
     monkeypatch.setattr(svc, "get_user_profile", fake_profile)
     monkeypatch.setattr(service, "_get_active_session", fake_no_active)
     monkeypatch.setattr(svc, "_get_supabase", lambda: _Supabase(writes))
     monkeypatch.setattr(svc, "_run", immediate_run)
+    monkeypatch.setattr(service, "resolve_report_update_offer", fake_report_update)
 
     result = await service.create_or_resume_session(
         user_id=user_id,
@@ -166,6 +170,7 @@ async def test_no_current_concern_creates_completed_positive_baseline(monkeypatc
     assert result["session"]["status"] == "completed"
     assert result["session"]["stage"] == 3
     assert result["session"]["safety"] == {"level": "routine", "interrupt": False}
+    assert result["report_update"] == {"status": "update_available", "update_available": True}
     assert [table for table, _payload in writes] == [
         "symptom_check_sessions",
         "symptom_evidence",
