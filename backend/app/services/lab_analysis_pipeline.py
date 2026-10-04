@@ -523,6 +523,43 @@ def _is_safe_subset_eligible(source_metadata: Dict[str, Any] | None) -> bool:
     return str(source_metadata.get("source") or "").strip().lower() in _CANONICAL_REPROCESSING_SOURCES
 
 
+def _resolve_canonical_reprocessing_gate(
+    gate: Dict[str, Any],
+    source_metadata: Dict[str, Any] | None,
+) -> Dict[str, Any]:
+    """Let already-canonical reports continue when the gate has no blocker.
+
+    Reprocessing can score below the automatic threshold solely because the
+    original extraction confidence is no longer present or because a persisted
+    marker has a non-blocking integrity warning (for example, a missing lab
+    reference range). These sources operate on canonical biomarkers that were
+    already accepted and stored. Requiring a second confirmation in that case
+    makes report regeneration impossible even though there is no unresolved
+    blocker.
+
+    Actual blockers remain authoritative. Fresh submissions and candidate
+    confirmation use the normal score threshold unchanged.
+    """
+    source = str((source_metadata or {}).get("source") or "").strip().lower()
+    if source not in _CANONICAL_REPROCESSING_SOURCES or gate.get("blockers"):
+        return gate
+    if float((gate.get("components") or {}).get("marker_presence") or 0) <= 0:
+        return gate
+
+    resolved = deepcopy(gate)
+    resolved["decision"] = "auto_continue"
+    resolved["requires_confirmation"] = False
+    reasons = list(resolved.get("reasons") or [])
+    if "canonical_biomarkers_already_confirmed" not in reasons:
+        reasons.append("canonical_biomarkers_already_confirmed")
+    resolved["reasons"] = reasons
+    resolved["reprocessing_resolution"] = {
+        "applied": True,
+        "reason": "persisted_canonical_input_without_blockers",
+    }
+    return resolved
+
+
 def _continue_confirmed_safe_subset(
     *,
     normalized_biomarkers: List[Dict[str, Any]],
@@ -897,6 +934,10 @@ async def run_lab_analysis_pipeline(
         clinical_integrity=clinical_integrity,
         health_context=health_context,
         source_metadata=source_metadata,
+    )
+    analysis_input_quality_gate = _resolve_canonical_reprocessing_gate(
+        analysis_input_quality_gate,
+        source_metadata,
     )
 
     # Stage 2B: canonical-data persistence boundary. Extraction candidates are

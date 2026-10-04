@@ -268,6 +268,57 @@ async def test_canonical_reprocessing_sources_get_safe_subset_too(source, save_b
     assert result["metadata"]["source"]["confirmation_safe_subset"]["excluded_markers"][0]["name"] == "Coagulation Marker"
 
 
+@pytest.mark.asyncio
+async def test_report_regeneration_continues_with_non_blocking_integrity_warning(save_biomarkers_spy):
+    """An existing canonical report must remain regenerable when its only gate
+    penalty is a warning such as a lab-provided range being absent."""
+
+    result = await lab_analysis_pipeline.run_lab_analysis_pipeline(
+        biomarkers=[
+            {
+                "name": "Erythrocyte Sedimentation Rate",
+                "value": 13,
+                "unit": "mm/h",
+                "status": "BORDERLINE",
+            }
+        ],
+        symptoms=[],
+        user_profile=CONFIDENT_PROFILE,
+        user_id="user-regenerate-warning",
+        analysis_id="upload-regenerate-warning",
+        source_metadata={"source": "report_regeneration", "locale": "en"},
+        generate_ai_protocol=False,
+    )
+
+    gate = result["analysis_input_quality_gate"]
+    assert result["analysis_status"] == "completed", gate
+    assert gate["decision"] == "auto_continue"
+    assert gate["requires_confirmation"] is False
+    assert gate["blockers"] == []
+    assert gate["reprocessing_resolution"]["reason"] == "persisted_canonical_input_without_blockers"
+    assert "canonical_biomarkers_already_confirmed" in gate["reasons"]
+    assert gate["warnings"], "the warning remains visible even though it no longer blocks regeneration"
+
+
+def test_canonical_reprocessing_never_overrides_real_gate_blockers():
+    gate = {
+        "decision": "block_or_confirm",
+        "requires_confirmation": True,
+        "components": {"marker_presence": 0.25},
+        "blockers": [{"key": "unit_or_plausibility_conflict"}],
+        "reasons": ["normalized_biomarkers_present"],
+    }
+
+    resolved = lab_analysis_pipeline._resolve_canonical_reprocessing_gate(
+        gate,
+        {"source": "report_regeneration"},
+    )
+
+    assert resolved is gate
+    assert resolved["decision"] == "block_or_confirm"
+    assert resolved["requires_confirmation"] is True
+
+
 def test_progress_overview_counts_confirmed_lab_date_markers_not_created_at():
     overview = build_progress_overview(
         [
