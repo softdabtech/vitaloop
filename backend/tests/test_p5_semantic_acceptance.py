@@ -118,6 +118,48 @@ def test_completed_symptom_check_must_change_priority_or_explanation():
     assert result["criteria"]["symptom_check_effect"]["code"] == "symptom_check_no_result_effect"
 
 
+def test_unmapped_legacy_text_is_not_a_failed_clinical_symptom_check():
+    result = _evaluate(
+        symptom_analysis={
+            "status": "no_mapped_concepts",
+            "concepts": [
+                {
+                    "concept_id": "unmapped_symptom_example",
+                    "mapping_status": "unmapped",
+                    "choice": "present",
+                }
+            ],
+            "conclusion_change": {"changed": False},
+        }
+    )
+
+    criterion = result["criteria"]["symptom_check_effect"]
+    assert criterion["status"] == "not_applicable"
+    assert criterion["code"] == "no_clinical_symptom_evidence"
+    assert result["passes_dod"] is True
+
+
+def test_mapped_symptom_without_report_effect_still_fails():
+    result = _evaluate(
+        symptom_analysis={
+            "status": "no_matching_hypotheses",
+            "concepts": [
+                {
+                    "concept_id": "joint_pain",
+                    "mapping_status": "mapped",
+                    "choice": "present",
+                }
+            ],
+            "conclusion_change": {"changed": False},
+        }
+    )
+
+    criterion = result["criteria"]["symptom_check_effect"]
+    assert criterion["status"] == "fail"
+    assert criterion["code"] == "symptom_check_no_result_effect"
+    assert result["passes_dod"] is False
+
+
 def test_changed_symptom_check_passes_when_connection_is_evidence_linked():
     synthesis, narrative = _contracts()
     narrative["symptom_lab_correlations"] = [

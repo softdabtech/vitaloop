@@ -209,6 +209,13 @@ def build_semantic_acceptance(
             "no_symptom_check",
             "No completed symptom check was attached to this report.",
         )
+    elif symptom_status == "no_mapped_concepts":
+        symptom_effect = _criterion(
+            "not_applicable",
+            "no_clinical_symptom_evidence",
+            "The saved symptom context did not contain a mapped clinical symptom, so it was safely excluded from the report conclusion.",
+            {"symptom_analysis_status": symptom_status, "connection_count": len(connections)},
+        )
     elif symptom_changed and linked_connections:
         symptom_effect = _criterion(
             "pass",
