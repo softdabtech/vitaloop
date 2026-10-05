@@ -1,7 +1,8 @@
 # P3 — перестройка AI-слоя
 
-Дата: 2026-10-04  
-Статус: **IMPLEMENTED — локальный и изолированный production-config suite зелёный; production deployment/account smoke фиксируются ниже после развёртывания**
+Начало: 2026-10-04
+Завершение: 2026-10-05
+Статус: **DONE — все пункты P3 реализованы, протестированы и развёрнуты в production**
 
 ## Цель
 
@@ -128,7 +129,36 @@ fallback_reason=null
 
 ## Production deployment и smoke
 
-Будет заполнено после commit/push, серверной сборки и проверки аккаунта владельца проекта.
+- Commit `d1a8a6a54501db9eeedb538d050b3dd9372968fb` отправлен в GitHub `main`: **PASS**.
+- Сервер обновлён fast-forward до того же commit: **PASS**.
+- Backup branch: `backup-p3-before-grounded-ai-20261004185127`.
+- Backend image собран с `--no-cache`: **PASS**.
+- Backend container после recreate: `healthy`.
+- Internal `/health`: **200**, `status=ok`.
+- Public `https://api.vitaloop.today/health`: **200**.
+- Knowledge readiness: **PASS**, 69 active rules, 91 recommendations, evaluator ok.
+- LLM readiness: **PASS**, provider reachable, model `gpt-4o-mini`.
+- Frontend `https://vitaloop.today/`: **200**. Frontend не пересобирался, поскольку P3 меняет только backend/API contract.
+
+## Production-проверка аккаунта
+
+Проверен аккаунт, указанный владельцем проекта. Email, пароль, user ID, upload ID и report version ID в отчёт не записывались. Кейс обозначен SHA-256 fingerprint: `00d5aa86ac68`.
+
+- Авторизация: **PASS**.
+- До регенерации последняя frozen-версия ещё не содержала P3: подтверждено.
+- `POST /analyze/{upload}/regenerate`: **200**.
+- Создана ровно одна новая report version; предыдущая immutable-версия сохранена: **PASS**.
+- Narrative version: `grounded_ai_narrative_v1`.
+- Narrative status: `complete`.
+- Реальный источник: `llm_selection`, fallback не использовался.
+- Все девять обязательных полей: **PASS**.
+- Statements: 6.
+- Evidence records: 3.
+- `all_statements_grounded=true`.
+- Read-only P3 audit: **SMOKE PASS**, failures отсутствуют.
+- Повторный `GET /analyze/{upload}` вернул идентичный frozen P3 contract: **PASS**.
+- `GET /results/{upload}` вернул тот же контракт: **PASS**.
+- Frozen report source после регенерации: `frozen`.
 
 ## Основные изменённые компоненты
 
@@ -140,3 +170,7 @@ fallback_reason=null
 - `backend/app/routers/protocol/compatibility.py` — parity live/legacy results;
 - `backend/app/services/protocol_enrichment.py` — восстановление evidence-backed managed domain context;
 - `backend/scripts/audit_grounded_ai_narrative.py` — read-only production audit без персональных данных.
+
+## Итог
+
+P3 закрыт полностью. AI narrative и AI protocol path теперь работают через проверенную структурированную границу. Narrative-модель не создаёт медицинский текст: она выбирает только ID утверждений текущего Case Synthesis, после чего сервер валидирует ссылки и материализует текст из frozen evidence. Ошибка или неподдерживаемый ID приводит к персонализированному fallback из данных этого же отчёта. Контракт сохраняется как immutable artifact и одинаково выдаётся всеми results endpoints.
