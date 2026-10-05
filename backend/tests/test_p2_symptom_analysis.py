@@ -214,6 +214,52 @@ def test_case_synthesis_explains_which_answer_changed_the_conclusion():
     assert iron["symptom_concept_ids"] == ["fatigue"]
 
 
+def test_case_synthesis_explains_when_absent_symptom_weakens_an_explanation():
+    analysis = build_symptom_analysis(
+        symptom_snapshot=_absent_snapshot(),
+        hypotheses=_hypotheses(),
+        biomarkers=BIOMARKERS,
+    )
+    ranked, analysis = apply_symptom_priority(_hypotheses(), analysis)
+    synthesis = build_case_synthesis(
+        biomarkers=BIOMARKERS,
+        symptoms=[],
+        clinical_hypotheses={"hypotheses": ranked},
+        interpreted_report={"patterns": []},
+        symptom_analysis=analysis,
+    )
+
+    connection = next(
+        item
+        for item in synthesis["symptom_connections"]
+        if item.get("relationship") == "domain_weakened"
+    )
+    assert "Reported absence of Joint pain lowers the priority" in connection["text"]
+    assert {item["id"] for item in connection["evidence"]} >= {"joint_pain", "canonical_crp"}
+
+
+def test_case_synthesis_gives_stable_panel_a_specific_baseline_action():
+    synthesis = build_case_synthesis(
+        biomarkers=[
+            {
+                "name": "Hemoglobin",
+                "canonical_name": "canonical_hemoglobin",
+                "value": 13.5,
+                "unit": "g/dL",
+                "status": "OPTIMAL",
+            }
+        ],
+        symptoms=[],
+        interpreted_report={"patterns": []},
+    )
+
+    action = synthesis["actions_now"][0]
+    assert "Hemoglobin is 13.5 g/dL" in action["text"]
+    assert action["priority"] == "routine"
+    assert action["timeframe"] == "next_routine_review"
+    assert action["evidence"][0]["id"] == "canonical_hemoglobin"
+
+
 def test_confidence_calibration_uses_stable_match_even_when_label_does_not_match_pattern_text():
     hypotheses = [_hypotheses()[1]]
     patterns = [{

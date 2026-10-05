@@ -1,0 +1,362 @@
+{
+  "version": "p6_reference_scenarios_v1",
+  "scenario_count": 20,
+  "reference_ranges": {
+    "hemoglobin": {"ref_low": 12.0, "ref_high": 15.5},
+    "glucose": {"ref_low": 70.0, "ref_high": 99.0},
+    "creatinine": {"ref_low": 0.6, "ref_high": 1.1},
+    "ferritin": {"ref_low": 30.0, "ref_high": 150.0},
+    "ldl": {"ref_low": 0.0, "ref_high": 129.0},
+    "mcv": {"ref_low": 80.0, "ref_high": 100.0},
+    "insulin": {"ref_low": 2.6, "ref_high": 24.9},
+    "triglycerides": {"ref_low": 0.0, "ref_high": 149.0},
+    "crp": {"ref_low": 0.0, "ref_high": 5.0},
+    "wbc": {"ref_low": 4.0, "ref_high": 10.0},
+    "tsh": {"ref_low": 0.4, "ref_high": 4.0},
+    "free_t4": {"ref_low": 0.8, "ref_high": 1.8},
+    "vitamin_d": {"ref_low": 30.0, "ref_high": 100.0},
+    "b12": {"ref_low": 200.0, "ref_high": 900.0},
+    "magnesium": {"ref_low": 1.7, "ref_high": 2.2},
+    "alt": {"ref_low": 7.0, "ref_high": 35.0},
+    "alp": {"ref_low": 44.0, "ref_high": 147.0},
+    "sodium": {"ref_low": 135.0, "ref_high": 145.0},
+    "potassium": {"ref_low": 3.5, "ref_high": 5.1}
+  },
+  "scenarios": [
+    {
+      "id": "normal_core_panel",
+      "category": "normal_values",
+      "expected_meaning": "The panel is a stable baseline: no abnormal clinical pattern or urgent signal is present, and the conclusion cites a measured value.",
+      "biomarkers": [
+        {"name": "Hemoglobin", "canonical_name": "hemoglobin", "value": 13.8, "unit": "g/dL", "status": "OPTIMAL"},
+        {"name": "Glucose", "canonical_name": "glucose", "value": 88, "unit": "mg/dL", "status": "OPTIMAL"},
+        {"name": "Creatinine", "canonical_name": "creatinine", "value": 0.8, "unit": "mg/dL", "status": "OPTIMAL"}
+      ],
+      "expected": {
+        "patterns": [],
+        "forbidden_patterns": ["iron_deficiency_anemia", "metabolic_risk", "electrolyte_kidney_safety"],
+        "conclusion_markers": ["hemoglobin"],
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "single_low_ferritin",
+      "category": "single_abnormality",
+      "expected_meaning": "Low ferritin is the report-specific priority, with an iron-status explanation and explicit missing corroborating evidence.",
+      "biomarkers": [
+        {"name": "Ferritin", "canonical_name": "ferritin", "value": 9, "unit": "ng/mL", "status": "DEFICIENT"}
+      ],
+      "expected": {
+        "patterns": ["iron_deficiency_anemia"],
+        "pattern_severity": {"iron_deficiency_anemia": "mild"},
+        "conclusion_markers": ["ferritin"],
+        "missing_markers": ["hemoglobin"],
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "single_high_ldl",
+      "category": "single_abnormality",
+      "expected_meaning": "Elevated LDL drives a cardiovascular-risk interpretation and the conclusion names the LDL result.",
+      "biomarkers": [
+        {"name": "LDL", "canonical_name": "ldl", "value": 172, "unit": "mg/dL", "status": "ELEVATED"}
+      ],
+      "expected": {
+        "patterns": ["cardiovascular_risk"],
+        "conclusion_markers": ["ldl"],
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "linked_iron_anemia",
+      "category": "multiple_related_abnormalities",
+      "expected_meaning": "Low ferritin, hemoglobin and MCV form a connected iron-deficiency pattern rather than three unrelated findings.",
+      "biomarkers": [
+        {"name": "Ferritin", "canonical_name": "ferritin", "value": 7, "unit": "ng/mL", "status": "DEFICIENT"},
+        {"name": "Hemoglobin", "canonical_name": "hemoglobin", "value": 10.4, "unit": "g/dL", "status": "DEFICIENT"},
+        {"name": "MCV", "canonical_name": "mcv", "value": 73, "unit": "fL", "status": "DEFICIENT"}
+      ],
+      "expected": {
+        "patterns": ["iron_deficiency_anemia"],
+        "conclusion_markers": ["ferritin", "hemoglobin"],
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "linked_metabolic_pattern",
+      "category": "multiple_related_abnormalities",
+      "expected_meaning": "Elevated glucose and insulin are combined into a metabolic-risk explanation with corroborating evidence.",
+      "biomarkers": [
+        {"name": "Glucose", "canonical_name": "glucose", "value": 116, "unit": "mg/dL", "status": "ELEVATED"},
+        {"name": "Insulin", "canonical_name": "insulin", "value": 28, "unit": "uIU/mL", "status": "ELEVATED"},
+        {"name": "Triglycerides", "canonical_name": "triglycerides", "value": 210, "unit": "mg/dL", "status": "ELEVATED"}
+      ],
+      "expected": {
+        "patterns": ["metabolic_risk"],
+        "conclusion_markers": ["glucose", "insulin"],
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "linked_inflammation_pattern",
+      "category": "multiple_related_abnormalities",
+      "expected_meaning": "CRP and WBC are presented as a linked inflammation pattern and not as a diagnosis.",
+      "biomarkers": [
+        {"name": "CRP", "canonical_name": "crp", "value": 40, "unit": "mg/L", "status": "ELEVATED"},
+        {"name": "WBC", "canonical_name": "wbc", "value": 14, "unit": "10^3/uL", "status": "ELEVATED"}
+      ],
+      "expected": {
+        "patterns": ["inflammation"],
+        "conclusion_markers": ["crp", "wbc"],
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "linked_thyroid_pattern",
+      "category": "multiple_related_abnormalities",
+      "expected_meaning": "High TSH with low free T4 forms a supported thyroid pattern and prompts clinician review without a diagnosis claim.",
+      "biomarkers": [
+        {"name": "TSH", "canonical_name": "tsh", "value": 12, "unit": "mIU/L", "status": "ELEVATED"},
+        {"name": "Free T4", "canonical_name": "free_t4", "value": 0.5, "unit": "ng/dL", "status": "DEFICIENT"}
+      ],
+      "expected": {
+        "patterns": ["thyroid_dysfunction"],
+        "conclusion_markers": ["tsh", "free_t4"],
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "micronutrient_cluster",
+      "category": "multiple_related_abnormalities",
+      "expected_meaning": "Multiple low nutrient markers are grouped into one micronutrient cluster with a high evidence priority.",
+      "biomarkers": [
+        {"name": "Vitamin D", "canonical_name": "vitamin_d", "value": 14, "unit": "ng/mL", "status": "DEFICIENT"},
+        {"name": "Vitamin B12", "canonical_name": "b12", "value": 145, "unit": "pg/mL", "status": "DEFICIENT"},
+        {"name": "Magnesium", "canonical_name": "magnesium", "value": 1.4, "unit": "mg/dL", "status": "DEFICIENT"}
+      ],
+      "expected": {
+        "patterns": ["micronutrient_deficiency_cluster"],
+        "pattern_severity": {"micronutrient_deficiency_cluster": "high"},
+        "conclusion_markers": ["vitamin_d", "b12"],
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "liver_enzyme_pattern",
+      "category": "multiple_related_abnormalities",
+      "expected_meaning": "ALT and ALP are combined into a liver-stress pattern with its cholestatic component visible.",
+      "biomarkers": [
+        {"name": "ALT", "canonical_name": "alt", "value": 90, "unit": "U/L", "status": "ELEVATED"},
+        {"name": "ALP", "canonical_name": "alp", "value": 180, "unit": "U/L", "status": "ELEVATED"}
+      ],
+      "expected": {
+        "patterns": ["liver_stress"],
+        "conclusion_markers": ["alt", "alp"],
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "kidney_electrolyte_pattern",
+      "category": "multiple_related_abnormalities",
+      "expected_meaning": "An electrolyte abnormality plus reduced kidney filtration is treated as a high-priority connected safety pattern.",
+      "biomarkers": [
+        {"name": "Sodium", "canonical_name": "sodium", "value": 132, "unit": "mmol/L", "status": "DEFICIENT"},
+        {"name": "Creatinine", "canonical_name": "creatinine", "value": 1.4, "unit": "mg/dL", "status": "ELEVATED"}
+      ],
+      "expected": {
+        "patterns": ["electrolyte_kidney_safety"],
+        "conclusion_markers": ["sodium", "creatinine"],
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "fatigue_confirms_iron",
+      "category": "symptom_confirms_pattern",
+      "expected_meaning": "A stable fatigue concept increases the priority of the supported iron explanation and the report says that the answer changed the result.",
+      "biomarkers": [
+        {"name": "Ferritin", "canonical_name": "ferritin", "value": 8, "unit": "ng/mL", "status": "DEFICIENT"},
+        {"name": "Hemoglobin", "canonical_name": "hemoglobin", "value": 11.1, "unit": "g/dL", "status": "DEFICIENT"}
+      ],
+      "symptom_snapshot": {
+        "version": "symptom_snapshot_v1", "session_id": "fatigue-present", "completed_at": "2026-10-05T08:00:00Z",
+        "assessment": {"urgent_warning": "absent"},
+        "evidence": {"present": [{"vitaloop_concept_id": "fatigue", "display_name_en": "Fatigue", "concept_type": "symptom", "mapping_status": "mapped", "is_primary": true, "domain_keys": ["iron_status"]}], "absent": [], "unknown": []}
+      },
+      "expected": {
+        "patterns": ["iron_deficiency_anemia"],
+        "conclusion_markers": ["ferritin"],
+        "symptom": {"status": "applied", "changed": true, "concept_id": "fatigue", "effect": "raises_priority"},
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "joint_pain_absent_limits_inflammation",
+      "category": "symptom_contradicts_pattern",
+      "expected_meaning": "An explicitly absent related symptom weakens and deprioritizes the inflammation explanation while preserving the measured CRP evidence.",
+      "biomarkers": [
+        {"name": "CRP", "canonical_name": "crp", "value": 18, "unit": "mg/L", "status": "ELEVATED"},
+        {"name": "WBC", "canonical_name": "wbc", "value": 12, "unit": "10^3/uL", "status": "ELEVATED"}
+      ],
+      "symptom_snapshot": {
+        "version": "symptom_snapshot_v1", "session_id": "joint-pain-absent", "completed_at": "2026-10-05T08:00:00Z",
+        "assessment": {"urgent_warning": "absent"},
+        "evidence": {"present": [], "absent": [{"vitaloop_concept_id": "joint_pain", "display_name_en": "Joint pain", "concept_type": "symptom", "mapping_status": "mapped", "is_primary": true, "domain_keys": ["inflammation"]}], "unknown": []}
+      },
+      "expected": {
+        "patterns": ["inflammation"],
+        "conclusion_markers": ["crp"],
+        "symptom": {"status": "applied", "changed": true, "concept_id": "joint_pain", "effect": "limits_support"},
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "mapped_symptom_without_matching_pattern",
+      "category": "insufficient_evidence",
+      "expected_meaning": "A valid symptom with no matching biomarker hypothesis remains visible but must not change the result or pass semantic DoD.",
+      "biomarkers": [
+        {"name": "Hemoglobin", "canonical_name": "hemoglobin", "value": 13.7, "unit": "g/dL", "status": "OPTIMAL"}
+      ],
+      "symptom_snapshot": {
+        "version": "symptom_snapshot_v1", "session_id": "joint-pain-no-pattern", "completed_at": "2026-10-05T08:00:00Z",
+        "assessment": {"urgent_warning": "absent"},
+        "evidence": {"present": [{"vitaloop_concept_id": "joint_pain", "display_name_en": "Joint pain", "concept_type": "symptom", "mapping_status": "mapped", "is_primary": true, "domain_keys": ["inflammation"]}], "absent": [], "unknown": []}
+      },
+      "expected": {
+        "patterns": [],
+        "conclusion_markers": ["hemoglobin"],
+        "symptom": {"status": "no_matching_hypotheses", "changed": false, "concept_id": "joint_pain", "effect": "no_matching_hypothesis"},
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": false, "failed_criteria": ["symptom_check_effect"]}
+      }
+    },
+    {
+      "id": "limited_iron_panel",
+      "category": "insufficient_evidence",
+      "expected_meaning": "A ferritin-only panel states the iron signal but explicitly requests missing CBC context before a stronger conclusion.",
+      "biomarkers": [
+        {"name": "Ferritin", "canonical_name": "ferritin", "value": 11, "unit": "ng/mL", "status": "DEFICIENT"}
+      ],
+      "expected": {
+        "patterns": ["iron_deficiency_anemia"],
+        "conclusion_markers": ["ferritin"],
+        "missing_markers": ["hemoglobin"],
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "critical_glucose_safety",
+      "category": "safety",
+      "expected_meaning": "A critical glucose value produces an urgent warning that names glucose and preserves the measured value as its reason.",
+      "biomarkers": [
+        {"name": "Glucose", "canonical_name": "glucose", "value": 350, "unit": "mg/dL", "status": "ELEVATED"}
+      ],
+      "expected": {
+        "patterns": ["metabolic_risk"],
+        "conclusion_markers": ["glucose"],
+        "safety": {"urgent": true, "event_keys": ["dangerous_glucose"]},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "critical_potassium_safety",
+      "category": "safety",
+      "expected_meaning": "A critically low potassium value produces a prompt-review warning tied to potassium and its exact value.",
+      "biomarkers": [
+        {"name": "Potassium", "canonical_name": "potassium", "value": 2.4, "unit": "mmol/L", "status": "DEFICIENT"}
+      ],
+      "expected": {
+        "patterns": [],
+        "conclusion_markers": ["potassium"],
+        "safety": {"urgent": true, "event_keys": ["critical_potassium"]},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "urgent_symptom_safety",
+      "category": "safety",
+      "expected_meaning": "An urgent symptom-check flag creates a concrete symptom safety event even when the measured panel itself is stable.",
+      "biomarkers": [
+        {"name": "Hemoglobin", "canonical_name": "hemoglobin", "value": 13.6, "unit": "g/dL", "status": "OPTIMAL"}
+      ],
+      "symptom_snapshot": {
+        "version": "symptom_snapshot_v1", "session_id": "urgent-fatigue", "completed_at": "2026-10-05T08:00:00Z",
+        "assessment": {"urgent_warning": "present"},
+        "evidence": {"present": [{"vitaloop_concept_id": "fatigue", "display_name_en": "Fatigue", "concept_type": "symptom", "mapping_status": "mapped", "is_primary": true, "domain_keys": ["iron_status"]}], "absent": [], "unknown": []}
+      },
+      "expected": {
+        "patterns": [],
+        "conclusion_markers": ["hemoglobin"],
+        "symptom": {"status": "no_matching_hypotheses", "changed": false, "concept_id": "fatigue", "effect": "no_matching_hypothesis"},
+        "safety": {"urgent": true, "event_keys": ["symptom_check_urgent_warning"]},
+        "semantic_acceptance": {"passes_dod": false, "failed_criteria": ["symptom_check_effect"]}
+      }
+    },
+    {
+      "id": "repeat_ferritin_improving",
+      "category": "longitudinal",
+      "expected_meaning": "Ferritin is still a current priority, but the repeat analysis explicitly shows a clinically meaningful rise from the previous result.",
+      "biomarkers": [
+        {"name": "Ferritin", "canonical_name": "ferritin", "value": 20, "unit": "ng/mL", "status": "BORDERLINE"}
+      ],
+      "historical_biomarkers": [
+        {"upload_id": "prior-ferritin", "name": "Ferritin", "canonical_name": "ferritin", "value": 8, "unit": "ng/mL", "status": "DEFICIENT", "test_date": "2026-07-01"}
+      ],
+      "expected": {
+        "patterns": ["iron_deficiency_anemia"],
+        "conclusion_markers": ["ferritin"],
+        "trend": {"marker": "ferritin", "direction": "rising"},
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "repeat_ldl_worsening",
+      "category": "longitudinal",
+      "expected_meaning": "The repeat report identifies LDL as both elevated and rising, increasing its follow-up priority.",
+      "biomarkers": [
+        {"name": "LDL", "canonical_name": "ldl", "value": 180, "unit": "mg/dL", "status": "ELEVATED"}
+      ],
+      "historical_biomarkers": [
+        {"upload_id": "prior-ldl", "name": "LDL", "canonical_name": "ldl", "value": 125, "unit": "mg/dL", "status": "BORDERLINE", "test_date": "2026-07-01"}
+      ],
+      "expected": {
+        "patterns": ["cardiovascular_risk"],
+        "conclusion_markers": ["ldl"],
+        "trend": {"marker": "ldl", "direction": "rising"},
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    },
+    {
+      "id": "repeat_hemoglobin_stable_unit_normalized",
+      "category": "longitudinal",
+      "expected_meaning": "Equivalent hemoglobin results stored in g/L and g/dL are recognized as stable rather than a false large change.",
+      "biomarkers": [
+        {"name": "Hemoglobin", "canonical_name": "hemoglobin", "value": 13.5, "unit": "g/dL", "status": "OPTIMAL"}
+      ],
+      "historical_biomarkers": [
+        {"upload_id": "prior-hemoglobin", "name": "Hemoglobin", "canonical_name": "hemoglobin", "value": 135, "unit": "g/L", "status": "OPTIMAL", "test_date": "2026-07-01"}
+      ],
+      "expected": {
+        "patterns": [],
+        "conclusion_markers": ["hemoglobin"],
+        "trend": {"marker": "hemoglobin", "direction": "stable"},
+        "safety": {"urgent": false, "event_keys": []},
+        "semantic_acceptance": {"passes_dod": true, "failed_criteria": []}
+      }
+    }
+  ]
+}

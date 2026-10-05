@@ -353,6 +353,21 @@ def build_case_synthesis(
                             hypothesis_id=match.get("hypothesis_id"),
                         ),
                     )
+            elif row.get("choice") == "absent" and matches:
+                for match in matches[:3]:
+                    hypothesis = hypothesis_by_id.get(str(match.get("hypothesis_id") or ""), {})
+                    marker_references = _marker_refs(match.get("confirming_marker_ids") or [], index)
+                    label = hypothesis.get("label") or match.get("hypothesis_id") or "the related explanation"
+                    _append(
+                        sections["symptom_connections"],
+                        _statement(
+                            f"Reported absence of {concept.get('label')} lowers the priority of {label} because this answer weakens the related explanation.",
+                            [symptom_reference, *marker_references],
+                            relationship="domain_weakened",
+                            symptom_concept_id=concept.get("concept_id"),
+                            hypothesis_id=match.get("hypothesis_id"),
+                        ),
+                    )
             elif row.get("choice") == "present":
                 _append(
                     sections["symptom_connections"],
@@ -573,6 +588,26 @@ def build_case_synthesis(
                 references,
                 role="urgent",
                 priority="urgent",
+            ),
+        )
+    if marker_rows and not sections["actions_now"]:
+        marker = attention_markers[0] if attention_markers else marker_rows[0]
+        if attention_markers:
+            text = f"Review {_marker_text(marker)} at the next clinically appropriate follow-up."
+            priority = "medium"
+            timeframe = "next_clinical_review"
+        else:
+            text = f"Keep {_marker_text(marker)} as a baseline and compare it with the next clinically appropriate repeat panel."
+            priority = "routine"
+            timeframe = "next_routine_review"
+        _append(
+            sections["actions_now"],
+            _statement(
+                text,
+                [_marker_ref(marker)],
+                role="self",
+                priority=priority,
+                timeframe=timeframe,
             ),
         )
 
