@@ -28,6 +28,7 @@ from app.services.population_profile_selection import select_population_profiles
 from app.services.doctor_escalation_precision import build_doctor_escalation_precision
 from app.services.case_synthesis import build_case_synthesis
 from app.services.grounded_ai_narrative import build_grounded_ai_narrative
+from app.services.semantic_acceptance import build_semantic_acceptance
 from app.services.symptom_analysis import (
     apply_symptom_priority,
     build_symptom_analysis,
@@ -1225,17 +1226,48 @@ async def run_lab_analysis_pipeline(
     safety_result = sanitize_safety_result_for_output(safety_result, locale=locale) or safety_result
     symptom_assessment = (symptom_snapshot or {}).get("assessment") or {}
     if symptom_assessment.get("urgent_warning") == "present":
+        symptom_evidence = (symptom_snapshot or {}).get("evidence") or {}
+        symptom_items = [
+            item
+            for choice in ("present", "unknown", "absent")
+            for item in (symptom_evidence.get(choice) or [])
+            if isinstance(item, dict)
+        ]
+        primary_symptom = next(
+            (item for item in symptom_items if item.get("is_primary")),
+            symptom_items[0] if symptom_items else {},
+        )
+        symptom_label = str(primary_symptom.get("display_name_en") or "Symptom check").strip()
+        urgent_message = (
+            f'The completed symptom check for "{symptom_label}" contains an urgent warning sign and requires prompt medical assessment.'
+            if not str(locale).lower().startswith("uk") else
+            f'Завершена перевірка симптому «{symptom_label}» містить термінову небезпечну ознаку та потребує негайної медичної оцінки.'
+        )
+        symptom_safety_event = {
+            "key": "symptom_check_urgent_warning",
+            "severity": "critical",
+            "message": urgent_message,
+            "item": {
+                "name": symptom_label,
+                "status": "urgent_warning_present",
+                "source": "symptom_check",
+            },
+        }
+        safety_events = [
+            item
+            for item in (safety_result.get("safety_events") or [])
+            if isinstance(item, dict)
+        ]
+        if not any(item.get("key") == symptom_safety_event["key"] for item in safety_events):
+            safety_events.append(symptom_safety_event)
         safety_result = {
             **safety_result,
             "status": "approved_with_warnings",
             "risk_level": "urgent",
             "urgent_review_required": True,
             "doctor_discussion_required": True,
-            "prominent_user_warning": (
-                "Your symptom check reports an urgent warning sign. Seek prompt medical assessment; call your local emergency number if symptoms are severe or worsening."
-                if not str(locale).lower().startswith("uk") else
-                "У перевірці симптомів зазначено термінову небезпечну ознаку. Негайно зверніться по медичну допомогу; якщо стан тяжкий або погіршується, телефонуйте до місцевої екстреної служби."
-            ),
+            "prominent_user_warning": urgent_message,
+            "safety_events": safety_events,
         }
     # Stage 2C: plain-language, user-facing notice — never exposes blocked_items'
     # internal rule keys — surfaced consistently alongside safety_result in every
@@ -1667,6 +1699,19 @@ async def run_lab_analysis_pipeline(
     )
     version_provenance["grounded_ai_narrative_version"] = grounded_ai_narrative.get("version")
 
+    # P5 semantic Definition of Done: validates whether this report actually
+    # answers the user's questions, not merely whether its JSON is well formed.
+    # This is an observational quality contract; it never adds clinical facts
+    # or rewrites the frozen P1/P3 output.
+    semantic_acceptance = build_semantic_acceptance(
+        case_synthesis=case_synthesis,
+        grounded_ai_narrative=grounded_ai_narrative,
+        symptom_analysis=symptom_analysis,
+        action_plan_by_role=action_plan_by_role,
+        safety_result=safety_result,
+    )
+    version_provenance["semantic_acceptance_version"] = semantic_acceptance.get("version")
+
     # Report Quality Audit (P23, backend-first v1): a technical/product
     # audit of THIS report's generation — what ran, domain coverage,
     # safety/cost signals, reproducibility — never a health score or
@@ -1760,6 +1805,7 @@ async def run_lab_analysis_pipeline(
         "symptom_analysis": symptom_analysis,
         "case_synthesis": case_synthesis,
         "grounded_ai_narrative": grounded_ai_narrative,
+        "semantic_acceptance": semantic_acceptance,
         "progress_intelligence": progress_intelligence,
         "personal_baseline": personal_baseline,
         "action_plan_by_role": action_plan_by_role,
@@ -1842,6 +1888,7 @@ async def run_lab_analysis_pipeline(
                     "symptom_analysis": symptom_analysis,
                     "case_synthesis": case_synthesis,
                     "grounded_ai_narrative": grounded_ai_narrative,
+                    "semantic_acceptance": semantic_acceptance,
                     "progress_intelligence": progress_intelligence,
                     "personal_baseline": personal_baseline,
                     "action_plan_by_role": action_plan_by_role,

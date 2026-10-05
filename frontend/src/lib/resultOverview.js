@@ -111,6 +111,37 @@ function alertItems(reportAlerts) {
   )).filter(Boolean)
 }
 
+function safetyReasonItems(safetyResult) {
+  return validObjects(safetyResult?.safety_events)
+    .filter((event) => event.severity === 'critical' || event.severity === 'high')
+    .map((event) => {
+      const marker = event.item && typeof event.item === 'object' ? event.item : null
+      const label = cleanText(marker?.name || marker?.canonical_name || marker?.source_name)
+      const measured = marker?.value == null || marker?.value === ''
+        ? ''
+        : `${marker.value}${marker.unit ? ` ${marker.unit}` : ''}`
+      const detail = label ? ` (${label}${measured ? `: ${measured}` : ''})` : ''
+      const item = plainItem(
+        `${cleanText(event.message)}${detail}`,
+        'safety_result',
+        { level: event.severity === 'critical' ? 'urgent' : 'doctor' }
+      )
+      if (item && marker && label) {
+        item.evidence = [{
+          type: 'biomarker',
+          id: marker.canonical_name || marker.name || marker.source_name,
+          label,
+          availability: 'observed',
+          value: marker.value,
+          unit: marker.unit,
+          status: marker.status,
+        }]
+      }
+      return item
+    })
+    .filter(Boolean)
+}
+
 function legacyReportItems(knowledgeReport, field) {
   const value = knowledgeReport?.[field]
   const rows = Array.isArray(value) ? value : value ? [value] : []
@@ -185,7 +216,8 @@ export function buildResultOverview({
   const narrativeUncertainties = narrativeItems(groundedNarrative, 'uncertainties', evidenceById)
 
   const urgent = Boolean(safetyResult?.urgent_review_required)
-  const urgentItem = urgent
+  const safetyReasons = safetyReasonItems(safetyResult)
+  const urgentItem = urgent && !safetyReasons.length
     ? plainItem(safetyResult?.prominent_user_warning || urgentFallback, 'safety_result', { level: 'urgent' })
     : null
   const escalations = escalationItems(doctorEscalationPrecision)
@@ -201,12 +233,16 @@ export function buildResultOverview({
     missing: dedupeItems(firstAvailable(synthesisMissing, gapItems, narrativeUncertainties)).slice(0, 5),
     consultation: dedupeItems([
       urgentItem,
+      ...safetyReasons,
       ...escalations,
       ...alerts,
       ...firstAvailable(narrativeConsultation, synthesisConsultation, legacyConsultation),
     ]).slice(0, 5),
     urgent,
     source: narrativeResults.length ? 'grounded_ai_narrative' : synthesisResults.length ? 'case_synthesis' : 'legacy',
+    narrativeSource: groundedNarrative?.source || null,
+    fallbackUsed: Boolean(groundedNarrative?.grounding?.fallback_used),
+    fallbackReason: groundedNarrative?.grounding?.fallback_reason || null,
     symptomImpactChanged: Boolean(caseSynthesis?.symptom_impact?.changed),
   }
 }

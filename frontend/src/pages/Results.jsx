@@ -317,6 +317,8 @@ const RESULTS_COPY = {
     confidenceCalibrationTitle: 'Confidence calibration',
     confidenceCalibrationOverall: 'Overall calibrated confidence',
     confidenceCalibrationItems: 'Items calibrated',
+    fallbackBadge: 'AI fallback: verified report data',
+    fallbackBody: 'AI selection was unavailable, so this summary was assembled only from verified statements and evidence in this report.',
   },
   uk: {
     hints: [
@@ -528,6 +530,8 @@ const RESULTS_COPY = {
     confidenceCalibrationTitle: 'Калібрування впевненості',
     confidenceCalibrationOverall: 'Загальна калібрована впевненість',
     confidenceCalibrationItems: 'Калібровано пунктів',
+    fallbackBadge: 'AI fallback: перевірені дані звіту',
+    fallbackBody: 'AI-відбір був недоступний, тому цей підсумок складено лише з перевірених тверджень і доказів цього звіту.',
   },
 }
 
@@ -721,6 +725,12 @@ function ResultOverviewPanel({ overview, finalAnalysis, copy, isUk }) {
           <ClipboardList className="h-5 w-5 text-emerald-700" />
           <h2 className="text-lg font-semibold text-slate-950">{copy.overviewResultsTitle}</h2>
         </div>
+        {overview.fallbackUsed && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-950" data-testid="p5-fallback-disclosure">
+            <p className="text-xs font-semibold uppercase tracking-wide">{copy.fallbackBadge}</p>
+            <p className="mt-1 text-sm leading-5">{copy.fallbackBody}</p>
+          </div>
+        )}
         <OverviewList items={overview.results} emptyText={copy.overviewResultsEmpty} copy={copy} />
       </div>
 

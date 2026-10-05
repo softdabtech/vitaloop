@@ -346,7 +346,7 @@ def build_case_synthesis(
                     _append(
                         sections["symptom_connections"],
                         _statement(
-                            f"{concept.get('label')} increases the priority of {label} because the stable symptom concept and hypothesis share the {match.get('domain')} domain; this is supportive context, not proof of cause.",
+                            f"{concept.get('label')} increases the priority of {label} because your answer is relevant to the related biomarker findings; this is supportive context, not proof of cause.",
                             [symptom_reference, *marker_references],
                             relationship="domain_supported",
                             symptom_concept_id=concept.get("concept_id"),
@@ -357,7 +357,7 @@ def build_case_synthesis(
                 _append(
                     sections["symptom_connections"],
                     _statement(
-                        f"{concept.get('label')} was reported, but its stable concept did not match a current biomarker hypothesis.",
+                        f"{concept.get('label')} was reported, but it did not match a current biomarker finding.",
                         [symptom_reference],
                         relationship="unlinked",
                         symptom_concept_id=concept.get("concept_id"),
@@ -418,13 +418,13 @@ def build_case_synthesis(
             symptom_reason = (
                 " Reported "
                 + ", ".join(str(item.get("label")) for item in supporting_concepts)
-                + " raises its priority through the stable symptom-domain link."
+                + " raises its priority because it is relevant to the related biomarker findings."
             )
         if absent_concepts:
             symptom_reason += (
                 " Reported absence of "
                 + ", ".join(str(item.get("label")) for item in absent_concepts)
-                + " lowers its priority through the stable symptom-domain link."
+                + " lowers its priority because its absence weakens the related explanation."
             )
         _append(
             sections["likely_explanations"],

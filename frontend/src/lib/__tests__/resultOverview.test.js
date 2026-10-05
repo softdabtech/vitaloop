@@ -95,7 +95,8 @@ describe('buildResultOverview', () => {
   it('does not crash for old or malformed reports', () => {
     assert.doesNotThrow(() => buildResultOverview())
     assert.deepEqual(buildResultOverview({ groundedNarrative: { personalized_summary: ['bad'] } }), {
-      results: [], connections: [], actions: [], missing: [], consultation: [], urgent: false, source: 'legacy', symptomImpactChanged: false,
+      results: [], connections: [], actions: [], missing: [], consultation: [], urgent: false, source: 'legacy',
+      narrativeSource: null, fallbackUsed: false, fallbackReason: null, symptomImpactChanged: false,
     })
   })
 
@@ -115,5 +116,39 @@ describe('buildResultOverview', () => {
     assert.match(result.connections[0].text, /This may be relevant to energy/)
     assert.match(result.actions[0].text, /Discuss iron studies/)
     assert.match(result.consultation[0].text, /follow-up testing/)
+  })
+
+  it('exposes deterministic fallback metadata for an explicit UI disclosure', () => {
+    const result = buildResultOverview({
+      groundedNarrative: {
+        ...narrative,
+        source: 'deterministic_fallback',
+        grounding: { fallback_used: true, fallback_reason: 'llm_not_configured' },
+      },
+    })
+
+    assert.equal(result.fallbackUsed, true)
+    assert.equal(result.narrativeSource, 'deterministic_fallback')
+    assert.equal(result.fallbackReason, 'llm_not_configured')
+  })
+
+  it('shows a report-specific critical safety reason before generic warning text', () => {
+    const result = buildResultOverview({
+      groundedNarrative: narrative,
+      safetyResult: {
+        urgent_review_required: true,
+        prominent_user_warning: 'Seek prompt medical review.',
+        safety_events: [{
+          key: 'critical_potassium',
+          severity: 'critical',
+          message: 'Very low potassium requires prompt medical review.',
+          item: { name: 'Potassium', value: 2.4, unit: 'mmol/L' },
+        }],
+      },
+    })
+
+    assert.match(result.consultation[0].text, /Very low potassium/)
+    assert.match(result.consultation[0].text, /2.4 mmol\/L/)
+    assert.equal(result.consultation[0].evidence[0].label, 'Potassium')
   })
 })

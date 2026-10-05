@@ -193,6 +193,7 @@ class AnalyzeResponse(BaseModel):
     case_synthesis: Optional[dict] = None
     symptom_analysis: Optional[dict] = None
     grounded_ai_narrative: Optional[dict] = None
+    semantic_acceptance: Optional[dict] = None
 
 
 class CandidateDecision(BaseModel):
@@ -1493,6 +1494,7 @@ async def confirm_upload_candidates(
         "case_synthesis": pipeline_result.get("case_synthesis"),
         "symptom_analysis": pipeline_result.get("symptom_analysis"),
         "grounded_ai_narrative": pipeline_result.get("grounded_ai_narrative"),
+        "semantic_acceptance": pipeline_result.get("semantic_acceptance"),
         "report_version": pipeline_result.get("report_version"),
         "final_analysis": pipeline_result,
     }
@@ -1766,6 +1768,7 @@ async def regenerate_results(
         "case_synthesis": pipeline_result.get("case_synthesis"),
         "symptom_analysis": pipeline_result.get("symptom_analysis"),
         "grounded_ai_narrative": pipeline_result.get("grounded_ai_narrative"),
+        "semantic_acceptance": pipeline_result.get("semantic_acceptance"),
         "report_version": pipeline_result.get("report_version"),
         "report_source": REPORT_SOURCE_REGENERATED,
         "final_analysis": pipeline_result,

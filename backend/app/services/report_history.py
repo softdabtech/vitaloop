@@ -292,6 +292,10 @@ def assemble_frozen_response(
         # Case Synthesis stored in this same snapshot. Never rerun the model
         # while reading history.
         "grounded_ai_narrative": input_snapshot.get("grounded_ai_narrative"),
+        # P5 meaning-level Definition of Done is frozen verbatim. Re-running
+        # newer acceptance rules against historical wording would silently
+        # change whether an old immutable report passed at generation time.
+        "semantic_acceptance": input_snapshot.get("semantic_acceptance"),
         # P2 stable symptom-concept matrix and its exact priority effects at
         # generation time. A newer symptom check never mutates this snapshot.
         "symptom_analysis": input_snapshot.get("symptom_analysis"),
