@@ -5,7 +5,6 @@ import api from '../lib/api.js'
 import FeatureGate from '../components/FeatureGate.jsx'
 import { useUserEntitlements } from '../hooks/useQueries.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
-import BiomarkerContextTooltip from '../components/BiomarkerContextTooltip.jsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.jsx'
 import { gaResultsView } from '../lib/analytics.js'
 import {
@@ -29,6 +28,7 @@ import {
 } from 'lucide-react'
 import { isUkrainianLocale } from '../lib/locale.js'
 import { buildClinicalReasoningMap } from '../lib/clinicalReasoningMap.js'
+import { buildResultOverview } from '../lib/resultOverview.js'
 import { biomarkerDisplayName, riskDisplayLabel } from '../lib/biomarker-display.js'
 import { CoachBadge, CoachCard } from '../components/coach/CoachUI.jsx'
 // coach-shell/coach-card/etc. have no built-in styles of their own — every
@@ -297,6 +297,26 @@ const RESULTS_COPY = {
     },
     doctorEscalationMarkersLabel: 'Related markers',
     doctorEscalationDisclaimer: 'This is educational information, not a diagnosis, and does not replace a doctor.',
+    overviewResultsTitle: 'What your results show',
+    overviewConnectionsTitle: 'How this may connect to how you feel',
+    overviewActionsTitle: 'Three priority actions',
+    overviewMissingTitle: 'What information is missing',
+    overviewConsultationTitle: 'When to seek clinical advice',
+    overviewResultsEmpty: 'There is not enough verified information to summarize this report yet.',
+    overviewConnectionsEmpty: 'No report-specific symptom connection was confirmed from the information provided.',
+    overviewActionsEmpty: 'No report-specific priority action is available yet.',
+    overviewMissingEmpty: 'No specific missing information was identified for this report.',
+    overviewConsultationEmpty: 'No prompt medical-review signal was identified. Discuss new, severe, or worsening symptoms with a qualified clinician.',
+    overviewEvidence: 'Based on',
+    overviewMissingEvidence: 'Missing',
+    technicalDisclosureTitle: 'Why the system reached this conclusion',
+    technicalDisclosureIntro: 'Open the technical evidence, confidence calibration, reasoning map, missing-data analysis, and engine trace.',
+    evidenceDebtTitle: 'Evidence debt',
+    evidenceDebtOverall: 'Overall evidence debt',
+    evidenceDebtDomains: 'Domains assessed',
+    confidenceCalibrationTitle: 'Confidence calibration',
+    confidenceCalibrationOverall: 'Overall calibrated confidence',
+    confidenceCalibrationItems: 'Items calibrated',
   },
   uk: {
     hints: [
@@ -488,6 +508,26 @@ const RESULTS_COPY = {
     },
     doctorEscalationMarkersLabel: 'Пов’язані показники',
     doctorEscalationDisclaimer: 'VITALOOP не ставить діагноз і не замінює лікаря.',
+    overviewResultsTitle: 'Що показують ваші результати',
+    overviewConnectionsTitle: 'Як це може бути пов’язано з вашим самопочуттям',
+    overviewActionsTitle: 'Три пріоритетні дії',
+    overviewMissingTitle: 'Яких даних не вистачає',
+    overviewConsultationTitle: 'Коли потрібна консультація',
+    overviewResultsEmpty: 'Перевірених даних поки недостатньо, щоб підсумувати цей звіт.',
+    overviewConnectionsEmpty: 'За наданими даними не підтверджено зв’язок результатів із конкретними симптомами.',
+    overviewActionsEmpty: 'Для цього звіту поки немає конкретної пріоритетної дії.',
+    overviewMissingEmpty: 'Для цього звіту не виявлено конкретних відсутніх даних.',
+    overviewConsultationEmpty: 'Сигналу для швидкого медичного перегляду не виявлено. Нові, виражені або наростаючі симптоми обговоріть із лікарем.',
+    overviewEvidence: 'На основі',
+    overviewMissingEvidence: 'Відсутнє',
+    technicalDisclosureTitle: 'Чому система зробила такий висновок',
+    technicalDisclosureIntro: 'Відкрийте технічні докази, калібрування впевненості, карту міркувань, аналіз відсутніх даних і трасування системи.',
+    evidenceDebtTitle: 'Дефіцит доказів',
+    evidenceDebtOverall: 'Загальний дефіцит доказів',
+    evidenceDebtDomains: 'Оцінено напрямків',
+    confidenceCalibrationTitle: 'Калібрування впевненості',
+    confidenceCalibrationOverall: 'Загальна калібрована впевненість',
+    confidenceCalibrationItems: 'Калібровано пунктів',
   },
 }
 
@@ -616,6 +656,108 @@ function formatPercent(value) {
   const number = Number(value)
   if (!Number.isFinite(number)) return null
   return `${Math.round(number * (number <= 1 ? 100 : 1))}%`
+}
+
+function formatOverviewEvidence(reference, copy) {
+  const label = String(reference?.label || reference?.id || '').trim()
+  if (!label) return ''
+  if (reference?.availability === 'missing') return `${copy.overviewMissingEvidence}: ${label}`
+  const value = reference?.value
+  const measured = value == null || value === ''
+    ? ''
+    : ` ${typeof value === 'object' ? JSON.stringify(value) : value}${reference?.unit ? ` ${reference.unit}` : ''}`
+  return `${label}${measured}`
+}
+
+function OverviewEvidence({ references, copy }) {
+  const items = (Array.isArray(references) ? references : [])
+    .map((reference) => formatOverviewEvidence(reference, copy))
+    .filter(Boolean)
+    .slice(0, 4)
+  if (!items.length) return null
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      <span className="text-xs font-medium text-slate-400">{copy.overviewEvidence}:</span>
+      {items.map((item) => (
+        <span key={item} className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600">{item}</span>
+      ))}
+    </div>
+  )
+}
+
+function OverviewList({ items, emptyText, copy, numbered = false }) {
+  if (!items.length) return <p className="text-sm leading-6 text-slate-500">{emptyText}</p>
+  const ListTag = numbered ? 'ol' : 'ul'
+  return (
+    <ListTag className="space-y-3">
+      {items.map((item, index) => (
+        <li key={item.statementId || `${item.text}-${index}`} className="text-sm leading-6 text-slate-700">
+          <div className="flex items-start gap-2">
+            {numbered ? (
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800">{index + 1}</span>
+            ) : (
+              <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+            )}
+            <span>{item.text}</span>
+          </div>
+          <div className="pl-7"><OverviewEvidence references={item.evidence} copy={copy} /></div>
+        </li>
+      ))}
+    </ListTag>
+  )
+}
+
+function ResultOverviewPanel({ overview, finalAnalysis, copy, isUk }) {
+  const consultationTone = overview.urgent
+    ? 'border-rose-300 bg-rose-50/60'
+    : overview.consultation.some((item) => item.level === 'doctor')
+      ? 'border-amber-200 bg-amber-50/50'
+      : 'border-slate-200 bg-white'
+
+  return (
+    <section className="mb-6 grid gap-4 lg:grid-cols-2" data-testid="p4-result-overview">
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-5 shadow-sm lg:col-span-2">
+        <div className="mb-3 flex items-center gap-3">
+          <ClipboardList className="h-5 w-5 text-emerald-700" />
+          <h2 className="text-lg font-semibold text-slate-950">{copy.overviewResultsTitle}</h2>
+        </div>
+        <OverviewList items={overview.results} emptyText={copy.overviewResultsEmpty} copy={copy} />
+      </div>
+
+      <div className="rounded-2xl border border-sky-200 bg-sky-50/40 p-5 shadow-sm">
+        <div className="mb-3 flex items-center gap-3">
+          <HeartPulse className="h-5 w-5 text-sky-700" />
+          <h2 className="text-lg font-semibold text-slate-950">{copy.overviewConnectionsTitle}</h2>
+        </div>
+        <OverviewList items={overview.connections} emptyText={copy.overviewConnectionsEmpty} copy={copy} />
+        <SymptomImpactNotice finalAnalysis={finalAnalysis} isUk={isUk} compact />
+      </div>
+
+      <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+        <div className="mb-3 flex items-center gap-3">
+          <CheckCircle2 className="h-5 w-5 text-emerald-700" />
+          <h2 className="text-lg font-semibold text-slate-950">{copy.overviewActionsTitle}</h2>
+        </div>
+        <OverviewList items={overview.actions} emptyText={copy.overviewActionsEmpty} copy={copy} numbered />
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-3 flex items-center gap-3">
+          <HelpCircle className="h-5 w-5 text-slate-600" />
+          <h2 className="text-lg font-semibold text-slate-950">{copy.overviewMissingTitle}</h2>
+        </div>
+        <OverviewList items={overview.missing} emptyText={copy.overviewMissingEmpty} copy={copy} />
+      </div>
+
+      <div className={`rounded-2xl border p-5 shadow-sm ${consultationTone}`}>
+        <div className="mb-3 flex items-center gap-3">
+          {overview.urgent ? <ShieldAlert className="h-5 w-5 text-rose-700" /> : <Stethoscope className="h-5 w-5 text-amber-700" />}
+          <h2 className="text-lg font-semibold text-slate-950">{copy.overviewConsultationTitle}</h2>
+        </div>
+        <OverviewList items={overview.consultation} emptyText={copy.overviewConsultationEmpty} copy={copy} />
+      </div>
+    </section>
+  )
 }
 
 function localizeDomainLabel(value, copy) {
@@ -1349,28 +1491,26 @@ function ClinicalReasoningMapSection({
   )
 }
 
-// P31b: raw per-pattern trace cards are the pattern engine's own debug-
-// level output (see P31a audit) -- kept available, but collapsed behind
-// a <details> disclosure by default so it doesn't compete with the
-// already-concise ClinicalReasoningMapSection above for attention. The
-// data is never removed, only hidden until the user opts in.
+// P4: raw per-pattern trace cards are rendered only inside the page-level
+// technical disclosure. The data remains available without competing with
+// the five user-facing result blocks.
 function ReasoningTraceSection({ traces, copy }) {
   const list = Array.isArray(traces) ? traces.filter(Boolean) : []
   if (!list.length) return null
   return (
-    <details className="mb-6 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-      <summary className="cursor-pointer text-sm font-semibold text-slate-700">{copy.reasoningTitle}</summary>
+    <section className="mb-6 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+      <h3 className="text-sm font-semibold text-slate-700">{copy.reasoningTitle}</h3>
       <p className="mb-4 mt-3 text-sm leading-6 text-slate-500">{copy.reasoningIntro}</p>
       <div className="space-y-3">
         {list.slice(0, 6).map((trace, index) => (
           <ReasoningTraceCard key={trace?.pattern_id || index} trace={trace} copy={copy} />
         ))}
       </div>
-    </details>
+    </section>
   )
 }
 
-function SymptomImpactNotice({ finalAnalysis, isUk }) {
+function SymptomImpactNotice({ finalAnalysis, isUk, compact = false }) {
   const analysis = finalAnalysis?.symptom_analysis || {}
   const impact = finalAnalysis?.case_synthesis?.symptom_impact || analysis?.conclusion_change || {}
   if (!impact?.changed) return null
@@ -1382,7 +1522,7 @@ function SymptomImpactNotice({ finalAnalysis, isUk }) {
   const explanations = Array.isArray(impact.explanations) ? impact.explanations : []
 
   return (
-    <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-5 text-blue-950 shadow-sm">
+    <div className={`${compact ? 'mt-4 p-3' : 'mb-6 p-5 shadow-sm'} rounded-2xl border border-blue-200 bg-blue-50 text-blue-950`}>
       <div className="font-semibold">
         {isUk ? 'Що змінилося через ваші відповіді' : 'What changed because of your answers'}
       </div>
@@ -1466,6 +1606,103 @@ function AnalysisCoreV2Panel({ finalAnalysis, copy }) {
         </div>
       </div>
     </SectionCard>
+  )
+}
+
+function TechnicalContractSummary({ evidenceDebt, confidenceCalibration, copy }) {
+  if (!evidenceDebt && !confidenceCalibration) return null
+  const debtDomains = Array.isArray(evidenceDebt?.domain_debt) ? evidenceDebt.domain_debt : []
+  const calibratedItems = Array.isArray(confidenceCalibration?.calibrated_items)
+    ? confidenceCalibration.calibrated_items
+    : []
+  return (
+    <div className="mb-6 grid gap-3 md:grid-cols-2">
+      {!!evidenceDebt && (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <h3 className="font-semibold text-slate-950">{copy.evidenceDebtTitle}</h3>
+          <p className="mt-2 text-sm text-slate-600">
+            {copy.evidenceDebtOverall}: <span className="font-semibold">{evidenceDebt.overall_debt || '—'}</span>
+            {Number.isFinite(Number(evidenceDebt.overall_score)) ? ` · ${formatPercent(evidenceDebt.overall_score)}` : ''}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">{copy.evidenceDebtDomains}: {debtDomains.length}</p>
+          {!!debtDomains.length && (
+            <ul className="mt-3 space-y-2 border-t border-slate-200 pt-3 text-xs text-slate-600">
+              {debtDomains.slice(0, 6).map((item, index) => (
+                <li key={item.domain || index}>
+                  <span className="font-semibold">{item.domain || 'domain'}:</span>{' '}
+                  {item.debt_level || '—'}{Number.isFinite(Number(item.debt_score)) ? ` (${formatPercent(item.debt_score)})` : ''}
+                  {!!item.reason_codes?.length && <span className="text-slate-400"> · {item.reason_codes.join(', ')}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {!!confidenceCalibration && (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <h3 className="font-semibold text-slate-950">{copy.confidenceCalibrationTitle}</h3>
+          <p className="mt-2 text-sm text-slate-600">
+            {copy.confidenceCalibrationOverall}: <span className="font-semibold">{confidenceCalibration.overall_confidence || '—'}</span>
+            {Number.isFinite(Number(confidenceCalibration.overall_score)) ? ` · ${formatPercent(confidenceCalibration.overall_score)}` : ''}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">{copy.confidenceCalibrationItems}: {calibratedItems.length}</p>
+          {!!calibratedItems.length && (
+            <ul className="mt-3 space-y-2 border-t border-slate-200 pt-3 text-xs text-slate-600">
+              {calibratedItems.slice(0, 6).map((item, index) => (
+                <li key={item.target_id || index}>
+                  <span className="font-semibold">{item.domain || item.target_id || 'item'}:</span>{' '}
+                  {item.calibrated_confidence || '—'}
+                  {Number.isFinite(Number(item.calibrated_score)) ? ` (${formatPercent(item.calibrated_score)})` : ''}
+                  {!!item.reason_codes?.length && <span className="text-slate-400"> · {item.reason_codes.join(', ')}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TechnicalReasoningDisclosure({
+  finalAnalysis,
+  clinicalHypotheses,
+  clinicalContradictions,
+  reasoningTraces,
+  evidenceGaps,
+  actionPlanByRole,
+  negativeEvidence,
+  copy,
+}) {
+  return (
+    <details className="mb-6 rounded-2xl border border-slate-200 bg-white shadow-sm" data-testid="p4-technical-disclosure">
+      <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-slate-800 marker:hidden">
+        <span className="inline-flex items-center gap-2">
+          <Info className="h-4 w-4 text-slate-500" />
+          {copy.technicalDisclosureTitle}
+        </span>
+      </summary>
+      <div className="border-t border-slate-100 p-5">
+        <p className="mb-5 text-sm leading-6 text-slate-500">{copy.technicalDisclosureIntro}</p>
+        <TechnicalContractSummary
+          evidenceDebt={finalAnalysis?.evidence_debt}
+          confidenceCalibration={finalAnalysis?.confidence_calibration}
+          copy={copy}
+        />
+        <AnalysisCoreV2Panel finalAnalysis={finalAnalysis} copy={copy} />
+        <ClinicalReasoningMapSection
+          clinicalHypotheses={clinicalHypotheses}
+          clinicalContradictions={clinicalContradictions}
+          reasoningTraces={reasoningTraces}
+          evidenceGaps={evidenceGaps}
+          actionPlanByRole={actionPlanByRole}
+          negativeEvidence={negativeEvidence}
+          copy={copy}
+        />
+        <EvidenceGapsSection evidenceGaps={evidenceGaps} copy={copy} />
+        <ReasoningTraceSection traces={reasoningTraces} copy={copy} />
+      </div>
+    </details>
   )
 }
 
@@ -1589,14 +1826,26 @@ export default function Results() {
 
   const reportSummary = knowledgeReport?.summary || null
   const reportFound = knowledgeReport?.what_was_found || null
-  const reportPatterns = Array.isArray(knowledgeReport?.why_it_matters) ? knowledgeReport.why_it_matters : []
   const reportActions = Array.isArray(knowledgeReport?.action_plan) ? knowledgeReport.action_plan : []
   const reportDiscussion = Array.isArray(knowledgeReport?.doctor_discussion) ? knowledgeReport.doctor_discussion : []
   const reportRetest = Array.isArray(knowledgeReport?.retest_plan) ? knowledgeReport.retest_plan : []
   const reportAlerts = Array.isArray(knowledgeReport?.safety_alerts) ? knowledgeReport.safety_alerts : []
-  const urgentWarning = safetyResult?.urgent_review_required
-    ? (safetyResult?.prominent_user_warning || copy.urgentFallback)
-    : null
+  const resultOverview = buildResultOverview({
+    groundedNarrative: finalAnalysis?.grounded_ai_narrative,
+    caseSynthesis: finalAnalysis?.case_synthesis,
+    actionPlanByRole,
+    evidenceGaps,
+    safetyResult,
+    doctorEscalationPrecision,
+    reportAlerts: reportAlerts.map((alert) => ({
+      ...alert,
+      message: alert.message || copy.alertFallback(alert.marker),
+    })),
+    urgentFallback: copy.urgentFallback,
+    knowledgeReport,
+    protocol,
+    priorityMarkers,
+  })
   const explanations = Array.isArray(explainability?.recommendations)
     ? explainability.recommendations
     : Array.isArray(explainability?.marker_explanations)
@@ -1758,101 +2007,19 @@ export default function Results() {
           </div>
         </motion.header>
 
-        {/* P31b: removed the "Focus now / Watch list / Stable zone" row --
-            it repeated the same counts/priority-marker name already shown
-            in the hero header above (headline + 3-stat box), one of three
-            redundant top-of-page overview widgets identified in the P31a
-            audit. AnalysisCoreV2Panel below carries the remaining
-            domain-level detail that isn't already in the hero. */}
-        <SymptomImpactNotice finalAnalysis={finalAnalysis} isUk={isUk} />
-        <AnalysisCoreV2Panel finalAnalysis={finalAnalysis} copy={copy} />
-
-        {!!urgentWarning && (
-          <div className="mb-6 rounded-2xl border border-rose-300 bg-rose-50 p-5 text-rose-950 shadow-sm">
-            <div className="mb-2 flex items-center gap-2 font-semibold">
-              <ShieldAlert className="h-5 w-5" />
-              {copy.urgentSignal}
-            </div>
-            <p className="text-sm leading-6">{urgentWarning}</p>
-          </div>
-        )}
-
-        {!!reportAlerts.length && (
-          <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-900">
-            <div className="mb-2 flex items-center gap-2 font-semibold">
-              <ShieldAlert className="h-5 w-5" />
-              {copy.medicalSignal}
-            </div>
-            <ul className="space-y-2 text-sm leading-6">
-              {reportAlerts.map((alert, idx) => (
-                <li key={`alert-${idx}`}>{alert.message || copy.alertFallback(alert.marker)}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <SectionCard icon={ClipboardList} title={copy.topFindings}>
-            {priorityMarkers.length ? (
-              <div className="space-y-3">
-                {priorityMarkers.slice(0, 3).map((b) => {
-                  const meta = STATUS_META[b.status_normalized] || STATUS_META.BORDERLINE
-                  return (
-                    <div key={b.id || `${b.name_en}-${b.value}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className={`h-2.5 w-2.5 rounded-full ${meta.dot}`} />
-                            <h3 className="font-semibold text-slate-950">{displayBiomarkerName(b, isUk)}</h3>
-                            <BiomarkerContextTooltip biomarkerName={displayBiomarkerName(b, isUk)} value={b.value} status={b.status_normalized} size="sm" />
-                          </div>
-                          <p className="mt-1 text-sm text-slate-500">{formatMetric(b)} · {copy.reference} {formatRange(b, copy)}</p>
-                          <details className="mt-3 text-sm">
-                            <summary className="cursor-pointer font-semibold text-teal-700">{copy.whyThisAppears}</summary>
-                            <p className="mt-2 leading-6 text-slate-600">
-                              {(() => {
-                                const explanation = explanations.find((item) => String(item.triggered_biomarker || item.marker || '').toLowerCase().includes(String(displayBiomarkerName(b, false)).toLowerCase().split(' ')[0]))
-                                return explanation?.explanation || explanation?.reason || explanation?.summary || explanation?.why || copy.whyDefault
-                              })()}
-                            </p>
-                          </details>
-                        </div>
-                        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>{isUk ? meta.ukLabel || meta.label : meta.label}</span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
-                {copy.noPriorities}
-              </div>
-            )}
-          </SectionCard>
-
-          <SectionCard icon={Info} title={copy.whyMatters}>
-            {reportPatterns.length ? (
-              <div className="space-y-3">
-                {reportPatterns.slice(0, 4).map((item, idx) => (
-                  <div key={`pattern-${idx}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                    <div className="font-semibold text-slate-950">{item.title}</div>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">{item.why_it_matters || item.summary}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm leading-6 text-slate-600">
-                {copy.noPattern}
-              </p>
-            )}
-          </SectionCard>
-        </div>
+        <ResultOverviewPanel
+          overview={resultOverview}
+          finalAnalysis={finalAnalysis}
+          copy={copy}
+          isUk={isUk}
+        />
 
         <DoctorEscalationSection doctorEscalationPrecision={doctorEscalationPrecision} copy={copy} />
 
         <ActionPlanByRoleSection actionPlan={actionPlanByRole} copy={copy} />
 
-        <ClinicalReasoningMapSection
+        <TechnicalReasoningDisclosure
+          finalAnalysis={finalAnalysis}
           clinicalHypotheses={clinicalHypotheses}
           clinicalContradictions={clinicalContradictions}
           reasoningTraces={reasoningTraces}
@@ -1861,10 +2028,6 @@ export default function Results() {
           negativeEvidence={negativeEvidence}
           copy={copy}
         />
-
-        <EvidenceGapsSection evidenceGaps={evidenceGaps} copy={copy} />
-
-        <ReasoningTraceSection traces={reasoningTraces} copy={copy} />
 
         <TestingPlanSection nextBestTests={nextBestTests} retestPlan={reportRetest} nextTestFunnel={nextTestFunnel} copy={copy} isUk={isUk} />
 
