@@ -56,10 +56,14 @@ async def test_stale_onboarding_flag_cannot_bypass_missing_profile(monkeypatch):
     async def fake_audit(**_kwargs):
         return None
 
+    async def no_completed_symptom_check(_user_id):
+        return None
+
     monkeypatch.setattr(svc, "get_user_account", fake_account)
     monkeypatch.setattr(svc, "get_user_profile", fake_profile)
     monkeypatch.setattr(svc, "get_user_location", fake_location)
     monkeypatch.setattr(onboarding_router, "_has_user_row", fake_has_user_row)
+    monkeypatch.setattr(onboarding_router, "load_latest_eligible_symptom_snapshot", no_completed_symptom_check)
     monkeypatch.setattr(svc, "write_audit_log", fake_audit)
 
     app.dependency_overrides[get_current_user] = lambda: {"sub": user_id}

@@ -9,6 +9,56 @@ from app.routers.analysis import dashboard as dashboard_router
 from app.services import supabase_service as svc
 
 
+class _Response:
+    def __init__(self, data):
+        self.data = data
+
+
+@pytest.mark.asyncio
+async def test_latest_activity_exposes_only_public_canonical_symptom_snapshot(monkeypatch):
+    snapshot = {
+        "version": "symptom_snapshot_v1",
+        "source_type": "controlled_symptom_check",
+        "session_id": "symptom-session-1",
+        "completed_at": "2026-10-06T08:00:00Z",
+        "provider_model": "must-stay-private",
+        "primary_concern": {
+            "vitaloop_concept_id": "fatigue",
+            "provider_concept_id": "private-provider-id",
+            "display_name_en": "Fatigue",
+        },
+        "evidence": {"present": [], "absent": [], "unknown": []},
+        "assessment": {"urgent_warning": "absent"},
+    }
+
+    class _Query:
+        def __getattr__(self, _name):
+            return lambda *_args, **_kwargs: self
+
+    class _Supabase:
+        def table(self, _name):
+            return _Query()
+
+    async def fake_run(_operation):
+        return _Response([{"week_start": "2026-10-05"}])
+
+    async def fake_snapshot(_user_id):
+        return snapshot
+
+    monkeypatch.setattr(svc, "_get_supabase", lambda: _Supabase())
+    monkeypatch.setattr(svc, "_run", fake_run)
+    monkeypatch.setattr(dashboard_router, "load_latest_eligible_symptom_snapshot", fake_snapshot)
+
+    weekly, latest = await dashboard_router._fetch_latest_activity("user-1")
+
+    assert weekly == {"week_start": "2026-10-05"}
+    assert latest["session_id"] == "symptom-session-1"
+    assert latest["source_type"] == "controlled_symptom_check"
+    assert latest["symptom_snapshot"]["primary_concern"]["vitaloop_concept_id"] == "fatigue"
+    assert "provider_model" not in latest["symptom_snapshot"]
+    assert "provider_concept_id" not in latest["symptom_snapshot"]["primary_concern"]
+
+
 @pytest.mark.asyncio
 async def test_dashboard_summary_uses_account_full_name_for_first_name(monkeypatch):
     user_id = str(uuid.uuid4())

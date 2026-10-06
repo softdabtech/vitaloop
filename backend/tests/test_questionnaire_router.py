@@ -79,6 +79,7 @@ def test_controlled_summary_requires_every_engine_input():
 def test_controlled_summary_accepts_closed_complete_payload():
     q._validate_controlled_summary({
         "schema_version": "controlled_symptom_fallback_v1",
+        "input_mode": "controlled_only",
         "overall_wellbeing": "reduced", "primary_concern_id": "energy",
         "primary_concept_id": "fatigue", "primary_signal": "Fatigue",
         "duration_bucket": "weeks_1_4", "severity": 6,
@@ -91,6 +92,7 @@ def test_controlled_summary_accepts_closed_complete_payload():
 def test_controlled_summary_rejects_unknown_values_and_concepts():
     payload = {
         "schema_version": "controlled_symptom_fallback_v1",
+        "input_mode": "controlled_only",
         "overall_wellbeing": "reduced", "primary_concern_id": "energy",
         "primary_concept_id": "made_up", "primary_signal": "Anything typed by a client",
         "related_symptoms": [], "duration_bucket": "weeks_1_4", "severity": 6,
@@ -104,14 +106,31 @@ def test_controlled_summary_rejects_unknown_values_and_concepts():
     assert exc.value.detail == "Invalid controlled symptom concept"
 
 
+def test_controlled_summary_rejects_related_label_id_mismatch():
+    payload = {
+        "schema_version": "controlled_symptom_fallback_v1", "input_mode": "controlled_only",
+        "overall_wellbeing": "reduced", "primary_concern_id": "energy",
+        "primary_concept_id": "fatigue", "primary_signal": "Fatigue",
+        "related_concept_ids": ["low_stamina"], "related_symptoms": ["General weakness"],
+        "duration_bucket": "weeks_1_4", "severity": 6, "symptom_pattern": "stable",
+        "functional_impact": "mild", "domain_detail": "absent", "urgent_warning": "absent",
+        "controlled_answers": {"severity": "moderate", "trajectory": "stable", "functional_impact": "mild", "domain_detail": "absent", "urgent_warning": "absent"},
+    }
+    with pytest.raises(HTTPException) as exc:
+        q._validate_controlled_summary(payload)
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "Invalid related symptom concept IDs"
+
+
 @pytest.mark.asyncio
 async def test_controlled_context_completion_is_persisted_atomically(monkeypatch):
     captured = {}
     summary = {
         "schema_version": "controlled_symptom_fallback_v1",
+        "input_mode": "controlled_only",
         "overall_wellbeing": "reduced", "primary_concern_id": "energy",
         "primary_concept_id": "fatigue", "primary_signal": "Fatigue",
-        "related_symptoms": ["Low stamina"], "duration_bucket": "weeks_1_4", "severity": 6,
+        "related_concept_ids": ["low_stamina"], "related_symptoms": ["Low stamina"], "duration_bucket": "weeks_1_4", "severity": 6,
         "symptom_pattern": "stable", "functional_impact": "mild",
         "domain_detail": "absent", "urgent_warning": "absent",
         "controlled_answers": {"severity": "moderate", "trajectory": "stable", "functional_impact": "mild", "domain_detail": "absent", "urgent_warning": "absent"},

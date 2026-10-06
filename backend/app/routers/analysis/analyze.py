@@ -19,7 +19,6 @@ from app.services.ai.openai_pdf_analyzer import OpenAIPDFAnalyzer, create_file_a
 from app.services.supabase_service import (
     assert_upload_belongs_to_user,
     calculate_health_score,
-    get_active_symptom_context,
     get_biomarker_extraction_candidates,
     get_biomarkers_by_upload,
     get_latest_report_version,
@@ -414,7 +413,11 @@ async def analyze_lab_file(
     user_id: str = current_user["sub"]
     response_locale = _resolve_response_locale(request)
     user_profile = await _require_analysis_profile_context(user_id, response_locale)
-    normalized_symptoms = _normalize_symptoms(symptoms or [])
+    # Legacy upload clients may still send symptoms, but extraction and analysis
+    # must never use that mutable request field. The shared pipeline loads the
+    # completed structured Symptom Check snapshot for this user.
+    _normalize_symptoms(symptoms or [])  # keep input-size validation at the boundary
+    normalized_symptoms: List[str] = []
 
     # Check quota (unified biomarker quota)
     quota_ok, quota_msg, used_by = await biomarker_service.check_freemium_biomarker_quota(user_id, "file")
@@ -904,7 +907,8 @@ async def analyze_lab(
         form = await request.form()
         file = form.get("file")
         lab_name_form = form.get("lab_name")
-        symptoms_form = form.getlist("symptoms")
+        _normalize_symptoms(form.getlist("symptoms"))  # validate, then ignore legacy request symptoms
+        symptoms_form: List[str] = []
 
         if file is None:
             raise HTTPException(
@@ -1063,7 +1067,8 @@ async def analyze_lab(
         )
 
     normalized_text = _normalize_lab_text(request_data.extracted_text)
-    normalized_symptoms = _normalize_symptoms(request_data.symptoms or [])
+    _normalize_symptoms(request_data.symptoms or [])  # validate, then ignore legacy request symptoms
+    normalized_symptoms: List[str] = []
     normalized_lab_name = request_data.lab_name.strip() if request_data.lab_name else None
     lab_date_extraction = extract_lab_dates(
         normalized_text,
@@ -1394,16 +1399,8 @@ async def confirm_upload_candidates(
 
     user_profile = await get_user_profile(user_id) or {}
     locale = _resolve_response_locale(request)
-    # Merge symptoms explicitly passed in the request body with whatever the
-    # user already filled in the questionnaire flow. Found 2026-09-11 QA:
-    # this endpoint only ever saw body.symptoms (which the frontend never
-    # actually sends here), so the clinical analyzer ran with an empty
-    # symptom list and no questionnaire-readiness credit even when the user
-    # had just completed a detailed intake describing e.g. fatigue and hair
-    # loss — get_active_symptom_context() is fail-open and returns ([], {})
-    # if nothing is on file, so this is safe to always call.
-    questionnaire_symptoms, questionnaire_context = await get_active_symptom_context(user_id)
-    combined_symptoms = _normalize_symptoms(list(body.symptoms) + questionnaire_symptoms)
+    # The shared pipeline loads the completed structured Symptom Check snapshot.
+    # Candidate/request text is deliberately not a second symptom authority.
     # Stage 2B: do NOT persist biomarkers here. Pass the confirmed/corrected
     # candidates (status="confirmed"/"corrected") into the gate re-evaluation via
     # source_metadata — analysis_quality_gate.py's _candidate_scores() boosts
@@ -1415,18 +1412,7 @@ async def confirm_upload_candidates(
     # before — the upload simply stays pending, exactly as required.
     pipeline_result = await run_lab_analysis_pipeline(
         biomarkers=biomarkers,
-        symptoms=combined_symptoms,
-        # P36c: routed through the symptom_context argument, deliberately
-        # NOT the pipeline's other, similarly-named "questionnaire" kwarg --
-        # that one feeds _questionnaire_summary()'s domain_scores extraction,
-        # the one path a client-computed health interpretation (e.g.
-        # Questionnaire.jsx's own buildDomainScores()) could ever blend into
-        # provenance-sensitive output (see
-        # tests/test_stage2f2_domain_scores_provenance.py). symptom_context
-        # preserves this endpoint's intended readiness credit (see
-        # analysis_quality_gate.py's has_symptom_context handling) without
-        # going through that reader at all.
-        symptom_context=questionnaire_context,
+        symptoms=[],
         user_profile=user_profile,
         user_id=user_id,
         analysis_id=str(upload_id),

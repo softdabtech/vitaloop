@@ -5,11 +5,13 @@ from copy import deepcopy
 import pytest
 
 from app.services import lab_analysis_pipeline
+from app.services import supabase_service as supabase_service
 from app.services.health_context import build_health_context
 from app.services.report_history import assemble_frozen_response
 from app.services.symptom_snapshot import (
     SYMPTOM_SNAPSHOT_VERSION,
     build_symptom_snapshot,
+    build_controlled_questionnaire_snapshot,
     build_legacy_questionnaire_snapshot,
     load_latest_eligible_symptom_snapshot,
     public_symptom_snapshot,
@@ -104,17 +106,21 @@ def test_controlled_questionnaire_becomes_full_immutable_snapshot():
             "active_concern": "Fatigue, Low stamina",
             "summary": {
                 "schema_version": "controlled_symptom_fallback_v1",
+                "input_mode": "controlled_only",
                 "overall_wellbeing": "reduced", "primary_concern_id": "energy",
                 "primary_concept_id": "fatigue", "primary_signal": "Fatigue",
-                "related_symptoms": ["Low stamina"], "duration_bucket": "weeks_1_4",
+                "related_concept_ids": ["low_stamina"], "related_symptoms": ["Low stamina"], "duration_bucket": "weeks_1_4",
                 "severity": 6, "symptom_pattern": "stable", "functional_impact": "mild",
                 "domain_detail": "absent", "urgent_warning": "absent",
+                "controlled_answers": {"severity": "moderate", "trajectory": "stable", "functional_impact": "mild", "domain_detail": "absent", "urgent_warning": "absent"},
             },
         },
     }
-    snapshot = build_legacy_questionnaire_snapshot(session)
+    snapshot = build_controlled_questionnaire_snapshot(session)
     assert snapshot["session_id"] == "legacy-1"
-    assert symptoms_from_snapshot(snapshot) == ["Fatigue", "Low stamina"]
+    assert snapshot["source_type"] == "controlled_symptom_check"
+    assert symptoms_from_snapshot(snapshot) == ["fatigue", "low_stamina"]
+    assert all(item["mapping_status"] == "mapped" for item in snapshot["evidence"]["present"])
     assert snapshot["overall_wellbeing"] == "reduced"
     assert snapshot["duration_bucket"] == "weeks_1_4"
     assert snapshot["assessment"] == {
@@ -125,12 +131,55 @@ def test_controlled_questionnaire_becomes_full_immutable_snapshot():
 
 @pytest.mark.asyncio
 async def test_loader_falls_back_when_optional_provider_table_is_not_deployed(monkeypatch):
-    legacy = {
+    controlled = {
         "id": "legacy-1", "status": "completed", "completed_at": "2026-09-29T08:00:00Z",
         "model_version": "v2", "session_metadata": {
             "active_concern": "Fatigue",
-            "summary": {"primary_signal": "Fatigue", "severity": 6},
+            "summary": {
+                "schema_version": "controlled_symptom_fallback_v1", "input_mode": "controlled_only",
+                "primary_concern_id": "energy", "primary_concept_id": "fatigue",
+                "primary_signal": "Fatigue", "related_concept_ids": [], "related_symptoms": [],
+                "overall_wellbeing": "reduced", "duration_bucket": "weeks_1_4",
+                "severity": 6, "symptom_pattern": "stable", "functional_impact": "mild",
+                "domain_detail": "absent", "urgent_warning": "absent",
+                "controlled_answers": {"severity": "moderate", "trajectory": "stable", "functional_impact": "mild", "domain_detail": "absent", "urgent_warning": "absent"},
+            },
         },
+    }
+    calls = 0
+
+    async def fake_run(operation):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError(
+                "{'code': 'PGRST205', 'message': \"Could not find the table "
+                "'public.symptom_check_sessions' in the schema cache\"}"
+            )
+        return _Response([controlled])
+
+    class _Query:
+        def __getattr__(self, _name):
+            return lambda *_args, **_kwargs: self
+
+    class _Supabase:
+        def table(self, _name):
+            return _Query()
+
+    monkeypatch.setattr("app.services.symptom_snapshot.svc._get_supabase", lambda: _Supabase())
+    monkeypatch.setattr("app.services.symptom_snapshot.svc._run", fake_run)
+
+    snapshot = await load_latest_eligible_symptom_snapshot("user-1")
+    assert snapshot["session_id"] == "legacy-1"
+    assert snapshot["source_type"] == "controlled_symptom_check"
+    assert symptoms_from_snapshot(snapshot) == ["fatigue"]
+
+
+@pytest.mark.asyncio
+async def test_loader_rejects_unstructured_legacy_questionnaire(monkeypatch):
+    legacy = {
+        "id": "legacy-1", "status": "completed", "completed_at": "2026-09-29T08:00:00Z",
+        "session_metadata": {"active_concern": "free text", "summary": {}},
     }
     calls = 0
 
@@ -155,14 +204,32 @@ async def test_loader_falls_back_when_optional_provider_table_is_not_deployed(mo
     monkeypatch.setattr("app.services.symptom_snapshot.svc._get_supabase", lambda: _Supabase())
     monkeypatch.setattr("app.services.symptom_snapshot.svc._run", fake_run)
 
-    snapshot = await load_latest_eligible_symptom_snapshot("user-1")
-    assert snapshot["session_id"] == "legacy-1"
-    assert symptoms_from_snapshot(snapshot) == ["Fatigue"]
+    assert await load_latest_eligible_symptom_snapshot("user-1") is None
+    assert build_legacy_questionnaire_snapshot(legacy) is None
 
 
 def test_legacy_bridge_uses_present_canonical_en_only():
     snapshot = build_symptom_snapshot(session=_session(), evidence=_evidence())
-    assert symptoms_from_snapshot(snapshot) == ["Fatigue"]
+    assert symptoms_from_snapshot(snapshot) == ["fatigue"]
+
+
+@pytest.mark.asyncio
+async def test_legacy_context_helper_delegates_to_canonical_snapshot(monkeypatch):
+    snapshot = build_symptom_snapshot(session=_session(), evidence=_evidence())
+
+    async def fake_loader(_user_id):
+        return snapshot
+
+    monkeypatch.setattr(
+        "app.services.symptom_snapshot.load_latest_eligible_symptom_snapshot",
+        fake_loader,
+    )
+
+    symptoms, context = await supabase_service.get_active_symptom_context("user-1")
+
+    assert symptoms == ["fatigue"]
+    assert context["symptom_snapshot"]["session_id"] == "session-1"
+    assert "provider_model" not in context["symptom_snapshot"]
 
 
 def test_public_projection_removes_provider_concept_and_model_ids():
@@ -247,15 +314,47 @@ async def test_b2c_pipeline_autoloads_snapshot_and_adds_only_present_to_legacy_s
     monkeypatch.setattr(lab_analysis_pipeline, "load_latest_eligible_symptom_snapshot", fake_load)
     result = await lab_analysis_pipeline.run_lab_analysis_pipeline(
         biomarkers=[],
+        symptoms=["legacy free text"],
+        symptom_context={"active_concern": "legacy free text"},
         user_id="user-1",
         source_metadata={"source": "b2c_file"},
     )
     assert result["analysis_status"] == "needs_confirmation"
     assert result["metadata"]["symptom_snapshot_present"] is True
     assert result["health_context"]["inputs"]["symptoms"]["items"] == ["fatigue"]
+    assert result["health_context"]["readiness"]["has_symptom_context"] is False
     assert "fever" not in result["health_context"]["inputs"]["symptoms"]["items"]
     assert result["symptom_snapshot"]["evidence"]["unknown"][0]["display_name_en"] == "Dizziness"
     assert snapshot == original
+
+
+@pytest.mark.asyncio
+async def test_b2c_pipeline_does_not_use_request_symptoms_without_completed_checker(monkeypatch):
+    async def no_snapshot(_user_id):
+        return None
+
+    monkeypatch.setattr(lab_analysis_pipeline, "load_latest_eligible_symptom_snapshot", no_snapshot)
+    result = await lab_analysis_pipeline.run_lab_analysis_pipeline(
+        biomarkers=[],
+        symptoms=["free text fatigue"],
+        symptom_context={"active_concern": "free text fatigue"},
+        user_id="user-1",
+        source_metadata={"source": "b2c_file"},
+    )
+
+    assert result["health_context"]["inputs"]["symptoms"]["items"] == []
+    assert result["health_context"]["readiness"]["has_symptom_context"] is False
+
+
+@pytest.mark.asyncio
+async def test_non_b2c_pipeline_keeps_explicit_symptoms():
+    result = await lab_analysis_pipeline.run_lab_analysis_pipeline(
+        biomarkers=[],
+        symptoms=["Fatigue"],
+        source_metadata={"source": "b2b_api"},
+    )
+
+    assert result["health_context"]["inputs"]["symptoms"]["items"] == ["fatigue"]
 
 
 def test_snapshot_loading_scope_covers_all_current_b2c_paths_not_b2b():

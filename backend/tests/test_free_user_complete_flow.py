@@ -83,6 +83,7 @@ async def test_free_user_complete_flow(monkeypatch):
 
     async def fake_extract_biomarkers(text, symptoms, **_kwargs):
         """Simulate biomarker extraction from lab report"""
+        assert symptoms == []
         return [
             {
                 "name": "Vitamin D (25-OH)",
@@ -128,6 +129,7 @@ async def test_free_user_complete_flow(monkeypatch):
 
     async def fake_generate_protocol(biomarkers, symptoms, **_kwargs):
         """Simulate Claude AI protocol generation"""
+        assert symptoms == ["fatigue"]
         return [
             {
                 "supplement": "Vitamin D3",
@@ -186,6 +188,20 @@ async def test_free_user_complete_flow(monkeypatch):
     async def fake_get_user_profile(_user_id):
         return {"age": 35, "sex": "female", "height_cm": 170, "weight_kg": 65}
 
+    async def fake_symptom_snapshot(_user_id):
+        return {
+            "version": "symptom_snapshot_v1", "source_type": "controlled_symptom_check",
+            "session_id": "free-flow-symptom-session", "completed_at": "2026-10-06T08:00:00Z",
+            "evidence": {
+                "present": [{
+                    "vitaloop_concept_id": "fatigue", "display_name_en": "Fatigue",
+                    "concept_type": "symptom", "mapping_status": "mapped", "is_primary": True,
+                }],
+                "absent": [], "unknown": [],
+            },
+            "assessment": {"urgent_warning": "absent"},
+        }
+
     # Apply monkeypatches
     from app.services import supabase_service as svc
     from app.routers.analysis import analyze as analyze_router
@@ -205,6 +221,7 @@ async def test_free_user_complete_flow(monkeypatch):
     monkeypatch.setattr(protocol_router, "generate_protocol", fake_generate_protocol)
     monkeypatch.setattr(protocol_router, "save_protocol", fake_save_protocol)
     monkeypatch.setattr(protocol_router, "assert_upload_belongs_to_user", fake_assert_upload_belongs_to_user)
+    monkeypatch.setattr(protocol_router, "load_latest_eligible_symptom_snapshot", fake_symptom_snapshot)
     monkeypatch.setattr(email_service, "_deliver_html_email", fake_send_email)
 
     # Override dependencies

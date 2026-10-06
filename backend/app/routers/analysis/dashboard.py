@@ -11,6 +11,10 @@ from app.services import supabase_service as svc
 from app.services.profile_requirements import has_required_profile
 from app.services.entitlements import resolve_user_entitlements
 from app.services.assignment_service import AssignmentService
+from app.services.symptom_snapshot import (
+    load_latest_eligible_symptom_snapshot,
+    public_symptom_snapshot,
+)
 from app.utils.roles import normalize_global_role as _normalize_role, as_bool as _as_bool
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -97,7 +101,7 @@ async def _resolve_onboarding_state(user_id: str, current_user: dict) -> Dict[st
     has_location = bool(location.get("city") or location.get("state") or location.get("country") or location.get("district"))
 
     sb = svc._get_supabase()
-    complaints_resp, uploads_resp, questionnaire_resp = await asyncio.gather(
+    complaints_resp, uploads_resp, symptom_snapshot = await asyncio.gather(
         svc._run(
             lambda: sb.table("recurring_complaints")
             .select("id")
@@ -112,19 +116,12 @@ async def _resolve_onboarding_state(user_id: str, current_user: dict) -> Dict[st
             .limit(1)
             .execute()
         ),
-        svc._run(
-            lambda: sb.table("questionnaire_sessions")
-            .select("id")
-            .eq("user_id", user_id)
-            .eq("status", "completed")
-            .limit(1)
-            .execute()
-        ),
+        load_latest_eligible_symptom_snapshot(user_id),
     )
 
     has_complaints = bool(complaints_resp.data)
     has_upload = bool(uploads_resp.data)
-    has_questionnaire = bool(questionnaire_resp.data)
+    has_questionnaire = bool(symptom_snapshot)
 
     _fire_and_forget(svc.write_audit_log(
         user_id=user_id,
@@ -432,10 +429,10 @@ async def _fetch_user_goals(user_id: str) -> int:
 
 
 async def _fetch_latest_activity(user_id: str) -> tuple[Optional[dict], Optional[dict]]:
-    """Fetch latest weekly checkin and questionnaire"""
+    """Fetch latest weekly check-in and canonical structured symptom snapshot."""
     try:
         sb = svc._get_supabase()
-        weekly_checkin_resp, questionnaire_resp = await asyncio.gather(
+        weekly_checkin_resp, symptom_snapshot = await asyncio.gather(
             svc._run(
                 lambda: sb.table("checkins_weekly")
                 .select("week_start, created_at, energy_score, sleep_quality, mood_score, protocol_adherence")
@@ -444,18 +441,19 @@ async def _fetch_latest_activity(user_id: str) -> tuple[Optional[dict], Optional
                 .limit(1)
                 .execute()
             ),
-            svc._run(
-                lambda: sb.table("questionnaire_sessions")
-                .select("id, completed_at, completion_score")
-                .eq("user_id", user_id)
-                .eq("status", "completed")
-                .order("completed_at", desc=True)
-                .limit(1)
-                .execute()
-            ),
+            load_latest_eligible_symptom_snapshot(user_id),
         )
         weekly_checkin = (weekly_checkin_resp.data or [None])[0]
-        questionnaire_latest = (questionnaire_resp.data or [None])[0]
+        public_snapshot = public_symptom_snapshot(symptom_snapshot)
+        questionnaire_latest = (
+            {
+                "session_id": public_snapshot.get("session_id"),
+                "completed_at": public_snapshot.get("completed_at"),
+                "source_type": public_snapshot.get("source_type"),
+                "symptom_snapshot": public_snapshot,
+            }
+            if public_snapshot else None
+        )
         return weekly_checkin, questionnaire_latest
     except Exception:
         return None, None

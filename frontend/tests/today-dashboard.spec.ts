@@ -69,6 +69,7 @@ type MockOptions = {
   latestQuestionnaireCompletedAt?: string | null
   questionnaireSummary?: any | null
   questionnaireSessionId?: string
+  symptomSnapshot?: any | null
   latestUpload?: any | null
 }
 
@@ -85,13 +86,44 @@ async function mockToday(page: Page, opts: MockOptions = {}) {
     latestQuestionnaireCompletedAt = null,
     questionnaireSummary = null,
     questionnaireSessionId = 'qs-fixture-1',
+    symptomSnapshot = null,
     latestUpload = null,
   } = opts
 
+  const effectiveSymptomSnapshot = symptomSnapshot || (questionnaireUrgency ? {
+    version: 'symptom_snapshot_v1',
+    source_type: 'controlled_symptom_check',
+    session_id: questionnaireSessionId,
+    completed_at: latestQuestionnaireCompletedAt || '2026-09-12T09:00:00Z',
+    final_safety_level: questionnaireUrgency.includes('Multiple') ? 'urgent' : 'clinician_review',
+    overall_wellbeing: 'reduced',
+    duration_bucket: 'weeks_1_4',
+    assessment: {
+      severity: 6,
+      trajectory: 'stable',
+      functional_impact: 'mild',
+      urgent_warning: 'present',
+    },
+    evidence: {
+      present: [{
+        vitaloop_concept_id: 'fatigue', display_name_en: 'Fatigue',
+        concept_type: 'symptom', is_primary: true, mapping_status: 'mapped',
+      }],
+      absent: [],
+      unknown: [],
+    },
+  } : null)
+
   await page.addInitScript((storageKey) => {
     const farFuture = Math.floor(Date.now() / 1000) + 3600
+    const encode = (value: unknown) => window.btoa(JSON.stringify(value))
+      .replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
+    const accessToken = `${encode({ alg: 'none', typ: 'JWT' })}.${encode({
+      sub: 'fixture-user-1', email: 'p37f-fixture@example.com',
+      role: 'authenticated', exp: farFuture,
+    })}.fixture-signature`
     window.localStorage.setItem(storageKey, JSON.stringify({
-      access_token: 'fixture-access-token',
+      access_token: accessToken,
       refresh_token: 'fixture-refresh-token',
       token_type: 'bearer',
       expires_at: farFuture,
@@ -108,7 +140,14 @@ async function mockToday(page: Page, opts: MockOptions = {}) {
     return fulfillJson(route, {
       today_contract,
       blocks: {
-        ...(latestQuestionnaireCompletedAt ? { latest_questionnaire: { completed_at: latestQuestionnaireCompletedAt } } : {}),
+        ...((latestQuestionnaireCompletedAt || effectiveSymptomSnapshot) ? {
+          latest_questionnaire: {
+            completed_at: latestQuestionnaireCompletedAt || effectiveSymptomSnapshot?.completed_at,
+            session_id: effectiveSymptomSnapshot?.session_id,
+            source_type: effectiveSymptomSnapshot?.source_type,
+            symptom_snapshot: effectiveSymptomSnapshot,
+          },
+        } : {}),
         ...(latestUpload ? { latest_upload: latestUpload, latest_lab_result: latestUpload } : {}),
       },
     })
@@ -590,16 +629,23 @@ test.describe('Today dashboard — P37f fixture QA', () => {
   })
 
   test('controlled symptom context is visible and provenance confirms the report snapshot', async ({ page }) => {
-    const symptomSummary = {
-      primary_signal: 'Fatigue', related_symptoms: ['Low stamina'], duration_bucket: 'weeks_1_4',
-      severity: 6, overall_wellbeing: 'reduced', symptom_pattern: 'stable', functional_impact: 'mild',
-      urgency: 'No urgent red flags reported.',
-    }
     await mockToday(page, {
       today_contract: contractReady(),
       latestQuestionnaireCompletedAt: '2026-09-29T08:00:00Z',
-      questionnaireSummary: symptomSummary,
       questionnaireSessionId: 'qs-controlled-1',
+      symptomSnapshot: {
+        version: 'symptom_snapshot_v1', source_type: 'controlled_symptom_check',
+        session_id: 'qs-controlled-1', completed_at: '2026-09-29T08:00:00Z',
+        overall_wellbeing: 'reduced', duration_bucket: 'weeks_1_4',
+        assessment: { severity: 6, trajectory: 'stable', functional_impact: 'mild', urgent_warning: 'absent' },
+        evidence: {
+          present: [
+            { vitaloop_concept_id: 'fatigue', display_name_en: 'Fatigue', concept_type: 'symptom', is_primary: true, mapping_status: 'mapped' },
+            { vitaloop_concept_id: 'low_stamina', display_name_en: 'Low stamina', concept_type: 'symptom', is_primary: false, mapping_status: 'mapped' },
+          ],
+          absent: [], unknown: [],
+        },
+      },
       results: { symptom_snapshot: { session_id: 'qs-controlled-1' }, biomarkers: [] },
     })
     await gotoToday(page)
@@ -610,7 +656,7 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await expect(page.getByText('Included in the current lab report analysis')).toBeVisible()
   })
 
-  test('legacy symptom answers are normalized into the same dashboard context card', async ({ page }) => {
+  test('unstructured legacy symptom answers are ignored by the dashboard', async ({ page }) => {
     await mockToday(page, {
       today_contract: contractReady(),
       latestQuestionnaireCompletedAt: '2026-09-11T13:12:54Z',
@@ -623,11 +669,8 @@ test.describe('Today dashboard — P37f fixture QA', () => {
       results: { symptom_snapshot: { session_id: 'qs-legacy-1' }, biomarkers: [] },
     })
     await gotoToday(page)
-    await expect(page.getByText('Latest symptom context', { exact: true })).toBeVisible()
-    await expect(page.getByText('Fatigue', { exact: true })).toBeVisible()
-    await expect(page.getByText('Brain fog, Low stamina', { exact: false })).toBeVisible()
-    await expect(page.getByText('1-3 months')).toBeVisible()
-    await expect(page.getByText('Affects work or study')).toBeVisible()
+    await expect(page.getByText('Latest symptom context', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('Brain fog, Low stamina', { exact: false })).toHaveCount(0)
   })
 
   test('P37k.2: safety triggered (report + questionnaire) -> This week row 1 is the clinician-review flag, primary CTA', async ({ page }) => {

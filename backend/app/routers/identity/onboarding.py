@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.dependencies import get_current_user
 from app.services import supabase_service as svc
 from app.services.profile_requirements import missing_required_profile_fields
+from app.services.symptom_snapshot import load_latest_eligible_symptom_snapshot
 
 router = APIRouter(prefix="/auth/onboarding", tags=["onboarding"])
 logger = logging.getLogger(__name__)
@@ -130,7 +131,12 @@ async def get_onboarding_state(current_user: dict = Depends(get_current_user)):
     has_location = _has_location(location)
     has_complaints = await _has_user_row("recurring_complaints", user_id)
     has_uploads = await _has_user_row("lab_uploads", user_id)
-    has_questionnaire = await _has_user_row("questionnaire_sessions", user_id, status="completed")
+    has_questionnaire = bool(await _safe_optional_lookup(
+        "canonical_symptom_snapshot",
+        user_id,
+        load_latest_eligible_symptom_snapshot(user_id),
+        None,
+    ))
     first_health_loop_started = bool(has_complaints or has_uploads or has_questionnaire)
     first_health_loop_complete = bool(has_uploads and has_questionnaire)
 

@@ -125,3 +125,39 @@ def test_analysis_quality_gate_credits_symptom_context_like_questionnaire():
     assert gate_with["components"]["context_readiness"] > gate_without["components"]["context_readiness"]
     assert "questionnaire_present" in gate_with["reasons"]
     assert "questionnaire_present" not in gate_without["reasons"]
+
+
+def test_analysis_quality_gate_credits_canonical_symptom_snapshot_as_structured_context():
+    from app.services.analysis_quality_gate import build_analysis_input_quality_gate
+
+    snapshot_context = build_health_context(
+        biomarkers=[{"name": "Ferritin", "status": "DEFICIENT"}],
+        symptom_snapshot={
+            "version": "symptom_snapshot_v1", "session_id": "symptom-session-1",
+            "completed_at": "2026-10-06T08:00:00Z",
+            "evidence": {
+                "present": [{
+                    "vitaloop_concept_id": "fatigue", "display_name_en": "Fatigue",
+                    "concept_type": "symptom", "mapping_status": "mapped", "is_primary": True,
+                }],
+                "absent": [], "unknown": [],
+            },
+            "assessment": {"urgent_warning": "absent"},
+        },
+    )
+    without_snapshot = build_health_context(
+        biomarkers=[{"name": "Ferritin", "status": "DEFICIENT"}],
+    )
+
+    gate_with = build_analysis_input_quality_gate(
+        biomarkers=[{"name": "Ferritin", "status": "DEFICIENT"}],
+        health_context=snapshot_context,
+    )
+    gate_without = build_analysis_input_quality_gate(
+        biomarkers=[{"name": "Ferritin", "status": "DEFICIENT"}],
+        health_context=without_snapshot,
+    )
+
+    assert gate_with["components"]["context_readiness"] > gate_without["components"]["context_readiness"]
+    assert "symptom_snapshot_present" in gate_with["reasons"]
+    assert "questionnaire_present" not in gate_with["reasons"]

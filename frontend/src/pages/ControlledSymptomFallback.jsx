@@ -118,6 +118,7 @@ export default function ControlledSymptomFallback() {
           primary_concern_id: concernId,
           primary_concept_id: primarySignal,
           primary_signal: selectedSignalLabel,
+          related_concept_ids: related.filter(Boolean),
           related_symptoms: relatedLabels,
           duration_bucket: duration,
           severity: severityScore,

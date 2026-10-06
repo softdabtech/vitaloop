@@ -147,9 +147,13 @@ async def test_e3_checkin_completion_visible_in_latest_activity(monkeypatch):
     async def fake_audit(**_kwargs):
         return None
 
+    async def no_completed_symptom_check(_user_id):
+        return None
+
     monkeypatch.setattr(svc, "_get_supabase", lambda: _Client())
     monkeypatch.setattr(svc, "_run", fake_run)
     monkeypatch.setattr(svc, "write_audit_log", fake_audit)
+    monkeypatch.setattr(dashboard_router, "load_latest_eligible_symptom_snapshot", no_completed_symptom_check)
 
     weekly_checkin, _questionnaire = await dashboard_router._fetch_latest_activity("user-e3")
     assert weekly_checkin["week_start"] == "2026-08-24"

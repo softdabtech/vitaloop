@@ -20,6 +20,10 @@ from app.services.safety_state_resolver import (
     resolve_biomarker_safety_state,
     format_safety_state_for_response,
 )
+from app.services.symptom_snapshot import (
+    load_latest_eligible_symptom_snapshot,
+    symptoms_from_snapshot,
+)
 from app.constants import PROTOCOL_GENERATION_TIMEOUT_SECONDS
 from app.utils.validation import normalize_symptoms as _normalize_symptoms
 
@@ -60,7 +64,7 @@ async def create_protocol(
 ):
     user_id: str = current_user["sub"]
     upload_id = str(request.upload_id)
-    normalized_symptoms = _normalize_symptoms(request.symptoms)
+    _normalize_symptoms(request.symptoms)  # validate legacy payload, then ignore it
 
     await assert_upload_belongs_to_user(upload_id, user_id)
 
@@ -102,6 +106,9 @@ async def create_protocol(
             status_code=404,
             detail={"detail": "No biomarkers found for this upload", "code": "BIOMARKERS_NOT_FOUND"},
         )
+
+    symptom_snapshot = await load_latest_eligible_symptom_snapshot(user_id)
+    normalized_symptoms = symptoms_from_snapshot(symptom_snapshot)
 
     try:
         recommendations = await asyncio.wait_for(

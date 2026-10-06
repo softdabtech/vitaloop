@@ -17,6 +17,7 @@ async def test_analyze_accepts_legacy_multipart_payload(monkeypatch):
         return True, "ok", None
 
     async def fake_pdf_analyze(_temp_path, symptoms=None):
+        assert symptoms == [], "legacy multipart symptoms must not influence extraction"
         return {
             "success": True,
             "analysis_method": "claude_pdf",

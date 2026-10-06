@@ -64,7 +64,25 @@ def _stub_history(monkeypatch):
     async def _fake(user_id):
         return []
 
+    async def _fake_symptom_snapshot(_user_id):
+        return {
+            "version": "symptom_snapshot_v1",
+            "source_type": "controlled_symptom_check",
+            "session_id": "safety-test-symptom-session",
+            "completed_at": "2026-10-06T08:00:00Z",
+            "evidence": {
+                "present": [{
+                    "vitaloop_concept_id": "fatigue", "display_name_en": "Fatigue",
+                    "concept_type": "symptom", "mapping_status": "mapped", "is_primary": True,
+                    "domain_keys": ["energy"],
+                }],
+                "absent": [], "unknown": [],
+            },
+            "assessment": {"urgent_warning": "absent"},
+        }
+
     monkeypatch.setattr(lab_analysis_pipeline, "_load_historical_biomarkers", _fake)
+    monkeypatch.setattr(lab_analysis_pipeline, "load_latest_eligible_symptom_snapshot", _fake_symptom_snapshot)
 
 
 def _mock_common(monkeypatch, action_plan):

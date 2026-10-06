@@ -57,6 +57,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
         return {"id": upload_id}
 
     async def fake_extract_biomarkers(text, symptoms, **_kwargs):
+        assert symptoms == [], "legacy request symptoms must not influence biomarker extraction"
         return [
             {
                 "name": "Vitamin D (25-OH)",
@@ -103,6 +104,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
     async def fake_generate_protocol(biomarkers, symptoms, **_kwargs):
         state["protocol_calls"] += 1
         assert len(biomarkers) > 0
+        assert symptoms == ["fatigue"], "protocol symptoms must come from the canonical checker snapshot"
         return [
             {
                 "supplement": "Vitamin D3",
@@ -159,6 +161,20 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
             "global_role": "end_user",
         }
 
+    async def fake_symptom_snapshot(_user_id):
+        return {
+            "version": "symptom_snapshot_v1", "source_type": "controlled_symptom_check",
+            "session_id": "symptom-session-1", "completed_at": "2026-10-06T08:00:00Z",
+            "evidence": {
+                "present": [{
+                    "vitaloop_concept_id": "fatigue", "display_name_en": "Fatigue",
+                    "concept_type": "symptom", "mapping_status": "mapped", "is_primary": True,
+                }],
+                "absent": [], "unknown": [],
+            },
+            "assessment": {"urgent_warning": "absent"},
+        }
+
     monkeypatch.setattr(analyze_router, "save_lab_upload", fake_save_lab_upload)
     monkeypatch.setattr(analyze_router, "extract_biomarkers", fake_extract_biomarkers)
     # Stage 2B: save_biomarkers() is now called from inside run_lab_analysis_pipeline
@@ -176,6 +192,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
     monkeypatch.setattr(protocol_router, "save_protocol", fake_save_protocol)
     monkeypatch.setattr(protocol_router, "build_iherb_url", fake_iherb_url)
     monkeypatch.setattr(protocol_router, "assert_upload_belongs_to_user", fake_assert_upload_belongs_to_user)
+    monkeypatch.setattr(protocol_router, "load_latest_eligible_symptom_snapshot", fake_symptom_snapshot)
 
     from app.services import supabase_service as svc
     monkeypatch.setattr(svc, "get_user_account", fake_get_user_account)
@@ -197,7 +214,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
                 json={
                     "extracted_text": "Quest Diagnostics report text ... Vitamin D 18 ng/mL Ferritin 22 ng/mL",
                     "lab_name": "Quest",
-                    "symptoms": ["fatigue"],
+                    "symptoms": ["legacy request symptom"],
                 },
             )
 
@@ -210,7 +227,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
                 "/protocol",
                 json={
                     "upload_id": analyze_json["upload_id"],
-                    "symptoms": ["fatigue"],
+                    "symptoms": ["legacy request symptom"],
                 },
             )
 
@@ -225,7 +242,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
                 "/protocol",
                 json={
                     "upload_id": analyze_json["upload_id"],
-                    "symptoms": ["fatigue"],
+                    "symptoms": ["legacy request symptom"],
                 },
             )
 

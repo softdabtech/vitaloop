@@ -877,7 +877,8 @@ async def run_lab_analysis_pipeline(
     # Capture the newest completed interview at analysis-generation time. The
     # detached value below is persisted into this report version and is never
     # reloaded when the frozen report is read later.
-    if symptom_snapshot is None and user_id and should_load_symptom_snapshot(source_metadata):
+    canonical_symptom_flow = should_load_symptom_snapshot(source_metadata)
+    if symptom_snapshot is None and user_id and canonical_symptom_flow:
         try:
             symptom_snapshot = await load_latest_eligible_symptom_snapshot(user_id)
         except RuntimeError as exc:
@@ -889,6 +890,12 @@ async def run_lab_analysis_pipeline(
                 raise
             symptom_snapshot = None
     symptom_snapshot = deepcopy(symptom_snapshot) if isinstance(symptom_snapshot, dict) else None
+    # B2C has one symptom authority: the immutable snapshot produced by the
+    # structured Symptom Check. Request fields and the retired questionnaire
+    # context must never be blended into clinical reasoning beside it. B2B and
+    # offline callers retain their explicit symptom inputs.
+    effective_questionnaire = None if canonical_symptom_flow else questionnaire
+    effective_symptom_context = None if canonical_symptom_flow else symptom_context
 
     # Extract sex and age from user_profile for sex/age-specific reference ranges
     user_sex = None
@@ -920,7 +927,12 @@ async def run_lab_analysis_pipeline(
     )
     normalized_symptoms: List[str] = []
     seen_symptoms: set[str] = set()
-    for item in [*(symptoms or []), *symptoms_from_snapshot(symptom_snapshot)]:
+    symptom_inputs = (
+        symptoms_from_snapshot(symptom_snapshot)
+        if canonical_symptom_flow or symptom_snapshot
+        else list(symptoms or [])
+    )
+    for item in symptom_inputs:
         normalized = str(item).strip().lower()
         if normalized and normalized not in seen_symptoms:
             seen_symptoms.add(normalized)
@@ -928,8 +940,8 @@ async def run_lab_analysis_pipeline(
     health_context = build_health_context(
         biomarkers=normalized_biomarkers,
         symptoms=normalized_symptoms,
-        questionnaire=questionnaire,
-        symptom_context=symptom_context,
+        questionnaire=effective_questionnaire,
+        symptom_context=effective_symptom_context,
         symptom_snapshot=symptom_snapshot,
         user_profile=user_profile,
         source_metadata=source_metadata,
@@ -971,8 +983,9 @@ async def run_lab_analysis_pipeline(
             "analysis_input_quality_gate": analysis_input_quality_gate,
             "metadata": {
                 "source": source_metadata or {},
-                "questionnaire_present": bool(questionnaire),
+                "questionnaire_present": bool(effective_questionnaire),
                 "symptom_snapshot_present": bool(symptom_snapshot),
+                "symptom_source_type": (symptom_snapshot or {}).get("source_type"),
                 "profile_present": bool(user_profile),
                 "biomarker_count": len(normalized_biomarkers),
                 "analysis_core_version": LAB_ANALYSIS_PIPELINE_VERSION,
@@ -1663,6 +1676,7 @@ async def run_lab_analysis_pipeline(
         "evidence_debt_version": evidence_debt.get("version"),
         "population_profile_overlays_version": population_profile_overlays.get("version"),
         "population_profile_selection_version": population_profile_selection.get("version"),
+        "symptom_snapshot_version": (symptom_snapshot or {}).get("version"),
         "symptom_analysis_version": symptom_analysis.get("version"),
     }
 
@@ -1822,8 +1836,9 @@ async def run_lab_analysis_pipeline(
         "symptom_snapshot": public_symptom_snapshot(symptom_snapshot),
         "metadata": {
             "source": source_metadata or {},
-            "questionnaire_present": bool(questionnaire),
+            "questionnaire_present": bool(effective_questionnaire),
             "symptom_snapshot_present": bool(symptom_snapshot),
+            "symptom_source_type": (symptom_snapshot or {}).get("source_type"),
             "profile_present": bool(user_profile),
             "profile_context_fields": sorted([key for key, value in (user_profile or {}).items() if value not in (None, "", [])]),
             "health_context_version": health_context.get("version"),

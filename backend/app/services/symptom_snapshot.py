@@ -13,11 +13,28 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.services import supabase_service as svc
-from app.services.symptom_analysis import stable_unmapped_concept_id
 from app.services.symptom_safety_policy import map_provider_triage
 
 
 SYMPTOM_SNAPSHOT_VERSION = "symptom_snapshot_v1"
+
+CONTROLLED_SYMPTOM_SIGNALS = {
+    "energy": {"fatigue": "Fatigue", "low_stamina": "Low stamina", "post_activity_exhaustion": "Post-activity exhaustion", "general_weakness": "General weakness"},
+    "sleep": {"difficulty_falling_asleep": "Difficulty falling asleep", "waking_during_the_night": "Waking during the night", "unrefreshing_sleep": "Unrefreshing sleep", "daytime_sleepiness": "Daytime sleepiness"},
+    "cognition": {"brain_fog": "Brain fog", "poor_concentration": "Poor concentration", "memory_difficulty": "Memory difficulty", "head_pressure": "Head pressure"},
+    "digestion": {"bloating": "Bloating", "abdominal_discomfort": "Abdominal discomfort", "bowel_changes": "Bowel changes", "food_related_symptoms": "Food-related symptoms"},
+    "hair_skin": {"hair_shedding": "Hair shedding", "dry_skin": "Dry skin", "brittle_nails": "Brittle nails", "skin_changes": "Skin changes"},
+    "mood": {"low_mood": "Low mood", "anxiety": "Anxiety", "irritability": "Irritability", "high_stress_load": "High stress load"},
+    "pain": {"muscle_pain": "Muscle pain", "joint_pain": "Joint pain", "headache": "Headache", "general_aches": "General aches"},
+}
+_CONTROLLED_ENUMS = {
+    "overall_wellbeing": {"good", "mostly_good", "reduced", "poor"},
+    "duration_bucket": {"today", "days_2_7", "weeks_1_4", "months_1_3", "months_3_plus", "intermittent", "unknown"},
+    "symptom_pattern": {"improving", "stable", "worsening", "intermittent"},
+    "functional_impact": {"none", "mild", "moderate", "severe"},
+    "domain_detail": {"present", "absent", "unknown"},
+    "urgent_warning": {"present", "absent", "unknown"},
+}
 
 _B2C_SOURCES = {
     "legacy_multipart_pdf",
@@ -77,6 +94,7 @@ def build_symptom_snapshot(
     provider_level = map_provider_triage(session.get("provider_triage_level")).value
     snapshot = {
         "version": SYMPTOM_SNAPSHOT_VERSION,
+        "source_type": session.get("source_type") or "provider_symptom_check",
         "session_id": session.get("id"),
         "questionnaire_version": session.get("questionnaire_version"),
         "provider": session.get("provider"),
@@ -111,41 +129,76 @@ def build_symptom_snapshot(
     return deepcopy(snapshot)
 
 
-def build_legacy_questionnaire_snapshot(session: dict[str, Any]) -> dict[str, Any] | None:
-    """Normalize a completed legacy/controlled questionnaire into the immutable snapshot contract."""
-    if str(session.get("status") or "") != "completed" or not session.get("completed_at"):
+def _controlled_summary(session: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(session, dict):
         return None
     metadata = session.get("session_metadata") if isinstance(session.get("session_metadata"), dict) else {}
     summary = metadata.get("summary") if isinstance(metadata.get("summary"), dict) else {}
-    active_concern = str(metadata.get("active_concern") or summary.get("concern") or "").strip()
-    primary = str(summary.get("primary_signal") or active_concern).strip()
-    related_raw = summary.get("related_symptoms") or summary.get("relatedSymptoms") or []
-    if isinstance(related_raw, str):
-        related = [item.strip() for item in related_raw.split(",") if item.strip()]
-    else:
-        related = [str(item).strip() for item in related_raw if str(item).strip()]
-    labels = [label for label in [primary, *related] if label]
+    if (
+        summary.get("schema_version") != "controlled_symptom_fallback_v1"
+        or summary.get("input_mode") != "controlled_only"
+    ):
+        return None
+    concern_id = str(summary.get("primary_concern_id") or "")
+    concept_id = str(summary.get("primary_concept_id") or "")
+    signals = CONTROLLED_SYMPTOM_SIGNALS.get(concern_id) or {}
+    if not concept_id or concept_id not in signals or summary.get("primary_signal") != signals[concept_id]:
+        return None
+    if any(summary.get(field) not in allowed for field, allowed in _CONTROLLED_ENUMS.items()):
+        return None
+    answers = summary.get("controlled_answers")
+    if not isinstance(answers, dict) or set(answers) != {
+        "severity", "trajectory", "functional_impact", "domain_detail", "urgent_warning"
+    }:
+        return None
+    expected_severity = {"mild": 3, "moderate": 6, "severe": 9}.get(answers.get("severity"))
+    if (
+        expected_severity != summary.get("severity")
+        or answers.get("trajectory") != summary.get("symptom_pattern")
+        or answers.get("functional_impact") != summary.get("functional_impact")
+        or answers.get("domain_detail") != summary.get("domain_detail")
+        or answers.get("urgent_warning") != summary.get("urgent_warning")
+    ):
+        return None
+    related = summary.get("related_symptoms") or []
+    related_ids = summary.get("related_concept_ids") or []
+    if (
+        not isinstance(related, list)
+        or not isinstance(related_ids, list)
+        or len(related) != len(related_ids)
+        or len(related) > 2
+        or any(item == concept_id or item not in signals for item in related_ids)
+        or [signals[item] for item in related_ids] != related
+    ):
+        return None
+    return summary
+
+
+def build_controlled_questionnaire_snapshot(session: dict[str, Any]) -> dict[str, Any] | None:
+    """Normalize only the controlled fallback of the new symptom checker."""
+    if str(session.get("status") or "") != "completed" or not session.get("completed_at"):
+        return None
+    summary = _controlled_summary(session)
+    if not summary:
+        return None
+    concern_id = str(summary["primary_concern_id"])
+    signals = CONTROLLED_SYMPTOM_SIGNALS[concern_id]
+    primary_id = str(summary["primary_concept_id"])
+    related_ids = [str(item) for item in (summary.get("related_concept_ids") or [])]
+    concepts = [(primary_id, signals[primary_id]), *[(concept_id, signals[concept_id]) for concept_id in related_ids if concept_id != primary_id]]
     evidence = [
         {
-            "vitaloop_concept_id": (
-                summary.get("primary_concept_id")
-                if index == 0 and summary.get("primary_concept_id")
-                else stable_unmapped_concept_id(label)
-            ),
+            "vitaloop_concept_id": concept_id,
             "provider_concept_id": None,
             "display_name_en": label,
             "concept_type": "symptom",
             "choice_id": "present",
             "source": "controlled_questionnaire",
             "is_primary": index == 0,
-            "domain_keys": [summary.get("primary_concern_id")] if index == 0 and summary.get("primary_concern_id") else [],
-            "mapping_status": (
-                "mapped"
-                if index == 0 and summary.get("primary_concept_id")
-                else "unmapped"
-            ),
+            "domain_keys": [concern_id],
+            "mapping_status": "mapped",
         }
-        for index, label in enumerate(dict.fromkeys(labels))
+        for index, (concept_id, label) in enumerate(dict.fromkeys(concepts))
     ]
     urgent = summary.get("urgent_warning")
     if urgent is None:
@@ -153,6 +206,7 @@ def build_legacy_questionnaire_snapshot(session: dict[str, Any]) -> dict[str, An
         urgent = "present" if "timely clinician" in urgency_text or "do not delay" in urgency_text else "absent"
     normalized_session = {
         "id": session.get("id"),
+        "source_type": "controlled_symptom_check",
         "status": "completed",
         "completed_at": session.get("completed_at"),
         "questionnaire_version": summary.get("schema_version") or session.get("model_version") or "questionnaire_v2",
@@ -170,6 +224,20 @@ def build_legacy_questionnaire_snapshot(session: dict[str, Any]) -> dict[str, An
         "final_safety_level": "urgent" if urgent == "present" else "routine",
     }
     return build_symptom_snapshot(session=normalized_session, evidence=evidence)
+
+
+def build_legacy_questionnaire_snapshot(session: dict[str, Any]) -> dict[str, Any] | None:
+    """Compatibility alias; unstructured legacy questionnaires are rejected."""
+    return build_controlled_questionnaire_snapshot(session)
+
+
+def _completed_at(value: dict[str, Any] | None) -> datetime:
+    raw = str((value or {}).get("completed_at") or "").replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(raw)
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return datetime.min.replace(tzinfo=timezone.utc)
 
 
 async def load_latest_eligible_symptom_snapshot(user_id: str) -> dict[str, Any] | None:
@@ -195,29 +263,24 @@ async def load_latest_eligible_symptom_snapshot(user_id: str) -> dict[str, Any] 
         if "PGRST205" not in message or "symptom_check_sessions" not in message:
             raise
         provider_session = None
-    legacy_response = await svc._run(
+    controlled_response = await svc._run(
         lambda: supabase.table("questionnaire_sessions")
         .select("*")
         .eq("user_id", user_id)
         .eq("status", "completed")
         .order("completed_at", desc=True)
-        .limit(1)
+        .limit(20)
         .execute()
     )
-    legacy_session = (legacy_response.data or [None])[0]
+    controlled_session = next(
+        (item for item in (controlled_response.data or []) if _controlled_summary(item)),
+        None,
+    )
+    if controlled_session and _completed_at(controlled_session) > _completed_at(provider_session):
+        return build_controlled_questionnaire_snapshot(controlled_session)
     if not provider_session:
-        return build_legacy_questionnaire_snapshot(legacy_session) if legacy_session else None
-    if legacy_session:
-        def _completed_at(value: dict[str, Any]) -> datetime:
-            raw = str(value.get("completed_at") or "").replace("Z", "+00:00")
-            try:
-                parsed = datetime.fromisoformat(raw)
-                return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
-            except ValueError:
-                return datetime.min.replace(tzinfo=timezone.utc)
-        if _completed_at(legacy_session) > _completed_at(provider_session):
-            return build_legacy_questionnaire_snapshot(legacy_session)
-    session = provider_session
+        return build_controlled_questionnaire_snapshot(controlled_session) if controlled_session else None
+    session = {**provider_session, "source_type": "provider_symptom_check"}
     evidence_response = await svc._run(
         lambda: supabase.table("symptom_evidence")
         .select(
@@ -261,7 +324,7 @@ async def load_latest_eligible_symptom_snapshot(user_id: str) -> dict[str, Any] 
 
 
 def symptoms_from_snapshot(snapshot: dict[str, Any] | None) -> list[str]:
-    """Legacy bridge: present evidence only, using canonical English labels."""
+    """Return mapped stable concept IDs from present evidence only."""
     evidence = (snapshot or {}).get("evidence")
     present = evidence.get("present") if isinstance(evidence, dict) else []
     result: list[str] = []
@@ -269,11 +332,13 @@ def symptoms_from_snapshot(snapshot: dict[str, Any] | None) -> list[str]:
     for item in present or []:
         if not isinstance(item, dict) or item.get("concept_type") == "positive_baseline":
             continue
-        label = str(item.get("display_name_en") or "").strip()
-        key = label.casefold()
-        if label and key not in seen:
+        concept_id = str(item.get("vitaloop_concept_id") or "").strip()
+        if item.get("mapping_status") == "unmapped" or concept_id.startswith("unmapped_symptom_"):
+            continue
+        key = concept_id.casefold()
+        if concept_id and key not in seen:
             seen.add(key)
-            result.append(label)
+            result.append(concept_id)
     return result
 
 

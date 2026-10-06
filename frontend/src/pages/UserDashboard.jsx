@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Activity, AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, ClipboardList, FileUp, HelpCircle, ListChecks, RefreshCw, ShieldAlert, Stethoscope, TrendingUp, UserRound } from 'lucide-react'
-import { useDashboardSummary, useQuestionnaireSession, useReportDetails } from '../hooks/useQueries.js'
+import { useDashboardSummary, useReportDetails } from '../hooks/useQueries.js'
 import { useProfile } from '../hooks/useProfile.ts'
 import { useSubscription } from '../hooks/useSubscription.js'
 import { CoachBadge, CoachButton, CoachSkeleton, EmptyCoachState } from '../components/coach/CoachUI.jsx'
@@ -458,15 +458,11 @@ const TODAY_COPY = {
   },
 }
 
-// Same closed, code-owned 3-string enum Questionnaire.jsx's urgencyGuidance()
-// produces (or the local "no red flags" fallback) — unchanged from the
-// pre-P37d dashboard. Kept exactly as-is: P37d preserves this signal, it
-// does not reinterpret it. Keep in sync with Questionnaire.jsx if that copy
-// changes.
-function classifySafetyTone(text) {
-  const t = String(text || '')
-  if (t.includes('Multiple') || t.includes('кілька')) return 'critical'
-  if (t.includes('Some answers') || t.includes('Деякі відповіді')) return 'warning'
+// Safety is classified only from the completed structured checker snapshot.
+function classifySafetyTone(snapshot) {
+  const finalLevel = String(snapshot?.final_safety_level || '')
+  if (finalLevel === 'urgent' || finalLevel === 'emergency') return 'critical'
+  if (snapshot?.assessment?.urgent_warning === 'present' || finalLevel === 'clinician_review') return 'warning'
   return 'success'
 }
 
@@ -1096,7 +1092,6 @@ function LimitedDashboard({ summary, symptomContext, safety, navigate, refetch, 
 export default function UserDashboard() {
   const navigate = useNavigate()
   const { data, isLoading, error, refetch } = useDashboardSummary()
-  const { data: questionnaireSession } = useQuestionnaireSession()
   const { data: profileData } = useProfile()
   const { isPremium } = useSubscription()
   const isUk = isUkrainianLocale()
@@ -1106,27 +1101,31 @@ export default function UserDashboard() {
   const onboardingGoals = Array.isArray(profileData?.profile?.goals) ? profileData.profile.goals : []
   const isLabsReadyIntent = onboardingGoals.includes('intent:labs')
 
-  const sessionContext = questionnaireSession?.session_context || questionnaireSession?.session?.session_metadata || {}
-  const concern = sessionContext?.active_concern || ''
-  const concernSummary = sessionContext?.summary || null
-  const legacyRelatedSymptoms = Array.isArray(concernSummary?.related_symptoms)
-    ? concernSummary.related_symptoms
-    : Array.isArray(concernSummary?.relatedSymptoms)
-      ? concernSummary.relatedSymptoms
-      : String(concernSummary?.related_symptoms || concernSummary?.relatedSymptoms || '').split(',').map((item) => item.trim()).filter(Boolean)
-  const primarySymptomSignal = concernSummary?.primary_signal || legacyRelatedSymptoms[0] || concern || null
-  const symptomContext = concernSummary ? {
-    ...concernSummary,
-    primary_signal: primarySymptomSignal,
-    related_symptoms: legacyRelatedSymptoms.filter((item) => item !== primarySymptomSignal),
-    duration_bucket: concernSummary.duration_bucket || concernSummary.duration,
-    overall_wellbeing: concernSummary.overall_wellbeing || concernSummary.overallWellbeing,
-    symptom_pattern: concernSummary.symptom_pattern || concernSummary.symptomPattern,
-    functional_impact: concernSummary.functional_impact || concernSummary.functionalImpact,
+  const canonicalSymptomSnapshot = summary?.blocks?.latest_questionnaire?.symptom_snapshot || null
+  const presentSymptomEvidence = Array.isArray(canonicalSymptomSnapshot?.evidence?.present)
+    ? canonicalSymptomSnapshot.evidence.present
+    : []
+  const primarySymptomEvidence = presentSymptomEvidence.find((item) => item?.is_primary) || presentSymptomEvidence[0] || null
+  const symptomAssessment = canonicalSymptomSnapshot?.assessment || {}
+  const symptomContext = primarySymptomEvidence ? {
+    primary_signal: primarySymptomEvidence.display_name_en || primarySymptomEvidence.vitaloop_concept_id,
+    related_symptoms: presentSymptomEvidence
+      .filter((item) => item !== primarySymptomEvidence)
+      .map((item) => item.display_name_en || item.vitaloop_concept_id)
+      .filter(Boolean),
+    duration_bucket: canonicalSymptomSnapshot?.duration_bucket,
+    overall_wellbeing: canonicalSymptomSnapshot?.overall_wellbeing,
+    severity: symptomAssessment.severity,
+    symptom_pattern: symptomAssessment.trajectory,
+    functional_impact: symptomAssessment.functional_impact,
   } : null
-  const hasConcern = Boolean(concern)
-  const safetyText = concernSummary?.urgency || null
-  const safetyTone = classifySafetyTone(safetyText)
+  const hasConcern = Boolean(primarySymptomEvidence)
+  const safetyTone = classifySafetyTone(canonicalSymptomSnapshot)
+  const safetyText = safetyTone === 'critical'
+    ? 'Multiple red flags detected. Do not delay medical review.'
+    : safetyTone === 'warning'
+      ? 'Some answers suggest timely clinician review is important.'
+      : null
 
   // P37e: fetch report details ONLY once a ready report's upload_id is
   // confirmed via today_contract -- never speculatively, never derived from
@@ -1199,7 +1198,7 @@ export default function UserDashboard() {
             copy={copy}
             navigate={navigate}
             symptomContext={symptomContext}
-            symptomSessionId={questionnaireSession?.session?.id}
+            symptomSessionId={canonicalSymptomSnapshot?.session_id}
             reportSymptomSnapshot={reportDetails?.symptom_snapshot}
             isUk={isUk}
           />

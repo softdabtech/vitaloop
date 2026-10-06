@@ -7,7 +7,6 @@ from app.services.symptom_analysis import (
     SYMPTOM_ANALYSIS_VERSION,
     apply_symptom_priority,
     build_symptom_analysis,
-    stable_unmapped_concept_id,
 )
 from app.services.symptom_snapshot import build_legacy_questionnaire_snapshot
 
@@ -158,7 +157,7 @@ def test_absent_symptom_deprioritizes_hypothesis_and_explains_change():
     assert updated["priority_effects"][0]["absent_concept_ids"] == ["joint_pain"]
 
 
-def test_unmapped_legacy_text_gets_stable_id_without_clinical_influence():
+def test_unstructured_legacy_text_is_not_a_symptom_snapshot():
     session = {
         "id": "legacy-1",
         "status": "completed",
@@ -170,23 +169,7 @@ def test_unmapped_legacy_text_gets_stable_id_without_clinical_influence():
         },
     }
     snapshot = build_legacy_questionnaire_snapshot(session)
-    concept = snapshot["evidence"]["present"][0]
-    expected = stable_unmapped_concept_id("How can I find more hours in the day?")
-
-    assert concept["vitaloop_concept_id"] == expected
-    assert concept["mapping_status"] == "unmapped"
-    analysis = build_symptom_analysis(
-        symptom_snapshot=snapshot,
-        hypotheses=_hypotheses(),
-        biomarkers=BIOMARKERS,
-    )
-    ranked, updated = apply_symptom_priority(_hypotheses(), analysis)
-    assert analysis["status"] == "no_mapped_concepts"
-    assert [item["hypothesis_id"] for item in ranked] == [
-        "inflammation_load",
-        "iron_status_context",
-    ]
-    assert updated["conclusion_change"]["changed"] is False
+    assert snapshot is None
 
 
 def test_case_synthesis_explains_which_answer_changed_the_conclusion():

@@ -9,6 +9,7 @@ from app.services import supabase_service as svc
 from app.services import claude_service
 from app.services.questionnaire_scoring import apply_authoritative_derived_state
 from app.services.symptom_report_update import resolve_report_update_offer
+from app.services.symptom_snapshot import CONTROLLED_SYMPTOM_SIGNALS
 from app.utils.locale import resolve_locale
 
 router = APIRouter()
@@ -126,19 +127,11 @@ class QuestionnaireContextRequest(BaseModel):
 
 
 _CONTROLLED_REQUIRED_FIELDS = {
-    "overall_wellbeing", "primary_concern_id", "primary_concept_id",
+    "input_mode", "overall_wellbeing", "primary_concern_id", "primary_concept_id",
     "primary_signal", "duration_bucket", "severity", "symptom_pattern",
     "functional_impact", "domain_detail", "urgent_warning", "controlled_answers",
 }
-_CONTROLLED_SIGNALS = {
-    "energy": {"fatigue": "Fatigue", "low_stamina": "Low stamina", "post_activity_exhaustion": "Post-activity exhaustion", "general_weakness": "General weakness"},
-    "sleep": {"difficulty_falling_asleep": "Difficulty falling asleep", "waking_during_the_night": "Waking during the night", "unrefreshing_sleep": "Unrefreshing sleep", "daytime_sleepiness": "Daytime sleepiness"},
-    "cognition": {"brain_fog": "Brain fog", "poor_concentration": "Poor concentration", "memory_difficulty": "Memory difficulty", "head_pressure": "Head pressure"},
-    "digestion": {"bloating": "Bloating", "abdominal_discomfort": "Abdominal discomfort", "bowel_changes": "Bowel changes", "food_related_symptoms": "Food-related symptoms"},
-    "hair_skin": {"hair_shedding": "Hair shedding", "dry_skin": "Dry skin", "brittle_nails": "Brittle nails", "skin_changes": "Skin changes"},
-    "mood": {"low_mood": "Low mood", "anxiety": "Anxiety", "irritability": "Irritability", "high_stress_load": "High stress load"},
-    "pain": {"muscle_pain": "Muscle pain", "joint_pain": "Joint pain", "headache": "Headache", "general_aches": "General aches"},
-}
+_CONTROLLED_SIGNALS = CONTROLLED_SYMPTOM_SIGNALS
 _CONTROLLED_ENUMS = {
     "overall_wellbeing": {"good", "mostly_good", "reduced", "poor"},
     "duration_bucket": {"today", "days_2_7", "weeks_1_4", "months_1_3", "months_3_plus", "intermittent", "unknown"},
@@ -155,6 +148,8 @@ def _validate_controlled_summary(summary: Dict[str, Any]) -> None:
     missing = sorted(key for key in _CONTROLLED_REQUIRED_FIELDS if summary.get(key) in (None, "", {}))
     if missing:
         raise HTTPException(status_code=422, detail={"message": "Incomplete controlled symptom context", "missing": missing})
+    if summary.get("input_mode") != "controlled_only":
+        raise HTTPException(status_code=422, detail="Invalid controlled symptom input mode")
     answers = summary.get("controlled_answers")
     if not isinstance(answers, dict) or set(answers) != {
         "severity", "trajectory", "functional_impact", "domain_detail", "urgent_warning"
@@ -174,6 +169,17 @@ def _validate_controlled_summary(summary: Dict[str, Any]) -> None:
     allowed_related = set(signals.values()) - {signals[concept_id]}
     if not isinstance(related, list) or len(related) > 2 or any(item not in allowed_related for item in related):
         raise HTTPException(status_code=422, detail="Invalid related symptom concepts")
+    related_ids = summary.get("related_concept_ids")
+    if related_ids is not None:
+        allowed_related_ids = set(signals) - {concept_id}
+        if (
+            not isinstance(related_ids, list)
+            or len(related_ids) != len(related)
+            or len(related_ids) > 2
+            or any(item not in allowed_related_ids for item in related_ids)
+            or [signals[item] for item in related_ids] != related
+        ):
+            raise HTTPException(status_code=422, detail="Invalid related symptom concept IDs")
     expected_severity = {"mild": 3, "moderate": 6, "severe": 9}.get(answers.get("severity"))
     if expected_severity != summary.get("severity") or answers.get("trajectory") != summary.get("symptom_pattern") or answers.get("functional_impact") != summary.get("functional_impact") or answers.get("domain_detail") != summary.get("domain_detail") or answers.get("urgent_warning") != summary.get("urgent_warning"):
         raise HTTPException(status_code=422, detail="Controlled answer summary mismatch")

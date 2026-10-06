@@ -69,9 +69,7 @@ def _questionnaire_summary(questionnaire: Dict[str, Any] | None) -> Dict[str, An
 
 
 def _symptom_context_summary(symptom_context: Dict[str, Any] | None) -> Dict[str, Any]:
-    """Summarizes a user's active questionnaire/intake session (active_concern,
-    completion_score, dimension_scores, llm_summary — see
-    supabase_service.get_active_symptom_context()) for readiness scoring.
+    """Summarizes an explicitly supplied legacy/offline symptom context.
 
     Deliberately does NOT scan for/extract a `domain_scores`/`scores`/`domains`
     key the way `_questionnaire_summary()` does. `run_lab_analysis_pipeline()`'s
@@ -80,9 +78,8 @@ def _symptom_context_summary(symptom_context: Dict[str, Any] | None) -> Dict[str
     interpretation (e.g. Questionnaire.jsx's buildDomainScores()) could ever
     blend into provenance-sensitive output (see
     tests/test_stage2f2_domain_scores_provenance.py). `symptom_context` is a
-    separate, narrower field precisely so a B2C caller can surface "the user
-    has an active intake session" (fields, presence) without ever touching
-    that path — see the P36c fix that introduced this function.
+    separate, narrower field retained for non-B2C callers. B2C flows use the
+    immutable structured ``symptom_snapshot`` input instead.
     """
     symptom_context = symptom_context if isinstance(symptom_context, dict) else {}
     if not symptom_context:

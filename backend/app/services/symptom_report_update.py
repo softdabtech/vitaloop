@@ -67,6 +67,12 @@ def build_report_update_offer(
 async def resolve_report_update_offer(*, user_id: str, completed_at: Any) -> Dict[str, Any]:
     """Read the user's latest ready report and return an explicit next action."""
     try:
+        from app.routers.analysis.dashboard import invalidate_summary_cache
+
+        invalidate_summary_cache(user_id)
+    except Exception:
+        pass
+    try:
         latest = await svc.get_latest_ready_report(user_id)
     except Exception:
         return {
