@@ -41,7 +41,7 @@ const NAV_LINKS = [
   { id: 'problem', label: 'How it works' },
   { id: 'example-report', label: 'Example report', route: '/example-report' },
   { id: 'pricing', label: 'Pricing' },
-  { id: 'about', label: 'About', route: '/about' },
+  { id: 'team', label: 'Team', route: '/team/' },
   { id: 'for-nutritionists', label: 'For professionals', route: '/for-nutritionists' },
 ]
 

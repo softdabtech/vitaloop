@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.js'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
@@ -9,12 +9,13 @@ const NAV_LINKS = [
   { id: 'why-vitaloop', label: 'Features', route: '/#why-vitaloop' },
   { id: 'pricing', label: 'Pricing', route: '/#pricing' },
   { id: 'health-hub', label: 'Health Hub', route: '/health-hub/' },
-  { id: 'about', label: 'About', route: '/about' },
+  { id: 'team', label: 'Team', route: '/team/' },
   { id: 'for-nutritionists', label: 'For Nutritionists', route: '/for-nutritionists' },
 ]
 
 export function PageHeader() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -27,6 +28,11 @@ export function PageHeader() {
       return
     }
     setTimeout(() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' }), mobileMenuOpen ? 280 : 0)
+  }
+
+  const isActive = (item) => {
+    if (item.route.includes('#')) return false
+    return location.pathname.replace(/\/$/, '') === item.route.replace(/\/$/, '')
   }
 
   const ctaBase = 'inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50'
@@ -42,12 +48,13 @@ export function PageHeader() {
           <BrandMark />
         </button>
 
-        <nav className="hidden items-center gap-7 md:flex">
+        <nav className="hidden items-center gap-7 lg:flex">
           {NAV_LINKS.map((item) => (
             <button
               key={item.id}
               onClick={() => navAction(item)}
-              className={`text-sm transition ${navTextClass}`}
+              aria-current={isActive(item) ? 'page' : undefined}
+              className={`text-sm transition ${isActive(item) ? 'font-semibold text-emerald-700' : navTextClass}`}
             >
               {item.label}
             </button>
@@ -78,7 +85,7 @@ export function PageHeader() {
             type="button"
             onClick={() => setMobileMenuOpen((v) => !v)}
             aria-label="Open navigation menu"
-            className="inline-flex items-center justify-center rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 md:hidden"
+            className="inline-flex items-center justify-center rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 lg:hidden"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -94,14 +101,15 @@ export function PageHeader() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18 }}
-            className="border-t md:hidden border-slate-200 bg-white"
+            className="border-t border-slate-200 bg-white lg:hidden"
           >
             <div className="mx-auto flex max-w-[1240px] flex-col gap-1 px-4 py-4">
               {NAV_LINKS.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => navAction(item)}
-                  className="rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                  aria-current={isActive(item) ? 'page' : undefined}
+                  className={`rounded-xl px-4 py-3 text-left text-sm font-medium transition hover:bg-slate-100 hover:text-slate-900 ${isActive(item) ? 'bg-emerald-50 text-emerald-800' : 'text-slate-700'}`}
                 >
                   {item.label}
                 </button>

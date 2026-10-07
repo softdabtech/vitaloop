@@ -12,7 +12,6 @@ const UA_ALTERNATE_BY_EN_PATH = {
   '/features/': 'https://ua.vitaloop.today/analizy/',
   '/pricing/': 'https://ua.vitaloop.today/tarify/',
   '/faq/': 'https://ua.vitaloop.today/faq/',
-  '/about/': 'https://ua.vitaloop.today/about/',
   '/privacy-policy/': 'https://ua.vitaloop.today/privacy-policy/',
   '/terms/': 'https://ua.vitaloop.today/terms/',
 }
@@ -309,12 +308,12 @@ const routes = [
     ],
   },
   {
-    path: '/about',
-    title: 'About VITALOOP | Symptom & Lab Health Intelligence',
-    description: 'Learn why VITALOOP connects symptom intake, biomarker analysis, Knowledge Base reasoning, safety context, and longitudinal progress in one health workflow.',
+    path: '/team',
+    title: 'Team | VITALOOP',
+    description: 'Meet the team building VITALOOP — a symptom-first health intelligence platform for longitudinal laboratory data interpretation.',
     priority: '0.6',
     changefreq: 'monthly',
-    text: ['About VITALOOP and the product mission: clearer health decisions from symptoms, labs, and progress over time.'],
+    text: ['Meet the product, engineering, design and people team building VITALOOP, backed by an initial investment from ARBOK.'],
   },
   {
     path: '/health-hub',
@@ -513,7 +512,7 @@ function renderStaticRoot(route) {
     { href: '/symptom-intake/', label: 'Start symptom check' },
     { href: '/health-hub/', label: 'Health Intelligence Hub' },
     { href: '/example-report/', label: 'Example health report' },
-    { href: '/about/', label: 'About VITALOOP' },
+    { href: '/team/', label: 'Meet the VITALOOP team' },
     { href: '/site-map/', label: 'Browse the complete VITALOOP site map' },
   ]
   const links = [...coreLinks, ...(route.links || [])]

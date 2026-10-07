@@ -12,7 +12,7 @@ const PRODUCT_LINKS = [
 ]
 
 const COMPANY_LINKS = [
-  { label: 'About', href: '/about/' },
+  { label: 'Team', href: '/team/' },
   { label: 'For practitioners', href: '/for-nutritionists/' },
   { label: 'For teams', href: '/for-nutritionists/' },
   { label: 'For investors', href: '/for-investors/' },

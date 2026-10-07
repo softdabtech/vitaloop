@@ -21,7 +21,7 @@ const FAQ = lazy(() => import('./pages/FAQ.jsx'))
 const EmailConfirmation = lazy(() => import('./pages/EmailConfirmation.jsx'))
 const ExampleReport = lazy(() => import('./pages/ExampleReport.jsx'))
 const HowItWorks = lazy(() => import('./pages/HowItWorks.jsx'))
-const About = lazy(() => import('./pages/About.jsx'))
+const Team = lazy(() => import('./pages/Team.jsx'))
 const Contact = lazy(() => import('./pages/Contact.jsx'))
 const ForInvestors = lazy(() => import('./pages/ForInvestors.jsx'))
 const ForNutritionists = lazy(() => import('./pages/ForNutritionists.jsx'))
@@ -840,7 +840,8 @@ export default function App() {
           <Route path="/faq" element={isUaHost ? <UaPage pageSlug="faq" /> : <FAQ />} />
           <Route path="/example-report" element={<ExampleReport />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/about" element={<About />} />
+          <Route path="/about" element={<Navigate to={isUaHost ? '/' : '/team/'} replace />} />
+          <Route path="/team" element={isUaHost ? <Navigate to="/" replace /> : <Team />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/for-investors" element={<ForInvestors />} />
           <Route path="/for-nutritionists" element={<ForNutritionists />} />

@@ -13,7 +13,7 @@ const PRODUCT_PAGES = [
   ['Example report', '/example-report/'],
   ['For nutritionists', '/for-nutritionists/'],
   ['FAQ', '/faq/'],
-  ['About VITALOOP', '/about/'],
+  ['Team', '/team/'],
 ]
 
 const TRUST_PAGES = [
