@@ -115,6 +115,7 @@ async def create_protocol(
             generate_protocol(
                 biomarkers=biomarkers,
                 symptoms=normalized_symptoms,
+                user_profile=user_profile,
                 user_id=user_id,
                 upload_id=upload_id,
             ),

@@ -1078,6 +1078,17 @@ async def save_protocol(
     return resp.data[0]
 
 
+async def invalidate_user_protocols(user_id: str) -> None:
+    """Remove cached derived plans so the next read uses the current profile."""
+    supabase = _get_supabase()
+    await _run(
+        lambda: supabase.table("protocols")
+        .delete()
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+
 async def save_symptoms(user_id: str, upload_id: str, tags: List[str], severity: int = 5) -> Dict:
     supabase = _get_supabase()
     resp = await _run(

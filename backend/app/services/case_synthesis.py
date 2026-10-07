@@ -685,6 +685,25 @@ def build_case_synthesis(
             ),
         )
 
+    profile_references = [
+        _profile_ref(field, profile.get(field), availability="provided")
+        for field in ("age", "sex")
+        if profile.get(field) not in (None, "", [], {})
+    ]
+    if profile_references:
+        profile_details = "; ".join(
+            f"{reference['label']}: {reference['value']}"
+            for reference in profile_references
+        )
+        _append(
+            sections["what_was_found"],
+            _statement(
+                f"Reference and safety context for this synthesis uses the recorded profile ({profile_details}).",
+                profile_references,
+                kind="profile_context",
+            ),
+        )
+
     # Main conclusion is a strict 2-4 item digest of the grounded sections.
     conclusion_candidates = [
         *(sections["likely_explanations"][:1]),

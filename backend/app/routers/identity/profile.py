@@ -71,6 +71,7 @@ async def update_profile(body: ProfileUpdate, current_user: dict = Depends(get_c
     if not data:
         return {"profile": await svc.get_user_profile(user_id)}
     updated = await svc.upsert_user_profile(user_id, data)
+    await svc.invalidate_user_protocols(user_id)
     return {"profile": updated}
 
 
@@ -79,6 +80,7 @@ async def update_goals(body: dict, current_user: dict = Depends(get_current_user
     user_id = current_user["sub"]
     goals = body.get("goals", [])
     updated = await svc.upsert_user_profile(user_id, {"goals": goals})
+    await svc.invalidate_user_protocols(user_id)
     return {"profile": updated}
 
 
