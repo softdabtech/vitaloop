@@ -210,6 +210,7 @@ function buildCockpitViewModel({
   planExists,
   reportAge,
   sourceDate,
+  newerUploadDate = null,
   symptomCheckDate,
   safety, // questionnaire safety (viewModel.safety), already built by the caller
   reportSafety, // report-scoped safety, already built by buildReturningUserSections
@@ -237,6 +238,7 @@ function buildCockpitViewModel({
   const headerContext = {
     labDate: sourceDate || null,
     symptomCheckDate: symptomCheckDate || null,
+    newerUploadDate,
     reportAge,
   }
 
@@ -245,7 +247,7 @@ function buildCockpitViewModel({
   const normalizedBiomarkers = biomarkers
     .filter((b) => b && (b.name || b.canonical_name || b.name_en))
     .map((b) => ({ raw: b, status: normalizeBiomarkerStatus(b) }))
-  const priorityCount = normalizedBiomarkers.filter((b) => b.status !== 'OPTIMAL').length
+  const priorityCount = normalizedBiomarkers.filter((b) => !['OPTIMAL', 'UNKNOWN', 'UNEVALUATED'].includes(b.status)).length
 
   const retestPlan = Array.isArray(reportDetails?.knowledge_report?.retest_plan)
     ? reportDetails.knowledge_report.retest_plan
@@ -717,6 +719,7 @@ export function buildTodayViewModel({
   // (never fetched here) for the cockpit's headerContext. A different
   // event/date than the report's own measurement_date -- never conflated.
   symptomCheckCompletedAt = null,
+  latestUpload = null,
 }) {
   const safety = safetyTone === 'success'
     ? null // "no urgent red flags" is not a banner-worthy signal on its own -- see do-not-do §14 (do not carry forward "No urgent red flags reported." as a default banner)
@@ -805,6 +808,15 @@ export function buildTodayViewModel({
   const uploadId = latestReadyReport.upload_id
   const sourceDate = formatDate(latestReadyReport.measurement_date, isUk)
     || formatDate(latestReadyReport.report_generated_at, isUk)
+  const latestUploadRawDate = latestUpload?.measurement_date || latestUpload?.test_date || latestUpload?.created_at
+  const reportRawDate = latestReadyReport.measurement_date || latestReadyReport.report_generated_at
+  const newerUploadDate = latestUpload
+    && latestUpload.upload_id !== latestReadyReport.upload_id
+    && latestUploadRawDate
+    && reportRawDate
+    && new Date(latestUploadRawDate).getTime() > new Date(reportRawDate).getTime()
+    ? formatDate(latestUploadRawDate, isUk)
+    : null
 
   // P37j: same two raw date fields sourceDate already prefers, classified
   // by elapsed time -- see classifyReportAge's own comment for thresholds
@@ -857,7 +869,7 @@ export function buildTodayViewModel({
     const contentStatus = returning.status === 'ready' ? 'ready' : returning.status === 'error' ? 'error' : 'loading'
     return buildCockpitViewModel({
       contentStatus,
-      reportDetails, copy, isUk, resultsTo, planTo: planLinkTo, uploadTo, reportAge, sourceDate, symptomCheckDate,
+      reportDetails, copy, isUk, resultsTo, planTo: planLinkTo, uploadTo, reportAge, sourceDate, newerUploadDate, symptomCheckDate,
       planAccessAllowed: planIsAccessible, planExists,
       safety, reportSafety: returning.reportSafety, changes: returning.changes,
     })

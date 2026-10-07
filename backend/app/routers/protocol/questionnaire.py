@@ -372,6 +372,11 @@ async def update_questionnaire_context(
             source="questionnaire:controlled_v1",
             metadata={"session_id": session["id"], "schema_version": "controlled_symptom_fallback_v1"},
         )
+        # Clear the short-lived dashboard cache so the completed symptom
+        # context is visible on the next dashboard load.
+        from app.routers.analysis.dashboard import invalidate_summary_cache
+
+        invalidate_summary_cache(user_id)
     report_update = (
         await resolve_report_update_offer(user_id=user_id, completed_at=updates.get("completed_at"))
         if body.complete else None

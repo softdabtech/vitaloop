@@ -19,7 +19,7 @@ import '../styles/coach-design-system.css'
 const TIMEZONES = [
   'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
   'America/Anchorage', 'America/Honolulu', 'Europe/London', 'Europe/Paris',
-  'Europe/Berlin', 'Europe/Helsinki', 'Europe/Moscow', 'Asia/Dubai',
+  'Europe/Berlin', 'Europe/Helsinki', 'Europe/Kyiv', 'Europe/Moscow', 'Asia/Dubai',
   'Asia/Kolkata', 'Asia/Bangkok', 'Asia/Tokyo', 'Asia/Shanghai',
   'Australia/Sydney', 'Pacific/Auckland',
 ]

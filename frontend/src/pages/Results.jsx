@@ -45,6 +45,7 @@ const STATUS_META = {
   ELEVATED: { rank: 1, label: 'Above range', ukLabel: 'Вище референсу', badge: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500' },
   BORDERLINE: { rank: 2, label: 'Worth watching', ukLabel: 'Потребує спостереження', badge: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
   OPTIMAL: { rank: 3, label: 'In range', ukLabel: 'У референсі', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  UNKNOWN: { rank: 4, label: 'Not evaluated', ukLabel: 'Не оцінено', badge: 'bg-slate-50 text-slate-600 border-slate-200', dot: 'bg-slate-400' },
 }
 
 const STATUS_ALIAS_MAP = {
@@ -574,7 +575,7 @@ function inferStatusFromRange(biomarker) {
   const low = Number(biomarker?.ref_low)
   const high = Number(biomarker?.ref_high)
   const value = Number(biomarker?.value)
-  if (!Number.isFinite(low) || !Number.isFinite(high) || !Number.isFinite(value) || high <= low) return 'BORDERLINE'
+  if (!Number.isFinite(low) || !Number.isFinite(high) || !Number.isFinite(value) || high <= low) return 'UNKNOWN'
   if (value < low) return 'DEFICIENT'
   if (value > high) return 'ELEVATED'
   const span = high - low
@@ -583,6 +584,7 @@ function inferStatusFromRange(biomarker) {
 }
 
 function normalizeBiomarkerStatus(biomarker) {
+  if (biomarker?.ref_low == null || biomarker?.ref_high == null) return 'UNKNOWN'
   const raw = String(biomarker?.status || '').trim().toUpperCase()
   return STATUS_ALIAS_MAP[raw] || inferStatusFromRange(biomarker)
 }
@@ -1840,7 +1842,7 @@ export default function Results() {
     [normalizedBiomarkers]
   )
 
-  const priorityMarkers = rankedBiomarkers.filter((b) => b.status_normalized !== 'OPTIMAL').slice(0, 5)
+  const priorityMarkers = rankedBiomarkers.filter((b) => !['OPTIMAL', 'UNKNOWN'].includes(b.status_normalized)).slice(0, 5)
   const optimalCount = normalizedBiomarkers.filter((b) => b.status_normalized === 'OPTIMAL').length
   const watchCount = normalizedBiomarkers.filter((b) => b.status_normalized === 'BORDERLINE').length
   const outOfRangeCount = normalizedBiomarkers.filter((b) => ['DEFICIENT', 'ELEVATED'].includes(b.status_normalized)).length

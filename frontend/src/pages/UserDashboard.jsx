@@ -152,6 +152,7 @@ const TODAY_COPY = {
       header: {
         labDateLabel: (date) => `Lab date: ${date}`,
         labDateUnavailable: 'Lab date unavailable',
+        newerUploadLabel: (date) => `Newer upload awaiting report: ${date}`,
         symptomCheckLabel: (date) => `Symptom check: ${date}`,
         // P37k.2: very_old gets stronger, still-calm framing -- "Saved"
         // read as neutral/current-adjacent; "Old saved report" makes clear
@@ -364,6 +365,7 @@ const TODAY_COPY = {
       header: {
         labDateLabel: (date) => `Дата аналізів: ${date}`,
         labDateUnavailable: 'Дата аналізів недоступна',
+        newerUploadLabel: (date) => `Новіше завантаження очікує на звіт: ${date}`,
         symptomCheckLabel: (date) => `Перевірка симптомів: ${date}`,
         freshness: { fresh: 'Свіжий', old: 'Старіший', very_old: 'Старий збережений звіт' },
       },
@@ -596,6 +598,7 @@ function CockpitBody({ viewModel, cockpit, copy, navigate, symptomContext, sympt
           <div className="cockpit-header__dates">
             <span>{headerContext.labDate ? c.header.labDateLabel(headerContext.labDate) : c.header.labDateUnavailable}</span>
             {headerContext.symptomCheckDate && <span>{c.header.symptomCheckLabel(headerContext.symptomCheckDate)}</span>}
+            {headerContext.newerUploadDate && <span className="cockpit-freshness-chip cockpit-freshness-chip--very-old">{c.header.newerUploadLabel(headerContext.newerUploadDate)}</span>}
             <span className={`cockpit-freshness-chip${headerContext.reportAge === 'very_old' ? ' cockpit-freshness-chip--very-old' : ''}`}>
               {c.header.freshness[headerContext.reportAge] || c.header.freshness.fresh}
             </span>
@@ -1159,6 +1162,7 @@ export default function UserDashboard() {
     // event/date from the report's own measurement_date, already present
     // on the same GET /dashboard/summary payload (no new fetch).
     symptomCheckCompletedAt: summary?.blocks?.latest_questionnaire?.completed_at || null,
+    latestUpload: summary?.blocks?.latest_upload || summary?.blocks?.latest_lab_result || null,
   })
 
   if (viewModel.status === 'loading') {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
   AlertCircle,
@@ -165,6 +166,7 @@ function SafetyPanel({ level, emergency = false }) {
 
 export default function SymptomCheck() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [catalog, setCatalog] = useState([])
@@ -188,6 +190,10 @@ export default function SymptomCheck() {
   )
   const initialOptions = session?.initial_options || []
   const question = session?.question || null
+
+  function refreshDashboardAfterCompletion() {
+    queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
+  }
 
   function applySession(nextSession) {
     setSession(nextSession)
@@ -246,6 +252,7 @@ export default function SymptomCheck() {
       })
       applySession(data.session)
       if (data.session?.status !== 'active') {
+        refreshDashboardAfterCompletion()
         setReportUpdate(data.report_update || null)
         const summaryData = await getSymptomSessionSummary(data.session.id)
         setSummary(summaryData.summary)
@@ -274,6 +281,7 @@ export default function SymptomCheck() {
       })
       applySession(data.session)
       if (data.session?.status !== 'active') {
+        refreshDashboardAfterCompletion()
         setReportUpdate(data.report_update || null)
         const summaryData = await getSymptomSessionSummary(data.session.id)
         setSummary(summaryData.summary)
@@ -307,6 +315,7 @@ export default function SymptomCheck() {
       const data = await submitSymptomAnswers(session.id, payload, idempotencyKey)
       applySession(data.session)
       if (data.session?.status !== 'active') {
+        refreshDashboardAfterCompletion()
         setReportUpdate(data.report_update || null)
         const summaryData = await getSymptomSessionSummary(data.session.id)
         setSummary(summaryData.summary)
@@ -361,6 +370,7 @@ export default function SymptomCheck() {
     setError('')
     try {
       await regenerateSymptomLinkedReport(reportUpdate.action.endpoint)
+      refreshDashboardAfterCompletion()
       navigate(reportUpdate.action.path || `/results/${reportUpdate.report_upload_id}`)
     } catch (updateError) {
       setError(apiError(updateError, 'We could not update your latest report. Your symptom answers are saved.'))

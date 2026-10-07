@@ -161,9 +161,12 @@ export default function NotificationPreferences({ currentPreferences = {}, onSav
   // the plan's own free-text timing window (see parseWeeksFromTiming's own
   // comment); the date input lets the user correct it before it's used.
   const weeksOut = nextRetest ? parseWeeksFromTiming(nextRetest.timing) : null
+  const recentReportDate = lastReportDate ? new Date(lastReportDate) : null
+  const reportDateIsUsable = recentReportDate && !Number.isNaN(recentReportDate.getTime())
+    && (Date.now() - recentReportDate.getTime()) < 548 * 86400000
   const computeDefaultEventDate = () => (
     weeksOut
-      ? addWeeks(lastReportDate ? new Date(lastReportDate) : new Date(), weeksOut)
+      ? addWeeks(reportDateIsUsable ? recentReportDate : new Date(), weeksOut)
       : addWeeks(new Date(), 8)
   )
   const [eventDateInput, setEventDateInput] = useState(() => computeDefaultEventDate().toISOString().slice(0, 10))
