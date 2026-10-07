@@ -245,7 +245,7 @@ export default function Team() {
               </div>
               <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-12">
                 <div className="relative h-11 w-44 overflow-hidden" role="img" aria-label="ARBOK">
-                  <img src="/images/arbok-logo.jpeg" alt="" className="absolute left-1/2 top-1/2 h-auto w-[356px] max-w-none -translate-x-1/2 -translate-y-1/2" loading="lazy" width="1344" height="768" />
+                  <img src="/images/arbok-logo.jpeg?v=20261007" alt="" className="absolute left-1/2 top-1/2 h-auto w-[356px] max-w-none -translate-x-1/2 -translate-y-1/2" loading="lazy" width="1344" height="768" />
                 </div>
                 <h2 className="mt-7 text-2xl font-bold tracking-[-0.025em] text-slate-950 sm:text-3xl">External backing for the next stage</h2>
                 <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">VITALOOP has secured a $100,000 initial investment from ARBOK to accelerate product development, strengthen its health intelligence infrastructure and support early market validation.</p>

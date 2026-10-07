@@ -17,22 +17,22 @@ export const teamMembers = [
   {
     id: 'alex-bombela', category: 'leadership', name: 'Alex Bombela', role: 'Founder & CEO',
     bio: 'Technology and product leader with 8+ years of experience delivering complex software and R&D projects. Leads VITALOOP’s product strategy, health intelligence direction and company development.',
-    image: '/images/team/alex-bombela.webp', linkedin: 'https://www.linkedin.com/in/aleksey-bombela/',
+    image: '/images/team/alex-bombela.webp?v=20261007', linkedin: 'https://www.linkedin.com/in/aleksey-bombela/',
   },
   {
     id: 'kate-yesipova', category: 'leadership', name: 'Kate Yesipova', role: 'Frontend Lead',
     bio: 'Frontend engineer with 4 years of React experience, including a year leading development teams. Leads the frontend experience that turns complex health intelligence into a clear and intuitive product.',
-    image: '/images/team/kate-yesipova.webp', linkedin: 'https://www.linkedin.com/in/kate-yesipova-966402239',
+    image: '/images/team/kate-yesipova.webp?v=20261007', linkedin: 'https://www.linkedin.com/in/kate-yesipova-966402239',
   },
   {
     id: 'sergey-bombela', category: 'leadership', name: 'Sergey Bombela', role: 'Product Designer',
     bio: 'Product designer with 8+ years across B2B SaaS, healthcare, logistics and AI platforms. Leads VITALOOP’s product design and user experience.',
-    image: '/images/team/sergey-bombela.webp', linkedin: 'https://www.linkedin.com/in/sergey-bombela',
+    image: '/images/team/sergey-bombela.webp?v=20261007', linkedin: 'https://www.linkedin.com/in/sergey-bombela',
   },
   {
     id: 'anna-bombela', category: 'leadership', name: 'Anna Bombela', role: 'People & Operations / HR',
     bio: 'Supports team development, hiring and people operations as VITALOOP grows its engineering and health expertise.',
-    image: '/images/team/anna-bombela.webp', linkedin: null,
+    image: '/images/team/anna-bombela.webp?v=20261007', linkedin: null,
   },
   {
     id: 'senior-python-engineer', category: 'engineering', name: null, role: 'Senior Python Engineer',
