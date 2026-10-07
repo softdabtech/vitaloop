@@ -5,7 +5,7 @@ assembles the deterministic synthesis, and prints only anonymized counts plus
 an upload fingerprint.
 
 Examples:
-    python scripts/audit_case_synthesis.py --require-symptom --fail-on-gap
+    python scripts/audit_case_synthesis.py --upload-id UUID --require-symptom --fail-on-gap
     python scripts/audit_case_synthesis.py --upload-id UUID --json
 """
 
@@ -29,18 +29,18 @@ from app.services.case_synthesis import (  # noqa: E402
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--upload-id", help="Audit the latest EN version for this upload.")
+    parser.add_argument("--upload-id", required=True, help="Audit the latest EN version for this upload.")
     parser.add_argument(
         "--require-symptom",
         action="store_true",
-        help="Select the latest completed EN report containing a symptom snapshot.",
+        help="Require the selected upload's latest completed EN report to contain a symptom snapshot.",
     )
     parser.add_argument("--json", action="store_true", help="Print the anonymized JSON audit.")
     parser.add_argument("--fail-on-gap", action="store_true", help="Exit non-zero when P1 validation fails.")
     return parser
 
 
-def _latest_report(client, *, upload_id: str | None, require_symptom: bool) -> dict:
+def _latest_report(client, *, upload_id: str, require_symptom: bool) -> dict:
     query = (
         client.table("report_versions")
         .select("*")
@@ -48,8 +48,7 @@ def _latest_report(client, *, upload_id: str | None, require_symptom: bool) -> d
         .in_("status", ["completed", "blocked"])
         .order("created_at", desc=True)
     )
-    if upload_id:
-        query = query.eq("upload_id", upload_id)
+    query = query.eq("upload_id", upload_id)
     rows = query.limit(100).execute().data or []
     if require_symptom:
         rows = [row for row in rows if (row.get("input_snapshot") or {}).get("symptom_snapshot")]

@@ -165,6 +165,9 @@ const RESULTS_COPY = {
     noRange: 'No reference range',
     emptyTitle: 'Results & Interpretation',
     emptySubtitle: 'No processed biomarkers yet.',
+    loadFailedTitle: 'Report unavailable',
+    loadFailedBody: 'We could not load this report. Check your connection and try again.',
+    retry: 'Try again',
     focusNow: 'Focus now',
     watchListLabel: 'Watch list',
     noImmediate: 'No immediate out-of-range marker',
@@ -378,6 +381,9 @@ const RESULTS_COPY = {
     noRange: 'Референс не вказано',
     emptyTitle: 'Результати й інтерпретація',
     emptySubtitle: 'Оброблених показників ще немає.',
+    loadFailedTitle: 'Не вдалося завантажити звіт',
+    loadFailedBody: 'Перевірте з’єднання та спробуйте ще раз.',
+    retry: 'Спробувати ще раз',
     focusNow: 'Фокус зараз',
     watchListLabel: 'Спостереження',
     noImmediate: 'Немає термінового показника поза референсом',
@@ -1739,12 +1745,16 @@ export default function Results() {
   const [clinicalContradictions, setClinicalContradictions] = useState(null)
   const [negativeEvidence, setNegativeEvidence] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [retryToken, setRetryToken] = useState(0)
   const isUk = isUkrainianLocale()
   const copy = isUk ? RESULTS_COPY.uk : RESULTS_COPY.en
 
   useEffect(() => {
     let active = true
     async function load() {
+      setLoading(true)
+      setLoadError(false)
       try {
         // Cabinet reconciliation: a single call to /results/{uploadId} is
         // sufficient — no second /analyze/{uploadId} fetch. Verified against
@@ -1790,6 +1800,7 @@ export default function Results() {
         gaResultsView(uploadId)
       } catch (_e) {
         if (!active) return
+        setLoadError(true)
         setBiomarkers([])
         setProtocol([])
         setShoppingLinks([])
@@ -1816,7 +1827,7 @@ export default function Results() {
     return () => {
       active = false
     }
-  }, [uploadId])
+  }, [uploadId, retryToken])
 
   const normalizedBiomarkers = useMemo(() => biomarkers.map((b) => ({
     ...b,
@@ -1923,6 +1934,33 @@ export default function Results() {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
         {copy.loading}
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-6">
+        <CabinetPageHeader title={copy.loadFailedTitle} />
+        <div className="max-w-4xl">
+          <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            {copy.loadFailedBody}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={() => setRetryToken((value) => value + 1)}
+              className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white"
+            >
+              {copy.retry}
+            </button>
+            <button
+              onClick={() => navigate('/lab-results')}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
+            >
+              {copy.back}
+            </button>
+          </div>
+        </div>
       </div>
     )
   }

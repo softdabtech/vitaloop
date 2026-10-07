@@ -21,6 +21,10 @@ UI_FIELD_CONSUMERS = {
         "frontend/src/pages/Results.jsx",
         "frontend/src/lib/todayViewModel.js",
     ],
+    "case_synthesis": ["frontend/src/pages/Results.jsx::buildResultOverview"],
+    "symptom_analysis": ["frontend/src/pages/Results.jsx::SymptomImpactNotice"],
+    "grounded_ai_narrative": ["frontend/src/lib/resultOverview.js"],
+    "semantic_acceptance": [],
     "health_states": ["frontend/src/pages/Results.jsx::AnalysisCoreV2Panel"],
     "trend_analysis": ["frontend/src/pages/Results.jsx::AnalysisCoreV2Panel"],
     "quality_snapshot": ["frontend/src/pages/Results.jsx::AnalysisCoreV2Panel"],
@@ -28,11 +32,13 @@ UI_FIELD_CONSUMERS = {
     "ai_orchestration": [],
     "cost_metadata": [],
     "health_context": [],
-    "case_synthesis": [],
-    "symptom_analysis": [],
 }
 
 UI_RESPONSE_PATHS = {
+    "case_synthesis": ("final_analysis", "case_synthesis"),
+    "symptom_analysis": ("final_analysis", "symptom_analysis"),
+    "grounded_ai_narrative": ("final_analysis", "grounded_ai_narrative"),
+    "semantic_acceptance": ("final_analysis", "semantic_acceptance"),
     "health_states": ("final_analysis", "health_states"),
     "trend_analysis": ("final_analysis", "trend_analysis"),
     "quality_snapshot": ("final_analysis", "quality_snapshot"),

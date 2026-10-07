@@ -33,7 +33,7 @@
 Команда проверки реального кейса:
 
 ```bash
-python scripts/audit_real_user_case.py --require-symptom --fail-on-gap
+python scripts/audit_real_user_case.py --upload-id "$UPLOAD_ID" --require-symptom --fail-on-gap
 ```
 
 Результат:

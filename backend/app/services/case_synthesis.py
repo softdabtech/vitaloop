@@ -169,9 +169,12 @@ def _find_marker(value: Any, index: Dict[str, Dict[str, Any]]) -> Dict[str, Any]
     marker_key = _key(value)
     if marker_key in index:
         return index[marker_key]
+    partial_matches: Dict[int, Dict[str, Any]] = {}
     for indexed_key, marker in index.items():
         if marker_key and (marker_key in indexed_key or indexed_key in marker_key):
-            return marker
+            partial_matches[id(marker)] = marker
+    if len(partial_matches) == 1:
+        return next(iter(partial_matches.values()))
     return None
 
 

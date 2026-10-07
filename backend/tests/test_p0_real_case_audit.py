@@ -3,6 +3,8 @@ import pytest
 from app.services.knowledge.integration import evaluate_biomarkers_with_knowledge
 from app.services.real_case_audit import build_real_case_audit
 from app.services.report_history import assemble_frozen_response
+from scripts.audit_case_synthesis import _parser as p1_audit_parser
+from scripts.audit_real_user_case import _parser as p0_audit_parser
 
 
 def _report_version():
@@ -56,6 +58,9 @@ def _report_version():
                     }
                 ],
             },
+            "symptom_analysis": {"version": "symptom_analysis_v1"},
+            "grounded_ai_narrative": {"version": "grounded_ai_narrative_v1"},
+            "semantic_acceptance": {"version": "semantic_acceptance_v1"},
             "version_provenance": {"pipeline_version": "lab_analysis_pipeline_v2"},
         },
         "knowledge_report": {
@@ -75,6 +80,14 @@ def _report_version():
             }
         },
     }
+
+
+def test_p0_and_p1_audit_clis_require_an_explicit_upload_id():
+    for parser in (p0_audit_parser(), p1_audit_parser()):
+        upload_argument = next(
+            action for action in parser._actions if "--upload-id" in action.option_strings
+        )
+        assert upload_argument.required is True
 
 
 def test_p0_audit_traces_complete_frozen_case_without_identifiers():
@@ -108,6 +121,12 @@ def test_p0_audit_traces_complete_frozen_case_without_identifiers():
     assert response["final_analysis"]["biomarkers"][1]["canonical_name"] == "canonical_tsh"
     assert response["case_synthesis"] == report["input_snapshot"]["case_synthesis"]
     assert response["final_analysis"]["case_synthesis"] == response["case_synthesis"]
+    transfers = {item["field"]: item for item in audit["engine_api_ui_transfer"]}
+    for field in ("case_synthesis", "symptom_analysis", "grounded_ai_narrative"):
+        assert transfers[field]["engine_persisted"] is True
+        assert transfers[field]["api_exposed"] is True
+        assert transfers[field]["ui_contract_present"] is True
+    assert transfers["semantic_acceptance"]["api_exposed"] is True
     assert "final_analysis" not in response["final_analysis"]
 
 

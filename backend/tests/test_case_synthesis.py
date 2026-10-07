@@ -2,6 +2,8 @@ from copy import deepcopy
 
 from app.services.case_synthesis import (
     CASE_SYNTHESIS_SECTIONS,
+    _find_marker,
+    _marker_index,
     build_case_synthesis,
 )
 
@@ -225,6 +227,21 @@ def test_case_synthesis_does_not_fabricate_statements_without_evidence():
     assert result["main_conclusion"] == []
     assert result["likely_explanations"] == []
     assert result["grounding"]["all_statements_grounded"] is True
+
+
+def test_partial_marker_alias_is_rejected_when_multiple_markers_match():
+    markers = [
+        {"name": "Free T4", "canonical_name": "canonical_free_t4", "value": 1.0},
+        {"name": "Total T4", "canonical_name": "canonical_total_t4", "value": 8.0},
+    ]
+
+    assert _find_marker("T4", _marker_index(markers)) is None
+
+
+def test_partial_marker_alias_resolves_when_it_has_one_candidate():
+    marker = {"name": "Free T4", "canonical_name": "canonical_free_t4", "value": 1.0}
+
+    assert _find_marker("T4", _marker_index([marker])) is marker
 
 
 def test_missing_evidence_is_also_exposed_as_a_conclusion_limit():

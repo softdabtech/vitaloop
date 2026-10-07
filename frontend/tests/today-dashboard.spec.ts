@@ -165,6 +165,7 @@ async function mockToday(page: Page, opts: MockOptions = {}) {
   }))
 
   await page.route('**/results/**', async (route) => {
+    if (route.request().isNavigationRequest()) return route.continue()
     if (resultsDelayMs) await new Promise((resolve) => setTimeout(resolve, resultsDelayMs))
     if (resultsStatus !== 200) return route.fulfill({ status: resultsStatus, contentType: 'application/json', body: JSON.stringify({ detail: 'error' }) })
     return fulfillJson(route, results || {})
@@ -228,6 +229,15 @@ test.describe('Today dashboard — P37f fixture QA', () => {
     await gotoToday(page)
     await expect(page.getByText(/couldn.t load your overview/i)).toBeVisible()
     await expect(page.getByRole('button', { name: /Try again/i })).toBeVisible()
+  })
+
+  test('Results API failure shows an error instead of the empty-report state', async ({ page }) => {
+    await mockToday(page, { resultsStatus: 500 })
+    await page.goto(`${LOCAL_BASE}/results/up-fixture-1`)
+
+    await expect(page.getByRole('alert')).toContainText(/could not load this report/i)
+    await expect(page.getByRole('heading', { name: 'Report unavailable' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Results & Interpretation' })).toHaveCount(0)
   })
 
   // P37k: once reportDetails resolves for a ready report, the cockpit

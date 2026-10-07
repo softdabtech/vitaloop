@@ -253,7 +253,7 @@ async def load_latest_eligible_symptom_snapshot(user_id: str) -> dict[str, Any] 
             .select("*")
             .eq("user_id", user_id)
             .eq("status", "completed")
-            .order("completed_at", desc=True)
+            .order("completed_at", desc=True, nullsfirst=False)
             .limit(1)
             .execute()
         )
@@ -268,7 +268,11 @@ async def load_latest_eligible_symptom_snapshot(user_id: str) -> dict[str, Any] 
         .select("*")
         .eq("user_id", user_id)
         .eq("status", "completed")
-        .order("completed_at", desc=True)
+        .contains(
+            "session_metadata",
+            {"summary": {"schema_version": "controlled_symptom_fallback_v1", "input_mode": "controlled_only"}},
+        )
+        .order("completed_at", desc=True, nullsfirst=False)
         .limit(20)
         .execute()
     )

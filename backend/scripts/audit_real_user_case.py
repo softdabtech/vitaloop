@@ -1,7 +1,7 @@
 """Audit one immutable production report without regenerating or writing data.
 
 Examples:
-    python scripts/audit_real_user_case.py --require-symptom
+    python scripts/audit_real_user_case.py --upload-id UUID --require-symptom --fail-on-gap
     python scripts/audit_real_user_case.py --upload-id UUID --json
 """
 
@@ -22,18 +22,18 @@ from app.services.report_history import assemble_frozen_response  # noqa: E402
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--upload-id", help="Audit the latest EN version for this upload.")
+    parser.add_argument("--upload-id", required=True, help="Audit the latest EN version for this upload.")
     parser.add_argument(
         "--require-symptom",
         action="store_true",
-        help="Select the latest completed EN report containing a symptom snapshot.",
+        help="Require the selected upload's latest completed EN report to contain a symptom snapshot.",
     )
     parser.add_argument("--json", action="store_true", help="Print JSON instead of the concise stage table.")
     parser.add_argument("--fail-on-gap", action="store_true", help="Exit non-zero when a P0 stage is not green.")
     return parser
 
 
-def _latest_report(client, *, upload_id: str | None, require_symptom: bool) -> dict:
+def _latest_report(client, *, upload_id: str, require_symptom: bool) -> dict:
     query = (
         client.table("report_versions")
         .select("*")
@@ -41,8 +41,7 @@ def _latest_report(client, *, upload_id: str | None, require_symptom: bool) -> d
         .in_("status", ["completed", "blocked"])
         .order("created_at", desc=True)
     )
-    if upload_id:
-        query = query.eq("upload_id", upload_id)
+    query = query.eq("upload_id", upload_id)
     rows = query.limit(100).execute().data or []
     if require_symptom:
         rows = [row for row in rows if (row.get("input_snapshot") or {}).get("symptom_snapshot")]

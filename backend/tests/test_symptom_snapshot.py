@@ -208,6 +208,87 @@ async def test_loader_rejects_unstructured_legacy_questionnaire(monkeypatch):
     assert build_legacy_questionnaire_snapshot(legacy) is None
 
 
+@pytest.mark.asyncio
+async def test_loader_orders_null_completion_times_after_eligible_sessions(monkeypatch):
+    controlled = {
+        "id": "controlled-1",
+        "status": "completed",
+        "completed_at": "2026-10-04T08:00:00Z",
+        "session_metadata": {
+            "summary": {
+                "schema_version": "controlled_symptom_fallback_v1",
+                "input_mode": "controlled_only",
+                "overall_wellbeing": "reduced",
+                "primary_concern_id": "energy",
+                "primary_concept_id": "fatigue",
+                "primary_signal": "Fatigue",
+                "duration_bucket": "weeks_1_4",
+                "symptom_pattern": "stable",
+                "functional_impact": "mild",
+                "domain_detail": "absent",
+                "urgent_warning": "absent",
+                "severity": 6,
+                "controlled_answers": {
+                    "severity": "moderate",
+                    "trajectory": "stable",
+                    "functional_impact": "mild",
+                    "domain_detail": "absent",
+                    "urgent_warning": "absent",
+                },
+            }
+        },
+    }
+    order_calls = []
+    contains_calls = []
+
+    class _Query:
+        def __init__(self, table_name):
+            self.table_name = table_name
+
+        def __getattr__(self, name):
+            if name == "contains":
+                def record_contains(column, value):
+                    contains_calls.append((self.table_name, column, value))
+                    return self
+
+                return record_contains
+            if name == "order":
+                def record_order(column, **kwargs):
+                    order_calls.append((self.table_name, column, kwargs))
+                    return self
+
+                return record_order
+            if name == "execute":
+                data = [] if self.table_name == "symptom_check_sessions" else [controlled]
+                return lambda: _Response(data)
+            return lambda *_args, **_kwargs: self
+
+    class _Supabase:
+        def table(self, name):
+            return _Query(name)
+
+    async def run(operation):
+        return operation()
+
+    monkeypatch.setattr("app.services.symptom_snapshot.svc._get_supabase", lambda: _Supabase())
+    monkeypatch.setattr("app.services.symptom_snapshot.svc._run", run)
+
+    snapshot = await load_latest_eligible_symptom_snapshot("user-1")
+
+    assert snapshot["session_id"] == "controlled-1"
+    assert order_calls == [
+        ("symptom_check_sessions", "completed_at", {"desc": True, "nullsfirst": False}),
+        ("questionnaire_sessions", "completed_at", {"desc": True, "nullsfirst": False}),
+    ]
+    assert contains_calls == [
+        (
+            "questionnaire_sessions",
+            "session_metadata",
+            {"summary": {"schema_version": "controlled_symptom_fallback_v1", "input_mode": "controlled_only"}},
+        )
+    ]
+
+
 def test_legacy_bridge_uses_present_canonical_en_only():
     snapshot = build_symptom_snapshot(session=_session(), evidence=_evidence())
     assert symptoms_from_snapshot(snapshot) == ["fatigue"]
