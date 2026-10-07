@@ -273,7 +273,7 @@ export default function Upload() {
   // permanent no-op (harmless — lab_name was always optional) rather than
   // dead code that would error. Left in place instead of ripped out in case
   // the field comes back; setLabName is intentionally unused now.
-  const [labName, setLabName] = useState('') // eslint-disable-line no-unused-vars
+  const [labName, setLabName] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
   const [errorInfo, setErrorInfo] = useState(null)
   const [selectedFileName, setSelectedFileName] = useState('')

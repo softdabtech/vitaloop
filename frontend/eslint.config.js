@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import reactPlugin from 'eslint-plugin-react';
+import reactHooksPlugin from 'eslint-plugin-react-hooks';
 
 export default [
   {
@@ -9,6 +10,7 @@ export default [
     files: ['src/**/*.{js,jsx}'],
     plugins: {
       react: reactPlugin,
+      'react-hooks': reactHooksPlugin,
     },
     languageOptions: {
       ecmaVersion: 'latest',
@@ -61,6 +63,8 @@ export default [
       'no-unused-vars': 'off',
       'react/jsx-uses-react': 'warn',
       'react/jsx-uses-vars': 'warn',
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'error',
       'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
       'prefer-const': 'warn',
       'no-var': 'warn',
@@ -72,7 +76,10 @@ export default [
       // Code style
       'semi': ['warn', 'never'],
       'quotes': ['warn', 'single', { avoidEscape: true }],
-      'indent': ['warn', 2],
+      // ESLint's core indent rule produces hundreds of false positives for
+      // nested JSX. Formatting is handled by the existing source style;
+      // correctness rules above remain blocking.
+      'indent': 'off',
       'comma-dangle': ['warn', 'only-multiline'],
       'no-multiple-empty-lines': ['warn', { max: 2 }],
       'no-trailing-spaces': 'warn',

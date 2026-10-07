@@ -98,7 +98,7 @@ export default function Privacy() {
           <p><strong>Emergencies:</strong> If you experience a medical emergency, immediate danger, or thoughts of self-harm, do not rely on VITALOOP. Contact your local emergency services or crisis line immediately.</p>
         </div>
 
-        <div>
+        <div id="cookies">
           <h2 style={h2Style}>8. Cookies and Tracking</h2>
           <p>We use essential cookies for authentication and core functionality, product analytics, and conversion tracking tools (including Meta Pixel) to measure campaign performance.</p>
         </div>

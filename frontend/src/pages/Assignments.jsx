@@ -166,7 +166,7 @@ export default function Assignments() {
     return () => {
       active = false
     }
-  }, [user])
+  }, [user, copy.couldNotLoad])
 
   const prioritized = useMemo(() => {
     return enrichAssignments(items)

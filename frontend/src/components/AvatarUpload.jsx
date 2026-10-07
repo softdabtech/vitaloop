@@ -176,7 +176,7 @@ export default function AvatarUpload({ user, onUpdate, isUk = false }) {
         onChange={(e) => handleFile(e.target.files?.[0])}
       />
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{'@keyframes spin { to { transform: rotate(360deg); } }'}</style>
     </div>
   )
 }

@@ -858,7 +858,7 @@ export default function ProtocolPage() {
     }
     load()
     return () => { active = false }
-  }, [uploadId])
+  }, [uploadId, copy.genericError, copy.notFound, copy.premium])
 
   const sortedProtocol = useMemo(() => sortProtocolByPriority(protocol), [protocol])
   const grouped = useMemo(() => groupProtocol(sortedProtocol), [sortedProtocol])

@@ -113,7 +113,6 @@ export default function Subscription() {
   useEffect(() => {
     if (loading) return
     gaViewPricing('subscription_page')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading])
 
   if (loading) {

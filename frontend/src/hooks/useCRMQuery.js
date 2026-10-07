@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-export function useCRMQuery(queryFn, deps = [], options = {}) {
+export function useCRMQuery(queryFn, _deps = [], options = {}) {
   const { enabled = true, initialData = null } = options
   const [data, setData] = useState(initialData)
   const [error, setError] = useState(null)
@@ -30,7 +30,7 @@ export function useCRMQuery(queryFn, deps = [], options = {}) {
     return () => {
       mountedRef.current = false
     }
-  }, deps)
+  }, [run])
 
   return {
     data,

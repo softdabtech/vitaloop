@@ -9,18 +9,8 @@ export default function HealthTipsDisplay({ biomarkers, userContext }) {
   const [pendingJobId, setPendingJobId] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [expandedTip, setExpandedTip] = useState(null)
-  const biomarkersKey = JSON.stringify((biomarkers || []).map((b) => ({
-    name: b?.name,
-    value: b?.value,
-    status: b?.status,
-    category: b?.category,
-  })))
-  const userContextKey = JSON.stringify({
-    age: userContext?.age,
-    lifestyle: userContext?.lifestyle,
-    goals: userContext?.goals,
-    compliance: userContext?.protocol_adherence,
-  })
+  const biomarkersKey = JSON.stringify(biomarkers || [])
+  const userContextKey = JSON.stringify(userContext || {})
 
   useEffect(() => {
     let cancelled = false
@@ -28,7 +18,9 @@ export default function HealthTipsDisplay({ biomarkers, userContext }) {
     async function loadTips() {
       setLoading(true)
       try {
-        const result = await generateHealthTips(biomarkers, userContext)
+        const biomarkerInput = JSON.parse(biomarkersKey)
+        const contextInput = JSON.parse(userContextKey)
+        const result = await generateHealthTips(biomarkerInput, contextInput)
         if (cancelled) return
 
         if (result.status === 'pending') {
@@ -50,7 +42,7 @@ export default function HealthTipsDisplay({ biomarkers, userContext }) {
       }
     }
 
-    if (biomarkers?.length > 0) {
+    if (JSON.parse(biomarkersKey).length > 0) {
       loadTips()
     }
 
@@ -78,7 +70,7 @@ export default function HealthTipsDisplay({ biomarkers, userContext }) {
         return
       }
 
-      setPendingMessage(result.message || pendingMessage)
+      setPendingMessage((current) => result.message || current)
       if (attempts < 30) {
         timer = setTimeout(poll, 20000)
       }

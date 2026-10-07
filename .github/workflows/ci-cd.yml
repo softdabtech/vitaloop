@@ -10,8 +10,6 @@ concurrency:
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   # ─────────────────────────────────────────────────────────
@@ -66,16 +64,7 @@ jobs:
         env:
           SUPABASE_URL: "https://placeholder.supabase.co"
           SUPABASE_SERVICE_ROLE_KEY: "placeholder"
-        run: |
-          pytest tests/test_analyze.py \
-                 tests/test_router_input_guards.py \
-                 tests/test_rate_limit_middleware.py \
-                 tests/test_knowledge_rule_evaluator.py \
-                 tests/test_knowledge_governance_api.py \
-                 tests/test_cors_origins.py \
-                 tests/test_uuid_validation.py \
-                 tests/test_ua_wellbeing_assessment.py \
-                 -q --tb=short
+        run: pytest tests -q --tb=short
 
   # ─────────────────────────────────────────────────────────
   # JOB 2: CRM .NET tests
@@ -141,8 +130,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Trust & claims guard (docs/TRUST_AND_CLAIMS_GUIDELINES.md)
-        run: npm run qa:claims
+      - name: Lint
+        run: npm run lint
+
+      - name: Static routes, links, and claims
+        run: npm run qa:routes && npm run qa:links:strict && npm run qa:claims
 
       - name: Build production bundle
         run: NODE_OPTIONS=--max-old-space-size=1536 npx vite build --mode production
@@ -150,11 +142,17 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      - name: Run Playwright smoke tests (EN site)
+      - name: Run canonical user-flow E2E
         env:
-          PLAYWRIGHT_BASE_URL: "https://vitaloop.today"
-        run: npx playwright test tests/sidebar-links.spec.ts tests/subscription-status.spec.ts --project=chromium --reporter=list
-        continue-on-error: true  # E2E smoke is advisory; doesn't block deploy
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:5173
+        run: |
+          npm run dev -- --mode production --host 127.0.0.1 > /tmp/vitaloop-vite.log 2>&1 &
+          for attempt in {1..30}; do
+            curl -fsS http://127.0.0.1:5173 >/dev/null && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:5173 >/dev/null
+          npx playwright test tests/symptom-check-en.spec.ts tests/today-dashboard.spec.ts --project=chromium --reporter=list
 
   # ─────────────────────────────────────────────────────────
   # JOB 3: Deploy to production (only on push to main)

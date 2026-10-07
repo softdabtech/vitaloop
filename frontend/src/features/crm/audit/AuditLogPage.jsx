@@ -8,7 +8,7 @@ import CRMTableState from '../components/CRMTableState.jsx'
 export default function AuditLogPage() {
   const [filters, setFilters] = useState({ entityType: '', userId: '' })
 
-  const queryFn = useCallback(() => getAuditLogs(filters), [filters.entityType, filters.userId])
+  const queryFn = useCallback(() => getAuditLogs(filters), [filters])
   const { data, error, loading, refetch } = useCRMQuery(queryFn, [queryFn])
 
   const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : []

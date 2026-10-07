@@ -5,7 +5,7 @@ const checks = [
   { path: '/health/ready', method: 'GET', expectStatus: 200 },
   { path: '/auth/me', method: 'GET', expectStatus: 401 },
   { path: '/dashboard/summary', method: 'GET', expectStatus: 401 },
-  { path: '/stripe/subscription', method: 'GET', expectStatus: 401 },
+  { path: '/auth/subscription', method: 'GET', expectStatus: 401 },
 ]
 
 function fail(message) {

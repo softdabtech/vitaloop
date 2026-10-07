@@ -90,7 +90,9 @@ function saveConsent(prefs) {
   const record = { ...prefs, version: CONSENT_VERSION, timestamp: new Date().toISOString() }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(record))
-  } catch {}
+  } catch {
+    // Storage can be unavailable in hardened/private browser contexts.
+  }
   // Notify analytics loader
   if (typeof window.loadVitaloopAnalytics === 'function') {
     window.loadVitaloopAnalytics(record)
@@ -191,8 +193,8 @@ function SettingsPanel({ t, prefs, setPrefs, onSave, onAcceptAll, onBack }) {
 
 export default function CookieConsent() {
   // Vanilla JS in index.html handles consent before React loads.
-  // Avoid double banner: if the vanilla script is active, return null.
-  if (typeof window !== 'undefined' && window.__vlCookieHandledByVanilla) return null
+  // Hooks still run in a stable order when the vanilla banner is active.
+  const handledByVanilla = typeof window !== 'undefined' && window.__vlCookieHandledByVanilla
   const [visible, setVisible] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [prefs, setPrefs] = useState({ analytics: true, marketing: true, functional: true })
@@ -200,13 +202,14 @@ export default function CookieConsent() {
   const t = isUk ? T.uk : T.en
 
   useEffect(() => {
+    if (handledByVanilla) return undefined
     const stored = loadStored()
     if (!stored || !stored.decided) {
       // Small delay so the page renders first
       const timer = setTimeout(() => setVisible(true), 800)
       return () => clearTimeout(timer)
     }
-  }, [])
+  }, [handledByVanilla])
 
   const acceptAll = useCallback(() => {
     saveConsent({ decided: true, essential: true, analytics: true, marketing: true, functional: true })
@@ -226,7 +229,7 @@ export default function CookieConsent() {
     setShowSettings(false)
   }, [prefs])
 
-  if (!visible) return null
+  if (handledByVanilla || !visible) return null
 
   const privacyHref = isUk ? '/privacy-policy/' : '/privacy-policy/'
   const cookieSection = `${privacyHref}#cookies`

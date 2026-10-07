@@ -84,9 +84,9 @@ export async function openWayforpayCheckout(plan, handlers = {}) {
   // route out from under it (stranding the overlay on screen with nothing
   // to close it) instead of returning the user to this page -- push a
   // throwaway history entry so back closes the widget in place instead.
-  history.pushState({ wfpCheckoutGuard: true }, '', window.location.href)
+  window.history.pushState({ wfpCheckoutGuard: true }, '', window.location.href)
   function onPopState() {
-    history.pushState({ wfpCheckoutGuard: true }, '', window.location.href)
+    window.history.pushState({ wfpCheckoutGuard: true }, '', window.location.href)
     closed()
   }
   window.addEventListener('popstate', onPopState)

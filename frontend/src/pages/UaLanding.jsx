@@ -1144,14 +1144,18 @@ export default function UaLanding() {
   }, [])
 
   const dismissModal = () => {
-    try { sessionStorage.setItem(UA_MODAL_SESSION_KEY, '1') } catch {}
+    try { sessionStorage.setItem(UA_MODAL_SESSION_KEY, '1') } catch {
+      // The modal still closes when session storage is unavailable.
+    }
     setAutoModalDismissed(true)
     setShowWellbeingModal(false)
   }
 
   const startSignup = () => navigate(getUaAuthPath({ signup: true }))
   const startWellbeingAssessment = () => {
-    try { sessionStorage.setItem(UA_MODAL_SESSION_KEY, '1') } catch {}
+    try { sessionStorage.setItem(UA_MODAL_SESSION_KEY, '1') } catch {
+      // The assessment still opens when session storage is unavailable.
+    }
     setAutoModalDismissed(true)
     setShowWellbeingModal(true)
   }

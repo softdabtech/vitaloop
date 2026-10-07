@@ -835,7 +835,7 @@ export default function App() {
           <Route path="/product" element={<Navigate to="/how-it-works/" replace />} />
           <Route path="/features" element={<Features />} />
           <Route path="/pricing" element={isUaHost ? <Navigate to="/tarify" replace /> : <Navigate to="/#pricing" replace />} />
-          <Route path="/stories" element={<Navigate to="/#stories" replace />} />
+          <Route path="/stories" element={<Navigate to="/how-it-works" replace />} />
           <Route path="/investors" element={<Navigate to="/for-investors/" replace />} />
           <Route path="/faq" element={isUaHost ? <UaPage pageSlug="faq" /> : <FAQ />} />
           <Route path="/example-report" element={<ExampleReport />} />

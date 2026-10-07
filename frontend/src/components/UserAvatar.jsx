@@ -27,7 +27,7 @@ export default function UserAvatar({ user, size = 36, name, className = '', onCl
     alignItems: 'center',
     justifyContent: 'center',
     cursor: onClick ? 'pointer' : 'default',
-    border: border ? `2px solid rgba(255,255,255,0.9)` : 'none',
+    border: border ? '2px solid rgba(255,255,255,0.9)' : 'none',
     boxShadow: border ? '0 2px 8px rgba(15,23,42,0.18)' : 'none',
     background: avatarUrl ? 'transparent' : `linear-gradient(135deg, ${g1}, ${g2})`,
     fontSize: Math.round(size * 0.36),

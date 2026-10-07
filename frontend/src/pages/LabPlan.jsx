@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Beaker, CheckCircle2, Circle, Coins, FlaskConical, HelpCircle, Upload } from 'lucide-react'
 import { CoachBadge, CoachButton, CoachCard, CoachProgress, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
@@ -179,13 +179,13 @@ export default function LabPlan() {
         .map((name) => String(name).toLowerCase())
     )
   }, [reportDetails])
-  const splitByLatestReport = (items) => ({
+  const splitByLatestReport = useCallback((items) => ({
     needed: items.filter((item) => !inLatestReport(item, activeMarkerNames)),
     haveAlready: items.filter((item) => inLatestReport(item, activeMarkerNames)),
-  })
-  const coreSplit = useMemo(() => splitByLatestReport(CORE_LABS), [activeMarkerNames])
-  const recommendedSplit = useMemo(() => splitByLatestReport(RECOMMENDED_LABS), [activeMarkerNames])
-  const optionalSplit = useMemo(() => splitByLatestReport(OPTIONAL_LABS), [activeMarkerNames])
+  }), [activeMarkerNames])
+  const coreSplit = useMemo(() => splitByLatestReport(CORE_LABS), [splitByLatestReport])
+  const recommendedSplit = useMemo(() => splitByLatestReport(RECOMMENDED_LABS), [splitByLatestReport])
+  const optionalSplit = useMemo(() => splitByLatestReport(OPTIONAL_LABS), [splitByLatestReport])
 
   if (!concern) {
     return (

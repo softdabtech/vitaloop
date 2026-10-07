@@ -1761,26 +1761,6 @@ async def regenerate_results(
     }
 
 
-@router.get(
-    "/biomarkers/options",
-    response_model=List[BiomarkerOption],
-    summary="Get available biomarkers for manual entry"
-)
-async def get_biomarker_options(current_user: dict = Depends(get_current_user)):
-    """
-    Get list of available biomarkers for dropdown selection in manual entry.
-
-    Returns:
-        List of biomarker options with id, name, category, units
-    """
-    try:
-        options = biomarker_service.get_available_biomarkers()
-        return options
-    except Exception as e:
-        logger.error(f"Error getting biomarker options: {e}")
-        raise HTTPException(status_code=500, detail=_FAILED_LOAD_BIOMARKERS)
-
-
 async def _check_and_validate_manual_entries(user_id: str, request: ManualAnalysisRequest):
     """Check quota and validate biomarker entries"""
     # Check unified freemium biomarker quota (1 total entry for free users)

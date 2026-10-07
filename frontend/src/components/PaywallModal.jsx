@@ -102,7 +102,6 @@ export default function PaywallModal({ open: controlledOpen, onClose }) {
   // not on every re-render while the modal stays open.
   useEffect(() => {
     if (isVisible) gaPaywallImpression(reason)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisible, reason])
 
   function handleClose() {

@@ -489,6 +489,9 @@ export default function Questionnaire() {
     loadSession()
     loadPreviousChecks()
     loadCheckins()
+    // These loaders initialize the wizard once. Depending on their inline
+    // identities would re-run the initialization after every state update.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function toggleRelated(label) {
@@ -687,7 +690,7 @@ export default function Questionnaire() {
         </h1>
         <p className="coach-body mt-4 max-w-2xl">
           {mode === 'pulse' || mode === 'already-done'
-            ? (isUk ? 'Короткий щотижневий пульс замість повторного довгого опитування — швидко фіксуємо динаміку головної скарги.' : "A short weekly pulse instead of redoing the full intake — quickly tracks how your main concern is trending.")
+            ? (isUk ? 'Короткий щотижневий пульс замість повторного довгого опитування — швидко фіксуємо динаміку головної скарги.' : 'A short weekly pulse instead of redoing the full intake — quickly tracks how your main concern is trending.')
             : (isUk ? 'Спочатку простий вхід, потім точний контекст. Ми використовуємо це, щоб повʼязати симптоми, аналізи, безпеку й наступний крок.' : 'Low barrier first, precise context next. We use this to connect symptoms, labs, safety context, and your next step.')}
         </p>
       </section>

@@ -101,18 +101,6 @@ export const useLabResults = (uploadId) =>
     gcTime: 60 * 60 * 1000,
   })
 
-// User profile
-export const useUserProfile = () =>
-  useQuery({
-    queryKey: ['user-profile'],
-    queryFn: async () => {
-      const { data } = await api.get('/user/profile')
-      return data || null
-    },
-    staleTime: 30 * 60 * 1000,
-    gcTime: 60 * 60 * 1000,
-  })
-
 // User entitlements (subscriptions, features)
 export const useUserEntitlements = () =>
   useQuery({
@@ -189,19 +177,6 @@ export const useQuestionnaireSession = () =>
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
-  })
-
-// Biomarker normalization for a specific lab
-export const useBiomarkerNormalize = (uploadId) =>
-  useQuery({
-    queryKey: ['biomarker-normalize', uploadId],
-    queryFn: async () => {
-      const { data } = await api.get(`/biomarker/normalize/${uploadId}`)
-      return data || {}
-    },
-    enabled: !!uploadId,
-    staleTime: 60 * 60 * 1000,
-    gcTime: 24 * 60 * 60 * 1000,
   })
 
 // Lab results list (all uploads)

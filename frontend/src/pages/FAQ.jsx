@@ -39,7 +39,7 @@ const FAQ_ITEMS = [
       },
       {
         q: 'Who can see my results?',
-        a: 'Only you by default. You can optionally share with practitioners via secure token links, which you can revoke anytime. Practitioners can never see your data without active sharing.',
+        a: 'Only you by default. You can export your information and share that export directly with a practitioner when you choose.',
       },
       {
         q: 'Do you comply with regulations?',

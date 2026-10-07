@@ -168,7 +168,7 @@ export default function OpsDashboard() {
     setSelectedUserId(null)
   }
 
-  const handleExportSnapshot = useCallback(() => {
+  const handleExportSnapshot = () => {
     if (!funnel.data) return
 
     const payload = {
@@ -197,7 +197,7 @@ export default function OpsDashboard() {
     link.click()
     link.remove()
     URL.revokeObjectURL(href)
-  }, [funnel.data, activeWindowDays, funnelDays, dropoffSortBy, dropoffMinReached, activeMinDropoffReached, activeDropoffSort, activeDropoffLimit, trendLimit])
+  }
 
   return (
     <CRMLayout title="Ops Dashboard">
