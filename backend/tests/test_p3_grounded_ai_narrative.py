@@ -118,8 +118,21 @@ def test_verified_context_contains_only_closed_candidates_and_evidence_registry(
     serialized = json.dumps(context)
     assert "canonical_ferritin" in serialized
     assert "9" in serialized
-    assert "age" not in serialized
-    assert "female" not in serialized
+    profile_evidence = {
+        item["evidence_id"]: item
+        for item in context["evidence_registry"]
+        if item.get("type") == "profile"
+    }
+    assert set(profile_evidence) == {
+        "profile:age:provided",
+        "profile:sex:provided",
+    }
+    assert profile_evidence["profile:age:provided"]["value"] == 37
+    assert profile_evidence["profile:sex:provided"]["value"] == "female"
+    assert all(
+        evidence_id in {"profile:age:provided", "profile:sex:provided"}
+        for evidence_id in profile_evidence
+    )
     assert set(context["candidates"]) == set(NARRATIVE_FIELDS)
     assert all(
         row["evidence_ids"]
@@ -199,9 +212,14 @@ async def test_unknown_statement_or_evidence_forces_report_specific_fallback(mon
             "canonical_hemoglobin",
             "fatigue",
             "transferrin_saturation",
+            "age",
+            "sex",
         }
         for item in result["evidence_links"]
     )
+    assert "biomarker:invented:value" not in {
+        item["evidence_id"] for item in result["evidence_links"]
+    }
 
 
 @pytest.mark.asyncio
