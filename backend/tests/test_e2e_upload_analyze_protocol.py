@@ -17,6 +17,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
         "biomarkers": {},
         "protocols": [],
         "protocol_calls": 0,
+        "protocol_profiles": [],
     }
 
     async def fake_save_lab_upload(
@@ -103,6 +104,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
 
     async def fake_generate_protocol(biomarkers, symptoms, **_kwargs):
         state["protocol_calls"] += 1
+        state["protocol_profiles"].append(_kwargs.get("user_profile"))
         assert len(biomarkers) > 0
         assert symptoms == ["fatigue"], "protocol symptoms must come from the canonical checker snapshot"
         return [
@@ -190,6 +192,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
     monkeypatch.setattr(protocol_router, "get_protocol_by_upload", fake_get_protocol_by_upload)
     monkeypatch.setattr(protocol_router, "generate_protocol", fake_generate_protocol)
     monkeypatch.setattr(protocol_router, "save_protocol", fake_save_protocol)
+    monkeypatch.setattr(protocol_router, "get_user_profile", fake_get_user_profile)
     monkeypatch.setattr(protocol_router, "build_iherb_url", fake_iherb_url)
     monkeypatch.setattr(protocol_router, "assert_upload_belongs_to_user", fake_assert_upload_belongs_to_user)
     monkeypatch.setattr(protocol_router, "load_latest_eligible_symptom_snapshot", fake_symptom_snapshot)
@@ -237,6 +240,7 @@ async def test_e2e_upload_analyze_protocol(monkeypatch):
             assert protocol_json["upload_id"] == analyze_json["upload_id"]
             assert len(protocol_json["recommendations"]) == 1
             assert "iherb_url" in protocol_json["recommendations"][0]
+            assert state["protocol_profiles"] == [{"age": 35, "sex": "female", "height_cm": 170, "weight_kg": 65}]
 
             protocol_second_response = await client.post(
                 "/protocol",

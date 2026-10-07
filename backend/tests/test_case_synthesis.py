@@ -54,11 +54,11 @@ IRON_PATTERN = {
 }
 
 
-def _synthesis():
+def _synthesis(profile=None):
     return build_case_synthesis(
         biomarkers=BIOMARKERS,
         symptoms=["fatigue"],
-        user_profile={"age": 42, "sex": "female"},
+        user_profile=profile or {"age": 42, "sex": "female"},
         interpreted_report={"patterns": [IRON_PATTERN]},
         clinical_hypotheses={
             "hypotheses": [
@@ -177,6 +177,27 @@ def test_case_synthesis_preserves_specific_values_symptom_links_limits_and_timin
     explanation = result["likely_explanations"][0]
     assert explanation["confidence"] == "moderate"
     assert "rather than a diagnosis" in explanation["text"]
+
+
+def test_case_synthesis_exposes_profile_context_used_for_personalization():
+    result = _synthesis()
+    profile_context = next(
+        item for item in result["what_was_found"]
+        if item.get("kind") == "profile_context"
+    )
+
+    assert "age: 42" in profile_context["text"]
+    assert "sex: female" in profile_context["text"]
+    assert {ref["id"] for ref in profile_context["evidence"]} == {"age", "sex"}
+    assert all(ref["availability"] == "provided" for ref in profile_context["evidence"])
+
+    changed = _synthesis({"age": 52, "sex": "female"})
+    changed_context = next(
+        item for item in changed["what_was_found"]
+        if item.get("kind") == "profile_context"
+    )
+    assert changed_context["text"] != profile_context["text"]
+    assert "age: 52" in changed_context["text"]
 
     limitation = result["contradictions_and_limits"][0]
     assert {ref["id"] for ref in limitation["evidence"]} == {
