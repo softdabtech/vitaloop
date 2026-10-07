@@ -3,6 +3,7 @@ networks:
     driver: bridge
 services:
   backend:
+    image: vitaloop-backend:${VITALOOP_IMAGE_TAG:-latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -38,6 +39,7 @@ services:
     - backend-data:/app/data
     - ./backend/logs:/app/logs
   frontend:
+    image: vitaloop-frontend:${VITALOOP_IMAGE_TAG:-latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod

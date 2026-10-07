@@ -51,10 +51,10 @@ when working on this project.
 
 ## 2. Real Architecture (verified, not assumed)
 
-The repo's own docs (and even `docker-compose.prod.yml`) imply a clean
-"everything runs in Docker" picture. **The main site does not actually work
-that way.** Here's what's really serving traffic, confirmed by reading the
-live nginx configs and `ss -tlnp` on 2026-09-11:
+Production uses Docker for the application services. Host nginx terminates
+TLS and proxies requests to those containers; it must not build application
+code or serve a host `frontend/dist` directory. Images are built on the CI
+runner, transferred to the server, and started with Docker Compose.
 
 ```
                          ┌─────────────────────────────────────────┐
@@ -67,36 +67,17 @@ live nginx configs and `ss -tlnp` on 2026-09-11:
       ▼                   ▼              ▼               ▼                     ▼
 vitaloop.today      api.vitaloop      crm.vitaloop   ua.vitaloop      staging-api.vitaloop
       │                .today            .today         .today             .today
-      │                   │                  │              │                  │
-      ▼                   ▼                  ▼              ▼                  ▼
- root = static      proxy_pass to      proxy_pass to   proxy_pass to    proxy_pass to
- files served       127.0.0.1:8004     127.0.0.1:9099  api.vitaloop     127.0.0.1:8011
- DIRECTLY BY        = Docker           /5090 = CRM     .today directly  = systemd
- NGINX FROM         container          (.NET, systemd  (absolute URL    vitaloop-staging-
- /var/www/VITALOOP  "vitaloop-         unit             baked into the  api.service
- /frontend/dist     backend"                            built bundle)   (separate .venv,
-                                                                         separate backend/
- + /api/v1/  →      THIS is the        + /api/v1/ →                    not this repo's
-   dead path,       real, current        dead path,                    backend/)
-   404s only        backend — the        404s only
-   (see below)      P0–P5 work in        (see below)
-                    this repo's
- + /api/stripe/     backend/ landed
-   webhook →        here
-   127.0.0.1:8004
+       ▼                   ▼                  ▼              ▼                  ▼
+     proxy to frontend  proxy to backend  proxy to CRM    ua frontend       staging backend
+     127.0.0.1:8080      127.0.0.1:8004    127.0.0.1:9099  separate host    127.0.0.1:8011
    (Docker backend)
 ```
 
 ### The critical thing to internalize
 
-**`docker-compose.prod.yml`'s `frontend` service (container `vitaloop-frontend`,
-port 8080) builds successfully, runs, and reports healthy — and is
-completely irrelevant to what `vitaloop.today` visitors see.** nginx serves
-the site straight off `/var/www/VITALOOP/frontend/dist/` as static files. The
-Docker frontend container is either a parallel migration-in-progress that
-was never cut over, or leftover infrastructure. **Do not assume a frontend
-fix has shipped because the Docker image and container look right — verify
-against the actual served bundle** (see [Deploying the Frontend](#deploying-the-frontend)).
+The `vitaloop-frontend` container on port 8080 is the live frontend. A
+frontend image that was built but not loaded and started by Compose is not a
+deployment.
 
 The **backend** story is the opposite and reassuring: `api.vitaloop.today`
 (the domain the frontend's compiled JS actually calls —
@@ -123,8 +104,7 @@ someone's editing them.
 | Component | Where it runs | Managed by | What it does |
 |---|---|---|---|
 | Backend (current) | Docker container `vitaloop-backend`, :8004 | `docker-compose.prod.yml` | Real API behind `api.vitaloop.today` |
-| Frontend (real) | Static files, `/var/www/VITALOOP/frontend/dist` | Host nginx reads it directly; built by `npm run build` **on the host** | What `vitaloop.today` visitors get |
-| Frontend (Docker, unused) | Docker container `vitaloop-frontend`, :8080 | `docker-compose.prod.yml` | Healthy, built correctly, serves no real traffic |
+| Frontend | Docker container `vitaloop-frontend`, :8080 | `docker-compose.prod.yml` | Product UI behind host nginx |
 | CRM | `.NET 8`, `/var/www/VITALOOP/crm-mvc/publish` | `systemd`: `vitaloop-crm-mvc.service` | Practitioner/admin app |
 | Staging backend | `/opt/vitaloop-staging/backend`, own `.venv`, :8011 | `systemd`: `vitaloop-staging-api.service` | Staging environment |
 | Stability monitor | `/opt/vitaloop-monitor/monitor.py`, bare system `python3` | `systemd`: `vitaloop-monitor.service` | Some kind of internal health polling (see [Monitoring](#4-monitoring--alerting)) |
@@ -133,52 +113,27 @@ someone's editing them.
 
 ## 3. Deploying
 
-### Deploying the Backend (Docker — the correct, current path)
+### Deploying Production (Docker images built off-server)
 
 ```bash
-ssh -i ~/.ssh/softdab_new root@159.65.252.227
-cd /var/www/VITALOOP
-git fetch origin main && git reset --hard origin/main
-docker compose -f docker-compose.prod.yml build --no-cache backend
-docker compose -f docker-compose.prod.yml up -d --force-recreate backend
-curl -s http://localhost:8004/health
+git push origin main
 ```
 
-Or, from your machine, use `scripts/deploy-docker.sh` — it does the above for
-both backend and frontend images, plus a post-deploy health check. As of
-2026-09-11 it also runs a landing-page image smoke check (see
-[What Broke and Why](#5-what-broke-and-why-2026-09-10-11-incident-log)),
-though that check only matters for the Docker frontend image, not the real
-served site.
+The GitHub Actions `CI / CD` workflow is the only supported automatic deploy.
+It runs tests, builds both images on the runner, transfers them with
+`docker save | gzip | ssh ... docker load`, reloads nginx, and runs health
+checks. The production host may only execute `docker load`, `docker compose
+up --no-build`, `nginx -t`, and `systemctl reload nginx`.
 
-### Deploying the Frontend (the one that actually matters)
+Required repository secrets:
 
-**The real, live site is built and served from the host filesystem, not a
-container.** This is the only sequence that ships a frontend change to real
-visitors:
+- `PROD_SSH_KEY`
+- `PROD_HOST`
+- `PROD_VITE_SUPABASE_URL`
+- `PROD_VITE_SUPABASE_ANON_KEY`
 
-```bash
-ssh -i ~/.ssh/softdab_new root@159.65.252.227
-cd /var/www/VITALOOP
-git fetch origin main && git reset --hard origin/main
-cd frontend
-npm ci --prefer-offline --no-audit --legacy-peer-deps
-NODE_OPTIONS='--max-old-space-size=2048' npm run build
-```
-
-That's it — nginx reads `frontend/dist/` on every request, no restart needed.
-`frontend/.env.production` must exist on the host (it's git-ignored, holds
-real `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` / `VITE_API_BASE_URL`
-etc. — see `frontend/.env.example` for the shape). If it's ever missing,
-`npm run build` fails fast with "Missing required frontend env variables"
-via `validate-env.mjs` — that's intentional, don't work around it by
-weakening the check.
-
-**If you also rebuild the Docker frontend image** (`vitaloop-frontend`
-container), that's a separate, currently-cosmetic action — it keeps that
-parallel infrastructure from silently rotting, but it is not how a frontend
-change reaches production today. Don't confuse "Docker image built and
-container healthy" with "shipped."
+Never add these values to git or run `npm ci`, `npm run build`, or
+`docker compose build` on the production host.
 
 **Verify a frontend deploy actually landed** — don't trust `curl
 vitaloop.today | grep 200`, the HTML shell doesn't change per-deploy in a way
@@ -244,19 +199,18 @@ What was actually wrong, and the fix for each:
   `node_modules/.bin` is only on `PATH` for `npm run <script>`, not
   arbitrary `run:` commands (`command not found`, exit 127). Fixed by
   prefixing with `npx`.
-- `deploy` itself: rewritten to match reality (Section 2/3 above) —
-  `docker compose build --no-cache backend` + `up -d --force-recreate`,
-  then `npm ci && npm run build` on the host for the frontend, then a
-  health check against the real domains instead of the bare host IP.
+- `deploy` now follows the Docker-only path described in Sections 2/3: both
+  images are built on the CI runner, transferred to the host, and started
+  with `docker compose up --no-build`; the host never runs npm or Docker
+  builds.
 - `PROD_HOST` and `PROD_SSH_KEY` didn't exist as repo secrets at all — even
   with every test job fixed, `deploy` would have failed instantly on "Set
   up SSH agent". Added both.
 
-**Verified working**: the fix-chain's final push (commit `88e70086`) is the
-first `deploy` run in this project's history, and it succeeded —
-backend rebuilt via Docker, frontend rebuilt on the host, both health
-checks passed. Pushing to `main` now actually ships to production. Treat
-that as a meaningful change in how careful `main` needs to be treated —
+**Historical note**: commit `88e70086` was the first successful deploy run,
+using the former mixed backend-Docker/host-frontend path. The current
+Docker-only workflow supersedes that path. Pushing to `main` ships to
+production. Treat that as a meaningful change in how careful `main` needs to be treated —
 there's no review gate, so a push is a deploy.
 
 ---

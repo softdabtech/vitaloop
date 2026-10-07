@@ -176,14 +176,9 @@ jobs:
         run: |
           ssh-keyscan -H ${{ secrets.PROD_HOST }} >> ~/.ssh/known_hosts
 
-      # See RUNBOOK.md sections 2-3 for why this is the real deploy shape:
-      # the backend runs in the Docker container (docker-compose.prod.yml),
-      # but the live vitaloop.today frontend is static files served by host
-      # nginx straight from frontend/dist/ — there is no vitaloop-backend
-      # systemd unit and no /var/www/html/ in the real serving path. This
-      # job used to assume both and would have failed outright, or worse,
-      # silently deployed nothing, the moment it actually ran (it never had,
-      # blocked by unrelated test failures, until 2026-09-11).
+      # All production images are built on this GitHub runner. The server is
+      # only an image transport/runtime host: it must never run npm or docker
+      # build during deployment. See RUNBOOK.md for the invariant.
       - name: Pull latest code on server
         run: |
           ssh root@${{ secrets.PROD_HOST }} "
@@ -192,21 +187,49 @@ jobs:
             git reset --hard origin/main
           "
 
-      - name: Rebuild and restart backend (Docker)
+      - name: Validate production frontend build secrets
+        env:
+          PROD_VITE_SUPABASE_URL: ${{ secrets.PROD_VITE_SUPABASE_URL }}
+          PROD_VITE_SUPABASE_ANON_KEY: ${{ secrets.PROD_VITE_SUPABASE_ANON_KEY }}
+        run: |
+          test -n "$PROD_VITE_SUPABASE_URL" || { echo "Missing PROD_VITE_SUPABASE_URL"; exit 1; }
+          test -n "$PROD_VITE_SUPABASE_ANON_KEY" || { echo "Missing PROD_VITE_SUPABASE_ANON_KEY"; exit 1; }
+
+      - name: Build production Docker images on CI runner
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.PROD_VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.PROD_VITE_SUPABASE_ANON_KEY }}
+          VITE_API_BASE_URL: https://api.vitaloop.today
+          VITE_CRM_BASE_URL: https://crm.vitaloop.today
+          VITE_EMAIL_CONFIRMATION_PATH: https://vitaloop.today/auth/confirmation
+        run: |
+          docker build -t vitaloop-backend:${{ github.sha }} ./backend
+          docker build \
+            --build-arg VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
+            --build-arg VITE_SUPABASE_ANON_KEY="$VITE_SUPABASE_ANON_KEY" \
+            --build-arg VITE_API_BASE_URL="$VITE_API_BASE_URL" \
+            --build-arg VITE_CRM_BASE_URL="$VITE_CRM_BASE_URL" \
+            --build-arg VITE_EMAIL_CONFIRMATION_PATH="$VITE_EMAIL_CONFIRMATION_PATH" \
+            -t vitaloop-frontend:${{ github.sha }} \
+            -f frontend/Dockerfile.prod frontend
+
+      - name: Transfer images to production without server-side builds
+        run: |
+          docker save vitaloop-backend:${{ github.sha }} vitaloop-frontend:${{ github.sha }} \
+            | gzip \
+            | ssh root@${{ secrets.PROD_HOST }} 'gunzip | docker load'
+
+      - name: Restart production containers without building
         run: |
           ssh root@${{ secrets.PROD_HOST }} "
             cd /var/www/VITALOOP &&
-            docker compose -f docker-compose.prod.yml build --no-cache backend &&
-            docker compose -f docker-compose.prod.yml up -d --force-recreate backend
+            VITALOOP_IMAGE_TAG=${{ github.sha }} docker compose -f docker-compose.prod.yml up -d --no-build --force-recreate backend frontend
           "
 
-      - name: Rebuild frontend (host static files nginx serves directly)
+      - name: Install and reload nginx routing
         run: |
-          ssh root@${{ secrets.PROD_HOST }} "
-            cd /var/www/VITALOOP/frontend &&
-            npm ci --prefer-offline --no-audit --legacy-peer-deps &&
-            NODE_OPTIONS=--max-old-space-size=2048 npm run build
-          "
+          scp nginx.vitaloop.conf root@${{ secrets.PROD_HOST }}:/etc/nginx/sites-available/vitaloop.today
+          ssh root@${{ secrets.PROD_HOST }} 'nginx -t && systemctl reload nginx'
 
       - name: Health check
         run: |

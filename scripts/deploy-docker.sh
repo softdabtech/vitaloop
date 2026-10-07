@@ -15,6 +15,7 @@ REMOTE_HOST="${REMOTE_HOST:-softdab-server}"
 REMOTE_DIR="${REMOTE_DIR:-/var/www/VITALOOP}"
 DOCKER_REGISTRY="${DOCKER_REGISTRY:-docker.io}"
 IMAGE_PREFIX="${IMAGE_PREFIX:-vitaloop}"
+IMAGE_TAG="${IMAGE_TAG:-$(git rev-parse --short HEAD)}"
 
 log_info() { echo "ℹ️  $1"; }
 log_success() { echo "✅ $1"; }
@@ -27,18 +28,18 @@ cd "$(dirname "$0")/.."
 log_section "Phase 1: Build Docker Images"
 
 log_info "Building backend image..."
-docker build -t $IMAGE_PREFIX-backend:latest ./backend || {
+docker build -t $IMAGE_PREFIX-backend:$IMAGE_TAG ./backend || {
     log_error "Failed to build backend image"
     exit 1
 }
-log_success "Backend image built: $IMAGE_PREFIX-backend:latest"
+log_success "Backend image built: $IMAGE_PREFIX-backend:$IMAGE_TAG"
 
 log_info "Building frontend image..."
-docker build -t $IMAGE_PREFIX-frontend:latest ./frontend -f ./frontend/Dockerfile.prod || {
+docker build -t $IMAGE_PREFIX-frontend:$IMAGE_TAG ./frontend -f ./frontend/Dockerfile.prod || {
     log_error "Failed to build frontend image"
     exit 1
 }
-log_success "Frontend image built: $IMAGE_PREFIX-frontend:latest"
+log_success "Frontend image built: $IMAGE_PREFIX-frontend:$IMAGE_TAG"
 
 # PHASE 2: Deploy to production
 log_section "Phase 2: Deploy to Production Server"
@@ -55,10 +56,24 @@ scp -q frontend/Dockerfile.prod "$REMOTE_HOST:$REMOTE_DIR/frontend/Dockerfile.pr
     exit 1
 }
 
-# PHASE 3: Pull latest code and rebuild containers
-log_section "Phase 3: Rebuild and Restart Containers"
+log_info "Transferring built images (the server will not build)..."
+docker save "$IMAGE_PREFIX-backend:$IMAGE_TAG" "$IMAGE_PREFIX-frontend:$IMAGE_TAG" \
+    | gzip \
+    | ssh "$REMOTE_HOST" 'gunzip | docker load' || {
+    log_error "Failed to transfer Docker images"
+    exit 1
+}
 
-ssh $REMOTE_HOST << 'DEPLOY_SCRIPT'
+log_info "Syncing nginx routing configuration..."
+scp -q nginx.vitaloop.conf "$REMOTE_HOST:/etc/nginx/sites-available/vitaloop.today" || {
+    log_error "Failed to sync nginx configuration"
+    exit 1
+}
+
+# PHASE 3: Pull latest code and restart transferred images
+log_section "Phase 3: Restart Transferred Images"
+
+ssh "$REMOTE_HOST" "VITALOOP_IMAGE_TAG='$IMAGE_TAG' bash -s" << 'DEPLOY_SCRIPT'
 set -euo pipefail
 cd /var/www/VITALOOP
 
@@ -68,29 +83,15 @@ git reset --hard origin/main
 echo "✅ Code updated"
 
 echo ""
-echo "2️⃣ Stopping old containers..."
-docker compose -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
-sleep 2
-echo "✅ Containers stopped"
-
-echo ""
-echo "3️⃣ Building Docker images on server..."
-docker compose -f docker-compose.prod.yml build --no-cache || {
-    echo "ERROR: Docker build failed"
-    exit 1
-}
-echo "✅ Images built"
-
-echo ""
-echo "4️⃣ Starting containers..."
-docker compose -f docker-compose.prod.yml up -d || {
+echo "2️⃣ Starting transferred images..."
+docker compose -f docker-compose.prod.yml up -d --no-build --force-recreate || {
     echo "ERROR: Failed to start containers"
     exit 1
 }
 echo "✅ Containers started"
 
 echo ""
-echo "5️⃣ Waiting for health checks..."
+echo "3️⃣ Waiting for health checks..."
 for i in {1..30}; do
     if docker compose -f docker-compose.prod.yml ps | grep -q "healthy"; then
         echo "✅ Containers healthy"
@@ -110,6 +111,8 @@ curl -s http://localhost:8004/health | head -c 100
 echo ""
 
 DEPLOY_SCRIPT
+
+ssh "$REMOTE_HOST" 'nginx -t && systemctl reload nginx'
 
 log_success "Deployment complete"
 
