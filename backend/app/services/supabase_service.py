@@ -2557,7 +2557,7 @@ def _insight_equivalence_key(insight: Dict[str, Any]) -> str:
     )
 
 
-async def generate_insights(user_id: str) -> List[Dict]:
+async def _resolve_insight_candidates(user_id: str, persist: bool = False) -> List[Dict]:
     """Rule-based MVP insight engine."""
     supabase = _get_supabase()
     insights_list: List[Dict] = []
@@ -2706,6 +2706,9 @@ async def generate_insights(user_id: str) -> List[Dict]:
         if _insight_equivalence_key(insight) not in dismissed_keys
     ]
 
+    if not persist:
+        return insights_list
+
     if insights_list:
         rows = [{"user_id": user_id, **i} for i in insights_list]
         response = await _run(lambda: supabase.table("insights").insert(rows).execute())
@@ -2720,6 +2723,10 @@ async def generate_insights(user_id: str) -> List[Dict]:
         return response.data or insights_list
 
     return insights_list
+
+
+async def generate_insights(user_id: str) -> List[Dict]:
+    return await _resolve_insight_candidates(user_id, persist=True)
 
 
 async def get_user_insights(user_id: str) -> List[Dict]:
@@ -2743,7 +2750,7 @@ async def get_user_insights(user_id: str) -> List[Dict]:
     return insights
 
 
-async def get_user_insight_state(user_id: str) -> Dict[str, List[Dict]]:
+async def get_user_insight_state(user_id: str) -> Dict[str, Any]:
     supabase = _get_supabase()
     resp = await _run(
         lambda: supabase.table("insights")
@@ -2755,9 +2762,29 @@ async def get_user_insight_state(user_id: str) -> Dict[str, List[Dict]]:
         .execute()
     )
     rows = resp.data or []
+    active = [row for row in rows if not row.get("dismissed", False)]
+    dismissed = [row for row in rows if row.get("dismissed", False)]
+    active_structured = any(
+        row.get("provenance") and row.get("next_action")
+        for row in active
+    )
+    candidates = await _resolve_insight_candidates(user_id)
+
+    if active_structured:
+        generation_allowed = False
+        generation_reason = "active_structured_insight"
+    elif candidates:
+        generation_allowed = True
+        generation_reason = "current_candidate_not_dismissed"
+    else:
+        generation_allowed = False
+        generation_reason = "no_current_candidate_or_equivalent_dismissal"
+
     return {
-        "active": [row for row in rows if not row.get("dismissed", False)],
-        "dismissed": [row for row in rows if row.get("dismissed", False)],
+        "active": active,
+        "dismissed": dismissed,
+        "generation_allowed": generation_allowed,
+        "generation_reason": generation_reason,
     }
 
 

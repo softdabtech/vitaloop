@@ -257,8 +257,64 @@ async def test_insight_state_keeps_dismissed_rows_for_eligibility(monkeypatch):
 
     monkeypatch.setattr(svc, "_get_supabase", lambda: supabase)
     monkeypatch.setattr(svc, "_run", fake_run)
+    async def empty_candidates(_user_id):
+        return []
+
+    monkeypatch.setattr(svc, "_resolve_insight_candidates", empty_candidates)
 
     state = await svc.get_user_insight_state("user-1")
 
     assert [row["id"] for row in state["active"]] == ["active"]
     assert [row["id"] for row in state["dismissed"]] == ["dismissed"]
+    assert state["generation_allowed"] is False
+    assert state["generation_reason"] == "no_current_candidate_or_equivalent_dismissal"
+
+@pytest.mark.asyncio
+async def test_insight_state_allows_current_candidate_when_only_legacy_dismissal_exists(monkeypatch):
+    rows = [
+        {"id": "old-dismissed", "dismissed": True, "provenance": None, "next_action": None},
+    ]
+    supabase = _DismissSupabase(rows)
+
+    async def fake_run(fn):
+        return fn()
+
+    monkeypatch.setattr(svc, "_get_supabase", lambda: supabase)
+    monkeypatch.setattr(svc, "_run", fake_run)
+    async def current_candidates(_user_id):
+        return [{"title": "new"}]
+
+    monkeypatch.setattr(svc, "_resolve_insight_candidates", current_candidates)
+
+    state = await svc.get_user_insight_state("user-1")
+
+    assert state["generation_allowed"] is True
+    assert state["generation_reason"] == "current_candidate_not_dismissed"
+
+
+@pytest.mark.asyncio
+async def test_insight_state_blocks_active_structured_insight(monkeypatch):
+    rows = [
+        {
+            "id": "active",
+            "dismissed": False,
+            "provenance": {"source_type": "weekly_checkin"},
+            "next_action": {"type": "review_checkin"},
+        },
+    ]
+    supabase = _DismissSupabase(rows)
+
+    async def fake_run(fn):
+        return fn()
+
+    monkeypatch.setattr(svc, "_get_supabase", lambda: supabase)
+    monkeypatch.setattr(svc, "_run", fake_run)
+    async def current_candidates(_user_id):
+        return [{"title": "new"}]
+
+    monkeypatch.setattr(svc, "_resolve_insight_candidates", current_candidates)
+
+    state = await svc.get_user_insight_state("user-1")
+
+    assert state["generation_allowed"] is False
+    assert state["generation_reason"] == "active_structured_insight"

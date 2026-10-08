@@ -1,19 +1,15 @@
 export function shouldGenerateInsight({
   querySucceeded,
   queryFetching,
-  activeInsights = [],
-  dismissedInsights = [],
+  generationAllowed,
   generationInFlight,
   generationAttempted,
 }) {
-  if (!querySucceeded || queryFetching || generationInFlight || generationAttempted) return false
-
-  const hasActiveStructuredInsight = activeInsights.some(
-    (insight) => insight?.provenance && insight?.next_action,
+  return Boolean(
+    querySucceeded &&
+    !queryFetching &&
+    generationAllowed &&
+    !generationInFlight &&
+    !generationAttempted
   )
-  const hasDismissedStructuredInsight = dismissedInsights.some(
-    (insight) => insight?.provenance && insight?.next_action,
-  )
-
-  return !hasActiveStructuredInsight && !hasDismissedStructuredInsight
 }
