@@ -176,7 +176,8 @@ function collectRequestPaths(page: Page) {
   const paths: string[] = []
   page.on('request', (req) => {
     const url = req.url()
-    if (url.includes('localhost:5173')) return // dev-server module/asset requests, not API calls
+    const parsed = new URL(url)
+    if (parsed.hostname === 'localhost' && parsed.port === '5173' && !parsed.pathname.startsWith('/api/')) return // dev-server module/asset requests, not API calls
     paths.push(url)
   })
   return paths
