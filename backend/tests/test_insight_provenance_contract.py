@@ -272,7 +272,13 @@ async def test_insight_state_keeps_dismissed_rows_for_eligibility(monkeypatch):
 @pytest.mark.asyncio
 async def test_insight_state_allows_current_candidate_when_only_legacy_dismissal_exists(monkeypatch):
     rows = [
-        {"id": "old-dismissed", "dismissed": True, "provenance": None, "next_action": None},
+        {
+            "id": "old-dismissed",
+            "user_id": "user-1",
+            "dismissed": True,
+            "provenance": None,
+            "next_action": None,
+        },
     ]
     supabase = _DismissSupabase(rows)
 
@@ -297,6 +303,7 @@ async def test_insight_state_blocks_active_structured_insight(monkeypatch):
     rows = [
         {
             "id": "active",
+            "user_id": "user-1",
             "dismissed": False,
             "provenance": {"source_type": "weekly_checkin"},
             "next_action": {"type": "review_checkin"},
