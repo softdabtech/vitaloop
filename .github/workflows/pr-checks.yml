@@ -114,7 +114,7 @@ jobs:
         run: npm run qa:routes && npm run qa:links:strict && npm run qa:claims
 
       - name: Build
-        run: NODE_OPTIONS=--max-old-space-size=1536 vite build --mode production
+        run: NODE_OPTIONS=--max-old-space-size=1536 ./node_modules/.bin/vite build --mode production
 
       - name: Install Playwright browser
         run: npx playwright install chromium --with-deps
