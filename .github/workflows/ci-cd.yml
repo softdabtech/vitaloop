@@ -144,14 +144,26 @@ jobs:
 
       - name: Run canonical user-flow E2E
         env:
-          PLAYWRIGHT_BASE_URL: http://localhost:5173
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:5173
         run: |
-          npm run dev -- --mode production --host localhost > /tmp/vitaloop-vite.log 2>&1 &
+          npm run dev -- --mode production --host 127.0.0.1 > /tmp/vitaloop-vite.log 2>&1 &
+          vite_pid=$!
+          ready=0
           for attempt in {1..30}; do
-            curl -fsS http://localhost:5173 >/dev/null && break
+            if curl -fsS http://127.0.0.1:5173 >/dev/null; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$vite_pid" 2>/dev/null; then
+              cat /tmp/vitaloop-vite.log
+              exit 1
+            fi
             sleep 1
           done
-          curl -fsS http://localhost:5173 >/dev/null
+          if [[ "$ready" != "1" ]]; then
+            cat /tmp/vitaloop-vite.log
+            exit 1
+          fi
           npx playwright test tests/symptom-check-en.spec.ts tests/today-dashboard.spec.ts --project=chromium --reporter=list
 
   # ─────────────────────────────────────────────────────────
