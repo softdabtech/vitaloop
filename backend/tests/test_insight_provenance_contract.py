@@ -47,8 +47,10 @@ class _CandidateTable:
         self.sessions = sessions
         self.insights = insights
         self.inserted = inserted
+        self.operation = "select"
 
     def select(self, *_args):
+        self.operation = "select"
         return self
 
     def eq(self, *_args):
@@ -61,6 +63,7 @@ class _CandidateTable:
         return self
 
     def insert(self, rows):
+        self.operation = "insert"
         self.inserted.extend(rows)
         return self
 
@@ -68,6 +71,8 @@ class _CandidateTable:
         if self.name == "questionnaire_sessions":
             return _Response(self.sessions)
         if self.name == "insights":
+            if self.operation == "insert":
+                return _Response(self.inserted)
             return _Response(self.insights)
         return _Response([])
 
