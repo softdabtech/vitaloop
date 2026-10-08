@@ -2522,6 +2522,82 @@ def _latest_symptom_source(summary: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def _questionnaire_symptom_evidence(session: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    metadata = session.get("session_metadata") or {}
+    summary = metadata.get("summary") or {}
+    signal = summary.get("primary_signal")
+    severity = summary.get("severity")
+    if not signal or not isinstance(severity, (int, float)) or severity <= 0:
+        return None
+
+    return {
+        "source_type": "questionnaire_session",
+        "source_id": str(session.get("id")) if session.get("id") else None,
+        "source_date": session.get("completed_at") or session.get("updated_at") or session.get("created_at"),
+        "current_severity": float(severity),
+        "context": {
+            "primary_signal": signal,
+            "overall_wellbeing": summary.get("overall_wellbeing"),
+            "duration_bucket": summary.get("duration_bucket"),
+            "symptom_pattern": summary.get("symptom_pattern"),
+            "functional_impact": summary.get("functional_impact"),
+            "domain_detail": summary.get("domain_detail"),
+        },
+    }
+
+
+async def _resolve_symptom_evidence(user_id: str) -> Dict[str, Any]:
+    """Resolve current symptom evidence with questionnaire-first precedence."""
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.table("questionnaire_sessions")
+        .select("id,status,completed_at,updated_at,created_at,session_metadata")
+        .eq("user_id", user_id)
+        .eq("status", "completed")
+        .order("completed_at", desc=True)
+        .limit(20)
+        .execute()
+    )
+    questionnaire_evidence = [
+        evidence
+        for evidence in (_questionnaire_symptom_evidence(row) for row in (response.data or []))
+        if evidence
+    ]
+    if questionnaire_evidence:
+        return {
+            "source_type": "questionnaire_session",
+            "current": questionnaire_evidence[0],
+            "previous": questionnaire_evidence[1] if len(questionnaire_evidence) > 1 else None,
+        }
+
+    current = await get_user_symptom_summary(user_id, days=30)
+    previous = await get_user_symptom_summary(user_id, days=60)
+    return {
+        "source_type": "symptom_log",
+        "current": {
+            "source_type": "symptom_log",
+            "source_id": (current.get("recent_logs") or [{}])[0].get("id"),
+            "source_date": (current.get("recent_logs") or [{}])[0].get("created_at"),
+            "current_severity": current.get("average_severity", 0),
+            "summary": current,
+        },
+        "previous": {
+            "current_severity": previous.get("average_severity", 0),
+            "summary": previous,
+        },
+    }
+
+
+def _questionnaire_symptom_provenance(evidence: Dict[str, Any], related: Dict[str, Any]) -> Dict[str, Any]:
+    return _insight_provenance(
+        source_type="questionnaire_session",
+        source_id=evidence.get("source_id"),
+        source_date=evidence.get("source_date"),
+        related=related,
+        evidence_status="observed",
+    )
+
+
 def _checkin_source(checkin: Dict[str, Any], related: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     source_id = checkin.get("id")
     source_date = checkin.get("week_start") or checkin.get("created_at")
@@ -2562,26 +2638,39 @@ async def _resolve_insight_candidates(user_id: str, persist: bool = False) -> Li
     supabase = _get_supabase()
     insights_list: List[Dict] = []
 
-    symptom_data = await get_user_symptom_summary(user_id, days=30)
-    prev_symptom_data = await get_user_symptom_summary(user_id, days=60)
-    if symptom_data["average_severity"] > 0 and prev_symptom_data["average_severity"] > 0:
-        delta = symptom_data["average_severity"] - prev_symptom_data["average_severity"]
+    symptom_evidence = await _resolve_symptom_evidence(user_id)
+    current_symptom = symptom_evidence["current"]
+    previous_symptom = symptom_evidence.get("previous")
+    current_severity = current_symptom.get("current_severity", 0)
+    previous_severity = previous_symptom.get("current_severity", 0) if previous_symptom else 0
+    symptom_trend_added = False
+    if current_severity > 0 and previous_severity > 0:
+        delta = current_severity - previous_severity
         if delta <= -1.0:
             insights_list.append({
                 "insight_type": "symptom_trend",
                 "title": "Symptom severity improving",
                 "body": f"Your average symptom severity decreased by {abs(delta):.1f} points over the last 30 days.",
                 "priority": 1,
-                "provenance": _latest_symptom_source(symptom_data),
+                "provenance": (
+                    _questionnaire_symptom_provenance(current_symptom, {"field": "severity", "delta": delta})
+                    if symptom_evidence["source_type"] == "questionnaire_session"
+                    else _latest_symptom_source(current_symptom["summary"])
+                ),
                 "next_action": _insight_action("review_symptoms", INSIGHT_REVIEW_SYMPTOM_LABEL, INSIGHT_QUESTIONNAIRE_ROUTE),
             })
+            symptom_trend_added = True
         elif delta >= 1.5:
             insights_list.append({
                 "insight_type": "symptom_trend",
                 "title": "Symptom severity increasing",
                 "body": "Your symptoms appear to be worsening. Consider consulting a physician if this persists.",
                 "priority": 4,
-                "provenance": _latest_symptom_source(symptom_data),
+                "provenance": (
+                    _questionnaire_symptom_provenance(current_symptom, {"field": "severity", "delta": delta})
+                    if symptom_evidence["source_type"] == "questionnaire_session"
+                    else _latest_symptom_source(current_symptom["summary"])
+                ),
                 "next_action": _insight_action(
                     "clinician_review",
                     INSIGHT_REVIEW_SYMPTOM_LABEL,
@@ -2589,6 +2678,21 @@ async def _resolve_insight_candidates(user_id: str, persist: bool = False) -> Li
                     safety_level="clinician_review",
                 ),
             })
+            symptom_trend_added = True
+
+    if symptom_evidence["source_type"] == "questionnaire_session" and not symptom_trend_added:
+        context = current_symptom["context"]
+        insights_list.append({
+            "insight_type": "general",
+            "title": "Symptom context recorded",
+            "body": f"Your latest symptom check recorded {context['primary_signal']} at severity {int(current_severity)}/9.",
+            "priority": 2,
+            "provenance": _questionnaire_symptom_provenance(
+                current_symptom,
+                {"field": "symptom_context", "primary_signal": context["primary_signal"]},
+            ),
+            "next_action": _insight_action("review_symptoms", INSIGHT_REVIEW_SYMPTOM_LABEL, INSIGHT_QUESTIONNAIRE_ROUTE),
+        })
 
     uploads_resp = await _run(
         lambda: supabase.table("lab_uploads")
