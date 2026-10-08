@@ -87,6 +87,8 @@ jobs:
     name: Frontend — build check
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
     defaults:
       run:
         working-directory: ./frontend
@@ -114,6 +116,35 @@ jobs:
 
       - name: Install Playwright browser
         run: npx playwright install chromium --with-deps
+
+      - name: Preflight Playwright Chromium
+        run: |
+          set -euo pipefail
+          executable_path=$(node -e 'process.stdout.write(require("playwright").chromium.executablePath())')
+          echo "Resolved Chromium executable: $executable_path"
+          echo "PLAYWRIGHT_BROWSERS_PATH: $PLAYWRIGHT_BROWSERS_PATH"
+          if [[ ! -x "$executable_path" ]]; then
+            echo "Chromium executable does not exist or is not executable"
+            find "$PLAYWRIGHT_BROWSERS_PATH" -maxdepth 6 -print 2>/dev/null || true
+            exit 1
+          fi
+          if ! node - <<'EOF'
+          const { chromium } = require("playwright");
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            await browser.close();
+          })().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          EOF
+          then
+            echo "Chromium launch failed"
+            echo "Resolved Chromium executable: $executable_path"
+            echo "PLAYWRIGHT_BROWSERS_PATH: $PLAYWRIGHT_BROWSERS_PATH"
+            find "$PLAYWRIGHT_BROWSERS_PATH" -maxdepth 6 -print 2>/dev/null || true
+            exit 1
+          fi
 
       - name: Run canonical user-flow E2E
         env:
