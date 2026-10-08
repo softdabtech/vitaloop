@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { Activity, Clock, RefreshCw, Sparkles, TrendingUp, TriangleAlert, Lightbulb, AlertCircle, BarChart3 } from 'lucide-react'
+import { Activity, Clock, RefreshCw, Sparkles, TrendingUp, TriangleAlert, Lightbulb, AlertCircle, BarChart3, ArrowRight, Check } from 'lucide-react'
 import api from '../lib/api.js'
 import CabinetPageHeader from '../components/dashboard/CabinetPageHeader.jsx'
 import { ct } from '../lib/cabinetI18n.js'
@@ -81,6 +81,17 @@ export default function Insights() {
       toast.error('Failed to generate insights')
     } finally {
       setLoadingInsights(false)
+    }
+  }
+
+  async function dismissInsight(insightId) {
+    if (!insightId) return
+    try {
+      await api.post(`/insights/${insightId}/dismiss`)
+      queryClient.setQueryData(['insights'], (old = []) => old.filter((insight) => insight.id !== insightId))
+      toast.success('Insight dismissed')
+    } catch {
+      toast.error('Could not dismiss this insight')
     }
   }
 
@@ -224,6 +235,37 @@ export default function Insights() {
                       <div className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color }}>{String(insight.insight_type || 'general').replaceAll('_', ' ')}</div>
                       <div className="mt-2 text-base font-semibold text-slate-900">{insight.title}</div>
                       <p className="mt-2 text-sm leading-6 text-slate-600">{insight.body}</p>
+                      <div className="mt-3 rounded-xl border border-white/70 bg-white/70 p-3 text-xs text-slate-600">
+                        <div className="font-semibold text-slate-700">Why this exists</div>
+                        <div className="mt-1">
+                          {insight.provenance?.evidence_status === 'unknown'
+                            ? 'Source unavailable; no evidence was inferred.'
+                            : `${String(insight.provenance?.source_type || 'unknown').replaceAll('_', ' ')}${insight.provenance?.source_date ? ` · ${formatDate(insight.provenance.source_date)}` : ''}`}
+                        </div>
+                      </div>
+                      {insight.next_action?.label && insight.next_action?.route && (
+                        <button
+                          type="button"
+                          onClick={() => window.location.assign(insight.next_action.route)}
+                          className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+                        >
+                          {insight.next_action.label}
+                          <ArrowRight className="h-4 w-4" />
+                        </button>
+                      )}
+                      {insight.next_action?.safety_level === 'clinician_review' && (
+                        <div className="mt-2 text-xs font-medium text-rose-700">Discuss persistent or worsening concerns with a qualified clinician.</div>
+                      )}
+                      {insight.id && (
+                        <button
+                          type="button"
+                          onClick={() => dismissInsight(insight.id)}
+                          className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-700"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          Dismiss
+                        </button>
+                      )}
                     </motion.div>
                   )
                 })}

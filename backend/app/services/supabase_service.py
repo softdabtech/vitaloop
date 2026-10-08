@@ -2462,6 +2462,83 @@ async def get_all_red_flags(acknowledged: Optional[bool] = False) -> List[Dict]:
 # INSIGHTS
 # ──────────────────────────────────────────────
 
+INSIGHT_PROVENANCE_VERSION = "insight_provenance_v1"
+
+
+def _insight_provenance(
+    *,
+    source_type: str,
+    source_id: Optional[str] = None,
+    source_date: Optional[str] = None,
+    evidence_status: str = "observed",
+    related: Optional[Dict[str, Any]] = None,
+    reason: Optional[str] = None,
+) -> Dict[str, Any]:
+    provenance: Dict[str, Any] = {
+        "version": INSIGHT_PROVENANCE_VERSION,
+        "source_type": source_type,
+        "source_id": source_id,
+        "source_date": source_date,
+        "evidence_status": evidence_status,
+        "related": related or {},
+    }
+    if reason:
+        provenance["reason"] = reason
+    return provenance
+
+
+def _insight_action(
+    action_type: str,
+    label: str,
+    route: str,
+    *,
+    safety_level: str = "routine",
+) -> Dict[str, Any]:
+    return {
+        "type": action_type,
+        "label": label,
+        "route": route,
+        "safety_level": safety_level,
+    }
+
+
+def _latest_symptom_source(summary: Dict[str, Any]) -> Dict[str, Any]:
+    latest = (summary.get("recent_logs") or [{}])[0]
+    related = {
+        "symptoms": [item.get("tag") for item in summary.get("top_symptoms", []) if item.get("tag")],
+        "window_days": summary.get("window_days"),
+    }
+    return _insight_provenance(
+        source_type="symptom_log",
+        source_id=str(latest.get("id")) if latest.get("id") else None,
+        source_date=latest.get("created_at"),
+        related=related,
+        reason=None if latest.get("id") else "Symptom summary has no identifiable source row.",
+        evidence_status="observed" if latest.get("id") else "unknown",
+    )
+
+
+def _checkin_source(checkin: Dict[str, Any], related: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    source_id = checkin.get("id")
+    source_date = checkin.get("week_start") or checkin.get("created_at")
+    return _insight_provenance(
+        source_type="weekly_checkin" if source_id else "unknown",
+        source_id=str(source_id) if source_id else None,
+        source_date=source_date,
+        related=related,
+        evidence_status="observed" if source_id else "unknown",
+        reason=None if source_id else "The generated insight has no identifiable check-in row.",
+    )
+
+
+def _unknown_insight_provenance(reason: str) -> Dict[str, Any]:
+    return _insight_provenance(
+        source_type="unknown",
+        evidence_status="unknown",
+        reason=reason,
+    )
+
+
 async def generate_insights(user_id: str) -> List[Dict]:
     """Rule-based MVP insight engine."""
     supabase = _get_supabase()
@@ -2477,6 +2554,8 @@ async def generate_insights(user_id: str) -> List[Dict]:
                 "title": "Symptom severity improving",
                 "body": f"Your average symptom severity decreased by {abs(delta):.1f} points over the last 30 days.",
                 "priority": 1,
+                "provenance": _latest_symptom_source(symptom_data),
+                "next_action": _insight_action("review_symptoms", "Review symptom context", "/questionnaire"),
             })
         elif delta >= 1.5:
             insights_list.append({
@@ -2484,11 +2563,18 @@ async def generate_insights(user_id: str) -> List[Dict]:
                 "title": "Symptom severity increasing",
                 "body": "Your symptoms appear to be worsening. Consider consulting a physician if this persists.",
                 "priority": 4,
+                "provenance": _latest_symptom_source(symptom_data),
+                "next_action": _insight_action(
+                    "clinician_review",
+                    "Review symptom context",
+                    "/questionnaire",
+                    safety_level="clinician_review",
+                ),
             })
 
     uploads_resp = await _run(
         lambda: supabase.table("lab_uploads")
-        .select("created_at")
+        .select("id, created_at, test_date, collected_at, reported_at")
         .eq("user_id", user_id)
         .order("created_at", desc=True)
         .limit(1)
@@ -2507,6 +2593,19 @@ async def generate_insights(user_id: str) -> List[Dict]:
                 "title": "Time to re-test your labs",
                 "body": f"Your last lab upload was {days_since} days ago. Re-testing helps track progress accurately.",
                 "priority": 3,
+                "provenance": _insight_provenance(
+                    source_type="lab_upload",
+                    source_id=str(uploads_resp.data[0].get("id")) if uploads_resp.data[0].get("id") else None,
+                    source_date=(
+                        uploads_resp.data[0].get("test_date")
+                        or uploads_resp.data[0].get("collected_at")
+                        or uploads_resp.data[0].get("reported_at")
+                        or last_upload
+                    ),
+                    related={"days_since_upload": days_since},
+                    evidence_status="observed" if uploads_resp.data[0].get("id") else "unknown",
+                ),
+                "next_action": _insight_action("upload_follow_up", "Upload follow-up labs", "/upload"),
             })
 
     checkins = await get_weekly_checkins(user_id, limit=4)
@@ -2527,6 +2626,8 @@ async def generate_insights(user_id: str) -> List[Dict]:
                 "title": "Protocol adherence is slipping",
                 "body": "Your latest weekly check-in shows low adherence. Tighten the routine before changing the protocol.",
                 "priority": 3,
+                "provenance": _checkin_source(latest_checkin, {"field": "protocol_adherence"}),
+                "next_action": _insight_action("review_checkin", "Review weekly check-in", "/check-ins"),
             })
         elif isinstance(adherence, int) and adherence >= 8:
             insights_list.append({
@@ -2534,6 +2635,8 @@ async def generate_insights(user_id: str) -> List[Dict]:
                 "title": "Adherence looks strong",
                 "body": "You are following the protocol consistently. Keep this pace and retest to validate biomarker changes.",
                 "priority": 2,
+                "provenance": _checkin_source(latest_checkin, {"field": "protocol_adherence"}),
+                "next_action": _insight_action("review_checkin", "Review weekly check-in", "/check-ins"),
             })
 
         if concerning_scores:
@@ -2542,6 +2645,13 @@ async def generate_insights(user_id: str) -> List[Dict]:
                 "title": "Weekly check-in shows high strain",
                 "body": f"Your latest check-in shows pressure in {', '.join(concerning_scores)}. Review recovery, sleep, and escalation signals closely.",
                 "priority": 4,
+                "provenance": _checkin_source(latest_checkin, {"fields": concerning_scores}),
+                "next_action": _insight_action(
+                    "clinician_review",
+                    "Review check-in before clinician discussion",
+                    "/check-ins",
+                    safety_level="clinician_review",
+                ),
             })
         elif symptom_changes:
             insights_list.append({
@@ -2549,6 +2659,8 @@ async def generate_insights(user_id: str) -> List[Dict]:
                 "title": "Symptom changes recorded",
                 "body": f"Latest note: {symptom_changes[:160]}",
                 "priority": 2,
+                "provenance": _checkin_source(latest_checkin, {"field": "symptom_changes"}),
+                "next_action": _insight_action("review_symptoms", "Review symptom context", "/questionnaire"),
             })
     else:
         insights_list.append({
@@ -2556,11 +2668,13 @@ async def generate_insights(user_id: str) -> List[Dict]:
             "title": "Start your weekly check-ins",
             "body": "Weekly check-ins personalize your health guidance. Complete your first check-in now.",
             "priority": 2,
+            "provenance": _unknown_insight_provenance("No weekly check-in exists for this insight."),
+            "next_action": _insight_action("start_checkin", "Start weekly check-in", "/check-ins"),
         })
 
     if insights_list:
         rows = [{"user_id": user_id, **i} for i in insights_list]
-        await _run(lambda: supabase.table("insights").insert(rows).execute())
+        response = await _run(lambda: supabase.table("insights").insert(rows).execute())
         await _emit_timeline(user_id, "insight_created", f"{len(insights_list)} new insight(s) generated")
         await _audit_medical_write(
             user_id=user_id,
@@ -2568,6 +2682,8 @@ async def generate_insights(user_id: str) -> List[Dict]:
             entity_type="insights",
             details={"count": len(insights_list)},
         )
+
+        return response.data or insights_list
 
     return insights_list
 
