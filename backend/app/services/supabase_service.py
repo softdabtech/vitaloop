@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import ssl
 from collections import Counter
@@ -2542,6 +2543,20 @@ def _unknown_insight_provenance(reason: str) -> Dict[str, Any]:
     )
 
 
+def _insight_equivalence_key(insight: Dict[str, Any]) -> str:
+    return json.dumps(
+        {
+            "insight_type": insight.get("insight_type"),
+            "title": insight.get("title"),
+            "body": insight.get("body"),
+            "provenance": insight.get("provenance"),
+            "next_action": insight.get("next_action"),
+        },
+        sort_keys=True,
+        default=str,
+    )
+
+
 async def generate_insights(user_id: str) -> List[Dict]:
     """Rule-based MVP insight engine."""
     supabase = _get_supabase()
@@ -2675,6 +2690,22 @@ async def generate_insights(user_id: str) -> List[Dict]:
             "next_action": _insight_action("start_checkin", "Start weekly check-in", INSIGHT_CHECK_INS_ROUTE),
         })
 
+    existing = await _run(
+        lambda: supabase.table("insights")
+        .select("insight_type, title, body, provenance, next_action, dismissed")
+        .eq("user_id", user_id)
+        .execute()
+    )
+    dismissed_keys = {
+        _insight_equivalence_key(row)
+        for row in (existing.data or [])
+        if row.get("dismissed", False)
+    }
+    insights_list = [
+        insight for insight in insights_list
+        if _insight_equivalence_key(insight) not in dismissed_keys
+    ]
+
     if insights_list:
         rows = [{"user_id": user_id, **i} for i in insights_list]
         response = await _run(lambda: supabase.table("insights").insert(rows).execute())
@@ -2710,6 +2741,24 @@ async def get_user_insights(user_id: str) -> List[Dict]:
         details={"count": len(insights)},
     )
     return insights
+
+
+async def get_user_insight_state(user_id: str) -> Dict[str, List[Dict]]:
+    supabase = _get_supabase()
+    resp = await _run(
+        lambda: supabase.table("insights")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("priority", desc=True)
+        .order("created_at", desc=True)
+        .limit(50)
+        .execute()
+    )
+    rows = resp.data or []
+    return {
+        "active": [row for row in rows if not row.get("dismissed", False)],
+        "dismissed": [row for row in rows if row.get("dismissed", False)],
+    }
 
 
 async def dismiss_insight(user_id: str, insight_id: str) -> None:

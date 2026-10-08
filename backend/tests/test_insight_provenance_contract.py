@@ -101,6 +101,66 @@ async def test_generated_insight_persists_provenance_and_next_action(monkeypatch
     assert generated[0]["next_action"] == persisted["next_action"]
 
 
+@pytest.mark.asyncio
+async def test_generation_skips_equivalent_dismissed_insight(monkeypatch):
+    dismissed = {
+        "insight_type": "adherence",
+        "title": "Protocol adherence is slipping",
+        "body": "Your latest weekly check-in shows low adherence. Tighten the routine before changing the protocol.",
+        "priority": 3,
+        "provenance": {
+            "version": "insight_provenance_v1",
+            "source_type": "weekly_checkin",
+            "source_id": "checkin-1",
+            "source_date": "2026-09-20",
+            "evidence_status": "observed",
+            "related": {"field": "protocol_adherence"},
+        },
+        "next_action": {
+            "type": "review_checkin",
+            "label": "Review weekly check-in",
+            "route": "/check-ins",
+            "safety_level": "routine",
+        },
+        "dismissed": True,
+    }
+
+    class _ExistingTable:
+        def select(self, *_args):
+            return self
+
+        def eq(self, *_args):
+            return self
+
+        def execute(self):
+            return _Response([dismissed])
+
+    class _ExistingSupabase:
+        def table(self, name):
+            return _ExistingTable() if name == "insights" else _Table(name, [])
+
+    async def fake_run(fn):
+        return fn()
+
+    async def empty_checkins(*_args, **_kwargs):
+        return [{"id": "checkin-1", "week_start": "2026-09-20", "protocol_adherence": 3}]
+
+    async def empty_symptom_summary(*_args, **_kwargs):
+        return {"average_severity": 0}
+
+    async def no_audit(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(svc, "_get_supabase", lambda: _ExistingSupabase())
+    monkeypatch.setattr(svc, "_run", fake_run)
+    monkeypatch.setattr(svc, "get_user_symptom_summary", empty_symptom_summary)
+    monkeypatch.setattr(svc, "get_weekly_checkins", empty_checkins)
+    monkeypatch.setattr(svc, "_emit_timeline", no_audit)
+    monkeypatch.setattr(svc, "_audit_medical_write", no_audit)
+
+    assert await svc.generate_insights("user-1") == []
+
+
 class _DismissTable:
     def __init__(self, rows):
         self.rows = rows
@@ -182,3 +242,23 @@ async def test_dismissal_persists_and_legacy_null_rows_are_filtered(monkeypatch)
     assert rows[0]["dismissed"] is True
     after = await svc.get_user_insights("user-1")
     assert after == []
+
+
+@pytest.mark.asyncio
+async def test_insight_state_keeps_dismissed_rows_for_eligibility(monkeypatch):
+    rows = [
+        {"id": "active", "user_id": "user-1", "dismissed": False},
+        {"id": "dismissed", "user_id": "user-1", "dismissed": True},
+    ]
+    supabase = _DismissSupabase(rows)
+
+    async def fake_run(fn):
+        return fn()
+
+    monkeypatch.setattr(svc, "_get_supabase", lambda: supabase)
+    monkeypatch.setattr(svc, "_run", fake_run)
+
+    state = await svc.get_user_insight_state("user-1")
+
+    assert [row["id"] for row in state["active"]] == ["active"]
+    assert [row["id"] for row in state["dismissed"]] == ["dismissed"]

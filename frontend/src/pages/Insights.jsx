@@ -9,7 +9,8 @@ import toast from 'react-hot-toast'
 import BiomarkerAlertsDisplay from '../components/BiomarkerAlertsDisplay.jsx'
 import HealthTipsDisplay from '../components/HealthTipsDisplay.jsx'
 import TrendAnalyticsDashboard from '../components/TrendAnalyticsDashboard.jsx'
-import { useTimeline, useInsights, useHealthScore, useProgress } from '../hooks/useQueries.js'
+import { useTimeline, useInsights, useInsightState, useHealthScore, useProgress } from '../hooks/useQueries.js'
+import { shouldGenerateInsight } from '../lib/insightEligibility.js'
 // CabinetPageHeader's .cabinet-header-hero class lives here -- Vite code-
 // splits CSS per lazy route chunk, so this page must import it directly.
 import '../styles/dashboard2026.css'
@@ -66,26 +67,44 @@ export default function Insights() {
 
   const { data: timeline = [], isError: timelineError } = useTimeline()
   const { data: insights = [], isSuccess: insightsLoaded } = useInsights()
+  const {
+    data: insightState = { active: [], dismissed: [] },
+    isSuccess: insightStateLoaded,
+    isFetching: insightStateFetching,
+  } = useInsightState()
   const { data: healthScore = null } = useHealthScore()
   const { data: progressRows = [] } = useProgress()
 
   const biomarkers = pickLatestBiomarkers(progressRows)
-  const hasCurrentInsight = insights.some((insight) => insight?.provenance && insight?.next_action)
+  const activeInsights = insightState.active || insights
+  const dismissedInsights = insightState.dismissed || []
+  const shouldGenerate = shouldGenerateInsight({
+    querySucceeded: insightsLoaded && insightStateLoaded,
+    queryFetching: insightStateFetching,
+    activeInsights,
+    dismissedInsights,
+    generationInFlight: loadingInsights,
+    generationAttempted: generationAttempted.current,
+  })
 
   useEffect(() => {
-    if (!insightsLoaded || hasCurrentInsight || generationAttempted.current) return
+    if (!shouldGenerate) return
 
     generationAttempted.current = true
     setLoadingInsights(true)
     api.post('/insights/generate')
       .then(({ data }) => {
         queryClient.setQueryData(['insights'], (old = []) => [...(data || []), ...old])
+        queryClient.setQueryData(['insight-state'], (old = { active: [], dismissed: [] }) => ({
+          ...old,
+          active: [...(data || []), ...(old.active || [])],
+        }))
       })
       .catch(() => {
-        generationAttempted.current = false
+        toast.error('Failed to generate insights')
       })
       .finally(() => setLoadingInsights(false))
-  }, [hasCurrentInsight, insightsLoaded, queryClient])
+  }, [queryClient, shouldGenerate])
 
   async function generateInsights() {
     setLoadingInsights(true)
@@ -93,6 +112,10 @@ export default function Insights() {
       const { data } = await api.post('/insights/generate')
       // Optimistic update: prepend new insights to cache
       queryClient.setQueryData(['insights'], (old = []) => [...(data || []), ...old])
+      queryClient.setQueryData(['insight-state'], (old = { active: [], dismissed: [] }) => ({
+        ...old,
+        active: [...(data || []), ...(old.active || [])],
+      }))
       toast.success(`${data?.length || 0} new insight(s) generated`)
     } catch {
       toast.error('Failed to generate insights')
@@ -106,7 +129,17 @@ export default function Insights() {
     try {
       await api.post(`/insights/${insightId}/dismiss`)
       queryClient.setQueryData(['insights'], (old = []) => old.filter((insight) => insight.id !== insightId))
-      await queryClient.invalidateQueries({ queryKey: ['insights'], refetchType: 'active' })
+      queryClient.setQueryData(['insight-state'], (old = { active: [], dismissed: [] }) => {
+        const dismissed = (old.active || []).find((insight) => insight.id === insightId)
+        return {
+          active: (old.active || []).filter((insight) => insight.id !== insightId),
+          dismissed: dismissed ? [...(old.dismissed || []), { ...dismissed, dismissed: true }] : old.dismissed || [],
+        }
+      })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['insights'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['insight-state'], refetchType: 'active' }),
+      ])
       toast.success('Insight dismissed')
     } catch {
       toast.error('Could not dismiss this insight')
