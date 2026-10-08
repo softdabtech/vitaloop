@@ -89,6 +89,8 @@ jobs:
     timeout-minutes: 15
     env:
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.playwright-browsers
+      VITE_SUPABASE_URL: ${{ secrets.PROD_VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.PROD_VITE_SUPABASE_ANON_KEY }}
     defaults:
       run:
         working-directory: ./frontend
