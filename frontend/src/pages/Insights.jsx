@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Activity, Clock, RefreshCw, Sparkles, TrendingUp, TriangleAlert, Lightbulb, AlertCircle, BarChart3, ArrowRight, Check } from 'lucide-react'
@@ -62,13 +62,30 @@ export default function Insights() {
   const queryClient = useQueryClient()
   const [tab, setTab] = useState('insights')
   const [loadingInsights, setLoadingInsights] = useState(false)
+  const generationAttempted = useRef(false)
 
   const { data: timeline = [], isError: timelineError } = useTimeline()
-  const { data: insights = [] } = useInsights()
+  const { data: insights = [], isSuccess: insightsLoaded } = useInsights()
   const { data: healthScore = null } = useHealthScore()
   const { data: progressRows = [] } = useProgress()
 
   const biomarkers = pickLatestBiomarkers(progressRows)
+  const hasCurrentInsight = insights.some((insight) => insight?.provenance && insight?.next_action)
+
+  useEffect(() => {
+    if (!insightsLoaded || hasCurrentInsight || generationAttempted.current) return
+
+    generationAttempted.current = true
+    setLoadingInsights(true)
+    api.post('/insights/generate')
+      .then(({ data }) => {
+        queryClient.setQueryData(['insights'], (old = []) => [...(data || []), ...old])
+      })
+      .catch(() => {
+        generationAttempted.current = false
+      })
+      .finally(() => setLoadingInsights(false))
+  }, [hasCurrentInsight, insightsLoaded, queryClient])
 
   async function generateInsights() {
     setLoadingInsights(true)
@@ -89,6 +106,7 @@ export default function Insights() {
     try {
       await api.post(`/insights/${insightId}/dismiss`)
       queryClient.setQueryData(['insights'], (old = []) => old.filter((insight) => insight.id !== insightId))
+      await queryClient.invalidateQueries({ queryKey: ['insights'], refetchType: 'active' })
       toast.success('Insight dismissed')
     } catch {
       toast.error('Could not dismiss this insight')
