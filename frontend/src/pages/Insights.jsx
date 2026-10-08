@@ -223,6 +223,13 @@ export default function Insights() {
               <div className="space-y-3">
                 {insights.map((insight, index) => {
                   const color = INSIGHT_COLORS[insight.insight_type] || INSIGHT_COLORS.general
+                  let provenanceText = 'Source unavailable; no evidence was inferred.'
+                  if (insight.provenance?.evidence_status !== 'unknown') {
+                    provenanceText = String(insight.provenance?.source_type || 'unknown').replaceAll('_', ' ')
+                    if (insight.provenance?.source_date) {
+                      provenanceText += ` · ${formatDate(insight.provenance.source_date)}`
+                    }
+                  }
                   return (
                     <motion.div
                       key={insight.id || index}
@@ -237,11 +244,7 @@ export default function Insights() {
                       <p className="mt-2 text-sm leading-6 text-slate-600">{insight.body}</p>
                       <div className="mt-3 rounded-xl border border-white/70 bg-white/70 p-3 text-xs text-slate-600">
                         <div className="font-semibold text-slate-700">Why this exists</div>
-                        <div className="mt-1">
-                          {insight.provenance?.evidence_status === 'unknown'
-                            ? 'Source unavailable; no evidence was inferred.'
-                            : `${String(insight.provenance?.source_type || 'unknown').replaceAll('_', ' ')}${insight.provenance?.source_date ? ` · ${formatDate(insight.provenance.source_date)}` : ''}`}
-                        </div>
+                        <div className="mt-1">{provenanceText}</div>
                       </div>
                       {insight.next_action?.label && insight.next_action?.route && (
                         <button

@@ -2463,6 +2463,9 @@ async def get_all_red_flags(acknowledged: Optional[bool] = False) -> List[Dict]:
 # ──────────────────────────────────────────────
 
 INSIGHT_PROVENANCE_VERSION = "insight_provenance_v1"
+INSIGHT_QUESTIONNAIRE_ROUTE = "/questionnaire"
+INSIGHT_REVIEW_SYMPTOM_LABEL = "Review symptom context"
+INSIGHT_CHECK_INS_ROUTE = "/check-ins"
 
 
 def _insight_provenance(
@@ -2555,7 +2558,7 @@ async def generate_insights(user_id: str) -> List[Dict]:
                 "body": f"Your average symptom severity decreased by {abs(delta):.1f} points over the last 30 days.",
                 "priority": 1,
                 "provenance": _latest_symptom_source(symptom_data),
-                "next_action": _insight_action("review_symptoms", "Review symptom context", "/questionnaire"),
+                "next_action": _insight_action("review_symptoms", INSIGHT_REVIEW_SYMPTOM_LABEL, INSIGHT_QUESTIONNAIRE_ROUTE),
             })
         elif delta >= 1.5:
             insights_list.append({
@@ -2566,8 +2569,8 @@ async def generate_insights(user_id: str) -> List[Dict]:
                 "provenance": _latest_symptom_source(symptom_data),
                 "next_action": _insight_action(
                     "clinician_review",
-                    "Review symptom context",
-                    "/questionnaire",
+                    INSIGHT_REVIEW_SYMPTOM_LABEL,
+                    INSIGHT_QUESTIONNAIRE_ROUTE,
                     safety_level="clinician_review",
                 ),
             })
@@ -2627,7 +2630,7 @@ async def generate_insights(user_id: str) -> List[Dict]:
                 "body": "Your latest weekly check-in shows low adherence. Tighten the routine before changing the protocol.",
                 "priority": 3,
                 "provenance": _checkin_source(latest_checkin, {"field": "protocol_adherence"}),
-                "next_action": _insight_action("review_checkin", "Review weekly check-in", "/check-ins"),
+                "next_action": _insight_action("review_checkin", "Review weekly check-in", INSIGHT_CHECK_INS_ROUTE),
             })
         elif isinstance(adherence, int) and adherence >= 8:
             insights_list.append({
@@ -2636,7 +2639,7 @@ async def generate_insights(user_id: str) -> List[Dict]:
                 "body": "You are following the protocol consistently. Keep this pace and retest to validate biomarker changes.",
                 "priority": 2,
                 "provenance": _checkin_source(latest_checkin, {"field": "protocol_adherence"}),
-                "next_action": _insight_action("review_checkin", "Review weekly check-in", "/check-ins"),
+                "next_action": _insight_action("review_checkin", "Review weekly check-in", INSIGHT_CHECK_INS_ROUTE),
             })
 
         if concerning_scores:
@@ -2649,7 +2652,7 @@ async def generate_insights(user_id: str) -> List[Dict]:
                 "next_action": _insight_action(
                     "clinician_review",
                     "Review check-in before clinician discussion",
-                    "/check-ins",
+                    INSIGHT_CHECK_INS_ROUTE,
                     safety_level="clinician_review",
                 ),
             })
@@ -2660,7 +2663,7 @@ async def generate_insights(user_id: str) -> List[Dict]:
                 "body": f"Latest note: {symptom_changes[:160]}",
                 "priority": 2,
                 "provenance": _checkin_source(latest_checkin, {"field": "symptom_changes"}),
-                "next_action": _insight_action("review_symptoms", "Review symptom context", "/questionnaire"),
+                "next_action": _insight_action("review_symptoms", INSIGHT_REVIEW_SYMPTOM_LABEL, INSIGHT_QUESTIONNAIRE_ROUTE),
             })
     else:
         insights_list.append({
@@ -2669,7 +2672,7 @@ async def generate_insights(user_id: str) -> List[Dict]:
             "body": "Weekly check-ins personalize your health guidance. Complete your first check-in now.",
             "priority": 2,
             "provenance": _unknown_insight_provenance("No weekly check-in exists for this insight."),
-            "next_action": _insight_action("start_checkin", "Start weekly check-in", "/check-ins"),
+            "next_action": _insight_action("start_checkin", "Start weekly check-in", INSIGHT_CHECK_INS_ROUTE),
         })
 
     if insights_list:
