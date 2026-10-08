@@ -64,6 +64,17 @@ export const useInsights = () =>
     gcTime: 20 * 60 * 1000,
   })
 
+export const useInsightState = () =>
+  useQuery({
+    queryKey: ['insight-state'],
+    queryFn: async () => {
+      const { data } = await api.get('/insights/state')
+      return data || { active: [], dismissed: [] }
+    },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
+  })
+
 // Timeline events
 export const useTimeline = () =>
   useQuery({

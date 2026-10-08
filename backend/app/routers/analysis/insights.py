@@ -14,6 +14,14 @@ async def get_insights(
     return await svc.get_user_insights(user_id)
 
 
+@router.get("/state")
+async def get_insight_state(
+    current_user: dict = Depends(get_current_user),
+    _subscription_check: None = Depends(require_active_subscription),
+):
+    return await svc.get_user_insight_state(current_user["sub"])
+
+
 @router.post("/generate")
 async def generate_insights(
     current_user: dict = Depends(get_current_user),
