@@ -68,7 +68,7 @@ export default function Insights() {
   const { data: timeline = [], isError: timelineError } = useTimeline()
   const { data: insights = [], isSuccess: insightsLoaded } = useInsights()
   const {
-    data: insightState = { active: [], dismissed: [] },
+    data: insightState = { active: [], dismissed: [], generation_allowed: false },
     isSuccess: insightStateLoaded,
     isFetching: insightStateFetching,
   } = useInsightState()
@@ -77,12 +77,10 @@ export default function Insights() {
 
   const biomarkers = pickLatestBiomarkers(progressRows)
   const activeInsights = insightState.active || insights
-  const dismissedInsights = insightState.dismissed || []
   const shouldGenerate = shouldGenerateInsight({
     querySucceeded: insightsLoaded && insightStateLoaded,
     queryFetching: insightStateFetching,
-    activeInsights,
-    dismissedInsights,
+    generationAllowed: insightState.generation_allowed,
     generationInFlight: loadingInsights,
     generationAttempted: generationAttempted.current,
   })
@@ -98,6 +96,7 @@ export default function Insights() {
         queryClient.setQueryData(['insight-state'], (old = { active: [], dismissed: [] }) => ({
           ...old,
           active: [...(data || []), ...(old.active || [])],
+          generation_allowed: false,
         }))
       })
       .catch(() => {
@@ -115,6 +114,7 @@ export default function Insights() {
       queryClient.setQueryData(['insight-state'], (old = { active: [], dismissed: [] }) => ({
         ...old,
         active: [...(data || []), ...(old.active || [])],
+        generation_allowed: false,
       }))
       toast.success(`${data?.length || 0} new insight(s) generated`)
     } catch {
@@ -134,6 +134,8 @@ export default function Insights() {
         return {
           active: (old.active || []).filter((insight) => insight.id !== insightId),
           dismissed: dismissed ? [...(old.dismissed || []), { ...dismissed, dismissed: true }] : old.dismissed || [],
+          generation_allowed: false,
+          generation_reason: 'equivalent_dismissal',
         }
       })
       await Promise.all([
