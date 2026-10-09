@@ -221,7 +221,7 @@ async function installApi(page: Page, scenario: Scenario) {
     }
     if (path.endsWith('/questionnaire/session/context') && method === 'PATCH') {
       scenario.fallbackContextCalls?.push(request.postDataJSON() as Json)
-      return json(route, { ok: true, session_context: request.postDataJSON() })
+      return json(route, { ok: true, session_context: request.postDataJSON(), report_update: scenario.reportUpdate || null })
     }
     if (path.includes('/progress') || path.includes('/timeline') || path.includes('/questionnaire/session')) {
       return json(route, [])
@@ -242,6 +242,24 @@ async function openCheck(page: Page, scenario: Scenario) {
 async function captureDemoStage(page: Page, name: string) {
   if (process.env.CAPTURE_SYMPTOM_DEMO !== '1') return
   await page.screenshot({ path: `../output/symptom-demo-${name}.png`, fullPage: true })
+}
+
+async function completeControlledFallback(page: Page, scenario: Scenario, choices = ['moderate', 'stable', 'mild', 'absent', 'absent']) {
+  await authenticate(page)
+  await installApi(page, scenario)
+  await page.goto('/questionnaire')
+  await expect(page.getByRole('heading', { name: 'Start with how you feel today' })).toBeVisible()
+  await page.getByLabel('How do you feel overall today?').selectOption('reduced')
+  await page.getByLabel('What area would you like to highlight?').selectOption('energy')
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  await page.getByLabel('Main signal').selectOption('fatigue')
+  await page.getByLabel('How long has it been present?').selectOption('weeks_1_4')
+  await page.getByRole('button', { name: /Start focused questions/ }).click()
+
+  for (const choice of choices) {
+    await page.getByLabel('Select the closest answer').selectOption(choice)
+    await page.getByRole('button', { name: /Save and continue|Save symptom context/ }).click()
+  }
 }
 
 test('positive baseline completes without assuming illness and links to lab upload', async ({ page }) => {
@@ -290,6 +308,58 @@ test('disabled provider uses the controlled three-stage internal flow', async ({
   })
   await expect(page.getByText('Symptom Check is not available yet')).toHaveCount(0)
   await expect(page.getByText('Step 1 of 8')).toHaveCount(0)
+})
+
+test('controlled fallback offers and completes a report update once', async ({ page }) => {
+  const scenario: Scenario = {
+    session: null,
+    answerCalls: [],
+    structuredUnavailable: true,
+    fallbackContextCalls: [],
+    reportUpdate: reportUpdateOffer(),
+    regenerationHandler: async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 250))
+      return json(route, { report_version: { id: 'new-report-version' } })
+    },
+  }
+  await completeControlledFallback(page, scenario)
+
+  await expect(page.getByText('Your latest report does not include these answers yet')).toBeVisible()
+  const updateButton = page.getByRole('button', { name: 'Update latest report' })
+  await updateButton.click()
+  await expect(page.getByRole('button', { name: 'Updating report…' })).toBeDisabled()
+  await updateButton.click({ force: true })
+  await expect(page.getByText('Report updated with your latest symptoms.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Update latest report' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'View updated report' })).toBeVisible()
+  expect(scenario.regenerationCalls).toBe(1)
+})
+
+test('controlled fallback keeps report update retryable after failure', async ({ page }) => {
+  const scenario: Scenario = {
+    session: null,
+    answerCalls: [],
+    structuredUnavailable: true,
+    fallbackContextCalls: [],
+    reportUpdate: reportUpdateOffer(),
+    regenerationHandler: (route, state) => state.regenerationCalls === 1
+      ? json(route, { detail: 'Regeneration failed' }, 500)
+      : json(route, { report_version: { id: 'new-report-version' } }),
+  }
+  await completeControlledFallback(page, scenario)
+  await page.getByRole('button', { name: 'Update latest report' }).click()
+  await expect(page.getByRole('alert')).toContainText('Regeneration failed')
+  await expect(page.getByRole('button', { name: 'Update latest report' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Update latest report' }).click()
+  await expect(page.getByText('Report updated with your latest symptoms.', { exact: true })).toBeVisible()
+  expect(scenario.regenerationCalls).toBe(2)
+})
+
+test('controlled fallback does not offer an unnecessary report update', async ({ page }) => {
+  const scenario: Scenario = { session: null, answerCalls: [], structuredUnavailable: true, fallbackContextCalls: [] }
+  await completeControlledFallback(page, scenario)
+  await expect(page.getByRole('button', { name: 'Update latest report' })).toHaveCount(0)
+  await expect(page.getByText('Report updated with your latest symptoms.', { exact: true })).toHaveCount(0)
 })
 
 test('urgent controlled result explains the trigger and shows the submitted summary without a dashboard button', async ({ page }) => {

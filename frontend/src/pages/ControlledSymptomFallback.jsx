@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AlertTriangle, ArrowRight, CheckCircle2, FileUp, Loader2, ShieldAlert, Stethoscope } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { regenerateSymptomLinkedReport } from '../api/symptomCheck.js'
 import api from '../lib/api.js'
 import CabinetPageFrame from '../components/dashboard/CabinetPageFrame.jsx'
 import '../styles/coach-design-system.css'
@@ -78,6 +79,8 @@ export default function ControlledSymptomFallback() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [completed, setCompleted] = useState(false)
+  const [reportUpdate, setReportUpdate] = useState(null)
+  const [reportUpdateState, setReportUpdateState] = useState('CURRENT')
 
   const concern = CONCERNS.find((item) => item.id === concernId)
   const signalOptions = (concern?.signals || []).map((label) => [label.toLowerCase().replace(/[^a-z0-9]+/g, '_'), label])
@@ -108,7 +111,7 @@ export default function ControlledSymptomFallback() {
     try {
       const relatedLabels = related.filter(Boolean).map((id) => signalOptions.find(([value]) => value === id)?.[1]).filter(Boolean)
       const severityScore = { mild: 3, moderate: 6, severe: 9 }[answers.severity] || 5
-      await api.patch('/questionnaire/session/context', {
+      const response = await api.patch('/questionnaire/session/context', {
         complete: true,
         active_concern: [selectedSignalLabel, ...relatedLabels].join(', '),
         summary: {
@@ -129,11 +132,27 @@ export default function ControlledSymptomFallback() {
           controlled_answers: answers,
         },
       })
+      const offer = response?.data?.report_update || null
+      setReportUpdate(offer)
+      setReportUpdateState(offer?.update_available ? 'UPDATE_AVAILABLE' : 'CURRENT')
       setCompleted(true)
     } catch (saveError) {
       setError(saveError?.response?.data?.detail || 'We could not save your answers. Please retry.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function updateLatestReport() {
+    if (reportUpdateState === 'UPDATING' || !reportUpdate?.update_available || !reportUpdate?.action?.endpoint) return
+    setReportUpdateState('UPDATING')
+    setError('')
+    try {
+      await regenerateSymptomLinkedReport(reportUpdate.action.endpoint)
+      setReportUpdateState('UPDATED')
+    } catch (updateError) {
+      setReportUpdateState('ERROR')
+      setError(updateError?.response?.data?.detail || 'We could not update your latest report. Your symptom answers are saved.')
     }
   }
 
@@ -188,6 +207,26 @@ export default function ControlledSymptomFallback() {
           </section>
 
           {!urgent && <button className="coach-button coach-button--primary coach-button--md justify-self-start" onClick={() => navigate('/upload')}><FileUp className="h-4 w-4" /> Upload lab results</button>}
+          {!urgent && error && <div role="alert" className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-950"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" /><span>{String(error)}</span></div>}
+          {!urgent && reportUpdate?.update_available && reportUpdateState !== 'UPDATED' && (
+            <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-blue-950">
+              <h2 className="font-extrabold">Your latest report does not include these answers yet</h2>
+              <p className="mt-1 text-sm leading-6">Update it to recalculate explanation priorities and show what changed because of this symptom check.</p>
+              <button type="button" disabled={reportUpdateState === 'UPDATING'} onClick={updateLatestReport} className="coach-button coach-button--primary coach-button--md mt-4">
+                {reportUpdateState === 'UPDATING' ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {reportUpdateState === 'UPDATING' ? 'Updating report…' : 'Update latest report'}
+              </button>
+            </section>
+          )}
+          {!urgent && reportUpdateState === 'UPDATED' && (
+            <section role="status" className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950">
+              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+              <div>
+                <p className="font-extrabold">Report updated with your latest symptoms.</p>
+                <button type="button" className="coach-button coach-button--secondary coach-button--md mt-4" onClick={() => navigate(reportUpdate.action.path || `/results/${reportUpdate.report_upload_id}`)}>View updated report</button>
+              </div>
+            </section>
+          )}
         </div>
       </CabinetPageFrame>
     )
