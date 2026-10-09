@@ -11,6 +11,7 @@ from supabase import create_client, Client
 from app.config import settings
 from app.services.lab_date_extraction import choose_measurement_date
 from app.services.lab_normalization.biomarker_mapping import is_metadata_field
+from app.services.safety.symptom_report_contract import normalize_report_level
 from app.utils.retry import (
     with_retry,
     SUPABASE_RETRY_CONFIG,
@@ -1577,7 +1578,7 @@ async def get_latest_ready_report(user_id: str) -> Optional[Dict[str, Any]]:
     supabase = _get_supabase()
     version_resp = await _run_supabase_read(
         lambda: supabase.table("report_versions")
-        .select("id, upload_id, status, created_at")
+        .select("id, upload_id, status, created_at, safety_result, input_snapshot")
         .eq("user_id", user_id)
         .in_("status", ["completed", "blocked"])
         .order("created_at", desc=True)
@@ -1618,6 +1619,10 @@ async def get_latest_ready_report(user_id: str) -> Optional[Dict[str, Any]]:
         "report_version_id": version_row.get("id"),
         "report_status": version_row.get("status"),
         "report_generated_at": version_row.get("created_at"),
+        "safety_result": version_row.get("safety_result"),
+        "symptom_snapshot": (version_row.get("input_snapshot") or {}).get("symptom_snapshot")
+        if isinstance(version_row.get("input_snapshot"), dict)
+        else None,
         "upload_created_at": upload_row.get("created_at"),
         "measurement_date": choose_measurement_date(upload_row) if upload_row else None,
         "lab_name": upload_row.get("lab_name"),
@@ -2502,7 +2507,7 @@ def _insight_action(
         "type": action_type,
         "label": label,
         "route": route,
-        "safety_level": safety_level,
+        "safety_level": normalize_report_level(safety_level),
     }
 
 

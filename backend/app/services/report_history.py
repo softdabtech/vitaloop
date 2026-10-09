@@ -57,6 +57,7 @@ from app.services.safety import (
 )
 from app.services.safety.verification import suppress_unverified_safety_claims
 from app.services.safety.safety_engine import blocked_content_notice
+from app.services.safety.symptom_report_contract import effective_report_safety
 from app.services.symptom_snapshot import (
     public_symptom_snapshot,
     redact_report_version_symptom_snapshot,
@@ -149,6 +150,12 @@ def assemble_frozen_response(
     )
     sanitized_input_snapshot = sanitize_safety_result_for_output(report_version.get("input_snapshot"), locale=locale)
     sanitized_explainability = sanitize_safety_result_for_output(report_version.get("explainability"), locale=locale)
+    frozen_symptom_snapshot = (
+        sanitized_input_snapshot.get("symptom_snapshot")
+        if isinstance(sanitized_input_snapshot, dict)
+        else None
+    )
+    safety_result = effective_report_safety(safety_result, frozen_symptom_snapshot)
 
     sanitized_report_version = redact_report_version_symptom_snapshot({
         **report_version,

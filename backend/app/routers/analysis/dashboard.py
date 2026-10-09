@@ -15,6 +15,7 @@ from app.services.symptom_snapshot import (
     load_latest_eligible_symptom_snapshot,
     public_symptom_snapshot,
 )
+from app.services.safety.symptom_report_contract import effective_report_safety, merge_report_levels
 from app.utils.roles import normalize_global_role as _normalize_role, as_bool as _as_bool
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -459,6 +460,33 @@ async def _fetch_latest_activity(user_id: str) -> tuple[Optional[dict], Optional
         return None, None
 
 
+def _dashboard_safety_state(
+    latest_ready_report: Optional[dict],
+    questionnaire_latest: Optional[dict],
+) -> Dict[str, Any]:
+    report_safety = latest_ready_report.get("safety_result") if isinstance(latest_ready_report, dict) else None
+    stored_snapshot = latest_ready_report.get("symptom_snapshot") if isinstance(latest_ready_report, dict) else None
+    snapshot = questionnaire_latest.get("symptom_snapshot") if isinstance(questionnaire_latest, dict) else None
+    state = effective_report_safety(report_safety, stored_snapshot)
+    return effective_report_safety({"risk_level": state.get("risk_level")}, snapshot)
+
+
+def _normalize_insight_safety(insights: List[Dict[str, Any]], safety_state: Dict[str, Any]) -> List[Dict[str, Any]]:
+    normalized: List[Dict[str, Any]] = []
+    for insight in insights:
+        item = dict(insight)
+        action = item.get("next_action")
+        if isinstance(action, dict):
+            item["next_action"] = {
+                **action,
+                "safety_level": merge_report_levels(
+                    action.get("safety_level"), safety_state.get("risk_level")
+                ),
+            }
+        normalized.append(item)
+    return normalized
+
+
 # P37c — Dashboard Today read-only exposure helpers. See
 # svc.get_latest_ready_report()/svc.plan_exists_for_upload() for the actual
 # reads; these two helpers only shape the /dashboard/summary response and
@@ -616,6 +644,9 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
     except Exception:
         start_here = {"enabled": False}
 
+    safety_state = _dashboard_safety_state(latest_ready_report, questionnaire_latest)
+    insights = _normalize_insight_safety(insights, safety_state)
+
     response = {
         "profile": {
             "user_id": user_id,
@@ -666,6 +697,7 @@ async def get_dashboard_summary(current_user: dict = Depends(get_current_user)):
         "today_contract": _build_today_contract(
             latest_ready_report, latest_ready_report_lookup_failed, plan_exists_result
         ),
+        "safety_state": safety_state,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
     _cache_set(user_id, response)
