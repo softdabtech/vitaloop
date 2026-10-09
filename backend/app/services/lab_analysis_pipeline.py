@@ -292,6 +292,7 @@ def normalize_biomarkers(
     name_aliases: Optional[Dict[str, str]] = None,
     sex: Optional[str] = None,
     age: Optional[int] = None,
+    preserve_existing_evaluation: bool = False,
 ) -> List[Dict[str, Any]]:
     """Delegates to clinical_engine.normalizer.normalize_biomarkers().
 
@@ -303,7 +304,13 @@ def normalize_biomarkers(
         sex: Optional user sex ('male', 'female') for sex-specific reference ranges
         age: Optional user age (years) for age-specific assessment
     """
-    return _engine_normalize_biomarkers(raw_biomarkers, name_aliases=name_aliases, sex=sex, age=age)
+    return _engine_normalize_biomarkers(
+        raw_biomarkers,
+        name_aliases=name_aliases,
+        sex=sex,
+        age=age,
+        preserve_existing_evaluation=preserve_existing_evaluation,
+    )
 
 
 def _iso_or_none(value: Any) -> str | None:
@@ -490,6 +497,10 @@ def _marker_identity(item: Dict[str, Any]) -> tuple[str, str, str]:
 # below) — re-reading/regenerating a report for an existing upload, not a
 # fresh, never-reviewed submission.
 _CANONICAL_REPROCESSING_SOURCES = {"results_read", "report_regeneration", "results_compatibility"}
+
+
+def _preserve_existing_evaluation_for_source(source_metadata: Dict[str, Any] | None) -> bool:
+    return str((source_metadata or {}).get("source") or "").strip().lower() in _CANONICAL_REPROCESSING_SOURCES
 
 
 def _is_candidate_confirmation(source_metadata: Dict[str, Any] | None) -> bool:
@@ -915,6 +926,7 @@ async def run_lab_analysis_pipeline(
         name_aliases=biomarker_name_aliases,
         sex=user_sex,
         age=user_age,
+        preserve_existing_evaluation=_preserve_existing_evaluation_for_source(source_metadata),
     )
     clinical_integrity = validate_clinical_data_integrity(
         biomarkers=normalized_biomarkers,

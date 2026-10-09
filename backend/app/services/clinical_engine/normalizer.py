@@ -217,6 +217,7 @@ def normalize_biomarkers(
     age: Optional[int] = None,
     weight: Optional[float] = None,
     height: Optional[float] = None,
+    preserve_existing_evaluation: bool = False,
 ) -> List[Dict[str, Any]]:
     """Нормализовать список сырых биомаркеров в каноническую форму.
 
@@ -269,8 +270,12 @@ def normalize_biomarkers(
             name_str = translate_biomarker_name(name_str)
 
         display_name, canonical = _normalize_name(name_str, name_aliases=name_aliases)
+        is_existing_canonical = str(item.get("canonical_name") or "").strip().lower() == canonical.lower()
         raw_unit = str(unit)
         numeric_value, normalized_unit = _normalize_value_unit(canonical, numeric_value, raw_unit)
+        incoming_reference_source = item.get("reference_source")
+        incoming_status = str(item.get("status") or "").strip().upper()
+        incoming_unevaluated_reason = item.get("unevaluated_reason")
         ref_low = item.get("ref_low") or item.get("reference_low")
         ref_high = item.get("ref_high") or item.get("reference_high")
         if ref_low in (None, "") or ref_high in (None, ""):
@@ -294,6 +299,33 @@ def normalize_biomarkers(
             has_reference=has_reference,
             is_verified_fallback=is_verified_fallback,
         )
+
+        preserve_unevaluated = (
+            preserve_existing_evaluation
+            and is_existing_canonical
+            and str(incoming_reference_source or "").strip().lower() == "vitaloop_reference_table"
+            and incoming_status == "UNEVALUATED"
+            and incoming_unevaluated_reason == "unverified_reference_interval"
+        )
+        preserve_unknown = (
+            preserve_existing_evaluation
+            and is_existing_canonical
+            and incoming_status == "UNKNOWN"
+            and incoming_reference_source in (None, "")
+            and item.get("ref_low") in (None, "")
+            and item.get("ref_high") in (None, "")
+            and item.get("reference_low") in (None, "")
+            and item.get("reference_high") in (None, "")
+            and item.get("reference_range") in (None, "")
+        )
+        if preserve_unevaluated:
+            reference_source = incoming_reference_source
+            status = incoming_status
+        elif preserve_unknown:
+            ref_low = None
+            ref_high = None
+            reference_source = None
+            status = incoming_status
 
         unique_key = canonical
         if unique_key in seen:
@@ -322,7 +354,9 @@ def normalize_biomarkers(
         }
 
         # Add unevaluated_reason for UNEVALUATED status
-        if status == "UNEVALUATED" and reference_source == "vitaloop_reference_table" and not is_verified_fallback:
+        if preserve_unevaluated:
+            record["unevaluated_reason"] = incoming_unevaluated_reason
+        elif status == "UNEVALUATED" and reference_source == "vitaloop_reference_table" and not is_verified_fallback:
             record["unevaluated_reason"] = "unverified_reference_interval"
 
         normalized.append(record)

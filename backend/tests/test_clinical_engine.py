@@ -38,6 +38,10 @@ from app.services.clinical_engine.biomarker_translator import (
     is_localized_name,
     translate_biomarkers_in_panel,
 )
+from app.services.lab_analysis_pipeline import (
+    _preserve_existing_evaluation_for_source,
+    normalize_biomarkers as pipeline_normalize_biomarkers,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -222,6 +226,67 @@ class TestNormalizerUnknownStatus:
         """UNEVALUATED status for unverified fallback ranges."""
         assert "UNEVALUATED" in STATUS_PRIORITY
         assert STATUS_PRIORITY["UNEVALUATED"] == STATUS_PRIORITY["UNKNOWN"]
+
+    @pytest.mark.parametrize("source", ["results_read", "report_regeneration", "results_compatibility"])
+    def test_canonical_reprocessing_preserves_unevaluated_fallback(self, source):
+        marker = {
+            "name": "Ferritin",
+            "canonical_name": "canonical_ferritin",
+            "value": 60,
+            "unit": "ng/mL",
+            "ref_low": 30,
+            "ref_high": 400,
+            "reference_source": "vitaloop_reference_table",
+            "status": "UNEVALUATED",
+            "unevaluated_reason": "unverified_reference_interval",
+        }
+        result = pipeline_normalize_biomarkers(
+            [marker],
+            preserve_existing_evaluation=_preserve_existing_evaluation_for_source({"source": source}),
+        )[0]
+        assert result["reference_source"] == "vitaloop_reference_table"
+        assert result["status"] == "UNEVALUATED"
+        assert result["unevaluated_reason"] == "unverified_reference_interval"
+
+    def test_canonical_unknown_without_reference_is_preserved(self):
+        result = pipeline_normalize_biomarkers(
+            [{
+                "name": "Ceruloplasmin",
+                "canonical_name": "canonical_ceruloplasmin",
+                "value": 0.31,
+                "unit": "g/L",
+                "reference_source": None,
+                "status": "UNKNOWN",
+            }],
+            preserve_existing_evaluation=True,
+        )[0]
+        assert result["reference_source"] is None
+        assert result["status"] == "UNKNOWN"
+
+    def test_fresh_lab_range_still_computes_status(self):
+        result = pipeline_normalize_biomarkers([{
+            "name": "Ferritin",
+            "value": 60,
+            "unit": "ng/mL",
+            "ref_low": 30,
+            "ref_high": 400,
+        }])[0]
+        assert result["reference_source"] == "lab_report"
+        assert result["status"] == "OPTIMAL"
+
+    def test_canonical_hemoglobin_deficiency_is_not_deescalated(self):
+        result = pipeline_normalize_biomarkers([{
+            "name": "Hemoglobin",
+            "canonical_name": "canonical_hemoglobin",
+            "value": 89,
+            "unit": "g/L",
+            "ref_low": 120,
+            "ref_high": 160,
+            "reference_source": "lab_report",
+            "status": "DEFICIENT",
+        }], preserve_existing_evaluation=True)[0]
+        assert result["reference_source"] == "lab_report"
+        assert result["status"] == "DEFICIENT"
 
 
 # ---------------------------------------------------------------------------
