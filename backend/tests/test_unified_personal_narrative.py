@@ -107,6 +107,25 @@ def test_unevaluated_marker_is_not_a_reference_derived_finding():
     assert narrative["what_we_found"] == []
 
 
+def test_unevaluated_ferritin_uncertainty_is_retained():
+    synthesis = _synthesis()
+    synthesis["contradictions_and_limits"] = [{
+        "text": "Ferritin reference interval is unverified, so its status cannot be clinically classified.",
+        "evidence": [{
+            "type": "biomarker",
+            "id": "canonical_ferritin",
+            "label": "Ferritin",
+            "value": 60,
+            "unit": "ng/mL",
+            "status": "UNEVALUATED",
+            "availability": "observed",
+        }],
+    }]
+    narrative = _build(case_synthesis=synthesis)
+    assert "Ferritin" in narrative["what_we_are_not_sure_about"][0]["text"]
+    assert narrative["what_we_are_not_sure_about"][0]["related_markers"] == ["canonical_ferritin"]
+
+
 def test_symptom_connection_retains_contextual_non_causal_text():
     narrative = _build()
     text = narrative["how_it_connects_to_you"][0]["text"].lower()
