@@ -12,6 +12,9 @@ type Scenario = {
   summary?: Json
   initialCalls?: Json[]
   answerCalls: AnswerCall[]
+  reportUpdate?: Json | null
+  regenerationCalls?: number
+  regenerationHandler?: (route: Route, scenario: Scenario) => Promise<void> | void
   answerHandler?: (route: Route, scenario: Scenario) => Promise<void> | void
 }
 
@@ -176,7 +179,7 @@ async function installApi(page: Page, scenario: Scenario) {
       scenario.session = body.primary_concern_id === 'no_current_concern'
         ? completedSession('routine')
         : initialSession()
-      return json(route, { created: true, session: scenario.session })
+      return json(route, { created: true, session: scenario.session, report_update: scenario.reportUpdate || null })
     }
     if (path.endsWith('/initial-evidence') && method === 'POST') {
       scenario.initialCalls?.push(request.postDataJSON() as Json)
@@ -206,6 +209,11 @@ async function installApi(page: Page, scenario: Scenario) {
         safety: scenario.session?.safety || { level: 'routine', interrupt: false },
         evidence: { present: [], absent: [], unknown: [] },
       } })
+    }
+    if (path.includes('/analyze/') && path.endsWith('/regenerate') && method === 'POST') {
+      scenario.regenerationCalls = (scenario.regenerationCalls || 0) + 1
+      if (scenario.regenerationHandler) return scenario.regenerationHandler(route, scenario)
+      return json(route, { report_version: { id: 'new-report-version' } })
     }
 
     if (path.endsWith('/dashboard/summary')) {
@@ -453,4 +461,82 @@ test('emergency answer interrupts the interview and removes continuation control
   await expect(alert).toContainText('Call your local emergency number now')
   await expect(page.getByRole('button', { name: /Save and continue/ })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Return to dashboard' })).toBeVisible()
+})
+
+function reportUpdateOffer(): Json {
+  return {
+    update_available: true,
+    report_upload_id: 'upload-1',
+    action: { endpoint: '/analyze/upload-1/regenerate', path: '/results/upload-1' },
+  }
+}
+
+async function completeWithReportUpdate(page: Page, scenario: Scenario) {
+  await openCheck(page, scenario)
+  await page.getByLabel('How do you feel overall today?').selectOption('good')
+  await page.getByLabel('What would you like to highlight?').selectOption('no_current_concern')
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Your structured symptom context is ready' })).toBeVisible()
+}
+
+test('update available shows an explicit report update CTA', async ({ page }) => {
+  const scenario: Scenario = { session: null, answerCalls: [], reportUpdate: reportUpdateOffer() }
+  await completeWithReportUpdate(page, scenario)
+  await expect(page.getByRole('button', { name: 'Update latest report' })).toBeVisible()
+})
+
+test('updating disables duplicate regeneration actions', async ({ page }) => {
+  const scenario: Scenario = {
+    session: null,
+    answerCalls: [],
+    reportUpdate: reportUpdateOffer(),
+    regenerationHandler: async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 200))
+      await json(route, { report_version: { id: 'new-report-version' } })
+    },
+  }
+  await completeWithReportUpdate(page, scenario)
+  const updateButton = page.getByRole('button', { name: 'Update latest report' })
+  await updateButton.click()
+  await expect(page.getByRole('button', { name: 'Updating report…' })).toBeDisabled()
+  expect(scenario.regenerationCalls).toBe(1)
+})
+
+test('successful regeneration enters UPDATED and confirms the report update', async ({ page }) => {
+  const scenario: Scenario = { session: null, answerCalls: [], reportUpdate: reportUpdateOffer() }
+  await completeWithReportUpdate(page, scenario)
+  await page.getByRole('button', { name: 'Update latest report' }).click()
+  await expect(page.getByText('Report updated with your latest symptoms.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'View updated report' })).toBeVisible()
+  expect(scenario.regenerationCalls).toBe(1)
+})
+
+test('failed regeneration enters ERROR and leaves the CTA available for retry', async ({ page }) => {
+  const scenario: Scenario = {
+    session: null,
+    answerCalls: [],
+    reportUpdate: reportUpdateOffer(),
+    regenerationHandler: (route, state) => state.regenerationCalls === 1
+      ? json(route, { detail: 'Regeneration failed' }, 500)
+      : json(route, { report_version: { id: 'new-report-version' } }),
+  }
+  await completeWithReportUpdate(page, scenario)
+  await page.getByRole('button', { name: 'Update latest report' }).click()
+  await expect(page.getByRole('alert')).toContainText('Regeneration failed')
+  await expect(page.getByRole('button', { name: 'Update latest report' })).toBeEnabled()
+  await expect(page.getByText('Report updated with your latest symptoms.', { exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Update latest report' }).click()
+  await expect(page.getByText('Report updated with your latest symptoms.', { exact: true })).toBeVisible()
+  expect(scenario.regenerationCalls).toBe(2)
+})
+
+test('current report does not offer an unnecessary update', async ({ page }) => {
+  const scenario: Scenario = {
+    session: null,
+    answerCalls: [],
+    reportUpdate: { update_available: false, action: { type: 'view_report' } },
+  }
+  await completeWithReportUpdate(page, scenario)
+  await expect(page.getByRole('button', { name: 'Update latest report' })).toHaveCount(0)
+  await expect(page.getByText('Report updated with your latest symptoms.', { exact: true })).toHaveCount(0)
 })

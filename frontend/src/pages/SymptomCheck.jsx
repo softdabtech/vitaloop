@@ -182,7 +182,7 @@ export default function SymptomCheck() {
   const [answers, setAnswers] = useState({})
   const [pendingSubmission, setPendingSubmission] = useState(null)
   const [reportUpdate, setReportUpdate] = useState(null)
-  const [reportUpdating, setReportUpdating] = useState(false)
+  const [reportUpdateState, setReportUpdateState] = useState('CURRENT')
 
   const availableConcerns = useMemo(
     () => catalog.filter((item) => item.available),
@@ -193,6 +193,11 @@ export default function SymptomCheck() {
 
   function refreshDashboardAfterCompletion() {
     queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
+  }
+
+  function applyReportUpdate(offer) {
+    setReportUpdate(offer || null)
+    setReportUpdateState(offer?.update_available ? 'UPDATE_AVAILABLE' : 'CURRENT')
   }
 
   function applySession(nextSession) {
@@ -253,7 +258,7 @@ export default function SymptomCheck() {
       applySession(data.session)
       if (data.session?.status !== 'active') {
         refreshDashboardAfterCompletion()
-        setReportUpdate(data.report_update || null)
+        applyReportUpdate(data.report_update)
         const summaryData = await getSymptomSessionSummary(data.session.id)
         setSummary(summaryData.summary)
       }
@@ -282,7 +287,7 @@ export default function SymptomCheck() {
       applySession(data.session)
       if (data.session?.status !== 'active') {
         refreshDashboardAfterCompletion()
-        setReportUpdate(data.report_update || null)
+        applyReportUpdate(data.report_update)
         const summaryData = await getSymptomSessionSummary(data.session.id)
         setSummary(summaryData.summary)
       }
@@ -316,7 +321,7 @@ export default function SymptomCheck() {
       applySession(data.session)
       if (data.session?.status !== 'active') {
         refreshDashboardAfterCompletion()
-        setReportUpdate(data.report_update || null)
+        applyReportUpdate(data.report_update)
         const summaryData = await getSymptomSessionSummary(data.session.id)
         setSummary(summaryData.summary)
       }
@@ -356,6 +361,7 @@ export default function SymptomCheck() {
       setError(apiError(abandonError, 'We could not end this check.'))
     } finally {
       setBusy(false)
+      setReportUpdateState('CURRENT')
     }
   }
 
@@ -365,17 +371,16 @@ export default function SymptomCheck() {
   }
 
   async function updateLatestReport() {
-    if (!reportUpdate?.update_available || !reportUpdate?.action?.endpoint) return
-    setReportUpdating(true)
+    if (reportUpdateState === 'UPDATING' || !reportUpdate?.update_available || !reportUpdate?.action?.endpoint) return
+    setReportUpdateState('UPDATING')
     setError('')
     try {
       await regenerateSymptomLinkedReport(reportUpdate.action.endpoint)
+      setReportUpdateState('UPDATED')
       refreshDashboardAfterCompletion()
-      navigate(reportUpdate.action.path || `/results/${reportUpdate.report_upload_id}`)
     } catch (updateError) {
+      setReportUpdateState('ERROR')
       setError(apiError(updateError, 'We could not update your latest report. Your symptom answers are saved.'))
-    } finally {
-      setReportUpdating(false)
     }
   }
 
@@ -462,7 +467,13 @@ export default function SymptomCheck() {
               <h1 className="coach-title-lg">Your structured symptom context is ready</h1>
               <p className="coach-body mt-2">Use it as context for your lab results and future comparisons. It is not a diagnosis.</p>
             </div>
-            {reportUpdate?.update_available && (
+            {error && (
+              <div role="alert" className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-950">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+            {reportUpdate?.update_available && reportUpdateState !== 'UPDATED' && (
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-blue-950">
                 <h2 className="font-extrabold">Your latest report does not include these answers yet</h2>
                 <p className="mt-1 text-sm leading-6">
@@ -470,13 +481,28 @@ export default function SymptomCheck() {
                 </p>
                 <button
                   type="button"
-                  disabled={reportUpdating}
+                  disabled={reportUpdateState === 'UPDATING'}
                   onClick={updateLatestReport}
                   className="coach-button coach-button--primary coach-button--md mt-4"
                 >
-                  {reportUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-                  {reportUpdating ? 'Updating report…' : 'Update latest report'}
+                  {reportUpdateState === 'UPDATING' ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                  {reportUpdateState === 'UPDATING' ? 'Updating report…' : 'Update latest report'}
                 </button>
+              </div>
+            )}
+            {reportUpdateState === 'UPDATED' && (
+              <div role="status" className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="font-extrabold">Report updated with your latest symptoms.</p>
+                  <button
+                    type="button"
+                    className="coach-button coach-button--secondary coach-button--md mt-4"
+                    onClick={() => navigate(reportUpdate.action.path || `/results/${reportUpdate.report_upload_id}`)}
+                  >
+                    View updated report
+                  </button>
+                </div>
               </div>
             )}
             <div className="flex flex-wrap gap-3">
