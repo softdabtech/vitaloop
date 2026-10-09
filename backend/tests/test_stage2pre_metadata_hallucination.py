@@ -201,3 +201,66 @@ async def test_uncommon_legitimate_biomarker_still_reaches_persistence(_capture_
         "an uncommon but legitimate biomarker must still reach the canonical "
         "biomarkers table via save_biomarkers(), not be silently dropped"
     )
+
+
+@pytest.mark.asyncio
+async def test_evaluation_provenance_round_trips_through_canonical_persistence(_capture_saved_rows, monkeypatch):
+    marker = {
+        "name": "Ferritin",
+        "canonical_name": "canonical_ferritin",
+        "value": 60,
+        "unit": "ng/mL",
+        "ref_low": 30,
+        "ref_high": 400,
+        "reference_source": "vitaloop_reference_table",
+        "status": "UNEVALUATED",
+        "unevaluated_reason": "unverified_reference_interval",
+    }
+
+    await svc.save_biomarkers("upload-round-trip", "user-round-trip", [marker])
+    persisted = _capture_saved_rows["inserted_rows"]
+
+    class _ReadTable:
+        def select(self, columns):
+            assert columns == "*"
+            return self
+
+        def eq(self, *_args, **_kwargs):
+            return self
+
+        def execute(self):
+            return _Resp(persisted)
+
+    class _ReadSupabase:
+        def table(self, name):
+            assert name == "biomarkers"
+            return _ReadTable()
+
+    monkeypatch.setattr(svc, "_get_supabase", lambda: _ReadSupabase())
+    reloaded = await svc.get_biomarkers_by_upload("upload-round-trip", "user-round-trip")
+
+    assert reloaded[0]["canonical_name"] == "canonical_ferritin"
+    assert reloaded[0]["reference_source"] == "vitaloop_reference_table"
+    assert reloaded[0]["status"] == "UNEVALUATED"
+    assert reloaded[0]["unevaluated_reason"] == "unverified_reference_interval"
+
+
+@pytest.mark.asyncio
+async def test_lab_report_provenance_remains_lab_report_in_persistence(_capture_saved_rows):
+    marker = {
+        "name": "Ferritin",
+        "canonical_name": "canonical_ferritin",
+        "value": 60,
+        "unit": "ng/mL",
+        "ref_low": 30,
+        "ref_high": 400,
+        "reference_source": "lab_report",
+        "status": "OPTIMAL",
+    }
+
+    await svc.save_biomarkers("upload-lab-control", "user-lab-control", [marker])
+    persisted = _capture_saved_rows["inserted_rows"][0]
+
+    assert persisted["reference_source"] == "lab_report"
+    assert persisted["status"] == "OPTIMAL"
+    assert persisted["unevaluated_reason"] is None

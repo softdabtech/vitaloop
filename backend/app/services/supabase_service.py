@@ -331,6 +331,9 @@ async def save_biomarkers(upload_id: str, user_id: str, biomarkers: List[Dict]) 
             "ref_high": b.get("ref_high"),
             "status": b["status"],
             "category": b.get("category"),
+            "canonical_name": b.get("canonical_name"),
+            "reference_source": b.get("reference_source"),
+            "unevaluated_reason": b.get("unevaluated_reason"),
         }
         for b in biomarkers
         # Stage 2A (F04): document metadata (dates, IDs, contact/admin fields) must
