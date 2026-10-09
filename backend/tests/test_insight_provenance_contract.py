@@ -148,7 +148,7 @@ def test_safety_action_is_clinician_facing():
         "type": "clinician_review",
         "label": "Discuss with a clinician",
         "route": "/check-ins",
-        "safety_level": "clinician_review",
+        "safety_level": "medical_review",
     }
 
 

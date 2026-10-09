@@ -70,6 +70,7 @@ from app.services.safety import (
 )
 from app.services.safety.safety_engine import blocked_content_notice
 from app.services.safety.safety_engine import SAFETY_ENGINE_VERSION
+from app.services.safety.symptom_report_contract import effective_report_safety
 from app.services.trend_engine import evaluate_biomarker_trends
 
 logger = logging.getLogger("uvicorn.error")
@@ -1276,12 +1277,13 @@ async def run_lab_analysis_pipeline(
         safety_result = {
             **safety_result,
             "status": "approved_with_warnings",
-            "risk_level": "urgent",
+            "risk_level": "high",
             "urgent_review_required": True,
             "doctor_discussion_required": True,
             "prominent_user_warning": urgent_message,
             "safety_events": safety_events,
         }
+    safety_result = effective_report_safety(safety_result, symptom_snapshot)
     # Stage 2C: plain-language, user-facing notice — never exposes blocked_items'
     # internal rule keys — surfaced consistently alongside safety_result in every
     # live response path (see analyze.py's response dicts).

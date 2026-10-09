@@ -15,6 +15,8 @@ class SafetyLevel(str, Enum):
 
     IMMEDIATE = "immediate"  # Prompt medical review needed (red alert)
     HIGH = "high"            # Within 1-2 weeks (amber alert)
+    MEDICAL_REVIEW = "medical_review"  # Clinician review recommended
+    INSUFFICIENT_DATA = "insufficient_data"  # Safety cannot be fully assessed
     ROUTINE = "routine"      # Baseline/monitoring (green)
 
 
@@ -28,7 +30,7 @@ class SafetyState(BaseModel):
     - Retest intervals (follow-up schedule)
     """
 
-    level: SafetyLevel = Field(..., description="Urgency level: immediate/high/routine")
+    level: SafetyLevel = Field(..., description="Urgency level: immediate/high/medical_review/insufficient_data/routine")
     message: str = Field(..., description="User-facing message (e.g., 'Prompt medical review')")
     recommended_interval_days: int = Field(..., description="Suggested follow-up days")
     rationale: Optional[str] = Field(None, description="Why this level (internal use)")

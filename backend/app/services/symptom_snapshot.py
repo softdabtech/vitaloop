@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.services import supabase_service as svc
+from app.services.safety.symptom_report_contract import normalize_symptom_level
 from app.services.symptom_safety_policy import map_provider_triage
 
 
@@ -362,6 +363,9 @@ def public_symptom_snapshot(snapshot: dict[str, Any] | None) -> dict[str, Any] |
             for item in items if isinstance(items, list) else []:
                 if isinstance(item, dict):
                     item.pop("provider_concept_id", None)
+    safety = result.get("safety")
+    if isinstance(safety, dict):
+        safety["report_level"] = normalize_symptom_level(safety.get("final_level"))
     return result
 
 
