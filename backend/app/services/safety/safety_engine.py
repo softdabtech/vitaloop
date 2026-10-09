@@ -4,6 +4,11 @@ import re
 from typing import Any, Dict, Iterable, List
 
 from app.services.clinical_engine.units import normalize_unit, convert_value
+from app.services.safety.verification import (
+    canonical_marker_key,
+    suppress_unverified_safety_claims,
+    verified_absolute_value,
+)
 
 SAFETY_ENGINE_VERSION = "safety_engine_v1"
 
@@ -333,11 +338,12 @@ def _dangerous_lab_events(biomarkers: Iterable[Dict[str, Any]]) -> List[Dict[str
     for item in biomarkers or []:
         if not isinstance(item, dict):
             continue
-        name = _marker_name(item)
-        value = _num(item.get("value"))
-        unit = str(item.get("unit") or "").strip().lower()
-        if value is None:
+        verified = verified_absolute_value(item)
+        if verified is None:
             continue
+        canonical, value = verified
+        unit = str(item.get("unit") or "").strip().lower()
+        name = canonical.replace("_", " ")
 
         # Unit-safe glucose check
         if "glucose" in name and _check_critical_glucose(value, unit):
@@ -851,7 +857,7 @@ def sanitize_safety_result_for_output(
             return [clean(item) for item in value]
         return _sanitize_user_text(value, locale)
 
-    return clean(safety_result)
+    return suppress_unverified_safety_claims(clean(safety_result))
 
 
 def _diagnosis_like_text(value: Any) -> bool:

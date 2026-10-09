@@ -24,6 +24,7 @@ from app.services.clinical_engine.normalizer import (
     STATUS_PRIORITY,
     normalize_biomarkers,
 )
+from app.services.safety.verification import REFERENCE_DEPENDENT_STATUSES
 from app.services.clinical_engine.marker_coverage import enrich_coverage
 from app.services.clinical_engine.result import AnalysisResult
 from app.services.clinical_engine.units import is_percentage_unit
@@ -70,7 +71,7 @@ def prioritize_biomarkers(biomarkers: List[Dict[str, Any]]) -> List[Dict[str, An
     for item in ordered:
         status = str(item.get("status") or "BORDERLINE")
         # P0 Reference Safety Fix: Exclude statuses that must not be KB-classified as numeric abnormalities
-        if status in ("OPTIMAL", "UNKNOWN", "UNEVALUATED"):
+        if status == "OPTIMAL" or status in REFERENCE_DEPENDENT_STATUSES:
             continue
         result.append(
             {
