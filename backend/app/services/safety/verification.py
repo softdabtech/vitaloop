@@ -10,6 +10,7 @@ REFERENCE_DEPENDENT_STATUSES = frozenset({"UNKNOWN", "UNEVALUATED", "NEEDS_CONFI
 
 _CANONICAL_ALIASES = {
     "anc": "anc",
+    "neutrophils": "anc",
     "absolute neutrophils": "anc",
     "absolute neutrophil count": "anc",
     "calcium": "calcium",
@@ -86,7 +87,11 @@ def verified_absolute_value(marker: Dict[str, Any]) -> tuple[str, float] | None:
         return None
     if not normalize_unit(unit):
         return None
-    converted = convert_value(canonical, value, unit, expected_unit)
+    normalized_unit = normalize_unit(unit)
+    if canonical in {"anc", "platelets"} and normalized_unit in {"10^9/l", "x10^9/l"}:
+        converted = value
+    else:
+        converted = convert_value(canonical, value, unit, expected_unit)
     if converted is None or not math.isfinite(converted):
         return None
     return canonical, converted
