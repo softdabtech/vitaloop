@@ -17,14 +17,17 @@ Test coverage:
 import pytest
 
 from app.services.safety.safety_engine import (
+    _check_critical_hemoglobin,
     _check_critical_glucose,
     _check_critical_ldl,
     _check_critical_hba1c,
     _check_critical_alt,
     _check_critical_ast,
     _check_critical_vitamin_d,
+    _dangerous_lab_events,
     validate_report,
 )
+from app.services.safety.verification import verified_absolute_value
 
 
 class TestCriticalGlucoseUnitSafety:
@@ -275,6 +278,85 @@ class TestCriticalVitaminDUnitSafety:
         """Incompatible unit should fail closed."""
         assert _check_critical_vitamin_d(10, "mg/dL") is False
         assert _check_critical_vitamin_d(10, "%") is False
+
+
+class TestAbsoluteVerificationUnitBoundary:
+    """Verified values must reach absolute rules with their canonical units."""
+
+    def test_normal_hemoglobin_g_per_l_does_not_emit_critical_event(self):
+        marker = {
+            "name": "Hemoglobin",
+            "canonical_name": "canonical_hemoglobin",
+            "value": 135,
+            "unit": "g/L",
+            "status": "OPTIMAL",
+        }
+
+        assert verified_absolute_value(marker) == ("hemoglobin", 13.5)
+        assert _check_critical_hemoglobin(135, "g/L") is False
+        assert _dangerous_lab_events([marker]) == []
+        result = validate_report(biomarkers=[marker])
+        assert not any(event["key"] == "critical_hemoglobin" for event in result["safety_events"])
+        assert result["risk_level"] not in {"urgent_review", "high"}
+
+    @pytest.mark.parametrize(
+        "canonical_value, canonical_unit, alternate_value, alternate_unit",
+        [
+            (8.9, "g/dL", 89, "g/L"),
+        ],
+    )
+    def test_hemoglobin_threshold_equivalence(
+        self, canonical_value, canonical_unit, alternate_value, alternate_unit
+    ):
+        canonical = {
+            "name": "Hemoglobin",
+            "canonical_name": "canonical_hemoglobin",
+            "value": canonical_value,
+            "unit": canonical_unit,
+        }
+        alternate = {**canonical, "value": alternate_value, "unit": alternate_unit}
+
+        canonical_events = _dangerous_lab_events([canonical])
+        alternate_events = _dangerous_lab_events([alternate])
+        assert any(event["key"] == "critical_hemoglobin" for event in canonical_events)
+        assert any(event["key"] == "critical_hemoglobin" for event in alternate_events)
+
+    @pytest.mark.parametrize(
+        "marker_name, canonical_name, event_key, canonical_value, canonical_unit, alternate_value, alternate_unit",
+        [
+            ("Glucose", "canonical_glucose", "dangerous_glucose", 300, "mg/dL", 16.6667, "mmol/L"),
+            ("LDL", "canonical_ldl", "dangerous_ldl", 200, "mg/dL", 5.1712, "mmol/L"),
+            ("Vitamin D", "canonical_vitamin_d", "severe_vitamin_d", 5, "ng/mL", 12.5, "nmol/L"),
+            ("Hemoglobin", "canonical_hemoglobin", "critical_hemoglobin", 8.9, "g/dL", 89, "g/L"),
+        ],
+    )
+    def test_absolute_rule_cross_unit_equivalence_through_event_path(
+        self,
+        marker_name,
+        canonical_name,
+        event_key,
+        canonical_value,
+        canonical_unit,
+        alternate_value,
+        alternate_unit,
+    ):
+        canonical = {
+            "name": marker_name,
+            "canonical_name": canonical_name,
+            "value": canonical_value,
+            "unit": canonical_unit,
+        }
+        alternate = {**canonical, "value": alternate_value, "unit": alternate_unit}
+
+        canonical_result = any(
+            event["key"] == event_key for event in _dangerous_lab_events([canonical])
+        )
+        alternate_result = any(
+            event["key"] == event_key for event in _dangerous_lab_events([alternate])
+        )
+        assert canonical_result is True
+        assert alternate_result is True
+        assert canonical_result == alternate_result
 
 
 class TestCrossUnitEquivalenceSemanticsGlucose:
