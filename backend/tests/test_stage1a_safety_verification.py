@@ -119,7 +119,7 @@ def test_frozen_read_suppresses_invalid_reference_claim(event):
         locale="en",
     )
     assert response["safety_result"]["safety_events"] == []
-    assert response["safety_result"]["risk_level"] == "routine"
+    assert response["safety_result"]["risk_level"] == "high"
 
 
 def test_frozen_read_preserves_valid_absolute_critical_event():

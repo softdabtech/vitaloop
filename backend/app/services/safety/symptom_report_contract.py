@@ -26,6 +26,7 @@ _REPORT_ALIASES = {
     "routine": "routine",
     "insufficient": "insufficient_data",
     "insufficient_data": "insufficient_data",
+    "clinician_review": "medical_review",
     "medical_review": "medical_review",
     "doctor": "medical_review",
     "urgent": "high",

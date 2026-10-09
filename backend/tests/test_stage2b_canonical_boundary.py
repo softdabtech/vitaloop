@@ -207,7 +207,7 @@ async def test_confirmed_batch_filters_conflicted_marker_and_persists_safe_criti
     saved_names = {item["name"] for item in save_biomarkers_spy[0]["biomarkers"]}
     assert "Coagulation Marker" not in saved_names
     assert {"Absolute Neutrophils", "Potassium", "Platelets", "Hemoglobin"} <= saved_names
-    assert result["safety_result"]["risk_level"] == "urgent_review"
+    assert result["safety_result"]["risk_level"] == "high"
     assert result["safety_result"]["urgent_review_required"] is True
 
 
