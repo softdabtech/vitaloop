@@ -428,7 +428,7 @@ test('provider outage is resumable and retry preserves the idempotency key', asy
   await openCheck(page, scenario)
   await page.getByLabel('Severe warning sign').selectOption('absent')
   await page.getByRole('button', { name: /Save and continue/ }).click()
-  await expect(page.getByRole('alert')).toContainText('Assessment temporarily unavailable')
+  await expect(page.getByRole('alert')).toContainText('Symptom assessment is temporarily unavailable')
   await page.getByRole('button', { name: /Save and continue/ }).click()
 
   await expect(page.getByRole('heading', { name: 'Arrange a medical consultation' })).toBeVisible()

@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowRight, CheckCircle2, FileUp, Loader2, ShieldAlert, 
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api.js'
 import CabinetPageFrame from '../components/dashboard/CabinetPageFrame.jsx'
+import { getSymptomSafetyCopy } from '../copy/symptomSafetyCopy.js'
 import '../styles/coach-design-system.css'
 
 const CONCERNS = [
@@ -65,7 +66,7 @@ function StepHeader({ step }) {
   )
 }
 
-export default function ControlledSymptomFallback() {
+export default function ControlledSymptomFallback({ initialSafetyLevel = null }) {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
   const [wellbeing, setWellbeing] = useState('')
@@ -147,6 +148,7 @@ export default function ControlledSymptomFallback() {
 
   if (completed) {
     const urgent = answers.urgent_warning === 'present'
+    const outcomeCopy = getSymptomSafetyCopy(urgent ? 'urgent_24h' : 'routine')
     const relatedLabels = related.filter(Boolean).map((id) => signalOptions.find(([value]) => value === id)?.[1]).filter(Boolean)
     const answerLabel = (questionId) => questions.find((question) => question.id === questionId)?.options.find(([id]) => id === answers[questionId])?.[1] || 'Not recorded'
     const durationLabel = DURATIONS.find(([id]) => id === duration)?.[1] || 'Not recorded'
@@ -158,8 +160,9 @@ export default function ControlledSymptomFallback() {
               {urgent ? <ShieldAlert className="h-7 w-7 shrink-0 text-red-700" /> : <CheckCircle2 className="h-7 w-7 shrink-0 text-emerald-700" />}
               <div>
                 <p className={`coach-eyebrow ${urgent ? 'text-red-700' : ''}`}>{urgent ? 'Safety result' : 'Symptom check complete'}</p>
-                <h1 className="coach-title-lg">{urgent ? 'Get urgent medical help now' : 'Your symptom context is saved'}</h1>
-                <p className="coach-body mt-2">{urgent ? 'Your answer indicates that at least one urgent warning sign may be present. This result comes from the safety question below — not from a diagnosis or a lab result.' : 'Your controlled answers are ready to add context to lab results and future comparisons. This is not a diagnosis.'}</p>
+                <h1 className="coach-title-lg">{urgent ? outcomeCopy.title : 'Your symptom context is saved'}</h1>
+                <p className="coach-body mt-2">{outcomeCopy.body}</p>
+                <p className="coach-body mt-3 font-bold">{outcomeCopy.action}</p>
               </div>
             </div>
           </section>
@@ -196,6 +199,21 @@ export default function ControlledSymptomFallback() {
   return (
     <CabinetPageFrame>
       <div className="coach-shell mx-auto grid max-w-5xl gap-5">
+        {initialSafetyLevel && (() => {
+          const copy = getSymptomSafetyCopy(initialSafetyLevel)
+          return (
+            <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-amber-950 sm:p-8" role="status" aria-live="polite">
+              <div className="flex items-start gap-4">
+                <AlertTriangle className="h-7 w-7 shrink-0 text-amber-700" aria-hidden="true" />
+                <div>
+                  <h2 className="coach-title-lg">{copy.title}</h2>
+                  <p className="coach-body mt-2">{copy.body}</p>
+                  <p className="coach-body mt-3 font-bold">{copy.action}</p>
+                </div>
+              </div>
+            </section>
+          )
+        })()}
         <header className="coach-hero grid gap-5">
           <StepHeader step={step} />
           <div><p className="coach-eyebrow">Controlled inputs, useful context</p><h1 className="coach-title-xl">{step === 1 ? 'Start with how you feel today' : step === 2 ? 'Choose the signals that matter' : 'Answer five focused questions'}</h1><p className="coach-body mt-3">Every answer is stored as a known value the VITALOOP backend can use. No medical free text is collected.</p></div>

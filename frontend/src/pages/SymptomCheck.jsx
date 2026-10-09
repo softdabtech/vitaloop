@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import CabinetPageFrame from '../components/dashboard/CabinetPageFrame.jsx'
 import ControlledSymptomFallback from './ControlledSymptomFallback.jsx'
+import { getSymptomSafetyCopy } from '../copy/symptomSafetyCopy.js'
 import {
   abandonSymptomSession,
   createSymptomSession,
@@ -47,39 +48,6 @@ const DURATION_OPTIONS = [
   { id: 'intermittent', label: 'Comes and goes' },
   { id: 'unknown', label: 'Not sure' },
 ]
-
-const SAFETY_COPY = {
-  emergency: {
-    title: 'Get emergency help now',
-    body: 'Your answers may indicate a serious medical emergency. This symptom check cannot determine the cause.',
-    action: 'Call your local emergency number now. Do not drive yourself. If possible, ask someone to stay with you and follow the emergency dispatcher’s instructions.',
-    tone: 'critical',
-  },
-  urgent_24h: {
-    title: 'Contact a medical professional within 24 hours',
-    body: 'Your answers indicate that prompt medical assessment is appropriate.',
-    action: 'Arrange medical care within 24 hours. If symptoms suddenly worsen or you develop an emergency warning sign, call your local emergency number.',
-    tone: 'warning',
-  },
-  clinician_review: {
-    title: 'Arrange a medical consultation',
-    body: 'A medical professional should review these symptoms.',
-    action: 'Schedule a consultation. Seek urgent help sooner if symptoms worsen.',
-    tone: 'warning',
-  },
-  insufficient_data: {
-    title: 'We could not complete a safe assessment',
-    body: 'This does not mean that nothing is wrong.',
-    action: 'Try the symptom check again or contact a medical professional. If symptoms are severe or rapidly worsening, call your local emergency number.',
-    tone: 'warning',
-  },
-  routine: {
-    title: 'Monitor how you feel',
-    body: 'Your answers did not trigger an urgent next step in this symptom check.',
-    action: 'Monitor your symptoms and contact a medical professional if they persist, worsen, or new symptoms appear.',
-    tone: 'success',
-  },
-}
 
 function apiError(error, fallback) {
   const detail = error?.response?.data?.detail
@@ -137,7 +105,7 @@ function SelectField({ label, value, onChange, options, placeholder, disabled = 
 }
 
 function SafetyPanel({ level, emergency = false }) {
-  const copy = SAFETY_COPY[level] || SAFETY_COPY.insufficient_data
+  const copy = getSymptomSafetyCopy(level)
   const Icon = emergency ? ShieldAlert : copy.tone === 'success' ? CheckCircle2 : AlertTriangle
   const styles = emergency
     ? 'border-red-300 bg-red-50 text-red-950'
@@ -321,7 +289,13 @@ export default function SymptomCheck() {
         setSummary(summaryData.summary)
       }
     } catch (submitError) {
-      setError(apiError(submitError, 'We could not safely process this answer. Your progress is saved; retry shortly.'))
+      const providerUnavailable = submitError?.response?.data?.detail?.code === 'SYMPTOM_PROVIDER_UNAVAILABLE'
+      if (providerUnavailable) {
+        const copy = getSymptomSafetyCopy('provider_outage')
+        setError(`${copy.title}. ${copy.body} ${copy.action}`)
+      } else {
+        setError(apiError(submitError, 'We could not safely process this answer. Your progress is saved; retry shortly.'))
+      }
     } finally {
       setBusy(false)
     }
@@ -391,7 +365,7 @@ export default function SymptomCheck() {
   }
 
   if (stage === 'unavailable') {
-    return <ControlledSymptomFallback />
+    return <ControlledSymptomFallback initialSafetyLevel="provider_outage" />
   }
 
   if (stage === 'load_error') {

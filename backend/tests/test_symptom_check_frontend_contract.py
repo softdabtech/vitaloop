@@ -3,6 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
 PAGE = (ROOT / "frontend/src/pages/SymptomCheck.jsx").read_text(encoding="utf-8")
+SAFETY_COPY = (ROOT / "frontend/src/copy/symptomSafetyCopy.js").read_text(encoding="utf-8")
 API = (ROOT / "frontend/src/api/symptomCheck.js").read_text(encoding="utf-8")
 APP = (ROOT / "frontend/src/App.jsx").read_text(encoding="utf-8")
 
@@ -38,10 +39,11 @@ def test_answer_api_requires_idempotency_header_and_has_resume_skip_abandon_path
 def test_emergency_state_is_blocking_non_diagnostic_candidate_copy():
     assert 'role={emergency ? \'alert\' : \'status\'}' in PAGE
     assert "aria-live={emergency ? 'assertive' : 'polite'}" in PAGE
-    assert "Get emergency help now" in PAGE
-    assert "may indicate a serious medical emergency" in PAGE
-    assert "This symptom check cannot determine the cause" in PAGE
-    assert "Do not drive yourself" in PAGE
+    assert "getSymptomSafetyCopy(level)" in PAGE
+    assert "Get emergency help now" in SAFETY_COPY
+    assert "may indicate a serious medical emergency" in SAFETY_COPY
+    assert "This symptom check cannot determine the cause" in SAFETY_COPY
+    assert "Do not drive yourself" in SAFETY_COPY
     assert "cannot continue this interview" in PAGE
     assert "probability" not in PAGE.lower()
     assert "diagnosis" in PAGE.lower()

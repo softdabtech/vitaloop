@@ -19,6 +19,7 @@
     "qa": "npm run qa:routes && npm run qa:links:strict && npm run qa:endpoints && npm run qa:claims",
     "lint": "eslint src --ext .js,.jsx",
     "lint:fix": "eslint src --ext .js,.jsx --fix",
+    "test:symptom-copy": "node --test tests/symptom-safety-copy-parity.test.js",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report"
