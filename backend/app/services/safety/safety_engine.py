@@ -5,6 +5,7 @@ from typing import Any, Dict, Iterable, List
 
 from app.services.clinical_engine.units import normalize_unit, convert_value
 from app.services.safety.verification import (
+    absolute_expected_unit,
     canonical_marker_key,
     suppress_unverified_safety_claims,
     verified_absolute_value,
@@ -342,7 +343,9 @@ def _dangerous_lab_events(biomarkers: Iterable[Dict[str, Any]]) -> List[Dict[str
         if verified is None:
             continue
         canonical, value = verified
-        unit = str(item.get("unit") or "").strip().lower()
+        unit = absolute_expected_unit(canonical)
+        if unit is None:
+            continue
         name = canonical.replace("_", " ")
 
         # Unit-safe glucose check

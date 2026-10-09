@@ -99,6 +99,11 @@ def verified_absolute_value(marker: Dict[str, Any]) -> tuple[str, float] | None:
     return canonical, converted
 
 
+def absolute_expected_unit(canonical: str) -> str | None:
+    """Return the unit used by the verified absolute value for a marker."""
+    return _ABSOLUTE_EXPECTED_UNITS.get(canonical)
+
+
 def suppress_unverified_safety_claims(safety_result: Any) -> Any:
     """Remove unsafe persisted biomarker claims without mutating the row."""
     if not isinstance(safety_result, dict):
