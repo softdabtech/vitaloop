@@ -8,7 +8,8 @@ RESULTS = (REPO_ROOT / "frontend/src/pages/Results.jsx").read_text(encoding="utf
 
 
 def test_completed_symptom_check_offers_real_report_regeneration_action():
-    assert "setReportUpdate(data.report_update || null)" in SYMPTOM_CHECK
+    assert "applyReportUpdate(data.report_update)" in SYMPTOM_CHECK
+    assert "setReportUpdate(offer || null)" in SYMPTOM_CHECK
     assert "regenerateSymptomLinkedReport(reportUpdate.action.endpoint)" in SYMPTOM_CHECK
     assert "Your latest report does not include these answers yet" in SYMPTOM_CHECK
     assert "Update latest report" in SYMPTOM_CHECK
