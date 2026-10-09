@@ -67,6 +67,8 @@ def canonical_marker_key(marker: Dict[str, Any]) -> str | None:
     """Return an exact allowlisted identity; never infer from substrings."""
     raw = marker.get("canonical_name") or marker.get("name")
     normalized = str(raw or "").strip().lower().replace("_", " ")
+    if normalized.startswith("canonical "):
+        normalized = normalized.removeprefix("canonical ")
     return _CANONICAL_ALIASES.get(normalized)
 
 
