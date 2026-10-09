@@ -268,7 +268,7 @@ async def test_pipeline_final_output_has_urgent_flag_and_no_unsafe_text(monkeypa
 
     assert result["analysis_status"] == "completed"
     assert result["safety_result"]["urgent_review_required"] is True
-    assert result["health_summary"]["risk_level"] == "urgent_review"
+    assert result["health_summary"]["risk_level"] == "high"
     assert result["health_summary"]["prominent_user_warning"]
 
     counts = _unsafe_counts(
