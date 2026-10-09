@@ -17,6 +17,7 @@ from typing import Any, Dict, Iterable, List
 
 
 CASE_SYNTHESIS_VERSION = "case_synthesis_v1"
+UNIFIED_PERSONAL_NARRATIVE_VERSION = "unified_personal_narrative_v1"
 
 CASE_SYNTHESIS_SECTIONS = (
     "main_conclusion",
@@ -32,6 +33,14 @@ CASE_SYNTHESIS_SECTIONS = (
 
 _ATTENTION_STATUSES = {"DEFICIENT", "LOW", "L", "ELEVATED", "HIGH", "H", "BORDERLINE"}
 _STABLE_STATUSES = {"OPTIMAL", "NORMAL", "IN_RANGE", "IN RANGE"}
+_UNIFIED_SAFETY_RANK = {
+    "routine": 0,
+    "insufficient_data": 1,
+    "medical_review": 2,
+    "high": 3,
+    "immediate": 4,
+}
+_UNIFIED_UNCERTAIN_STATUSES = {"UNKNOWN", "UNEVALUATED"}
 
 
 def _key(value: Any) -> str:
@@ -756,5 +765,311 @@ def build_case_synthesis(
             "ungrounded_statement_count": len(ungrounded),
             "all_statements_grounded": not ungrounded,
             "allowed_evidence_types": ["biomarker", "symptom", "profile"],
+        },
+    }
+
+
+def _unified_source_version(source: Dict[str, Any] | None, fallback: Any = None) -> Any:
+    value = source.get("version") if isinstance(source, dict) else None
+    return value if value not in (None, "") else fallback
+
+
+def _unified_refs(item: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [reference for reference in _dedupe_refs(item.get("evidence") or [])]
+
+
+def _unified_statement(
+    item: Dict[str, Any],
+    *,
+    source_type: str,
+    source_version: Any,
+    safety_level: Any = None,
+    confidence_or_limit: Any = None,
+) -> Dict[str, Any]:
+    evidence = _unified_refs(item)
+    related_markers = [
+        reference.get("id")
+        for reference in evidence
+        if reference.get("type") == "biomarker"
+    ]
+    related_symptoms = [
+        reference.get("id")
+        for reference in evidence
+        if reference.get("type") == "symptom"
+    ]
+    return {
+        "text": str(item.get("text") or "").strip(),
+        "evidence": evidence,
+        "source_type": source_type,
+        "source_version": source_version,
+        "confidence_or_limit": confidence_or_limit,
+        "related_markers": related_markers,
+        "related_symptoms": related_symptoms,
+        "safety_level": safety_level,
+    }
+
+
+def _unified_safe_finding(item: Dict[str, Any]) -> bool:
+    evidence = _unified_refs(item)
+    return not any(
+        reference.get("type") == "biomarker"
+        and str(reference.get("status") or "").upper() in _UNIFIED_UNCERTAIN_STATUSES
+        for reference in evidence
+    )
+
+
+def _unified_safety_level(safety_result: Dict[str, Any] | None) -> str:
+    safety = safety_result if isinstance(safety_result, dict) else {}
+    level = str(safety.get("safety_level") or safety.get("risk_level") or "routine").strip().lower()
+    return level if level in _UNIFIED_SAFETY_RANK else "routine"
+
+
+def _unified_safety_evidence(
+    case_synthesis: Dict[str, Any],
+    safety_result: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    candidates = [
+        *(case_synthesis.get("what_was_found") or []),
+        *(case_synthesis.get("actions_now") or []),
+        *(case_synthesis.get("clinician_discussion") or []),
+    ]
+    for item in candidates:
+        if isinstance(item, dict) and _unified_refs(item):
+            return _unified_refs(item)
+    return []
+
+
+def _unified_trend_statement(
+    trend: Dict[str, Any],
+    *,
+    source_version: Any,
+) -> Dict[str, Any] | None:
+    marker_id = str(trend.get("canonical_name") or trend.get("name") or "").strip()
+    previous_date = trend.get("previous_measured_at")
+    current_date = trend.get("current_measured_at")
+    if not marker_id or not previous_date or not current_date:
+        return None
+    unit = trend.get("unit")
+    evidence = [
+        {
+            "type": "biomarker",
+            "id": marker_id,
+            "label": trend.get("name") or marker_id,
+            "availability": "observed",
+            "value": trend.get("current_value"),
+            "unit": unit,
+            "measured_at": current_date,
+            "previous_value": trend.get("previous_value"),
+            "previous_measured_at": previous_date,
+        }
+    ]
+    direction = str(trend.get("direction") or "stable").strip()
+    return {
+        "text": (
+            f"{trend.get('name') or marker_id} changed {direction} by "
+            f"{trend.get('percent_change')}% between the comparable dated measurements."
+        ),
+        "evidence": evidence,
+        "source_type": "trend_analysis",
+        "source_version": source_version,
+        "confidence_or_limit": None,
+        "related_markers": [marker_id],
+        "related_symptoms": [],
+        "safety_level": None,
+    }
+
+
+def build_unified_personal_narrative(
+    *,
+    case_synthesis: Dict[str, Any] | None = None,
+    safety_result: Dict[str, Any] | None = None,
+    doctor_escalation_precision: Dict[str, Any] | None = None,
+    symptom_snapshot: Dict[str, Any] | None = None,
+    health_context: Dict[str, Any] | None = None,
+    trend_analysis: Dict[str, Any] | None = None,
+    progress_intelligence: Dict[str, Any] | None = None,
+    evidence_gaps: Dict[str, Any] | None = None,
+    confidence_calibration: Dict[str, Any] | None = None,
+    next_best_tests: Dict[str, Any] | None = None,
+    action_plan_by_role: Dict[str, Any] | None = None,
+    version_provenance: Dict[str, Any] | None = None,
+    report_id: Any = None,
+) -> Dict[str, Any]:
+    """Compose one narrative from already-grounded, generation-time outputs."""
+    synthesis = case_synthesis if isinstance(case_synthesis, dict) else {}
+    safety = safety_result if isinstance(safety_result, dict) else {}
+    escalation = doctor_escalation_precision if isinstance(doctor_escalation_precision, dict) else {}
+    trend = trend_analysis if isinstance(trend_analysis, dict) else {}
+    gaps = evidence_gaps if isinstance(evidence_gaps, dict) else {}
+    provenance = version_provenance if isinstance(version_provenance, dict) else {}
+    safety_level = _unified_safety_level(safety)
+    safety_rank = _UNIFIED_SAFETY_RANK[safety_level]
+    synthesis_version = _unified_source_version(synthesis, "case_synthesis_v1")
+    safety_version = _unified_source_version(safety, provenance.get("safety_engine_version"))
+
+    found = [
+        _unified_statement(item, source_type="case_synthesis", source_version=synthesis_version)
+        for item in (synthesis.get("what_was_found") or [])
+        if isinstance(item, dict) and item.get("text") and _unified_safe_finding(item)
+    ]
+    connections = [
+        _unified_statement(item, source_type="case_synthesis", source_version=synthesis_version)
+        for item in (synthesis.get("symptom_connections") or [])
+        if isinstance(item, dict) and item.get("text")
+    ]
+    limits = [
+        _unified_statement(item, source_type="case_synthesis", source_version=synthesis_version, confidence_or_limit="explicit_limit")
+        for item in [*(synthesis.get("contradictions_and_limits") or []), *(synthesis.get("missing_information") or [])]
+        if isinstance(item, dict) and item.get("text")
+    ]
+    actions = [
+        _unified_statement(item, source_type="case_synthesis", source_version=synthesis_version, safety_level=safety_level)
+        for item in [*(synthesis.get("actions_now") or []), *(synthesis.get("clinician_discussion") or []), *(synthesis.get("retest_plan") or [])]
+        if isinstance(item, dict) and item.get("text")
+    ]
+    if not actions:
+        for bucket in ("urgent", "doctor", "practitioner", "self"):
+            bucket_items = ((action_plan_by_role or {}).get("buckets") or {}).get(bucket) or []
+            actions.extend(
+                _unified_statement(
+                    {"text": item.get("reason") or item.get("title"), "evidence": item.get("evidence") or []},
+                    source_type="action_plan_by_role",
+                    source_version=_unified_source_version(action_plan_by_role, provenance.get("action_plan_by_role_version")),
+                    safety_level=safety_level,
+                )
+                for item in bucket_items
+                if isinstance(item, dict) and (item.get("reason") or item.get("title"))
+            )
+
+    trend_items = []
+    progress_items = []
+    progress = progress_intelligence if isinstance(progress_intelligence, dict) else {}
+    if progress.get("available"):
+        evidence_by_pattern = {
+            str(item.get("pattern_id")): item
+            for item in (synthesis.get("what_was_found") or [])
+            if isinstance(item, dict) and item.get("pattern_id")
+        }
+        for change in progress.get("changes") or []:
+            if not isinstance(change, dict):
+                continue
+            source = evidence_by_pattern.get(str(change.get("pattern_id")))
+            if not source or not _unified_refs(source):
+                continue
+            progress_items.append(_unified_statement(
+                {
+                    "text": (
+                        f"{change.get('pattern_name') or change.get('pattern_id')} "
+                        f"was {change.get('status')} compared with the previous report."
+                    ),
+                    "evidence": source.get("evidence"),
+                },
+                source_type="progress_intelligence",
+                source_version=_unified_source_version(progress, provenance.get("progress_intelligence_version")),
+                confidence_or_limit="pattern-level change",
+            ))
+    if trend.get("available"):
+        trend_items = [
+            item for item in (
+                _unified_trend_statement(row, source_version=_unified_source_version(trend, provenance.get("trend_engine_version")))
+                for row in (trend.get("priority_changes") or trend.get("trends") or [])
+                if isinstance(row, dict)
+            )
+            if item is not None
+        ]
+    trend_items = [*progress_items, *trend_items]
+
+    safety_evidence = _unified_safety_evidence(synthesis, safety)
+    headline_source = "case_synthesis"
+    headline_version = synthesis_version
+    headline_text = None
+    if safety_rank >= _UNIFIED_SAFETY_RANK["medical_review"] or safety.get("urgent_review_required"):
+        headline_text = safety.get("prominent_user_warning")
+        headline_source = "safety_result"
+        headline_version = safety_version
+        if not headline_text:
+            escalations = escalation.get("escalations") or []
+            headline_text = next(
+                (item.get("human_readable_reason") for item in escalations if isinstance(item, dict) and item.get("human_readable_reason")),
+                "This report includes a medical-review signal.",
+            )
+    elif safety_level == "insufficient_data":
+        headline_text = "This report is limited by insufficient data."
+        headline_source = "safety_result"
+        headline_version = safety_version
+    else:
+        headline_text = next((item.get("text") for item in found), None)
+        if not headline_text:
+            headline_text = "This report is limited to the available measured biomarkers."
+
+    priority = []
+    if safety_rank >= _UNIFIED_SAFETY_RANK["medical_review"] or safety.get("urgent_review_required"):
+        priority = [
+            _unified_statement(item, source_type="safety_result", source_version=safety_version, safety_level=safety_level)
+            for item in (synthesis.get("what_was_found") or [])
+            if isinstance(item, dict) and item.get("text") and _unified_safe_finding(item)
+        ][:3]
+        if not priority:
+            priority = [{
+                "text": headline_text,
+                "evidence": safety_evidence,
+                "source_type": "safety_result",
+                "source_version": safety_version,
+                "confidence_or_limit": None,
+                "related_markers": [item.get("id") for item in safety_evidence if item.get("type") == "biomarker"],
+                "related_symptoms": [item.get("id") for item in safety_evidence if item.get("type") == "symptom"],
+                "safety_level": safety_level,
+            }]
+    elif safety_level == "insufficient_data":
+        priority = [{
+            "text": headline_text,
+            "evidence": safety_evidence,
+            "source_type": "safety_result",
+            "source_version": safety_version,
+            "confidence_or_limit": "insufficient_data",
+            "related_markers": [],
+            "related_symptoms": [],
+            "safety_level": safety_level,
+        }]
+
+    if safety_rank >= _UNIFIED_SAFETY_RANK["medical_review"] or safety_level == "insufficient_data":
+        safety_action = {
+            "text": headline_text,
+            "evidence": safety_evidence,
+            "source_type": "safety_result",
+            "source_version": safety_version,
+            "confidence_or_limit": None,
+            "related_markers": [item.get("id") for item in safety_evidence if item.get("type") == "biomarker"],
+            "related_symptoms": [item.get("id") for item in safety_evidence if item.get("type") == "symptom"],
+            "safety_level": safety_level,
+        }
+        actions.insert(0, safety_action)
+
+    return {
+        "version": UNIFIED_PERSONAL_NARRATIVE_VERSION,
+        "headline": {
+            "text": headline_text,
+            "evidence": safety_evidence if headline_source == "safety_result" else (found[0].get("evidence") if found else []),
+            "source_type": headline_source,
+            "source_version": headline_version,
+            "confidence_or_limit": "insufficient_data" if safety_level == "insufficient_data" else None,
+            "related_markers": [item.get("id") for item in (safety_evidence if headline_source == "safety_result" else (found[0].get("evidence") if found else [])) if item.get("type") == "biomarker"],
+            "related_symptoms": [item.get("id") for item in (safety_evidence if headline_source == "safety_result" else (found[0].get("evidence") if found else [])) if item.get("type") == "symptom"],
+            "safety_level": safety_level,
+        },
+        "what_we_found": found,
+        "how_it_connects_to_you": connections,
+        "what_changed_over_time": trend_items,
+        "what_we_are_not_sure_about": limits,
+        "why_this_is_priority": priority,
+        "what_to_do_next": actions,
+        "provenance": {
+            "report_id": report_id,
+            "pipeline_version": provenance.get("pipeline_version"),
+            "case_synthesis_version": synthesis_version,
+            "safety_engine_version": provenance.get("safety_engine_version"),
+            "trend_engine_version": provenance.get("trend_engine_version"),
+            "health_context_version": provenance.get("health_context_version"),
+            "source_version": UNIFIED_PERSONAL_NARRATIVE_VERSION,
         },
     }

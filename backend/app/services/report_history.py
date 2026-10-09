@@ -298,6 +298,7 @@ def assemble_frozen_response(
         # at generation time. Older report versions intentionally expose None
         # instead of being recomputed with newer reasoning rules.
         "case_synthesis": input_snapshot.get("case_synthesis"),
+        "unified_personal_narrative": input_snapshot.get("unified_personal_narrative"),
         # P3 narrative is immutable and already grounded against the exact
         # Case Synthesis stored in this same snapshot. Never rerun the model
         # while reading history.
