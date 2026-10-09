@@ -26,7 +26,7 @@ from app.services.report_quality_audit import build_report_quality_audit
 from app.services.population_profiles import build_population_profile_overlays
 from app.services.population_profile_selection import select_population_profiles
 from app.services.doctor_escalation_precision import build_doctor_escalation_precision
-from app.services.case_synthesis import build_case_synthesis
+from app.services.case_synthesis import build_case_synthesis, build_unified_personal_narrative
 from app.services.grounded_ai_narrative import build_grounded_ai_narrative
 from app.services.semantic_acceptance import build_semantic_acceptance
 from app.services.symptom_analysis import (
@@ -1781,6 +1781,23 @@ async def run_lab_analysis_pipeline(
     )
     version_provenance["doctor_escalation_precision_version"] = doctor_escalation_precision.get("version")
 
+    unified_personal_narrative = build_unified_personal_narrative(
+        case_synthesis=case_synthesis,
+        safety_result=safety_result,
+        doctor_escalation_precision=doctor_escalation_precision,
+        symptom_snapshot=symptom_snapshot,
+        health_context=health_context,
+        trend_analysis=trend_analysis,
+        progress_intelligence=progress_intelligence,
+        evidence_gaps=evidence_gaps,
+        confidence_calibration=confidence_calibration,
+        next_best_tests=next_best_tests,
+        action_plan_by_role=action_plan_by_role,
+        version_provenance=version_provenance,
+        report_id=analysis_id,
+    )
+    version_provenance["unified_personal_narrative_version"] = unified_personal_narrative.get("version")
+
     result = {
         "analysis_id": analysis_id or "",
         "status": "completed",
@@ -1820,6 +1837,7 @@ async def run_lab_analysis_pipeline(
         "doctor_escalation_precision": doctor_escalation_precision,
         "symptom_analysis": symptom_analysis,
         "case_synthesis": case_synthesis,
+        "unified_personal_narrative": unified_personal_narrative,
         "grounded_ai_narrative": grounded_ai_narrative,
         "semantic_acceptance": semantic_acceptance,
         "progress_intelligence": progress_intelligence,
@@ -1904,6 +1922,7 @@ async def run_lab_analysis_pipeline(
                     "doctor_escalation_precision": doctor_escalation_precision,
                     "symptom_analysis": symptom_analysis,
                     "case_synthesis": case_synthesis,
+                    "unified_personal_narrative": unified_personal_narrative,
                     "grounded_ai_narrative": grounded_ai_narrative,
                     "semantic_acceptance": semantic_acceptance,
                     "progress_intelligence": progress_intelligence,

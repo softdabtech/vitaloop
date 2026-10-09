@@ -190,6 +190,7 @@ class AnalyzeResponse(BaseModel):
     report_source: Optional[str] = None
     safety_notice: Optional[str] = None
     case_synthesis: Optional[dict] = None
+    unified_personal_narrative: Optional[dict] = None
     symptom_analysis: Optional[dict] = None
     grounded_ai_narrative: Optional[dict] = None
     semantic_acceptance: Optional[dict] = None
