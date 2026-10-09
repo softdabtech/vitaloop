@@ -55,6 +55,7 @@ from app.services.safety import (
     sanitize_protocol_for_safety,
     sanitize_safety_result_for_output,
 )
+from app.services.safety.verification import suppress_unverified_safety_claims
 from app.services.safety.safety_engine import blocked_content_notice
 from app.services.symptom_snapshot import (
     public_symptom_snapshot,
@@ -143,7 +144,9 @@ def assemble_frozen_response(
     sanitized_protocol_recommendations = sanitize_protocol_for_safety(
         protocol_recommendations, profile=user_profile, locale=locale
     )
-    safety_result = sanitize_safety_result_for_output(report_version.get("safety_result"), locale=locale)
+    safety_result = suppress_unverified_safety_claims(
+        sanitize_safety_result_for_output(report_version.get("safety_result"), locale=locale)
+    )
     sanitized_input_snapshot = sanitize_safety_result_for_output(report_version.get("input_snapshot"), locale=locale)
     sanitized_explainability = sanitize_safety_result_for_output(report_version.get("explainability"), locale=locale)
 

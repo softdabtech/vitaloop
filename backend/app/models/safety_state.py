@@ -7,6 +7,7 @@ Used by Results, Today, Protocol, and Retest endpoints.
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
+from app.services.safety.verification import verified_absolute_value
 
 
 class SafetyLevel(str, Enum):
@@ -65,11 +66,10 @@ def resolve_safety_state(
     high_markers = []
 
     for marker in biomarker_values or []:
-        canonical = (marker.get("canonical_name") or marker.get("name") or "").lower()
-        value = _to_float(marker.get("value"))
-
-        if value is None:
+        verified = verified_absolute_value(marker)
+        if verified is None:
             continue
+        canonical, value = verified
 
         # Critical potassium (K < 2.5 or K > 7.0)
         if "potassium" in canonical or "k" == canonical:
