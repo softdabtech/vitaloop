@@ -325,7 +325,7 @@ test('controlled fallback offers and completes a report update once', async ({ p
   await completeControlledFallback(page, scenario)
 
   await expect(page.getByText('Your latest report does not include these answers yet')).toBeVisible()
-  const updateButton = page.getByRole('button', { name: 'Update latest report' })
+  const updateButton = page.getByRole('button', { name: /Update latest report|Updating report…/ })
   await updateButton.click()
   await expect(page.getByRole('button', { name: 'Updating report…' })).toBeDisabled()
   await updateButton.click({ force: true })
