@@ -75,7 +75,10 @@ def _report(report_id="report-2", *, created_at="2026-02-15T12:00:00+00:00"):
 
 
 def _install_fake(monkeypatch, rows):
-    client = _FakeClient(rows, [{"id": "source-1", "created_at": "2026-01-01T12:00:00+00:00"}])
+    client = _FakeClient(
+        rows,
+        [{"id": "source-1", "user_id": "user-1", "created_at": "2026-01-01T12:00:00+00:00"}],
+    )
     monkeypatch.setattr(supabase_service, "_get_supabase", lambda: client)
     return client
 
