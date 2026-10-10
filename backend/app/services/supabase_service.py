@@ -1,9 +1,10 @@
 import asyncio
 import json
 import logging
+import re
 import ssl
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from uuid import uuid4, UUID
 from fastapi import HTTPException
 import httpx
@@ -22,6 +23,8 @@ from typing import List, Dict, Any, Optional
 _supabase: Optional[Client] = None
 _use_rest_auth_context = False
 _logger = logging.getLogger(__name__)
+
+_RETEST_WEEKS_RE = re.compile(r"^\s*(\d+)\s*-\s*(\d+)\s+weeks?\s*$", re.IGNORECASE)
 
 SYMPTOM_ZONE_MAP: Dict[str, List[str]] = {
     "brain": ["brain_fog", "poor_concentration", "mood_swings", "depression", "anxiety"],
@@ -2332,6 +2335,87 @@ async def delete_intervention_event(user_id: str, event_id: str) -> bool:
             entity_id=event_id,
         )
     return deleted
+
+
+def derive_retest_window(timing: Any, anchor_date: date) -> Optional[tuple[date, date]]:
+    match = _RETEST_WEEKS_RE.match(str(timing or ""))
+    if not match:
+        return None
+    start_weeks, end_weeks = (int(value) for value in match.groups())
+    if start_weeks <= 0 or end_weeks < start_weeks:
+        return None
+    return (
+        anchor_date + timedelta(weeks=start_weeks),
+        anchor_date + timedelta(weeks=end_weeks),
+    )
+
+
+async def persist_retest_obligations(
+    *,
+    user_id: str,
+    report_version: Dict[str, Any],
+    retest_plan: List[Dict[str, Any]] | None,
+) -> List[Dict[str, Any]]:
+    report_version_id = report_version.get("id")
+    if not report_version_id or not retest_plan:
+        return []
+
+    created_at = report_version.get("created_at")
+    if isinstance(created_at, datetime):
+        anchor_date = created_at.date()
+    else:
+        raw_created_at = str(created_at or "").replace("Z", "+00:00")
+        try:
+            anchor_date = datetime.fromisoformat(raw_created_at).date()
+        except ValueError:
+            return []
+
+    supabase = _get_supabase()
+    existing = await _run(
+        lambda: supabase.table("intervention_events")
+        .select("related_recommendation_id")
+        .eq("user_id", user_id)
+        .eq("source_report_version_id", str(report_version_id))
+        .eq("action_type", "retest")
+        .execute()
+    )
+    existing_targets = {
+        str(row.get("related_recommendation_id") or "").strip().lower()
+        for row in (existing.data or [])
+    }
+    created: List[Dict[str, Any]] = []
+    seen_targets: set[str] = set()
+    for item in retest_plan:
+        if not isinstance(item, dict):
+            continue
+        target = str(item.get("marker") or "").strip()
+        target_key = target.lower()
+        window = derive_retest_window(item.get("timing"), anchor_date)
+        if not target or not window or target_key in seen_targets or target_key in existing_targets:
+            continue
+        window_start, window_end = window
+        payload = {
+            "user_id": user_id,
+            "source": "system",
+            "event_type": "protocol_action",
+            "action_type": "retest",
+            "label": f"Retest {target}",
+            "description": item.get("reason"),
+            "related_recommendation_id": target,
+            "source_report_version_id": str(report_version_id),
+            "retest_window_start": window_start.isoformat(),
+            "retest_window_end": window_end.isoformat(),
+            "metadata": {
+                "action_type": "retest",
+                "retest_target": target,
+                "timing": item.get("timing"),
+                "priority": item.get("priority"),
+            },
+        }
+        response = await _run(lambda payload=payload: supabase.table("intervention_events").insert(payload).execute())
+        created.extend(response.data or [])
+        seen_targets.add(target_key)
+    return created
 
 
 # ──────────────────────────────────────────────
