@@ -1972,6 +1972,16 @@ async def run_lab_analysis_pipeline(
                 report_version=report_version,
                 retest_plan=knowledge_report.get("retest_plan") or [],
             )
+            reliable_test_date = supabase.resolve_reliable_retest_date(source_metadata)
+            if reliable_test_date is not None:
+                await supabase.reconcile_retest_fulfillment(
+                    user_id=user_id,
+                    report_version=report_version,
+                    biomarkers=normalized_biomarkers,
+                    test_date=reliable_test_date,
+                    date_source=(source_metadata or {}).get("date_source"),
+                    date_confidence=(source_metadata or {}).get("date_confidence"),
+                )
             record_lab_analysis_snapshot(
                 source=str((source_metadata or {}).get("source") or "unknown"),
                 snapshot=symptom_snapshot,
