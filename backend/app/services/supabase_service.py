@@ -25,6 +25,12 @@ _use_rest_auth_context = False
 _logger = logging.getLogger(__name__)
 
 _RETEST_WEEKS_RE = re.compile(r"^\s*(\d+)\s*-\s*(\d+)\s+weeks?\s*$", re.IGNORECASE)
+_RELIABLE_RETEST_DATE_SOURCES = frozenset({
+    "extracted_test_date",
+    "extracted_collected_at",
+    "extracted_done_date",
+    "user_provided",
+})
 
 SYMPTOM_ZONE_MAP: Dict[str, List[str]] = {
     "brain": ["brain_fog", "poor_concentration", "mood_swings", "depression", "anxiety"],
@@ -2350,6 +2356,40 @@ def derive_retest_window(timing: Any, anchor_date: date) -> Optional[tuple[date,
     )
 
 
+def resolve_reliable_retest_date(source_metadata: Dict[str, Any] | None) -> Optional[date]:
+    metadata = source_metadata or {}
+    if str(metadata.get("date_source") or "").strip().lower() not in _RELIABLE_RETEST_DATE_SOURCES:
+        return None
+    if str(metadata.get("date_confidence") or "").strip().lower() not in {"high", "medium"}:
+        return None
+    raw_date = metadata.get("test_date") or metadata.get("collected_at")
+    if isinstance(raw_date, datetime):
+        return raw_date.date()
+    if isinstance(raw_date, date):
+        return raw_date
+    try:
+        return date.fromisoformat(str(raw_date or "").strip()[:10])
+    except ValueError:
+        return None
+
+
+def _parse_retest_window_date(value: Any) -> Optional[date]:
+    try:
+        return date.fromisoformat(str(value or "").strip()[:10])
+    except ValueError:
+        return None
+
+
+def _marker_keys(value: Any) -> set[str]:
+    normalized = re.sub(r"[^a-z0-9]+", "", str(value or "").strip().lower())
+    if not normalized:
+        return set()
+    keys = {normalized}
+    if normalized.startswith("canonical"):
+        keys.add(normalized[len("canonical"):])
+    return keys
+
+
 async def persist_retest_obligations(
     *,
     user_id: str,
@@ -2416,6 +2456,107 @@ async def persist_retest_obligations(
         created.extend(response.data or [])
         seen_targets.add(target_key)
     return created
+
+
+async def reconcile_retest_fulfillment(
+    *,
+    user_id: str,
+    report_version: Dict[str, Any],
+    biomarkers: List[Dict[str, Any]] | None,
+    test_date: date | str | None,
+    date_source: str | None,
+    date_confidence: str | None,
+) -> List[Dict[str, Any]]:
+    report_version_id = report_version.get("id")
+    upload_id = report_version.get("upload_id")
+    if not report_version_id or not upload_id:
+        return []
+    reliable_date = resolve_reliable_retest_date({
+        "test_date": test_date,
+        "date_source": date_source,
+        "date_confidence": date_confidence,
+    })
+    if reliable_date is None:
+        return []
+
+    raw_created_at = str(report_version.get("created_at") or "").replace("Z", "+00:00")
+    try:
+        report_created_at = datetime.fromisoformat(raw_created_at)
+    except ValueError:
+        return []
+
+    marker_keys: set[str] = set()
+    for biomarker in biomarkers or []:
+        if not isinstance(biomarker, dict):
+            continue
+        for field in ("name", "canonical_name"):
+            marker_keys.update(_marker_keys(biomarker.get(field)))
+    if not marker_keys:
+        return []
+
+    supabase = _get_supabase()
+    pending_response = await _run(
+        lambda: supabase.table("intervention_events")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("action_type", "retest")
+        .eq("fulfillment_status", "pending")
+        .execute()
+    )
+    pending = pending_response.data or []
+    source_ids = {
+        str(row.get("source_report_version_id"))
+        for row in pending
+        if row.get("source_report_version_id")
+    }
+    if not source_ids:
+        return []
+    source_response = await _run(
+        lambda: supabase.table("report_versions")
+        .select("id,created_at")
+        .eq("user_id", user_id)
+        .in_("id", list(source_ids))
+        .execute()
+    )
+    source_created_at = {}
+    for row in source_response.data or []:
+        try:
+            source_created_at[str(row["id"])] = datetime.fromisoformat(
+                str(row.get("created_at") or "").replace("Z", "+00:00")
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+
+    fulfilled: List[Dict[str, Any]] = []
+    for obligation in pending:
+        target = str(obligation.get("related_recommendation_id") or "")
+        source_id = str(obligation.get("source_report_version_id") or "")
+        window_start = _parse_retest_window_date(obligation.get("retest_window_start"))
+        window_end = _parse_retest_window_date(obligation.get("retest_window_end"))
+        if (
+            not _marker_keys(target) & marker_keys
+            or report_created_at <= source_created_at.get(source_id, report_created_at)
+            or window_start is None
+            or window_end is None
+            or reliable_date < window_start
+            or reliable_date > window_end
+        ):
+            continue
+        response = await _run(
+            lambda obligation_id=obligation.get("id"): supabase.table("intervention_events")
+            .update({
+                "fulfillment_status": "fulfilled",
+                "fulfilled_by_upload_id": str(upload_id),
+                "fulfilled_by_report_version_id": str(report_version_id),
+                "fulfilled_at": datetime.now(timezone.utc).isoformat(),
+            })
+            .eq("id", obligation_id)
+            .eq("user_id", user_id)
+            .eq("fulfillment_status", "pending")
+            .execute()
+        )
+        fulfilled.extend(response.data or [])
+    return fulfilled
 
 
 # ──────────────────────────────────────────────
