@@ -1967,6 +1967,11 @@ async def run_lab_analysis_pipeline(
                 interpreted_report=interpreted_report,
                 status="completed" if safety_result.get("status") != "blocked" else "blocked",
             )
+            await supabase.persist_retest_obligations(
+                user_id=user_id,
+                report_version=report_version,
+                retest_plan=knowledge_report.get("retest_plan") or [],
+            )
             record_lab_analysis_snapshot(
                 source=str((source_metadata or {}).get("source") or "unknown"),
                 snapshot=symptom_snapshot,

@@ -57,11 +57,22 @@ CREATE TABLE IF NOT EXISTS public.intervention_events (
   related_protocol_id UUID,
   related_recommendation_id TEXT,
 
+  action_type TEXT CHECK (action_type IS NULL OR action_type IN ('retest')),
+  source_report_version_id UUID REFERENCES public.report_versions(id) ON DELETE RESTRICT,
+  retest_window_start DATE,
+  retest_window_end DATE,
+
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.intervention_events
+  ADD COLUMN IF NOT EXISTS action_type TEXT CHECK (action_type IS NULL OR action_type IN ('retest')),
+  ADD COLUMN IF NOT EXISTS source_report_version_id UUID REFERENCES public.report_versions(id) ON DELETE RESTRICT,
+  ADD COLUMN IF NOT EXISTS retest_window_start DATE,
+  ADD COLUMN IF NOT EXISTS retest_window_end DATE;
 
 CREATE INDEX IF NOT EXISTS idx_intervention_events_user_started
   ON public.intervention_events(user_id, started_at);
@@ -72,6 +83,14 @@ CREATE INDEX IF NOT EXISTS idx_intervention_events_user_type
 CREATE INDEX IF NOT EXISTS idx_intervention_events_related_protocol_id
   ON public.intervention_events(related_protocol_id)
   WHERE related_protocol_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_intervention_events_retest_source
+  ON public.intervention_events(user_id, source_report_version_id, action_type)
+  WHERE source_report_version_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_intervention_events_retest_target
+  ON public.intervention_events(user_id, source_report_version_id, action_type, related_recommendation_id)
+  WHERE source_report_version_id IS NOT NULL AND action_type = 'retest';
 
 CREATE INDEX IF NOT EXISTS idx_intervention_events_metadata_gin
   ON public.intervention_events USING GIN (metadata);
