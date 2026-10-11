@@ -64,6 +64,8 @@ def test_protocol_actions_all_go_to_self_bucket():
     assert len(result["buckets"]["self"]) == 2
     titles = {item["title"] for item in result["buckets"]["self"]}
     assert titles == {"Eat more iron-rich foods", "Vitamin D"}
+    assert all(item["action_id"] for item in result["buckets"]["self"])
+    assert len({item["action_id"] for item in result["buckets"]["self"]}) == 2
 
 
 def test_next_best_tests_not_already_attached_to_a_pattern_go_to_practitioner():

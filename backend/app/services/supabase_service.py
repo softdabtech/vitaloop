@@ -2653,6 +2653,66 @@ async def get_weekly_checkins(user_id: str, limit: int = 12) -> List[Dict]:
     return checkins
 
 
+async def get_report_version_for_user(user_id: str, report_version_id: str) -> Optional[Dict[str, Any]]:
+    supabase = _get_supabase()
+    response = await _run(
+        lambda: supabase.table("report_versions")
+        .select("*")
+        .eq("id", str(report_version_id))
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    return response.data[0] if response.data else None
+
+
+async def complete_protocol_action(
+    user_id: str,
+    action_id: str,
+    report_version_id: str,
+    label: str,
+    description: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    supabase = _get_supabase()
+    existing_query = (
+        supabase.table("intervention_events")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("action_type", "protocol_action")
+        .eq("source_report_version_id", str(report_version_id))
+        .eq("related_recommendation_id", action_id)
+        .limit(1)
+    )
+    existing = await _run(lambda: existing_query.execute())
+    if existing.data:
+        return existing.data[0]
+
+    now = datetime.now(timezone.utc).isoformat()
+    payload = {
+        "user_id": user_id,
+        "source": "user",
+        "event_type": "protocol_action",
+        "action_type": "protocol_action",
+        "label": label,
+        "description": description,
+        "related_recommendation_id": action_id,
+        "source_report_version_id": str(report_version_id),
+        "ended_at": now,
+        "ongoing": False,
+        "metadata": metadata or {},
+    }
+    try:
+        response = await _run(lambda: supabase.table("intervention_events").insert(payload).execute())
+    except Exception:
+        # A concurrent request may win the partial unique constraint. Return
+        # that winner so completion remains idempotent.
+        response = await _run(lambda: existing_query.execute())
+    if response.data:
+        return response.data[0]
+    raise RuntimeError("Failed to persist protocol action completion")
+
+
 # ──────────────────────────────────────────────
 # RED FLAGS
 # ──────────────────────────────────────────────

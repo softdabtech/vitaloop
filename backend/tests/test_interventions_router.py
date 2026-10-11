@@ -58,6 +58,75 @@ async def test_create_intervention_forces_source_user(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_create_protocol_action_validates_ownership_and_action(monkeypatch):
+    captured = {}
+
+    async def fake_get_report(user_id, report_version_id):
+        captured["lookup"] = (user_id, report_version_id)
+        return {
+            "user_id": user_id,
+            "input_snapshot": {"action_plan_by_role": {"buckets": {"self": [{"action_id": "v1:test"}]}}},
+        }
+
+    async def fake_complete(**kwargs):
+        captured["completion"] = kwargs
+        return kwargs
+
+    monkeypatch.setattr(router.svc, "get_report_version_for_user", fake_get_report)
+    monkeypatch.setattr(router.svc, "complete_protocol_action", fake_complete)
+
+    body = router.InterventionEventCreate(
+        event_type="protocol_action",
+        label="Complete action",
+        action_id="v1:test",
+        source_report_version_id="11111111-1111-1111-1111-111111111111",
+    )
+    result = await router.create_intervention(body, _user("user-1"))
+
+    assert captured["lookup"][0] == "user-1"
+    assert captured["completion"]["user_id"] == "user-1"
+    assert result["action_id"] == "v1:test"
+
+
+@pytest.mark.asyncio
+async def test_create_protocol_action_rejects_unknown_action(monkeypatch):
+    async def fake_get_report(_user_id, _report_version_id):
+        return {"input_snapshot": {"action_plan_by_role": {"buckets": {"self": []}}}}
+
+    monkeypatch.setattr(router.svc, "get_report_version_for_user", fake_get_report)
+    body = router.InterventionEventCreate(
+        event_type="protocol_action",
+        label="Unknown",
+        action_id="v1:unknown",
+        source_report_version_id="11111111-1111-1111-1111-111111111111",
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await router.create_intervention(body, _user("user-1"))
+
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_create_protocol_action_rejects_foreign_report(monkeypatch):
+    async def fake_get_report(_user_id, _report_version_id):
+        return None
+
+    monkeypatch.setattr(router.svc, "get_report_version_for_user", fake_get_report)
+    body = router.InterventionEventCreate(
+        event_type="protocol_action",
+        label="Foreign",
+        action_id="v1:foreign",
+        source_report_version_id="11111111-1111-1111-1111-111111111111",
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await router.create_intervention(body, _user("user-1"))
+
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_update_intervention_returns_404_when_not_found(monkeypatch):
     async def fake_update(user_id, event_id, data):
         return None
