@@ -240,6 +240,24 @@ jobs:
           test -n "$PROD_VITE_SUPABASE_URL" || { echo "Missing PROD_VITE_SUPABASE_URL"; exit 1; }
           test -n "$PROD_VITE_SUPABASE_ANON_KEY" || { echo "Missing PROD_VITE_SUPABASE_ANON_KEY"; exit 1; }
 
+      - name: Free runner disk before production image build
+        run: |
+          echo "Disk before cleanup"
+          df -h
+          for path in \
+            /usr/local/lib/android \
+            /usr/share/dotnet \
+            /opt/ghc \
+            /usr/local/share/powershell \
+            /usr/local/share/chromium; do
+            if [[ -e "$path" ]]; then
+              sudo rm -rf "$path"
+            fi
+          done
+          docker system prune --all --force --volumes
+          echo "Disk after cleanup"
+          df -h
+
       - name: Build production Docker images on CI runner
         env:
           VITE_SUPABASE_URL: ${{ secrets.PROD_VITE_SUPABASE_URL }}
