@@ -42,8 +42,13 @@ def _resolve_user_id(current_user: dict) -> str:
     return str(user_id)
 
 
-def _reminder_copy(reminder_type: str, platform: str) -> Dict[str, Any]:
+def _reminder_copy(
+    reminder_type: str,
+    platform: str,
+    context: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
     mobile = platform == "mobile"
+    context = context or {}
 
     if reminder_type == "weekly_checkin":
         return {
@@ -62,11 +67,19 @@ def _reminder_copy(reminder_type: str, platform: str) -> Dict[str, Any]:
         }
 
     if reminder_type == "retest_reminder":
+        target = context.get("target")
+        window_start = context.get("window_start")
+        window_end = context.get("window_end")
+        if target and window_start and window_end:
+            body = f"Retest {target} between {window_start} and {window_end} to compare progress."
+        else:
+            body = "Upload fresh labs to compare progress." if mobile else "It has been a while since your last lab upload. Re-test now to validate progress."
         return {
             "title": "Time to re-test labs",
-            "body": "Upload fresh labs to compare progress." if mobile else "It has been a while since your last lab upload. Re-test now to validate progress.",
+            "body": body,
             "url": "/upload",
             "tag": "reminder-retest",
+            "context": context,
         }
 
     return {
@@ -103,11 +116,19 @@ async def _mark_subscription_inactive(subscription_id: str) -> None:
     )
 
 
-async def _send_push_to_user(user_id: str, reminder_type: str) -> int:
+async def _send_push_to_user(
+    user_id: str,
+    reminder_type: str,
+    context: Dict[str, Any] | None = None,
+) -> int:
     subscriptions = await _active_subscriptions_for_user(user_id)
     sent = 0
     for sub in subscriptions:
-        copy = _reminder_copy(reminder_type, str(sub.get("platform") or "desktop").lower())
+        copy = _reminder_copy(
+            reminder_type,
+            str(sub.get("platform") or "desktop").lower(),
+            context,
+        )
         payload = {
             "title": copy["title"],
             "body": copy["body"],
@@ -116,6 +137,7 @@ async def _send_push_to_user(user_id: str, reminder_type: str) -> int:
             "icon": "/icons/icon-192.png",
             "badge": "/icons/icon-192.png",
             "requireInteraction": reminder_type in {"weekly_checkin", "assignment_due"},
+            "reminder_context": copy.get("context", {}),
         }
 
         ok = await asyncio.to_thread(send_web_push, sub, payload)
@@ -220,25 +242,37 @@ async def _active_assignment_count(user_id: str) -> int:
     return int(resp.count or 0)
 
 
-async def _choose_reminder_for_user(user_id: str, prefs: Dict[str, Any]) -> str | None:
+async def _choose_reminder_for_user(user_id: str, prefs: Dict[str, Any]) -> Dict[str, Any] | None:
     now = datetime.now(timezone.utc)
 
     last_checkin = await _latest_row_timestamp("weekly_checkins", "user_id", user_id)
     if prefs.get("weekly_checkin", True):
         if not last_checkin or (now - last_checkin) >= timedelta(days=7):
             if not await _was_dispatched_recently(user_id, "weekly_checkin"):
-                return "weekly_checkin"
+                return {"reminder_type": "weekly_checkin", "context": {}}
 
     if prefs.get("assignment_due", True):
         assignments_count = await _active_assignment_count(user_id)
         if assignments_count > 0 and not await _was_dispatched_recently(user_id, "assignment_due"):
-            return "assignment_due"
+            return {"reminder_type": "assignment_due", "context": {}}
 
     if prefs.get("retest_reminder", True):
+        obligation = await svc.get_pending_retest_obligation(user_id)
+        if obligation and not await _was_dispatched_recently(user_id, "retest_reminder", since_hours=72):
+            return {
+                "reminder_type": "retest_reminder",
+                "context": {
+                    "target": obligation.get("related_recommendation_id"),
+                    "window_start": obligation.get("retest_window_start"),
+                    "window_end": obligation.get("retest_window_end"),
+                    "obligation_id": obligation.get("id"),
+                },
+            }
+
         last_upload = await _latest_row_timestamp("lab_uploads", "user_id", user_id)
         if last_upload and (now - last_upload) >= timedelta(days=70):
             if not await _was_dispatched_recently(user_id, "retest_reminder", since_hours=72):
-                return "retest_reminder"
+                return {"reminder_type": "retest_reminder", "context": {}}
 
     return None
 
@@ -385,15 +419,17 @@ async def run_push_reminders(
         if prefs.get("push_enabled", True) is False:
             continue
 
-        reminder_type = await _choose_reminder_for_user(user_id, prefs)
-        if not reminder_type:
+        selection = await _choose_reminder_for_user(user_id, prefs)
+        if not selection:
             continue
+        reminder_type = selection["reminder_type"]
+        reminder_context = selection.get("context", {})
 
-        sent_count = await _send_push_to_user(user_id, reminder_type)
+        sent_count = await _send_push_to_user(user_id, reminder_type, reminder_context)
         if sent_count <= 0:
             continue
 
-        copy = _reminder_copy(reminder_type, "desktop")
+        copy = _reminder_copy(reminder_type, "desktop", reminder_context)
         await svc.create_notification(
             user_id=user_id,
             trigger_type=reminder_type,

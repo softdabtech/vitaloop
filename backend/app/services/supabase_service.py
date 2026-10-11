@@ -2282,6 +2282,41 @@ async def get_intervention_events(user_id: str) -> List[Dict]:
     return events
 
 
+async def get_pending_retest_obligation(
+    user_id: str,
+    current_date: Optional[date] = None,
+) -> Optional[Dict[str, Any]]:
+    """Return the first valid pending retest obligation active today."""
+    supabase = _get_supabase()
+    today = current_date or datetime.now(timezone.utc).date()
+    try:
+        resp = await _run(
+            lambda: supabase.table("intervention_events")
+            .select(
+                "id,related_recommendation_id,retest_window_start,retest_window_end"
+            )
+            .eq("user_id", user_id)
+            .eq("action_type", "retest")
+            .eq("fulfillment_status", "pending")
+            .lte("retest_window_start", today.isoformat())
+            .gte("retest_window_end", today.isoformat())
+            .order("retest_window_start", desc=False)
+            .limit(10)
+            .execute()
+        )
+    except Exception:
+        _logger.warning("pending_retest_obligation_fetch_failed user_id=%s", user_id)
+        return None
+
+    for obligation in resp.data or []:
+        window_start = obligation.get("retest_window_start")
+        window_end = obligation.get("retest_window_end")
+        if not window_start or not window_end or window_start > window_end:
+            continue
+        return obligation
+    return None
+
+
 async def create_intervention_event(user_id: str, data: Dict[str, Any]) -> Dict:
     supabase = _get_supabase()
     payload = {**data, "user_id": user_id}
