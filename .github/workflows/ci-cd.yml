@@ -134,6 +134,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Run completion UI Vitest tests
+        run: npx --no-install vitest run src/pages/ProtocolPage.test.jsx src/api/interventions.test.js
+
       - name: Lint
         run: npm run lint
 
