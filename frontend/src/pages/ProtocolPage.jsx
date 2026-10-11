@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, CalendarClock, CheckCircle2, Download, ExternalLink, FileText, GitBranch, HelpCircle, MessageCircle, RefreshCw, ShieldAlert, Sparkles, Stethoscope } from 'lucide-react'
 import api from '../lib/api.js'
+import { completeProtocolAction, listInterventions } from '../api/interventions.js'
 import { useFeature } from '../hooks/useFeature.js'
 import { CoachBadge, CoachButton, CoachCard, CoachSkeleton, EmptyCoachState, InsightCard } from '../components/coach/CoachUI.jsx'
 import { isUkrainianLocale } from '../lib/locale.js'
@@ -85,6 +86,9 @@ const PROTOCOL_COPY = {
     summaryBody: 'Educational next steps based on this report. Confirm supplements, medication interactions, and dosing with a qualified clinician when relevant.',
     exporting: 'Exporting...',
     exportPdf: 'Export PDF',
+    markComplete: 'Mark complete',
+    completing: 'Saving...',
+    completed: 'Completed',
     planContext: 'Plan Context',
     actions: 'Actions',
     biomarkers: 'Biomarkers reviewed',
@@ -189,6 +193,9 @@ const PROTOCOL_COPY = {
     summaryBody: 'Освітні наступні кроки на основі звіту. Підтвердьте добавки, взаємодії та дозування з кваліфікованим фахівцем.',
     exporting: 'Експортуємо...',
     exportPdf: 'Експорт PDF',
+    markComplete: 'Позначити виконаним',
+    completing: 'Зберігаємо...',
+    completed: 'Виконано',
     planContext: 'Контекст плану',
     actions: 'Дій',
     biomarkers: 'Показників переглянуто',
@@ -330,7 +337,10 @@ function normalizeProtocolRows(protocol) {
 }
 
 async function loadProtocolData(uploadId) {
-  const { data } = await api.get(`/results/${uploadId}`)
+  const [{ data }, interventions] = await Promise.all([
+    api.get(`/results/${uploadId}`),
+    listInterventions(),
+  ])
   const biomarkers = data?.biomarkers ?? []
   const coreProtocol = normalizeProtocolRows(data?.final_analysis?.protocol)
   const storedProtocol = normalizeProtocolRows(data?.protocol)
@@ -353,6 +363,8 @@ async function loadProtocolData(uploadId) {
   // -- see P29a exposure review (docs/P29A_DOCTOR_ESCALATION_FRONTEND_EXPOSURE_REVIEW_2026-09-18.md)
   // for why both the top-level and final_analysis fallbacks are checked.
   const doctorEscalationPrecision = data?.doctor_escalation_precision ?? data?.final_analysis?.doctor_escalation_precision ?? null
+  const reportVersionId = data?.report_version?.id ?? data?.final_analysis?.report_version?.id ?? null
+  const completedActionIds = completedProtocolActionIds(interventions, reportVersionId)
   return {
     biomarkers,
     protocol: coreProtocol.length ? coreProtocol : storedProtocol.length ? storedProtocol : actionPlan,
@@ -364,7 +376,27 @@ async function loadProtocolData(uploadId) {
     clinicalReasoningTraces,
     progressIntelligence,
     doctorEscalationPrecision,
+    reportVersionId,
+    completedActionIds,
   }
+}
+
+export function buildProtocolActionCompletionPayload(item, reportVersionId) {
+  return {
+    event_type: 'protocol_action',
+    action_id: item.action_id,
+    source_report_version_id: reportVersionId,
+    label: protocolTitle(item),
+    description: protocolBody(item) || undefined,
+  }
+}
+
+export function completedProtocolActionIds(interventions, reportVersionId) {
+  return new Set(
+    (Array.isArray(interventions) ? interventions : [])
+      .filter((event) => event?.source_report_version_id === reportVersionId && event?.related_recommendation_id)
+      .map((event) => event.related_recommendation_id)
+  )
 }
 
 function protocolTitle(item) {
@@ -700,7 +732,7 @@ function ProgressActionSection({ progress, copy }) {
   )
 }
 
-function ActionCard({ item, copy, isUk }) {
+export function ActionCard({ item, copy, isUk, reportVersionId, completed, saving, onComplete }) {
   const title = protocolTitle(item)
   const body = protocolBody(item)
   const timing = protocolTiming(item, isUk)
@@ -714,6 +746,7 @@ function ActionCard({ item, copy, isUk }) {
   const safetyNotes = safetyNotesList(item)
   const retestMarkers = retestMarkersList(item)
   const expectedTimeline = item?.expected_timeline || item?.timeline || item?.expected_timeframe || null
+  const canComplete = Boolean(item?.action_id && reportVersionId)
   return (
     <CoachCard className="p-4" interactive>
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -753,6 +786,16 @@ function ActionCard({ item, copy, isUk }) {
           <span className="font-semibold">{copy.safetyNotes}: </span>
           {[safety, ...safetyNotes].filter(Boolean).join(' ')}
         </div>
+      )}
+      {canComplete && (
+        <button
+          type="button"
+          className="mt-4 w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={saving || completed}
+          onClick={() => onComplete(item)}
+        >
+          {completed ? copy.completed : saving ? copy.completing : copy.markComplete}
+        </button>
       )}
     </CoachCard>
   )
@@ -824,6 +867,9 @@ export default function ProtocolPage() {
   const [clinicalReasoningTraces, setClinicalReasoningTraces] = useState([])
   const [progressIntelligence, setProgressIntelligence] = useState(null)
   const [doctorEscalationPrecision, setDoctorEscalationPrecision] = useState(null)
+  const [reportVersionId, setReportVersionId] = useState(null)
+  const [completedActionIds, setCompletedActionIds] = useState(() => new Set())
+  const [savingActionId, setSavingActionId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [exporting, setExporting] = useState(false)
@@ -845,6 +891,8 @@ export default function ProtocolPage() {
         setClinicalReasoningTraces(data.clinicalReasoningTraces)
         setProgressIntelligence(data.progressIntelligence)
         setDoctorEscalationPrecision(data.doctorEscalationPrecision)
+        setReportVersionId(data.reportVersionId)
+        setCompletedActionIds(data.completedActionIds)
         gaProtocolView(uploadId)
       } catch (err) {
         if (!active) return
@@ -868,6 +916,17 @@ export default function ProtocolPage() {
     { key: 'month', title: copy.sections.month[0], body: copy.sections.month[1], rows: grouped.month },
     { key: 'longTerm', title: copy.sections.longTerm[0], body: copy.sections.longTerm[1], rows: grouped.longTerm },
   ].filter((section) => section.rows.length > 0)
+
+  async function handleComplete(item) {
+    if (!reportVersionId || !item?.action_id || savingActionId || completedActionIds.has(item.action_id)) return
+    setSavingActionId(item.action_id)
+    try {
+      await completeProtocolAction(buildProtocolActionCompletionPayload(item, reportVersionId))
+      setCompletedActionIds((current) => new Set(current).add(item.action_id))
+    } finally {
+      setSavingActionId(null)
+    }
+  }
 
   async function handleExportPdf() {
     if (!canExport || exporting || sortedProtocol.length === 0) return
@@ -956,7 +1015,18 @@ export default function ProtocolPage() {
             <h2 className="coach-title-lg">{section.body}</h2>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            {section.rows.map((item, index) => <ActionCard key={`${protocolTitle(item)}-${index}`} item={item} copy={copy} isUk={isUk} />)}
+            {section.rows.map((item, index) => (
+              <ActionCard
+                key={`${protocolTitle(item)}-${index}`}
+                item={item}
+                copy={copy}
+                isUk={isUk}
+                reportVersionId={reportVersionId}
+                completed={completedActionIds.has(item.action_id)}
+                saving={savingActionId === item.action_id}
+                onComplete={handleComplete}
+              />
+            ))}
           </div>
         </CoachCard>
       ))}
