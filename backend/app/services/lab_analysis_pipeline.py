@@ -1073,8 +1073,7 @@ async def run_lab_analysis_pipeline(
         knowledge_report=knowledge_report,
         domain_definitions=domain_definitions,
     )
-    rule_recommendations = assign_action_ids(knowledge_report.get("action_plan") or [], "action-plan")
-    knowledge_report = {**knowledge_report, "action_plan": rule_recommendations}
+    rule_recommendations = knowledge_report.get("action_plan") or []
     # Build clinical context for LLM — the deterministic engine's output
     risk_flags = _risk_flags(knowledge_report, prioritized)
     from app.services.clinical_engine.marker_coverage import enrich_coverage
@@ -1200,7 +1199,6 @@ async def run_lab_analysis_pipeline(
             clinical_context=clinical_context,
         )
         ai_protocol = ai_orchestration.get("items") or []
-    ai_protocol = assign_action_ids(ai_protocol, "ai-protocol")
     ai_protocol = sanitize_protocol_for_safety(ai_protocol, profile=user_profile, locale=locale)
     if isinstance(ai_orchestration, dict):
         ai_orchestration = {**ai_orchestration, "items": ai_protocol}
@@ -1301,6 +1299,17 @@ async def run_lab_analysis_pipeline(
             "safety_events": safety_events,
         }
     safety_result = effective_report_safety(safety_result, symptom_snapshot)
+    # Action identity is attached only after all safety sanitization and
+    # validation. Safety receives the same recommendation shape as before;
+    # IDs are added to the immutable public/persisted report snapshot below.
+    knowledge_report = sanitize_knowledge_report_for_safety(knowledge_report, locale=locale)
+    rule_recommendations = assign_action_ids(knowledge_report.get("action_plan") or [], "action-plan")
+    knowledge_report = {**knowledge_report, "action_plan": rule_recommendations}
+    ai_protocol = assign_action_ids(ai_protocol, "ai-protocol")
+    for section, actions in protocol.items():
+        protocol[section] = assign_action_ids(actions, f"protocol-{section}")
+    if isinstance(ai_orchestration, dict):
+        ai_orchestration = {**ai_orchestration, "items": ai_protocol}
     # Stage 2C: plain-language, user-facing notice — never exposes blocked_items'
     # internal rule keys — surfaced consistently alongside safety_result in every
     # live response path (see analyze.py's response dicts).
@@ -1311,7 +1320,6 @@ async def run_lab_analysis_pipeline(
     # is used any further (interpreted_report build, API response,
     # report_versions persistence), so the exact flagged text cannot survive in
     # any live output while safety_result still correctly reports "blocked".
-    knowledge_report = sanitize_knowledge_report_for_safety(knowledge_report, locale=locale)
     # Same gap, one more location: knowledge_evaluation (the upstream rule-match
     # object) is served independently of knowledge_report in every response and
     # in B2B's raw pipeline-result spread — the report-level fix alone does not
