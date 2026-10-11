@@ -23,6 +23,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from app.services.action_identity import assign_action_ids
+
 ACTION_PLAN_BY_ROLE_VERSION = "action_plan_by_role_v1"
 
 _BUCKET_ORDER = ("urgent", "doctor", "practitioner", "self")
@@ -60,7 +62,8 @@ def _protocol_item(action: Dict[str, Any], section: str) -> Dict[str, Any]:
         "reason": action.get("body") or action.get("rationale") or action.get("reason"),
         "confidence": None,
         "source": "protocol",
-        "source_id": section,
+        "source_id": action.get("action_id") or section,
+        "action_id": action.get("action_id"),
     }
 
 
@@ -73,17 +76,23 @@ def build_action_plan_by_role(
 ) -> Dict[str, Any]:
     buckets: Dict[str, List[Dict[str, Any]]] = {key: [] for key in _BUCKET_ORDER}
 
+    trace_items = []
     for trace in clinical_reasoning_traces or []:
         if not isinstance(trace, dict):
             continue
         bucket = _bucket_for_trace(trace)
-        buckets[bucket].append(_trace_item(trace, bucket))
+        trace_items.append(_trace_item(trace, bucket))
+
+    for item in assign_action_ids(trace_items, "pattern"):
+        buckets[item["bucket"]].append(item)
 
     for section, actions in (protocol or {}).items():
+        protocol_items = []
         for action in actions or []:
             if not isinstance(action, dict):
                 continue
-            buckets["self"].append(_protocol_item(action, section))
+            protocol_items.append(_protocol_item(action, section))
+        buckets["self"].extend(assign_action_ids(protocol_items, f"protocol-{section}"))
 
     # Report-level next_best_tests / high-priority evidence_gaps not already
     # attached to a specific pattern (e.g. no pattern detected at all, but a
@@ -99,16 +108,14 @@ def build_action_plan_by_role(
         marker = str(test.get("marker") or "").strip()
         if not marker or marker.lower() in existing_practitioner_markers:
             continue
-        buckets["practitioner"].append(
-            {
+        buckets["practitioner"].extend(assign_action_ids([{
                 "bucket": "practitioner",
                 "title": marker,
                 "reason": test.get("reason"),
                 "confidence": None,
                 "source": "next_best_tests",
                 "source_id": marker,
-            }
-        )
+            }], "next-best-test"))
 
     for gap in (evidence_gaps or {}).get("gaps") or []:
         if not isinstance(gap, dict) or gap.get("priority") != "high":
@@ -116,16 +123,14 @@ def build_action_plan_by_role(
         label = gap.get("missing_marker") or gap.get("domain")
         if not label:
             continue
-        buckets["practitioner"].append(
-            {
+        buckets["practitioner"].extend(assign_action_ids([{
                 "bucket": "practitioner",
                 "title": label,
                 "reason": gap.get("suggested_next_step") or gap.get("reason"),
                 "confidence": None,
                 "source": "evidence_gap",
                 "source_id": label,
-            }
-        )
+            }], "evidence-gap"))
 
     return {
         "version": ACTION_PLAN_BY_ROLE_VERSION,

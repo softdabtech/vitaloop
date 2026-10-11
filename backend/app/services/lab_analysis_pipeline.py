@@ -36,6 +36,7 @@ from app.services.symptom_analysis import (
 from app.services.progress_intelligence import build_progress_intelligence
 from app.services.personal_baseline import build_personal_baseline, build_personal_baseline_velocity
 from app.services.action_plan_by_role import build_action_plan_by_role
+from app.services.action_identity import assign_action_ids
 from app.services.next_test_funnel import build_next_test_funnel
 from app.services.cost_analytics import record_analysis_cost
 from app.services.evidence_gaps import build_evidence_gaps
@@ -1072,7 +1073,8 @@ async def run_lab_analysis_pipeline(
         knowledge_report=knowledge_report,
         domain_definitions=domain_definitions,
     )
-    rule_recommendations = knowledge_report.get("action_plan") or []
+    rule_recommendations = assign_action_ids(knowledge_report.get("action_plan") or [], "action-plan")
+    knowledge_report = {**knowledge_report, "action_plan": rule_recommendations}
     # Build clinical context for LLM — the deterministic engine's output
     risk_flags = _risk_flags(knowledge_report, prioritized)
     from app.services.clinical_engine.marker_coverage import enrich_coverage
@@ -1198,6 +1200,7 @@ async def run_lab_analysis_pipeline(
             clinical_context=clinical_context,
         )
         ai_protocol = ai_orchestration.get("items") or []
+    ai_protocol = assign_action_ids(ai_protocol, "ai-protocol")
     ai_protocol = sanitize_protocol_for_safety(ai_protocol, profile=user_profile, locale=locale)
     if isinstance(ai_orchestration, dict):
         ai_orchestration = {**ai_orchestration, "items": ai_protocol}
@@ -1221,6 +1224,8 @@ async def run_lab_analysis_pipeline(
         biomarkers=normalized_biomarkers,
         prioritized=prioritized,
     )
+    for section, actions in protocol.items():
+        protocol[section] = assign_action_ids(actions, f"protocol-{section}")
     protocol = sanitize_protocol_for_safety(protocol, profile=user_profile, locale=locale)
     safety_result = validate_report(
         biomarkers=normalized_biomarkers,

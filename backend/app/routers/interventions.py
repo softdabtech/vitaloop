@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from typing import Any, Literal, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -46,6 +47,8 @@ class InterventionEventCreate(BaseModel):
     frequency: Optional[str] = Field(default=None, max_length=100)
     related_protocol_id: Optional[str] = None
     related_recommendation_id: Optional[str] = None
+    action_id: Optional[str] = None
+    source_report_version_id: Optional[UUID] = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -73,11 +76,38 @@ async def create_intervention(
     current_user: dict = Depends(get_current_user),
 ):
     user_id = current_user["sub"]
+    if body.action_id or body.source_report_version_id:
+        if body.event_type != "protocol_action" or not body.action_id or not body.source_report_version_id:
+            raise HTTPException(status_code=400, detail="action_id and source_report_version_id are required for protocol actions")
+        report_version = await svc.get_report_version_for_user(user_id, str(body.source_report_version_id))
+        if not report_version or not _report_contains_action(report_version, body.action_id):
+            raise HTTPException(status_code=404, detail="Protocol action not found")
+        return await svc.complete_protocol_action(
+            user_id=user_id,
+            action_id=body.action_id,
+            report_version_id=str(body.source_report_version_id),
+            label=body.label,
+            description=body.description,
+            metadata=body.metadata,
+        )
     # source is always "user" for this endpoint — practitioner/protocol/
     # import/system sources are reserved for a later, separately-authorized
     # write path (see this module's docstring).
     data = {**body.model_dump(mode="json", exclude_none=True), "source": "user"}
     return await svc.create_intervention_event(user_id, data)
+
+
+def _report_contains_action(report_version: dict[str, Any], action_id: str) -> bool:
+    def contains(value: Any) -> bool:
+        if isinstance(value, dict):
+            if value.get("action_id") == action_id:
+                return True
+            return any(contains(child) for child in value.values())
+        if isinstance(value, list):
+            return any(contains(child) for child in value)
+        return False
+
+    return contains(report_version.get("input_snapshot")) or contains(report_version.get("protocol")) or contains(report_version.get("knowledge_report"))
 
 
 @router.patch("/{event_id}")
