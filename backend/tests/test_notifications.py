@@ -16,6 +16,7 @@ def _obligation():
 
 @pytest.mark.asyncio
 async def test_pending_retest_is_selected_with_context(monkeypatch):
+    monkeypatch.setattr(notifications, "_latest_row_timestamp", lambda *args: _async_result(None))
     monkeypatch.setattr(
         notifications.svc,
         "get_pending_retest_obligation",
