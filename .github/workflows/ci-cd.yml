@@ -311,3 +311,83 @@ jobs:
             exit 1
           fi
           echo "Health check PASSED"
+
+      - name: Rotate old production Docker images
+        run: |
+          ssh root@${{ secrets.PROD_HOST }} 'bash -s' <<'REMOTE'
+          set -u
+
+          skip_rotation() {
+            echo "Image rotation skipped: $1"
+            echo "Removed image count: 0"
+            echo "Kept images:"
+            docker image ls --format '{{.Repository}}:{{.Tag}}' \
+              | grep -E '^vitaloop-(backend|frontend):' || true
+            docker system df || true
+            df -h || true
+            exit 0
+          }
+
+          backend_image=$(docker inspect -f '{{.Config.Image}}' vitaloop-backend 2>/dev/null) || \
+            skip_rotation "current backend container could not be inspected"
+          frontend_image=$(docker inspect -f '{{.Config.Image}}' vitaloop-frontend 2>/dev/null) || \
+            skip_rotation "current frontend container could not be inspected"
+
+          if [[ ! "$backend_image" =~ ^vitaloop-backend:[0-9a-f]{40}$ ]] || \
+             [[ ! "$frontend_image" =~ ^vitaloop-frontend:[0-9a-f]{40}$ ]]; then
+            skip_rotation "current containers do not use immutable Vitaloop SHA tags"
+          fi
+
+          current_backend_sha=${backend_image#vitaloop-backend:}
+          current_frontend_sha=${frontend_image#vitaloop-frontend:}
+          if [[ "$current_backend_sha" != "$current_frontend_sha" ]]; then
+            skip_rotation "backend and frontend current SHAs differ"
+          fi
+          current_sha=$current_backend_sha
+
+          previous_sha=$(for sha in $(docker image ls --format '{{.Tag}}' vitaloop-backend \
+            | grep -E '^[0-9a-f]{40}$' || true); do
+            [[ "$sha" == "$current_sha" ]] && continue
+            docker image inspect "vitaloop-frontend:$sha" >/dev/null 2>&1 || continue
+            created=$(docker image inspect -f '{{.Created}}' "vitaloop-backend:$sha" 2>/dev/null) || continue
+            printf '%s\t%s\n' "$created" "$sha"
+          done | sort -r | awk 'NR == 1 { print $2; exit }')
+
+          if [[ ! "$previous_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            skip_rotation "no previous matching backend/frontend pair was found"
+          fi
+
+          keep_backend_current="vitaloop-backend:$current_sha"
+          keep_frontend_current="vitaloop-frontend:$current_sha"
+          keep_backend_previous="vitaloop-backend:$previous_sha"
+          keep_frontend_previous="vitaloop-frontend:$previous_sha"
+          remove_refs=()
+          while IFS=$'\t' read -r repository tag; do
+            ref="$repository:$tag"
+            case "$ref" in
+              "$keep_backend_current"|"$keep_frontend_current"|\
+              "$keep_backend_previous"|"$keep_frontend_previous") continue ;;
+            esac
+            remove_refs+=("$ref")
+          done < <(docker image ls --format '{{.Repository}}\t{{.Tag}}' \
+            | awk '$1 == "vitaloop-backend" || $1 == "vitaloop-frontend"')
+
+          removed_count=0
+          for ref in "${remove_refs[@]}"; do
+            if docker image rm "$ref"; then
+              removed_count=$((removed_count + 1))
+            else
+              echo "Image rotation retained $ref because Docker refused its removal"
+            fi
+          done
+
+          docker image prune -f
+          echo "Removed image count: $removed_count"
+          echo "Kept images:"
+          printf '%s\n' "$keep_backend_current" "$keep_frontend_current" \
+            "$keep_backend_previous" "$keep_frontend_previous"
+          echo "Docker system usage:"
+          docker system df
+          echo "Filesystem usage:"
+          df -h
+          REMOTE
